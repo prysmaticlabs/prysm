@@ -1,0 +1,33 @@
+language: go
+go:
+  - 1.4.2
+install:
+  # - go get code.google.com/p/go.tools/cmd/goimports
+  # - go get github.com/golang/lint/golint
+  # - go get golang.org/x/tools/cmd/vet 
+  - go get golang.org/x/tools/cmd/cover github.com/mattn/goveralls
+before_script:
+  # - gofmt -l -w .
+  # - goimports -l -w .
+  # - golint .
+  # - go vet ./...
+  # - go test -race ./...
+script:
+  - make travis-test-with-coverage
+after_success:
+  - if [ "$COVERALLS_TOKEN" ]; then goveralls -coverprofile=profile.cov -service=travis-ci -repotoken $COVERALLS_TOKEN; fi
+env:
+  global:
+    - secure: "U2U1AmkU4NJBgKR/uUAebQY87cNL0+1JHjnLOmmXwxYYyj5ralWb1aSuSH3qSXiT93qLBmtaUkuv9fberHVqrbAeVlztVdUsKAq7JMQH+M99iFkC9UiRMqHmtjWJ0ok4COD1sRYixxi21wb/JrMe3M1iL4QJVS61iltjHhVdM64="
+sudo: false
+addons:
+  apt:
+    packages:
+    - libgmp3-dev
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/e09ccdce1048c5e03445
+    on_success: change 
+    on_failure: always
+    on_start: false 
