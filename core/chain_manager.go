@@ -76,7 +76,8 @@ type ChainManager struct {
 	cache        *lru.Cache // cache is the LRU caching
 	futureBlocks *lru.Cache // future blocks are blocks added for later processing
 
-	quit chan struct{}
+	quit    chan struct{}
+	running int32 // running must be called automically
 	// procInterrupt must be atomically called
 	procInterrupt int32 // interrupt signaler for block processing
 	wg            sync.WaitGroup
@@ -98,7 +99,15 @@ func NewChainManager(blockDb, stateDb, extraDb common.Database, pow pow.PoW, mux
 
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
-		return nil, ErrNoGenesis
+		reader, err := NewDefaultGenesisReader()
+		if err != nil {
+			return nil, err
+		}
+		bc.genesisBlock, err = WriteGenesisBlock(stateDb, blockDb, reader)
+		if err != nil {
+			return nil, err
+		}
+		glog.V(logger.Info).Infoln("WARNING: Wrote default ethereum genesis block")
 	}
 
 	if err := bc.setLastState(); err != nil {
@@ -443,6 +452,9 @@ func (bc *ChainManager) setTotalDifficulty(td *big.Int) {
 }
 
 func (bc *ChainManager) Stop() {
+	if !atomic.CompareAndSwapInt32(&bc.running, 0, 1) {
+		return
+	}
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
