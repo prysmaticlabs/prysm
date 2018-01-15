@@ -1,0 +1,24 @@
+Welcome to the Geth JavaScript console!
+
+instance: Geth/v1.8.0-unstable-34918903/darwin-amd64/go1.9.2
+coinbase: 0xee477909449e30d22ce01bc673b3f69367e12805
+at block: 0 (Wed, 31 Dec 1969 18:00:00 CST)
+ datadir: /Users/rauljordan/Library/Ethereum
+ modules: admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 txpool:1.0 web3:1.0
+
+> caught interrupt, exiting
+Welcome to the Geth JavaScript console!
+
+instance: Geth/v1.8.0-unstable-34918903/darwin-amd64/go1.9.2
+coinbase: 0xee477909449e30d22ce01bc673b3f69367e12805
+at block: 0 (Wed, 31 Dec 1969 18:00:00 CST)
+ datadir: /Users/rauljordan/Library/Ethereum
+ modules: admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 txpool:1.0 web3:1.0
+
+> caught interrupt, exiting
+Welcome to the Geth JavaScript console!
+
+instance: Geth/v1.8.0-unstable-34918903/darwin-amd64/go1.9.2
+ modules: admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 txpool:1.0 web3:1.0
+
+> caught interrupt, exiting
