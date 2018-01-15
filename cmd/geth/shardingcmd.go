@@ -13,6 +13,7 @@ var (
 		Name:        "shard",
 		Usage:       "Start a sharding client",
 		ArgsUsage:   "[endpoint]",
+		Flags:       append(consoleFlags, utils.DataDirFlag),
 		Category:    "SHARDING COMMANDS",
 		Description: "TODO(prestonvanloon)- Add sharding client description",
 	}
