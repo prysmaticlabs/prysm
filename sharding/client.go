@@ -1,7 +1,9 @@
 package sharding
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -15,7 +17,8 @@ const (
 
 type Client struct {
 	endpoint string
-	client   *rpc.Client
+	client   *ethclient.Client
+	keystore *keystore.KeyStore // Keystore containing the single signer
 }
 
 func MakeShardingClient(ctx *cli.Context) *Client {
@@ -24,8 +27,19 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 		endpoint = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
 
+	config := &node.Config{
+		DataDir: "/tmp/ethereum",
+	}
+	scryptN, scryptP, keydir, err := config.AccountConfig()
+	if err != nil {
+		panic(err) // TODO: handle this
+	}
+
+	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
+
 	return &Client{
 		endpoint: endpoint,
+		keystore: ks,
 	}
 }
 
@@ -35,8 +49,8 @@ func (c *Client) Start() error {
 	if err != nil {
 		return err
 	}
-	c.client = rpcClient
-	defer c.client.Close()
+	c.client = ethclient.NewClient(rpcClient)
+	defer rpcClient.Close()
 	if err := c.verifyVMC(); err != nil {
 		return err
 	}
