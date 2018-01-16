@@ -8,14 +8,14 @@ package sharding
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"sync/atomic"
-	//"github.com/ethereum/go-ethereum/common/hexutil"
 	//"github.com/ethereum/go-ethereum/rlp"
 )
 
-// Transaction Base Sharding Struct
-type Transaction struct {
+// ShardingTransaction Base Struct
+type ShardingTransaction struct {
 	data txdata
 	hash atomic.Value
 	size atomic.Value
@@ -30,9 +30,52 @@ type txdata struct {
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	// Code Payload
 	Payload []byte `json:"input"    gencodec:"required"`
-	// TODO:
-	// add accesslist, chainid, shardid,
 
+	// Sharding specific fields
+	AccessList []*common.Address `json:"accessList" gencodec:"required"`
+	ChainID    uint64            `json:"chainId" gencodec:"required"`
+	ShardID    uint64            `json:"shardId" gencodec:"required"`
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+type txdataMarshaling struct {
+	AccountNonce hexutil.Uint64
+	Price        *hexutil.Big
+	GasLimit     hexutil.Uint64
+	Amount       *hexutil.Big
+	Payload      hexutil.Bytes
+	ChainID      hexutil.Uint64
+	ShardID      hexutil.Uint64
+}
+
+func NewShardingTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []*common.Address) *ShardingTransaction {
+	return newShardingTransaction(nonce, &to, amount, gasLimit, gasPrice, data, accessList)
+}
+
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []*common.Address) *ShardingTransaction {
+	return newShardingTransaction(nonce, nil, amount, gasLimit, gasPrice, data, accessList)
+}
+
+func newShardingTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []*common.Address) *ShardingTransaction {
+	if len(data) > 0 {
+		data = common.CopyBytes(data)
+	}
+	d := txdata{
+		AccountNonce: nonce,
+		Recipient:    to,
+		Payload:      data,
+		Amount:       new(big.Int),
+		GasLimit:     gasLimit,
+		Price:        new(big.Int),
+		AccessList:   accessList,
+	}
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	return &ShardingTransaction{data: d}
 }
