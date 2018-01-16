@@ -32,9 +32,9 @@ type txdata struct {
 	Payload []byte `json:"input"    gencodec:"required"`
 
 	// Sharding specific fields
+	// TODO: Figure out exact format of accesslist. array of arrays of addr + prefixes?
 	AccessList []*common.Address `json:"accessList" gencodec:"required"`
-	ChainID    uint64            `json:"chainId" gencodec:"required"`
-	ShardID    uint64            `json:"shardId" gencodec:"required"`
+
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
@@ -78,4 +78,15 @@ func newShardingTransaction(nonce uint64, to *common.Address, amount *big.Int, g
 	}
 
 	return &ShardingTransaction{data: d}
+}
+
+// ChainID determines the chain the tx will go into (this is 1 on the mainnet)
+func (tx *ShardingTransaction) ChainID() *big.Int {
+	return big.NewInt(1)
+}
+
+// ShardID determines the shard a transaction belongs to
+func (tx *ShardingTransaction) ShardID() *big.Int {
+	// TODO: figure out how to determine ShardID. 1 for now
+	return big.NewInt(1)
 }
