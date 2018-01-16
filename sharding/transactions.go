@@ -33,7 +33,7 @@ type txdata struct {
 
 	// Sharding specific fields
 	// TODO: Figure out exact format of accesslist. array of arrays of addr + prefixes?
-	AccessList []*common.Address `json:"accessList" gencodec:"required"`
+	AccessList []common.Address `json:"accessList" gencodec:"required"`
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -49,15 +49,15 @@ type txdataMarshaling struct {
 	ShardID      hexutil.Uint64
 }
 
-func NewShardingTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []*common.Address) *ShardingTransaction {
+func NewShardingTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []common.Address) *ShardingTransaction {
 	return newShardingTransaction(nonce, &to, amount, gasLimit, gasPrice, data, accessList)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []*common.Address) *ShardingTransaction {
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []common.Address) *ShardingTransaction {
 	return newShardingTransaction(nonce, nil, amount, gasLimit, gasPrice, data, accessList)
 }
 
-func newShardingTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []*common.Address) *ShardingTransaction {
+func newShardingTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList []common.Address) *ShardingTransaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
