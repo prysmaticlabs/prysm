@@ -1,6 +1,12 @@
 pragma solidity ^0.4.19;
 
+import "RLP.sol";
+
 contract VMC {
+  using RLP for RLP.RLPItem;
+  using RLP for RLP.Iterator;
+  using RLP for bytes;
+  
   struct Validator {
     // Amount of wei the validator holds
     uint deposit;
@@ -124,8 +130,18 @@ contract VMC {
     return index;
   }
 
-  function withdraw(uint _validatorIndex, bytes10 _sig) public returns(bool) {
-    // TODO
+  function withdraw(int _validatorIndex, bytes10 _sig) public returns(bool) {
+    var msgHash = keccak256("withdraw");
+    var result = validators[_validatorIndex].validationCodeAddr.call.gas(sigGasLimit)(msgHash, _sig) == true;
+    if (result) {
+      validators[_validatorIndex].returnAddr.transfer(validators[_validatorIndex].deposit);
+      isValcodeDeposited[validators[_validatorIndex].validationCodeAddr] = false;
+      delete validators[_validatorIndex];
+      stackPush(_validatorIndex);
+      --numValidators;
+      log1(msgHash, bytes32(_validatorIndex));
+      return result;
+    }
   }
 
   function sample(int _shardId) public constant returns(address) {
@@ -175,8 +191,8 @@ contract VMC {
     return shardList;
   }
 
-
-  function addHeader(bytes12 header) public returns(bool) {
+  
+  function addHeader(bytes _header) public returns(bool) {
     // TODO
   }
 
