@@ -1,6 +1,8 @@
 package sharding
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -22,10 +24,11 @@ type Client struct {
 }
 
 func MakeShardingClient(ctx *cli.Context) *Client {
-	endpoint := ""
+	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-		endpoint = ctx.GlobalString(utils.DataDirFlag.Name)
+		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
+	endpoint := fmt.Sprintf("%s/geth.ipc", path)
 
 	config := &node.Config{
 		DataDir: "/tmp/ethereum",
