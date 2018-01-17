@@ -28,9 +28,13 @@ func (c *Client) verifyVMC() error {
 		log.Info(fmt.Sprintf("No validator management contract found at %s.", validatorManagerAddress.String()))
 
 		accounts := c.keystore.Accounts()
+		if len(accounts) == 0 {
+			return fmt.Errorf("no accounts found")
+		}
+
 		// TODO: get password from file
 		if err := c.keystore.Unlock(accounts[0], "password"); err != nil {
-			return err
+			return fmt.Errorf("failed to unlock account 0: %v", err)
 		}
 
 		suggestedGasPrice, err := c.client.SuggestGasPrice(context.Background())
