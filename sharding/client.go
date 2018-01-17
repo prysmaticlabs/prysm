@@ -13,16 +13,19 @@ import (
 )
 
 const (
-	// TODO: Can this be referenced from main.clientIdentifier?
+	// TODO(prestonvanloon): Can this be referenced from main.clientIdentifier?
 	clientIdentifier = "geth" // Client identifier to advertise over the network
 )
 
+// Client for sharding. Communicates to geth node via JSON RPC.
 type Client struct {
-	endpoint string
-	client   *ethclient.Client
+	endpoint string             // Endpoint to JSON RPC
+	client   *ethclient.Client  // Ethereum RPC client.
 	keystore *keystore.KeyStore // Keystore containing the single signer
+	ctx      *cli.Context       // Command line context
 }
 
+// MakeShardingClient for interfacing with geth full node.
 func MakeShardingClient(ctx *cli.Context) *Client {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
@@ -35,7 +38,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	}
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
-		panic(err) // TODO: handle this
+		panic(err) // TODO(prestonvanloon): handle this
 	}
 
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
@@ -43,9 +46,13 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	return &Client{
 		endpoint: endpoint,
 		keystore: ks,
+		ctx:      ctx,
 	}
 }
 
+// Start the sharding client.
+// * Connects to node.
+// * Verifies the validator management contract.
 func (c *Client) Start() error {
 	log.Info("Starting sharding client")
 	rpcClient, err := dialRPC(c.endpoint)
@@ -58,15 +65,17 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// TODO: Wait to be selected?
+	// TODO: Wait to be selected in goroutine?
 
 	return nil
 }
 
+// Wait until sharding client is shutdown.
 func (c *Client) Wait() {
 	// TODO: Blocking lock
 }
 
+// dialRPC endpoint to node.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
 		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
