@@ -10,7 +10,7 @@ var (
 	// Number of network shards
 	shardCount = 100
 	// Address of the validator management contract
-	validatorManagerAddress = common.HexToAddress("0xd76b5bf01b55d75733de3997f54a7becc2be3f4a") // TODO
+	validatorManagerAddress = common.HexToAddress("0x0") // TODO
 	// Gas limit for verifying signatures
 	sigGasLimit = 40000
 	// Number of blocks in a period
