@@ -1,6 +1,7 @@
 package sharding
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -28,7 +29,7 @@ func (c *Client) verifyVMC() error {
 	// TODO: Fetch validator manager contract.
 	b, err := c.client.CodeAt(context.Background(), validatorManagerAddress, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get contract code at %s. %v", validatorManagerAddress, err)
+		return fmt.Errorf("unable to get contract code at %s. %v", validatorManagerAddress, err)
 	}
 
 	if len(b) == 0 {
@@ -36,17 +37,24 @@ func (c *Client) verifyVMC() error {
 
 		addr, err := c.deployVMC()
 		if err != nil {
-			return fmt.Errorf("failed to deploy validator management contract: %v", err)
+			return fmt.Errorf("unable to deploy validator management contract: %v", err)
 		}
 
 		log.Info(fmt.Sprintf("Created contract at address %s", addr.String()))
 
-		if err != nil {
-			return fmt.Errorf("could not deploy validator management contract: %v", err)
+		validatorManagerAddress = *addr
+
+		if b, err = c.client.CodeAt(context.Background(), validatorManagerAddress, nil); err != nil {
+			return fmt.Errorf("unable to get contract code at %s %v", validatorManagerAddress, err)
 		}
-	} else {
-		// TODO: Check contract bytecode is what we expected, otherwise return error.
 	}
+
+	// TODO: Check contract bytecode is what we expected, otherwise return error.
+	if !bytes.Equal(b, abiBytecode) {
+		return fmt.Errorf("bytecode at contract address %s does not match expected bytecode", validatorManagerAddress.String())
+	}
+
+	log.Info("Validator management contract verified!")
 
 	return nil
 }
@@ -59,43 +67,43 @@ func (c *Client) deployVMC() (*common.Address, error) {
 
 	// TODO: call unlock only if account is actually locked.
 	if err := c.unlockAccount(accounts[0]); err != nil {
-		return nil, fmt.Errorf("failed to unlock account 0: %v", err)
+		return nil, fmt.Errorf("unable to unlock account 0: %v", err)
 	}
 
 	suggestedGasPrice, err := c.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get suggested gas price from node: %v", err)
+		return nil, fmt.Errorf("unable to get suggested gas price from node: %v", err)
 	}
 
 	nonce, err := c.client.NonceAt(context.Background(), accounts[0].Address, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get nonce for %s: %v", accounts[0].Address, err)
+		return nil, fmt.Errorf("unable to get nonce for %s: %v", accounts[0].Address, err)
 	}
 
 	tx := types.NewContractCreation(nonce, new(big.Int).SetInt64(0), contractGasLimit, suggestedGasPrice, abiBytecode)
 	signed, err := c.keystore.SignTx(accounts[0], tx, new(big.Int).SetInt64(1000))
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign transaction: %v", err)
+		return nil, fmt.Errorf("unable to sign transaction: %v", err)
 	}
 
 	log.Info(fmt.Sprintf("Creating validator management contract. Tx: %s", signed.Hash().String()))
 
 	if err := c.client.SendTransaction(context.Background(), signed); err != nil {
-		return nil, fmt.Errorf("failed to send transaction: %v", err)
+		return nil, fmt.Errorf("unable to send transaction: %v", err)
 	}
 
 	log.Info(fmt.Sprintf("Contract creation sent. Waiting for transaction receipt."))
 
 	for pending := true; pending; _, pending, err = c.client.TransactionByHash(context.Background(), signed.Hash()) {
 		if err != nil {
-			return nil, fmt.Errorf("Failed to get transaction by hash: %v", err)
+			return nil, fmt.Errorf("unable to get transaction by hash: %v", err)
 		}
 		time.Sleep(1 * time.Second)
 	}
 
 	receipt, err := c.client.TransactionReceipt(context.Background(), signed.Hash())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction receipt: %v", err)
+		return nil, fmt.Errorf("unable to get transaction receipt: %v", err)
 	}
 
 	return &receipt.ContractAddress, nil
@@ -107,7 +115,7 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
 		blob, err := ioutil.ReadFile(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
 		if err != nil {
-			return fmt.Errorf("failed to read account password contents in file %s. %v", utils.PasswordFileFlag.Value, err)
+			return fmt.Errorf("unable to read account password contents in file %s. %v", utils.PasswordFileFlag.Value, err)
 		}
 		// Some text files end in new line, remove with strings.Trim.
 		pass = strings.Trim(string(blob), "\n")
