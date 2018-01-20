@@ -10,7 +10,8 @@ import (
 var (
 	shardingClientCommand = cli.Command{
 		Action:      utils.MigrateFlags(shardingClient),
-		Name:        "shard",
+		Name:        "sharding",
+		Aliases:     []string{"shard"},
 		Usage:       "Start a sharding client",
 		ArgsUsage:   "[endpoint]",
 		Flags:       []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag},

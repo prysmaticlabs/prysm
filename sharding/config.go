@@ -21,6 +21,4 @@ var (
 	depositSize = new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil) // 100 ETH
 	// Gas limit to create contract
 	contractGasLimit = uint64(4700000) // Max is 4712388
-	// Gas price for contract creation
-	contractGasPrice = new(big.Int).SetInt64(18000000000)
 )
