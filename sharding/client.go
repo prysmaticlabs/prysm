@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	// TODO(prestonvanloon): Can this be referenced from main.clientIdentifier?
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
 // Client for sharding. Communicates to geth node via JSON RPC.
@@ -32,7 +31,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
-	endpoint := fmt.Sprintf("%s/geth.ipc", path)
+	endpoint := fmt.Sprintf("%s/%s.ipc", path, clientIdentifier)
 
 	config := &node.Config{
 		DataDir: path,
@@ -58,7 +57,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 
 // Start the sharding client.
 // * Connects to node.
-// * Verifies the validator management contract.
+// * Verifies or deploys the validator management contract.
 func (c *Client) Start() error {
 	log.Info("Starting sharding client")
 	rpcClient, err := dialRPC(c.endpoint)
@@ -71,14 +70,14 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// TODO: Wait to be selected in goroutine?
+	// TODO: Wait to be selected as collator in goroutine?
 
 	return nil
 }
 
 // Wait until sharding client is shutdown.
 func (c *Client) Wait() {
-	// TODO: Blocking lock
+	// TODO: Blocking lock.
 }
 
 // dialRPC endpoint to node.
@@ -87,4 +86,20 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
 	}
 	return rpc.Dial(endpoint)
+}
+
+// UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
+func (c *Client) unlockAccount(account accounts.Account) error {
+	pass := ""
+
+	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
+		blob, err := ioutil.ReadFile(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
+		if err != nil {
+			return fmt.Errorf("unable to read account password contents in file %s. %v", utils.PasswordFileFlag.Value, err)
+		}
+		// TODO: Use bufio.Scanner or other reader that doesn't include a trailing newline character.
+		pass = strings.Trim(string(blob), "\n") // Some text files end in new line, remove with strings.Trim.
+	}
+
+	return c.keystore.Unlock(account, pass)
 }

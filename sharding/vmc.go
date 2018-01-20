@@ -26,7 +26,6 @@ var (
 // Verify validator management contract.
 // Checks that the contract exists and verifies the bytecode. Otherwise, deploys a copy of the contract.
 func (c *Client) verifyVMC() error {
-	// TODO: Fetch validator manager contract.
 	b, err := c.client.CodeAt(context.Background(), validatorManagerAddress, nil)
 	if err != nil {
 		return fmt.Errorf("unable to get contract code at %s. %v", validatorManagerAddress, err)
@@ -50,6 +49,8 @@ func (c *Client) verifyVMC() error {
 	}
 
 	// TODO: Check contract bytecode is what we expected, otherwise return error.
+	// Note: The compiled byte code returned by the contract will not exactly match the original
+	// bytecode since the contract constructor is not saved on the chain.
 	if !bytes.Equal(b, abiBytecode) {
 		return fmt.Errorf("bytecode at contract address %s does not match expected bytecode", validatorManagerAddress.String())
 	}
@@ -65,7 +66,6 @@ func (c *Client) deployVMC() (*common.Address, error) {
 		return nil, fmt.Errorf("no accounts found")
 	}
 
-	// TODO: call unlock only if account is actually locked.
 	if err := c.unlockAccount(accounts[0]); err != nil {
 		return nil, fmt.Errorf("unable to unlock account 0: %v", err)
 	}
@@ -107,19 +107,4 @@ func (c *Client) deployVMC() (*common.Address, error) {
 	}
 
 	return &receipt.ContractAddress, nil
-}
-
-func (c *Client) unlockAccount(account accounts.Account) error {
-	pass := ""
-
-	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
-		blob, err := ioutil.ReadFile(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
-		if err != nil {
-			return fmt.Errorf("unable to read account password contents in file %s. %v", utils.PasswordFileFlag.Value, err)
-		}
-		// Some text files end in new line, remove with strings.Trim.
-		pass = strings.Trim(string(blob), "\n")
-	}
-
-	return c.keystore.Unlock(account, pass)
 }
