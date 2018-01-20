@@ -81,7 +81,7 @@ func (c *Client) deployVMC() (*common.Address, error) {
 	}
 
 	tx := types.NewContractCreation(nonce, new(big.Int).SetInt64(0) /*amount*/, contractGasLimit, suggestedGasPrice, abiBytecode)
-	signed, err := c.keystore.SignTx(accounts[0], tx, new(big.Int).SetInt64(1000) /*chainId*/) // TODO(prestonvanloon): reference chain ID from flag
+	signed, err := c.keystore.SignTx(accounts[0], tx, new(big.Int).SetUint64(c.networkID))
 	if err != nil {
 		return nil, fmt.Errorf("unable to sign transaction: %v", err)
 	}

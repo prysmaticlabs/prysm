@@ -19,10 +19,11 @@ const (
 
 // Client for sharding. Communicates to geth node via JSON RPC.
 type Client struct {
-	endpoint string             // Endpoint to JSON RPC
-	client   *ethclient.Client  // Ethereum RPC client.
-	keystore *keystore.KeyStore // Keystore containing the single signer
-	ctx      *cli.Context       // Command line context
+	endpoint  string             // Endpoint to JSON RPC
+	client    *ethclient.Client  // Ethereum RPC client.
+	keystore  *keystore.KeyStore // Keystore containing the single signer
+	ctx       *cli.Context       // Command line context
+	networkID uint64             // Ethereum network ID
 }
 
 // MakeShardingClient for interfacing with geth full node.
@@ -40,13 +41,18 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	if err != nil {
 		panic(err) // TODO(prestonvanloon): handle this
 	}
-
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
+	networkID := uint64(1)
+	if ctx.GlobalIsSet(utils.NetworkIdFlag.Name) {
+		networkID = ctx.GlobalUint64(utils.NetworkIdFlag.Name)
+	}
+
 	return &Client{
-		endpoint: endpoint,
-		keystore: ks,
-		ctx:      ctx,
+		endpoint:  endpoint,
+		keystore:  ks,
+		ctx:       ctx,
+		networkID: networkID,
 	}
 }
 

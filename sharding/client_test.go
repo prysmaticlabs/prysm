@@ -21,7 +21,7 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// FakeEthService based on implementation of internal/ethapi
+// FakeEthService based on implementation of internal/ethapi.Client
 type FakeEthService struct {
 	mu sync.Mutex
 
