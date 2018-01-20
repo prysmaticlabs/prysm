@@ -34,7 +34,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	endpoint := fmt.Sprintf("%s/geth.ipc", path)
 
 	config := &node.Config{
-		DataDir: "/tmp/ethereum",
+		DataDir: path,
 	}
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
