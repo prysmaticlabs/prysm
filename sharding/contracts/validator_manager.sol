@@ -2,6 +2,10 @@ pragma solidity ^0.4.19;
 
 import "RLP.sol";
 
+interface ValidatorContract {
+  function withdraw(bytes10 _sig) returns(bool);
+}
+
 contract VMC {
   using RLP for RLP.RLPItem;
   using RLP for RLP.Iterator;
@@ -11,7 +15,7 @@ contract VMC {
     // Amount of wei the validator holds
     uint deposit;
     // The address which the validator's signatures must verify to (to be later replaced with validation code)
-    address validationCodeAddr;
+    ValidatorContract validationCodeAddr;
     // Addess to withdraw to
     address returnAddr;
     // The cycle number which the validator would be included after
@@ -105,7 +109,7 @@ contract VMC {
     return activateValidatorNum + emptySlotsStackTop;
   }
 
-  function deposit(address _validationCodeAddr, address _returnAddr) public payable returns(int) {
+  function deposit(ValidatorContract _validationCodeAddr, address _returnAddr) public payable returns(int) {
     require(!isValcodeDeposited[_validationCodeAddr]);
     require(msg.value == depositSize);
     // Find the empty slot index in validators set
@@ -126,13 +130,14 @@ contract VMC {
     ++numValidators;
     isValcodeDeposited[_validationCodeAddr] = true;
     
-    log2(keccak256("deposit()"), bytes32(_validationCodeAddr), bytes32(index));
+    log2(keccak256("deposit()"), bytes32(address(_validationCodeAddr)), bytes32(index));
     return index;
   }
 
   function withdraw(int _validatorIndex, bytes10 _sig) public returns(bool) {
     var msgHash = keccak256("withdraw");
-    var result = validators[_validatorIndex].validationCodeAddr.call.gas(sigGasLimit)(msgHash, _sig) == true;
+    // TODO: Check this function
+    var result = validators[_validatorIndex].validationCodeAddr.withdraw.gas(sigGasLimit)(_sig) == true;
     if (result) {
       validators[_validatorIndex].returnAddr.transfer(validators[_validatorIndex].deposit);
       isValcodeDeposited[validators[_validatorIndex].validationCodeAddr] = false;
@@ -166,7 +171,7 @@ contract VMC {
 
   // Get all possible shard ids that the given valcode_addr
   // may be sampled in the current cycle
-  function getShardList(address _valcodeAddr) public constant returns(bool[100]) {
+  function getShardList(ValidatorContract _valcodeAddr) public constant returns(bool[100]) {
     bool[100] memory shardList;
     int cycle = int(block.number) / shufflingCycleLength;
     int cycleStartBlockNumber = cycle * shufflingCycleLength - 1;
@@ -191,9 +196,67 @@ contract VMC {
     return shardList;
   }
 
-  
+  // function checkHeader(int _shardId, bytes32 _periodStartPrevhash, int _expectedPeriodNumber) internal {
+  //   // Check if the header is valid
+  //   assert(_shardId >= 0 && _shardId < shardCount);
+  //   assert(block.number >= periodLength);
+  //   assert(uint(_expectedPeriodNumber) == block.number / periodLength);
+  //   assert(_periodStartPrevhash == block.blockhash(uint(_expectedPeriodNumber)*periodLength - 1));
+
+  //   // Check if this header already exists
+  //   var entireHeaderHash = keccak256(_header);
+  //   assert(entireHeaderHash != bytes32(0));
+  //   assert(collationHeaders[shardId][entireHeaderHash].score == 0);
+  // }
+
   function addHeader(bytes _header) public returns(bool) {
+    address zeroAddr = 0x0;
+    // require(_header.length <= 4096);
     // TODO
+    // values = RLPList(header, [num, num, bytes32, bytes32, bytes32, address, bytes32, bytes32, num, bytes])
+    // return True
+    bytes memory mHeader = _header;
+    var RLPList = mHeader.toRLPItem(true).iterator();
+    int shardId = RLPList.next().toInt();
+    int expectedPeriodNumber = RLPList.next().toInt();
+    bytes32 periodStartPrevhash = RLPList.next().toBytes32();
+    bytes32 parentCollationHash = RLPList.next().toBytes32();
+    bytes32 txListRoot = RLPList.next().toBytes32();
+    address collationCoinbase = RLPList.next().toAddress();
+    bytes32 postStateRoot = RLPList.next().toBytes32();
+    bytes32 receiptRoot = RLPList.next().toBytes32();
+    int collationNumber = RLPList.next().toInt();
+    bytes memory sig = RLPList.next().toBytes();
+    
+    // Check whether the parent exists.
+    // if (parent_collation_hash == 0), i.e., is the genesis,
+    // then there is no need to check.
+    if (parentCollationHash != bytes32(0))
+      assert(parentCollationHash == bytes32(0) || collationHeaders[shardId][parentCollationHash].score > 0);
+    // Check if only one colllation in one period
+    assert(periodHead[shardId] < expectedPeriodNumber);
+
+    // Check the signature with validation_code_addr
+    var collatorValcodeAddr = sample(shardId);
+    if (collatorValcodeAddr == zeroAddr) {
+      return false;
+    }
+
+    
+    // var sighash = sighasherAddr.call.gas(20000)(_header);
+    // var collatorCall = collatorValcodeAddr.call.gas(sigGasLimit)();
+
+    // assert(collatorCall == )
+    // if collator_valcode_addr == zero_addr:
+    //     return False
+    // sighash = extract32(raw_call(self.sighasher_addr, header, gas=200000, outsize=32), 0)
+    // assert extract32(raw_call(collator_valcode_addr, concat(sighash, sig), gas=self.sig_gas_limit, outsize=32), 0) == as_bytes32(1)
+
+
+    // Check score == collation_number
+    // var score = collationHeaders[shardId][parentCollationHash].score + 1;
+    // assert(collationNumber == score);
+
   }
 
   function getPeriodStartPrevhash(uint _expectedPeriodNumber) public constant returns(bytes32) {
