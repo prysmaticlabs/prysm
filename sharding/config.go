@@ -15,7 +15,7 @@ var (
 	sigGasLimit = 40000
 	// Number of blocks in a period
 	periodLength = 5
-	// Number of periods to lookahead for ??? TODO(prestonvanloon) finish this comment.
+	// Number of periods ahead of current period which the contract is able to return the collator of that period.
 	lookaheadPeriods = 4
 	// Required deposit size in wei
 	depositSize = new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil) // 100 ETH
