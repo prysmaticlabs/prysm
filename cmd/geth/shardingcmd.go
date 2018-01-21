@@ -9,14 +9,16 @@ import (
 
 var (
 	shardingClientCommand = cli.Command{
-		Action:      utils.MigrateFlags(shardingClient),
-		Name:        "sharding",
-		Aliases:     []string{"shard"},
-		Usage:       "Start a sharding client",
-		ArgsUsage:   "[endpoint]",
-		Flags:       []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag},
-		Category:    "SHARDING COMMANDS",
-		Description: "TODO(prestonvanloon)- Add sharding client description",
+		Action:    utils.MigrateFlags(shardingClient),
+		Name:      "sharding",
+		Aliases:   []string{"shard"},
+		Usage:     "Start a sharding client",
+		ArgsUsage: "[endpoint]",
+		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag},
+		Category:  "SHARDING COMMANDS",
+		Description: `
+The Geth sharding client connects to a running geth node in sharding mode. This feature is a work in progress.
+`,
 	}
 )
 
