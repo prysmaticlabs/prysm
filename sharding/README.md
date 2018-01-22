@@ -7,12 +7,9 @@ This repository contains the sharding implementation for the go-ethereum client.
 To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node:
 
 ```
-$ git clone github.com/prysmaticlabs/geth-sharding
-$ make geth
-$ cd $GOPATH/src/github.com/prysmaticlabs/geth-sharding
 $ make geth
 $ ./build/bin/geth init ./sharding/genesis.json -datadir /path/to/your/datadir
-$ ./build/bin/geth --nodiscover console --datadir /path/to/your/datadir
+$ ./build/bin/geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
 ```
 
 Then, the geth console can start up and you can start a miner as follows:
@@ -29,10 +26,10 @@ Then, once you are satisfied with mining for a few seconds, stop the miner with
 > miner.stop()
 ```
 
-Once you have this private geth node running on your local network, the sharding client can be started as a standalone geth command as follows in a separate terminal window:
+Now, save the passphrase you used in the geth node into a text file called `password.txt`. Then, once you have this private geth node running on your local network, the sharding client can be started as a standalone geth command as follows in a separate terminal window:
 
 ```
-$ geth sharding /path/to/your/datadir/geth.ipc
+$ ./build/bin/geth shard --datadir=~/Desktop/datadir --password=password.txt
 ```
 
 The project consists of the following parts, with each of them requiring comprehensive tests:
