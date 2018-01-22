@@ -67,6 +67,12 @@ func (s *FakeEthService) GetTransactionByHash(hash common.Hash) (tx *types.Trans
 	return nil, false, nil
 }
 
+type FakeNetworkService struct{}
+
+func (s *FakeNetworkService) Version() (string, error) {
+	return "100", nil
+}
+
 func newTestServer(endpoint string) (*rpc.Server, error) {
 	// Create datadir.
 	if err := os.Mkdir(endpoint, 0777); err != nil {
@@ -85,6 +91,9 @@ func newTestServer(endpoint string) (*rpc.Server, error) {
 	// Create server and register eth service with FakeEthService
 	server := rpc.NewServer()
 	if err := server.RegisterName("eth", new(FakeEthService)); err != nil {
+		return nil, err
+	}
+	if err := server.RegisterName("net", new(FakeNetworkService)); err != nil {
 		return nil, err
 	}
 	l, err := rpc.CreateIPCListener(endpoint + "/geth.ipc")
