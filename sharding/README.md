@@ -29,7 +29,7 @@ Then, once you are satisfied with mining for a few seconds, stop the miner with
 Now, save the passphrase you used in the geth node into a text file called `password.txt`. Then, once you have this private geth node running on your local network, the sharding client can be started as a standalone geth command as follows in a separate terminal window:
 
 ```
-$ ./build/bin/geth shard --datadir=~/Desktop/datadir --password=password.txt
+$ ./build/bin/geth shard --datadir=/path/to/your/datadir --password=password.txt
 ```
 
 The project consists of the following parts, with each of them requiring comprehensive tests:
