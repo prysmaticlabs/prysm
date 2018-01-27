@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
-// InitVMC initializes the validator management contract bindings.
+// initVMC initializes the validator management contract bindings.
 // If the VMC does not exist, it will be deployed.
 func initVMC(c *Client) error {
 	b, err := c.client.CodeAt(context.Background(), validatorManagerAddress, nil)
