@@ -42,7 +42,7 @@ func initVMC(c *Client) error {
 			},
 		}
 
-		addr, tx, contract, err := contracts.DeployValidatorContract(&ops, c.client)
+		addr, tx, contract, err := contracts.DeployVMC(&ops, c.client)
 		if err != nil {
 			return fmt.Errorf("unable to deploy validator management contract: %v", err)
 		}
@@ -57,7 +57,7 @@ func initVMC(c *Client) error {
 		c.vmc = contract
 		log.Info(fmt.Sprintf("New contract deployed at %s", addr.String()))
 	} else {
-		contract, err := contracts.NewValidatorContract(validatorManagerAddress, c.client)
+		contract, err := contracts.NewVMC(validatorManagerAddress, c.client)
 		if err != nil {
 			return fmt.Errorf("failed to create validator contract: %v", err)
 		}
