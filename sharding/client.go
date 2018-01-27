@@ -22,11 +22,11 @@ const (
 
 // Client for sharding. Communicates to geth node via JSON RPC.
 type Client struct {
-	endpoint string                       // Endpoint to JSON RPC
-	client   *ethclient.Client            // Ethereum RPC client.
-	keystore *keystore.KeyStore           // Keystore containing the single signer
-	ctx      *cli.Context                 // Command line context
-	vmc      *contracts.ValidatorContract // The deployed validator management contract
+	endpoint string             // Endpoint to JSON RPC
+	client   *ethclient.Client  // Ethereum RPC client.
+	keystore *keystore.KeyStore // Keystore containing the single signer
+	ctx      *cli.Context       // Command line context
+	vmc      *contracts.VMC     // The deployed validator management contract
 }
 
 // MakeShardingClient for interfacing with geth full node.
