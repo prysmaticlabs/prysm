@@ -45,16 +45,18 @@ func (s *FakeEthService) SetGetCode(resp hexutil.Bytes, err error) {
 	s.mu.Unlock()
 }
 
-func (s *FakeEthService) GasPrice(ctx context.Context) (*big.Int, error) {
-	return big.NewInt(10000), nil
+func (s *FakeEthService) GasPrice(ctx context.Context) (hexutil.Big, error) {
+	b := big.NewInt(1000)
+	return hexutil.Big(*b), nil
 }
 
-func (s *FakeEthService) EstimateGas(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
-	return hexutil.MustDecode("0x1000000000"), nil
+func (s *FakeEthService) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (hexutil.Uint64, error) {
+	h := hexutil.Uint64(uint64(1000000))
+	return h, nil
 }
 
-func (s *FakeEthService) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
-	return nil, nil
+func (s *FakeEthService) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Uint64, error) {
+	return hexutil.Uint64(uint64(1)), nil
 }
 
 func (s *FakeEthService) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
