@@ -72,8 +72,14 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// Listens to incoming transactions from the geth node's txpool
+	// TODO: Wait to be selected as a collator, then start listening to the
+	// geth node's txpool.
 
+	// Listens to incoming transactions from the geth node's txpool and directs
+	// them into the VMC if node is a collator
+	if err := listenTXPool(c); err != nil {
+		return err
+	}
 	return nil
 }
 
