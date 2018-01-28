@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"path"
 	"sync"
 	"testing"
 
@@ -80,11 +81,6 @@ func (s *FakeNetworkService) Version() (string, error) {
 }
 
 func newTestServer(endpoint string) (*rpc.Server, error) {
-	// Create datadir.
-	if err := os.Mkdir(endpoint, 0777); err != nil {
-		return nil, err
-	}
-
 	// Create a default account without password.
 	scryptN, scryptP, keydir, err := (&node.Config{DataDir: endpoint}).AccountConfig()
 	if err != nil {
@@ -118,7 +114,7 @@ func createContext() *cli.Context {
 }
 
 func TestShardingClient(t *testing.T) {
-	endpoint := fmt.Sprintf("%s/go-ethereum-test-ipc-%d-%d", os.TempDir(), os.Getpid(), rand.Int63())
+	endpoint := path.Join(os.TempDir(), fmt.Sprintf("go-ethereum-test-ipc-%d-%d", os.Getpid(), rand.Int63()))
 	server, err := newTestServer(endpoint)
 	if err != nil {
 		t.Fatalf("Failed to create a test server: %v", err)
