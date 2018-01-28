@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -25,6 +26,7 @@ type Client struct {
 	client   *ethclient.Client  // Ethereum RPC client.
 	keystore *keystore.KeyStore // Keystore containing the single signer
 	ctx      *cli.Context       // Command line context
+	vmc      *contracts.VMC     // The deployed validator management contract
 }
 
 // MakeShardingClient for interfacing with geth full node.
@@ -66,7 +68,7 @@ func (c *Client) Start() error {
 	}
 	c.client = ethclient.NewClient(rpcClient)
 	defer rpcClient.Close()
-	if err := c.verifyVMC(); err != nil {
+	if err := initVMC(c); err != nil {
 		return err
 	}
 
