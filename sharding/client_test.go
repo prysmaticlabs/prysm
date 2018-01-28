@@ -10,7 +10,6 @@ import (
 	"sync"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -50,7 +49,7 @@ func (s *FakeEthService) GasPrice(ctx context.Context) (hexutil.Big, error) {
 	return hexutil.Big(*b), nil
 }
 
-func (s *FakeEthService) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (hexutil.Uint64, error) {
+func (s *FakeEthService) EstimateGas(ctx context.Context, msg interface{}) (hexutil.Uint64, error) {
 	h := hexutil.Uint64(uint64(1000000))
 	return h, nil
 }
