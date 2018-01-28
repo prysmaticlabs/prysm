@@ -72,6 +72,13 @@ func (c *Client) Start() error {
 		return err
 	}
 
+	// TODO: Deposit 100ETH into the validator set in the VMC. Checks if account
+	// is already a validator in the VMC (in the case the client restarted)
+	// Once that's done we can subscribe to block headers
+	if err := initVMCValidator(c); err != nil {
+		return err
+	}
+
 	// Listens to block headers from the geth node and if we are an eligible
 	// proposer, we fetch pending transactions and propose a collation
 	if err := subscribeBlockHeaders(c); err != nil {
