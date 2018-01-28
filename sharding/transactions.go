@@ -87,6 +87,5 @@ func (tx *ShardingTransaction) ChainID() *big.Int {
 
 // ShardID determines the shard a transaction belongs to
 func (tx *ShardingTransaction) ShardID() *big.Int {
-	// TODO: figure out how to determine ShardID. 1 for now
 	return big.NewInt(1)
 }
