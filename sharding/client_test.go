@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"path"
 	"sync"
 	"testing"
 
@@ -44,12 +45,18 @@ func (s *FakeEthService) SetGetCode(resp hexutil.Bytes, err error) {
 	s.mu.Unlock()
 }
 
-func (s *FakeEthService) GasPrice(ctx context.Context) (*big.Int, error) {
-	return big.NewInt(10000), nil
+func (s *FakeEthService) GasPrice(ctx context.Context) (hexutil.Big, error) {
+	b := big.NewInt(1000)
+	return hexutil.Big(*b), nil
 }
 
-func (s *FakeEthService) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
-	return nil, nil
+func (s *FakeEthService) EstimateGas(ctx context.Context, msg interface{}) (hexutil.Uint64, error) {
+	h := hexutil.Uint64(uint64(1000000))
+	return h, nil
+}
+
+func (s *FakeEthService) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Uint64, error) {
+	return hexutil.Uint64(uint64(1)), nil
 }
 
 func (s *FakeEthService) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
@@ -74,11 +81,6 @@ func (s *FakeNetworkService) Version() (string, error) {
 }
 
 func newTestServer(endpoint string) (*rpc.Server, error) {
-	// Create datadir.
-	if err := os.Mkdir(endpoint, 0777); err != nil {
-		return nil, err
-	}
-
 	// Create a default account without password.
 	scryptN, scryptP, keydir, err := (&node.Config{DataDir: endpoint}).AccountConfig()
 	if err != nil {
@@ -112,7 +114,7 @@ func createContext() *cli.Context {
 }
 
 func TestShardingClient(t *testing.T) {
-	endpoint := fmt.Sprintf("%s/go-ethereum-test-ipc-%d-%d", os.TempDir(), os.Getpid(), rand.Int63())
+	endpoint := path.Join(os.TempDir(), fmt.Sprintf("go-ethereum-test-ipc-%d-%d", os.Getpid(), rand.Int63()))
 	server, err := newTestServer(endpoint)
 	if err != nil {
 		t.Fatalf("Failed to create a test server: %v", err)
