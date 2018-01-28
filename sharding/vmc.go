@@ -66,3 +66,11 @@ func initVMC(c *Client) error {
 
 	return nil
 }
+
+// initVMCValidator checks if the account is a validator in the VMC. If
+// the account is not in the set, it will deposit 100ETH into contract.
+func initVMCValidator(c *Client) error {
+
+	// TODO: Implement
+
+}
