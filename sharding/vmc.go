@@ -38,7 +38,7 @@ func initVMC(c *Client) error {
 				if err != nil {
 					return nil, fmt.Errorf("unable to fetch networkID: %v", err)
 				}
-				return c.keystore.SignTx(accounts[0], tx, networkID)
+				return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
 			},
 		}
 
