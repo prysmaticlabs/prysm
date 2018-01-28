@@ -72,7 +72,7 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// TODO: Wait to be selected as collator in goroutine?
+	// Listens to incoming transactions from the geth node's txpool
 
 	return nil
 }
