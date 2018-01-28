@@ -44,12 +44,18 @@ func (s *FakeEthService) SetGetCode(resp hexutil.Bytes, err error) {
 	s.mu.Unlock()
 }
 
-func (s *FakeEthService) GasPrice(ctx context.Context) (*big.Int, error) {
-	return big.NewInt(10000), nil
+func (s *FakeEthService) GasPrice(ctx context.Context) (hexutil.Big, error) {
+	b := big.NewInt(1000)
+	return hexutil.Big(*b), nil
 }
 
-func (s *FakeEthService) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Uint64, error) {
-	return nil, nil
+func (s *FakeEthService) EstimateGas(ctx context.Context, msg interface{}) (hexutil.Uint64, error) {
+	h := hexutil.Uint64(uint64(1000000))
+	return h, nil
+}
+
+func (s *FakeEthService) GetTransactionCount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Uint64, error) {
+	return hexutil.Uint64(uint64(1)), nil
 }
 
 func (s *FakeEthService) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
@@ -65,6 +71,12 @@ func (s *FakeEthService) GetTransactionReceipt(hash common.Hash) (*types.Receipt
 
 func (s *FakeEthService) GetTransactionByHash(hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
 	return nil, false, nil
+}
+
+type FakeNetworkService struct{}
+
+func (s *FakeNetworkService) Version() (string, error) {
+	return "100", nil
 }
 
 func newTestServer(endpoint string) (*rpc.Server, error) {
@@ -85,6 +97,9 @@ func newTestServer(endpoint string) (*rpc.Server, error) {
 	// Create server and register eth service with FakeEthService
 	server := rpc.NewServer()
 	if err := server.RegisterName("eth", new(FakeEthService)); err != nil {
+		return nil, err
+	}
+	if err := server.RegisterName("net", new(FakeNetworkService)); err != nil {
 		return nil, err
 	}
 	l, err := rpc.CreateIPCListener(endpoint + "/geth.ipc")
