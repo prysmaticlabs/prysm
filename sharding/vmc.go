@@ -71,7 +71,8 @@ func initVMC(c *Client) error {
 // the account is not in the set, it will deposit 100ETH into contract.
 func initVMCValidator(c *Client) error {
 
-	// TODO: Check if account is already in validator set
+	// TODO: Check if account is already in validator set. Do we need to implement
+	// a func in solidity to do this?
 
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
