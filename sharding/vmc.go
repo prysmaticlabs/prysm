@@ -81,8 +81,11 @@ func initVMCValidator(c *Client) error {
 	if err := c.unlockAccount(accounts[0]); err != nil {
 		return fmt.Errorf("unable to unlock account 0: %v", err)
 	}
+
+	// Deposits 100ETH into the VMC from the current account
 	ops := bind.TransactOpts{
-		From: accounts[0].Address,
+		From:  accounts[0].Address,
+		Value: depositSize,
 		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			networkID, err := c.client.NetworkID(context.Background())
 			if err != nil {
@@ -92,8 +95,10 @@ func initVMCValidator(c *Client) error {
 		},
 	}
 
-	// Deposits 100ETH into the VMC from the current account
-	c.vmc.VMCTransactor.Deposit(&ops)
+	tx, err := c.vmc.VMCTransactor.Deposit(&ops, /* validatorcodeaddr */, accounts[0].Address)
+	if err != nil {
+		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
+	}
 	return nil
 
 }
