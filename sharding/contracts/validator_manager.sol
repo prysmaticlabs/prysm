@@ -2,10 +2,6 @@ pragma solidity ^0.4.19;
 
 import "RLP.sol";
 
-interface ValidatorContract {
-  function withdraw(bytes32 _sig) returns(bool);
-}
-
 interface SigHasherContract {
   // function () returns(bytes32);
 }
@@ -18,8 +14,8 @@ contract VMC {
   struct Validator {
     // Amount of wei the validator holds
     uint deposit;
-    // The address which the validator's signatures must verify to (to be later replaced with validation code)
-    ValidatorContract validationCodeAddr;
+    // The validator's address
+    address addr;
     // Addess to withdraw to
     address returnAddr;
     // The cycle number which the validator would be included after
@@ -97,7 +93,6 @@ contract VMC {
   }
 
   function getValidatorsMaxIndex() public view returns(int) {
-    address zeroAddr = 0x0;
     int activateValidatorNum = 0;
     int currentCycle = int(block.number) / shufflingCycleLength;
     int allValidatorSlotsNum = numValidators + emptySlotsStackTop;
@@ -106,15 +101,14 @@ contract VMC {
     for (int i = 0; i < 1024; ++i) {
         if (i >= allValidatorSlotsNum)
             break;
-        if ((validators[i].validationCodeAddr != zeroAddr) &&
-            (validators[i].cycle <= currentCycle))
+        if (validators[i].cycle <= currentCycle)
             activateValidatorNum += 1;
     }
     return activateValidatorNum + emptySlotsStackTop;
   }
 
-  function deposit(ValidatorContract _validationCodeAddr, address _returnAddr) public payable returns(int) {
-    require(!isValcodeDeposited[_validationCodeAddr]);
+  function deposit(address _returnAddr) public payable returns(int) {
+    require(!isValcodeDeposited[msg.sender]);
     require(msg.value == depositSize);
     // Find the empty slot index in validators set
     int index;
@@ -126,31 +120,27 @@ contract VMC {
       nextCycle = (int(block.number) / shufflingCycleLength) + 1;
       validators[index] = Validator({
         deposit: msg.value,
-        validationCodeAddr: _validationCodeAddr,
+        addr: msg.sender,
         returnAddr: _returnAddr,
         cycle: nextCycle
       });
     }
     ++numValidators;
-    isValcodeDeposited[_validationCodeAddr] = true;
+    isValcodeDeposited[msg.sender] = true;
     
-    log2(keccak256("deposit()"), bytes32(address(_validationCodeAddr)), bytes32(index));
+    log2(keccak256("deposit()"), bytes32(msg.sender), bytes32(index));
     return index;
   }
 
-  function withdraw(int _validatorIndex, bytes32 _sig) public returns(bool) {
+  function withdraw(int _validatorIndex) public {
     var msgHash = keccak256("withdraw");
-    // TODO: Check this function
-    var result = validators[_validatorIndex].validationCodeAddr.withdraw.gas(sigGasLimit)(_sig);
-    if (result) {
-      validators[_validatorIndex].returnAddr.transfer(validators[_validatorIndex].deposit);
-      isValcodeDeposited[validators[_validatorIndex].validationCodeAddr] = false;
-      delete validators[_validatorIndex];
-      stackPush(_validatorIndex);
-      --numValidators;
-      log1(msgHash, bytes32(_validatorIndex));
-      return result;
-    }
+    require(msg.sender == validators[_validatorIndex].addr);
+    validators[_validatorIndex].returnAddr.transfer(validators[_validatorIndex].deposit);
+    isValcodeDeposited[validators[_validatorIndex].addr] = false;
+    delete validators[_validatorIndex];
+    stackPush(_validatorIndex);
+    --numValidators;
+    log1(msgHash, bytes32(_validatorIndex));
   }
 
   function sample(int _shardId) public constant returns(address) {
@@ -170,12 +160,12 @@ contract VMC {
     if (validators[int(validatorIndex)].cycle > cycle)
       return 0x0;
     else
-      return validators[int(validatorIndex)].validationCodeAddr;
+      return validators[int(validatorIndex)].addr;
   }
 
   // Get all possible shard ids that the given _valcodeAddr
   // may be sampled in the current cycle
-  function getShardList(ValidatorContract _valcodeAddr) public constant returns(bool[100]) {
+  function getShardList(address _validatorAddr) public constant returns(bool[100]) {
     bool[100] memory shardList;
     int cycle = int(block.number) / shufflingCycleLength;
     int cycleStartBlockNumber = cycle * shufflingCycleLength - 1;
@@ -190,7 +180,7 @@ contract VMC {
         for (uint8 possibleIndexInSubset = 0; possibleIndexInSubset < 100; ++possibleIndexInSubset) {
           uint validatorIndex = uint(keccak256(cycleSeed, bytes32(shardId), bytes32(possibleIndexInSubset))) 
                              % uint(validatorsMaxIndex);
-          if (_valcodeAddr == validators[int(validatorIndex)].validationCodeAddr) {
+          if (_validatorAddr == validators[int(validatorIndex)].addr) {
             shardList[shardId] = true;
             break;
           }
@@ -227,7 +217,6 @@ contract VMC {
     }
 
   function addHeader(bytes _header) public returns(bool) {
-    address zeroAddr = 0x0;
     // require(_header.length <= 4096);
     // TODO
     // values = RLPList(header, [num, num, bytes32, bytes32, bytes32, address, bytes32, bytes32, num, bytes])
