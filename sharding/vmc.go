@@ -71,6 +71,29 @@ func initVMC(c *Client) error {
 // the account is not in the set, it will deposit 100ETH into contract.
 func initVMCValidator(c *Client) error {
 
-	// TODO: Implement
+	// TODO: Check if account is already in validator set
+
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return fmt.Errorf("unable to unlock account 0: %v", err)
+	}
+	ops := bind.TransactOpts{
+		From: accounts[0].Address,
+		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			networkID, err := c.client.NetworkID(context.Background())
+			if err != nil {
+				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
+			}
+			return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
+		},
+	}
+
+	// Deposits 100ETH into the VMC from the current account
+	c.vmc.VMCTransactor.Deposit(&ops)
+	return nil
 
 }
