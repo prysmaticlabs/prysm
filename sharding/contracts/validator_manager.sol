@@ -49,17 +49,18 @@ contract VMC {
   // The top index of the stack in empty_slots_stack
   int emptySlotsStackTop;
 
-  // The exact deposit size which you have to deposit to become a validator
-  uint depositSize;
-  // Any given validator randomly gets allocated to some number of shards every SHUFFLING_CYCLE
-  int shufflingCycleLength;
-  // Gas limit of the signature validation code
-  uint sigGasLimit;
   // Is a valcode addr deposited now?
   mapping (address => bool) isValcodeDeposited;
-  uint periodLength;
-  int numValidatorsPerCycle;
-  int shardCount;
+
+  // Constant values
+  uint constant periodLength = 5;
+  int constant numValidatorsPerCycle = 100;
+  int constant shardCount = 100;
+  // The exact deposit size which you have to deposit to become a validator
+  uint constant depositSize = 100 ether;
+  // Any given validator randomly gets allocated to some number of shards every SHUFFLING_CYCLE
+  int constant shufflingCycleLength = 5; // FIXME: just modified temporarily for test;
+
   bytes32 addHeaderLogTopic;
   SigHasherContract sighasher;
   // Log the latest period number of the shard
@@ -68,12 +69,6 @@ contract VMC {
   function VMC() public {
     numValidators = 0;
     emptySlotsStackTop = 0;
-    depositSize = 100 ether;
-    shufflingCycleLength = 5; // FIXME: just modified temporarily for test;
-    sigGasLimit = 400000;
-    periodLength = 5;
-    numValidatorsPerCycle = 100;
-    shardCount = 100;
     addHeaderLogTopic = keccak256("add_header()");
     sighasher = SigHasherContract(0xDFFD41E18F04Ad8810c83B14FD1426a82E625A7D);
   }
@@ -165,8 +160,8 @@ contract VMC {
 
   // Get all possible shard ids that the given _valcodeAddr
   // may be sampled in the current cycle
-  function getShardList(address _validatorAddr) public constant returns(bool[100]) {
-    bool[100] memory shardList;
+  function getShardList(address _validatorAddr) public constant returns(bool[shardCount]) {
+    bool[shardCount] memory shardList;
     int cycle = int(block.number) / shufflingCycleLength;
     int cycleStartBlockNumber = cycle * shufflingCycleLength - 1;
     if (cycleStartBlockNumber < 0)
@@ -175,9 +170,9 @@ contract VMC {
     var cycleSeed = block.blockhash(uint(cycleStartBlockNumber));
     int validatorsMaxIndex = getValidatorsMaxIndex();
     if (numValidators != 0) {
-      for (uint8 shardId = 0; shardId < 100; ++shardId) {
+      for (uint8 shardId = 0; shardId < shardCount; ++shardId) {
         shardList[shardId] = false;
-        for (uint8 possibleIndexInSubset = 0; possibleIndexInSubset < 100; ++possibleIndexInSubset) {
+        for (uint8 possibleIndexInSubset = 0; possibleIndexInSubset < shardCount; ++possibleIndexInSubset) {
           uint validatorIndex = uint(keccak256(cycleSeed, bytes32(shardId), bytes32(possibleIndexInSubset))) 
                              % uint(validatorsMaxIndex);
           if (_validatorAddr == validators[int(validatorIndex)].addr) {
@@ -189,19 +184,6 @@ contract VMC {
     }
     return shardList;
   }
-
-  // function checkHeader(int _shardId, bytes32 _periodStartPrevhash, int _expectedPeriodNumber) internal {
-  //   // Check if the header is valid
-  //   assert(_shardId >= 0 && _shardId < shardCount);
-  //   assert(block.number >= periodLength);
-  //   assert(uint(_expectedPeriodNumber) == block.number / periodLength);
-  //   assert(_periodStartPrevhash == block.blockhash(uint(_expectedPeriodNumber)*periodLength - 1));
-
-  //   // Check if this header already exists
-  //   var entireHeaderHash = keccak256(_header);
-  //   assert(entireHeaderHash != bytes32(0));
-  //   assert(collationHeaders[shardId][entireHeaderHash].score == 0);
-  // }
 
   struct Header {
       int shardId;
