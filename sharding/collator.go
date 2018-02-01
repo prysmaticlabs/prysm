@@ -27,6 +27,15 @@ func subscribeBlockHeaders(c *Client) error {
 		case head := <-headerChan:
 			// Query the current state to see if we are an eligible proposer
 			log.Info(fmt.Sprintf("received new header %v", head.Number.String()))
+			// TODO: Only run this code on certain periods?
+			watchShards(head)
 		}
 	}
+}
+
+// watchShards checks if we are an eligible proposer for collation for
+// the available shards in the VMC. The function calls getEligibleProposer from
+// the VMC and proposes a collation if conditions are met
+func watchShards(head types.Header) {
+
 }
