@@ -28,7 +28,7 @@ func subscribeBlockHeaders(c *Client) error {
 			// Query the current state to see if we are an eligible proposer
 			log.Info(fmt.Sprintf("received new header %v", head.Number.String()))
 			// TODO: Only run this code on certain periods?
-			watchShards(head)
+			watchShards(c, head)
 		}
 	}
 }
@@ -36,6 +36,22 @@ func subscribeBlockHeaders(c *Client) error {
 // watchShards checks if we are an eligible proposer for collation for
 // the available shards in the VMC. The function calls getEligibleProposer from
 // the VMC and proposes a collation if conditions are met
-func watchShards(head types.Header) {
+func watchShards(c *Client, head *types.Header) error {
 
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return fmt.Errorf("unable to unlock account 0: %v", err)
+	}
+
+	shards, err := c.vmc.VMCCaller.GetShardList(accounts[0].Address)
+	if err != nil {
+		return fmt.Errorf("shard list could not be fetched")
+	}
+	log.info(fmt.Sprintf("%s", shards))
+
+	return nil
 }
