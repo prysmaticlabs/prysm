@@ -10,7 +10,7 @@ contract VMC {
   using RLP for RLP.RLPItem;
   using RLP for RLP.Iterator;
   using RLP for bytes;
-  
+
   struct Validator {
     // Amount of wei the validator holds
     uint deposit;
@@ -59,7 +59,7 @@ contract VMC {
   mapping (address => bool) isValcodeDeposited;
   uint periodLength;
   int numValidatorsPerCycle;
-  int shardCount;
+  int public shardCount;
   bytes32 addHeaderLogTopic;
   SigHasherContract sighasher;
   // Log the latest period number of the shard
@@ -127,7 +127,7 @@ contract VMC {
     }
     ++numValidators;
     isValcodeDeposited[msg.sender] = true;
-    
+
     log2(keccak256("deposit()"), bytes32(msg.sender), bytes32(index));
     return index;
   }
@@ -156,7 +156,7 @@ contract VMC {
 
     uint indexInSubset = uint(keccak256(seed, bytes32(_shardId))) % uint(numValidatorsPerCycle);
     uint validatorIndex = uint(keccak256(cycleSeed, bytes32(_shardId), bytes32(indexInSubset))) % uint(getValidatorsMaxIndex());
-    
+
     if (validators[int(validatorIndex)].cycle > cycle)
       return 0x0;
     else
@@ -178,7 +178,7 @@ contract VMC {
       for (uint8 shardId = 0; shardId < 100; ++shardId) {
         shardList[shardId] = false;
         for (uint8 possibleIndexInSubset = 0; possibleIndexInSubset < 100; ++possibleIndexInSubset) {
-          uint validatorIndex = uint(keccak256(cycleSeed, bytes32(shardId), bytes32(possibleIndexInSubset))) 
+          uint validatorIndex = uint(keccak256(cycleSeed, bytes32(shardId), bytes32(possibleIndexInSubset)))
                              % uint(validatorsMaxIndex);
           if (_validatorAddr == validators[int(validatorIndex)].addr) {
             shardList[shardId] = true;
@@ -259,7 +259,7 @@ contract VMC {
     var collatorValcodeAddr = sample(header.shardId);
     if (collatorValcodeAddr == 0x0)
         return false;
-    
+
     // assembly {
       // TODO next block
     // }
@@ -291,7 +291,7 @@ contract VMC {
     // Emit log
     // TODO LOG
     // log1(addHeaderLogTopic, _header);
-    
+
     return true;
   }
 
@@ -332,11 +332,11 @@ contract VMC {
     });
     var receiptId = numReceipts;
     ++numReceipts;
-    
+
     log3(keccak256("tx_to_shard()"), bytes32(_to), bytes32(_shardId), bytes32(receiptId));
     return receiptId;
   }
-  
+
   function updataGasPrice(int _receiptId, uint _txGasprice) public payable returns(bool) {
     require(receipts[_receiptId].sender == msg.sender);
     receipts[_receiptId].txGasprice = _txGasprice;
