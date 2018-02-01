@@ -71,9 +71,10 @@ func initVMC(c *Client) error {
 // the account is not in the set, it will deposit 100ETH into contract.
 func initVMCValidator(c *Client) error {
 
-	// TODO: Check if account is already in validator set. Do we need to implement
-	// a func in solidity to do this?
+	// TODO: Check if account is already in validator set. Fetch this From
+	// the VMC contract's validator set.
 
+	// Unlocks the current account from the keystore
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
 		return fmt.Errorf("no accounts found")
@@ -96,10 +97,11 @@ func initVMCValidator(c *Client) error {
 		},
 	}
 
-	tx, err := c.vmc.VMCTransactor.Deposit(&ops, /* validatorcodeaddr */, accounts[0].Address)
+	_, err := c.vmc.VMCTransactor.Deposit(&ops, accounts[0].Address)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
 	}
+	log.Info(fmt.Sprintf("deposited 100ETH into contract"))
 	return nil
 
 }
