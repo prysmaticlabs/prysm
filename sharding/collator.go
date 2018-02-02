@@ -60,9 +60,21 @@ func watchShards(c *Client, head *types.Header) error {
 	s := 0
 	for s < int(count.Int64()) {
 		// Checks if we are an eligible proposer according to the VMC
-		log.Info(fmt.Sprintf("shard %d", s))
+		addr, err := c.vmc.VMCCaller.Sample(&ops, big.NewInt(s))
+		if err != nil {
+			return err
+		}
+		// if the address is the coinbase addr (current node running the sharding
+		// clint, then we propose a new collation)
+		if addr == accounts[0].Address {
+			proposeCollation()
+		}
 		s++
 	}
 
+	return nil
+}
+
+func proposeCollation() {
 	return nil
 }
