@@ -14,7 +14,7 @@ contract VMC {
   }
 
   struct CollationHeader {
-    bytes32 parentCollationHash;
+    bytes32 parentHash;
     int score;
   }
 
@@ -45,7 +45,9 @@ contract VMC {
   // shardId => headerHash
   mapping (int => bytes32) shardHead;
   
+  // Number of validators
   int numValidators;
+  // Number of receipts
   int numReceipts;
   // Indexs of empty slots caused by the function `withdraw`
   mapping (int => int) emptySlotsStack;
@@ -134,9 +136,9 @@ contract VMC {
 
   // Attempts to process a collation header, returns true on success, reverts on failure.
   function addHeader(int _shardId, uint _expectedPeriodNumber, bytes32 _periodStartPrevHash,
-                     bytes32 _parentCollationHash, bytes32 _txListRoot,
-                     address _collationCoinbase, bytes32 _postStateRoot, bytes32 _receiptRoot,
-                     int _collationNumber) public returns(bool) {
+                     bytes32 _parentHash, bytes32 _transactionRoot,
+                     address _coinbase, bytes32 _stateRoot, bytes32 _receiptRoot,
+                     int _number) public returns(bool) {
     HeaderVars memory headerVars;
 
     // Check if the header is valid
@@ -147,15 +149,14 @@ contract VMC {
 
     // Check if this header already exists
     headerVars.entireHeaderHash = keccak256(_shardId, _expectedPeriodNumber, _periodStartPrevHash,
-                                   _parentCollationHash, _txListRoot, bytes32(_collationCoinbase),
-                                   _postStateRoot, _receiptRoot, _collationNumber);
-    assert(headerVars.entireHeaderHash != 0x0);
+                                   _parentHash, _transactionRoot, bytes32(_coinbase),
+                                   _stateRoot, _receiptRoot, _number);
     assert(collationHeaders[_shardId][headerVars.entireHeaderHash].score == 0);
     // Check whether the parent exists.
     // if (parent_collation_hash == 0), i.e., is the genesis,
     // then there is no need to check.
-    if (_parentCollationHash != 0x0)
-        assert((_parentCollationHash == 0x0) || (collationHeaders[_shardId][_parentCollationHash].score > 0));
+    if (_parentHash != 0x0)
+        assert(collationHeaders[_shardId][_parentHash].score > 0);
     // Check if only one collation in one period
     assert(periodHead[_shardId] < int(_expectedPeriodNumber));
 
@@ -165,12 +166,12 @@ contract VMC {
     require(msg.sender == headerVars.validatorAddr);
 
     // Check score == collationNumber
-    headerVars.score = collationHeaders[_shardId][_parentCollationHash].score + 1;
-    require(_collationNumber == headerVars.score);
+    headerVars.score = collationHeaders[_shardId][_parentHash].score + 1;
+    require(_number == headerVars.score);
 
     // Add the header
     collationHeaders[_shardId][headerVars.entireHeaderHash] = CollationHeader({
-      parentCollationHash: _parentCollationHash,
+      parentHash: _parentHash,
       score: headerVars.score
     });
 
