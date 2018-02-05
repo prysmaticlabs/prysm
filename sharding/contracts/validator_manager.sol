@@ -2,7 +2,7 @@ pragma solidity ^0.4.19;
 
 contract VMC {
   event TxToShard(address indexed to, int indexed shardId, int receiptId);
-  event CollationAdded(uint256 indexed shardId, bytes collationHeader, bool isNewHead, uint256 score);
+  event CollationAdded(uint indexed shardId, bytes collationHeader, bool isNewHead, uint score);
   event Deposit(address validator, int index);
   event Withdraw(int validatorIndex);
 
@@ -49,7 +49,7 @@ contract VMC {
   uint constant depositSize = 100 ether;
   // Number of periods ahead of current period, which the contract
   // is able to return the collator of that period
-  int constant lookAheadPeriods = 4;
+  uint constant lookAheadPeriods = 4;
 
   // Log the latest period number of the shard
   mapping (int => int) periodHead;
@@ -121,46 +121,42 @@ contract VMC {
   // Uses a block hash as a seed to pseudorandomly select a signer from the validator set.
   // [TODO] Chance of being selected should be proportional to the validator's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function getEligibleProposer(int shardId, uint period) public {
+  function getEligibleProposer(int shardId, uint period) public view returns(address) {
     require(period >= lookAheadPeriods);
     require((period - lookAheadPeriods) * periodLength < block.number);
     require(numValidators > 0);
+    // [TODO] Should check further if this safe or not
     return validators[
-      uint(keccak256(block.blockhash(period - lookAheadPeriods) * periodLength, shardId))
+      int(
+      uint(keccak256(uint(block.blockhash(period - lookAheadPeriods)) * periodLength, shardId))
       %
       uint(getValidatorsMaxIndex())
-      ].addr;
+      )].addr;
   }
 
-  struct Header {
-      int shardId;
-      uint expectedPeriodNumber;
-      bytes32 periodStartPrevhash;
-      bytes32 parentCollationHash;
-      bytes32 txListRoot;
-      address collationCoinbase;
-      bytes32 postStateRoot;
-      bytes32 receiptRoot;
-      int collationNumber;
-      bytes sig;
-    }
-
-  function addHeader(int shardId, int expectedPeriodNumber, bytes32 periodStartPrevHash,
+  struct HeaderVars {
+    bytes32 entireHeaderHash;
+    int score;
+    address validatorAddr;
+    bool isNewHead;
+  }
+  function addHeader(int shardId, uint expectedPeriodNumber, bytes32 periodStartPrevHash,
                      bytes32 parentCollationHash, bytes32 txListRoot, address collationCoinbase,
                      bytes32 postStateRoot, bytes32 receiptRoot, int collationNumber) public returns(bool) {
+    HeaderVars memory headerVars;
 
     // Check if the header is valid
     require((shardId >= 0) && (shardId < shardCount));
     require(block.number >= periodLength);
-    require(expectedPeriodNumber == (block.number / periodLength));
+    require(expectedPeriodNumber == block.number / periodLength);
     require(periodStartPrevHash == block.blockhash(expectedPeriodNumber * periodLength - 1));
 
     // Check if this header already exists
-    var entireHeaderHash = keccak256(shardId, expectedPeriodNumber, periodStartPrevHash,
+    headerVars.entireHeaderHash = keccak256(shardId, expectedPeriodNumber, periodStartPrevHash,
                                    parentCollationHash, txListRoot, bytes32(collationCoinbase),
                                    postStateRoot, receiptRoot, collationNumber);
-    assert(entireHeaderHash != 0x0);
-    assert(collationHeaders[shardId][entireHeaderHash].score == 0);
+    assert(headerVars.entireHeaderHash != 0x0);
+    assert(collationHeaders[shardId][headerVars.entireHeaderHash].score == 0);
     // Check whether the parent exists.
     // if (parent_collation_hash == 0), i.e., is the genesis,
     // then there is no need to check.
@@ -170,28 +166,27 @@ contract VMC {
     assert(periodHead[shardId] < int(expectedPeriodNumber));
 
     // Check the signature with validation_code_addr
-    var validatorAddr = getEligibleProposer(shardId, block.number/periodLength);
-    require(validatorAddr != 0x0);
-    require(msg.sender == validatorAddr);
+    headerVars.validatorAddr = getEligibleProposer(shardId, block.number/periodLength);
+    require(headerVars.validatorAddr != 0x0);
+    require(msg.sender == headerVars.validatorAddr);
 
     // Check score == collationNumber
-    var _score = collationHeaders[shardId][parentCollationHash].score + 1;
-    require(collationNumber == _score);
+    headerVars.score = collationHeaders[shardId][parentCollationHash].score + 1;
+    require(collationNumber == headerVars.score);
 
     // Add the header
-    collationHeaders[shardId][entireHeaderHash] = CollationHeader({
+    collationHeaders[shardId][headerVars.entireHeaderHash] = CollationHeader({
       parentCollationHash: parentCollationHash,
-      score: _score
+      score: headerVars.score
     });
 
     // Update the latest period number
     periodHead[shardId] = int(expectedPeriodNumber);
 
     // Determine the head
-    var isNewHead = false;
-    if (_score > collationHeaders[shardId[shardHead[shardId]]].score) {
-      shardHead[shardId] = entireHeaderHash;
-      isNewHead = true;
+    if (headerVars.score > collationHeaders[shardId][shardHead[shardId]].score) {
+      shardHead[shardId] = headerVars.entireHeaderHash;
+      headerVars.isNewHead = true;
     }
     // [TODO] Log
     //CollationAdded(headerBytes, isNewHead, _score);
