@@ -23,9 +23,9 @@ contract VMC {
     uint txStartgas;
     uint txGasprice;
     uint value;
+    bytes32 data;
     address sender;
     address to;
-    bytes32 data;
   }
 
   mapping (int => Validator) validators;
