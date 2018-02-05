@@ -11,6 +11,8 @@ contract VMC {
   using RLP for RLP.Iterator;
   using RLP for bytes;
   
+  event CollationAdded(uint256 indexed shardId, bytes collationHeader, bool isNewHead, uint256 score);
+
   struct Validator {
     // Amount of wei the validator holds
     uint deposit;
@@ -67,8 +69,6 @@ contract VMC {
   mapping (int => int) periodHead;
 
   function VMC() public {
-    numValidators = 0;
-    emptySlotsStackTop = 0;
     addHeaderLogTopic = keccak256("add_header()");
     sighasher = SigHasherContract(0xDFFD41E18F04Ad8810c83B14FD1426a82E625A7D);
   }
