@@ -56,7 +56,7 @@ contract VMC {
 
   // Constant values
   uint constant periodLength = 5;
-  int constant shardCount = 100;
+  int constant public shardCount = 100;
   // The exact deposit size which you have to deposit to become a validator
   uint constant depositSize = 100 ether;
   // Number of periods ahead of current period, which the contract
