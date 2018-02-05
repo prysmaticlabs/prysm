@@ -18,7 +18,7 @@ func subscribeBlockHeaders(c *Client) error {
 
 	_, err := c.client.SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
 	}
 
 	log.Info("listening for new headers...")
@@ -31,7 +31,7 @@ func subscribeBlockHeaders(c *Client) error {
 			// TODO: Only run this code on certain periods?
 			err := watchShards(c, head)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		}
 	}
@@ -48,13 +48,13 @@ func watchShards(c *Client, head *types.Header) error {
 	}
 
 	if err := c.unlockAccount(accounts[0]); err != nil {
-		return err
+		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
 	ops := bind.CallOpts{}
 	count, err := c.vmc.VMCCaller.ShardCount(&ops)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to fetch shard count. %v", err)
 	}
 
 	s := 0
@@ -62,12 +62,15 @@ func watchShards(c *Client, head *types.Header) error {
 		// Checks if we are an eligible proposer according to the VMC
 		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&ops, big.NewInt(s))
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot fetch eligible collation proposer. %v", err)
 		}
 		// if the address is the coinbase addr (current node running the sharding
 		// clint, then we propose a new collation)
 		if addr == accounts[0].Address {
-			proposeCollation()
+			err := proposeCollation()
+			if err != nil {
+				return fmt.Errorf("could not propose collation. %v", err)
+			}
 		}
 		s++
 	}
@@ -75,6 +78,6 @@ func watchShards(c *Client, head *types.Header) error {
 	return nil
 }
 
-func proposeCollation() {
+func proposeCollation() error {
 	return nil
 }

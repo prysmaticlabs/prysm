@@ -72,7 +72,7 @@ func initVMC(c *Client) error {
 func initVMCValidator(c *Client) error {
 
 	// TODO: Check if account is already in validator set. Fetch this From
-	// the VMC contract's validator set.
+	// the VMC contract's validator set
 
 	// Unlocks the current account from the keystore
 	accounts := c.keystore.Accounts()
