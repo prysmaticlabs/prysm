@@ -11,8 +11,6 @@ contract VMC {
     uint deposit;
     // The validator's address
     address addr;
-    // The cycle number which the validator would be included after
-    int cycle;
   }
 
   struct CollationHeader {
@@ -81,7 +79,7 @@ contract VMC {
     for (int i = 0; i < 1024; ++i) {
         if (i >= allValidatorSlotsNum)
             break;
-        if (validators[i].cycle != 0x0)
+        if (validators[i].addr != 0x0)
             activateValidatorNum += 1;
     }
     return activateValidatorNum + emptySlotsStackTop;
@@ -123,7 +121,7 @@ contract VMC {
   // Uses a block hash as a seed to pseudorandomly select a signer from the validator set.
   // [TODO] Chance of being selected should be proportional to the validator's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function getEligibleProposer(int shardId, int period) public {
+  function getEligibleProposer(int shardId, uint period) public {
     require(period >= lookAheadPeriods);
     require((period - lookAheadPeriods) * periodLength < block.number);
     require(numValidators > 0);
