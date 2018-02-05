@@ -28,11 +28,23 @@ contract VMC {
     address to;
   }
 
-  mapping (int => Validator) validators;
-  mapping (int => mapping (bytes32 => CollationHeader)) collationHeaders;
-  mapping (int => Receipt) receipts;
+  // Packed variables to be used in addHeader
+  struct HeaderVars {
+    bytes32 entireHeaderHash;
+    int score;
+    address validatorAddr;
+    bool isNewHead;
+  }
 
+  // validatorId => Validators
+  mapping (int => Validator) validators;
+  // shardId => (headerHash => CollationHeader)
+  mapping (int => mapping (bytes32 => CollationHeader)) collationHeaders;
+  // receiptId => Receipt
+  mapping (int => Receipt) receipts;
+  // shardId => headerHash
   mapping (int => bytes32) shardHead;
+  
   int numValidators;
   int numReceipts;
   // Indexs of empty slots caused by the function `withdraw`
@@ -57,32 +69,33 @@ contract VMC {
   function VMC() public {
   }
 
-  function isStackEmpty() internal view returns(bool) {
-    return emptySlotsStackTop == 0;
-  }
-  function stackPush(int index) internal {
-    emptySlotsStack[emptySlotsStackTop] = index;
-    ++emptySlotsStackTop;
-  }
-  function stackPop() internal returns(int) {
-    if (isStackEmpty())
-      return -1;
-    --emptySlotsStackTop;
-    return emptySlotsStack[emptySlotsStackTop];
+  // Returns the gas limit that collations can currently have (by default make
+  // this function always answer 10 million).
+  function getCollationGasLimit() public pure returns(uint) {
+    return 10000000;
   }
 
-  function getValidatorsMaxIndex() internal view returns(int) {
-    int activateValidatorNum = 0;
-    int allValidatorSlotsNum = numValidators + emptySlotsStackTop;
-
-    // TODO: any better way to iterate the mapping?
-    for (int i = 0; i < 1024; ++i) {
-        if (i >= allValidatorSlotsNum)
-            break;
-        if (validators[i].addr != 0x0)
-            activateValidatorNum += 1;
-    }
-    return activateValidatorNum + emptySlotsStackTop;
+  // Uses a block hash as a seed to pseudorandomly select a signer from the validator set.
+  // [TODO] Chance of being selected should be proportional to the validator's deposit.
+  // Should be able to return a value for the current period or any future period up to.
+  function getEligibleProposer(int _shardId, uint _period) public view returns(address) {
+    require(_period >= lookAheadPeriods);
+    require((_period - lookAheadPeriods) * periodLength < block.number);
+    require(numValidators > 0);
+    // [TODO] Should check further if this safe or not
+    return validators[
+      int(
+        uint(
+          keccak256(
+            uint(
+              block.blockhash(_period - lookAheadPeriods)
+            ) * periodLength,
+            _shardId
+          )
+        ) %
+        uint(getValidatorsMaxIndex())
+      )
+    ].addr;
   }
 
   function deposit() public payable returns(int) {
@@ -99,13 +112,14 @@ contract VMC {
       deposit: msg.value,
       addr: msg.sender
     });
-  ++numValidators;
-  isValidatorDeposited[msg.sender] = true;
-  
-  Deposit(msg.sender, index);
-  return index;
+    ++numValidators;
+    isValidatorDeposited[msg.sender] = true;
+    
+    Deposit(msg.sender, index);
+    return index;
   }
 
+  // Removes the validator from the validator set and refunds the deposited ether 
   function withdraw(int _validatorIndex) public {
     require(msg.sender == validators[_validatorIndex].addr);
     // [FIXME] Should consider calling the validator's contract, might be useful
@@ -118,31 +132,11 @@ contract VMC {
     Withdraw(_validatorIndex);
   }
 
-  // Uses a block hash as a seed to pseudorandomly select a signer from the validator set.
-  // [TODO] Chance of being selected should be proportional to the validator's deposit.
-  // Should be able to return a value for the current period or any future period up to.
-  function getEligibleProposer(int _shardId, uint _period) public view returns(address) {
-    require(_period >= lookAheadPeriods);
-    require((_period - lookAheadPeriods) * periodLength < block.number);
-    require(numValidators > 0);
-    // [TODO] Should check further if this safe or not
-    return validators[
-      int(
-      uint(keccak256(uint(block.blockhash(_period - lookAheadPeriods)) * periodLength, _shardId))
-      %
-      uint(getValidatorsMaxIndex())
-      )].addr;
-  }
-
-  struct HeaderVars {
-    bytes32 entireHeaderHash;
-    int score;
-    address validatorAddr;
-    bool isNewHead;
-  }
+  // Attempts to process a collation header, returns true on success, reverts on failure.
   function addHeader(int _shardId, uint _expectedPeriodNumber, bytes32 _periodStartPrevHash,
-                     bytes32 _parentCollationHash, bytes32 _txListRoot, address _collationCoinbase,
-                     bytes32 _postStateRoot, bytes32 _receiptRoot, int _collationNumber) public returns(bool) {
+                     bytes32 _parentCollationHash, bytes32 _txListRoot,
+                     address _collationCoinbase, bytes32 _postStateRoot, bytes32 _receiptRoot,
+                     int _collationNumber) public returns(bool) {
     HeaderVars memory headerVars;
 
     // Check if the header is valid
@@ -194,17 +188,12 @@ contract VMC {
     return true;
   }
 
-  // Returns the gas limit that collations can currently have (by default make
-  // this function always answer 10 million).
-  function getCollationGasLimit() public pure returns(uint) {
-    return 10000000;
-  }
-
   // Records a request to deposit msg.value ETH to address to in shard shard_id
   // during a future collation. Saves a `receipt ID` for this request,
   // also saving `msg.sender`, `msg.value`, `to`, `shard_id`, `startgas`,
   // `gasprice`, and `data`.
-  function txToShard(address _to, int _shardId, uint _txStartgas, uint _txGasprice, bytes12 _data) public payable returns(int) {
+  function txToShard(address _to, int _shardId, uint _txStartgas, uint _txGasprice, 
+                     bytes12 _data) public payable returns(int) {
     receipts[numReceipts] = Receipt({
       shardId: _shardId,
       txStartgas: _txStartgas,
@@ -221,9 +210,39 @@ contract VMC {
     return receiptId;
   }
   
-  function updataGasPrice(int _receiptId, uint _txGasprice) public payable returns(bool) {
+  function updateGasPrice(int _receiptId, uint _txGasprice) public payable returns(bool) {
     require(receipts[_receiptId].sender == msg.sender);
     receipts[_receiptId].txGasprice = _txGasprice;
     return true;
+  }
+
+  function isStackEmpty() internal view returns(bool) {
+    return emptySlotsStackTop == 0;
+  }
+
+  function stackPush(int index) internal {
+    emptySlotsStack[emptySlotsStackTop] = index;
+    ++emptySlotsStackTop;
+  }
+  
+  function stackPop() internal returns(int) {
+    if (isStackEmpty())
+      return -1;
+    --emptySlotsStackTop;
+    return emptySlotsStack[emptySlotsStackTop];
+  }
+
+  function getValidatorsMaxIndex() internal view returns(int) {
+    int activateValidatorNum = 0;
+    int allValidatorSlotsNum = numValidators + emptySlotsStackTop;
+
+    // TODO: any better way to iterate the mapping?
+    for (int i = 0; i < 1024; ++i) {
+        if (i >= allValidatorSlotsNum)
+            break;
+        if (validators[i].addr != 0x0)
+            activateValidatorNum += 1;
+    }
+    return activateValidatorNum + emptySlotsStackTop;
   }
 }
