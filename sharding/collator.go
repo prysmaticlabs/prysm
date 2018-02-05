@@ -60,7 +60,7 @@ func watchShards(c *Client, head *types.Header) error {
 	s := 0
 	for s < int(count.Int64()) {
 		// Checks if we are an eligible proposer according to the VMC
-		addr, err := c.vmc.VMCCaller.Sample(&ops, big.NewInt(s))
+		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&ops, big.NewInt(s))
 		if err != nil {
 			return err
 		}
