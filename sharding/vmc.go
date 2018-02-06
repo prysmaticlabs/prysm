@@ -3,6 +3,7 @@ package sharding
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/log"
@@ -20,7 +21,7 @@ func initVMC(c *Client) error {
 	if len(b) == 0 {
 		log.Info(fmt.Sprintf("No validator management contract found at %s. Deploying new contract.", validatorManagerAddress.String()))
 
-		txOps, err := c.createTXOps()
+		txOps, err := c.createTXOps(big.NewInt(0))
 		if err != nil {
 			return fmt.Errorf("unable to intiate the transaction: %v", err)
 		}
@@ -56,7 +57,7 @@ func joinValidatorSet(c *Client) error {
 
 	// TODO: Check if account is already in validator set. Fetch this From
 	// the VMC contract's validator set
-	txOps, err := c.createTXOps()
+	txOps, err := c.createTXOps(depositSize)
 	if err != nil {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
@@ -65,7 +66,7 @@ func joinValidatorSet(c *Client) error {
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
 	}
-	log.Info(fmt.Sprintf("Deposited 100ETH into contract with transaction hash: %v", tx.Hash()))
+	log.Info(fmt.Sprintf("Deposited 100ETH into contract with transaction hash: %s", tx.Hash().String()))
 	return nil
 
 }

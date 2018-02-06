@@ -53,7 +53,7 @@ func checkShardsForProposal(c *Client, head *types.Header) error {
 		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
-	log.Info("Watching shards...")
+	log.Info("Checking if we are an eligible collation proposer for a shard...")
 	for s := int64(0); s < shardCount; s++ {
 		// Checks if we are an eligible proposer according to the VMC
 		period := head.Number.Div(head.Number, big.NewInt(periodLength))
