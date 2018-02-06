@@ -97,7 +97,7 @@ func initVMCValidator(c *Client) error {
 		},
 	}
 
-	_, err := c.vmc.VMCTransactor.Deposit(&ops, accounts[0].Address)
+	_, err := c.vmc.VMCTransactor.Deposit(&ops)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
 	}

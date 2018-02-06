@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"math/big"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if
@@ -51,27 +52,23 @@ func watchShards(c *Client, head *types.Header) error {
 		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
-	ops := bind.CallOpts{}
-	count, err := c.vmc.VMCCaller.ShardCount(&ops)
-	if err != nil {
-		return fmt.Errorf("unable to fetch shard count. %v", err)
-	}
-
+	log.Info(fmt.Sprint("watching shards..."))
 	s := 0
-	for s < int(count.Int64()) {
+	for s < shardCount {
 		// Checks if we are an eligible proposer according to the VMC
-		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&ops, big.NewInt(s))
-		if err != nil {
-			return fmt.Errorf("cannot fetch eligible collation proposer. %v", err)
-		}
-		// if the address is the coinbase addr (current node running the sharding
-		// clint, then we propose a new collation)
-		if addr == accounts[0].Address {
-			err := proposeCollation()
+		ops := bind.CallOpts{}
+		period := head.Number.Div(head.Number, big.NewInt(int64(periodLength)))
+		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&ops, big.NewInt(int64(s)), period)
+
+		// If output is non-empty and the addr == coinbase
+		if err == nil && addr == accounts[0].Address {
+			log.Info(fmt.Sprintf("selected as collator on shard %d", s))
+			err := proposeCollation(s)
 			if err != nil {
 				return fmt.Errorf("could not propose collation. %v", err)
 			}
 		}
+
 		s++
 	}
 
@@ -104,6 +101,6 @@ func proposeCollation(shardID int) error {
 	// This functions will fetch the transactions in the txpool and and apply
 	// them to finish up the collation. It will then need to broadcast the
 	// collation to the main chain using JSON-RPC.
-
+	log.Info(fmt.Sprint("propose collation called"))
 	return nil
 }
