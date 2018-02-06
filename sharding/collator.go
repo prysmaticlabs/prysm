@@ -22,26 +22,27 @@ func subscribeBlockHeaders(c *Client) error {
 		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
 	}
 
-	log.Info("listening for new headers...")
+	log.Info("Listening for new headers...")
 
 	for {
+		// TODO: Error handling for getting disconnected from the client
 		select {
 		case head := <-headerChan:
 			// Query the current state to see if we are an eligible proposer
-			log.Info(fmt.Sprintf("received new header %v", head.Number.String()))
+			log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 			// TODO: Only run this code on certain periods?
-			err := watchShards(c, head)
-			if err != nil {
+			if err := checkShardsForProposal(c, head); err != nil {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		}
 	}
 }
 
-// watchShards checks if we are an eligible proposer for collation for
-// the available shards in the VMC. The function calls getEligibleProposer from
-// the VMC and proposes a collation if conditions are met
-func watchShards(c *Client, head *types.Header) error {
+// checkShardsForProposal checks if we are an eligible proposer for
+// collation for the available shards in the VMC. The function calls
+// getEligibleProposer from the VMC and proposes a collation if
+// conditions are met
+func checkShardsForProposal(c *Client, head *types.Header) error {
 
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
@@ -52,31 +53,29 @@ func watchShards(c *Client, head *types.Header) error {
 		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
-	log.Info(fmt.Sprint("watching shards..."))
-	s := 0
-	for s < shardCount {
+	log.Info("Watching shards...")
+	for s := int64(0); s < shardCount; s++ {
 		// Checks if we are an eligible proposer according to the VMC
-		ops := bind.CallOpts{}
-		period := head.Number.Div(head.Number, big.NewInt(int64(periodLength)))
-		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&ops, big.NewInt(int64(s)), period)
+		period := head.Number.Div(head.Number, big.NewInt(periodLength))
+		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&bind.CallOpts{}, big.NewInt(s), period)
+		// TODO: When we are not a proposer, we get the error of being unable to
+		// unmarshal empty output. Open issue to deal with this.
 
 		// If output is non-empty and the addr == coinbase
 		if err == nil && addr == accounts[0].Address {
-			log.Info(fmt.Sprintf("selected as collator on shard %d", s))
+			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
 			err := proposeCollation(s)
 			if err != nil {
 				return fmt.Errorf("could not propose collation. %v", err)
 			}
 		}
-
-		s++
 	}
 
 	return nil
 }
 
 // proposeCollation interacts with the VMC directly to add a collation header
-func proposeCollation(shardID int) error {
+func proposeCollation(shardID int64) error {
 	// TODO: Adds a collation header to the VMC with the following fields:
 	// [
 	//  shard_id: uint256,
@@ -101,6 +100,6 @@ func proposeCollation(shardID int) error {
 	// This functions will fetch the transactions in the txpool and and apply
 	// them to finish up the collation. It will then need to broadcast the
 	// collation to the main chain using JSON-RPC.
-	log.Info(fmt.Sprint("propose collation called"))
+	log.Info("Propose collation function called")
 	return nil
 }

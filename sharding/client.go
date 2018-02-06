@@ -1,13 +1,17 @@
 package sharding
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
@@ -78,7 +82,7 @@ func (c *Client) Start() error {
 	//
 	// TODO: this function should store the validator's VMC index as a property
 	// in the client's struct
-	if err := initVMCValidator(c); err != nil {
+	if err := joinValidatorSet(c); err != nil {
 		return err
 	}
 
@@ -93,6 +97,13 @@ func (c *Client) Start() error {
 // Wait until sharding client is shutdown.
 func (c *Client) Wait() {
 	// TODO: Blocking lock.
+}
+
+// WatchCollationHeaders checks the logs for add_header func calls
+// and updates the head collation of the client. We can probably store
+// this as a property of the client struct
+func (c *Client) WatchCollationHeaders() {
+
 }
 
 // dialRPC endpoint to node.
@@ -119,9 +130,26 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-// TODO: Watch logs for add_header func calls and update the head collation
-// of the client. We can probably store this as a property of the client
-// struct
-func (c *Client) watchHeaders() {
+func (c *Client) createTXOps() (bind.TransactOpts, error) {
+
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return bind.TransactOpts{}, fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return bind.TransactOpts{}, fmt.Errorf("unable to unlock account 0: %v", err)
+	}
+
+	return bind.TransactOpts{
+		From: accounts[0].Address,
+		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			networkID, err := c.client.NetworkID(context.Background())
+			if err != nil {
+				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
+			}
+			return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
+		},
+	}, nil
 
 }
