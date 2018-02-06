@@ -164,6 +164,8 @@ func init() {
 		consoleCommand,
 		attachCommand,
 		javascriptCommand,
+		// See shardingcmd.go:
+		shardingClientCommand,
 		// See misccmd.go:
 		makecacheCommand,
 		makedagCommand,
