@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
@@ -17,32 +14,18 @@ import (
 func initVMC(c *Client) error {
 	b, err := c.client.CodeAt(context.Background(), validatorManagerAddress, nil)
 	if err != nil {
-		return fmt.Errorf("unable to get contract code at %s. %v", validatorManagerAddress, err)
+		return fmt.Errorf("unable to get contract code at %s: %v", validatorManagerAddress, err)
 	}
 
 	if len(b) == 0 {
 		log.Info(fmt.Sprintf("No validator management contract found at %s. Deploying new contract.", validatorManagerAddress.String()))
 
-		accounts := c.keystore.Accounts()
-		if len(accounts) == 0 {
-			return fmt.Errorf("no accounts found")
+		txOps, err := c.createTXOps()
+		if err != nil {
+			return fmt.Errorf("unable to intiate the transaction: %v", err)
 		}
 
-		if err := c.unlockAccount(accounts[0]); err != nil {
-			return fmt.Errorf("unable to unlock account 0: %v", err)
-		}
-		ops := bind.TransactOpts{
-			From: accounts[0].Address,
-			Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-				networkID, err := c.client.NetworkID(context.Background())
-				if err != nil {
-					return nil, fmt.Errorf("unable to fetch networkID: %v", err)
-				}
-				return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
-			},
-		}
-
-		addr, tx, contract, err := contracts.DeployVMC(&ops, c.client)
+		addr, tx, contract, err := contracts.DeployVMC(&txOps, c.client)
 		if err != nil {
 			return fmt.Errorf("unable to deploy validator management contract: %v", err)
 		}
@@ -67,41 +50,22 @@ func initVMC(c *Client) error {
 	return nil
 }
 
-// initVMCValidator checks if the account is a validator in the VMC. If
+// joinValidatorSet checks if the account is a validator in the VMC. If
 // the account is not in the set, it will deposit 100ETH into contract.
-func initVMCValidator(c *Client) error {
+func joinValidatorSet(c *Client) error {
 
 	// TODO: Check if account is already in validator set. Fetch this From
 	// the VMC contract's validator set
-
-	// Unlocks the current account from the keystore
-	accounts := c.keystore.Accounts()
-	if len(accounts) == 0 {
-		return fmt.Errorf("no accounts found")
+	txOps, err := c.createTXOps()
+	if err != nil {
+		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
 
-	if err := c.unlockAccount(accounts[0]); err != nil {
-		return fmt.Errorf("unable to unlock account 0: %v", err)
-	}
-
-	// Deposits 100ETH into the VMC from the current account
-	ops := bind.TransactOpts{
-		From:  accounts[0].Address,
-		Value: depositSize,
-		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			networkID, err := c.client.NetworkID(context.Background())
-			if err != nil {
-				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
-			}
-			return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
-		},
-	}
-
-	_, err := c.vmc.VMCTransactor.Deposit(&ops)
+	tx, err := c.vmc.VMCTransactor.Deposit(&txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
 	}
-	log.Info(fmt.Sprintf("deposited 100ETH into contract"))
+	log.Info(fmt.Sprintf("Deposited 100ETH into contract with transaction hash: %v", tx.Hash()))
 	return nil
 
 }
