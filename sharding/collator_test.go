@@ -1,11 +1,19 @@
 package sharding
 
 import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"sync"
 	"testing"
 )
 
-func TestDeposit(t *testing.T) {
-	if 0 != 0 {
-		t.Errorf("test incorrect")
-	}
+// FakeEthService based on implementation of internal/ethapi.Client
+type FakeEthService struct {
+	mu sync.Mutex
+
+	getCodeResp hexutil.Bytes
+	getCodeErr  error
+}
+
+func TestSubscribeHeaders(t *testing.T) {
+
 }
