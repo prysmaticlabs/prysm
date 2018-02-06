@@ -78,6 +78,32 @@ func watchShards(c *Client, head *types.Header) error {
 	return nil
 }
 
-func proposeCollation() error {
+// proposeCollation interacts with the VMC directly to add a collation header
+func proposeCollation(shardID int) error {
+	// TODO: Adds a collation header to the VMC with the following fields:
+	// [
+	//  shard_id: uint256,
+	//  expected_period_number: uint256,
+	//  period_start_prevhash: bytes32,
+	//  parent_hash: bytes32,
+	//  transactions_root: bytes32,
+	//  coinbase: address,
+	//  state_root: bytes32,
+	//  receipts_root: bytes32,
+	//  number: uint256,
+	//  sig: bytes
+	// ]
+	//
+	// Before calling this, we would need to have access to the state of
+	// the period_start_prevhash. Refer to the comments in:
+	// https://github.com/ethereum/py-evm/issues/258#issuecomment-359879350
+	//
+	// This function will call FetchCandidateHead() of the VMC to obtain
+	// more necessary information.
+	//
+	// This functions will fetch the transactions in the txpool and and apply
+	// them to finish up the collation. It will then need to broadcast the
+	// collation to the main chain using JSON-RPC.
+
 	return nil
 }
