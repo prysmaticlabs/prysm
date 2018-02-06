@@ -2,11 +2,11 @@ pragma solidity ^0.4.19;
 
 contract VMC {
   event TxToShard(address indexed to, int indexed shardId, int receiptId);
-  event CollationAdded(int indexed shardId, uint _expectedPeriodNumber, 
-                     bytes32 _periodStartPrevHash, bytes32 _parentHash,
-                     bytes32 _transactionRoot, address _coinbase,
-                     bytes32 _stateRoot, bytes32 _receiptRoot,
-                     int _number, bool isNewHead, int score);
+  event CollationAdded(int indexed shardId, uint expectedPeriodNumber, 
+                     bytes32 periodStartPrevHash, bytes32 parentHash,
+                     bytes32 transactionRoot, address coinbase,
+                     bytes32 stateRoot, bytes32 receiptRoot,
+                     int number, bool isNewHead, int score);
   event Deposit(address validator, int index);
   event Withdraw(int validatorIndex);
 
