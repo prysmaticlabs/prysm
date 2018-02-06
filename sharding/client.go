@@ -74,7 +74,10 @@ func (c *Client) Start() error {
 
 	// Deposit 100ETH into the validator set in the VMC. Checks if account
 	// is already a validator in the VMC (in the case the client restarted).
-	// Once that's done we can subscribe to block headers
+	// Once that's done we can subscribe to block headers.
+	//
+	// TODO: this function should store the validator's VMC index as a property
+	// in the client's struct
 	if err := initVMCValidator(c); err != nil {
 		return err
 	}
@@ -114,4 +117,11 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	}
 
 	return c.keystore.Unlock(account, pass)
+}
+
+// TODO: Watch logs for add_header func calls and update the head collation
+// of the client. We can probably store this as a property of the client
+// struct
+func (c *Client) watchHeaders() {
+
 }
