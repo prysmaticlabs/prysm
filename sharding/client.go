@@ -96,7 +96,7 @@ func (c *Client) Start() error {
 
 // Wait until sharding client is shutdown.
 func (c *Client) Wait() {
-	// TODO: Blocking lock.
+	log.Info("Sharding client has been shutdown...")
 }
 
 // WatchCollationHeaders checks the logs for add_header func calls
@@ -104,14 +104,6 @@ func (c *Client) Wait() {
 // this as a property of the client struct
 func (c *Client) WatchCollationHeaders() {
 
-}
-
-// dialRPC endpoint to node.
-func dialRPC(endpoint string) (*rpc.Client, error) {
-	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
-	}
-	return rpc.Dial(endpoint)
 }
 
 // UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
@@ -152,4 +144,12 @@ func (c *Client) createTXOps() (bind.TransactOpts, error) {
 		},
 	}, nil
 
+}
+
+// dialRPC endpoint to node.
+func dialRPC(endpoint string) (*rpc.Client, error) {
+	if endpoint == "" {
+		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
+	}
+	return rpc.Dial(endpoint)
 }
