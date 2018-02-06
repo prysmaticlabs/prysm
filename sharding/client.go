@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -122,7 +123,7 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-func (c *Client) createTXOps() (bind.TransactOpts, error) {
+func (c *Client) createTXOps(value *big.Int) (bind.TransactOpts, error) {
 
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
@@ -133,8 +134,22 @@ func (c *Client) createTXOps() (bind.TransactOpts, error) {
 		return bind.TransactOpts{}, fmt.Errorf("unable to unlock account 0: %v", err)
 	}
 
+	if value.Cmp(big.NewInt(0)) == 0 {
+		return bind.TransactOpts{
+			From: accounts[0].Address,
+			Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+				networkID, err := c.client.NetworkID(context.Background())
+				if err != nil {
+					return nil, fmt.Errorf("unable to fetch networkID: %v", err)
+				}
+				return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
+			},
+		}, nil
+	}
+
 	return bind.TransactOpts{
-		From: accounts[0].Address,
+		From:  accounts[0].Address,
+		Value: value,
 		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			networkID, err := c.client.NetworkID(context.Background())
 			if err != nil {
