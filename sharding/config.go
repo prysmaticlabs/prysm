@@ -8,13 +8,13 @@ import (
 
 var (
 	// Number of network shards
-	shardCount = 100
+	shardCount = int64(100)
 	// Address of the validator management contract
 	validatorManagerAddress = common.HexToAddress("0x0") // TODO
 	// Gas limit for verifying signatures
 	sigGasLimit = 40000
 	// Number of blocks in a period
-	periodLength = 5
+	periodLength = int64(5)
 	// Number of periods ahead of current period which the contract is able to return the collator of that period.
 	lookaheadPeriods = 4
 	// Required deposit size in wei
