@@ -1,13 +1,18 @@
 package sharding
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
@@ -72,22 +77,34 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// TODO: Wait to be selected as collator in goroutine?
+	// Deposit 100ETH into the validator set in the VMC. Checks if account
+	// is already a validator in the VMC (in the case the client restarted).
+	// Once that's done we can subscribe to block headers.
+	//
+	// TODO: this function should store the validator's VMC index as a property
+	// in the client's struct
+	if err := joinValidatorSet(c); err != nil {
+		return err
+	}
 
+	// Listens to block headers from the geth node and if we are an eligible
+	// proposer, we fetch pending transactions and propose a collation
+	if err := subscribeBlockHeaders(c); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Wait until sharding client is shutdown.
 func (c *Client) Wait() {
-	// TODO: Blocking lock.
+	log.Info("Sharding client has been shutdown...")
 }
 
-// dialRPC endpoint to node.
-func dialRPC(endpoint string) (*rpc.Client, error) {
-	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
-	}
-	return rpc.Dial(endpoint)
+// WatchCollationHeaders checks the logs for add_header func calls
+// and updates the head collation of the client. We can probably store
+// this as a property of the client struct
+func (c *Client) WatchCollationHeaders() {
+
 }
 
 // UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
@@ -104,4 +121,50 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	}
 
 	return c.keystore.Unlock(account, pass)
+}
+
+func (c *Client) createTXOps(value *big.Int) (bind.TransactOpts, error) {
+
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return bind.TransactOpts{}, fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return bind.TransactOpts{}, fmt.Errorf("unable to unlock account 0: %v", err)
+	}
+
+	if value.Cmp(big.NewInt(0)) == 0 {
+		return bind.TransactOpts{
+			From: accounts[0].Address,
+			Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+				networkID, err := c.client.NetworkID(context.Background())
+				if err != nil {
+					return nil, fmt.Errorf("unable to fetch networkID: %v", err)
+				}
+				return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
+			},
+		}, nil
+	}
+
+	return bind.TransactOpts{
+		From:  accounts[0].Address,
+		Value: value,
+		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			networkID, err := c.client.NetworkID(context.Background())
+			if err != nil {
+				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
+			}
+			return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
+		},
+	}, nil
+
+}
+
+// dialRPC endpoint to node.
+func dialRPC(endpoint string) (*rpc.Client, error) {
+	if endpoint == "" {
+		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
+	}
+	return rpc.Dial(endpoint)
 }
