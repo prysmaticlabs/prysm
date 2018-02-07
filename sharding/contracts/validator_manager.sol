@@ -44,7 +44,7 @@ contract VMC {
   mapping (int => Receipt) receipts;
   // shardId => headerHash
   mapping (int => bytes32) shardHead;
-  
+
   // Number of validators
   int numValidators;
   // Number of receipts
@@ -109,19 +109,19 @@ contract VMC {
       index = stackPop();
     else
       index = int(numValidators);
-      
+
     validators[index] = Validator({
       deposit: msg.value,
       addr: msg.sender
     });
     ++numValidators;
     isValidatorDeposited[msg.sender] = true;
-    
+
     Deposit(msg.sender, index);
     return index;
   }
 
-  // Removes the validator from the validator set and refunds the deposited ether 
+  // Removes the validator from the validator set and refunds the deposited ether
   function withdraw(int _validatorIndex) public {
     require(msg.sender == validators[_validatorIndex].addr);
     // [FIXME] Should consider calling the validator's contract, might be useful
@@ -193,7 +193,7 @@ contract VMC {
   // during a future collation. Saves a `receipt ID` for this request,
   // also saving `msg.sender`, `msg.value`, `to`, `shard_id`, `startgas`,
   // `gasprice`, and `data`.
-  function txToShard(address _to, int _shardId, uint _txStartgas, uint _txGasprice, 
+  function txToShard(address _to, int _shardId, uint _txStartgas, uint _txGasprice,
                      bytes12 _data) public payable returns(int) {
     receipts[numReceipts] = Receipt({
       shardId: _shardId,
@@ -206,11 +206,11 @@ contract VMC {
     });
     var receiptId = numReceipts;
     ++numReceipts;
-    
+
     TxToShard(_to, _shardId, receiptId);
     return receiptId;
   }
-  
+
   function updateGasPrice(int _receiptId, uint _txGasprice) public payable returns(bool) {
     require(receipts[_receiptId].sender == msg.sender);
     receipts[_receiptId].txGasprice = _txGasprice;
@@ -225,7 +225,7 @@ contract VMC {
     emptySlotsStack[emptySlotsStackTop] = index;
     ++emptySlotsStackTop;
   }
-  
+
   function stackPop() internal returns(int) {
     if (isStackEmpty())
       return -1;

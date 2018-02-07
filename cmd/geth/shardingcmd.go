@@ -17,7 +17,7 @@ var (
 		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
-The Geth sharding client connects to a running geth node in sharding mode. This feature is a work in progress.
+Launches a sharding client that connects to a running geth node and proposes collations to a Validator Manager Contract. This feature is a work in progress.
 `,
 	}
 )
