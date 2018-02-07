@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-// subscribeBlockHeaders checks incoming block headers and determines if
+// SubscribeBlockHeaders checks incoming block headers and determines if
 // we are an eligible proposer for collations. Then, it finds the pending tx's
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
