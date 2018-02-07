@@ -1,0 +1,1 @@
+var MetaCoin = artifacts.require("./validator_manager.sol");
