@@ -1,19 +1,29 @@
 package sharding
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"sync"
+	"context"
+	"fmt"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// FakeEthService based on implementation of internal/ethapi.Client
-type FakeEthService struct {
-	mu sync.Mutex
+type FakeClient struct {
+	client *FakeEthClient
+}
 
-	getCodeResp hexutil.Bytes
-	getCodeErr  error
+type FakeEthClient struct{}
+
+type FakeSubscription struct{}
+
+func (ec *FakeEthClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (FakeSubscription, error) {
+	return FakeSubscription{}, fmt.Errorf("error, network disconnected!")
 }
 
 func TestSubscribeHeaders(t *testing.T) {
-
+	client := &FakeClient{client: &FakeEthClient{}}
+	err := subscribeBlockHeaders(client)
+	if err != nil {
+		t.Errorf("subscribe new headers should work", "no error", err)
+	}
 }
