@@ -7,10 +7,12 @@ import (
 	"math/big"
 	"strings"
 
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 // VMCABI is the input ABI used to generate the binding from.
@@ -29,13 +31,14 @@ func DeployVMC(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Ad
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &VMC{VMCCaller: VMCCaller{contract: contract}, VMCTransactor: VMCTransactor{contract: contract}}, nil
+	return address, tx, &VMC{VMCCaller: VMCCaller{contract: contract}, VMCTransactor: VMCTransactor{contract: contract}, VMCFilterer: VMCFilterer{contract: contract}}, nil
 }
 
 // VMC is an auto generated Go binding around an Ethereum contract.
 type VMC struct {
 	VMCCaller     // Read-only binding to the contract
 	VMCTransactor // Write-only binding to the contract
+	VMCFilterer   // Log filterer for contract events
 }
 
 // VMCCaller is an auto generated read-only Go binding around an Ethereum contract.
@@ -45,6 +48,11 @@ type VMCCaller struct {
 
 // VMCTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type VMCTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// VMCFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type VMCFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
@@ -87,16 +95,16 @@ type VMCTransactorRaw struct {
 
 // NewVMC creates a new instance of VMC, bound to a specific deployed contract.
 func NewVMC(address common.Address, backend bind.ContractBackend) (*VMC, error) {
-	contract, err := bindVMC(address, backend, backend)
+	contract, err := bindVMC(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &VMC{VMCCaller: VMCCaller{contract: contract}, VMCTransactor: VMCTransactor{contract: contract}}, nil
+	return &VMC{VMCCaller: VMCCaller{contract: contract}, VMCTransactor: VMCTransactor{contract: contract}, VMCFilterer: VMCFilterer{contract: contract}}, nil
 }
 
 // NewVMCCaller creates a new read-only instance of VMC, bound to a specific deployed contract.
 func NewVMCCaller(address common.Address, caller bind.ContractCaller) (*VMCCaller, error) {
-	contract, err := bindVMC(address, caller, nil)
+	contract, err := bindVMC(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -105,20 +113,29 @@ func NewVMCCaller(address common.Address, caller bind.ContractCaller) (*VMCCalle
 
 // NewVMCTransactor creates a new write-only instance of VMC, bound to a specific deployed contract.
 func NewVMCTransactor(address common.Address, transactor bind.ContractTransactor) (*VMCTransactor, error) {
-	contract, err := bindVMC(address, nil, transactor)
+	contract, err := bindVMC(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &VMCTransactor{contract: contract}, nil
 }
 
+// NewVMCFilterer creates a new log filterer instance of VMC, bound to a specific deployed contract.
+func NewVMCFilterer(address common.Address, filterer bind.ContractFilterer) (*VMCFilterer, error) {
+	contract, err := bindVMC(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &VMCFilterer{contract: contract}, nil
+}
+
 // bindVMC binds a generic wrapper to an already deployed contract.
-func bindVMC(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor) (*bind.BoundContract, error) {
+func bindVMC(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(VMCABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -340,4 +357,533 @@ func (_VMC *VMCSession) Withdraw(_validatorIndex *big.Int) (*types.Transaction, 
 // Solidity: function withdraw(_validatorIndex int256) returns()
 func (_VMC *VMCTransactorSession) Withdraw(_validatorIndex *big.Int) (*types.Transaction, error) {
 	return _VMC.Contract.Withdraw(&_VMC.TransactOpts, _validatorIndex)
+}
+
+// VMCCollationAddedIterator is returned from FilterCollationAdded and is used to iterate over the raw logs and unpacked data for CollationAdded events raised by the VMC contract.
+type VMCCollationAddedIterator struct {
+	Event *VMCCollationAdded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *VMCCollationAddedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(VMCCollationAdded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(VMCCollationAdded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *VMCCollationAddedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *VMCCollationAddedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// VMCCollationAdded represents a CollationAdded event raised by the VMC contract.
+type VMCCollationAdded struct {
+	ShardId              *big.Int
+	ExpectedPeriodNumber *big.Int
+	PeriodStartPrevHash  [32]byte
+	ParentHash           [32]byte
+	TransactionRoot      [32]byte
+	Coinbase             common.Address
+	StateRoot            [32]byte
+	ReceiptRoot          [32]byte
+	Number               *big.Int
+	IsNewHead            bool
+	Score                *big.Int
+	Raw                  types.Log // Blockchain specific contextual infos
+}
+
+// FilterCollationAdded is a free log retrieval operation binding the contract event 0x788a01fdbeb989d24e706cdd2993ca4213400e7b5fa631819b2acfe8ebad4135.
+//
+// Solidity: event CollationAdded(shardId indexed int256, expectedPeriodNumber uint256, periodStartPrevHash bytes32, parentHash bytes32, transactionRoot bytes32, coinbase address, stateRoot bytes32, receiptRoot bytes32, number int256, isNewHead bool, score int256)
+func (_VMC *VMCFilterer) FilterCollationAdded(opts *bind.FilterOpts, shardId []*big.Int) (*VMCCollationAddedIterator, error) {
+
+	var shardIdRule []interface{}
+	for _, shardIdItem := range shardId {
+		shardIdRule = append(shardIdRule, shardIdItem)
+	}
+
+	logs, sub, err := _VMC.contract.FilterLogs(opts, "CollationAdded", shardIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &VMCCollationAddedIterator{contract: _VMC.contract, event: "CollationAdded", logs: logs, sub: sub}, nil
+}
+
+// WatchCollationAdded is a free log subscription operation binding the contract event 0x788a01fdbeb989d24e706cdd2993ca4213400e7b5fa631819b2acfe8ebad4135.
+//
+// Solidity: event CollationAdded(shardId indexed int256, expectedPeriodNumber uint256, periodStartPrevHash bytes32, parentHash bytes32, transactionRoot bytes32, coinbase address, stateRoot bytes32, receiptRoot bytes32, number int256, isNewHead bool, score int256)
+func (_VMC *VMCFilterer) WatchCollationAdded(opts *bind.WatchOpts, sink chan<- *VMCCollationAdded, shardId []*big.Int) (event.Subscription, error) {
+
+	var shardIdRule []interface{}
+	for _, shardIdItem := range shardId {
+		shardIdRule = append(shardIdRule, shardIdItem)
+	}
+
+	logs, sub, err := _VMC.contract.WatchLogs(opts, "CollationAdded", shardIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(VMCCollationAdded)
+				if err := _VMC.contract.UnpackLog(event, "CollationAdded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// VMCDepositIterator is returned from FilterDeposit and is used to iterate over the raw logs and unpacked data for Deposit events raised by the VMC contract.
+type VMCDepositIterator struct {
+	Event *VMCDeposit // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *VMCDepositIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(VMCDeposit)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(VMCDeposit)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *VMCDepositIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *VMCDepositIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// VMCDeposit represents a Deposit event raised by the VMC contract.
+type VMCDeposit struct {
+	Validator common.Address
+	Index     *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterDeposit is a free log retrieval operation binding the contract event 0xd8a6d38df847dcba70dfdeb4948fb1457d61a81d132801f40dc9c00d52dfd478.
+//
+// Solidity: event Deposit(validator address, index int256)
+func (_VMC *VMCFilterer) FilterDeposit(opts *bind.FilterOpts) (*VMCDepositIterator, error) {
+
+	logs, sub, err := _VMC.contract.FilterLogs(opts, "Deposit")
+	if err != nil {
+		return nil, err
+	}
+	return &VMCDepositIterator{contract: _VMC.contract, event: "Deposit", logs: logs, sub: sub}, nil
+}
+
+// WatchDeposit is a free log subscription operation binding the contract event 0xd8a6d38df847dcba70dfdeb4948fb1457d61a81d132801f40dc9c00d52dfd478.
+//
+// Solidity: event Deposit(validator address, index int256)
+func (_VMC *VMCFilterer) WatchDeposit(opts *bind.WatchOpts, sink chan<- *VMCDeposit) (event.Subscription, error) {
+
+	logs, sub, err := _VMC.contract.WatchLogs(opts, "Deposit")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(VMCDeposit)
+				if err := _VMC.contract.UnpackLog(event, "Deposit", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// VMCTxToShardIterator is returned from FilterTxToShard and is used to iterate over the raw logs and unpacked data for TxToShard events raised by the VMC contract.
+type VMCTxToShardIterator struct {
+	Event *VMCTxToShard // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *VMCTxToShardIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(VMCTxToShard)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(VMCTxToShard)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *VMCTxToShardIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *VMCTxToShardIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// VMCTxToShard represents a TxToShard event raised by the VMC contract.
+type VMCTxToShard struct {
+	To        common.Address
+	ShardId   *big.Int
+	ReceiptId *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterTxToShard is a free log retrieval operation binding the contract event 0xfc322e0c42ee41e0d74b940ceeee9cd5971acdd6ace8ff8010ee7134c31d9ea5.
+//
+// Solidity: event TxToShard(to indexed address, shardId indexed int256, receiptId int256)
+func (_VMC *VMCFilterer) FilterTxToShard(opts *bind.FilterOpts, to []common.Address, shardId []*big.Int) (*VMCTxToShardIterator, error) {
+
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var shardIdRule []interface{}
+	for _, shardIdItem := range shardId {
+		shardIdRule = append(shardIdRule, shardIdItem)
+	}
+
+	logs, sub, err := _VMC.contract.FilterLogs(opts, "TxToShard", toRule, shardIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &VMCTxToShardIterator{contract: _VMC.contract, event: "TxToShard", logs: logs, sub: sub}, nil
+}
+
+// WatchTxToShard is a free log subscription operation binding the contract event 0xfc322e0c42ee41e0d74b940ceeee9cd5971acdd6ace8ff8010ee7134c31d9ea5.
+//
+// Solidity: event TxToShard(to indexed address, shardId indexed int256, receiptId int256)
+func (_VMC *VMCFilterer) WatchTxToShard(opts *bind.WatchOpts, sink chan<- *VMCTxToShard, to []common.Address, shardId []*big.Int) (event.Subscription, error) {
+
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var shardIdRule []interface{}
+	for _, shardIdItem := range shardId {
+		shardIdRule = append(shardIdRule, shardIdItem)
+	}
+
+	logs, sub, err := _VMC.contract.WatchLogs(opts, "TxToShard", toRule, shardIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(VMCTxToShard)
+				if err := _VMC.contract.UnpackLog(event, "TxToShard", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// VMCWithdrawIterator is returned from FilterWithdraw and is used to iterate over the raw logs and unpacked data for Withdraw events raised by the VMC contract.
+type VMCWithdrawIterator struct {
+	Event *VMCWithdraw // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *VMCWithdrawIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(VMCWithdraw)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(VMCWithdraw)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *VMCWithdrawIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *VMCWithdrawIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// VMCWithdraw represents a Withdraw event raised by the VMC contract.
+type VMCWithdraw struct {
+	ValidatorIndex *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterWithdraw is a free log retrieval operation binding the contract event 0xe13f360aa18d414ccdb598da6c447faa89d0477ffc7549dab5678fca76910b8c.
+//
+// Solidity: event Withdraw(validatorIndex int256)
+func (_VMC *VMCFilterer) FilterWithdraw(opts *bind.FilterOpts) (*VMCWithdrawIterator, error) {
+
+	logs, sub, err := _VMC.contract.FilterLogs(opts, "Withdraw")
+	if err != nil {
+		return nil, err
+	}
+	return &VMCWithdrawIterator{contract: _VMC.contract, event: "Withdraw", logs: logs, sub: sub}, nil
+}
+
+// WatchWithdraw is a free log subscription operation binding the contract event 0xe13f360aa18d414ccdb598da6c447faa89d0477ffc7549dab5678fca76910b8c.
+//
+// Solidity: event Withdraw(validatorIndex int256)
+func (_VMC *VMCFilterer) WatchWithdraw(opts *bind.WatchOpts, sink chan<- *VMCWithdraw) (event.Subscription, error) {
+
+	logs, sub, err := _VMC.contract.WatchLogs(opts, "Withdraw")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(VMCWithdraw)
+				if err := _VMC.contract.UnpackLog(event, "Withdraw", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
 }
