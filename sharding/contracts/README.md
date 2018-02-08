@@ -1,9 +1,10 @@
 # Sharding contracts
 
-Generate contract bindings from this directory:
+Generate contract bindings from the sharding package with go generate:
 
 ```bash
 
-go run ../../cmd/abigen/main.go --sol validator_manager.sol --pkg contracts --out validator_manager.go
+cd ..
+go generate
 
 ```
