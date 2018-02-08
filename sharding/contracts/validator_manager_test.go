@@ -76,3 +76,32 @@ func TestValidatorDeposit(t *testing.T) {
 		t.Fatalf("Validator index mismatch: %d should be 0", depositsEventsIterator.Event.Index)
 	}
 }
+
+// Test validator withdraw
+func TestValidatorWithdraw(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	transactOpts := bind.NewKeyedTransactor(key)
+	_, _, vmc, _ := deployVMCContract(backend)
+
+	transactOpts.Value, _ = new(big.Int).SetString("100000000000000000000", 10)
+	vmc.Deposit(transactOpts)
+
+	transactOpts.Value = big.NewInt(0)
+	_, err := vmc.Withdraw(transactOpts, big.NewInt(0))
+	if err != nil {
+		t.Fatalf("Failed to W=withdraw: %v", err)
+	}
+	backend.Commit()
+
+	//Check for the Withdraw event
+	withdrawsEventsIterator, err := vmc.FilterWithdraw(&bind.FilterOpts{Start: 0})
+	if err != nil {
+		t.Fatalf("Failed to get withdraw event: %v", err)
+	}
+	if withdrawsEventsIterator.Next() == false {
+		t.Fatal("No withdraw event found")
+	}
+	if withdrawsEventsIterator.Event.ValidatorIndex.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Validator index mismatch: %d should be 0", withdrawsEventsIterator.Event.ValidatorIndex)
+	}
+}
