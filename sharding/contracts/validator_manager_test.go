@@ -89,7 +89,7 @@ func TestValidatorWithdraw(t *testing.T) {
 	transactOpts.Value = big.NewInt(0)
 	_, err := vmc.Withdraw(transactOpts, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Failed to W=withdraw: %v", err)
+		t.Fatalf("Failed to withdraw: %v", err)
 	}
 	backend.Commit()
 
