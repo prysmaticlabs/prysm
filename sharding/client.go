@@ -1,11 +1,15 @@
 package sharding
 
+//go:generate abigen --sol contracts/validator_manager.sol --pkg contracts --out contracts/validator_manager.go
+
 import (
 	"context"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -162,6 +166,35 @@ func (c *Client) createTXOps(value *big.Int) (bind.TransactOpts, error) {
 		},
 	}, nil
 
+}
+
+// Account to use for sharding transations.
+func (c *Client) Account() (*accounts.Account, error) {
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return nil, fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return nil, fmt.Errorf("cannot unlock account. %v", err)
+	}
+
+	return &accounts[0], nil
+}
+
+// ChainReader for interacting with the chain.
+func (c *Client) ChainReader() ethereum.ChainReader {
+	return ethereum.ChainReader(c.client)
+}
+
+// Client to interact with ethereum node.
+func (c *Client) Client() *ethclient.Client {
+	return c.client
+}
+
+// VMCCaller to interact with the validator management contract.
+func (c *Client) VMCCaller() *contracts.VMCCaller {
+	return &c.vmc.VMCCaller
 }
 
 // dialRPC endpoint to node.
