@@ -165,7 +165,7 @@ func (c *Client) createTXOps(value *big.Int) (bind.TransactOpts, error) {
 
 }
 
-// Account to use for sharding transations.
+// Account to use for sharding transactions.
 func (c *Client) Account() (*accounts.Account, error) {
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
