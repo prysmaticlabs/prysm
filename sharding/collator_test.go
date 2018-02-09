@@ -107,7 +107,6 @@ func TestCheckShardsForProposal(t *testing.T) {
 			},
 			Head: &types.Header{Number: big.NewInt(100)},
 		},
-		// {Name: "", Head: &types.Header{Number: big.NewInt(100)}, ExpectedPeriod: big.NewInt(int64(10))},
 	}
 
 	for _, tt := range tests {
