@@ -38,6 +38,14 @@ The project consists of the following parts, with each of them requiring compreh
 
 The VMC is built in Solidity and deployed to the geth node upon launch of the client if it does not exist in the network at a specified address. If the contract already exists, the client simply sets up an interface to programmatically call the internal contract functions and listens to transactions broadcasted to the geth node to begin the sharding system.
 
+#### Generating Contract Bindings
+
+To generate the go bindings run the following command from this package:
+
+```bash
+go generate
+```
+
 ### VMC Wrapper & Sharding Client
 
 As we will be interacting with a geth node, we will create a Golang interface that wraps over the VMC and a client that connects to the local geth node upon launch via JSON-RPC.
