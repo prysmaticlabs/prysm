@@ -8,7 +8,7 @@ contract VMC {
                      bytes32 stateRoot, bytes32 receiptRoot,
                      int number, bool isNewHead, int score);
   event Deposit(address validator, int index);
-  event Withdraw(int validatorIndex);
+  event Withdraw(int index);
 
   struct Validator {
     // Amount of wei the validator holds
@@ -41,16 +41,16 @@ contract VMC {
   }
 
   // validatorId => Validators
-  mapping (int => Validator) validators;
+  mapping (int => Validator) public validators;
   // shardId => (headerHash => CollationHeader)
-  mapping (int => mapping (bytes32 => CollationHeader)) collationHeaders;
+  mapping (int => mapping (bytes32 => CollationHeader)) public collationHeaders;
   // receiptId => Receipt
-  mapping (int => Receipt) receipts;
+  mapping (int => Receipt) public receipts;
   // shardId => headerHash
   mapping (int => bytes32) shardHead;
 
   // Number of validators
-  int numValidators;
+  int public numValidators;
   // Number of receipts
   int numReceipts;
   // Indexs of empty slots caused by the function `withdraw`
@@ -58,7 +58,7 @@ contract VMC {
   // The top index of the stack in empty_slots_stack
   int emptySlotsStackTop;
   // Has the validator deposited before?
-  mapping (address => bool) isValidatorDeposited;
+  mapping (address => bool) public isValidatorDeposited;
 
   // Constant values
   uint constant periodLength = 5;
@@ -70,7 +70,7 @@ contract VMC {
   uint constant lookAheadPeriods = 4;
 
   // Log the latest period number of the shard
-  mapping (int => int) periodHead;
+  mapping (int => int) public periodHead;
 
   function VMC() public {
   }
@@ -93,9 +93,7 @@ contract VMC {
       int(
         uint(
           keccak256(
-            uint(
-              block.blockhash(_period - lookAheadPeriods)
-            ) * periodLength,
+            uint(block.blockhash((_period - lookAheadPeriods) * periodLength)),
             _shardId
           )
         ) %
