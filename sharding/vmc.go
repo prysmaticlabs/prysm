@@ -26,7 +26,7 @@ func initVMC(c *Client) error {
 			return fmt.Errorf("unable to intiate the transaction: %v", err)
 		}
 
-		addr, tx, contract, err := contracts.DeployVMC(&txOps, c.client)
+		addr, tx, contract, err := contracts.DeployVMC(txOps, c.client)
 		if err != nil {
 			return fmt.Errorf("unable to deploy validator management contract: %v", err)
 		}
@@ -62,7 +62,7 @@ func joinValidatorSet(c *Client) error {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
 
-	tx, err := c.vmc.VMCTransactor.Deposit(&txOps)
+	tx, err := c.vmc.VMCTransactor.Deposit(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
 	}
