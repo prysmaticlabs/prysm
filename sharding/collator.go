@@ -3,21 +3,31 @@ package sharding
 import (
 	"context"
 	"fmt"
+	"math/big"
+
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"math/big"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
+
+type collatorClient interface {
+	Account() (*accounts.Account, error)
+	ChainReader() ethereum.ChainReader
+	VMCCaller() *contracts.VMCCaller
+}
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
 // we are an eligible proposer for collations. Then, it finds the pending tx's
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the VMC to create a collation
-func subscribeBlockHeaders(c *Client) error {
+func subscribeBlockHeaders(c collatorClient) error {
 	headerChan := make(chan *types.Header, 16)
 
-	_, err := c.client.SubscribeNewHead(context.Background(), headerChan)
+	_, err := c.ChainReader().SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
 		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
 	}
@@ -42,27 +52,25 @@ func subscribeBlockHeaders(c *Client) error {
 // collation for the available shards in the VMC. The function calls
 // getEligibleProposer from the VMC and proposes a collation if
 // conditions are met
-func checkShardsForProposal(c *Client, head *types.Header) error {
-
-	accounts := c.keystore.Accounts()
-	if len(accounts) == 0 {
-		return fmt.Errorf("no accounts found")
-	}
-
-	if err := c.unlockAccount(accounts[0]); err != nil {
-		return fmt.Errorf("cannot unlock account. %v", err)
+func checkShardsForProposal(c collatorClient, head *types.Header) error {
+	account, err := c.Account()
+	if err != nil {
+		return err
 	}
 
 	log.Info("Checking if we are an eligible collation proposer for a shard...")
 	for s := int64(0); s < shardCount; s++ {
 		// Checks if we are an eligible proposer according to the VMC
 		period := head.Number.Div(head.Number, big.NewInt(periodLength))
-		addr, err := c.vmc.VMCCaller.GetEligibleProposer(&bind.CallOpts{}, big.NewInt(s), period)
+		addr, err := c.VMCCaller().GetEligibleProposer(&bind.CallOpts{}, big.NewInt(s), period)
 		// TODO: When we are not a proposer, we get the error of being unable to
 		// unmarshal empty output. Open issue to deal with this.
+		if err != nil {
+			return err
+		}
 
 		// If output is non-empty and the addr == coinbase
-		if err == nil && addr == accounts[0].Address {
+		if addr == account.Address {
 			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
 			err := proposeCollation(s)
 			if err != nil {
