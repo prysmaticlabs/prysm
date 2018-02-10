@@ -14,7 +14,7 @@ var (
 		Aliases:   []string{"shard"},
 		Usage:     "Start a sharding client",
 		ArgsUsage: "[endpoint]",
-		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag,utils.IPCPathFlag},
+		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
 Launches a sharding client that connects to a running geth node and proposes collations to a Validator Manager Contract. This feature is a work in progress.
