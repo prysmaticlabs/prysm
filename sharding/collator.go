@@ -36,15 +36,14 @@ func subscribeBlockHeaders(c collatorClient) error {
 
 	for {
 		// TODO: Error handling for getting disconnected from the client
-		select {
-		case head := <-headerChan:
-			// Query the current state to see if we are an eligible proposer
-			log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
-			// TODO: Only run this code on certain periods?
-			if err := checkShardsForProposal(c, head); err != nil {
-				return fmt.Errorf("unable to watch shards. %v", err)
-			}
+		head := <-headerChan
+		// Query the current state to see if we are an eligible proposer
+		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
+		// TODO: Only run this code on certain periods?
+		if err := checkShardsForProposal(c, head); err != nil {
+			return fmt.Errorf("unable to watch shards. %v", err)
 		}
+
 	}
 }
 
