@@ -49,6 +49,9 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	if endpoint == "" {
 		endpoint = fmt.Sprintf("%s/%s.ipc", path, clientIdentifier)
 	}
+	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
+		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
+	}
 
 	config := &node.Config{
 		DataDir: path,
