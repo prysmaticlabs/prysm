@@ -77,6 +77,7 @@ func (c *Client) Start() error {
 	}
 	c.client = ethclient.NewClient(rpcClient)
 	defer rpcClient.Close()
+
 	if err := initVMC(c); err != nil {
 		return err
 	}
@@ -127,42 +128,23 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-func (c *Client) createTXOps(value *big.Int) (bind.TransactOpts, error) {
-
-	accounts := c.keystore.Accounts()
-	if len(accounts) == 0 {
-		return bind.TransactOpts{}, fmt.Errorf("no accounts found")
+func (c *Client) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
+	account, err := c.Account()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := c.unlockAccount(accounts[0]); err != nil {
-		return bind.TransactOpts{}, fmt.Errorf("unable to unlock account 0: %v", err)
-	}
-
-	if value.Cmp(big.NewInt(0)) == 0 {
-		return bind.TransactOpts{
-			From: accounts[0].Address,
-			Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-				networkID, err := c.client.NetworkID(context.Background())
-				if err != nil {
-					return nil, fmt.Errorf("unable to fetch networkID: %v", err)
-				}
-				return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
-			},
-		}, nil
-	}
-
-	return bind.TransactOpts{
-		From:  accounts[0].Address,
+	return &bind.TransactOpts{
+		From:  account.Address,
 		Value: value,
 		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			networkID, err := c.client.NetworkID(context.Background())
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
 			}
-			return c.keystore.SignTx(accounts[0], tx, networkID /* chainID */)
+			return c.keystore.SignTx(*account, tx, networkID /* chainID */)
 		},
 	}, nil
-
 }
 
 // Account to use for sharding transactions.
