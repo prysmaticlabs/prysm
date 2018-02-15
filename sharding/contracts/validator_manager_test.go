@@ -89,7 +89,7 @@ func TestValidatorDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get Deposit event: %v", err)
 	}
-	if depositsEventsIterator.Next() == false {
+	if !depositsEventsIterator.Next() {
 		t.Fatal("No Deposit event found")
 	}
 	if depositsEventsIterator.Event.Validator != addr {
@@ -116,12 +116,12 @@ func TestValidatorWithdraw(t *testing.T) {
 	}
 	backend.Commit()
 
-	//Check for the Withdraw event
+	// Check for the Withdraw event
 	withdrawsEventsIterator, err := vmc.FilterWithdraw(&bind.FilterOpts{Start: 0})
 	if err != nil {
 		t.Fatalf("Failed to get withdraw event: %v", err)
 	}
-	if withdrawsEventsIterator.Next() == false {
+	if !withdrawsEventsIterator.Next() {
 		t.Fatal("No withdraw event found")
 	}
 	if withdrawsEventsIterator.Event.Index.Cmp(big.NewInt(0)) != 0 {
