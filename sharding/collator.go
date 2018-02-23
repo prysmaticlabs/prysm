@@ -58,10 +58,11 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 	}
 
 	log.Info("Checking if we are an eligible collation proposer for a shard...")
+	period := big.NewInt(0).Div(head.Number, big.NewInt(periodLength))
 	for s := int64(0); s < shardCount; s++ {
 		// Checks if we are an eligible proposer according to the VMC
-		period := head.Number.Div(head.Number, big.NewInt(periodLength))
 		addr, err := c.VMCCaller().GetEligibleProposer(&bind.CallOpts{}, big.NewInt(s), period)
+
 		// TODO: When we are not a proposer, we get the error of being unable to
 		// unmarshal empty output. Open issue to deal with this.
 		if err != nil {
