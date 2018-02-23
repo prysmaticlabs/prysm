@@ -28,7 +28,7 @@ type CollationHeader struct {
 func (c *Collation) Header() *CollationHeader           { return c.header }
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 
-func (c *Collation) SetHeader(h *collationHeader) { c.header = h }
+func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
 func (c *Collation) AddTransaction(tx *types.Transaction) {
 	// TODO: Check transaction does not exceed gas limit
 	c.transactions = append(c.transactions, tx)
