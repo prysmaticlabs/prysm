@@ -19,6 +19,18 @@ var (
 		Description: `
 Launches a sharding client that connects to a running geth node and proposes collations to a Validator Manager Contract. This feature is a work in progress.
 `,
+		Subcommands: []cli.Command{
+			{
+			Name: "joinvalidatorset",
+			Usage: "Join validator set",
+			ArgsUsage: "",
+			Action: utils.MigrateFlags(joinValidatorSet),
+			Category: "SHARDING COMMANDS",
+			Description: `
+Participate in validator set, client will deposit 100ETH from user's account into VMC validator set, which can be withdrawl at any time. This feature is a work in progress.
+`,
+		},
+	},
 	}
 )
 
@@ -28,5 +40,9 @@ func shardingClient(ctx *cli.Context) error {
 		return err
 	}
 	c.Wait()
+	return nil
+}
+
+func joinValidatorSet(ctx *cli.Context) error {
 	return nil
 }
