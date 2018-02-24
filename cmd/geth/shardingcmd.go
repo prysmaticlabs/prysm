@@ -27,7 +27,7 @@ Launches a sharding client that connects to a running geth node and proposes col
 			Action: utils.MigrateFlags(joinValidatorSet),
 			Category: "SHARDING COMMANDS",
 			Description: `
-Participate in validator set, client will deposit 100ETH from user's account into VMC validator set, which can be withdrawl at any time. This feature is a work in progress.
+Participate in validator set, client will deposit 100ETH from user's account into VMC validator set, which can be withdrawn at any time. This feature is a work in progress.
 `,
 		},
 	},
