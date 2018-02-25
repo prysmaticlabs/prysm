@@ -14,24 +14,11 @@ var (
 		Aliases:   []string{"shard"},
 		Usage:     "Start a sharding client",
 		ArgsUsage: "[endpoint]",
-		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag,utils.ValidatorSetFlag},
+		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.ValidatorSetFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
 Launches a sharding client that connects to a running geth node and proposes collations to a Validator Manager Contract. This feature is a work in progress.
 `,
-	/*	Subcommands: []cli.Command{
-			{
-				Name:      "joinvalidatorset",
-				Usage:     "Join validator set",
-				Aliases:   []string{"validate"},
-				ArgsUsage: "",
-				Action:    utils.MigrateFlags(joinValidatorSet),
-				Category:  "SHARDING COMMANDS",
-				Description: `
-Participate in validator set, client will deposit 100ETH from user's account into VMC validator set, which can be withdrawn at any time. This feature is a work in progress.
-`,
-			},
-		},*/
 	}
 )
 
@@ -43,8 +30,3 @@ func shardingClient(ctx *cli.Context) error {
 	c.Wait()
 	return nil
 }
-
-/*func joinValidatorSet(ctx *cli.Context) error {
-	fmt.Println("Testing")
-	return nil
-}*/
