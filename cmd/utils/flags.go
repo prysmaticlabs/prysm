@@ -537,6 +537,12 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+
+	//Sharding Settings
+	ValidatorSetFlag = cli.BoolFlag{
+		Name:  "joinvalidatorset",
+		Usage: "Join validator set",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
