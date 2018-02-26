@@ -540,7 +540,7 @@ var (
 
 	//Sharding Settings
 	ValidatorSetFlag = cli.BoolFlag{
-		Name:  "joinvalidatorset",
+		Name:  "validator",
 		Usage: "Join validator set",
 	}
 )
