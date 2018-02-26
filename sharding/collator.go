@@ -40,8 +40,19 @@ func subscribeBlockHeaders(c collatorClient) error {
 		// Query the current state to see if we are an eligible proposer
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 		// TODO: Only run this code on certain periods?
-		if err := checkShardsForProposal(c, head); err != nil {
-			return fmt.Errorf("unable to watch shards. %v", err)
+
+		// Check if we are in the validator pool before checking if we are an eligible proposer
+		v, err := checkForValidators(c)
+		if err != nil {
+			return fmt.Errorf("unable to verify client in validator pool", err)
+		}
+
+		if (v) {
+			if err := checkShardsForProposal(c, head); err != nil {
+				return fmt.Errorf("unable to watch shards. %v", err)
+			}
+		} else {
+			log.Warn("client not in validator pool, re-try next block")
 		}
 
 	}
@@ -80,6 +91,25 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 	}
 
 	return nil
+}
+
+// checkForValidators checks if the client is in the validator pool because
+// we can't guarantee our tx for deposit will be in the next block header we receive
+// The function calls IsValidatorDeposited from the VMC and returns true if
+// the client is in the validator pool
+func checkForValidators(c collatorClient) (bool, error) {
+	account, err := c.Account()
+	if err != nil {
+		return false, err
+	}
+
+	// Checks if our deposit has gone through according to the VMC
+	b, err := c.VMCCaller().IsValidatorDeposited(&bind.CallOpts{}, account.Address)
+	if err != nil {
+		return false, err
+	}
+
+	return b, nil
 }
 
 // proposeCollation interacts with the VMC directly to add a collation header
