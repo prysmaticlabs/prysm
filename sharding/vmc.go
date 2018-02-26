@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
@@ -57,16 +58,23 @@ func joinValidatorSet(c *Client) error {
 
 	// TODO: Check if account is already in validator set. Fetch this From
 	// the VMC contract's validator set
-	txOps, err := c.createTXOps(depositSize)
-	if err != nil {
-		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
-	}
+	if c.ctx.GlobalBool(utils.ValidatorSetFlag.Name) {
 
-	tx, err := c.vmc.VMCTransactor.Deposit(txOps)
-	if err != nil {
-		return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
+		log.Info(fmt.Sprintf("Joining Validator Set"))
+		txOps, err := c.createTXOps(depositSize)
+		if err != nil {
+			return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
+		}
+
+		tx, err := c.vmc.VMCTransactor.Deposit(txOps)
+		if err != nil {
+			return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
+		}
+		log.Info(fmt.Sprintf("Deposited 100ETH into contract with transaction hash: %s", tx.Hash().String()))
+
+	} else {
+		log.Info(fmt.Sprintf("Not Joining Validator Set"))
+
 	}
-	log.Info(fmt.Sprintf("Deposited 100ETH into contract with transaction hash: %s", tx.Hash().String()))
 	return nil
-
 }
