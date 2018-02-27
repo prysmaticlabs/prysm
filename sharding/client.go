@@ -127,7 +127,7 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 		scanner := bufio.NewScanner(file)
 		scanner.Split(bufio.ScanWords)
 		passwordSuccess := scanner.Scan()
-		if passwordSuccess == false {
+		if !passwordSuccess {
 			err = scanner.Err()
 			if err != nil {
 				return fmt.Errorf("unable to read contents of file %v", err)
