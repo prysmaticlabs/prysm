@@ -98,8 +98,8 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 	return nil
 }
 
-// checkForValidators checks if the client is in the validator pool because
-// we can't guarantee our tx for deposit will be in the next block header we receive
+// isAccountInValidatorSet checks if the client is in the validator pool because
+// we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsValidatorDeposited from the VMC and returns true if
 // the client is in the validator pool
 func isAccountInValidatorSet(c collatorClient) (bool, error) {
