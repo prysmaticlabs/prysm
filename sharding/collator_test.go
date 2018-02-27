@@ -23,8 +23,8 @@ type FakeCollatorClient struct {
 	contractCaller FakeContractCaller
 }
 
-func (c FakeCollatorClient) Account() (*accounts.Account, error) {
-	return c.accountAccount, c.accountError
+func (c FakeCollatorClient) Account() *accounts.Account {
+	return c.accountAccount
 }
 
 func (c FakeCollatorClient) ChainReader() ethereum.ChainReader {
@@ -89,13 +89,6 @@ func TestCheckShardsForProposal(t *testing.T) {
 		ExpectedError  string
 		CollatorClient FakeCollatorClient
 	}{
-		{
-			Name:          "collatorClient.Account should return an error",
-			ExpectedError: "no account",
-			CollatorClient: FakeCollatorClient{
-				accountError: errors.New("no account"),
-			},
-		},
 		{
 			Name:          "VMCCaller.GetEligibleProposer should return an error",
 			ExpectedError: "there is no cake",
