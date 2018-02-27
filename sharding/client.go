@@ -57,6 +57,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	config := &node.Config{
 		DataDir: path,
 	}
+
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
 		panic(err) // TODO(prestonvanloon): handle this
