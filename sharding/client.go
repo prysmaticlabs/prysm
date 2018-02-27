@@ -126,13 +126,12 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 		}
 		scanner := bufio.NewScanner(file)
 		scanner.Split(bufio.ScanWords)
-		passwordSuccess := scanner.Scan()
-		if !passwordSuccess {
+		if !scanner.Scan() {
 			err = scanner.Err()
 			if err != nil {
 				return fmt.Errorf("unable to read contents of file %v", err)
 			}
-			return fmt.Errorf("Password Not Found in file")
+			return fmt.Errorf("password not found in file")
 		}
 
 		pass = scanner.Text()
