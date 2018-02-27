@@ -3,11 +3,12 @@ package sharding
 //go:generate abigen --sol contracts/validator_manager.sol --pkg contracts --out contracts/validator_manager.go
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"strings"
+	"os"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -120,12 +121,21 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	pass := ""
 
 	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
-		blob, err := ioutil.ReadFile(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
+		file, err := os.Open(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
 		if err != nil {
-			return fmt.Errorf("unable to read account password contents in file %s. %v", utils.PasswordFileFlag.Value, err)
+			return fmt.Errorf("unable to open file containing account password %s. %v", utils.PasswordFileFlag.Value, err)
 		}
-		// TODO: Use bufio.Scanner or other reader that doesn't include a trailing newline character.
-		pass = strings.Trim(string(blob), "\n") // Some text files end in new line, remove with strings.Trim.
+		scanner := bufio.NewScanner(file)
+		scanner.Split(bufio.ScanWords)
+		if !scanner.Scan() {
+			err = scanner.Err()
+			if err != nil {
+				return fmt.Errorf("unable to read contents of file %v", err)
+			}
+			return errors.New("password not found in file")
+		}
+
+		pass = scanner.Text()
 	}
 
 	return c.keystore.Unlock(account, pass)
