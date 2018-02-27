@@ -88,7 +88,7 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 		// If output is non-empty and the addr == coinbase
 		if addr == account.Address {
 			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
-			err := proposeCollation(s)
+			err := proposeCollation(c, s)
 			if err != nil {
 				return fmt.Errorf("could not propose collation. %v", err)
 			}
@@ -118,7 +118,7 @@ func isAccountInValidatorSet(c collatorClient) (bool, error) {
 }
 
 // proposeCollation interacts with the VMC directly to add a collation header
-func proposeCollation(shardID int64) error {
+func proposeCollation(c collatorClient, shardID int64) error {
 	// TODO: Adds a collation header to the VMC with the following fields:
 	// [
 	//  shard_id: uint256,
@@ -144,5 +144,9 @@ func proposeCollation(shardID int64) error {
 	// them to finish up the collation. It will then need to broadcast the
 	// collation to the main chain using JSON-RPC.
 	log.Info("Propose collation function called")
+	pendingTXs, err := processPendingTransactions(c)
+	if err != nil {
+		return fmt.Errorf("could not fetch pending tx's. %v", err)
+	}
 	return nil
 }

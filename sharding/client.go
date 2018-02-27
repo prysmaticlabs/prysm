@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"runtime"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -47,7 +48,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 
 	endpoint := ctx.Args().First()
 	if endpoint == "" {
-		endpoint = fmt.Sprintf("%s/%s.ipc", path, clientIdentifier)
+		endpoint = fmt.Sprintf("%s/%s", path, clientIdentifier)
 	}
 	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
 		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
@@ -57,6 +58,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 		DataDir: path,
 	}
 	scryptN, scryptP, keydir, err := config.AccountConfig()
+	log.Info(keydir)
 	if err != nil {
 		panic(err) // TODO(prestonvanloon): handle this
 	}
@@ -74,7 +76,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 // * Verifies or deploys the validator management contract.
 func (c *Client) Start() error {
 	log.Info("Starting sharding client")
-	rpcClient, err := dialRPC(c.endpoint)
+	rpcClient, err := dialRPC("")
 	if err != nil {
 		return err
 	}
@@ -181,7 +183,7 @@ func (c *Client) VMCCaller() *contracts.VMCCaller {
 
 // dialRPC endpoint to node.
 func dialRPC(endpoint string) (*rpc.Client, error) {
-	if endpoint == "" {
+	if endpoint == "" || runtime.GOOS == "windows" {
 		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
 	}
 	return rpc.Dial(endpoint)
