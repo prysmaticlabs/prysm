@@ -90,13 +90,6 @@ func TestCheckShardsForProposal(t *testing.T) {
 		CollatorClient FakeCollatorClient
 	}{
 		{
-			Name:          "collatorClient.Account should return an error",
-			ExpectedError: "no account",
-			CollatorClient: FakeCollatorClient{
-				accountError: errors.New("no account"),
-			},
-		},
-		{
 			Name:          "VMCCaller.GetEligibleProposer should return an error",
 			ExpectedError: "there is no cake",
 			CollatorClient: FakeCollatorClient{
