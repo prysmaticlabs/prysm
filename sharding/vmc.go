@@ -56,11 +56,9 @@ func initVMC(c *Client) error {
 // the account is not in the set, it will deposit 100ETH into contract.
 func joinValidatorSet(c *Client) error {
 
-	// TODO: Check if account is already in validator set. Fetch this From
-	// the VMC contract's validator set
-	if c.ctx.GlobalBool(utils.ValidatorSetFlag.Name) {
+	if c.ctx.GlobalBool(utils.JoinValidatorSetFlag.Name) {
 
-		log.Info(fmt.Sprintf("Joining Validator Set"))
+		log.Info("Joining validator set")
 		txOps, err := c.createTXOps(depositSize)
 		if err != nil {
 			return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
@@ -70,10 +68,10 @@ func joinValidatorSet(c *Client) error {
 		if err != nil {
 			return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
 		}
-		log.Info(fmt.Sprintf("Deposited 100ETH into contract with transaction hash: %s", tx.Hash().String()))
+		log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", depositSize, tx.Hash().String()))
 
 	} else {
-		log.Info(fmt.Sprintf("Not Joining Validator Set"))
+		log.Info("Not joining validator set")
 
 	}
 	return nil
