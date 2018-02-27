@@ -52,7 +52,7 @@ func subscribeBlockHeaders(c collatorClient) error {
 			return fmt.Errorf("unable to verify client in validator pool. %v", err)
 		}
 
-		if (v) {
+		if v {
 			if err := checkShardsForProposal(c, head); err != nil {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
