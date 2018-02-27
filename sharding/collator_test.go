@@ -23,8 +23,8 @@ type FakeCollatorClient struct {
 	contractCaller FakeContractCaller
 }
 
-func (c FakeCollatorClient) Account() (*accounts.Account, error) {
-	return c.accountAccount, c.accountError
+func (c FakeCollatorClient) Account() *accounts.Account {
+	return c.accountAccount
 }
 
 func (c FakeCollatorClient) ChainReader() ethereum.ChainReader {
