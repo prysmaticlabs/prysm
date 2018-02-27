@@ -82,6 +82,16 @@ func (c *Client) Start() error {
 	c.client = ethclient.NewClient(rpcClient)
 	defer rpcClient.Close()
 
+	// Check account existence and unlock account before starting sharding client
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return fmt.Errorf("cannot unlock account. %v", err)
+	}
+
 	if err := initVMC(c); err != nil {
 		return err
 	}
@@ -142,10 +152,7 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 }
 
 func (c *Client) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
-	account, err := c.Account()
-	if err != nil {
-		return nil, err
-	}
+	account := c.Account()
 
 	return &bind.TransactOpts{
 		From:  account.Address,
@@ -161,17 +168,10 @@ func (c *Client) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
 }
 
 // Account to use for sharding transactions.
-func (c *Client) Account() (*accounts.Account, error) {
+func (c *Client) Account() *accounts.Account {
 	accounts := c.keystore.Accounts()
-	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no accounts found")
-	}
 
-	if err := c.unlockAccount(accounts[0]); err != nil {
-		return nil, fmt.Errorf("cannot unlock account. %v", err)
-	}
-
-	return &accounts[0], nil
+	return &accounts[0]
 }
 
 // ChainReader for interacting with the chain.
