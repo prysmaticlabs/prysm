@@ -14,7 +14,7 @@ import (
 )
 
 type collatorClient interface {
-	Account() (*accounts.Account, error)
+	Account() *accounts.Account
 	ChainReader() ethereum.ChainReader
 	VMCCaller() *contracts.VMCCaller
 }
@@ -27,12 +27,9 @@ type collatorClient interface {
 func subscribeBlockHeaders(c collatorClient) error {
 	headerChan := make(chan *types.Header, 16)
 
-	account, err := c.Account()
-	if err != nil {
-		return err
-	}
+	account := c.Account()
 
-	_, err = c.ChainReader().SubscribeNewHead(context.Background(), headerChan)
+	_, err := c.ChainReader().SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
 		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
 	}
@@ -68,10 +65,7 @@ func subscribeBlockHeaders(c collatorClient) error {
 // getEligibleProposer from the VMC and proposes a collation if
 // conditions are met
 func checkShardsForProposal(c collatorClient, head *types.Header) error {
-	account, err := c.Account()
-	if err != nil {
-		return err
-	}
+	account := c.Account()
 
 	log.Info("Checking if we are an eligible collation proposer for a shard...")
 	period := big.NewInt(0).Div(head.Number, big.NewInt(periodLength))
@@ -103,10 +97,7 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 // The function calls IsValidatorDeposited from the VMC and returns true if
 // the client is in the validator pool
 func isAccountInValidatorSet(c collatorClient) (bool, error) {
-	account, err := c.Account()
-	if err != nil {
-		return false, err
-	}
+	account := c.Account()
 
 	// Checks if our deposit has gone through according to the VMC
 	b, err := c.VMCCaller().IsValidatorDeposited(&bind.CallOpts{}, account.Address)

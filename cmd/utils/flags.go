@@ -537,6 +537,12 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
+
+	//Sharding Settings
+	JoinValidatorSetFlag = cli.BoolFlag{
+		Name:  "validator",
+		Usage: "To become a validator with your sharding client, 100 ETH will be deposited from user's account into VMC ",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating

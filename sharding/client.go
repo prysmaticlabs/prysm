@@ -3,11 +3,12 @@ package sharding
 //go:generate abigen --sol contracts/validator_manager.sol --pkg contracts --out contracts/validator_manager.go
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"strings"
+	"os"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -56,6 +57,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 	config := &node.Config{
 		DataDir: path,
 	}
+
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
 		panic(err) // TODO(prestonvanloon): handle this
@@ -80,6 +82,16 @@ func (c *Client) Start() error {
 	}
 	c.client = ethclient.NewClient(rpcClient)
 	defer rpcClient.Close()
+
+	// Check account existence and unlock account before starting sharding client
+	accounts := c.keystore.Accounts()
+	if len(accounts) == 0 {
+		return fmt.Errorf("no accounts found")
+	}
+
+	if err := c.unlockAccount(accounts[0]); err != nil {
+		return fmt.Errorf("cannot unlock account. %v", err)
+	}
 
 	if err := initVMC(c); err != nil {
 		return err
@@ -120,22 +132,28 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 	pass := ""
 
 	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
-		blob, err := ioutil.ReadFile(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
+		file, err := os.Open(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
 		if err != nil {
-			return fmt.Errorf("unable to read account password contents in file %s. %v", utils.PasswordFileFlag.Value, err)
+			return fmt.Errorf("unable to open file containing account password %s. %v", utils.PasswordFileFlag.Value, err)
 		}
-		// TODO: Use bufio.Scanner or other reader that doesn't include a trailing newline character.
-		pass = strings.Trim(string(blob), "\n") // Some text files end in new line, remove with strings.Trim.
+		scanner := bufio.NewScanner(file)
+		scanner.Split(bufio.ScanWords)
+		if !scanner.Scan() {
+			err = scanner.Err()
+			if err != nil {
+				return fmt.Errorf("unable to read contents of file %v", err)
+			}
+			return errors.New("password not found in file")
+		}
+
+		pass = scanner.Text()
 	}
 
 	return c.keystore.Unlock(account, pass)
 }
 
 func (c *Client) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
-	account, err := c.Account()
-	if err != nil {
-		return nil, err
-	}
+	account := c.Account()
 
 	return &bind.TransactOpts{
 		From:  account.Address,
@@ -151,17 +169,10 @@ func (c *Client) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
 }
 
 // Account to use for sharding transactions.
-func (c *Client) Account() (*accounts.Account, error) {
+func (c *Client) Account() *accounts.Account {
 	accounts := c.keystore.Accounts()
-	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no accounts found")
-	}
 
-	if err := c.unlockAccount(accounts[0]); err != nil {
-		return nil, fmt.Errorf("cannot unlock account. %v", err)
-	}
-
-	return &accounts[0], nil
+	return &accounts[0]
 }
 
 // ChainReader for interacting with the chain.
