@@ -14,7 +14,7 @@ import (
 )
 
 type collatorClient interface {
-	Account() (*accounts.Account, error)
+	Account() *accounts.Account
 	ChainReader() ethereum.ChainReader
 	VMCCaller() *contracts.VMCCaller
 }
@@ -26,6 +26,8 @@ type collatorClient interface {
 // to the VMC to create a collation
 func subscribeBlockHeaders(c collatorClient) error {
 	headerChan := make(chan *types.Header, 16)
+
+	account := c.Account()
 
 	_, err := c.ChainReader().SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
@@ -40,8 +42,19 @@ func subscribeBlockHeaders(c collatorClient) error {
 		// Query the current state to see if we are an eligible proposer
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 		// TODO: Only run this code on certain periods?
-		if err := checkShardsForProposal(c, head); err != nil {
-			return fmt.Errorf("unable to watch shards. %v", err)
+
+		// Check if we are in the validator pool before checking if we are an eligible proposer
+		v, err := isAccountInValidatorSet(c)
+		if err != nil {
+			return fmt.Errorf("unable to verify client in validator pool. %v", err)
+		}
+
+		if v {
+			if err := checkShardsForProposal(c, head); err != nil {
+				return fmt.Errorf("unable to watch shards. %v", err)
+			}
+		} else {
+			log.Warn(fmt.Sprintf("Account %s not in validator pool.", account.Address.String()))
 		}
 
 	}
@@ -52,10 +65,7 @@ func subscribeBlockHeaders(c collatorClient) error {
 // getEligibleProposer from the VMC and proposes a collation if
 // conditions are met
 func checkShardsForProposal(c collatorClient, head *types.Header) error {
-	account, err := c.Account()
-	if err != nil {
-		return err
-	}
+	account := c.Account()
 
 	log.Info("Checking if we are an eligible collation proposer for a shard...")
 	period := big.NewInt(0).Div(head.Number, big.NewInt(periodLength))
@@ -80,6 +90,22 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 	}
 
 	return nil
+}
+
+// isAccountInValidatorSet checks if the client is in the validator pool because
+// we can't guarantee our tx for deposit will be in the next block header we receive.
+// The function calls IsValidatorDeposited from the VMC and returns true if
+// the client is in the validator pool
+func isAccountInValidatorSet(c collatorClient) (bool, error) {
+	account := c.Account()
+
+	// Checks if our deposit has gone through according to the VMC
+	b, err := c.VMCCaller().IsValidatorDeposited(&bind.CallOpts{}, account.Address)
+	if err != nil {
+		return false, err
+	}
+
+	return b, nil
 }
 
 // proposeCollation interacts with the VMC directly to add a collation header
