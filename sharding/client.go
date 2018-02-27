@@ -5,6 +5,7 @@ package sharding
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -131,7 +132,7 @@ func (c *Client) unlockAccount(account accounts.Account) error {
 			if err != nil {
 				return fmt.Errorf("unable to read contents of file %v", err)
 			}
-			return fmt.Errorf("password not found in file")
+			return errors.New("password not found in file")
 		}
 
 		pass = scanner.Text()
