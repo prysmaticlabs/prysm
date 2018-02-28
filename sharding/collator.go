@@ -73,8 +73,6 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 		// Checks if we are an eligible proposer according to the VMC
 		addr, err := c.VMCCaller().GetEligibleProposer(&bind.CallOpts{}, big.NewInt(s), period)
 
-		// TODO: When we are not a proposer, we get the error of being unable to
-		// unmarshal empty output. Open issue to deal with this.
 		if err != nil {
 			return err
 		}
