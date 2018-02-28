@@ -1,6 +1,7 @@
 package sharding
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 
@@ -29,9 +30,14 @@ func (c *Collation) Header() *CollationHeader           { return c.header }
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 
 func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
-func (c *Collation) AddTransaction(tx *types.Transaction) {
+func (c *Collation) AddTransaction(tx *types.Transaction) error {
 	// TODO: Check transaction does not exceed gas limit
+	gasLimit := uint64(4000000)
+	if tx.Gas() > gasLimit {
+		return fmt.Errorf("The transaction has exceeded the gas limit of %d by %d", gasLimit, (tx.Gas() - gasLimit))
+	}
 	c.transactions = append(c.transactions, tx)
+	return nil
 }
 
 func (c *Collation) GasUsed() *big.Int {
