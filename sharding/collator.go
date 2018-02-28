@@ -41,7 +41,6 @@ func subscribeBlockHeaders(c collatorClient) error {
 		head := <-headerChan
 		// Query the current state to see if we are an eligible proposer
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
-		// TODO: Only run this code on certain periods?
 
 		// Check if we are in the validator pool before checking if we are an eligible proposer
 		v, err := isAccountInValidatorSet(c)
