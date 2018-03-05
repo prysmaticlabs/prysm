@@ -11,15 +11,15 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
 Table of Contents
 =================
 
-  * [Installation](#installation)
-  * [Sharding Instructions](#sharding)
-        * [Running a Local Geth Node](#running-a-local-geth-node)
-        * [Transaction Generator](#transaction-generator)
-        * [Becoming a Validator](#becoming-a-validator)
-        * [Becoming a Proposer](#becoming-a-proposer)
-  * [Testing](#testing)
-  * [Contribution Guidelines](#contribution-guidelines)
-  * [License](#license)
+- [Installation](#installation)
+- [Sharding Instructions](#sharding)
+  - [Running a Local Geth Node](#running-a-local-geth-node)
+  - [Transaction Generator](#transaction-generator)
+  - [Becoming a Validator](#becoming-a-validator)
+  - [Becoming a Proposer](#becoming-a-proposer)
+- [Testing](#testing)
+- [Contribution Guidelines](#contribution-guidelines)
+- [License](#license)
 
 Installation
 ============
@@ -86,7 +86,7 @@ Now, save the passphrase you used in the geth node into a text file called passw
 Transaction Generator
 ---------------------
 
-Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870)
+Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870).
 
 Once we have fake transactions broadcast to our local node, we can start a validator and proposer client in separate terminal windows to begin the sharding process.
 
@@ -108,7 +108,11 @@ The proposer node can be started with the following command:
 geth proposer --password ~/Desktop/password.txt
 ```
 
-Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit. Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract. Once this is done, the full, end-to-end sharding example is complete and another iteration can occur.
+Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit. 
+
+Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract. 
+
+Once this is done, the full, end-to-end sharding example is complete and another iteration can occur.
 
 
 Making Changes
