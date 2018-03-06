@@ -1,5 +1,7 @@
 # Prysmatic Labs Sharding Implementation
 
+![Travis Build](<https://travis-ci.org/prysmaticlabs/geth-sharding.svg?branch=master)
+
 This is the main repository for the sharding implementation of the go-ethereum client by [Prysmatic Labs](https://prysmaticlabs.com). For the original, go-ethereum project, refer to the following [link](https://github.com/ethereum/go-ethereum).
 
 Before you begin, check out our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc serves as the single source of truth for our team, our milestones, and details on the different components of our architecture.
