@@ -122,7 +122,7 @@ var (
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
-		utils.JoinValidatorSetFlag,
+		utils.DepositFlag,
 		configFileFlag,
 	}
 
