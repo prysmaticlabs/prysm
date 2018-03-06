@@ -112,7 +112,7 @@ Becoming a Validator
 To deposit ETH and join as a validator in the Validator Manager Contract, run the following command:
 
 ```
-geth sharding-validator --deposit 100eth --password /path/to/your/password.txt
+geth sharding-validator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
 This will extract 100ETH from your account balance and insert you into the VMC's validator set. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible proposer for a certain shard in a given period. Once you are selected, the validator will request collations from a "collation proposals pool" that is created by a proposer node. We will need to run a proposal node concurrently in a separate terminal window as follows:
@@ -122,7 +122,7 @@ Becoming a Proposer
 The proposer node can be started with the following command:
 
 ```
-geth sharding-proposer --password /path/to/your/password.txt
+geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
 Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
@@ -140,7 +140,7 @@ Rebuilding the Validator Manager Contract Bindings
 The Validator Manager Contract is built in Solidity and deployed to the geth node upon launch of the client if it does not exist in the network at a specified address. If there are any changes to the VMC's code, the Golang bindigs must be rebuilt with the following command.
 
 ```
-go generate abigen --sol contracts/validator_manager.sol --pkg contracts --out contracts/validator_manager.go
+cd ./sharding && go generate
 ```
 
 Testing
@@ -149,7 +149,7 @@ Testing
 To run the unit tests of our system do:
 
 ```
-go test ./sharding
+go test github.com/ethereum/go-ethereum/sharding
 ```
 
 We will require more complex testing scenarios (fuzz tests) to measure the full integrity of the system as it evolves.
