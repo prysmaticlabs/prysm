@@ -184,13 +184,9 @@ Now, we’ll explore our architecture and implementation in detail as part of th
 
 Our Ruby Release will require users to start a local geth node running a localized, private blockchain to deploy the **VMC** into. Then, users can spin up a validator client as a command line entrypoint into geth while the node is running as follows:
 
-<<<<<<< HEAD
 ```
 $ geth sharding-validator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
-=======
-    $ geth sharding-validator --deposit 100eth --password ~/Desktop/password.txt
->>>>>>> 5bc1276af89d6f43060be9c1324e7080aaf79d53
 
 If it is the first time the client runs, it will deploy a new **VMC** into the local chain and establish a JSON-RPC connection to interact with the node directly. The `--deposit` flag tells the sharding client to automatically unlock the user’s keystore and begin depositing ETH into the VMC to become a validator.
 
@@ -198,13 +194,9 @@ If the initial deposit is successful, the sharding client will launch a **local,
 
 Concurrently, a user will need to launch a **proposer client** that will start processing transactions into collations that can then be “sold” to validators by including a cryptographic proof of an eth deposit in their unsign collation headers. This proof is a guarantee of a state change in the validator’s account balance for accepting to sign the incoming collation header. The proposer client (also known as a collator) can also be initialized as follows in a separate process:
 
-<<<<<<< HEAD
 ```
 geth sharding-collator --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
-=======
-    geth sharding-collator --password ~/Desktop/password.txt
->>>>>>> 5bc1276af89d6f43060be9c1324e7080aaf79d53
 
 Back to the validators, the validator client will begin its main loop, which involves the following steps:
 
@@ -335,13 +327,9 @@ The main running thread of our implementation is the validator client, which ser
 
 When we launch the client with
 
-<<<<<<< HEAD
 ```
 geth sharding-validator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
-=======
-    geth sharding-validator --deposit 100eth --password ~/Desktop/password.txt
->>>>>>> 5bc1276af89d6f43060be9c1324e7080aaf79d53
 
 The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Validator Manager Contract to insert the user into a validator set. Then, we subscribe for updates on incoming block headers and call `getEligibleProposer` on receiving each header. Once we are selected, our client fetches and “purchases” proposed, unsigned collations from a proposals pool created by proposer nodes. The validator client accepts a collation that offer the highest payout, countersigns it, and adds it to the VMC all within that period.
 
@@ -357,13 +345,9 @@ In addition to launching a validator client, our system will require a user to c
 
 Users will launch a proposal client as another geth entrypoint as follows:
 
-<<<<<<< HEAD
 ```
 geth sharding-collator --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
-=======
-    geth sharding-collator --password ~/Desktop/password.txt
->>>>>>> 5bc1276af89d6f43060be9c1324e7080aaf79d53
 
 Launching this command will connect via JSON-RPC to fetch the geth node’s tx pool and see who the currently active validator node is for the period. The proposer is tasked with running transactions to create valid collations and executing their required computations, tracking used gas, and all the heavy lifting that is usually seen in full Ethereum nodes. Once a valid collation is created, the proposer broadcasts the unsigned header **(note: the body is not broadcasted)** to a proposals pool along with a guaranteed ETH deposit that is extracted from the proposer’s account upfront. Then, the current validator assigned for the period will find proposals for her/her assigned shard and sign the one with the highest payout.
 
