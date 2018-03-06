@@ -539,8 +539,8 @@ var (
 	}
 
 	//Sharding Settings
-	JoinValidatorSetFlag = cli.BoolFlag{
-		Name:  "validator",
+	DepositFlag = cli.BoolFlag{
+		Name:  "deposit",
 		Usage: "To become a validator with your sharding client, 100 ETH will be deposited from user's account into VMC ",
 	}
 )
