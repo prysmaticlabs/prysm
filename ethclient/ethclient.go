@@ -411,7 +411,10 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	return uint(num), err
 }
 
-// TODO: SubscribePendingTransactions (needs server side)
+// SubscribePendingTransactions (needs server side)
+func (ec *Client) SubscribePendingTransactions(ctx context.Context) ([]*types.Transaction, error) {
+	return nil, nil
+}
 
 // Contract Calling
 
