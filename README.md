@@ -104,8 +104,6 @@ Once we have test transactions broadcast to our local node, we can start a valid
 
 ## Becoming a Validator
 
-Work in progress.
-
 To deposit ETH and join as a validator in the Validator Manager Contract, run the following command:
 
 ```
