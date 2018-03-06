@@ -55,6 +55,7 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
   - [Separation of Proposals and Consensus](#separation-of-proposals-and-consensus)
   - [Selecting Eligible Validators Off-Chain](#selecting-eligible-validators-off-chain)
 - [Community Updates and Contributions](#community-updates-and-contributions)
+- [Acknowledgements](#acknowledgements)
 - [References](#references)
 
 # Sharding Introduction
@@ -564,6 +565,10 @@ Now you should have a remote pointing to the `origin` repo (geth-sharding) and t
 - Push to your remote `git push YOURNAME collations-pool`
 - Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `go-ethereum:collations-pool` (your fork on your profile).
 - Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
+
+# Acknowledgements
+
+A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/geth-sharding) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang) for the help and guidance in our approach.
 
 # References
 
