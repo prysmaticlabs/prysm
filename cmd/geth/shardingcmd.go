@@ -27,7 +27,7 @@ Launches a sharding validator client that connects to a running geth node and pr
 		Aliases:   []string{"shard-collator"},
 		Usage:     "Start a sharding collator client",
 		ArgsUsage: "[endpoint]",
-		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.CollateFlag},
+		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
 Launches a sharding collator client that connects to a running geth node and proposes collations to validator node. This feature is a work in progress.
