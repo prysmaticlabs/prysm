@@ -112,7 +112,7 @@ Becoming a Validator
 To deposit ETH and join as a validator in the Validator Manager Contract, run the following command:
 
 ```
-geth validator --deposit 100eth --password ~/Desktop/password.txt
+geth validator --deposit 100eth --password /path/to/your/password.txt
 ```
 
 This will extract 100ETH from your account balance and insert you into the VMC's validator set. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible proposer for a certain shard in a given period. Once you are selected, the validator will request collations from a "collation proposals pool" that is created by a proposer node. We will need to run a proposal node concurrently in a separate terminal window as follows:
@@ -122,7 +122,7 @@ Becoming a Proposer
 The proposer node can be started with the following command:
 
 ```
-geth proposer --password ~/Desktop/password.txt
+geth proposer --password /path/to/your/password.txt
 ```
 
 Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
