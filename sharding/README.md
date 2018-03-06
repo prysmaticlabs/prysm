@@ -145,4 +145,95 @@ The **Diamond Release** will reconcile the best parts of the previous releases a
 
 The Diamond Release should be considered the production release candidate for sharding Ethereum on the mainnet.
 
-ETA: To Be Determined
+ETA: To Be
+
+Go-Ethereum Sharding Alpha Implementation
+=========================================
+Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a validator sharding client that allows for staking, a proposer client that allows for simple state execution and collation proposals, and processing of transactions into shards through on-chain verification via the Validator Manager Smart Contract.
+
+Here is a full reference spec explaining how our initial system will function:
+
+System Architecture
+-------------------
+Our implementation revolves around 5 core components:
+
+- A **locally-running geth node** that spins up an instance of the Ethereum blockchain
+- A **validator manager contract (VMC)** that is deployed onto this blockchain instance
+- A **validator client** that connects to the running geth node through JSON-RPC, provides bindings to the VMC, and listens for incoming collation proposals
+- A **proposer client** that is tasked with state execution, processing pending tx’s from the Geth node, and creates collations that are then broadcast to validators via a wire protocol
+- A **user** that will interact with the sharding client to become a validator and automatically process transactions into shards through the sharding client’s VMC bindings.
+
+Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the VMC and join as a validator that is automatically assigned to a certain period. We will also launch a proposer client that will create collations from the geth node’s tx pool and submit them to validators for them to add their headers to the VMC.
+
+A basic, end-to-end example of the system is as follows:
+
+1. _**A User Starts a Validator Client and Deposits 100ETH into the VMC:**_ the sharding client connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
+
+2. _**Validator Client Connects & Listens to Incoming Headers from the Geth Node and Assigns User as Validator on a Shard per Period:**_ the validator is selected for the current period and must accept collations from proposer nodes that offer the best prices.
+
+3. _**Concurrently, the Proposer Client Processes and Executes Pending tx’s from the Geth Node:**_ the proposer client will create valid collations and submit them to validators on an open bidding system.
+
+4. _**Validators Will Select Collation Proposals that Offer Highest Payout:**_ Validators listen to collation headers on a certain shard with high deposit sizes and sign them.
+
+5. _**The Validator Adds Collation Headers Through the VMC:**_ the validator client calls the add_header function in the VMC and to do on-chain verification of the countersigned and accepted collation header immediately.
+
+6. _**The User Will be Selected as Validator Again on the VMC in a Different Period or Can Withdraw His/Her Stake from the Validator Pool:**_ the user can keep staking and adding incoming collation headers and restart the process, or withdraw his/her stake and be removed from the VMC validator set.
+
+Now, we’ll explore our architecture and implementation in detail as part of the go-ethereum repository.
+
+System Start and User Entrypoint
+--------------------------------
+Our Ruby Release will require users to start a local geth node running a localized, private blockchain to deploy the **VMC** into. Then, users can spin up a validator client as a command line entrypoint into geth while the node is running as follows:
+
+```
+$ geth validator --deposit 100eth --password ~/Desktop/password.txt
+```
+
+If it is the first time the client runs, it will deploy a new **VMC** into the local chain and establish a JSON-RPC connection to interact with the node directly. The `--deposit` flag tells the sharding client to automatically unlock the user’s keystore and begin depositing ETH into the VMC to become a validator.
+
+If the initial deposit is successful, the sharding client will launch a **local, transaction simulation generator**, which will queue transactions into the txpool for the geth node to process that can then be added into collations on a shard.
+
+Concurrently, a user will need to launch a **proposer client** that will start processing transactions into collations that can then be “sold” to validators by including a cryptographic proof of an eth deposit in their unsign collation headers. This proof is a guarantee of a state change in the validator’s account balance for accepting to sign the incoming collation header. The proposer client can also be initialized as follows in a separate process:
+
+```
+geth proposer --password ~/Desktop/password.txt
+```
+
+Back to the validators, the validator client will begin its main loop, which involves the following steps:
+
+1. _**Subscribe to Incoming Block Headers:**_ the client will begin by issuing a subscription over JSON-RPC for block headers from the running geth node.
+
+2. _**Check Shards for Eligible Proposer:**_ On incoming headers, the client will interact with the VMC to check if the current validator is an eligible validator for an upcoming periods (only a few minutes notice)
+
+3. _**If Validator is Selected, Fetch Proposals from Proposal Nodes and Add Collation Headers to VMC:**_ Once a validator is selected, he/she only has a small timeframe to add collation headers through the VMC, so he/she looks for proposals from proposer nodes and accepts those that offer the highest payouts. The validator then countersigns the collation header, receives the full collation with its body after signing, and adds it to the VMC through PoS consensus.
+
+4. _**Supernode Reconciles and Adds to Main Chain:**_ Supernodes that will be responsible for reconciling global state across shards into the main Ethereum blockchain. They are tasked with observing the state across the whole galaxy of shards and adding blocks to the canonical PoW main chain. Proposers get rewarded to their coinbase address for inclusion of a block (also known as a collation subsidy).
+
+5. _**If User Withdraws, Remove from Validator Set:**_ A user can choose to stop being a validator and then his/her ETH is withdrawn from the validator set.
+
+6. _**Otherwise, Validating Client Keeps Subscribing to Block Headers:**_ If the user chooses to keep going,
+
+It will be the proposer client’s responsibility to listen to any new broadcasted transactions to the node and interact with validators that have staked their ETH into the VMC through an open bidding system for collation proposals. Proposer clients are the ones responsible for **state execution** of transactions in the tx pool.
+
+![system functioning](https://i.imgur.com/C54LL1R.png)
+
+## The Validator Manager Contract
+
+Our solidity implementation of the Validator Manager Contract follows the reference spec outlined by Vitalik [here](https://github.com/ethereum/sharding/blob/develop/docs/doc.md).
+
+### Necessary functionality
+
+In our Solidity implementation, we begin with the following sensible defaults:
+
+```javascript
+// Constant values
+uint constant periodLength = 5;
+int constant public shardCount = 100;
+// The exact deposit size which you have to deposit to become a validator
+uint constant depositSize = 100 ether;
+// Number of periods ahead of current period, which the contract
+// is able to return the collator of that period
+uint constant lookAheadPeriods = 4;
+```
+
+Then, the 4 minimal functions required by the VMC are as follows:
