@@ -109,9 +109,9 @@ This will extract 100ETH from your account balance and insert you into the VMC's
 
 ## Becoming a Proposer
 
-The proposer node can be started with the following command:
+The proposer node (collator) can be started with the following command:
 
-    geth sharding-proposer --password /path/to/your/password.txt
+    geth sharding-collation --password /path/to/your/password.txt
 
 Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
 
