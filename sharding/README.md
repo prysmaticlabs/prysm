@@ -190,9 +190,9 @@ If it is the first time the client runs, it will deploy a new **VMC** into the l
 
 If the initial deposit is successful, the sharding client will launch a **local, transaction simulation generator**, which will queue transactions into the txpool for the geth node to process that can then be added into collations on a shard.
 
-Concurrently, a user will need to launch a **proposer client** that will start processing transactions into collations that can then be “sold” to validators by including a cryptographic proof of an eth deposit in their unsign collation headers. This proof is a guarantee of a state change in the validator’s account balance for accepting to sign the incoming collation header. The proposer client can also be initialized as follows in a separate process:
+Concurrently, a user will need to launch a **proposer client** that will start processing transactions into collations that can then be “sold” to validators by including a cryptographic proof of an eth deposit in their unsign collation headers. This proof is a guarantee of a state change in the validator’s account balance for accepting to sign the incoming collation header. The proposer client (also known as a collator) can also be initialized as follows in a separate process:
 
-    geth sharding-proposer --password ~/Desktop/password.txt
+    geth sharding-collator --password ~/Desktop/password.txt
 
 Back to the validators, the validator client will begin its main loop, which involves the following steps:
 
@@ -339,7 +339,7 @@ In addition to launching a validator client, our system will require a user to c
 
 Users will launch a proposal client as another geth entrypoint as follows:
 
-    geth sharding-proposer --password ~/Desktop/password.txt
+    geth sharding-collator --password ~/Desktop/password.txt
 
 Launching this command will connect via JSON-RPC to fetch the geth node’s tx pool and see who the currently active validator node is for the period. The proposer is tasked with running transactions to create valid collations and executing their required computations, tracking used gas, and all the heavy lifting that is usually seen in full Ethereum nodes. Once a valid collation is created, the proposer broadcasts the unsigned header **(note: the body is not broadcasted)** to a proposals pool along with a guaranteed ETH deposit that is extracted from the proposer’s account upfront. Then, the current validator assigned for the period will find proposals for her/her assigned shard and sign the one with the highest payout.
 
