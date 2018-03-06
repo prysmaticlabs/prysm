@@ -543,10 +543,6 @@ var (
 		Name:  "deposit",
 		Usage: "To become a validator with your sharding client, 100 ETH will be deposited from user's account into VMC ",
 	}
-	CollateFlag = cli.BoolFlag{
-		Name:  "collate",
-		Usage: "To become a collator with your sharding client, to submit collations to validator node",
-	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
