@@ -24,13 +24,13 @@ Table of Contents
 Installation
 ============
 
-Create a folder in your `$GOPATH` and navigate to it 
+Create a folder in your `$GOPATH` and navigate to it
 
 ```
 mkdir -p $GOPATH/src/github.com/ethereum && cd $GOPATH/src/github.com/ethereum
 ```
 
-Clone our repository as `go-ethereum` 
+Clone our repository as `go-ethereum`
 
 ```
 git clone https://github.com/prysmaticlabs/geth-sharding ./go-ethereum
@@ -61,6 +61,23 @@ To get started with running the project, follow the instructions to initialize y
 
 Running a Local Geth Node
 ------------------------------
+
+To start a local Geth node, you can create your own `genesis.json` file similar to:
+
+```json
+{
+    "config": {
+        "chainId": 12345,
+        "homesteadBlock": 0,
+        "eip155Block": 0,
+        "eip158Block": 0
+    },
+    "difficulty": "200",
+    "gasLimit": "210000000000"
+}
+```
+
+Then, you can build `geth` and init a new instance of a local, Ethereum blockchain as follows:
 
 ```
 $ make geth
@@ -108,9 +125,9 @@ The proposer node can be started with the following command:
 geth proposer --password ~/Desktop/password.txt
 ```
 
-Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit. 
+Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
 
-Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract. 
+Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract.
 
 Once this is done, the full, end-to-end sharding example is complete and another iteration can occur.
 
@@ -169,6 +186,3 @@ included in our repository in the `COPYING.LESSER` file.
 The go-ethereum binaries (i.e. all code inside of the `cmd` directory) is licensed under the
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also included
 in our repository in the `COPYING` file.
-
-
-
