@@ -104,6 +104,8 @@ Once we have test transactions broadcast to our local node, we can start a valid
 
 ## Becoming a Validator
 
+Work in progress.
+
 To deposit ETH and join as a validator in the Validator Manager Contract, run the following command:
 
     geth sharding-validator --deposit 100eth --password /path/to/your/password.txt
@@ -111,6 +113,8 @@ To deposit ETH and join as a validator in the Validator Manager Contract, run th
 This will extract 100ETH from your account balance and insert you into the VMC's validator set. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible validator for a certain shard in a given period. Once you are selected, the validator will request collations from a "collation proposals pool" that is created by a collation proposer node. We will need to run a collation proposal node concurrently in a separate terminal window as follows:
 
 ## Becoming a Collation Proposer
+
+Work in progress.
 
 The proposer node (collator) can be started with the following command:
 
