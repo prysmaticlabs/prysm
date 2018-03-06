@@ -51,8 +51,8 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     - [Synchronous State Execution](#synchronous-state-execution)
   - [Transparent Sharding](#transparent-sharding)
   - [Tightly-Coupled Sharding (Fork-Free Sharding)](#tightly-coupled-sharding-fork-free-sharding)
-- [Active Questions & Research](#active-questions-and-research)
-  - [Separation of Proposals & Consensus](#separation-of-proposals-and-consensus)
+- [Active Questions and Research](#active-questions-and-research)
+  - [Separation of Proposals and Consensus](#separation-of-proposals-and-consensus)
   - [Selecting Eligible Validators Off-Chain](#selecting-eligible-validators-off-chain)
 - [Community Updates and Contributions](#community-updates-and-contributions)
 - [References](#references)
@@ -458,7 +458,7 @@ Casper allows us to forego some of these windback considerations and reduces the
 
 ## The Data Availability Problem
 
-### Introduction & Background
+### Introduction and Background
 
 Work in progress.
 
@@ -545,7 +545,7 @@ Perfect fairness: within an epoch validators are selected proportionally accordi
 
 # Community Updates and Contributions
 
-Excited by our work and want to get involved in building out our sharding releases? Our  [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md) has all you need to know in order to begin helping us make this happen. We created this document as a single source of reference for all things related to sharding Ethereum, and we need as much help as we can get!
+Excited by our work and want to get involved in building out our sharding releases? We created this document as a single source of reference for all things related to sharding Ethereum, and we need as much help as we can get!
 
 You can explore our [Current Projects](https://github.com/prysmaticlabs/geth-sharding/projects) in-the works for the Ruby release. Each of the project boards contain a full collection of open and closed issues relevant to the different parts of our first implementation that we use to track our open source progress. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Gitter](https://gitter.im/prysmaticlabs/geth-sharding), so drop us a line there if you want to get more involved or have any questions on our implementation!
 
