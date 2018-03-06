@@ -76,7 +76,7 @@ These collations are holistic descriptions of the state and transactions on a ce
 -   Information about the current state of the shard before all transactions are applied
 -   Information about what the state of the shard will be after all transactions are applied
 
-For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have two types of nodes that do the heavy lifting of our sharding logic: **proposers and validators**. The basic role of proposers is to fetch pending transactions from the txpool, execute any state logic or computation, wrap them into collations, and submit them along with an ETH deposit to a **proposals pool**.
+For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives-collations-blocks-transactions-accounts). We will have two types of nodes that do the heavy lifting of our sharding logic: **proposers and validators**. The basic role of proposers is to fetch pending transactions from the txpool, execute any state logic or computation, wrap them into collations, and submit them along with an ETH deposit to a **proposals pool**.
 
 ![proposers](https://yuml.me/8a367c37.png)
 
