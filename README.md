@@ -17,7 +17,7 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
     -   [Running a Local Geth Node](#running-a-local-geth-node)
     -   [Transaction Generator](#transaction-generator)
     -   [Becoming a Validator](#becoming-a-validator)
-    -   [Becoming a Proposer](#becoming-a-proposer)
+    -   [Becoming a Collation Proposer](#becoming-a-collation-proposer)
 -   [Testing](#testing)
 -   [Contribution Guidelines](#contribution-guidelines)
 -   [License](#license)
@@ -56,7 +56,7 @@ $ make all
 
 # Sharding Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can become a validator or a proposer.
+To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can become a validator or a collation proposer.
 
 ## Running a Local Geth Node
 
@@ -71,33 +71,36 @@ To start a local Geth node, you can create your own `genesis.json` file similar 
         "eip158Block": 0
     },
     "difficulty": "200",
-    "gasLimit": "210000000000"
+    "gasLimit": "210000000000",
+    "alloc": {
+        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" },
+    }
 }
 ```
+
+The `alloc` portion specifies account addresses with prefunded ETH when the Ethereum blockchain is created. You can modify this section of the genesis to include your own test address and prefund it with 100ETH.
 
 Then, you can build `geth` and init a new instance of a local, Ethereum blockchain as follows:
 
     $ make geth
-    $ ./build/bin/geth init ./sharding/genesis.json -datadir /path/to/your/datadir
+    $ ./build/bin/geth init /path/to/genesis.json -datadir /path/to/your/datadir
     $ ./build/bin/geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
+
+It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
 
 Then, the geth console can start up and you can start a miner as follows:
 
     > personal.newAccount()
     > miner.setEtherbase(eth.accounts[0])
-    > miner.start()
+    > miner.start(1)
 
-Then, once you are satisfied with mining for a few seconds, stop the miner with
-
-    > miner.stop()
-
-Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate fake, pending transactions that can then be processed into shards by validators and proposers. For this, we have created an in-house transaction generator CLI tool.
+Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into shards by validators and collation proposers. For this, we have created an in-house transaction generator CLI tool.
 
 ## Transaction Generator
 
 Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870).
 
-Once we have fake transactions broadcast to our local node, we can start a validator and proposer client in separate terminal windows to begin the sharding process.
+Once we have test transactions broadcast to our local node, we can start a validator and collation proposer client in separate terminal windows to begin the sharding process.
 
 ## Becoming a Validator
 
@@ -105,17 +108,17 @@ To deposit ETH and join as a validator in the Validator Manager Contract, run th
 
     geth sharding-validator --deposit 100eth --password /path/to/your/password.txt
 
-This will extract 100ETH from your account balance and insert you into the VMC's validator set. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible proposer for a certain shard in a given period. Once you are selected, the validator will request collations from a "collation proposals pool" that is created by a proposer node. We will need to run a proposal node concurrently in a separate terminal window as follows:
+This will extract 100ETH from your account balance and insert you into the VMC's validator set. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible validator for a certain shard in a given period. Once you are selected, the validator will request collations from a "collation proposals pool" that is created by a collation proposer node. We will need to run a collation proposal node concurrently in a separate terminal window as follows:
 
-## Becoming a Proposer
+## Becoming a Collation Proposer
 
 The proposer node (collator) can be started with the following command:
 
-    geth sharding-collation --password /path/to/your/password.txt
+    geth sharding-collator --password /path/to/your/password.txt
 
-Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
+Collation proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
 
-Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract.
+Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the collation proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract.
 
 Once this is done, the full, end-to-end sharding example is complete and another iteration can occur.
 
@@ -125,7 +128,9 @@ Once this is done, the full, end-to-end sharding example is complete and another
 
 The Validator Manager Contract is built in Solidity and deployed to the geth node upon launch of the client if it does not exist in the network at a specified address. If there are any changes to the VMC's code, the Golang bindigs must be rebuilt with the following command.
 
-    go generate abigen --sol contracts/validator_manager.sol --pkg contracts --out contracts/validator_manager.go
+    go generate github.com/ethereum/go-ethereum/sharding
+    # OR
+    cd sharding && go generate
 
 # Testing
 
@@ -153,6 +158,7 @@ Now you should have a remote pointing to the `origin` repo (geth-sharding) and t
 
 -   Create a new branch with a clear feature name such as `git checkout -b collations-pool`
 -   Issue changes with clear commit messages
+-   Run the linter and CI tester as follows `go run build/ci.go test && go run build/ci.go lint`
 -   Push to your remote `git push YOURNAME collations-pool`
 -   Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `go-ethereum:collations-pool` (your fork on your profile).
 -   Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
