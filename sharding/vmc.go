@@ -56,7 +56,7 @@ func initVMC(c *Client) error {
 // the account is not in the set, it will deposit 100ETH into contract.
 func joinValidatorSet(c *Client) error {
 
-	if c.ctx.GlobalBool(utils.JoinValidatorSetFlag.Name) {
+	if c.ctx.GlobalBool(utils.DepositFlag.Name) {
 
 		log.Info("Joining validator set")
 		txOps, err := c.createTXOps(depositSize)
