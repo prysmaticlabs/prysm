@@ -128,7 +128,7 @@ func submitCollation(shardID int64) error {
 	// This function will call FetchCandidateHead() of the SMC to obtain
 	// more necessary information.
 	//
-	// This functions will fetch the transactions in the collator pool and and apply
+	// This functions will fetch the transactions in the proposer tx pool and and apply
 	// them to finish up the collation. It will then need to broadcast the
 	// collation to the main chain using JSON-RPC.
 	log.Info("Submit collation function called")
