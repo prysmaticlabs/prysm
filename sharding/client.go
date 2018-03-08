@@ -1,6 +1,6 @@
 package sharding
 
-//go:generate abigen --sol contracts/validator_manager.sol --pkg contracts --out contracts/validator_manager.go
+//go:generate abigen --sol contracts/sharding_manager.sol --pkg contracts --out contracts/sharding_manager.go
 
 import (
 	"bufio"
@@ -36,7 +36,7 @@ type Client struct {
 	client   *ethclient.Client  // Ethereum RPC client.
 	keystore *keystore.KeyStore // Keystore containing the single signer
 	ctx      *cli.Context       // Command line context
-	vmc      *contracts.VMC     // The deployed validator management contract
+	smc      *contracts.SMC     // The deployed sharding management contract
 }
 
 // MakeShardingClient for interfacing with geth full node.
@@ -73,7 +73,7 @@ func MakeShardingClient(ctx *cli.Context) *Client {
 
 // Start the sharding client.
 // * Connects to node.
-// * Verifies or deploys the validator management contract.
+// * Verifies or deploys the sharding manager contract.
 func (c *Client) Start() error {
 	log.Info("Starting sharding client")
 	rpcClient, err := dialRPC(c.endpoint)
@@ -97,18 +97,18 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// Deposit 100ETH into the validator set in the VMC. Checks if account
-	// is already a validator in the VMC (in the case the client restarted).
+	// Deposit 100ETH into the collator set in the VMC. Checks if account
+	// is already a collator in the VMC (in the case the client restarted).
 	// Once that's done we can subscribe to block headers.
 	//
-	// TODO: this function should store the validator's VMC index as a property
+	// TODO: this function should store the collator's VMC index as a property
 	// in the client's struct
-	if err := joinValidatorSet(c); err != nil {
+	if err := joinCollatorPool(c); err != nil {
 		return err
 	}
 
 	// Listens to block headers from the geth node and if we are an eligible
-	// proposer, we fetch pending transactions and propose a collation
+	// collator, we fetch pending transactions and collator a collation
 	if err := subscribeBlockHeaders(c); err != nil {
 		return err
 	}
@@ -185,9 +185,9 @@ func (c *Client) Client() *ethclient.Client {
 	return c.client
 }
 
-// VMCCaller to interact with the validator management contract.
-func (c *Client) VMCCaller() *contracts.VMCCaller {
-	return &c.vmc.VMCCaller
+// VMCCaller to interact with the sharding manager contract.
+func (c *Client) VMCCaller() *contracts.SMCCaller {
+	return &c.smc.SMCCaller
 }
 
 // dialRPC endpoint to node.

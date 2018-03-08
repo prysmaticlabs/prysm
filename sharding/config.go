@@ -9,8 +9,8 @@ import (
 var (
 	// Number of network shards
 	shardCount = int64(100)
-	// Address of the validator management contract
-	validatorManagerAddress = common.HexToAddress("0x0") // TODO
+	// Address of the sharding manager contract
+	shardingManagerContract = common.HexToAddress("0x0") // TODO
 	// Gas limit for verifying signatures
 	sigGasLimit = 40000
 	// Number of blocks in a period

@@ -16,14 +16,14 @@ import (
 type collatorClient interface {
 	Account() *accounts.Account
 	ChainReader() ethereum.ChainReader
-	VMCCaller() *contracts.VMCCaller
+	SMCCaller() *contracts.SMCCaller
 }
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
-// we are an eligible proposer for collations. Then, it finds the pending tx's
+// we are an eligible collator for collations. Then, it finds the pending tx's
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
-// to the VMC to create a collation
+// to the SMC to create a collation
 func subscribeBlockHeaders(c collatorClient) error {
 	headerChan := make(chan *types.Header, 16)
 
@@ -39,38 +39,38 @@ func subscribeBlockHeaders(c collatorClient) error {
 	for {
 		// TODO: Error handling for getting disconnected from the client
 		head := <-headerChan
-		// Query the current state to see if we are an eligible proposer
+		// Query the current state to see if we are an eligible collator
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 
-		// Check if we are in the validator pool before checking if we are an eligible proposer
-		v, err := isAccountInValidatorSet(c)
+		// Check if we are in the collator pool before checking if we are an eligible collator
+		v, err := isAccountInCollatorPool(c)
 		if err != nil {
-			return fmt.Errorf("unable to verify client in validator pool. %v", err)
+			return fmt.Errorf("unable to verify client in collator pool. %v", err)
 		}
 
 		if v {
-			if err := checkShardsForProposal(c, head); err != nil {
+			if err := checkSMCForCollator(c, head); err != nil {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		} else {
-			log.Warn(fmt.Sprintf("Account %s not in validator pool.", account.Address.String()))
+			log.Warn(fmt.Sprintf("Account %s not in collator pool.", account.Address.String()))
 		}
 
 	}
 }
 
-// checkShardsForProposal checks if we are an eligible proposer for
-// collation for the available shards in the VMC. The function calls
-// getEligibleProposer from the VMC and proposes a collation if
+// checkSMCForCollator checks if we are an eligible collator for
+// collation for the available shards in the SMC. The function calls
+// getEligibleCollator from the SMC and collator a collation if
 // conditions are met
-func checkShardsForProposal(c collatorClient, head *types.Header) error {
+func checkSMCForCollator(c collatorClient, head *types.Header) error {
 	account := c.Account()
 
-	log.Info("Checking if we are an eligible collation proposer for a shard...")
+	log.Info("Checking if we are an eligible collation collator for a shard...")
 	period := big.NewInt(0).Div(head.Number, big.NewInt(periodLength))
 	for s := int64(0); s < shardCount; s++ {
-		// Checks if we are an eligible proposer according to the VMC
-		addr, err := c.VMCCaller().GetEligibleProposer(&bind.CallOpts{}, big.NewInt(s), period)
+		// Checks if we are an eligible collator according to the SMC
+		addr, err := c.SMCCaller().GetEligibleCollator(&bind.CallOpts{}, big.NewInt(s), period)
 
 		if err != nil {
 			return err
@@ -79,9 +79,9 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 		// If output is non-empty and the addr == coinbase
 		if addr == account.Address {
 			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
-			err := proposeCollation(s)
+			err := submitCollation(s)
 			if err != nil {
-				return fmt.Errorf("could not propose collation. %v", err)
+				return fmt.Errorf("could not add collation. %v", err)
 			}
 		}
 	}
@@ -89,15 +89,15 @@ func checkShardsForProposal(c collatorClient, head *types.Header) error {
 	return nil
 }
 
-// isAccountInValidatorSet checks if the client is in the validator pool because
+// isAccountInCollatorPool checks if the client is in the collator pool because
 // we can't guarantee our tx for deposit will be in the next block header we receive.
-// The function calls IsValidatorDeposited from the VMC and returns true if
-// the client is in the validator pool
-func isAccountInValidatorSet(c collatorClient) (bool, error) {
+// The function calls IsCollatorDeposited from the SMC and returns true if
+// the client is in the collator pool
+func isAccountInCollatorPool(c collatorClient) (bool, error) {
 	account := c.Account()
 
-	// Checks if our deposit has gone through according to the VMC
-	b, err := c.VMCCaller().IsValidatorDeposited(&bind.CallOpts{}, account.Address)
+	// Checks if our deposit has gone through according to the SMC
+	b, err := c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
 	if err != nil {
 		return false, err
 	}
@@ -105,9 +105,9 @@ func isAccountInValidatorSet(c collatorClient) (bool, error) {
 	return b, nil
 }
 
-// proposeCollation interacts with the VMC directly to add a collation header
-func proposeCollation(shardID int64) error {
-	// TODO: Adds a collation header to the VMC with the following fields:
+// submitCollation interacts with the SMC directly to add a collation header
+func submitCollation(shardID int64) error {
+	// TODO: Adds a collation header to the SMC with the following fields:
 	// [
 	//  shard_id: uint256,
 	//  expected_period_number: uint256,
@@ -125,12 +125,12 @@ func proposeCollation(shardID int64) error {
 	// the period_start_prevhash. Refer to the comments in:
 	// https://github.com/ethereum/py-evm/issues/258#issuecomment-359879350
 	//
-	// This function will call FetchCandidateHead() of the VMC to obtain
+	// This function will call FetchCandidateHead() of the SMC to obtain
 	// more necessary information.
 	//
-	// This functions will fetch the transactions in the txpool and and apply
+	// This functions will fetch the transactions in the collator pool and and apply
 	// them to finish up the collation. It will then need to broadcast the
 	// collation to the main chain using JSON-RPC.
-	log.Info("Propose collation function called")
+	log.Info("Submit collation function called")
 	return nil
 }

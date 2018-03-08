@@ -22,7 +22,7 @@ type FakeEthService struct{}
 
 // eth_getCode
 func (s *FakeEthService) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (string, error) {
-	return contracts.VMCBin, nil
+	return contracts.SMCBin, nil
 }
 
 func (s *FakeEthService) GasPrice(ctx context.Context) (hexutil.Big, error) {

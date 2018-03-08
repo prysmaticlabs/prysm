@@ -31,12 +31,12 @@ func (c FakeCollatorClient) ChainReader() ethereum.ChainReader {
 	return c.chainReader
 }
 
-func (c FakeCollatorClient) VMCCaller() *contracts.VMCCaller {
-	VMCCaller, err := contracts.NewVMCCaller(common.HexToAddress("0x0"), c.contractCaller)
+func (c FakeCollatorClient) SMCCaller() *contracts.SMCCaller {
+	SMCCaller, err := contracts.NewSMCCaller(common.HexToAddress("0x0"), c.contractCaller)
 	if err != nil {
 		panic(err)
 	}
-	return VMCCaller
+	return SMCCaller
 }
 
 type FakeChainReader struct {
@@ -81,7 +81,7 @@ func (c FakeContractCaller) CallContract(ctx context.Context, call ethereum.Call
 	return c.callContractBytes, c.callContractError
 }
 
-func TestCheckShardsForProposal(t *testing.T) {
+func TestcheckSMCForCollator(t *testing.T) {
 	tests := []struct {
 		Name           string
 		Head           *types.Header
@@ -90,7 +90,7 @@ func TestCheckShardsForProposal(t *testing.T) {
 		CollatorClient FakeCollatorClient
 	}{
 		{
-			Name:          "VMCCaller.GetEligibleProposer should return an error",
+			Name:          "SMCCaller.checkSMCForCollator should return an error",
 			ExpectedError: "there is no cake",
 			CollatorClient: FakeCollatorClient{
 				accountAccount: &accounts.Account{},
@@ -104,7 +104,7 @@ func TestCheckShardsForProposal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			if err := checkShardsForProposal(tt.CollatorClient, tt.Head); !strings.Contains(safeError(err), tt.ExpectedError) {
+			if err := checkSMCForCollator(tt.CollatorClient, tt.Head); !strings.Contains(safeError(err), tt.ExpectedError) {
 				t.Fatalf("Incorrect error! Wanted %v, got %v", tt.ExpectedError, err)
 			}
 		})
