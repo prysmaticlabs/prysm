@@ -11,25 +11,25 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
-// initVMC initializes the validator management contract bindings.
-// If the VMC does not exist, it will be deployed.
-func initVMC(c *Client) error {
-	b, err := c.client.CodeAt(context.Background(), validatorManagerAddress, nil)
+// initSMC initializes the sharding manager contract bindings.
+// If the SMC does not exist, it will be deployed.
+func initSMC(c *Client) error {
+	b, err := c.client.CodeAt(context.Background(), shardingManagerAddress, nil)
 	if err != nil {
-		return fmt.Errorf("unable to get contract code at %s: %v", validatorManagerAddress, err)
+		return fmt.Errorf("unable to get contract code at %s: %v", shardingManagerAddress, err)
 	}
 
 	if len(b) == 0 {
-		log.Info(fmt.Sprintf("No validator management contract found at %s. Deploying new contract.", validatorManagerAddress.String()))
+		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", shardingManagerAddress.String()))
 
 		txOps, err := c.createTXOps(big.NewInt(0))
 		if err != nil {
 			return fmt.Errorf("unable to intiate the transaction: %v", err)
 		}
 
-		addr, tx, contract, err := contracts.DeployVMC(txOps, c.client)
+		addr, tx, contract, err := contracts.DeploySMC(txOps, c.client)
 		if err != nil {
-			return fmt.Errorf("unable to deploy validator management contract: %v", err)
+			return fmt.Errorf("unable to deploy sharding manager contract: %v", err)
 		}
 
 		for pending := true; pending; _, pending, err = c.client.TransactionByHash(context.Background(), tx.Hash()) {
@@ -39,39 +39,39 @@ func initVMC(c *Client) error {
 			time.Sleep(1 * time.Second)
 		}
 
-		c.vmc = contract
+		c.smc = contract
 		log.Info(fmt.Sprintf("New contract deployed at %s", addr.String()))
 	} else {
-		contract, err := contracts.NewVMC(validatorManagerAddress, c.client)
+		contract, err := contracts.NewSMC(shardingManagerAddress, c.client)
 		if err != nil {
-			return fmt.Errorf("failed to create validator contract: %v", err)
+			return fmt.Errorf("failed to create sharding contract: %v", err)
 		}
-		c.vmc = contract
+		c.smc = contract
 	}
 
 	return nil
 }
 
-// joinValidatorSet checks if the account is a validator in the VMC. If
+// joinCollatorPool checks if the account is a collator in the SMC. If
 // the account is not in the set, it will deposit 100ETH into contract.
-func joinValidatorSet(c *Client) error {
+func joinCollatorPool(c *Client) error {
 
 	if c.ctx.GlobalBool(utils.DepositFlag.Name) {
 
-		log.Info("Joining validator set")
+		log.Info("Joining collator pool")
 		txOps, err := c.createTXOps(depositSize)
 		if err != nil {
 			return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 		}
 
-		tx, err := c.vmc.VMCTransactor.Deposit(txOps)
+		tx, err := c.smc.SMCTransactor.Deposit(txOps)
 		if err != nil {
-			return fmt.Errorf("unable to deposit eth and become a validator: %v", err)
+			return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
 		}
 		log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", depositSize, tx.Hash().String()))
 
 	} else {
-		log.Info("Not joining validator set")
+		log.Info("Not joining collator set")
 
 	}
 	return nil
