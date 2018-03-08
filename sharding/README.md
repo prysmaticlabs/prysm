@@ -80,7 +80,7 @@ For detailed information on protocol primitives including collations, see: [Prot
 
 ![proposers](https://yuml.me/8a367c37.png)
 
-Collators then subscribe to updates in this proposals pool and accept collations that offer the highest payouts. Once collators are selected to add collations to a shard chain by adding their headers to a smart contract, and do so successfully, they get paid by the deposit the proposer offered.
+Collators add collations in the proof of work chain, throughout the document named the **canonical chain**. Collators subscribe to updates in the proposals pool and pick a collation in their best interest. Once collators are selected to add collations to the canonical chain, and do so successfully, they get paid by the deposit the proposer offered.
 
 To recap, the role of a collator is to reach consensus through Proof of Stake on collations they receive in the period they are assigned to. This consensus will involve validation and data availability proofs of collations proposed to them by proposer nodes, along with validating collations from the immediate past (See: [Windback](#enforced-windback)).
 
@@ -93,7 +93,7 @@ In this new protocol, a block is valid when
 -   Transactions in all collations are valid
 -   The state of collations after the transactions is the same as what the collation headers specified
 
-Collators periodically get assigned to different shards, the moment between collators get assigned to a shard and the moment they get reassigned is called a **dynasty**.
+Collators periodically get assigned to different shards, the moment between when collators gets assigned to a shard and the moment they get reassigned is called a **dynasty**.
 
 Given that we are splitting up the global state of the Ethereum blockchain into shards, new types of attacks arise because fewer hash power is required to completely dominate a shard. This is why a **source of randomness**, and dynasties are critical components to ensuring the integrity of the system.
 
@@ -101,7 +101,7 @@ The Ethereum Wiki’s [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Shard
 
 Casper Proof of Stake (Casper [FFG](https://arxiv.org/abs/1710.09437) and [CBC](https://arxiv.org/abs/1710.09437)) makes this quite trivial because there is already a set of global collators that we can select collator nodes from. The source of randomness needs to be common to ensure that this sampling is entirely compulsory and can’t be gamed by the collators in question.
 
-In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage shards and sampling proposed collators from a global collator set. As the SMC lives in the **cannonical chain**, it will take guarantee a global state among all shard states.
+In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage shards and sampling proposed collators from a global collator set. As the SMC lives in the canonical chain, it will take guarantee a global state among all shard states.
 
 Among its basic responsibilities, the SMC is be responsible for reconciling collators across all shards. It is in charge of pseudorandomly sampling collators from a collator set of accounts that have staked ETH into the SMC. The SMC is also responsible for providing immediate collation header verification that records a valid collation header hash on the cannonical chain. In essence, sharding revolves around being able to store proofs of shard states in the cannonical chain through this smart contract.
 
@@ -109,7 +109,7 @@ Among its basic responsibilities, the SMC is be responsible for reconciling coll
 
 Prysmatic Labs’ implementation will follow parts of the roadmap outlined by Vitalik in his [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) to roll out a working version of quadratic sharding, with a few modifications on our releases.
 
-1.  **Phase 1:** Basic VMC shard system with no cross-shard communication along with a proposer + validator node architecture
+1.  **Phase 1:** Basic VMC shard system with no cross-shard communication along with a proposer + collator node architecture
 2.  **Phase 2:** Receipt-based, cross-shard communication
 3.  **Phase 3:** Require collation headers to be added in as uncles instead of as transactions
 4.  **Phase 4:** Tightly-coupled sharding with data availability proofs and robust security
