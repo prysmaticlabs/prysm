@@ -93,15 +93,15 @@ func (c *Client) Start() error {
 		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
-	if err := initVMC(c); err != nil {
+	if err := initSMC(c); err != nil {
 		return err
 	}
 
-	// Deposit 100ETH into the collator set in the VMC. Checks if account
-	// is already a collator in the VMC (in the case the client restarted).
+	// Deposit 100ETH into the collator set in the SMC. Checks if account
+	// is already a collator in the SMC (in the case the client restarted).
 	// Once that's done we can subscribe to block headers.
 	//
-	// TODO: this function should store the collator's VMC index as a property
+	// TODO: this function should store the collator's SMC index as a property
 	// in the client's struct
 	if err := joinCollatorPool(c); err != nil {
 		return err
@@ -185,8 +185,8 @@ func (c *Client) Client() *ethclient.Client {
 	return c.client
 }
 
-// VMCCaller to interact with the sharding manager contract.
-func (c *Client) VMCCaller() *contracts.SMCCaller {
+// SMCCaller to interact with the sharding manager contract.
+func (c *Client) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
 }
 
