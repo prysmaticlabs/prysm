@@ -9,34 +9,34 @@ import (
 )
 
 var (
-	validatorClientCommand = cli.Command{
-		Action:    utils.MigrateFlags(validatorClient),
-		Name:      "sharding-validator",
-		Aliases:   []string{"shard-validator"},
-		Usage:     "Start a sharding validator client",
-		ArgsUsage: "[endpoint]",
-		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
-		Category:  "SHARDING COMMANDS",
-		Description: `
-Launches a sharding validator client that connects to a running geth node and proposes collations to a Validator Manager Contract. This feature is a work in progress.
-`,
-	}
 	collatorClientCommand = cli.Command{
 		Action:    utils.MigrateFlags(collatorClient),
 		Name:      "sharding-collator",
 		Aliases:   []string{"shard-collator"},
 		Usage:     "Start a sharding collator client",
 		ArgsUsage: "[endpoint]",
+		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
+		Category:  "SHARDING COMMANDS",
+		Description: `
+Launches a sharding collator client that connects to a running geth node and submit collations to a Sharding Manager Contract. This feature is a work in progress.
+`,
+	}
+	proposerClientCommand = cli.Command{
+		Action:    utils.MigrateFlags(proposerClient),
+		Name:      "sharding-proposer",
+		Aliases:   []string{"shard-proposer"},
+		Usage:     "Start a sharding proposer client",
+		ArgsUsage: "[endpoint]",
 		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
-Launches a sharding collator client that connects to a running geth node and proposes collations to validator node. This feature is a work in progress.
+Launches a sharding proposer client that connects to a running geth node and proposes collations to collator node. This feature is a work in progress.
 `,
 	}
 )
 
-func validatorClient(ctx *cli.Context) error {
-	c := sharding.MakeShardingClient(ctx)
+func collatorClient(ctx *cli.Context) error {
+	c := sharding.MakeCollatorClient(ctx)
 	if err := c.Start(); err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func validatorClient(ctx *cli.Context) error {
 	return nil
 }
 
-func collatorClient(ctx *cli.Context) error {
-	fmt.Println("Starting collator client")
+func proposerClient(ctx *cli.Context) error {
+	fmt.Println("Starting proposer client")
 	return nil
 }
