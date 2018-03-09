@@ -22,7 +22,7 @@ type FakeEthService struct{}
 
 // eth_getCode
 func (s *FakeEthService) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (string, error) {
-	return contracts.VMCBin, nil
+	return contracts.SMCBin, nil
 }
 
 func (s *FakeEthService) GasPrice(ctx context.Context) (hexutil.Big, error) {
@@ -117,7 +117,7 @@ func createContext() *cli.Context {
 // 		t.Fatalf("Failed to set global variable for flag %s. Error: %v", utils.DataDirFlag.Name, err)
 // 	}
 
-// 	c := MakeShardingClient(ctx)
+// 	c := MakeCollatorClient(ctx)
 
 // 	if err := c.Start(); err != nil {
 // 		t.Errorf("Failed to start server: %v", err)

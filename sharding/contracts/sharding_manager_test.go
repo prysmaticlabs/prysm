@@ -16,30 +16,30 @@ var (
 	key, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr                     = crypto.PubkeyToAddress(key.PublicKey)
 	accountBalance1000Eth, _ = new(big.Int).SetString("1000000000000000000000", 10)
-	validatorDeposit, _      = new(big.Int).SetString("100000000000000000000", 10)
+	collatorDeposit, _       = new(big.Int).SetString("100000000000000000000", 10)
 )
 
-func deployVMCContract(backend *backends.SimulatedBackend) (common.Address, *types.Transaction, *VMC, error) {
+func deploySMCContract(backend *backends.SimulatedBackend) (common.Address, *types.Transaction, *SMC, error) {
 	transactOpts := bind.NewKeyedTransactor(key)
 	defer backend.Commit()
-	return DeployVMC(transactOpts, backend)
+	return DeploySMC(transactOpts, backend)
 }
 
-// Test creating the VMC contract
+// Test creating the SMC contract
 func TestContractCreation(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
-	_, _, _, err := deployVMCContract(backend)
+	_, _, _, err := deploySMCContract(backend)
 	backend.Commit()
 	if err != nil {
-		t.Fatalf("can't deploy VMC: %v", err)
+		t.Fatalf("can't deploy SMC: %v", err)
 	}
 }
 
 // Test getting the collation gas limit
 func TestGetCollationGasLimit(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
-	_, _, vmc, _ := deployVMCContract(backend)
-	gasLimit, err := vmc.GetCollationGasLimit(&bind.CallOpts{})
+	_, _, smc, _ := deploySMCContract(backend)
+	gasLimit, err := smc.GetCollationGasLimit(&bind.CallOpts{})
 	if err != nil {
 		t.Fatalf("Error getting collationGasLimit: %v", err)
 	}
@@ -48,76 +48,76 @@ func TestGetCollationGasLimit(t *testing.T) {
 	}
 }
 
-// Test validator deposit
-func TestValidatorDeposit(t *testing.T) {
+// Test collator deposit
+func TestCollatorDeposit(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
-	_, _, vmc, _ := deployVMCContract(backend)
+	_, _, smc, _ := deploySMCContract(backend)
 
 	// Test deposit() function
 	// Deposit 100 Eth
-	transactOpts.Value = validatorDeposit
+	transactOpts.Value = collatorDeposit
 
-	if _, err := vmc.Deposit(transactOpts); err != nil {
-		t.Fatalf("Validator cannot deposit: %v", err)
+	if _, err := smc.Deposit(transactOpts); err != nil {
+		t.Fatalf("Collator cannot deposit: %v", err)
 	}
 	backend.Commit()
 
-	// Check updated number of validators
-	numValidators, err := vmc.NumValidators(&bind.CallOpts{})
+	// Check updated number of collators
+	numCollators, err := smc.NumCollators(&bind.CallOpts{})
 	if err != nil {
-		t.Fatalf("Failed to get number of validators: %v", err)
+		t.Fatalf("Failed to get number of collators: %v", err)
 	}
-	if numValidators.Cmp(big.NewInt(1)) != 0 {
-		t.Fatalf("Failed to update number of validators")
+	if numCollators.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("Failed to update number of collators")
 	}
 
-	// Check validator structure
-	validatorStruct, err := vmc.Validators(&bind.CallOpts{}, big.NewInt(0))
+	// Check collator structure
+	collatorStruct, err := smc.Collators(&bind.CallOpts{}, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Failed to get validator structure: %v", err)
+		t.Fatalf("Failed to get collator structure: %v", err)
 	}
-	if validatorStruct.Addr != addr {
-		t.Fatalf("Wrong validator address, %v should be %v", validatorStruct.Addr, addr)
+	if collatorStruct.Addr != addr {
+		t.Fatalf("Wrong collator address, %v should be %v", collatorStruct.Addr, addr)
 	}
-	if validatorStruct.Deposit.Cmp(validatorDeposit) != 0 {
-		t.Fatalf("Wrong validator deposit, %v should be %v", validatorStruct.Deposit, validatorDeposit)
+	if collatorStruct.Deposit.Cmp(collatorDeposit) != 0 {
+		t.Fatalf("Wrong collator deposit, %v should be %v", collatorStruct.Deposit, collatorDeposit)
 	}
 
 	// Check for the Deposit event
-	depositsEventsIterator, err := vmc.FilterDeposit(&bind.FilterOpts{})
+	depositsEventsIterator, err := smc.FilterDeposit(&bind.FilterOpts{})
 	if err != nil {
 		t.Fatalf("Failed to get Deposit event: %v", err)
 	}
 	if !depositsEventsIterator.Next() {
 		t.Fatal("No Deposit event found")
 	}
-	if depositsEventsIterator.Event.Validator != addr {
-		t.Fatalf("Validator address mismatch: %x should be %x", depositsEventsIterator.Event.Validator, addr)
+	if depositsEventsIterator.Event.Collator != addr {
+		t.Fatalf("Collator address mismatch: %x should be %x", depositsEventsIterator.Event.Collator, addr)
 	}
 	if depositsEventsIterator.Event.Index.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Validator index mismatch: %d should be 0", depositsEventsIterator.Event.Index)
+		t.Fatalf("Collator index mismatch: %d should be 0", depositsEventsIterator.Event.Index)
 	}
 }
 
-// Test validator withdraw
-func TestValidatorWithdraw(t *testing.T) {
+// Test collator withdraw
+func TestCollatorWithdraw(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
-	_, _, vmc, _ := deployVMCContract(backend)
+	_, _, smc, _ := deploySMCContract(backend)
 
-	transactOpts.Value = validatorDeposit
-	vmc.Deposit(transactOpts)
+	transactOpts.Value = collatorDeposit
+	smc.Deposit(transactOpts)
 
 	transactOpts.Value = big.NewInt(0)
-	_, err := vmc.Withdraw(transactOpts, big.NewInt(0))
+	_, err := smc.Withdraw(transactOpts, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("Failed to withdraw: %v", err)
 	}
 	backend.Commit()
 
 	// Check for the Withdraw event
-	withdrawsEventsIterator, err := vmc.FilterWithdraw(&bind.FilterOpts{Start: 0})
+	withdrawsEventsIterator, err := smc.FilterWithdraw(&bind.FilterOpts{Start: 0})
 	if err != nil {
 		t.Fatalf("Failed to get withdraw event: %v", err)
 	}
@@ -125,6 +125,6 @@ func TestValidatorWithdraw(t *testing.T) {
 		t.Fatal("No withdraw event found")
 	}
 	if withdrawsEventsIterator.Event.Index.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Validator index mismatch: %d should be 0", withdrawsEventsIterator.Event.Index)
+		t.Fatalf("Collator index mismatch: %d should be 0", withdrawsEventsIterator.Event.Index)
 	}
 }

@@ -1,19 +1,19 @@
 pragma solidity ^0.4.19;
 
-contract VMC {
+contract SMC {
   event TxToShard(address indexed to, int indexed shardId, int receiptId);
   event CollationAdded(int indexed shardId, uint expectedPeriodNumber, 
                      bytes32 periodStartPrevHash, bytes32 parentHash,
                      bytes32 transactionRoot, address coinbase,
                      bytes32 stateRoot, bytes32 receiptRoot,
                      int number, bool isNewHead, int score);
-  event Deposit(address validator, int index);
+  event Deposit(address collator, int index);
   event Withdraw(int index);
 
-  struct Validator {
-    // Amount of wei the validator holds
+  struct Collator {
+    // Amount of wei the collator holds
     uint deposit;
-    // The validator's address
+    // The collator's address
     address addr;
   }
 
@@ -36,12 +36,12 @@ contract VMC {
   struct HeaderVars {
     bytes32 entireHeaderHash;
     int score;
-    address validatorAddr;
+    address collatorAddr;
     bool isNewHead;
   }
 
-  // validatorId => Validators
-  mapping (int => Validator) public validators;
+  // collatorId => Collators
+  mapping (int => Collator) public collators;
   // shardId => (headerHash => CollationHeader)
   mapping (int => mapping (bytes32 => CollationHeader)) public collationHeaders;
   // receiptId => Receipt
@@ -49,21 +49,21 @@ contract VMC {
   // shardId => headerHash
   mapping (int => bytes32) shardHead;
 
-  // Number of validators
-  int public numValidators;
+  // Number of collators
+  int public numCollators;
   // Number of receipts
   int numReceipts;
   // Indexs of empty slots caused by the function `withdraw`
   mapping (int => int) emptySlotsStack;
   // The top index of the stack in empty_slots_stack
   int emptySlotsStackTop;
-  // Has the validator deposited before?
-  mapping (address => bool) public isValidatorDeposited;
+  // Has the collator deposited before?
+  mapping (address => bool) public isCollatorDeposited;
 
   // Constant values
   uint constant periodLength = 5;
   int constant public shardCount = 100;
-  // The exact deposit size which you have to deposit to become a validator
+  // The exact deposit size which you have to deposit to become a collator
   uint constant depositSize = 100 ether;
   // Number of periods ahead of current period, which the contract
   // is able to return the collator of that period
@@ -72,7 +72,7 @@ contract VMC {
   // Log the latest period number of the shard
   mapping (int => int) public periodHead;
 
-  function VMC() public {
+  function SMC() public {
   }
 
   // Returns the gas limit that collations can currently have (by default make
@@ -81,15 +81,15 @@ contract VMC {
     return 10000000;
   }
 
-  // Uses a block hash as a seed to pseudorandomly select a signer from the validator set.
-  // [TODO] Chance of being selected should be proportional to the validator's deposit.
+  // Uses a block hash as a seed to pseudorandomly select a signer from the collator pool.
+  // [TODO] Chance of being selected should be proportional to the collator's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function getEligibleProposer(int _shardId, uint _period) public view returns(address) {
+  function getEligibleCollator(int _shardId, uint _period) public view returns(address) {
     require(_period >= lookAheadPeriods);
     require((_period - lookAheadPeriods) * periodLength < block.number);
-    require(numValidators > 0);
+    require(numCollators > 0);
     // [TODO] Should check further if this safe or not
-    return validators[
+    return collators[
       int(
         uint(
           keccak256(
@@ -97,43 +97,43 @@ contract VMC {
             _shardId
           )
         ) %
-        uint(getValidatorsMaxIndex())
+        uint(getCollatorsMaxIndex())
       )
     ].addr;
   }
 
   function deposit() public payable returns(int) {
-    require(!isValidatorDeposited[msg.sender]);
+    require(!isCollatorDeposited[msg.sender]);
     require(msg.value == depositSize);
-    // Find the empty slot index in validators set
+    // Find the empty slot index in collators pool
     int index;
     if (!isStackEmpty())
       index = stackPop();
     else
-      index = int(numValidators);
+      index = int(numCollators);
 
-    validators[index] = Validator({
+    collators[index] = Collator({
       deposit: msg.value,
       addr: msg.sender
     });
-    ++numValidators;
-    isValidatorDeposited[msg.sender] = true;
+    ++numCollators;
+    isCollatorDeposited[msg.sender] = true;
 
     Deposit(msg.sender, index);
     return index;
   }
 
-  // Removes the validator from the validator set and refunds the deposited ether
-  function withdraw(int _validatorIndex) public {
-    require(msg.sender == validators[_validatorIndex].addr);
-    // [FIXME] Should consider calling the validator's contract, might be useful
-    // when the validator is a contract.
-    validators[_validatorIndex].addr.transfer(validators[_validatorIndex].deposit);
-    isValidatorDeposited[validators[_validatorIndex].addr] = false;
-    delete validators[_validatorIndex];
-    stackPush(_validatorIndex);
-    --numValidators;
-    Withdraw(_validatorIndex);
+  // Removes the collator from the collator pool and refunds the deposited ether
+  function withdraw(int _collatorIndex) public {
+    require(msg.sender == collators[_collatorIndex].addr);
+    // [FIXME] Should consider calling the collator's contract, might be useful
+    // when the collator is a contract.
+    collators[_collatorIndex].addr.transfer(collators[_collatorIndex].deposit);
+    isCollatorDeposited[collators[_collatorIndex].addr] = false;
+    delete collators[_collatorIndex];
+    stackPush(_collatorIndex);
+    --numCollators;
+    Withdraw(_collatorIndex);
   }
 
   // Attempts to process a collation header, returns true on success, reverts on failure.
@@ -163,9 +163,9 @@ contract VMC {
     assert(periodHead[_shardId] < int(_expectedPeriodNumber));
 
     // Check the signature with validation_code_addr
-    headerVars.validatorAddr = getEligibleProposer(_shardId, block.number/periodLength);
-    require(headerVars.validatorAddr != 0x0);
-    require(msg.sender == headerVars.validatorAddr);
+    headerVars.collatorAddr = getEligibleCollator(_shardId, block.number/periodLength);
+    require(headerVars.collatorAddr != 0x0);
+    require(msg.sender == headerVars.collatorAddr);
 
     // Check score == collationNumber
     headerVars.score = collationHeaders[_shardId][_parentHash].score + 1;
@@ -237,17 +237,17 @@ contract VMC {
     return emptySlotsStack[emptySlotsStackTop];
   }
 
-  function getValidatorsMaxIndex() internal view returns(int) {
-    int activateValidatorNum = 0;
-    int allValidatorSlotsNum = numValidators + emptySlotsStackTop;
+  function getCollatorsMaxIndex() internal view returns(int) {
+    int activateCollatorNum = 0;
+    int allCollatorSlotsNum = numCollators + emptySlotsStackTop;
 
     // TODO: any better way to iterate the mapping?
     for (int i = 0; i < 1024; ++i) {
-        if (i >= allValidatorSlotsNum)
+        if (i >= allCollatorSlotsNum)
             break;
-        if (validators[i].addr != 0x0)
-            activateValidatorNum += 1;
+        if (collators[i].addr != 0x0)
+            activateCollatorNum += 1;
     }
-    return activateValidatorNum + emptySlotsStackTop;
+    return activateCollatorNum + emptySlotsStackTop;
   }
 }
