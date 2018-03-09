@@ -95,11 +95,8 @@ func checkSMCForCollator(c collator, head *types.Header) error {
 // the client is in the collator pool
 func isAccountInCollatorPool(c collator) (bool, error) {
 	account := c.Account()
-
 	// Checks if our deposit has gone through according to the SMC
-	b, err := c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
-
-	return b, err
+	return c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
 }
 
 // submitCollation interacts with the SMC directly to add a collation header
