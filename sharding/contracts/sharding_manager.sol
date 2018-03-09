@@ -84,7 +84,7 @@ contract SMC {
   // Uses a block hash as a seed to pseudorandomly select a signer from the collator pool.
   // [TODO] Chance of being selected should be proportional to the collator's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function getEligibleProposer(int _shardId, uint _period) public view returns(address) {
+  function getEligibleCollator(int _shardId, uint _period) public view returns(address) {
     require(_period >= lookAheadPeriods);
     require((_period - lookAheadPeriods) * periodLength < block.number);
     require(numCollators > 0);
@@ -163,7 +163,7 @@ contract SMC {
     assert(periodHead[_shardId] < int(_expectedPeriodNumber));
 
     // Check the signature with validation_code_addr
-    headerVars.collatorAddr = getEligibleProposer(_shardId, block.number/periodLength);
+    headerVars.collatorAddr = getEligibleCollator(_shardId, block.number/periodLength);
     require(headerVars.collatorAddr != 0x0);
     require(msg.sender == headerVars.collatorAddr);
 

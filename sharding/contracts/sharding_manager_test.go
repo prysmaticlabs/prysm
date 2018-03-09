@@ -16,7 +16,7 @@ var (
 	key, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr                     = crypto.PubkeyToAddress(key.PublicKey)
 	accountBalance1000Eth, _ = new(big.Int).SetString("1000000000000000000000", 10)
-	collatorDeposit, _      = new(big.Int).SetString("100000000000000000000", 10)
+	collatorDeposit, _       = new(big.Int).SetString("100000000000000000000", 10)
 )
 
 func deploySMCContract(backend *backends.SimulatedBackend) (common.Address, *types.Transaction, *SMC, error) {
