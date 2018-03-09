@@ -103,7 +103,7 @@ Casper Proof of Stake (Casper [FFG](https://arxiv.org/abs/1710.09437) and [CBC](
 
 In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage shards and sampling proposed collators from a global collator set. As the SMC lives in the canonical chain, it will take guarantee a global state among all shard states.
 
-Among its basic responsibilities, the SMC is be responsible for reconciling collators across all shards. It is in charge of pseudorandomly sampling collators from a collator set of accounts that have staked ETH into the SMC. The SMC is also responsible for providing immediate collation header verification that records a valid collation header hash on the cannonical chain. In essence, sharding revolves around being able to store proofs of shard states in the cannonical chain through this smart contract.
+Among its basic responsibilities, the SMC is be responsible for reconciling collators across all shards. It is in charge of pseudorandomly sampling collators from a collator set of accounts that have staked ETH into the SMC. The SMC is also responsible for providing immediate collation header verification that records a valid collation header hash on the canonical chain. In essence, sharding revolves around being able to store proofs of shard states in the canonical chain through this smart contract.
 
 # Roadmap Phases
 
