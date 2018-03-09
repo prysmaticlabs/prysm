@@ -30,8 +30,8 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
-// Client for Collactor. Communicates to Geth node via JSON RPC.
-type collactorClient struct {
+// Client for Collator. Communicates to Geth node via JSON RPC.
+type collatorClient struct {
 	endpoint string             // Endpoint to JSON RPC
 	client   *ethclient.Client  // Ethereum RPC client.
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -39,8 +39,8 @@ type collactorClient struct {
 	smc      *contracts.SMC     // The deployed sharding management contract
 }
 
-// MakeCollactorClient for interfacing with Geth full node.
-func MakeCollactorClient(ctx *cli.Context) *collactorClient {
+// MakeCollatorClient for interfacing with Geth full node.
+func MakeCollatorClient(ctx *cli.Context) *collatorClient {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
@@ -64,7 +64,7 @@ func MakeCollactorClient(ctx *cli.Context) *collactorClient {
 	}
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	return &collactorClient{
+	return &collatorClient{
 		endpoint: endpoint,
 		keystore: ks,
 		ctx:      ctx,
@@ -74,7 +74,7 @@ func MakeCollactorClient(ctx *cli.Context) *collactorClient {
 // Start the collator client.
 // * Connects to Geth node.
 // * Verifies or deploys the sharding manager contract.
-func (c *collactorClient) Start() error {
+func (c *collatorClient) Start() error {
 	log.Info("Starting collator client")
 	rpcClient, err := dialRPC(c.endpoint)
 	if err != nil {
@@ -116,19 +116,19 @@ func (c *collactorClient) Start() error {
 }
 
 // Wait until collator client is shutdown.
-func (c *collactorClient) Wait() {
+func (c *collatorClient) Wait() {
 	log.Info("Sharding client has been shutdown...")
 }
 
 // WatchCollationHeaders checks the logs for add_header func calls
 // and updates the head collation of the client. We can probably store
 // this as a property of the client struct
-func (c *collactorClient) WatchCollationHeaders() {
+func (c *collatorClient) WatchCollationHeaders() {
 
 }
 
 // UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
-func (c *collactorClient) unlockAccount(account accounts.Account) error {
+func (c *collatorClient) unlockAccount(account accounts.Account) error {
 	pass := ""
 
 	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
@@ -152,7 +152,7 @@ func (c *collactorClient) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-func (c *collactorClient) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
+func (c *collatorClient) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
 	account := c.Account()
 
 	return &bind.TransactOpts{
@@ -169,24 +169,24 @@ func (c *collactorClient) createTXOps(value *big.Int) (*bind.TransactOpts, error
 }
 
 // Account to use for sharding transactions.
-func (c *collactorClient) Account() *accounts.Account {
+func (c *collatorClient) Account() *accounts.Account {
 	accounts := c.keystore.Accounts()
 
 	return &accounts[0]
 }
 
 // ChainReader for interacting with the chain.
-func (c *collactorClient) ChainReader() ethereum.ChainReader {
+func (c *collatorClient) ChainReader() ethereum.ChainReader {
 	return ethereum.ChainReader(c.client)
 }
 
 // Client to interact with ethereum node.
-func (c *collactorClient) Client() *ethclient.Client {
+func (c *collatorClient) Client() *ethclient.Client {
 	return c.client
 }
 
 // SMCCaller to interact with the sharding manager contract.
-func (c *collactorClient) SMCCaller() *contracts.SMCCaller {
+func (c *collatorClient) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
 }
 

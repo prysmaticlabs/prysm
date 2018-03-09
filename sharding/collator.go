@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
-type collatorClient interface {
+type collator interface {
 	Account() *accounts.Account
 	ChainReader() ethereum.ChainReader
 	SMCCaller() *contracts.SMCCaller
@@ -24,7 +24,7 @@ type collatorClient interface {
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation
-func subscribeBlockHeaders(c collatorClient) error {
+func subscribeBlockHeaders(c collator) error {
 	headerChan := make(chan *types.Header, 16)
 
 	account := c.Account()
@@ -63,7 +63,7 @@ func subscribeBlockHeaders(c collatorClient) error {
 // collation for the available shards in the SMC. The function calls
 // getEligibleCollator from the SMC and collator a collation if
 // conditions are met
-func checkSMCForCollator(c collatorClient, head *types.Header) error {
+func checkSMCForCollator(c collator, head *types.Header) error {
 	account := c.Account()
 
 	log.Info("Checking if we are an eligible collation collator for a shard...")
@@ -93,7 +93,7 @@ func checkSMCForCollator(c collatorClient, head *types.Header) error {
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsCollatorDeposited from the SMC and returns true if
 // the client is in the collator pool
-func isAccountInCollatorPool(c collatorClient) (bool, error) {
+func isAccountInCollatorPool(c collator) (bool, error) {
 	account := c.Account()
 
 	// Checks if our deposit has gone through according to the SMC

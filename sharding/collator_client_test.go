@@ -117,7 +117,7 @@ func createContext() *cli.Context {
 // 		t.Fatalf("Failed to set global variable for flag %s. Error: %v", utils.DataDirFlag.Name, err)
 // 	}
 
-// 	c := MakeCollactorClient(ctx)
+// 	c := MakeCollatorClient(ctx)
 
 // 	if err := c.Start(); err != nil {
 // 		t.Errorf("Failed to start server: %v", err)
