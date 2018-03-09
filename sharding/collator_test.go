@@ -81,7 +81,7 @@ func (c FakeContractCaller) CallContract(ctx context.Context, call ethereum.Call
 	return c.callContractBytes, c.callContractError
 }
 
-func TestcheckSMCForCollator(t *testing.T) {
+func TestCheckSMCForCollator(t *testing.T) {
 	tests := []struct {
 		Name           string
 		Head           *types.Header
