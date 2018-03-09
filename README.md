@@ -16,8 +16,8 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
 -   [Sharding Instructions](#sharding)
     -   [Running a Local Geth Node](#running-a-local-geth-node)
     -   [Transaction Generator](#transaction-generator)
-    -   [Becoming a Validator](#becoming-a-validator)
-    -   [Becoming a Collation Proposer](#becoming-a-collation-proposer)
+    -   [Becoming a Collator](#becoming-a-collator)
+    -   [Becoming a Proposer](#becoming-a-proposer)
 -   [Testing](#testing)
 -   [Contribution Guidelines](#contribution-guidelines)
 -   [License](#license)
@@ -56,7 +56,7 @@ $ make all
 
 # Sharding Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can become a validator or a collation proposer.
+To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can become a collator or a proposer.
 
 ## Running a Local Geth Node
 
@@ -100,35 +100,35 @@ Now, save the passphrase you used in the geth node into a text file called passw
 
 Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870).
 
-Once we have test transactions broadcast to our local node, we can start a validator and collation proposer client in separate terminal windows to begin the sharding process.
+Once we have test transactions broadcast to our local node, we can start a collator and proposer client in separate terminal windows to begin the sharding process.
 
-## Becoming a Validator
+## Becoming a Collator
 
-To deposit ETH and join as a validator in the Validator Manager Contract, run the following command:
-
-```
-geth sharding-validator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
-```
-
-This will extract 100ETH from your account balance and insert you into the VMC's validator set. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible validator for a certain shard in a given period. Once you are selected, the validator will request collations from a "collation proposals pool" that is created by a collation proposer node. We will need to run a collation proposal node concurrently in a separate terminal window as follows:
-
-## Becoming a Collation Proposer
+To deposit ETH and join as a collator in the Sharding Manager Contract, run the following command:
 
 ```
-geth sharding-collator --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-Collation proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
+This will extract 100ETH from your account balance and insert you into the SMC's collator pool. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible collator for a certain shard in a given period. Once you are selected, the collator will request collations from a "proposals pool" that is created by a proposer node. We will need to run a proposer node concurrently in a separate terminal window as follows:
 
-Validators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a validator signs this collation, the collation proposer needs to provide the full collation body and the validator can then append the collation header to the Validator Manager Contract.
+## Becoming a Proposer
+
+```
+geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+```
+
+Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
+
+Collators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a collator signs this collation, the proposer needs to provide the full collation body and the collator can then append the collation header to the Sharding Manager Contract.
 
 Once this is done, the full, end-to-end sharding example is complete and another iteration can occur.
 
 # Making Changes
 
-## Rebuilding the Validator Manager Contract Bindings
+## Rebuilding the Sharding Manager Contract Bindings
 
-The Validator Manager Contract is built in Solidity and deployed to the geth node upon launch of the client if it does not exist in the network at a specified address. If there are any changes to the VMC's code, the Golang bindigs must be rebuilt with the following command.
+The Sharding Manager Contract is built in Solidity and deployed to the geth node upon launch of the client if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
 
     go generate github.com/ethereum/go-ethereum/sharding
     # OR
