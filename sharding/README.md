@@ -16,7 +16,7 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     -   [The Sharding Manager Contract](#the-sharding-manager-contract)
         -   [Necessary Functionality](#necessary-functionality)
             -   [Depositing ETH and Becoming a Collator](#depositing-eth-and-becoming-a-collator)
-            -   [Determining an Eligible Proposer for a Period on a Shard](#determining-an-eligible-proposer-for-a-period-on-a-shard)
+            -   [Determining an Eligible Collator for a Period on a Shard](#determining-an-eligible-collator-for-a-period-on-a-shard)
             -   [Withdrawing From the Collator Set](#withdrawing-from-the-collator-set)
             -   [Processing and Verifying a Collation Header](#processing-and-verifying-a-collation-header)
         -   [Collator Sampling](#collator-sampling)
@@ -202,7 +202,7 @@ Back to the collators, the collator client begins to work by its main loop, whic
 
 1.  _**Subscribe to incoming block headers:**_ the client will begin by issuing a subscription over JSON-RPC for block headers from the running geth node.
 
-2.  _**Check shards for eligible proposer:**_ On incoming headers, the client will interact with the SMC to check if the current collator is an eligible collator for upcoming periods (only a few minutes notice)
+2.  _**Check shards for eligible collator:**_ On incoming headers, the client will interact with the SMC to check if the current collator is an eligible collator for upcoming periods (only a few minutes notice)
 
 3.  _**If the collator is selected, fetch proposals from proposal nodes and add collation headers to SMC:**_ Once a collator is selected, he/she only has a small timeframe to add collation headers through the SMC, so he/she looks for proposals from proposer nodes and accepts those that offer the highest payouts. The collator then countersigns the collation header, receives the full collation with its body after signing, and adds it to the SMC through PoS consensus.
 
@@ -248,23 +248,23 @@ function deposit() public payable returns(int) {
 
 `deposit` adds a collator to the collator set, with the collator's size being the `msg.value` (i.e., the amount of ETH deposited) in the function call. This function returns the collator's index.
 
-#### Determining an Eligible Proposer for a Period on a Shard
+#### Determining an Eligible Collator for a Period on a Shard
 
 ```javascript
-function getEligibleProposer(int _shardId, int _period) public view returns(address) {
+function getEligibleCollator(int _shardId, int _period) public view returns(address) {
     require(_period >= lookAheadPeriod);
     require((_period - lookAheadPeriods) * periodLength < block.number);
     ...
 }
 ```
 
-The `getEligibleProposer` function uses a block hash as a seed to pseudorandomly select a signer from the collator set. The chance of being selected should be proportional to the collator's deposit. The function should be able to return a value for the current period or any future up to `LOOKAHEAD_PERIODS` periods ahead.
+The `getEligibleCollator` function uses a block hash as a seed to pseudorandomly select a signer from the collator set. The chance of being selected should be proportional to the collator's deposit. The function should be able to return a value for the current period or any future up to `LOOKAHEAD_PERIODS` periods ahead.
 
 #### Withdrawing From the collator Set
 
 ```javascript
-function withdraw(int _validatorIndex) public {
-    require(msg.sender == validators[_validatorIndex].addr);
+function withdraw(int _collatorIndex) public {
+    require(msg.sender == collators[_collatorIndex].addr);
     ...
 }
 ```
@@ -291,7 +291,7 @@ function addHeader(int _shardId, uint _expectedPeriodNumber, bytes32 _periodStar
 
 The `addHeader` function is the most important function in the SMC as it provides on-chain verification of collation headers, and maintains a canonical ordering of processed collation headers.
 
-Our current [solidity implementation](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/contracts/validator_manager.sol) includes all of these functions along with other utilities important for the our Ruby Release sharding scheme.
+Our current [solidity implementation](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/contracts/sharding_manager.sol) includes all of these functions along with other utilities important for the our Ruby Release sharding scheme.
 
 ### Collator Sampling
 
@@ -330,7 +330,7 @@ When we launch the client with
 geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and call `getEligibleProposer` on receiving each header. Once we are selected, our client fetches and “purchases” proposed, unsigned collations from a proposals pool created by proposer nodes. The collator client accepts a collation that offer the highest payout, countersigns it, and adds it to the SMC all within that period.
+The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and call `getEligibleCollator` on receiving each header. Once we are selected, our client fetches and “purchases” proposed, unsigned collations from a proposals pool created by proposer nodes. The collator client accepts a collation that offer the highest payout, countersigns it, and adds it to the SMC all within that period.
 
 ### Local Shard Storage
 
@@ -418,7 +418,7 @@ The primary incentive for collators is to earn the payouts from the proposers of
 
 ## Current Status
 
-Currently, Prysmatic Labs is focusing its initial implementation around the logic of the collator and proposer clients. We have built the command line entrypoints as well as the minimum, required functions of the Sharding Manager Contract that is deployed to a local Ethereum blockchain instance. Our collator client is able to subscribe for block headers from the running Geth node and determine when we are selected as an eligible proposer in a given period if we have deposited ETH into the contract.
+Currently, Prysmatic Labs is focusing its initial implementation around the logic of the collator and proposer clients. We have built the command line entrypoints as well as the minimum, required functions of the Sharding Manager Contract that is deployed to a local Ethereum blockchain instance. Our collator client is able to subscribe for block headers from the running Geth node and determine when we are selected as an eligible collator in a given period if we have deposited ETH into the contract.
 
 You can track our progress, open issues, and projects in our repository [here](https://github.com/prysmaticlabs/geth-sharding).
 
@@ -536,13 +536,13 @@ In practice, we would end up with a system of 3 types of nodes to ensure the fun
 
 ## Selecting Eligible Collators Off-Chain
 
-In our current implementation for the Ruby Release, we are selecting collators on-chain by calling the `getEligibleProposer` function from the SMC directly. Justin Drake proposes an alternative scheme that could potentially open up new collator selection mechanisms off-chain through a fork-choice rule in [this](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922) post on ETHResearch.
+In our current implementation for the Ruby Release, we are selecting collators on-chain by calling the `getEligibleCollator` function from the SMC directly. Justin Drake proposes an alternative scheme that could potentially open up new collator selection mechanisms off-chain through a fork-choice rule in [this](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922) post on ETHResearch.
 
 In his own words, this scheme “saves gas when calling addHeader and unlocks the possibility for fancier proposer eligibility functions”. A potential way to do so would be through private collator sampling which is elaborated on below:
 
 _“We now look at the problem of private sampling. That is, can we find a proposal mechanism which selects a single validator [collator] per period and provides “private lookahead”, i.e. it does not reveal to others which validators will be selected next?
 There are various possible private sampling strategies (based on MPCs, SNARKs/STARKs, cryptoeconomic signalling, or fancy crypto) but finding a workable scheme is hard. Below we present our best attempt based on one-time ring signatures. The scheme has several nice properties:
-Perfect privacy: private lookahead and private lookbehind (i.e. the scheme never matches eligible proposers with specific validators)
+Perfect privacy: private lookahead and private lookbehind (i.e. the scheme never matches eligible collators with specific validators)
 Full lookahead: the lookahead extends to the end of the epoch (epochs are defined below, and have roughly the same size as the validator set)
 Perfect fairness: within an epoch validators are selected proportionally according to deposit size, with zero variance”_  - Justin Drake
 
