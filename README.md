@@ -94,7 +94,7 @@ Then, the geth console can start up and you can start a miner as follows:
     > miner.setEtherbase(eth.accounts[0])
     > miner.start(1)
 
-Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into shards by validators and collation proposers. For this, we have created an in-house transaction generator CLI tool.
+Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
 
 ## Transaction Generator
 
