@@ -215,7 +215,7 @@ Back to the collators, the collator client begins to work by its main loop, whic
 It will be the proposer client’s responsibility to listen to any new broadcasted transactions to the node and interact with collators that have staked their ETH into the SMC through an open bidding system for collation proposals. Proposer clients are the ones responsible for **state execution** of transactions in the tx pool.
 
 <!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Collator Client],[Collator Client]add collation header->[Sharding Manager Contract{bg:wheat}]-->
-![system functioning](<https://yuml.me/4a7c8c5b.png)
+![system functioning](https://yuml.me/4a7c8c5b.png)
 
 ## The Collator Manager Contract
 
