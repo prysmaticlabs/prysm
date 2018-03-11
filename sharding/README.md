@@ -78,7 +78,8 @@ These collations are holistic descriptions of the state and transactions on a ce
 
 For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have two types of nodes that do the heavy lifting of our sharding logic: **proposers and collators**. The basic role of proposers is to fetch pending transactions from the txpool, execute any state logic or computation, wrap them into collations, and submit them along with an ETH deposit to a **proposals pool**.
 
-![proposers](https://yuml.me/8a367c37.png)
+<!--[Proposer{bg:wheat}]fetch txs-.->[TXPool], [TXPool]-.->[Proposer{bg:wheat}], [Proposer{bg:wheat}]-package txs>[Collation|header|ETH Deposit], [Collation|header|ETH Deposit]-submit>[Proposals Pool], [Collator{bg:wheat}]subscribe to-.->[Proposals Pool]-->
+![proposers](https://yuml.me/6da583d7.png)
 
 Collators add collations in the proof of work chain, throughout the document named the **canonical chain**. Collators subscribe to updates in the proposals pool and pick a collation in their best interest. Once collators are selected to add collations to the canonical chain, and do so successfully, they get paid by the deposit the proposer offered.
 
@@ -213,7 +214,8 @@ Back to the collators, the collator client begins to work by its main loop, whic
 6.  _**Otherwise, collating client keeps subscribing to block headers:**_ If the user chooses to keep going,
 It will be the proposer client’s responsibility to listen to any new broadcasted transactions to the node and interact with collators that have staked their ETH into the SMC through an open bidding system for collation proposals. Proposer clients are the ones responsible for **state execution** of transactions in the tx pool.
 
-![system functioning](https://i.imgur.com/C54LL1R.png)
+<!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Collator Client],[Collator Client]add collation header->[Sharding Manager Contract{bg:wheat}]-->
+![system functioning](<https://yuml.me/4a7c8c5b.png)
 
 ## The Collator Manager Contract
 
