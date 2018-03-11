@@ -227,7 +227,7 @@ In our Solidity implementation, we begin with the following sensible defaults:
 // Constant values
 uint constant periodLength = 5;
 int constant public shardCount = 100;
-// The exact deposit size which you have to deposit to become a validator
+// The exact deposit size which you have to deposit to become a collator
 uint constant depositSize = 100 ether;
 // Number of periods ahead of current period, which the contract
 // is able to return the collator of that period
@@ -240,7 +240,7 @@ Then, the 4 minimal functions required by the SMC are as follows:
 
 ```javascript
 function deposit() public payable returns(int) {
-    require(!isValidatorDeposited[msg.sender]);
+    require(!isCollatorDeposited[msg.sender]);
     require(msg.value == depositSize);
     ...
 }
