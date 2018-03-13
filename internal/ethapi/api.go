@@ -1282,6 +1282,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, err
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Pending Transactions Called!!!!!!!!")
 
 	transactions := make([]*RPCTransaction, 0, len(pending))
 	for _, tx := range pending {

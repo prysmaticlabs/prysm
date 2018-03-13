@@ -411,10 +411,17 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	return uint(num), err
 }
 
-// TODO: SubscribePendingTransactions (needs server side)
+// PendingTransactions fetches the latest pending txs from the geth node's txpool
 func (ec *Client) PendingTransactions(ctx context.Context) ([]*types.Transaction, error) {
+	var txs []*types.Transaction
+	err := ec.c.CallContext(ctx, &txs, "eth_pendingTransactions")
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
+
+// TODO: SubscribePendingTransactions: look at subscribe new head
 
 // Contract Calling
 
