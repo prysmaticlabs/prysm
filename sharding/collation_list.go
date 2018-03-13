@@ -11,19 +11,19 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-// nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
+// collationNumberHeap is a heap.Interface implementation over 64bit unsigned integers for
 // retrieving sorted collations from the possibly gapped future queue.
-type nonceHeap []uint64
+type collationNumberHeap []uint64
 
-func (h nonceHeap) Len() int           { return len(h) }
-func (h nonceHeap) Less(i, j int) bool { return h[i] < h[j] }
-func (h nonceHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h collationNumberHeap) Len() int           { return len(h) }
+func (h collationNumberHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h collationNumberHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *nonceHeap) Push(x interface{}) {
+func (h *collationNumberHeap) Push(x interface{}) {
 	*h = append(*h, x.(uint64))
 }
 
-func (h *nonceHeap) Pop() interface{} {
+func (h *collationNumberHeap) Pop() interface{} {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -31,49 +31,49 @@ func (h *nonceHeap) Pop() interface{} {
 	return x
 }
 
-//collationsSortedMap is a nonce->collation hash map with a heap based index to allow
-//iterating over the contents in a nonce-incrementing way.
+//collationsSortedMap is a collationNumber->collation hash map with a heap based index to allow
+//iterating over the contents in a collationNumber-incrementing way.
 
 type collationsSortedMap struct {
 	items map[uint64]*Collation // Hash map storing the collation data
-	index *nonceHeap            // Heap of nonces of all the stored collations under non-strict mode
-	cache []*Collation            // Cache of the collations already sorted
+	index *collationNumberHeap            // Heap of collationNumbers of all the stored collations under non-strict mode
+	cache Collations            // Cache of the collations already sorted
 }
 
-// newCollationSortedMap creates a new nonce-sorted collation map.
+// newCollationSortedMap creates a new number sorted collation map.
 func newCollationSortedMap() *collationsSortedMap {
 	return &collationsSortedMap{
 		items: make(map[uint64]*Collation),
-		index: new(nonceHeap),
+		index: new(collationNumberHeap),
 	}
 }
 
-// Get retrieves the current collation associated with the given nonce.
-func (m *collationsSortedMap) Get(nonce uint64) *Collation {
-	return m.items[nonce]
+// Get retrieves the current collation associated with the given collationNumber.
+func (m *collationsSortedMap) Get(collationNumber uint64) *Collation {
+	return m.items[collationNumber]
 }
 
-// Put inserts a new collation into the map, also updating the map's nonce index
-// If a collation is already exists with the same nonce, it's over written.
+// Put inserts a new collation into the map, also updating the map's collationNumber index
+// If a collation is already exists with the same collationNumber, it's over written.
 func (m *collationsSortedMap) Put(collation *Collation) {
-	nonce := collation.Nonce()
-	if m.items[nonce] == nil {
-		heap.Push(m.index, nonce)
+	collationNumber := collation.header.collationNumber
+	if m.items[collationNumber] == nil {
+		heap.Push(m.index, collationNumber)
 	}
-	m.items[nonce], m.cache = collation, nil
+	m.items[collationNumber], m.cache = collation, nil
 }
 
-// Forward removes all the collations from the map with a nonce lower than the
+// Forward removes all the collations from the map with a collationNumber lower than the
 // provided threshold. Every removed collation is returns for any post-removal
 // maintenance.
-func (m *collationsSortedMap) Forward(threshold uint64) Collation {
+func (m *collationsSortedMap) Forward(threshold uint64) Collations {
 	var removed Collations
 
 	//Pop off head items until the threshold is reached
 	for m.index.Len() > 0 && (*m.index)[0] < threshold {
-		nonce := heap.Pop(m.index).(uint64)
-		removed = append(removed, m.items[nonce])
-		delete(m.items, nonce)
+		collationNumber := heap.Pop(m.index).(uint64)
+		removed = append(removed, m.items[collationNumber])
+		delete(m.items, collationNumber)
 	}
 
 	// Shift the cached order to the front
@@ -90,18 +90,18 @@ func (m *collationsSortedMap) Filter(filter func(*Collation) bool) Collations {
 	var removed Collations
 
 	//Collect all the collations to filter out
-	for nonce, collation := range m.items {
+	for collationNumber, collation := range m.items {
 		if filter(collation) {
 			removed = append(removed, collation)
-			delete(m.items, nonce)
+			delete(m.items, collationNumber)
 		}
 	}
 	// If collations were removed, the heap and cache are ruined
 	// Fix heap and cache.
 	if len(removed) > 0 {
 		*m.index = make([]uint64, 0, len(m.items))
-		for nonce := range m.items {
-			*m.index = append(*m.index, nonce)
+		for collationNumber := range m.items {
+			*m.index = append(*m.index, collationNumber)
 		}
 		heap.Init(m.index)
 
@@ -117,7 +117,7 @@ func (m *collationsSortedMap) Cap(threshold int) Collations {
 	if len(m.items) <= threshold {
 		return nil
 	}
-	// Otherwise gather and drop the highest nonce'd collations
+	// Otherwise gather and drop the highest collationNumber'd collations
 	var drops Collations
 
 	sort.Sort(*m.index)
@@ -137,15 +137,15 @@ func (m *collationsSortedMap) Cap(threshold int) Collations {
 
 // Remove deletes a collation from the maintained map, returning whether
 // the collation was found.
-func (m *collationsSortedMap) Remove(nonce uint64) bool {
+func (m *collationsSortedMap) Remove(collationNumber uint64) bool {
 	// Short circuit if no collation is present
-	_, ok := m.items[nonce]
+	_, ok := m.items[collationNumber]
 	if !ok {
 		return false
 	}
 	// Otherwise delete the collation and fix the heap index
 	for i := 0; i < m.index.Len(); i++ {
-		if (*m.index)[i]==nonce {
+		if (*m.index)[i]==collationNumber {
 			heap.Remove(m.index, i)
 			break
 		}
