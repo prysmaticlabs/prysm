@@ -16,6 +16,7 @@ type Collation struct {
 type CollationHeader struct {
 	shardID              *big.Int
 	expectedPeriodNumber *big.Int
+	proposerBid			 *big.Int
 	periodStartPrevHash  *common.Hash
 	parentCollationHash  *common.Hash
 	txListRoot           *common.Hash
@@ -23,7 +24,10 @@ type CollationHeader struct {
 	postStateRoot        *common.Hash
 	receiptsRoot         *common.Hash
 	sig                  []byte
+	collationNumber		 uint64
 }
+
+type Collations []*Collation
 
 func (c *Collation) Header() *CollationHeader           { return c.header }
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
