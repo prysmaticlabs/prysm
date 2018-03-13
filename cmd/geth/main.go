@@ -122,7 +122,7 @@ var (
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
-		utils.JoinValidatorSetFlag,
+		utils.DepositFlag,
 		configFileFlag,
 	}
 
@@ -170,7 +170,8 @@ func init() {
 		attachCommand,
 		javascriptCommand,
 		// See shardingcmd.go:
-		shardingClientCommand,
+		validatorClientCommand,
+		collatorClientCommand,
 		// See misccmd.go:
 		makecacheCommand,
 		makedagCommand,
