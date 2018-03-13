@@ -36,7 +36,7 @@ func (h *collationNumberHeap) Pop() interface{} {
 
 type collationsSortedMap struct {
 	items map[uint64]*Collation // Hash map storing the collation data
-	index *collationNumberHeap            // Heap of collationNumbers of all the stored collations under non-strict mode
+	index *collationNumberHeap  // Heap of collationNumbers of all the stored collations under non-strict mode
 	cache Collations            // Cache of the collations already sorted
 }
 
@@ -145,13 +145,179 @@ func (m *collationsSortedMap) Remove(collationNumber uint64) bool {
 	}
 	// Otherwise delete the collation and fix the heap index
 	for i := 0; i < m.index.Len(); i++ {
-		if (*m.index)[i]==collationNumber {
+		if (*m.index)[i] == collationNumber {
 			heap.Remove(m.index, i)
 			break
 		}
 	}
-	delete(m.items, nonce)
+	delete(m.items, collationNumber)
 	m.cache = nil
 
 	return true
+}
+
+// Ready retrieves a sequentially increasing list of collations starting at the
+// provided collationNumber that is ready for processing. The returned collations will be
+// removed from the list.
+//
+// Note, all collations with collationNumber lower than start will also be returned to
+// prevent getting into and invalid state. This is not something that should ever
+// happen but better to be self correcting than failing!
+func (m *collationsSortedMap) Ready(start uint64) Collations {
+	// Short circuit if no collations are available
+	if m.index.Len() == 0 || (*m.index)[0] > start {
+		return nil
+	}
+	// Otherwise start accumulating incremental collations
+	var ready Collations
+	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
+		ready = append(ready, m.items[next])
+		delete(m.items, next)
+		heap.Pop(m.index)
+	}
+	m.cache = nil
+
+	return ready
+}
+
+// Len returns the length of the collation map
+func (m *collationsSortedMap) Len() int {
+	return len(m.items)
+}
+
+// Flatten creates a collationNumber-sorted slice of collations based on the loosely
+// sorted internal representation. The result of the sorting is cached in case
+// it's requested again before any modifications are made to the contents.
+func (m *collationsSortedMap) Flatten() Collations {
+	// If the sorting was not cached yet, create and cache it
+	if m.cache == nil {
+		m.cache = make(Collations, 0, len(m.items))
+		for _, tx := range m.items {
+			m.cache = append(m.cache, tx)
+		}
+		sort.Sort(CollationByNumber(m.cache))
+	}
+	// Copy the cache to prevent accidental modifications
+	cacheCopy := make(Collations, len(m.cache))
+	copy(cacheCopy, m.cache)
+	return cacheCopy
+}
+
+// bidHeap is a heap.Interface implementation over collations for retrieving
+// bid price sorted collations to discard when the pool fills up.
+type bidPriceHeap []*Collation
+
+func (h bidPriceHeap) Len() int           { return len(h) }
+func (h bidPriceHeap) Less(i, j int) bool { return h[i].BidPrice().Cmp(h[j].BidPrice()) < 0 }
+func (h bidPriceHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *bidPriceHeap) Push(x interface{}) {
+	*h = append(*h, x.(*Collation))
+}
+
+func (h *bidPriceHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+// collationBidList is a bid-sorted heap to allow operating on proposer pool
+// contents in a bid-incrementing way.
+type collationBidList struct {
+	all    *map[uint64]*Collation // Pointer to the map of all collations
+	items  *bidPriceHeap          // Heap of bids of all the stored collations
+	//TODO: DO WE NEED TO TRACK STALES BID POINTS?
+	stales int                    // Number of stale bid points to (re-heap trigger)
+}
+
+// newCollationBidList creates a new bid-sorted collation heap.
+func newCollationBidList(all *map[uint64]*Collation) *collationBidList {
+	return &collationBidList{
+		all:   all,
+		items: new(bidPriceHeap),
+	}
+}
+
+// Put inserts a new collation into the heap
+func (l *collationBidList) Put(collation *Collation) {
+	heap.Push(l.items, collation)
+}
+
+// Removed notifies the bid price collation list that an old collation dropped
+// from the pool. The list will just keep a counter of stale objects and update
+// the heap if a large enough ratio of transactions go stale.
+func (l *collationBidList) Removed() {
+	// Bump the stale counter, but exit if still too low (< 25%)
+	l.stales++
+	if l.stales <= len(*l.items)/4 {
+		return
+	}
+	// Seems we've reached a critical number of stale transactions, reheap
+	reheap := make(bidPriceHeap, 0, len(*l.all))
+
+	l.stales, l.items = 0, &reheap
+	for _, collation := range *l.all {
+		*l.items = append(*l.items, collation)
+	}
+	heap.Init(l.items)
+}
+
+// Cap finds all the bids below the given price threshold, drops them
+// from the priced list and returns them for further removal from the entire pool.
+func (l *collationBidList) Cap(threshold *big.Int) Collations {
+	drop := make(Collations, 0, 128) // Remote underpriced collations to drop
+	save := make(Collations, 0, 64)  // Local underpriced collations to keep
+
+	for len(*l.items) > 0 {
+		// Discard stale collations if found during cleanup
+		collation := heap.Pop(l.items).(*Collation)
+		if _, ok := (*l.all)[collation.Number()]; !ok {
+			l.stales--
+			continue
+		}
+		// Stop the discards if we've reached the threshold
+		if collation.BidPrice().Cmp(threshold) >= 0 {
+			save = append(save, collation)
+			break
+		} else {
+			drop = append(drop, collation)
+		}
+	}
+	for _, collation := range save {
+		heap.Push(l.items, collation)
+	}
+	return drop
+}
+
+// Underpriced checks whether a collation's bid is cheaper than (or as cheap as) the
+// lowest priced collation currently being tracked.
+func (l *collationBidList) Underpriced(collation Collation) bool {
+	// Check if the transaction is underpriced or not
+	if len(*l.items) == 0 {
+		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
+		return false
+	}
+	cheapest := []*Collation(*l.items)[0]
+	return cheapest.BidPrice().Cmp(collation.BidPrice()) >= 0
+}
+
+// Discard finds a number of most underpriced collations, removes them from the
+// bid list and returns them for further removal from the entire pool.
+func (l collationBidList) Discard(count int) Collations {
+	drop := make(Collations, 0, count) // Remote underpriced collations to drop
+
+	for len(*l.items) > 0 && count > 0 {
+		// Discard stale collations if found during cleanup
+		collation := heap.Pop(l.items).(*Collation)
+		if _, ok := (*l.all)[collation.Number()]; !ok {
+			l.stales--
+			continue
+		}
+		// Non stale transaction found, discard
+		drop = append(drop, collation)
+		count--
+	}
+	return drop
 }
