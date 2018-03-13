@@ -31,6 +31,9 @@ type Collations []*Collation
 
 func (c *Collation) Header() *CollationHeader           { return c.header }
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
+func (c *Collation) BidPrice() *big.Int { return new(big.Int).Set(c.header.proposerBid) }
+func (c *Collation) Number() uint64      { return c.header.collationNumber }
+
 
 func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
 func (c *Collation) AddTransaction(tx *types.Transaction) {
