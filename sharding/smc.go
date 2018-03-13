@@ -13,8 +13,8 @@ import (
 
 // initSMC initializes the sharding manager contract bindings.
 // If the SMC does not exist, it will be deployed.
-func initSMC(c *collatorClient) error {
-	b, err := c.client.CodeAt(context.Background(), shardingManagerAddress, nil)
+func initSMC(c *CollatorClient) error {
+	b, err := c.Client().CodeAt(context.Background(), shardingManagerAddress, nil)
 	if err != nil {
 		return fmt.Errorf("unable to get contract code at %s: %v", shardingManagerAddress, err)
 	}
@@ -54,7 +54,7 @@ func initSMC(c *collatorClient) error {
 
 // joinCollatorPool checks if the account is a collator in the SMC. If
 // the account is not in the set, it will deposit 100ETH into contract.
-func joinCollatorPool(c *collatorClient) error {
+func joinCollatorPool(c *CollatorClient) error {
 
 	if c.ctx.GlobalBool(utils.DepositFlag.Name) {
 

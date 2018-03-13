@@ -411,17 +411,10 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	return uint(num), err
 }
 
-// PendingTransactions fetches the latest pending txs from the geth node's txpool
-func (ec *Client) PendingTransactions(ctx context.Context) ([]*types.Transaction, error) {
-	var txs []*types.Transaction
-	err := ec.c.CallContext(ctx, &txs, "eth_pendingTransactions")
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+// SubscribePendingTransactions fetches real-time info on pending txs
+func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (ethereum.Subscription, error) {
+	return ec.c.EthSubscribe(ctx, ch, "newHeads", map[string]struct{}{})
 }
-
-// TODO: SubscribePendingTransactions: look at subscribe new head
 
 // Contract Calling
 

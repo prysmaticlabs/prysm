@@ -21,4 +21,6 @@ var (
 	depositSize = new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil) // 100 ETH
 	// Gas limit to create contract
 	contractGasLimit = uint64(4700000) // Max is 4712388
+	// Used to determine the ipc name.
+	clientIdentifier = "geth"
 )
