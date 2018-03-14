@@ -411,7 +411,10 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	return uint(num), err
 }
 
-// TODO: SubscribePendingTransactions (needs server side)
+// SubscribePendingTransactions fetches real-time info on pending txs
+func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- *common.Hash) (ethereum.Subscription, error) {
+	return ec.c.EthSubscribe(ctx, ch, "newPendingTransactions")
+}
 
 // Contract Calling
 

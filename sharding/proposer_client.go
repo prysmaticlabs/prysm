@@ -4,30 +4,23 @@ package sharding
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"os"
 
-	"github.com/ethereum/go-ethereum"
-
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// CollatorClient communicates to Geth node via JSON RPC.
-type CollatorClient struct {
+// ProposerClient communicates to Geth node via JSON RPC.
+type ProposerClient struct {
 	endpoint string             // Endpoint to JSON RPC
 	client   *ethclient.Client  // Ethereum RPC client.
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -35,8 +28,8 @@ type CollatorClient struct {
 	smc      *contracts.SMC     // The deployed sharding management contract
 }
 
-// MakeCollatorClient for interfacing with Geth full node.
-func MakeCollatorClient(ctx *cli.Context) *CollatorClient {
+// MakeProposerClient for interfacing with Geth full node.
+func MakeProposerClient(ctx *cli.Context) *ProposerClient {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
@@ -60,18 +53,16 @@ func MakeCollatorClient(ctx *cli.Context) *CollatorClient {
 	}
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	return &CollatorClient{
+	return &ProposerClient{
 		endpoint: endpoint,
 		keystore: ks,
 		ctx:      ctx,
 	}
 }
 
-// Start the collator client.
-// * Connects to Geth node.
-// * Verifies or deploys the sharding manager contract.
-func (c *CollatorClient) Start() error {
-	log.Info("Starting collator client")
+// Start the proposer client
+func (c *ProposerClient) Start() error {
+	log.Info("Starting proposer client")
 	rpcClient, err := dialRPC(c.endpoint)
 	if err != nil {
 		return err
@@ -89,42 +80,20 @@ func (c *CollatorClient) Start() error {
 		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
-	if err := initSMC(c); err != nil {
+	if err := subscribePendingTransactions(c); err != nil {
 		return err
 	}
 
-	// Deposit 100ETH into the collator set in the SMC. Checks if account
-	// is already a collator in the SMC (in the case the client restarted).
-	// Once that's done we can subscribe to block headers.
-	//
-	// TODO: this function should store the collator's SMC index as a property
-	// in the client's struct
-	if err := joinCollatorPool(c); err != nil {
-		return err
-	}
-
-	// Listens to block headers from the Geth node and if we are an eligible
-	// collator, we fetch pending transactions and collator a collation
-	if err := subscribeBlockHeaders(c); err != nil {
-		return err
-	}
 	return nil
 }
 
-// Wait until collator client is shutdown.
-func (c *CollatorClient) Wait() {
-	log.Info("Sharding client has been shutdown...")
-}
-
-// WatchCollationHeaders checks the logs for add_header func calls
-// and updates the head collation of the client. We can probably store
-// this as a property of the client struct
-func (c *CollatorClient) WatchCollationHeaders() {
-
+// Wait until proposer client is shutdown.
+func (c *ProposerClient) Wait() {
+	log.Info("Proposer client has been shutdown...")
 }
 
 // UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
-func (c *CollatorClient) unlockAccount(account accounts.Account) error {
+func (c *ProposerClient) unlockAccount(account accounts.Account) error {
 	pass := ""
 
 	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
@@ -148,58 +117,34 @@ func (c *CollatorClient) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-func (c *CollatorClient) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
-	account := c.Account()
-
-	return &bind.TransactOpts{
-		From:  account.Address,
-		Value: value,
-		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			networkID, err := c.client.NetworkID(context.Background())
-			if err != nil {
-				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
-			}
-			return c.keystore.SignTx(*account, tx, networkID /* chainID */)
-		},
-	}, nil
-}
-
 // Account to use for sharding transactions.
-func (c *CollatorClient) Account() *accounts.Account {
+func (c *ProposerClient) Account() *accounts.Account {
 	accounts := c.keystore.Accounts()
 
 	return &accounts[0]
 }
 
 // ChainReader for interacting with the chain.
-func (c *CollatorClient) ChainReader() ethereum.ChainReader {
+func (c *ProposerClient) ChainReader() ethereum.ChainReader {
 	return ethereum.ChainReader(c.client)
 }
 
+// PendingStateEventer provides subscription functionality
+func (c *ProposerClient) PendingStateEventer() ethereum.PendingStateEventer {
+	return ethereum.PendingStateEventer(c.client)
+}
+
 // Client to interact with ethereum node.
-func (c *CollatorClient) Client() *ethclient.Client {
+func (c *ProposerClient) Client() *ethclient.Client {
 	return c.client
 }
 
 // Context from the CLI
-func (c *CollatorClient) Context() *cli.Context {
+func (c *ProposerClient) Context() *cli.Context {
 	return c.ctx
 }
 
 // SMCCaller to interact with the sharding manager contract.
-func (c *CollatorClient) SMCCaller() *contracts.SMCCaller {
+func (c *ProposerClient) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
-}
-
-// PendingStateEventer provides subscription functionality
-func (c *CollatorClient) PendingStateEventer() ethereum.PendingStateEventer {
-	return ethereum.PendingStateEventer(c.client)
-}
-
-// dialRPC endpoint to node.
-func dialRPC(endpoint string) (*rpc.Client, error) {
-	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
-	}
-	return rpc.Dial(endpoint)
 }
