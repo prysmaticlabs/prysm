@@ -26,10 +26,10 @@ func subscribePendingTransactions(c shardingClient) error {
 		// Query the current state to see if we are an eligible collator
 		log.Info("Received new pending tx")
 
-		pending, err := c.Client().TransactionByHash(context.Background(), hash)
+		tx, _, err := c.Client().TransactionByHash(context.Background(), *hash)
 		if err != nil {
 			return fmt.Errorf("Could not fetch tx by hash. %v", err)
 		}
-		log.Info(fmt.Sprintf("TX Nonce: %v", pending.Nonce()))
+		log.Info(fmt.Sprintf("TX Nonce and Hash: %v %s", tx.Nonce(), tx.Hash().String()))
 	}
 }
