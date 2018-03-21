@@ -9,8 +9,7 @@ import (
 )
 
 type Collation struct {
-	header *CollationHeader
-	//TODO: Tx to blob
+	header       *CollationHeader
 	transactions []*types.Transaction
 }
 
@@ -35,7 +34,6 @@ func (c *Collation) ProposerSignature() []byte          { return c.header.propos
 
 func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
 
-//TODO: Tx to blob
 func (c *Collation) AddTransaction(tx *types.Transaction) {
 	c.transactions = append(c.transactions, tx)
 }
