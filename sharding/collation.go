@@ -10,6 +10,7 @@ import (
 
 type Collation struct {
 	header       *CollationHeader
+	//TODO: Tx to blob
 	transactions []*types.Transaction
 }
 
@@ -34,8 +35,9 @@ func (c *Collation) ProposerSignature() []byte{ return c.header.proposerSignatur
 
 
 func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
+
+//TODO: Tx to blob
 func (c *Collation) AddTransaction(tx *types.Transaction) {
-	// TODO: Check transaction does not exceed gas limit
 	c.transactions = append(c.transactions, tx)
 }
 
