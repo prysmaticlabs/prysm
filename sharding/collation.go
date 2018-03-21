@@ -35,6 +35,7 @@ func (c *Collation) ProposerSignature() []byte          { return c.header.propos
 func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
 
 func (c *Collation) AddTransaction(tx *types.Transaction) {
+	// TODO: Check transaction does not exceed gas limit
 	c.transactions = append(c.transactions, tx)
 }
 
