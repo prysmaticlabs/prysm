@@ -106,12 +106,32 @@ Among its basic responsibilities, the SMC is be responsible for reconciling coll
 
 # Roadmap Phases
 
-Prysmatic Labs will follow the updated Phase 1 Spec posted on ETHResearch by the Foundation's research team to roll out a local version of qudratic sharding. In essence, the high-level sharding roadmap is as follows:
+Prysmatic Labs will follow the updated Phase 1 Spec posted on [ETHResearch](https://ethresear.ch/t/sharding-phase-1-spec/1407) by the Foundation's research team to roll out a local version of qudratic sharding. In essence, the high-level sharding roadmap is as follows as outlined by Justin Drake:
 
-1.  **Phase 1:** Basic SMC shard system with no cross-shard communication along with a proposer + collator node architecture
-2.  **Phase 2:** Receipt-based, cross-shard communication
-3.  **Phase 3:** Require collation headers to be added in as uncles instead of as transactions
-4.  **Phase 4:** Tightly-coupled sharding with data availability proofs and robust security
+- Phase 1: Basic sharding without EVM
+  - Blob shard without transactions
+  - Proposers
+  - Proposal commitments
+  - Collation availability challenges
+- Phase 2: EVM state transition function
+  - Full nodes only
+  - Asynchronous cross-contract calls only
+  - Account abstraction
+  - eWASM
+  - Archive accumulators
+  - Storage rent
+- Phase 3: Light client state protocol
+  - Executors
+  - Stateless clients
+- Phase 4: Cross-shard transactions
+  - Internally-synchronous zones
+- Phase 5: Tight coupling with main chain security
+  - Data availability proofs
+  - Casper integration
+  - Internally fork-free sharding
+  - Manager shard
+- Phase 6: Super-quadratic sharding
+  - Load balancing
 
 To concretize these phases, we will be releasing our implementation of sharding for the geth client as follows:
 
