@@ -86,14 +86,11 @@ Collators add collations via a smart contract on the Ethereum mainchain. Collato
 
 To recap, the role of a collator is to reach consensus through Proof of Stake on collations they receive in the period they are assigned to, as well as to determine the canonical shard chain via a process known as "windback". This consensus will involve validation and data availability proofs of collations proposed to them by proposer nodes, along with validating collations from the immediate past (See: [Windback](#enforced-windback)).
 
-When processing collations, proposer nodes download the merkle branches of the state that transactions within their collations need. In the case of cross-shard transactions, an access list of the state along with transaction receipts are required as part of the transaction primitive (See: [Protocol Primitives](#protocol-primitives)). Additionally, these proposers need to provide proofs of availability and validity when submitting collations for “sale” to collators. This submission process is akin to the current transaction fee open bidding market where miners accept the transactions that maximize their profits. This abstract separation of concerns between collators and proposers allows for more computational efficiency within the system, as collators will not have to do the heavy lifting of state execution and focus solely on consensus through fork-choice rules.
+So then, are proposers in charge of state execution? The short answer is that phase 1 will contain **no state execution**. Instead, proposers will simply package all types of transactions into collations and later down the line, agents known as executors will download, run, and validate state as they need to through possibly different types of execution engines (potentially TrueBit-style, interactive execution).
+
+The proposal-collator interaction is akin to the current transaction fee open bidding market where miners accept the transactions that maximize their profits. This abstract separation of concerns between collators and proposers allows for more computational efficiency within the system, as collators will not have to do the heavy lifting of state execution and focus solely on consensus through fork-choice rules. In this scheme, it makes sense that eventually **proposers** will become **executors** in later phases of a sharding spec.
 
 When deciding and signing a proposed, valid collation, collators have the responsibility of finding the **longest valid shard chain within the longest valid main chain**.
-
-In this new protocol, a block is valid when
-
--   Transactions in all collations are valid
--   The state of collations after the transactions is the same as what the collation headers specified
 
 Collators periodically get assigned to different shards, the moment between when collators get assigned to a shard and the moment they get reassigned is called a **period**.
 
@@ -103,9 +100,9 @@ The Ethereum Wiki’s [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Shard
 
 Casper Proof of Stake (Casper [FFG](https://arxiv.org/abs/1710.09437) and [CBC](https://arxiv.org/abs/1710.09437)) makes this quite trivial because there is already a set of global collators that we can select collator nodes from. The source of randomness needs to be common to ensure that this sampling is entirely compulsory and can’t be gamed by the collators in question.
 
-In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage shards and sampling proposed collators from a global collator set. As the SMC lives in the canonical chain, it will take guarantee a global state among all shard states.
+In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage proposers, their proposal bids, and the sampling of collators from a global collator set. As the SMC lives in the Ethereum main chain, it will take guarantee a canonical head for all shard states.
 
-Among its basic responsibilities, the SMC is be responsible for reconciling collators across all shards. It is in charge of pseudorandomly sampling collators from a collator set of accounts that have staked ETH into the SMC. The SMC is also responsible for providing immediate collation header verification that records a valid collation header hash on the canonical chain. In essence, sharding revolves around being able to store proofs of shard states in the canonical chain through this smart contract.
+Among its basic responsibilities, the SMC is be responsible for reconciling collators across all shards. It is in charge of pseudorandomly sampling collators from a collator set of accounts that have staked ETH into the SMC. The SMC is also responsible for providing immediate collation header verification that records a valid collation header hash on the main chain, as well as managing proposer's bids. In essence, sharding revolves around being able to store proofs of shard states in the main chain through this smart contract.
 
 # Roadmap Phases
 
