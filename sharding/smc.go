@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
@@ -68,7 +69,7 @@ func joinCollatorPool(c *collatorClient) error {
 		if err != nil {
 			return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
 		}
-		log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", depositSize, tx.Hash().String()))
+		log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(depositSize, big.NewInt(params.Ether)), tx.Hash().String()))
 
 	} else {
 		log.Info("Not joining collator pool")
