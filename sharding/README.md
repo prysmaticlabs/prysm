@@ -106,7 +106,7 @@ Among its basic responsibilities, the SMC is be responsible for reconciling coll
 
 # Roadmap Phases
 
-Prysmatic Labs’ implementation will follow parts of the roadmap outlined by Vitalik in his [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) to roll out a working version of quadratic sharding, with a few modifications on our releases.
+Prysmatic Labs will follow the updated Phase 1 Spec posted on ETHResearch by the Foundation's research team to roll out a local version of qudratic sharding. In essence, the high-level sharding roadmap is as follows:
 
 1.  **Phase 1:** Basic SMC shard system with no cross-shard communication along with a proposer + collator node architecture
 2.  **Phase 2:** Receipt-based, cross-shard communication
@@ -119,13 +119,14 @@ To concretize these phases, we will be releasing our implementation of sharding 
 
 Our current work is focused on creating a localized version of phase 1, quadratic sharding that would include the following:
 
--   A minimal, **collator client** system that will deploy a **Sharding Manager Contract** to a locally running geth node
+-   A minimal, **collator client** system that will interact with a **Sharding Manager Contract** on a locally running geth node
 -   Ability to deposit ETH into the SMC through the command line and to be selected as a collator by the local **SMC** in addition to the ability to withdraw the ETH staked
--   A **proposer node client** and Cryptoeconomic incentive system for proposer nodes to listen for pending tx’s, create collations, and submit them along with a deposit to collator nodes in the network
--   A simple command line util to **simulate pending transactions** of different types posted to the local geth node’s txpool for the local collation proposer to begin proposing collation headers
+-   A **proposer client** and cryptoeconomic incentive system for proposer nodes to listen for pending tx’s, create collations, and submit them along with a deposit to collator nodes in the network
 -   Ability to inspect the shard states and visualize the working system locally through the command line
 
-We will forego many of the security considerations that will be critical for testnet and mainnet release for the purposes of demonstration and local network execution as part of the Ruby Release (See: [Security Considerations Not Included in Ruby](#not-included-in-ruby-release)).
+Proposers and collators will interact through a local file system, as peer to peer networking considerations for sharding are still under heavy research.
+
+We will forego several security considerations that will be critical for testnet and mainnet release for the purposes of demonstration and local network execution as part of the Ruby Release (See: [Security Considerations Not Included in Ruby](#not-included-in-ruby-release)).
 
 ETA: To be determined
 
@@ -133,7 +134,7 @@ ETA: To be determined
 
 Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a set of collators effectively processing collations through the **on-chain SMC**. This will require a lot more elaborate simulations around the safety of the randomness behind the collator assignments in the SMC. Futhermore we need to pass stress testing against DDoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently along with collators that can accept these proposals and add their headers to the SMC.
 
-Part 2 of the **Sapphire Release** will focus on implementing a cross-shard transaction mechanism via two-way pegging and the receipts system (as outlined in [Beyond Phase 1](#beyond-phase-1)) and getting that functionality ready to run on a **local, private network** as an extension to the Ruby Release.
+Part 2 of the **Sapphire Release** will focus on implementing state execution and defining the State Transition Function for sharding on a local testnet (as outlined in [Beyond Phase 1](#beyond-phase-1)) as an extenstion to the Ruby Release.
 
 ETA: To be determined
 
