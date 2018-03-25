@@ -174,13 +174,12 @@ Here is a full reference spec explaining how our initial system will function:
 
 ## System Architecture
 
-Our implementation revolves around 5 core components:
+Our implementation revolves around 4 core components:
 
--   A **locally-running geth node** that spins up an instance of the Ethereum blockchain
+-   A **locally-running geth node** that spins up an instance of the Ethereum blockchain and mines on the Proof of Work chain
 -   A **Sharding Manager Contract (SMC)** that is deployed onto this blockchain instance
 -   A **collator client** that connects to the running geth node through JSON-RPC, provides bindings to the SMC, and listens for incoming collation proposals
--   A **proposer client** that is tasked with state execution, processing pending tx’s from the Geth node, and creates collations that are then broadcast to collators via a wire protocol
--   A **user** that will interact with the sharding client to become a collator and automatically process transactions into shards through the sharding client’s SMC bindings.
+-   A **proposer client** that is tasked with processing pending tx's into collations that are then submitted to collators via a local filesystem for the purposes of simplified, phase 1 implementation
 
 Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the SMC and join as a collator that is automatically assigned to a certain period. We will also launch a proposer client that will create collations from the geth node’s tx pool and submit them to collators for them to add their headers to the SMC.
 
