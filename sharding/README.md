@@ -179,7 +179,7 @@ Our implementation revolves around 4 core components:
 -   A **locally-running geth node** that spins up an instance of the Ethereum blockchain and mines on the Proof of Work chain
 -   A **Sharding Manager Contract (SMC)** that is deployed onto this blockchain instance
 -   A **collator client** that connects to the running geth node through JSON-RPC, provides bindings to the SMC, and listens for incoming collation proposals
--   A **proposer client** that is tasked with processing pending tx's into collations that are then submitted to collators via a local filesystem for the purposes of simplified, phase 1 implementation
+-   A **proposer client** that is tasked with processing pending tx's into collations that are then submitted to collators via a local filesystem for the purposes of simplified, phase 1 implementation. In phase 1, proposers _do not_ execute state, but rather just serialize pending tx data into possibly valid/invalid data blobs.
 
 Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the SMC and join as a collator that is automatically assigned to a certain period. We will also launch a proposer client that will create collations and submit them to collators for them to add their headers to the SMC via a cryptoeconomic "game".
 
@@ -189,7 +189,7 @@ A basic, end-to-end example of the system is as follows:
 
 2.  _**Collator client connects & listens to incoming headers from the geth node and assigns user as collators on a shard per period:**_ The collator is selected in CURRENT_PERIOD + LOOKEAD_PERIOD (which is around a 5 minutes notice) and must accept collations from proposer nodes that offer the best prices.
 
-3.  _**Concurrently, a proposer client processes pending transaction data into blobs:**_ the proposer client will create collation bodies and submit them to collators through an open bidding system.
+3.  _**Concurrently, a proposer client processes pending transaction data into blobs:**_ the proposer client will create collation bodies and submit them to collators through an open bidding system. In Phase 1, it is important to note that we will _not_ have any state execution. Proposers will just serialize pending tx into fixed collation body sizes without executing them for validity.
 
 4. _**Collators broadcast a signed commitment to all top proposers:**_ collators create a signed list called a _commitment_ that specifies top collations he/she would accept based on a high payout. This eliminates some risk on behalf of proposers, who need some guarantee that they are not being led on by collators.
 
@@ -211,11 +211,9 @@ Our Ruby Release requires users to start a local geth node running a localized, 
 $ geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-If it is the first time the client runs, it deploys a new **SMC** into the local chain and establish a JSON-RPC connection to interact with the node directly. The `--deposit` flag tells the sharding client to automatically unlock the user’s keystore and begin depositing ETH into the SMC to become a collator.
+If it is the first time the client runs, it deploys a new **SMC** into the local chain and establishes a JSON-RPC connection to interact with the node directly. The `--deposit` flag tells the sharding client to automatically unlock the user’s keystore and begin depositing ETH into the SMC to become a collator.
 
-If the initial deposit is successful, the sharding client launches a **local, transaction simulation generator**, which will queue transactions into the txpool for the geth node to process that can then be added into collations on a shard.
-
-Concurrently, a user needs to launch a **proposer client** that starts processing transactions into collations that can then be “sold” to collators by including a cryptographic proof of an ETH deposit in their unsigned collation headers. This proof is a guarantee of a state change in the collator’s account balance for accepting to sign the incoming collation header. The proposer client can also be initialized as follows in a separate process:
+Concurrently, a user needs to launch a **proposer client** that starts processing transactions into collations that can then be offered to collators by including an ETH deposit in their unsigned collation headers. The proposer client can also be initialized as follows in a separate process:
 
 ```
 geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
@@ -225,23 +223,20 @@ Back to the collators, the collator client begins to work by its main loop, whic
 
 1.  _**Subscribe to incoming block headers:**_ the client will begin by issuing a subscription over JSON-RPC for block headers from the running geth node.
 
-2.  _**Check shards for eligible collator:**_ On incoming headers, the client will interact with the SMC to check if the current collator is an eligible collator for upcoming periods (only a few minutes notice)
+2.  _**Check shards for eligible collator within LOOKEAD_PERIOD:**_ on incoming headers, the client will interact with the SMC to check if the current collator is an eligible collator for an upcoming period (only a few minutes notice)
 
-3.  _**If the collator is selected, fetch proposals from proposal nodes and add collation headers to SMC:**_ Once a collator is selected, he/she only has a small timeframe to add collation headers through the SMC, so he/she looks for proposals from proposer nodes and accepts those that offer the highest payouts. The collator then countersigns the collation header, receives the full collation with its body after signing, and adds it to the SMC through PoS consensus.
+3.  _**If the collator is selected, fetch proposals from proposal nodes and add collation headers to SMC:**_ once a collator is selected, he/she only has a small timeframe to add collation headers through the SMC, so he/she looks for proposals from proposer nodes and accepts those that offer the highest payouts. The collator then broadcasts a commitment that includes a cryptographic guarantee of the specific proposals such collator would accept if proposer publishes a corresponding collation body. Then, the top proposer that acts accordingly gets his/her proposal accepted, and the collator appends it to the SMC through a simplified PoS consensus.
 
-4.  _**Supernode reconciles and adds to main chain:**_ Supernodes that are responsible for reconciling global state across shards into the canonical chain. They are tasked with observing the state across the whole galaxy of shards and adding blocks to the canonical PoW main chain. Proposers get rewarded to their coinbase address for inclusion of a block (also known as a collation subsidy).
+5.  _**If user withdraws, remove from collator set:**_ a user can choose to stop being a collator and then his/her ETH is withdrawn from the collator set after a certain lockup period is met.
 
-5.  _**If user withdraws, remove from collator set:**_ A user can choose to stop being a collator and then his/her ETH is withdrawn from the collator set.
-
-6.  _**Otherwise, collating client keeps subscribing to block headers:**_ If the user chooses to keep going,
-It will be the proposer client’s responsibility to listen to any new broadcasted transactions to the node and interact with collators that have staked their ETH into the SMC through an open bidding system for collation proposals. Proposer clients are the ones responsible for **state execution** of transactions in the tx pool.
+6.  _**Otherwise, collating client keeps subscribing to block headers:**_ If the user chooses to keep going, it will be the proposer client’s responsibility to listen to any new pending transactions and interact with collators that have staked their ETH into the SMC through an open bidding system for collation proposals.
 
 <!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Collator Client],[Collator Client]add collation header->[Sharding Manager Contract{bg:wheat}]-->
 ![system functioning](https://yuml.me/4a7c8c5b.png)
 
 ## The Collator Manager Contract
 
-Our solidity implementation of the Collator Manager Contract follows the reference spec outlined by Vitalik [here](https://github.com/ethereum/sharding/blob/develop/docs/doc.md).
+Our solidity implementation of the Collator Manager Contract follows the reference spec outlined in ETHResearch's Updated Phase 1 Spec [here](https://ethresear.ch/t/sharding-phase-1-spec/1407).
 
 ### Necessary functionality
 
