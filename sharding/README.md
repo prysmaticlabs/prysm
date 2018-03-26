@@ -146,7 +146,7 @@ Our current work is focused on creating a localized version of phase 1, quadrati
 
 Proposers and collators will interact through a local file system, as peer to peer networking considerations for sharding are still under heavy research.
 
-We will forego several security considerations that will be critical for testnet and mainnet release for the purposes of demonstration and local network execution as part of the Ruby Release (See: [Security Considerations Not Included in Ruby](#not-included-in-ruby-release)).
+We will forego several security considerations that will be critical for testnet and mainnet release for the purposes of demonstration and local network testing as part of the Ruby Release (See: [Security Considerations Not Included in Ruby](#not-included-in-ruby-release)).
 
 ETA: To be determined
 
@@ -181,21 +181,25 @@ Our implementation revolves around 4 core components:
 -   A **collator client** that connects to the running geth node through JSON-RPC, provides bindings to the SMC, and listens for incoming collation proposals
 -   A **proposer client** that is tasked with processing pending tx's into collations that are then submitted to collators via a local filesystem for the purposes of simplified, phase 1 implementation
 
-Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the SMC and join as a collator that is automatically assigned to a certain period. We will also launch a proposer client that will create collations from the geth node’s tx pool and submit them to collators for them to add their headers to the SMC.
+Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the SMC and join as a collator that is automatically assigned to a certain period. We will also launch a proposer client that will create collations and submit them to collators for them to add their headers to the SMC via a cryptoeconomic "game".
 
 A basic, end-to-end example of the system is as follows:
 
-1.  _**A User starts a collator client and deposits 100ETH into the SMC:**_ the sharding client connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
+1.  _**User starts a collator client and deposits 100ETH into the SMC:**_ the sharding client connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
 
-2.  _**Collator client connects & listens to incoming headers from the geth node and assigns user as collators on a shard per period:**_ The collator is selected for the current period and must accept collations from proposer nodes that offer the best prices.
+2.  _**Collator client connects & listens to incoming headers from the geth node and assigns user as collators on a shard per period:**_ The collator is selected in CURRENT_PERIOD + LOOKEAD_PERIOD (which is around a 5 minutes notice) and must accept collations from proposer nodes that offer the best prices.
 
-3.  _**Concurrently, the proposer client processes and executes pending tx’s from the geth node:**_ the proposer client will create valid collations and submit them to collators on an open bidding system.
+3.  _**Concurrently, a proposer client processes pending transaction data into blobs:**_ the proposer client will create collation bodies and submit them to collators through an open bidding system.
 
-4.  _**Collators select collation proposals that offer highest payout:**_ Collators listen to collation headers on a certain shard with high deposit sizes and sign them.
+4. _**Collators broadcast a signed commitment to all top proposers:**_ collators create a signed list called a _commitment_ that specifies top collations he/she would accept based on a high payout. This eliminates some risk on behalf of proposers, who need some guarantee that they are not being led on by collators.
 
-5.  _**The collator adds collation headers through the SMC:**_ The collator client calls the `add_header` function in the SMC and to append the header to the canonical chain.
+5. _**Top proposer in commitment broadcasts his/her collation body to the collator:** proposer sends the collation body to the collator, but does not have a way of ensuring the collator will not be lazy and not download the body.
 
-6.  _**The user is selected as collator again on the SMC in a different period or can withdraw his/her stake from the collator's Pool:**_ the user can keep staking and adding incoming collation headers and restart the process, or withdraw his/her stake and be removed from the SMC collator set.
+4.  _**Proposers can challenge collators on data availability:**_ to ease more proposer risk, we give proposers the ability to challenge the data availability of a collation downloaded by a collator. If collator cannot respond in a certain period of time, collator is slashed.
+
+5.  _**The collator adds collation headers through the SMC:**_ the collator client checks the previous 25 collations in the shard chain to check for validity, and then uses the fork choice rule to determine the canonical shard head the recently exchanged collation would be appended to via an `addHeader` SMC call.
+
+6.  _**User is selected as collator again on the SMC in a different period or can withdraw his/her stake from the collator's pool:**_ the user can keep staking and adding incoming collation headers and restart the process, or withdraw his/her stake and be removed from the SMC collator pool.
 
 Now, we’ll explore our architecture and implementation in detail as part of the go-ethereum repository.
 
