@@ -253,9 +253,28 @@ uint constant depositSize = 100 ether;
 uint constant lookAheadPeriods = 4;
 ```
 
+The contract will store the following data structures (full credit to the Phase 1 Spec)
+
+- Collator pool
+    - `collator_pool`: `address[int128]`—array of active collator addresses
+    - `collator_pool_len`: `int128`—size of the collator pool
+    - `empty_slots_stack`: `int128[int128]`—stack of empty collator slot indices
+    - `empty_slots_stack_top`: `int128`—top index of the stack
+- Collator registry
+    - `collator_registry`: `{deregistered: int128, pool_index: int128}[address]`—collator registry (deregistered is 0 for not yet deregistered collators)
+- Proposer registry
+    - `proposer_registry`: `{deregistered: int128, balances: wei_value[uint256]}[address]`—proposer registry
+- Collation trees
+    - `collation_trees`: `bytes32[bytes32][uint256]`—collation trees (the collation tree of a shard maps collation hashes to previous collation hashes truncated to 24 bytes packed into a bytes32 with the collation height in the last 8 bytes)
+    - `last_update_periods`: `int128[uint256]`—period of last update for each shard
+- Availability challenges
+    - `availability_challenges`:TBD—availability challenges
+    - `availability_challenges_len`: `int128`—availability challenges counter
+
+
 Then, the 4 minimal functions required by the SMC are as follows:
 
-#### Depositing ETH and Becoming a Collator
+#### Registering Collators & Proposers
 
 ```javascript
 function deposit() public payable returns(int) {
@@ -264,8 +283,6 @@ function deposit() public payable returns(int) {
     ...
 }
 ```
-
-`deposit` adds a collator to the collator set, with the collator's size being the `msg.value` (i.e., the amount of ETH deposited) in the function call. This function returns the collator's index.
 
 #### Determining an Eligible Collator for a Period on a Shard
 
