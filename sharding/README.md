@@ -15,9 +15,8 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     -   [System Start and User Entrypoint](#system-start-and-user-entrypoint)
     -   [The Sharding Manager Contract](#the-sharding-manager-contract)
         -   [Necessary Functionality](#necessary-functionality)
-            -   [Depositing ETH and Becoming a Collator](#depositing-eth-and-becoming-a-collator)
+            -   [Registering Collators and Proposers](#registering-collators-and-proposers)
             -   [Determining an Eligible Collator for a Period on a Shard](#determining-an-eligible-collator-for-a-period-on-a-shard)
-            -   [Withdrawing From the Collator Set](#withdrawing-from-the-collator-set)
             -   [Processing and Verifying a Collation Header](#processing-and-verifying-a-collation-header)
         -   [Collator Sampling](#collator-sampling)
         -   [Collation Header Approval](#collation-header-approval)
@@ -25,7 +24,7 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     -   [The Collator Client](#the-collator-client)
         -   [Local Shard Storage](#local-shard-storage)
     -   [The Proposer Client](#the-proposer-client)
-        -   [Collation Headers and State Execution](#collation-headers-and-state-execution)
+        -   [Collation Headers](#collation-headers)
     -   [Peer Discovery and Shard Wire Protocol](#peer-discovery-and-shard-wire-protocol)
     -   [Protocol Modifications](#protocol-modifications)
         -   [Protocol Primitives: Collations, Blocks, Transactions, Accounts](#protocol-primitives-collations-blocks-transactions-accounts)
@@ -234,11 +233,11 @@ Back to the collators, the collator client begins to work by its main loop, whic
 <!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Collator Client],[Collator Client]add collation header->[Sharding Manager Contract{bg:wheat}]-->
 ![system functioning](https://yuml.me/4a7c8c5b.png)
 
-## The Collator Manager Contract
+## The Sharding Manager Contract
 
 Our solidity implementation of the Collator Manager Contract follows the reference spec outlined in ETHResearch's Updated Phase 1 Spec [here](https://ethresear.ch/t/sharding-phase-1-spec/1407).
 
-### Necessary functionality
+### Necessary Functionality
 
 In our Solidity implementation, we begin with the following sensible defaults:
 
@@ -272,17 +271,40 @@ The contract will store the following data structures (full credit to the Phase 
     - `availability_challenges_len`: `int128`—availability challenges counter
 
 
-Then, the 4 minimal functions required by the SMC are as follows:
+Then, the minimal functions required by the SMC are as follows:
 
-#### Registering Collators & Proposers
+#### Registering Collators and Proposers
 
 ```javascript
-function deposit() public payable returns(int) {
+function registerCollator() public payable returns(bool) {
     require(!isCollatorDeposited[msg.sender]);
     require(msg.value == depositSize);
     ...
 }
 ```
+
+Locks a collator into the contract and updates the collator pool accordingly.
+
+```javascript
+function registerProposer() public payable returns(bool) {
+    require(!isCollatorDeposited[msg.sender]);
+    require(msg.value == depositSize);
+    ...
+}
+```
+
+Same as above but does **not** update the collator pool.
+
+```javascript
+function proposerAddBalance(uint256 shard_id) returns(bool) {
+    ...
+}
+
+```
+
+Adds `msg.value` to the balance of the proposer on `shard_id`, and returns `True` on success. Checks:
+Shard: shard_id against NETWORK_ID and SHARD_COUNT
+Authentication: `proposer_registry[msg.sender]` exists
 
 #### Determining an Eligible Collator for a Period on a Shard
 
@@ -295,17 +317,6 @@ function getEligibleCollator(int _shardId, int _period) public view returns(addr
 ```
 
 The `getEligibleCollator` function uses a block hash as a seed to pseudorandomly select a signer from the collator set. The chance of being selected should be proportional to the collator's deposit. The function should be able to return a value for the current period or any future up to `LOOKAHEAD_PERIODS` periods ahead.
-
-#### Withdrawing From the collator Set
-
-```javascript
-function withdraw(int _collatorIndex) public {
-    require(msg.sender == collators[_collatorIndex].addr);
-    ...
-}
-```
-
-Authenticates the collator and removes him/her from the collator set, refunding the deposited ETH.
 
 #### Processing and Verifying a Collation Header
 
@@ -327,7 +338,9 @@ function addHeader(int _shardId, uint _expectedPeriodNumber, bytes32 _periodStar
 
 The `addHeader` function is the most important function in the SMC as it provides on-chain verification of collation headers, and maintains a canonical ordering of processed collation headers.
 
-Our current [solidity implementation](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/contracts/sharding_manager.sol) includes all of these functions along with other utilities important for the our Ruby Release sharding scheme.
+Our current [solidity implementation](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/contracts/sharding_manager.sol) includes all of these functions along with other utilities important for the our Ruby Release sharding scheme. 
+
+For more details on these methods, please refer to the Phase 1 spec as it details all important requirements and additional functions to be included in the production-ready SMC.
 
 ### Collator Sampling
 
@@ -366,7 +379,7 @@ When we launch the client with
 geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and call `getEligibleCollator` on receiving each header. Once we are selected, our client fetches and “purchases” proposed, unsigned collations from a proposals pool created by proposer nodes. The collator client accepts a collation that offer the highest payout, countersigns it, and adds it to the SMC all within that period.
+The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and call `getEligibleCollator` on receiving each header. Once we are selected within a LOOKAHEAD_PERIOD, our client fetches proposed, unsigned collations created by proposer nodes. The collator client accepts a collation that offer the highest payout, countersigns it, and adds it to the SMC.
 
 ### Local Shard Storage
 
@@ -376,7 +389,7 @@ Work in progress.
 
 ## The Proposer Client
 
-In addition to launching a collator client, our system requires a user to concurrently launch a proposer client that is tasked with state execution, fetching pending tx’s from the running geth node’s txpool, and creating collations that can be sent to collators.
+In addition to launching a collator client, our system requires a user to concurrently launch a proposer client that is tasked with fetching pending tx’s from the network and creating collations that can be sent to collators.
 
 Users launch a proposal client as another geth entrypoint as follows:
 
@@ -384,11 +397,11 @@ Users launch a proposal client as another geth entrypoint as follows:
 geth sharding-collator --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-Launching this command connects via JSON-RPC to fetch the geth node’s tx pool and see who the currently active collator node is for the period. The proposer is tasked with running transactions to create valid collations and executing their required computations, tracking used gas, and all the heavy lifting that is usually seen in full Ethereum nodes. Once a valid collation is created, the proposer broadcasts the unsigned header **(note: the body is not broadcasted)** to a proposals pool along with a guaranteed ETH deposit that is extracted from the proposer’s account upfront. Then, the current collator assigned for the period will find proposals for him/her assigned shard and sign the one with the highest payout.
+Launching this command connects via JSON-RPC to give the client the ability to call required functions on the SMC. The proposer is tasked with packaging pending transaction data into _blobs_ and **not** executing these transactions. This is very important, we will not consider state execution until later phases of a sharding roadmap. The proposer broadcasts the unsigned header **(note: the body is not broadcasted)** to a proposals folder in the local, shared filesystem along with a guaranteed ETH deposit that is extracted from the proposer’s account upfront. Then, the current collator assigned for the period will find proposals for him/her assigned shard and sign the one with the highest payout.
 
-Then, the collator node calls the addHeader function on the SMC by submitting this collation header. We’ll explore the structure of collation headers in this next section along with important considerations for state execution, as this can quickly become the bottleneck of the entire sharding system.
+Then, the collator node calls the addHeader function on the SMC by submitting this collation header. We’ll explore the structure of collation headers in this next section.
 
-### Collation Headers and State Execution
+### Collation Headers
 
 Work in progress.
 
@@ -438,9 +451,9 @@ In the sharding consensus mechanism, it is important to consider that we now hav
 
 ### Use-Case Stories: Proposers
 
-The primary purpose of proposers is to use their computational power for state execution of transactions and create valid collations that can then be put on an open market for collators to take. Upon offering a proposal, proposers will deposit part of their ETH as a payout to the collator that adds its collation header to the SMC, __even if the collation gets orphaned__. By forcing proposers to take on this risk, we prevent a certain degree of collation proposal spamming, albeit not without a few other security problems: (See: [Active Research](#active-questions-and-research)).
+The primary purpose of proposers is to package transaction data into collations that can then be put on an open market for collators to take. Upon offering a proposal, proposers will deposit part of their ETH as a payout to the collator that adds its collation header to the SMC, __even if the collation gets orphaned__. By forcing proposers to take on this risk, we prevent a certain degree of collation proposal spamming, albeit not without a few other security problems: (See: [Active Research](#active-questions-and-research)).
 
-The primary incentive for proposers to generate these collations is to receive a payout to their coinbase address along with transactions fees from the ones they process once added to a block in the canonical chain.
+The primary incentive for proposers to generate these collations is to receive a payout to their coinbase address along with transactions fees from the ones they process once added to a block in the canonical chain. This process, however, cannot occur until we have state execution in our protocol, so proposers will be running at a loss for our Phase 1 implementation.
 
 ### Use-Case Stories: Collators
 
@@ -464,9 +477,7 @@ You can track our progress, open issues, and projects in our repository [here](h
 
 Under the uncoordinated majority model, in order to prevent a single shard takeover, random sampling is utilized. Each shard is assigned a certain number of collators. Collators that approve the collations on that shard are sampled randomly. However for the ruby release we will not be implementing any random sampling of the collators of the shard, as the primary objective of this release is to launch an archival sharding client which deploys the Sharding Management Contract to a locally running geth node.
 
-Also for now we will not be implementing challenge response mechanisms to mitigate instances where malicious actors are penalized and have their staked slashed for making incorrect claims regarding the veracity of collations.
-
-We will not be considering data availability proofs as part of the ruby release we will not be implementing them as it just yet as they are an area of active research.
+We will not be considering data availability proofs (part of the stateless client model) as part of the ruby release we will not be implementing them as it just yet as they are an area of active research.
 
 ## Bribing, Coordinated Attack Models
 
@@ -543,7 +554,7 @@ To add validity to our current SMC spec, Drake mentions that we can use a succin
 
 The other missing piece is the guarantee of data availability within collation headers submitted to the SMC which can once again be done through zero-knowledge proofs and erasure codes (See: The Data Availability Problem). By escalating this up to the SMC, we can ensure what Vitalik calls “tightly-coupled” sharding, in which case breaking a single shard would entail also breaking the progression of the canonical chain, enabling easier cross-shard communication due to having a single source of truth being the SMC and the associated collation headers it has processed. In Justin Drake’s words, “there is no fork-choice rule within the SMC”.
 
-It is important to note that this “tightly coupled” sharding has been relegated to Phase 4 of the roadmap.
+It is important to note that this “tightly coupled” sharding has been relegated to the latter phases of the roadmap.
 
 Work in progress.
 
@@ -555,7 +566,7 @@ In a recent [blog post](https://ethresear.ch/t/separating-proposing-and-confirma
 
 This leads to significant computational burdens on collators that need to keep track of the state of a particular shard in the proposal process as part of the transaction packaging process. The potentially better approach outlined above is the idea of separating the transaction packaging process and the consensus mechanism into two separate nodes with different responsibilities. **Our model will be based on this separation and we will be releasing a proposer client alongside a collator client in our Ruby release**.
 
-The two nodes would interact through a cryptoeconomic incentive system where proposers would package transactions and send unsigned collation headers (with obfuscated collation bodies) over to collators with a signed message including a deposit. If a collator chooses to accept the proposal, he/she would be rewarded by the amount specified in the deposit. This would allow proposers to focus all of their computational power solely on state execution and organizing transactions into proposals.
+The two nodes would interact through a cryptoeconomic incentive system where proposers would package transactions and send unsigned collation headers (with obfuscated collation bodies) over to collators with a signed message including a deposit. If a collator chooses to accept the proposal, he/she would be rewarded by the amount specified in the deposit.
 
 Along the same lines, it will make it easier for collators to constantly jump across shards to validate collations, as they no longer have the need for resyncing an entire state tree because they can simply receive collation proposals from proposer nodes. This is very important, as collator reshuffling is a crucial security consideration to prevent shard hostile takeovers.
 
@@ -567,7 +578,7 @@ In this system, collators would get paid the proposal’s deposit __even if the 
 
 In practice, we would end up with a system of 3 types of nodes to ensure the functioning of a sharded blockchain
 
-1.  Proposer nodes that are tasked with state execution and creation of unsigned collation headers, obfuscated collation bodies, data availability proofs, and an ETH deposit to be relayed to collators.
+1.  Proposer nodes that are tasked with the creation of unsigned collation headers, obfuscated collation bodies, and an ETH deposit to be relayed to collators.
 2.  Collator nodes that accept proposals through an open auction system similar to way transactions fees currently work. These nodes then sign these collations and pass them through the SMC for inclusion into a shard through PoS.
 
 ## Selecting Eligible Collators Off-Chain
