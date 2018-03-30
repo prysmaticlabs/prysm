@@ -8,15 +8,64 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 type collator interface {
 	Account() *accounts.Account
+	UnlockAccount(account accounts.Account) error
+	Context() *cli.Context
 	ChainReader() ethereum.ChainReader
 	SMCCaller() *contracts.SMCCaller
+	SMCTransactor() *contracts.SMCTransactor
+	InitSMC() error
+	AttachClient(ec *ethclient.Client) *ethclient.Client
+	CreateTXOps(value *big.Int) (*bind.TransactOpts, error)
+	Endpoint() string
+}
+
+// StartCollatorClient inits the collator that connects to Geth node
+func StartCollatorClient(c collator) error {
+	log.Info("Starting collator client")
+	rpcClient, err := dialRPC(c.Endpoint())
+	if err != nil {
+		return err
+	}
+	c.AttachClient(ethclient.NewClient(rpcClient))
+	defer rpcClient.Close()
+
+	account := c.Account()
+	if err := c.UnlockAccount(*account); err != nil {
+		return fmt.Errorf("cannot unlock account: %v", err)
+	}
+
+	if err := c.InitSMC(); err != nil {
+		return err
+	}
+
+	// Deposit 100ETH into the collator set in the SMC. Checks if account
+	// is already a collator in the SMC (in the case the client restarted)
+	if err := joinCollatorPool(c); err != nil {
+		return err
+	}
+
+	// Listens to block headers from the Geth node and if we are an eligible
+	// collator, we fetch pending transactions and collator a collation
+	if err := subscribeBlockHeaders(c); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WaitCollatorClient on shutdown
+func WaitCollatorClient(c collator) {
+	log.Info("Sharding client has been shutdown...")
 }
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
@@ -57,6 +106,31 @@ func subscribeBlockHeaders(c collator) error {
 		}
 
 	}
+}
+
+// joinCollatorPool checks if the account is a collator in the SMC. If
+// the account is not in the set, it will deposit 100ETH into contract.
+func joinCollatorPool(c collator) error {
+
+	if c.Context().GlobalBool(utils.DepositFlag.Name) {
+
+		log.Info("Joining collator pool")
+		txOps, err := c.CreateTXOps(depositSize)
+		if err != nil {
+			return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
+		}
+
+		tx, err := c.SMCTransactor().Deposit(txOps)
+		if err != nil {
+			return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
+		}
+		log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(depositSize, big.NewInt(params.Ether)), tx.Hash().String()))
+
+	} else {
+		log.Info("Not joining collator pool")
+
+	}
+	return nil
 }
 
 // checkSMCForCollator checks if we are an eligible collator for
