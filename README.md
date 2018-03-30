@@ -108,7 +108,7 @@ To deposit ETH and join as a collator in the Sharding Manager Contract, run the 
 geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This will extract 100ETH from your account balance and insert you into the SMC's collator registry. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible collator for a certain shard in a given period. Once you are selected, the collator will request collations created by proposer nodes. We will need to run a proposer node concurrently in a separate terminal window as follows:
+This will extract 100ETH from your account balance and insert you into the SMC's collator pool. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible collator for a certain shard in a given period. Once you are selected, the collator will request collations created by proposer nodes. We will need to run a proposer node concurrently in a separate terminal window as follows:
 
 ## Becoming a Proposer
 
