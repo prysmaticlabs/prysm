@@ -1,7 +1,5 @@
 package sharding
 
-//go:generate abigen --sol contracts/sharding_manager.sol --pkg contracts --out contracts/sharding_manager.go
-
 import (
 	"bufio"
 	"context"
@@ -9,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -30,8 +29,8 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
-// Client for Collator. Communicates to Geth node via JSON RPC.
-type collatorClient struct {
+// ShardingClient abstraction for collators and proposers
+type ShardingClient struct {
 	endpoint string             // Endpoint to JSON RPC
 	client   *ethclient.Client  // Ethereum RPC client.
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -39,8 +38,8 @@ type collatorClient struct {
 	smc      *contracts.SMC     // The deployed sharding management contract
 }
 
-// MakeCollatorClient for interfacing with Geth full node.
-func MakeCollatorClient(ctx *cli.Context) *collatorClient {
+// MakeShardingClient for interfacing with Geth full node.
+func MakeShardingClient(ctx *cli.Context) *ShardingClient {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
@@ -64,71 +63,15 @@ func MakeCollatorClient(ctx *cli.Context) *collatorClient {
 	}
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	return &collatorClient{
+	return &ShardingClient{
 		endpoint: endpoint,
 		keystore: ks,
 		ctx:      ctx,
 	}
 }
 
-// Start the collator client.
-// * Connects to Geth node.
-// * Verifies or deploys the sharding manager contract.
-func (c *collatorClient) Start() error {
-	log.Info("Starting collator client")
-	rpcClient, err := dialRPC(c.endpoint)
-	if err != nil {
-		return err
-	}
-	c.client = ethclient.NewClient(rpcClient)
-	defer rpcClient.Close()
-
-	// Check account existence and unlock account before starting collator client
-	accounts := c.keystore.Accounts()
-	if len(accounts) == 0 {
-		return fmt.Errorf("no accounts found")
-	}
-
-	if err := c.unlockAccount(accounts[0]); err != nil {
-		return fmt.Errorf("cannot unlock account. %v", err)
-	}
-
-	if err := initSMC(c); err != nil {
-		return err
-	}
-
-	// Deposit 100ETH into the collator set in the SMC. Checks if account
-	// is already a collator in the SMC (in the case the client restarted).
-	// Once that's done we can subscribe to block headers.
-	//
-	// TODO: this function should store the collator's SMC index as a property
-	// in the client's struct
-	if err := joinCollatorPool(c); err != nil {
-		return err
-	}
-
-	// Listens to block headers from the Geth node and if we are an eligible
-	// collator, we fetch pending transactions and collator a collation
-	if err := subscribeBlockHeaders(c); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Wait until collator client is shutdown.
-func (c *collatorClient) Wait() {
-	log.Info("Sharding client has been shutdown...")
-}
-
-// WatchCollationHeaders checks the logs for add_header func calls
-// and updates the head collation of the client. We can probably store
-// this as a property of the client struct
-func (c *collatorClient) WatchCollationHeaders() {
-
-}
-
 // UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
-func (c *collatorClient) unlockAccount(account accounts.Account) error {
+func (c *ShardingClient) UnlockAccount(account accounts.Account) error {
 	pass := ""
 
 	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
@@ -152,7 +95,8 @@ func (c *collatorClient) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-func (c *collatorClient) createTXOps(value *big.Int) (*bind.TransactOpts, error) {
+// CreateTXOps initializes a SMC call tx op
+func (c *ShardingClient) CreateTXOps(value *big.Int) (*bind.TransactOpts, error) {
 	account := c.Account()
 
 	return &bind.TransactOpts{
@@ -169,25 +113,87 @@ func (c *collatorClient) createTXOps(value *big.Int) (*bind.TransactOpts, error)
 }
 
 // Account to use for sharding transactions.
-func (c *collatorClient) Account() *accounts.Account {
+func (c *ShardingClient) Account() *accounts.Account {
 	accounts := c.keystore.Accounts()
 
 	return &accounts[0]
 }
 
 // ChainReader for interacting with the chain.
-func (c *collatorClient) ChainReader() ethereum.ChainReader {
+func (c *ShardingClient) ChainReader() ethereum.ChainReader {
 	return ethereum.ChainReader(c.client)
 }
 
 // Client to interact with ethereum node.
-func (c *collatorClient) Client() *ethclient.Client {
+func (c *ShardingClient) Client() *ethclient.Client {
 	return c.client
 }
 
+// AttachClient attaches the ethclient RPC connection
+func (c *ShardingClient) AttachClient(ec *ethclient.Client) *ethclient.Client {
+	c.client = ec
+	return c.client
+}
+
+// Context fetches the CLI context
+func (c *ShardingClient) Context() *cli.Context {
+	return c.ctx
+}
+
 // SMCCaller to interact with the sharding manager contract.
-func (c *collatorClient) SMCCaller() *contracts.SMCCaller {
+func (c *ShardingClient) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
+}
+
+// SMCTransactor to interact with the sharding manager contract.
+func (c *ShardingClient) SMCTransactor() *contracts.SMCTransactor {
+	return &c.smc.SMCTransactor
+}
+
+// Endpoint fetches the rpc endpoint
+func (c *ShardingClient) Endpoint() string {
+	return c.endpoint
+}
+
+// InitSMC initializes the sharding manager contract bindings.
+// If the SMC does not exist, it will be deployed.
+func (c *ShardingClient) InitSMC() error {
+	b, err := c.client.CodeAt(context.Background(), shardingManagerAddress, nil)
+	if err != nil {
+		return fmt.Errorf("unable to get contract code at %s: %v", shardingManagerAddress, err)
+	}
+
+	if len(b) == 0 {
+		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", shardingManagerAddress.String()))
+
+		txOps, err := c.CreateTXOps(big.NewInt(0))
+		if err != nil {
+			return fmt.Errorf("unable to intiate the transaction: %v", err)
+		}
+
+		addr, tx, contract, err := contracts.DeploySMC(txOps, c.client)
+		if err != nil {
+			return fmt.Errorf("unable to deploy sharding manager contract: %v", err)
+		}
+
+		for pending := true; pending; _, pending, err = c.client.TransactionByHash(context.Background(), tx.Hash()) {
+			if err != nil {
+				return fmt.Errorf("unable to get transaction by hash: %v", err)
+			}
+			time.Sleep(1 * time.Second)
+		}
+
+		c.smc = contract
+		log.Info(fmt.Sprintf("New contract deployed at %s", addr.String()))
+	} else {
+		contract, err := contracts.NewSMC(shardingManagerAddress, c.client)
+		if err != nil {
+			return fmt.Errorf("failed to create sharding contract: %v", err)
+		}
+		c.smc = contract
+	}
+
+	return nil
 }
 
 // dialRPC endpoint to node.
