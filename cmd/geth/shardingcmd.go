@@ -36,12 +36,8 @@ Launches a sharding proposer client that connects to a running geth node and pro
 )
 
 func collatorClient(ctx *cli.Context) error {
-	c := collator.NewCollatorClient(ctx)
-	if err := collator.CollatorStart(c); err != nil {
-		return err
-	}
-	c.Wait()
-	return nil
+	c := collator.NewCollator(ctx)
+	return c.Start()
 }
 
 func proposerClient(ctx *cli.Context) error {
