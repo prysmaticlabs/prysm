@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/ethereum/go-ethereum/sharding/collator"
-	//"github.com/ethereum/go-ethereum/sharding/proposer"
+	"github.com/ethereum/go-ethereum/sharding/proposer"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	cli "gopkg.in/urfave/cli.v1"
@@ -41,11 +41,6 @@ func collatorClient(ctx *cli.Context) error {
 }
 
 func proposerClient(ctx *cli.Context) error {
-	/*p := proposer.NewProposerClient(ctx)
-	if err := proposer.ProposerStart(p); err != nil {
-		return err
-	}
-	p.Wait()
-	*/
-	return nil
+	p := proposer.NewProposer(ctx)
+	return p.Start()
 }
