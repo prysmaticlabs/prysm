@@ -1,119 +1,91 @@
 package collator
 
 import (
-	"context"
-	"errors"
 	"math/big"
-	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum"
-
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
-
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type FakeCollatorClient struct {
-	accountAccount *accounts.Account
-	accountError   error
-	chainReader    FakeChainReader
-	contractCaller FakeContractCaller
+var (
+	key, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	addr                     = crypto.PubkeyToAddress(key.PublicKey)
+	accountBalance1000Eth, _ = new(big.Int).SetString("1000000000000000000000", 10)
+)
+
+// Mock client for testing collator. Should this go into sharding/client/testing?
+type mockClient struct {
+	smc *contracts.SMC
+	t   *testing.T
 }
 
-func (c FakeCollatorClient) Account() *accounts.Account {
-	return c.accountAccount
+func (m *mockClient) Account() *accounts.Account {
+	return &accounts.Account{Address: addr}
 }
 
-func (c FakeCollatorClient) ChainReader() ethereum.ChainReader {
-	return c.chainReader
+func (m *mockClient) SMCCaller() *contracts.SMCCaller {
+	return &m.smc.SMCCaller
 }
 
-func (c FakeCollatorClient) SMCCaller() *contracts.SMCCaller {
-	SMCCaller, err := contracts.NewSMCCaller(common.HexToAddress("0x0"), c.contractCaller)
+func (m *mockClient) ChainReader() ethereum.ChainReader {
+	m.t.Fatal("ChainReader not implemented")
+	return nil
+}
+
+func (m *mockClient) SMCTransactor() *contracts.SMCTransactor {
+	return &m.smc.SMCTransactor
+}
+
+func (m *mockClient) CreateTXOps(value *big.Int) (*bind.TransactOpts, error) {
+	m.t.Fatal("CreateTXOps not implemented")
+	return nil, nil
+}
+
+// Unused mockClient methods
+func (m *mockClient) Start() error {
+	m.t.Fatal("Start called")
+	return nil
+}
+func (m *mockClient) Close() {
+	m.t.Fatal("Close called")
+}
+
+func TestIsAccountInCollatorPool(t *testing.T) {
+	// Test setup (should this go to sharding/client/testing?)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	transactOpts := bind.NewKeyedTransactor(key)
+	_, _, smc, _ := contracts.DeploySMC(transactOpts, backend)
+	backend.Commit()
+
+	client := &mockClient{smc: smc, t: t}
+
+	// address should not be in pool initially
+	b, err := isAccountInCollatorPool(client)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	return SMCCaller
-}
-
-type FakeChainReader struct {
-	subscribeNewHeadSubscription ethereum.Subscription
-	subscribeNewHeadError        error
-}
-
-func (r FakeChainReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
-	return r.subscribeNewHeadSubscription, r.subscribeNewHeadError
-}
-func (r FakeChainReader) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	return nil, nil
-}
-func (r FakeChainReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return nil, nil
-}
-func (r FakeChainReader) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	return nil, nil
-}
-func (r FakeChainReader) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return nil, nil
-}
-func (r FakeChainReader) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
-	return 0, nil
-}
-func (r FakeChainReader) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
-	return nil, nil
-}
-
-type FakeContractCaller struct {
-	codeAtBytes       []byte
-	codeAtError       error
-	callContractBytes []byte
-	callContractError error
-}
-
-func (c FakeContractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	return c.codeAtBytes, c.codeAtError
-}
-
-func (c FakeContractCaller) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	return c.callContractBytes, c.callContractError
-}
-
-func TestCheckSMCForCollator(t *testing.T) {
-	tests := []struct {
-		Name           string
-		Head           *types.Header
-		ExpectedPeriod *big.Int
-		ExpectedError  string
-		CollatorClient FakeCollatorClient
-	}{
-		{
-			Name:          "SMCCaller.checkSMCForCollator should return an error",
-			ExpectedError: "there is no cake",
-			CollatorClient: FakeCollatorClient{
-				accountAccount: &accounts.Account{},
-				contractCaller: FakeContractCaller{
-					callContractError: errors.New("there is no cake"),
-				},
-			},
-			Head: &types.Header{Number: big.NewInt(100)},
-		},
+	if b {
+		t.Fatal("Account unexpectedly in collator pool")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
-			if err := checkSMCForCollator(tt.CollatorClient, tt.Head); !strings.Contains(safeError(err), tt.ExpectedError) {
-				t.Fatalf("Incorrect error! Wanted %v, got %v", tt.ExpectedError, err)
-			}
-		})
+	// deposit in collator pool, then it should return true
+	transactOpts.Value = sharding.DepositSize
+	if _, err := smc.Deposit(transactOpts); err != nil {
+		t.Fatalf("Failed to deposit: %v", err)
 	}
-}
-
-func safeError(err error) string {
+	backend.Commit()
+	b, err = isAccountInCollatorPool(client)
 	if err != nil {
-		return err.Error()
+		t.Fatal(err)
 	}
-	return "nil"
+	if !b {
+		t.Fatal("Account not in collator pool when expected to be")
+	}
 }
