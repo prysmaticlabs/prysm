@@ -34,5 +34,5 @@ func (c *collator) Start() error {
 		return err
 	}
 
-	return nil
+	return subscribeBlockHeaders(c.client)
 }

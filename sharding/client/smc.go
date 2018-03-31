@@ -42,8 +42,8 @@ func initSMC(c *shardingClient) (*contracts.SMC, error) {
 			time.Sleep(1 * time.Second)
 		}
 
-		return contract, nil
 		log.Info(fmt.Sprintf("New contract deployed at %s", addr.String()))
+		return contract, nil
 	}
 
 	contract, err := contracts.NewSMC(sharding.ShardingManagerAddress, c.client)
