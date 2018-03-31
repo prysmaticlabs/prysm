@@ -2,6 +2,7 @@ package collator
 
 import (
 	"github.com/ethereum/go-ethereum/sharding/client"
+	"github.com/ethereum/go-ethereum/log"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -12,7 +13,12 @@ func NewCollatorClient(ctx *cli.Context) *client.ShardingClient {
 }
 
 func CollatorStart(sclient *client.ShardingClient) error {
-	sclient.Start()
+	log.Info("Starting collator client")
+	rpcClient, err := sclient.Start()
+	defer rpcClient.Close()
+	if err != nil {
+		return err
+	}
 
 	if err := joinCollatorPool(sclient); err != nil {
 		return err
