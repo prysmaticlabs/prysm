@@ -79,30 +79,28 @@ func MakeClient(ctx *cli.Context) *ShardingClient {
 // Start the sharding client.
 // * Connects to Geth node.
 // * Verifies or deploys the sharding manager contract.
-func (c *ShardingClient) Start() error {
-	log.Info("Starting collator client")
+func (c *ShardingClient) Start() (*rpc.Client, error) {
 	rpcClient, err := dialRPC(c.endpoint)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("cannot start rpc client. %v", err)
 	}
 	c.client = ethclient.NewClient(rpcClient)
-	defer rpcClient.Close()
 
 	// Check account existence and unlock account before starting collator client
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
-		return fmt.Errorf("no accounts found")
+		return nil, fmt.Errorf("no accounts found")
 	}
 
 	if err := c.unlockAccount(accounts[0]); err != nil {
-		return fmt.Errorf("cannot unlock account. %v", err)
+		return nil, fmt.Errorf("cannot unlock account. %v", err)
 	}
 
 	if err := initSMC(c); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return rpcClient, nil
 }
 
 // Wait until collator client is shutdown.
