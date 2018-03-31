@@ -39,7 +39,6 @@ type shardingClient struct {
 }
 
 type Client interface {
-	//	MakeClient(*cli.Context) *shardingClient
 	Start() error
 	Close()
 	CreateTXOps(*big.Int) (*bind.TransactOpts, error)
