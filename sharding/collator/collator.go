@@ -1,4 +1,4 @@
-package sharding
+package collator
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
@@ -67,8 +68,8 @@ func checkSMCForCollator(c collator, head *types.Header) error {
 	account := c.Account()
 
 	log.Info("Checking if we are an eligible collation collator for a shard...")
-	period := big.NewInt(0).Div(head.Number, big.NewInt(periodLength))
-	for s := int64(0); s < shardCount; s++ {
+	period := big.NewInt(0).Div(head.Number, big.NewInt(sharding.PeriodLength))
+	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible collator according to the SMC
 		addr, err := c.SMCCaller().GetEligibleCollator(&bind.CallOpts{}, big.NewInt(s), period)
 
