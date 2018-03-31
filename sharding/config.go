@@ -6,6 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+//go:generate abigen --sol contracts/sharding_manager.sol --pkg contracts --out contracts/sharding_manager.go
+
 var (
 	// Number of network shards
 	ShardCount = int64(1)
