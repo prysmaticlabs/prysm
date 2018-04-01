@@ -64,7 +64,7 @@ contract SMC {
   uint constant periodLength = 5;
   int constant public shardCount = 100;
   // The exact deposit size which you have to deposit to become a collator
-  uint constant depositSize = 100 ether;
+  uint constant depositSize = 1000 ether;
   // Number of periods ahead of current period, which the contract
   // is able to return the collator of that period
   uint constant lookAheadPeriods = 4;
