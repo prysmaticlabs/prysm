@@ -10,7 +10,7 @@ func TestDepositSize(t *testing.T) {
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
-	if depositSize.Cmp(want) != 0 {
-		t.Errorf("depositSize incorrect. Wanted %d, got %d", want, depositSize)
+	if DepositSize.Cmp(want) != 0 {
+		t.Errorf("depositSize incorrect. Wanted %d, got %d", want, DepositSize)
 	}
 }
