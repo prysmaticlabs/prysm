@@ -1,3 +1,5 @@
+// Package proposer holds all of the functionality to run as a collation proposer in a sharded
+// system.
 package proposer
 
 import (
