@@ -1,3 +1,4 @@
+// Package collator holds all of the functionality to run as a collator in a sharded system.
 package collator
 
 import (
@@ -6,7 +7,9 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
+// Collator runnable client.
 type Collator interface {
+	// Start the main routine for a collator.
 	Start() error
 }
 
