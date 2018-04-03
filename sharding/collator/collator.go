@@ -127,7 +127,7 @@ func submitCollation(shardID int64) error {
 func joinCollatorPool(c client.Client) error {
 
 	log.Info("Joining collator pool")
-	txOps, err := c.CreateTXOps(sharding.CollatorDeposit)
+	txOps, err := c.CreateTXOpts(sharding.CollatorDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
