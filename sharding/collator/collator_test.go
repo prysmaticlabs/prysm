@@ -17,7 +17,7 @@ import (
 var (
 	key, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr                     = crypto.PubkeyToAddress(key.PublicKey)
-	accountBalance1000Eth, _ = new(big.Int).SetString("1000000000000000000000", 10)
+	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
 
 // Mock client for testing collator. Should this go into sharding/client/testing?
@@ -59,7 +59,7 @@ func (m *mockClient) Close() {
 
 func TestIsAccountInCollatorPool(t *testing.T) {
 	// Test setup (should this go to sharding/client/testing?)
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	_, _, smc, _ := contracts.DeploySMC(transactOpts, backend)
 	backend.Commit()
@@ -76,7 +76,7 @@ func TestIsAccountInCollatorPool(t *testing.T) {
 	}
 
 	// deposit in collator pool, then it should return true
-	transactOpts.Value = sharding.DepositSize
+	transactOpts.Value = sharding.CollatorDeposit
 	if _, err := smc.Deposit(transactOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}

@@ -15,8 +15,8 @@ import (
 var (
 	key, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr                     = crypto.PubkeyToAddress(key.PublicKey)
-	accountBalance1000Eth, _ = new(big.Int).SetString("1000000000000000000000", 10)
-	collatorDeposit, _       = new(big.Int).SetString("100000000000000000000", 10)
+	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
+	collatorDeposit, _       = new(big.Int).SetString("1000000000000000000000", 10)
 )
 
 func deploySMCContract(backend *backends.SimulatedBackend) (common.Address, *types.Transaction, *SMC, error) {
@@ -27,7 +27,7 @@ func deploySMCContract(backend *backends.SimulatedBackend) (common.Address, *typ
 
 // Test creating the SMC contract
 func TestContractCreation(t *testing.T) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	_, _, _, err := deploySMCContract(backend)
 	backend.Commit()
 	if err != nil {
@@ -37,7 +37,7 @@ func TestContractCreation(t *testing.T) {
 
 // Test getting the collation gas limit
 func TestGetCollationGasLimit(t *testing.T) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	_, _, smc, _ := deploySMCContract(backend)
 	gasLimit, err := smc.GetCollationGasLimit(&bind.CallOpts{})
 	if err != nil {
@@ -50,7 +50,7 @@ func TestGetCollationGasLimit(t *testing.T) {
 
 // Test collator deposit
 func TestCollatorDeposit(t *testing.T) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	_, _, smc, _ := deploySMCContract(backend)
 
@@ -102,7 +102,7 @@ func TestCollatorDeposit(t *testing.T) {
 
 // Test collator withdraw
 func TestCollatorWithdraw(t *testing.T) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1000Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	_, _, smc, _ := deploySMCContract(backend)
 
