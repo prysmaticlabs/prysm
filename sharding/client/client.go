@@ -47,7 +47,7 @@ type shardingClient struct {
 type Client interface {
 	Start() error
 	Close()
-	CreateTXOps(*big.Int) (*bind.TransactOpts, error)
+	CreateTXOpts(*big.Int) (*bind.TransactOpts, error)
 	ChainReader() ethereum.ChainReader
 	Account() *accounts.Account
 	SMCCaller() *contracts.SMCCaller
@@ -145,8 +145,8 @@ func (c *shardingClient) unlockAccount(account accounts.Account) error {
 	return c.keystore.Unlock(account, pass)
 }
 
-// CreateTXOps creates a *TransactOpts with a signer using the default account on the keystore.
-func (c *shardingClient) CreateTXOps(value *big.Int) (*bind.TransactOpts, error) {
+// CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
+func (c *shardingClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	account := c.Account()
 
 	return &bind.TransactOpts{
@@ -210,7 +210,7 @@ func initSMC(c *shardingClient) (*contracts.SMC, error) {
 	if len(b) == 0 {
 		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", sharding.ShardingManagerAddress.String()))
 
-		txOps, err := c.CreateTXOps(big.NewInt(0))
+		txOps, err := c.CreateTXOpts(big.NewInt(0))
 		if err != nil {
 			return nil, fmt.Errorf("unable to intiate the transaction: %v", err)
 		}

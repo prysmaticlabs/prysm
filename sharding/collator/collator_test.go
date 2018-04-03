@@ -43,7 +43,7 @@ func (m *mockClient) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
 
-func (m *mockClient) CreateTXOps(value *big.Int) (*bind.TransactOpts, error) {
+func (m *mockClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
