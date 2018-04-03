@@ -100,8 +100,6 @@ Now, save the passphrase you used in the geth node into a text file called passw
 
 Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870).
 
-Once we have test transactions broadcast to our local node, we can start a collator and proposer client in separate terminal windows to begin the sharding process.
-
 ## Becoming a Collator
 
 To deposit ETH and join as a collator in the Sharding Manager Contract, run the following command:
@@ -110,19 +108,18 @@ To deposit ETH and join as a collator in the Sharding Manager Contract, run the 
 geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This will extract 100ETH from your account balance and insert you into the SMC's collator pool. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible collator for a certain shard in a given period. Once you are selected, the collator will request collations from a "proposals pool" that is created by a proposer node. We will need to run a proposer node concurrently in a separate terminal window as follows:
+This will extract 100ETH from your account balance and insert you into the SMC's collator pool. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible collator for a certain shard in a given period. Once you are selected, the collator will request collations created by proposer nodes. We will need to run a proposer node concurrently in a separate terminal window as follows:
 
 ## Becoming a Proposer
 
 ```
 geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
+Proposers are tasked with processing pending transactions into blobs within collations. They are responsible for submitting proposals (collation headers) to collators currently assigned to a period along with an ETH bid.
 
-Proposers are tasked with state execution, so they will process and validate pending transactions in the Geth node and create collations with headers that are then broadcast to a proposals pool along with an ETH deposit.
+Collators then subscribe to incoming proposals and fetch the collation headers that offer the highest ETH deposit. Once a collator issues a commitment to a certain proposal, the proposer can be confident the collator will download the body. After this countersigning occurs, the collator can add the collation header to the Sharding Manager Contract.
 
-Collators then subscribe to changes in the proposals pool and fetch the collation headers that offer the highest ETH deposit. Once a collator signs this collation, the proposer needs to provide the full collation body and the collator can then append the collation header to the Sharding Manager Contract.
-
-Once this is done, the full, end-to-end sharding example is complete and another iteration can occur.
+Once this is done, the full, end-to-end phase 1 sharding example is complete and another iteration can occur.
 
 # Making Changes
 
