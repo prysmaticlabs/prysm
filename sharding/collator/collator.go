@@ -1,33 +1,25 @@
-package sharding
+package collator
 
 import (
 	"context"
 	"fmt"
 	"math/big"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/client"
 )
-
-type collator interface {
-	Account() *accounts.Account
-	ChainReader() ethereum.ChainReader
-	SMCCaller() *contracts.SMCCaller
-}
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
 // we are an eligible collator for collations. Then, it finds the pending tx's
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation
-func subscribeBlockHeaders(c collator) error {
+func subscribeBlockHeaders(c client.Client) error {
 	headerChan := make(chan *types.Header, 16)
-
-	account := c.Account()
 
 	_, err := c.ChainReader().SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
@@ -53,7 +45,6 @@ func subscribeBlockHeaders(c collator) error {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		} else {
-			log.Warn(fmt.Sprintf("Account %s not in collator pool.", account.Address.String()))
 		}
 
 	}
@@ -63,12 +54,10 @@ func subscribeBlockHeaders(c collator) error {
 // collation for the available shards in the SMC. The function calls
 // getEligibleCollator from the SMC and collator a collation if
 // conditions are met
-func checkSMCForCollator(c collator, head *types.Header) error {
-	account := c.Account()
-
+func checkSMCForCollator(c client.Client, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation collator for a shard...")
-	period := big.NewInt(0).Div(head.Number, big.NewInt(periodLength))
-	for s := int64(0); s < shardCount; s++ {
+	period := big.NewInt(0).Div(head.Number, big.NewInt(sharding.PeriodLength))
+	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible collator according to the SMC
 		addr, err := c.SMCCaller().GetEligibleCollator(&bind.CallOpts{}, big.NewInt(s), period)
 
@@ -77,7 +66,7 @@ func checkSMCForCollator(c collator, head *types.Header) error {
 		}
 
 		// If output is non-empty and the addr == coinbase
-		if addr == account.Address {
+		if addr == c.Account().Address {
 			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
 			err := submitCollation(s)
 			if err != nil {
@@ -93,10 +82,14 @@ func checkSMCForCollator(c collator, head *types.Header) error {
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsCollatorDeposited from the SMC and returns true if
 // the client is in the collator pool
-func isAccountInCollatorPool(c collator) (bool, error) {
+func isAccountInCollatorPool(c client.Client) (bool, error) {
 	account := c.Account()
 	// Checks if our deposit has gone through according to the SMC
-	return c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
+	b, err := c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
+	if !b && err != nil {
+		log.Warn(fmt.Sprintf("Account %s not in collator pool.", account.Address.String()))
+	}
+	return b, err
 }
 
 // submitCollation interacts with the SMC directly to add a collation header
@@ -126,5 +119,24 @@ func submitCollation(shardID int64) error {
 	// them to finish up the collation. It will then need to broadcast the
 	// collation to the main chain using JSON-RPC.
 	log.Info("Submit collation function called")
+	return nil
+}
+
+// joinCollatorPool checks if the account is a collator in the SMC. If
+// the account is not in the set, it will deposit 100ETH into contract.
+func joinCollatorPool(c client.Client) error {
+
+	log.Info("Joining collator pool")
+	txOps, err := c.CreateTXOps(sharding.CollatorDeposit)
+	if err != nil {
+		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
+	}
+
+	tx, err := c.SMCTransactor().Deposit(txOps)
+	if err != nil {
+		return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
+	}
+	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.CollatorDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
+
 	return nil
 }
