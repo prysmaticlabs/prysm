@@ -43,9 +43,10 @@ func (m *mockClient) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
 
-func (m *mockClient) CreateTXOps(value *big.Int) (*bind.TransactOpts, error) {
-	m.t.Fatal("CreateTXOps not implemented")
-	return nil, nil
+func (m *mockClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+	txOpts := transactOpts()
+	txOpts.Value = value
+	return txOpts, nil
 }
 
 // Unused mockClient methods
@@ -57,13 +58,21 @@ func (m *mockClient) Close() {
 	m.t.Fatal("Close called")
 }
 
-func TestIsAccountInCollatorPool(t *testing.T) {
-	// Test setup (should this go to sharding/client/testing?)
+// Helper/setup methods
+// TODO: consider moving these to common sharding testing package as the collator and smc tests
+// use them.
+func transactOpts() *bind.TransactOpts {
+	return bind.NewKeyedTransactor(key)
+}
+func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
-	transactOpts := bind.NewKeyedTransactor(key)
-	_, _, smc, _ := contracts.DeploySMC(transactOpts, backend)
+	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend)
 	backend.Commit()
+	return backend, smc
+}
 
+func TestIsAccountInCollatorPool(t *testing.T) {
+	backend, smc := setup()
 	client := &mockClient{smc: smc, t: t}
 
 	// address should not be in pool initially
@@ -75,9 +84,10 @@ func TestIsAccountInCollatorPool(t *testing.T) {
 		t.Fatal("Account unexpectedly in collator pool")
 	}
 
+	txOpts := transactOpts()
 	// deposit in collator pool, then it should return true
-	transactOpts.Value = sharding.CollatorDeposit
-	if _, err := smc.Deposit(transactOpts); err != nil {
+	txOpts.Value = sharding.CollatorDeposit
+	if _, err := smc.Deposit(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
@@ -87,5 +97,34 @@ func TestIsAccountInCollatorPool(t *testing.T) {
 	}
 	if !b {
 		t.Fatal("Account not in collator pool when expected to be")
+	}
+}
+
+func TestJoinCollatorPool(t *testing.T) {
+	backend, smc := setup()
+	client := &mockClient{smc, t}
+
+	// There should be no collators initially
+	numCollators, err := smc.NumCollators(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(0).Cmp(numCollators) != 0 {
+		t.Fatalf("Unexpected number of collators. Got %d, wanted 0.", numCollators)
+	}
+
+	err = joinCollatorPool(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend.Commit()
+
+	// Now there should be one collator
+	numCollators, err = smc.NumCollators(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(1).Cmp(numCollators) != 0 {
+		t.Fatalf("Unexpected number of collators. Got %d, wanted 1.", numCollators)
 	}
 }
