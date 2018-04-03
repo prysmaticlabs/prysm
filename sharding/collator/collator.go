@@ -123,11 +123,11 @@ func submitCollation(shardID int64) error {
 }
 
 // joinCollatorPool checks if the account is a collator in the SMC. If
-// the account is not in the set, it will deposit 100ETH into contract.
+// the account is not in the set, it will deposit ETH into contract.
 func joinCollatorPool(c client.Client) error {
 
 	log.Info("Joining collator pool")
-	txOps, err := c.CreateTXOps(sharding.CollatorDeposit)
+	txOps, err := c.CreateTXOpts(sharding.CollatorDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
