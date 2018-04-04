@@ -35,57 +35,41 @@ func TestContractCreation(t *testing.T) {
 	}
 }
 
-// Test getting the collation gas limit
-func TestGetCollationGasLimit(t *testing.T) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
-	_, _, smc, _ := deploySMCContract(backend)
-	gasLimit, err := smc.GetCollationGasLimit(&bind.CallOpts{})
-	if err != nil {
-		t.Fatalf("Error getting collationGasLimit: %v", err)
-	}
-	if gasLimit.Cmp(big.NewInt(10000000)) != 0 {
-		t.Fatalf("collation gas limit should be 10000000 gas")
-	}
-}
-
-// Test collator deposit
+// Test register collator
 func TestCollatorDeposit(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	_, _, smc, _ := deploySMCContract(backend)
 
-	// Test deposit() function
+	// Test register_collator() function
 	// Deposit 100 Eth
 	transactOpts.Value = collatorDeposit
 
-	if _, err := smc.Deposit(transactOpts); err != nil {
+	if _, err := smc.Register_collator(transactOpts); err != nil {
 		t.Fatalf("Collator cannot deposit: %v", err)
 	}
 	backend.Commit()
 
 	// Check updated number of collators
-	numCollators, err := smc.NumCollators(&bind.CallOpts{})
+	numCollators, err := smc.Collator_pool_len(&bind.CallOpts{})
 	if err != nil {
-		t.Fatalf("Failed to get number of collators: %v", err)
+		t.Fatalf("Failed to get collator pool length: %v", err)
 	}
 	if numCollators.Cmp(big.NewInt(1)) != 0 {
 		t.Fatalf("Failed to update number of collators")
 	}
 
-	// Check collator structure
-	collatorStruct, err := smc.Collators(&bind.CallOpts{}, big.NewInt(0))
+	// Check deposited is true
+	tx, err := smc.Collator_registry(&bind.CallOpts{}, addr)
 	if err != nil {
-		t.Fatalf("Failed to get collator structure: %v", err)
+		t.Fatalf("Failed to update collator registry: %v", err)
 	}
-	if collatorStruct.Addr != addr {
-		t.Fatalf("Wrong collator address, %v should be %v", collatorStruct.Addr, addr)
-	}
-	if collatorStruct.Deposit.Cmp(collatorDeposit) != 0 {
-		t.Fatalf("Wrong collator deposit, %v should be %v", collatorStruct.Deposit, collatorDeposit)
+	if tx.Deposited != true {
+		t.Fatalf("Collator registry not updated")
 	}
 
-	// Check for the Deposit event
-	depositsEventsIterator, err := smc.FilterDeposit(&bind.FilterOpts{})
+	// Check for the RegisterCollator event
+	depositsEventsIterator, err := smc.FilterCollatorRegistered(&bind.FilterOpts{})
 	if err != nil {
 		t.Fatalf("Failed to get Deposit event: %v", err)
 	}
@@ -95,36 +79,47 @@ func TestCollatorDeposit(t *testing.T) {
 	if depositsEventsIterator.Event.Collator != addr {
 		t.Fatalf("Collator address mismatch: %x should be %x", depositsEventsIterator.Event.Collator, addr)
 	}
-	if depositsEventsIterator.Event.Index.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Collator index mismatch: %d should be 0", depositsEventsIterator.Event.Index)
+	if depositsEventsIterator.Event.Pool_index.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Collator index mismatch: %d should be 0", depositsEventsIterator.Event.Pool_index)
 	}
 }
 
-// Test collator withdraw
+// Test collator withdraw from the pool
 func TestCollatorWithdraw(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(key)
 	_, _, smc, _ := deploySMCContract(backend)
 
 	transactOpts.Value = collatorDeposit
-	smc.Deposit(transactOpts)
+	// Register collator
+	smc.Register_collator(transactOpts)
 
 	transactOpts.Value = big.NewInt(0)
-	_, err := smc.Withdraw(transactOpts, big.NewInt(0))
-	if err != nil {
-		t.Fatalf("Failed to withdraw: %v", err)
-	}
+	// Deregister collator
+	_, err := smc.Deregister_collator(transactOpts)
 	backend.Commit()
-
-	// Check for the Withdraw event
-	withdrawsEventsIterator, err := smc.FilterWithdraw(&bind.FilterOpts{Start: 0})
 	if err != nil {
-		t.Fatalf("Failed to get withdraw event: %v", err)
+		t.Fatalf("Failed to deregister collator: %v", err)
+	}
+
+	// Check for the CollatorDeregistered event
+	withdrawsEventsIterator, err := smc.FilterCollatorDeregistered(&bind.FilterOpts{Start: 0})
+	if err != nil {
+		t.Fatalf("Failed to get CollatorDeregistered event: %v", err)
 	}
 	if !withdrawsEventsIterator.Next() {
-		t.Fatal("No withdraw event found")
+		t.Fatal("No CollatorDeregistered event found")
 	}
-	if withdrawsEventsIterator.Event.Index.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Collator index mismatch: %d should be 0", withdrawsEventsIterator.Event.Index)
+	if withdrawsEventsIterator.Event.Pool_index.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Collator index mismatch: %d should be 0", withdrawsEventsIterator.Event.Pool_index)
 	}
+	// for i := 0; i < 16128*5+1; i++ {
+	// 	backend.Commit()
+	// }
+
+	// Release collator
+	// _, err = smc.Release_collator(transactOpts)
+	// if err != nil {
+	// 	t.Fatalf("Failed to release collator: %v", err)
+	// }
 }
