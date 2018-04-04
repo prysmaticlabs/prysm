@@ -5,15 +5,21 @@ contract SMC {
                     bytes32 chunk_root, int128 period, int128 height,
                     address proposer_address, uint proposer_bid,
                     bytes proposer_signature);
-  event Deposit(address collator, int index);
-  event Withdraw(int index);
+  event CollatorRegistered(address collator, uint pool_index);
+  event CollatorDeregistered(uint pool_index);
+  event CollatorReleased(uint pool_index);
+  event ProposerRegistered(uint pool_index);
+  event ProposerDeregistered(uint index);
+  event ProposerReleased(uint index);
 
   // Entry in collator_registry
   struct Collator {
     // When collator asked for unregistration
     uint deregistered;
     // The collator's pool index
-    int pool_index;
+    uint pool_index;
+    // False if collator has not deposited, true otherwise
+    bool deposited;
   }
   
   // Entry in proposer_registry
@@ -61,13 +67,11 @@ contract SMC {
   mapping (int => bytes32) shardead;
 
   // Number of collators
-  int public collator_pool_len;
+  uint public collator_pool_len;
   // Indexes of empty slots caused by the function `withdraw`
-  int[] empty_slots_stack;
+  uint[] empty_slots_stack;
   // The top index of the stack in empty_slots_stack
-  int empty_slots_stack_top;
-  // Has the collator deposited before?
-  mapping (address => bool) public is_collator_deposited;
+  uint empty_slots_stack_top;
 
   // Constant values
   uint constant PERIOD_LENGTH = 5;
@@ -76,7 +80,7 @@ contract SMC {
   // Subsidy in vEth
   uint constant COLLATOR_SUBSIDY = 0.001 ether;
   // Number of shards
-  int constant SHARD_COUNT = 100;
+  uint constant SHARD_COUNT = 100;
   // The minimum deposit size for a collator
   uint constant COLLATOR_DEPOSIT = 1000 ether;
   // The minimum deposit size for a proposer
@@ -97,12 +101,6 @@ contract SMC {
   function SMC() public {
   }
 
-  // Returns the gas limit that collations can currently have (by default make
-  // this function always answer 10 million).
-  function getCollationGasLimit() public pure returns(uint) {
-    return 10000000;
-  }
-
   // Uses a block hash as a seed to pseudorandomly select a signer from the collator pool.
   // [TODO] Chance of being selected should be proportional to the collator's deposit.
   // Should be able to return a value for the current period or any future period up to.
@@ -118,7 +116,7 @@ contract SMC {
           shard_id
         )
       ) %
-      uint(collator_pool_len)
+      collator_pool_len
     ];
   }
 
@@ -131,44 +129,57 @@ contract SMC {
 
   }
 
-  function register_collator() public payable returns(int) {
+  function register_collator() public payable returns(bool) {
     address collator_address = msg.sender;
-    require(!is_collator_deposited[msg.sender]);
+    require(!collator_registry[collator_address].deposited);
     require(msg.value == COLLATOR_DEPOSIT);
-
-    is_collator_deposited[msg.sender] = true;
-    int index;
+    
+    uint index;
     if (!empty_stack()) {
       index = stack_pop();
-      collator_pool[uint(index)] = collator_address;
+      collator_pool[index] = collator_address;
     }
     else {
       index = collator_pool_len; 
       collator_pool.push(collator_address);
     }
     ++collator_pool_len;
-    Deposit(collator_address, index);
-    return index;
+
+    collator_registry[collator_address] = Collator({
+      deregistered: 0,
+      pool_index: index,
+      deposited: true
+    });
+    CollatorRegistered(collator_address, index);
+    return true;
   }
 
-  // Removes the collator from the collator pool and refunds the deposited ether
-  function deregister_collator(int index) public {
+  // Removes the collator from the collator pool and sets deregistered period
+  function deregister_collator() public {
     address collator_address = msg.sender;
-    require(is_collator_deposited[msg.sender]);
-    require(collator_pool[uint(index)] == collator_address);
+    uint index = collator_registry[collator_address].pool_index;
+    // Check if collator deposited
+    require(collator_registry[collator_address].deposited);
+    require(collator_pool[index] == collator_address);
     
-    collator_registry[collator_address] = Collator({
-      deregistered: block.number,
-      pool_index: index 
-    });
+    // Deregistered period
+    collator_registry[collator_address].deregistered = block.number / PERIOD_LENGTH;
 
     stack_push(index);
     --collator_pool_len;
-    // Withdraw(_collatorIndex);
+    CollatorDeregistered(index);
   }
 
   function release_collator() public {
+    address collator_address = msg.sender;
+    require(collator_registry[collator_address].deposited == true);
+    // Deregistered
+    require(collator_registry[collator_address].deregistered != 0);
+    // Locked up period
+    require((block.number / PERIOD_LENGTH) > (collator_registry[collator_address].deregistered + COLLATOR_LOCKUP_LENGTH));
 
+    delete collator_registry[collator_address];
+    collator_address.transfer(COLLATOR_DEPOSIT);
   }
 
   function register_proposer() public payable returns(int) {
@@ -253,15 +264,19 @@ contract SMC {
     return empty_slots_stack_top == 0;
   }
 
-  function stack_push(int index) internal {
-    empty_slots_stack[uint(empty_slots_stack_top)] = index;
+  function stack_push(uint index) internal {
+    if (empty_slots_stack.length == empty_slots_stack_top)
+      empty_slots_stack.push(index);
+    else
+      empty_slots_stack[empty_slots_stack_top] = index;
+
     ++empty_slots_stack_top;
   }
-
-  function stack_pop() internal returns(int) {
-    if (empty_stack())
-      return -1;
+  // Pop element from stack
+  // Caller should check if stack is empty
+  function stack_pop() internal returns(uint) {
+    require(empty_slots_stack_top > 1);
     --empty_slots_stack_top;
-    return empty_slots_stack[uint(empty_slots_stack_top)];
+    return empty_slots_stack[empty_slots_stack_top];
   }
 }
