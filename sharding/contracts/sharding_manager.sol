@@ -87,10 +87,10 @@ contract SMC {
   uint constant PROPOSER_DEPOSIT = 1 ether;
   // The minimum balance of a proposer (for collators)
   uint constant MIN_PROPOSER_BALANCE = 0.1 ether;
-  // Time the ether is locked by collators
-  uint constant COLLATOR_LOCKUP_LENGTH = 16128;
-  // Time the ether is locked by proposers
-  uint constant PROPOSER_LOCKUP_LENGTH = 48;
+  // Time the ether is locked by collators (Not constant for testing)
+  uint COLLATOR_LOCKUP_LENGTH = 16128;
+  // Time the ether is locked by proposers (Not constant for testing)
+  uint PROPOSER_LOCKUP_LENGTH = 48;
   // Number of periods ahead of current period, which the contract
   // is able to return the collator of that period
   uint constant LOOKAHEAD_LENGTH = 4;
@@ -98,25 +98,31 @@ contract SMC {
   // Log the latest period number of the shard
   mapping (int => int) public period_head;
 
-  function SMC() public {
+  function SMC(uint collator_lockup_length, uint proposer_lockup_length) public {
+    COLLATOR_LOCKUP_LENGTH = collator_lockup_length;
+    PROPOSER_LOCKUP_LENGTH = proposer_lockup_length; 
   }
 
+  event LOG(uint L);
   // Uses a block hash as a seed to pseudorandomly select a signer from the collator pool.
   // [TODO] Chance of being selected should be proportional to the collator's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function get_eligible_collator(uint256 shard_id, uint256 period) public view returns(address) {
-    require(period >= LOOKAHEAD_LENGTH);
-    require((period - LOOKAHEAD_LENGTH) * PERIOD_LENGTH < block.number);
+  function get_eligible_collator(uint shard_id, uint period) public view returns(address) {
+    uint current_period = block.number / PERIOD_LENGTH;
+    uint period_to_look = ((period - LOOKAHEAD_LENGTH) * PERIOD_LENGTH);
+    require(period >= current_period);
+    require(period <= (current_period + LOOKAHEAD_LENGTH));
     require(collator_pool_len > 0);
-    // [TODO] Should check further if this safe or not
-    return collator_pool[
-      uint(
-        keccak256(
-          uint(block.blockhash((period - LOOKAHEAD_LENGTH) * PERIOD_LENGTH)),
-          shard_id
-        )
-      ) %
-      collator_pool_len
+    if (period <= LOOKAHEAD_LENGTH)
+      period_to_look = period;
+    require(period_to_look < block.number);
+    return collator_pool[uint(
+      keccak256(
+        block.blockhash(period_to_look),
+        shard_id
+      )
+    ) %
+    collator_pool_len
     ];
   }
 

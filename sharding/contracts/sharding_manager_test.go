@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
@@ -12,23 +13,32 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+type SMCConfig struct {
+	collatorLockupLenght *big.Int
+	proposerLockupLength *big.Int
+}
+
 var (
-	key, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	addr                     = crypto.PubkeyToAddress(key.PublicKey)
+	mainKey, _               = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 	collatorDeposit, _       = new(big.Int).SetString("1000000000000000000000", 10)
+	smcConfig                = SMCConfig{
+		collatorLockupLenght: new(big.Int).SetInt64(1),
+		proposerLockupLength: new(big.Int).SetInt64(1),
+	}
 )
 
-func deploySMCContract(backend *backends.SimulatedBackend) (common.Address, *types.Transaction, *SMC, error) {
+func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey) (common.Address, *types.Transaction, *SMC, error) {
 	transactOpts := bind.NewKeyedTransactor(key)
 	defer backend.Commit()
-	return DeploySMC(transactOpts, backend)
+	return DeploySMC(transactOpts, backend, smcConfig.collatorLockupLenght, smcConfig.proposerLockupLength)
 }
 
 // Test creating the SMC contract
 func TestContractCreation(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
-	_, _, _, err := deploySMCContract(backend)
+	_, _, _, err := deploySMCContract(backend, mainKey)
 	backend.Commit()
 	if err != nil {
 		t.Fatalf("can't deploy SMC: %v", err)
@@ -37,12 +47,13 @@ func TestContractCreation(t *testing.T) {
 
 // Test register collator
 func TestCollatorDeposit(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
-	transactOpts := bind.NewKeyedTransactor(key)
-	_, _, smc, _ := deploySMCContract(backend)
+	transactOpts := bind.NewKeyedTransactor(mainKey)
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
 	// Test register_collator() function
-	// Deposit 100 Eth
+	// Deposit 1000 Eth
 	transactOpts.Value = collatorDeposit
 
 	if _, err := smc.Register_collator(transactOpts); err != nil {
@@ -84,11 +95,12 @@ func TestCollatorDeposit(t *testing.T) {
 	}
 }
 
-// Test collator withdraw from the pool
-func TestCollatorWithdraw(t *testing.T) {
+// Test collator deregister from pool
+func TestCollatorDeregister(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
-	transactOpts := bind.NewKeyedTransactor(key)
-	_, _, smc, _ := deploySMCContract(backend)
+	transactOpts := bind.NewKeyedTransactor(mainKey)
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
 	transactOpts.Value = collatorDeposit
 	// Register collator
@@ -113,13 +125,50 @@ func TestCollatorWithdraw(t *testing.T) {
 	if withdrawsEventsIterator.Event.Pool_index.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("Collator index mismatch: %d should be 0", withdrawsEventsIterator.Event.Pool_index)
 	}
-	// for i := 0; i < 16128*5+1; i++ {
-	// 	backend.Commit()
-	// }
+}
 
-	// Release collator
-	// _, err = smc.Release_collator(transactOpts)
-	// if err != nil {
-	// 	t.Fatalf("Failed to release collator: %v", err)
-	// }
+func TestGetEligibleCollator(t *testing.T) {
+	const numberCollators = 20
+	var collatorPoolAddr [numberCollators]common.Address
+	var collatorPoolPrivKeys [numberCollators]*ecdsa.PrivateKey
+	var transactOpts [numberCollators]*bind.TransactOpts
+	genesis := make(core.GenesisAlloc)
+
+	for i := 0; i < numberCollators; i++ {
+		key, _ := crypto.GenerateKey()
+		collatorPoolPrivKeys[i] = key
+		collatorPoolAddr[i] = crypto.PubkeyToAddress(key.PublicKey)
+		transactOpts[i] = bind.NewKeyedTransactor(key)
+		transactOpts[i].Value = collatorDeposit
+
+		genesis[collatorPoolAddr[i]] = core.GenesisAccount{
+			Balance: accountBalance1001Eth,
+		}
+	}
+
+	backend := backends.NewSimulatedBackend(genesis)
+	_, _, smc, _ := deploySMCContract(backend, collatorPoolPrivKeys[0])
+
+	// Register collator
+	for i := 0; i < numberCollators; i++ {
+		smc.Register_collator(transactOpts[i])
+	}
+
+	// Move blockchain 4 blocks further (Head is at 5 after) : period 1
+	for i := 0; i < 4; i++ {
+		backend.Commit()
+	}
+
+	_, err := smc.Get_eligible_collator(&bind.CallOpts{}, big.NewInt(0), big.NewInt(4))
+	if err != nil {
+		t.Fatalf("Cannot get eligible collator: %v", err)
+	}
+	// after: Head is 11, period 2
+	for i := 0; i < 6; i++ {
+		backend.Commit()
+	}
+	_, err = smc.Get_eligible_collator(&bind.CallOpts{}, big.NewInt(1), big.NewInt(6))
+	if err != nil {
+		t.Fatalf("Cannot get eligible collator: %v\n", err)
+	}
 }
