@@ -140,3 +140,23 @@ func joinCollatorPool(c client.Client) error {
 
 	return nil
 }
+
+// deregisterCollatorPool starts the deregistered period for the collator in SMC
+// after period hits, collator can call release_collator to release it's deposit
+func deregisterCollatorPool(c client.Client) error {
+
+	log.Info("Deregistring collator from collator pool")
+	txOps, err := c.CreateTXOpts(big.NewInt(0))
+	if err != nil {
+		return nil, fmt.Errorf("unable to intiate the deregistring process: %v", err)
+	}
+
+	_, err := c.SMCTransactor().Deregister_collator(txOps)
+	if err != nil {
+		return fmt.Errorf("unable to deregister collator from SMC: %v", err)
+	}
+	log.Info(fmt.Sprintf("account %s deregistered from collator pool", c.addr.String())
+
+	return nil
+}
+
