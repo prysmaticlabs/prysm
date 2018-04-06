@@ -20,7 +20,6 @@ var (
 	addr                     = crypto.PubkeyToAddress(key.PublicKey)
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 	ctx     = context.Background()
-	test = big.NewInt(0)
 )
 
 // Mock client for testing collator. Should this go into sharding/client/testing?
