@@ -180,24 +180,24 @@ func (_SMC *SMCTransactorRaw) Transact(opts *bind.TransactOpts, method string, p
 //
 // Solidity: function collationHeaders( int256,  bytes32) constant returns(shard_id uint256, parent_hash bytes32, chunk_root bytes32, period int128, height int128, proposer_address address, proposer_bid uint256, proposer_signature bytes)
 func (_SMC *SMCCaller) CollationHeaders(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) (struct {
-	Shard_id           *big.Int
-	Parent_hash        [32]byte
-	Chunk_root         [32]byte
-	Period             *big.Int
-	Height             *big.Int
-	Proposer_address   common.Address
-	Proposer_bid       *big.Int
-	Proposer_signature []byte
+	ShardId           *big.Int
+	ParentHash        [32]byte
+	ChunkRoot         [32]byte
+	Period            *big.Int
+	Height            *big.Int
+	ProposerAddress   common.Address
+	ProposerBid       *big.Int
+	ProposerSignature []byte
 }, error) {
 	ret := new(struct {
-		Shard_id           *big.Int
-		Parent_hash        [32]byte
-		Chunk_root         [32]byte
-		Period             *big.Int
-		Height             *big.Int
-		Proposer_address   common.Address
-		Proposer_bid       *big.Int
-		Proposer_signature []byte
+		ShardId           *big.Int
+		ParentHash        [32]byte
+		ChunkRoot         [32]byte
+		Period            *big.Int
+		Height            *big.Int
+		ProposerAddress   common.Address
+		ProposerBid       *big.Int
+		ProposerSignature []byte
 	})
 	out := ret
 	err := _SMC.contract.Call(opts, out, "collationHeaders", arg0, arg1)
@@ -208,14 +208,14 @@ func (_SMC *SMCCaller) CollationHeaders(opts *bind.CallOpts, arg0 *big.Int, arg1
 //
 // Solidity: function collationHeaders( int256,  bytes32) constant returns(shard_id uint256, parent_hash bytes32, chunk_root bytes32, period int128, height int128, proposer_address address, proposer_bid uint256, proposer_signature bytes)
 func (_SMC *SMCSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
-	Shard_id           *big.Int
-	Parent_hash        [32]byte
-	Chunk_root         [32]byte
-	Period             *big.Int
-	Height             *big.Int
-	Proposer_address   common.Address
-	Proposer_bid       *big.Int
-	Proposer_signature []byte
+	ShardId           *big.Int
+	ParentHash        [32]byte
+	ChunkRoot         [32]byte
+	Period            *big.Int
+	Height            *big.Int
+	ProposerAddress   common.Address
+	ProposerBid       *big.Int
+	ProposerSignature []byte
 }, error) {
 	return _SMC.Contract.CollationHeaders(&_SMC.CallOpts, arg0, arg1)
 }
@@ -224,22 +224,22 @@ func (_SMC *SMCSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
 //
 // Solidity: function collationHeaders( int256,  bytes32) constant returns(shard_id uint256, parent_hash bytes32, chunk_root bytes32, period int128, height int128, proposer_address address, proposer_bid uint256, proposer_signature bytes)
 func (_SMC *SMCCallerSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
-	Shard_id           *big.Int
-	Parent_hash        [32]byte
-	Chunk_root         [32]byte
-	Period             *big.Int
-	Height             *big.Int
-	Proposer_address   common.Address
-	Proposer_bid       *big.Int
-	Proposer_signature []byte
+	ShardId           *big.Int
+	ParentHash        [32]byte
+	ChunkRoot         [32]byte
+	Period            *big.Int
+	Height            *big.Int
+	ProposerAddress   common.Address
+	ProposerBid       *big.Int
+	ProposerSignature []byte
 }, error) {
 	return _SMC.Contract.CollationHeaders(&_SMC.CallOpts, arg0, arg1)
 }
 
-// Collation_trees is a free data retrieval call binding the contract method 0xea2ef69e.
+// CollationTrees is a free data retrieval call binding the contract method 0xea2ef69e.
 //
 // Solidity: function collation_trees( uint256,  bytes32) constant returns(bytes32)
-func (_SMC *SMCCaller) Collation_trees(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
+func (_SMC *SMCCaller) CollationTrees(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
 	)
@@ -248,24 +248,24 @@ func (_SMC *SMCCaller) Collation_trees(opts *bind.CallOpts, arg0 *big.Int, arg1 
 	return *ret0, err
 }
 
-// Collation_trees is a free data retrieval call binding the contract method 0xea2ef69e.
+// CollationTrees is a free data retrieval call binding the contract method 0xea2ef69e.
 //
 // Solidity: function collation_trees( uint256,  bytes32) constant returns(bytes32)
-func (_SMC *SMCSession) Collation_trees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
-	return _SMC.Contract.Collation_trees(&_SMC.CallOpts, arg0, arg1)
+func (_SMC *SMCSession) CollationTrees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
+	return _SMC.Contract.CollationTrees(&_SMC.CallOpts, arg0, arg1)
 }
 
-// Collation_trees is a free data retrieval call binding the contract method 0xea2ef69e.
+// CollationTrees is a free data retrieval call binding the contract method 0xea2ef69e.
 //
 // Solidity: function collation_trees( uint256,  bytes32) constant returns(bytes32)
-func (_SMC *SMCCallerSession) Collation_trees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
-	return _SMC.Contract.Collation_trees(&_SMC.CallOpts, arg0, arg1)
+func (_SMC *SMCCallerSession) CollationTrees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
+	return _SMC.Contract.CollationTrees(&_SMC.CallOpts, arg0, arg1)
 }
 
-// Collator_pool is a free data retrieval call binding the contract method 0xade8d06f.
+// CollatorPool is a free data retrieval call binding the contract method 0xade8d06f.
 //
 // Solidity: function collator_pool( uint256) constant returns(address)
-func (_SMC *SMCCaller) Collator_pool(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
+func (_SMC *SMCCaller) CollatorPool(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
@@ -274,24 +274,24 @@ func (_SMC *SMCCaller) Collator_pool(opts *bind.CallOpts, arg0 *big.Int) (common
 	return *ret0, err
 }
 
-// Collator_pool is a free data retrieval call binding the contract method 0xade8d06f.
+// CollatorPool is a free data retrieval call binding the contract method 0xade8d06f.
 //
 // Solidity: function collator_pool( uint256) constant returns(address)
-func (_SMC *SMCSession) Collator_pool(arg0 *big.Int) (common.Address, error) {
-	return _SMC.Contract.Collator_pool(&_SMC.CallOpts, arg0)
+func (_SMC *SMCSession) CollatorPool(arg0 *big.Int) (common.Address, error) {
+	return _SMC.Contract.CollatorPool(&_SMC.CallOpts, arg0)
 }
 
-// Collator_pool is a free data retrieval call binding the contract method 0xade8d06f.
+// CollatorPool is a free data retrieval call binding the contract method 0xade8d06f.
 //
 // Solidity: function collator_pool( uint256) constant returns(address)
-func (_SMC *SMCCallerSession) Collator_pool(arg0 *big.Int) (common.Address, error) {
-	return _SMC.Contract.Collator_pool(&_SMC.CallOpts, arg0)
+func (_SMC *SMCCallerSession) CollatorPool(arg0 *big.Int) (common.Address, error) {
+	return _SMC.Contract.CollatorPool(&_SMC.CallOpts, arg0)
 }
 
-// Collator_pool_len is a free data retrieval call binding the contract method 0x94c30f23.
+// CollatorPoolLen is a free data retrieval call binding the contract method 0x94c30f23.
 //
 // Solidity: function collator_pool_len() constant returns(uint256)
-func (_SMC *SMCCaller) Collator_pool_len(opts *bind.CallOpts) (*big.Int, error) {
+func (_SMC *SMCCaller) CollatorPoolLen(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
@@ -300,31 +300,31 @@ func (_SMC *SMCCaller) Collator_pool_len(opts *bind.CallOpts) (*big.Int, error) 
 	return *ret0, err
 }
 
-// Collator_pool_len is a free data retrieval call binding the contract method 0x94c30f23.
+// CollatorPoolLen is a free data retrieval call binding the contract method 0x94c30f23.
 //
 // Solidity: function collator_pool_len() constant returns(uint256)
-func (_SMC *SMCSession) Collator_pool_len() (*big.Int, error) {
-	return _SMC.Contract.Collator_pool_len(&_SMC.CallOpts)
+func (_SMC *SMCSession) CollatorPoolLen() (*big.Int, error) {
+	return _SMC.Contract.CollatorPoolLen(&_SMC.CallOpts)
 }
 
-// Collator_pool_len is a free data retrieval call binding the contract method 0x94c30f23.
+// CollatorPoolLen is a free data retrieval call binding the contract method 0x94c30f23.
 //
 // Solidity: function collator_pool_len() constant returns(uint256)
-func (_SMC *SMCCallerSession) Collator_pool_len() (*big.Int, error) {
-	return _SMC.Contract.Collator_pool_len(&_SMC.CallOpts)
+func (_SMC *SMCCallerSession) CollatorPoolLen() (*big.Int, error) {
+	return _SMC.Contract.CollatorPoolLen(&_SMC.CallOpts)
 }
 
-// Collator_registry is a free data retrieval call binding the contract method 0xcc05589c.
+// CollatorRegistry is a free data retrieval call binding the contract method 0xcc05589c.
 //
 // Solidity: function collator_registry( address) constant returns(deregistered uint256, pool_index uint256, deposited bool)
-func (_SMC *SMCCaller) Collator_registry(opts *bind.CallOpts, arg0 common.Address) (struct {
+func (_SMC *SMCCaller) CollatorRegistry(opts *bind.CallOpts, arg0 common.Address) (struct {
 	Deregistered *big.Int
-	Pool_index   *big.Int
+	PoolIndex    *big.Int
 	Deposited    bool
 }, error) {
 	ret := new(struct {
 		Deregistered *big.Int
-		Pool_index   *big.Int
+		PoolIndex    *big.Int
 		Deposited    bool
 	})
 	out := ret
@@ -332,32 +332,32 @@ func (_SMC *SMCCaller) Collator_registry(opts *bind.CallOpts, arg0 common.Addres
 	return *ret, err
 }
 
-// Collator_registry is a free data retrieval call binding the contract method 0xcc05589c.
+// CollatorRegistry is a free data retrieval call binding the contract method 0xcc05589c.
 //
 // Solidity: function collator_registry( address) constant returns(deregistered uint256, pool_index uint256, deposited bool)
-func (_SMC *SMCSession) Collator_registry(arg0 common.Address) (struct {
+func (_SMC *SMCSession) CollatorRegistry(arg0 common.Address) (struct {
 	Deregistered *big.Int
-	Pool_index   *big.Int
+	PoolIndex    *big.Int
 	Deposited    bool
 }, error) {
-	return _SMC.Contract.Collator_registry(&_SMC.CallOpts, arg0)
+	return _SMC.Contract.CollatorRegistry(&_SMC.CallOpts, arg0)
 }
 
-// Collator_registry is a free data retrieval call binding the contract method 0xcc05589c.
+// CollatorRegistry is a free data retrieval call binding the contract method 0xcc05589c.
 //
 // Solidity: function collator_registry( address) constant returns(deregistered uint256, pool_index uint256, deposited bool)
-func (_SMC *SMCCallerSession) Collator_registry(arg0 common.Address) (struct {
+func (_SMC *SMCCallerSession) CollatorRegistry(arg0 common.Address) (struct {
 	Deregistered *big.Int
-	Pool_index   *big.Int
+	PoolIndex    *big.Int
 	Deposited    bool
 }, error) {
-	return _SMC.Contract.Collator_registry(&_SMC.CallOpts, arg0)
+	return _SMC.Contract.CollatorRegistry(&_SMC.CallOpts, arg0)
 }
 
-// Get_eligible_collator is a free data retrieval call binding the contract method 0xf3ae61b7.
+// GetEligibleCollator is a free data retrieval call binding the contract method 0xf3ae61b7.
 //
 // Solidity: function get_eligible_collator(shard_id uint256, period uint256) constant returns(address)
-func (_SMC *SMCCaller) Get_eligible_collator(opts *bind.CallOpts, shard_id *big.Int, period *big.Int) (common.Address, error) {
+func (_SMC *SMCCaller) GetEligibleCollator(opts *bind.CallOpts, shard_id *big.Int, period *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
@@ -366,24 +366,24 @@ func (_SMC *SMCCaller) Get_eligible_collator(opts *bind.CallOpts, shard_id *big.
 	return *ret0, err
 }
 
-// Get_eligible_collator is a free data retrieval call binding the contract method 0xf3ae61b7.
+// GetEligibleCollator is a free data retrieval call binding the contract method 0xf3ae61b7.
 //
 // Solidity: function get_eligible_collator(shard_id uint256, period uint256) constant returns(address)
-func (_SMC *SMCSession) Get_eligible_collator(shard_id *big.Int, period *big.Int) (common.Address, error) {
-	return _SMC.Contract.Get_eligible_collator(&_SMC.CallOpts, shard_id, period)
+func (_SMC *SMCSession) GetEligibleCollator(shard_id *big.Int, period *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetEligibleCollator(&_SMC.CallOpts, shard_id, period)
 }
 
-// Get_eligible_collator is a free data retrieval call binding the contract method 0xf3ae61b7.
+// GetEligibleCollator is a free data retrieval call binding the contract method 0xf3ae61b7.
 //
 // Solidity: function get_eligible_collator(shard_id uint256, period uint256) constant returns(address)
-func (_SMC *SMCCallerSession) Get_eligible_collator(shard_id *big.Int, period *big.Int) (common.Address, error) {
-	return _SMC.Contract.Get_eligible_collator(&_SMC.CallOpts, shard_id, period)
+func (_SMC *SMCCallerSession) GetEligibleCollator(shard_id *big.Int, period *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetEligibleCollator(&_SMC.CallOpts, shard_id, period)
 }
 
-// Period_head is a free data retrieval call binding the contract method 0x4462ffae.
+// PeriodHead is a free data retrieval call binding the contract method 0x4462ffae.
 //
 // Solidity: function period_head( int256) constant returns(int256)
-func (_SMC *SMCCaller) Period_head(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+func (_SMC *SMCCaller) PeriodHead(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
@@ -392,24 +392,24 @@ func (_SMC *SMCCaller) Period_head(opts *bind.CallOpts, arg0 *big.Int) (*big.Int
 	return *ret0, err
 }
 
-// Period_head is a free data retrieval call binding the contract method 0x4462ffae.
+// PeriodHead is a free data retrieval call binding the contract method 0x4462ffae.
 //
 // Solidity: function period_head( int256) constant returns(int256)
-func (_SMC *SMCSession) Period_head(arg0 *big.Int) (*big.Int, error) {
-	return _SMC.Contract.Period_head(&_SMC.CallOpts, arg0)
+func (_SMC *SMCSession) PeriodHead(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.PeriodHead(&_SMC.CallOpts, arg0)
 }
 
-// Period_head is a free data retrieval call binding the contract method 0x4462ffae.
+// PeriodHead is a free data retrieval call binding the contract method 0x4462ffae.
 //
 // Solidity: function period_head( int256) constant returns(int256)
-func (_SMC *SMCCallerSession) Period_head(arg0 *big.Int) (*big.Int, error) {
-	return _SMC.Contract.Period_head(&_SMC.CallOpts, arg0)
+func (_SMC *SMCCallerSession) PeriodHead(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.PeriodHead(&_SMC.CallOpts, arg0)
 }
 
-// Proposer_pool is a free data retrieval call binding the contract method 0x6d9061c3.
+// ProposerPool is a free data retrieval call binding the contract method 0x6d9061c3.
 //
 // Solidity: function proposer_pool( uint256) constant returns(shardId uint256)
-func (_SMC *SMCCaller) Proposer_pool(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+func (_SMC *SMCCaller) ProposerPool(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
@@ -418,24 +418,24 @@ func (_SMC *SMCCaller) Proposer_pool(opts *bind.CallOpts, arg0 *big.Int) (*big.I
 	return *ret0, err
 }
 
-// Proposer_pool is a free data retrieval call binding the contract method 0x6d9061c3.
+// ProposerPool is a free data retrieval call binding the contract method 0x6d9061c3.
 //
 // Solidity: function proposer_pool( uint256) constant returns(shardId uint256)
-func (_SMC *SMCSession) Proposer_pool(arg0 *big.Int) (*big.Int, error) {
-	return _SMC.Contract.Proposer_pool(&_SMC.CallOpts, arg0)
+func (_SMC *SMCSession) ProposerPool(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.ProposerPool(&_SMC.CallOpts, arg0)
 }
 
-// Proposer_pool is a free data retrieval call binding the contract method 0x6d9061c3.
+// ProposerPool is a free data retrieval call binding the contract method 0x6d9061c3.
 //
 // Solidity: function proposer_pool( uint256) constant returns(shardId uint256)
-func (_SMC *SMCCallerSession) Proposer_pool(arg0 *big.Int) (*big.Int, error) {
-	return _SMC.Contract.Proposer_pool(&_SMC.CallOpts, arg0)
+func (_SMC *SMCCallerSession) ProposerPool(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.ProposerPool(&_SMC.CallOpts, arg0)
 }
 
-// Proposer_registry is a free data retrieval call binding the contract method 0x98bd94df.
+// ProposerRegistry is a free data retrieval call binding the contract method 0x98bd94df.
 //
 // Solidity: function proposer_registry( address) constant returns(shardId uint256)
-func (_SMC *SMCCaller) Proposer_registry(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
+func (_SMC *SMCCaller) ProposerRegistry(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
@@ -444,18 +444,18 @@ func (_SMC *SMCCaller) Proposer_registry(opts *bind.CallOpts, arg0 common.Addres
 	return *ret0, err
 }
 
-// Proposer_registry is a free data retrieval call binding the contract method 0x98bd94df.
+// ProposerRegistry is a free data retrieval call binding the contract method 0x98bd94df.
 //
 // Solidity: function proposer_registry( address) constant returns(shardId uint256)
-func (_SMC *SMCSession) Proposer_registry(arg0 common.Address) (*big.Int, error) {
-	return _SMC.Contract.Proposer_registry(&_SMC.CallOpts, arg0)
+func (_SMC *SMCSession) ProposerRegistry(arg0 common.Address) (*big.Int, error) {
+	return _SMC.Contract.ProposerRegistry(&_SMC.CallOpts, arg0)
 }
 
-// Proposer_registry is a free data retrieval call binding the contract method 0x98bd94df.
+// ProposerRegistry is a free data retrieval call binding the contract method 0x98bd94df.
 //
 // Solidity: function proposer_registry( address) constant returns(shardId uint256)
-func (_SMC *SMCCallerSession) Proposer_registry(arg0 common.Address) (*big.Int, error) {
-	return _SMC.Contract.Proposer_registry(&_SMC.CallOpts, arg0)
+func (_SMC *SMCCallerSession) ProposerRegistry(arg0 common.Address) (*big.Int, error) {
+	return _SMC.Contract.ProposerRegistry(&_SMC.CallOpts, arg0)
 }
 
 // AddHeader is a paid mutator transaction binding the contract method 0x683eee78.
@@ -479,193 +479,193 @@ func (_SMC *SMCTransactorSession) AddHeader(_shardId *big.Int, period *big.Int, 
 	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, period, height, _parent_hash, chunk_root, proposer_address, proposer_bid, proposer_signature)
 }
 
-// Compute_header_hash is a paid mutator transaction binding the contract method 0x6e6483f4.
+// ComputeHeaderHash is a paid mutator transaction binding the contract method 0x6e6483f4.
 //
 // Solidity: function compute_header_hash(shard_id uint256, parent_hash bytes32, chunk_root bytes32, period uint256, proposer_address address, proposer_bid uint256) returns(bytes32)
-func (_SMC *SMCTransactor) Compute_header_hash(opts *bind.TransactOpts, shard_id *big.Int, parent_hash [32]byte, chunk_root [32]byte, period *big.Int, proposer_address common.Address, proposer_bid *big.Int) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) ComputeHeaderHash(opts *bind.TransactOpts, shard_id *big.Int, parent_hash [32]byte, chunk_root [32]byte, period *big.Int, proposer_address common.Address, proposer_bid *big.Int) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "compute_header_hash", shard_id, parent_hash, chunk_root, period, proposer_address, proposer_bid)
 }
 
-// Compute_header_hash is a paid mutator transaction binding the contract method 0x6e6483f4.
+// ComputeHeaderHash is a paid mutator transaction binding the contract method 0x6e6483f4.
 //
 // Solidity: function compute_header_hash(shard_id uint256, parent_hash bytes32, chunk_root bytes32, period uint256, proposer_address address, proposer_bid uint256) returns(bytes32)
-func (_SMC *SMCSession) Compute_header_hash(shard_id *big.Int, parent_hash [32]byte, chunk_root [32]byte, period *big.Int, proposer_address common.Address, proposer_bid *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Compute_header_hash(&_SMC.TransactOpts, shard_id, parent_hash, chunk_root, period, proposer_address, proposer_bid)
+func (_SMC *SMCSession) ComputeHeaderHash(shard_id *big.Int, parent_hash [32]byte, chunk_root [32]byte, period *big.Int, proposer_address common.Address, proposer_bid *big.Int) (*types.Transaction, error) {
+	return _SMC.Contract.ComputeHeaderHash(&_SMC.TransactOpts, shard_id, parent_hash, chunk_root, period, proposer_address, proposer_bid)
 }
 
-// Compute_header_hash is a paid mutator transaction binding the contract method 0x6e6483f4.
+// ComputeHeaderHash is a paid mutator transaction binding the contract method 0x6e6483f4.
 //
 // Solidity: function compute_header_hash(shard_id uint256, parent_hash bytes32, chunk_root bytes32, period uint256, proposer_address address, proposer_bid uint256) returns(bytes32)
-func (_SMC *SMCTransactorSession) Compute_header_hash(shard_id *big.Int, parent_hash [32]byte, chunk_root [32]byte, period *big.Int, proposer_address common.Address, proposer_bid *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Compute_header_hash(&_SMC.TransactOpts, shard_id, parent_hash, chunk_root, period, proposer_address, proposer_bid)
+func (_SMC *SMCTransactorSession) ComputeHeaderHash(shard_id *big.Int, parent_hash [32]byte, chunk_root [32]byte, period *big.Int, proposer_address common.Address, proposer_bid *big.Int) (*types.Transaction, error) {
+	return _SMC.Contract.ComputeHeaderHash(&_SMC.TransactOpts, shard_id, parent_hash, chunk_root, period, proposer_address, proposer_bid)
 }
 
-// Deregister_collator is a paid mutator transaction binding the contract method 0xfae39b4f.
+// DeregisterCollator is a paid mutator transaction binding the contract method 0xfae39b4f.
 //
 // Solidity: function deregister_collator() returns()
-func (_SMC *SMCTransactor) Deregister_collator(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) DeregisterCollator(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "deregister_collator")
 }
 
-// Deregister_collator is a paid mutator transaction binding the contract method 0xfae39b4f.
+// DeregisterCollator is a paid mutator transaction binding the contract method 0xfae39b4f.
 //
 // Solidity: function deregister_collator() returns()
-func (_SMC *SMCSession) Deregister_collator() (*types.Transaction, error) {
-	return _SMC.Contract.Deregister_collator(&_SMC.TransactOpts)
+func (_SMC *SMCSession) DeregisterCollator() (*types.Transaction, error) {
+	return _SMC.Contract.DeregisterCollator(&_SMC.TransactOpts)
 }
 
-// Deregister_collator is a paid mutator transaction binding the contract method 0xfae39b4f.
+// DeregisterCollator is a paid mutator transaction binding the contract method 0xfae39b4f.
 //
 // Solidity: function deregister_collator() returns()
-func (_SMC *SMCTransactorSession) Deregister_collator() (*types.Transaction, error) {
-	return _SMC.Contract.Deregister_collator(&_SMC.TransactOpts)
+func (_SMC *SMCTransactorSession) DeregisterCollator() (*types.Transaction, error) {
+	return _SMC.Contract.DeregisterCollator(&_SMC.TransactOpts)
 }
 
-// Deregister_proposer is a paid mutator transaction binding the contract method 0xff683139.
+// DeregisterProposer is a paid mutator transaction binding the contract method 0xff683139.
 //
 // Solidity: function deregister_proposer() returns()
-func (_SMC *SMCTransactor) Deregister_proposer(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) DeregisterProposer(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "deregister_proposer")
 }
 
-// Deregister_proposer is a paid mutator transaction binding the contract method 0xff683139.
+// DeregisterProposer is a paid mutator transaction binding the contract method 0xff683139.
 //
 // Solidity: function deregister_proposer() returns()
-func (_SMC *SMCSession) Deregister_proposer() (*types.Transaction, error) {
-	return _SMC.Contract.Deregister_proposer(&_SMC.TransactOpts)
+func (_SMC *SMCSession) DeregisterProposer() (*types.Transaction, error) {
+	return _SMC.Contract.DeregisterProposer(&_SMC.TransactOpts)
 }
 
-// Deregister_proposer is a paid mutator transaction binding the contract method 0xff683139.
+// DeregisterProposer is a paid mutator transaction binding the contract method 0xff683139.
 //
 // Solidity: function deregister_proposer() returns()
-func (_SMC *SMCTransactorSession) Deregister_proposer() (*types.Transaction, error) {
-	return _SMC.Contract.Deregister_proposer(&_SMC.TransactOpts)
+func (_SMC *SMCTransactorSession) DeregisterProposer() (*types.Transaction, error) {
+	return _SMC.Contract.DeregisterProposer(&_SMC.TransactOpts)
 }
 
-// Proposer_add_balance is a paid mutator transaction binding the contract method 0x5f7d96b5.
+// ProposerAddBalance is a paid mutator transaction binding the contract method 0x5f7d96b5.
 //
 // Solidity: function proposer_add_balance(shard_id uint256) returns()
-func (_SMC *SMCTransactor) Proposer_add_balance(opts *bind.TransactOpts, shard_id *big.Int) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) ProposerAddBalance(opts *bind.TransactOpts, shard_id *big.Int) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "proposer_add_balance", shard_id)
 }
 
-// Proposer_add_balance is a paid mutator transaction binding the contract method 0x5f7d96b5.
+// ProposerAddBalance is a paid mutator transaction binding the contract method 0x5f7d96b5.
 //
 // Solidity: function proposer_add_balance(shard_id uint256) returns()
-func (_SMC *SMCSession) Proposer_add_balance(shard_id *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Proposer_add_balance(&_SMC.TransactOpts, shard_id)
+func (_SMC *SMCSession) ProposerAddBalance(shard_id *big.Int) (*types.Transaction, error) {
+	return _SMC.Contract.ProposerAddBalance(&_SMC.TransactOpts, shard_id)
 }
 
-// Proposer_add_balance is a paid mutator transaction binding the contract method 0x5f7d96b5.
+// ProposerAddBalance is a paid mutator transaction binding the contract method 0x5f7d96b5.
 //
 // Solidity: function proposer_add_balance(shard_id uint256) returns()
-func (_SMC *SMCTransactorSession) Proposer_add_balance(shard_id *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Proposer_add_balance(&_SMC.TransactOpts, shard_id)
+func (_SMC *SMCTransactorSession) ProposerAddBalance(shard_id *big.Int) (*types.Transaction, error) {
+	return _SMC.Contract.ProposerAddBalance(&_SMC.TransactOpts, shard_id)
 }
 
-// Proposer_withdraw_balance is a paid mutator transaction binding the contract method 0x9c56a7e0.
+// ProposerWithdrawBalance is a paid mutator transaction binding the contract method 0x9c56a7e0.
 //
 // Solidity: function proposer_withdraw_balance(shard_id uint256) returns()
-func (_SMC *SMCTransactor) Proposer_withdraw_balance(opts *bind.TransactOpts, shard_id *big.Int) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) ProposerWithdrawBalance(opts *bind.TransactOpts, shard_id *big.Int) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "proposer_withdraw_balance", shard_id)
 }
 
-// Proposer_withdraw_balance is a paid mutator transaction binding the contract method 0x9c56a7e0.
+// ProposerWithdrawBalance is a paid mutator transaction binding the contract method 0x9c56a7e0.
 //
 // Solidity: function proposer_withdraw_balance(shard_id uint256) returns()
-func (_SMC *SMCSession) Proposer_withdraw_balance(shard_id *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Proposer_withdraw_balance(&_SMC.TransactOpts, shard_id)
+func (_SMC *SMCSession) ProposerWithdrawBalance(shard_id *big.Int) (*types.Transaction, error) {
+	return _SMC.Contract.ProposerWithdrawBalance(&_SMC.TransactOpts, shard_id)
 }
 
-// Proposer_withdraw_balance is a paid mutator transaction binding the contract method 0x9c56a7e0.
+// ProposerWithdrawBalance is a paid mutator transaction binding the contract method 0x9c56a7e0.
 //
 // Solidity: function proposer_withdraw_balance(shard_id uint256) returns()
-func (_SMC *SMCTransactorSession) Proposer_withdraw_balance(shard_id *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Proposer_withdraw_balance(&_SMC.TransactOpts, shard_id)
+func (_SMC *SMCTransactorSession) ProposerWithdrawBalance(shard_id *big.Int) (*types.Transaction, error) {
+	return _SMC.Contract.ProposerWithdrawBalance(&_SMC.TransactOpts, shard_id)
 }
 
-// Register_collator is a paid mutator transaction binding the contract method 0xd64e1650.
+// RegisterCollator is a paid mutator transaction binding the contract method 0xd64e1650.
 //
 // Solidity: function register_collator() returns(bool)
-func (_SMC *SMCTransactor) Register_collator(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) RegisterCollator(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "register_collator")
 }
 
-// Register_collator is a paid mutator transaction binding the contract method 0xd64e1650.
+// RegisterCollator is a paid mutator transaction binding the contract method 0xd64e1650.
 //
 // Solidity: function register_collator() returns(bool)
-func (_SMC *SMCSession) Register_collator() (*types.Transaction, error) {
-	return _SMC.Contract.Register_collator(&_SMC.TransactOpts)
+func (_SMC *SMCSession) RegisterCollator() (*types.Transaction, error) {
+	return _SMC.Contract.RegisterCollator(&_SMC.TransactOpts)
 }
 
-// Register_collator is a paid mutator transaction binding the contract method 0xd64e1650.
+// RegisterCollator is a paid mutator transaction binding the contract method 0xd64e1650.
 //
 // Solidity: function register_collator() returns(bool)
-func (_SMC *SMCTransactorSession) Register_collator() (*types.Transaction, error) {
-	return _SMC.Contract.Register_collator(&_SMC.TransactOpts)
+func (_SMC *SMCTransactorSession) RegisterCollator() (*types.Transaction, error) {
+	return _SMC.Contract.RegisterCollator(&_SMC.TransactOpts)
 }
 
-// Register_proposer is a paid mutator transaction binding the contract method 0x531b6fc7.
+// RegisterProposer is a paid mutator transaction binding the contract method 0x531b6fc7.
 //
 // Solidity: function register_proposer() returns(int256)
-func (_SMC *SMCTransactor) Register_proposer(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) RegisterProposer(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "register_proposer")
 }
 
-// Register_proposer is a paid mutator transaction binding the contract method 0x531b6fc7.
+// RegisterProposer is a paid mutator transaction binding the contract method 0x531b6fc7.
 //
 // Solidity: function register_proposer() returns(int256)
-func (_SMC *SMCSession) Register_proposer() (*types.Transaction, error) {
-	return _SMC.Contract.Register_proposer(&_SMC.TransactOpts)
+func (_SMC *SMCSession) RegisterProposer() (*types.Transaction, error) {
+	return _SMC.Contract.RegisterProposer(&_SMC.TransactOpts)
 }
 
-// Register_proposer is a paid mutator transaction binding the contract method 0x531b6fc7.
+// RegisterProposer is a paid mutator transaction binding the contract method 0x531b6fc7.
 //
 // Solidity: function register_proposer() returns(int256)
-func (_SMC *SMCTransactorSession) Register_proposer() (*types.Transaction, error) {
-	return _SMC.Contract.Register_proposer(&_SMC.TransactOpts)
+func (_SMC *SMCTransactorSession) RegisterProposer() (*types.Transaction, error) {
+	return _SMC.Contract.RegisterProposer(&_SMC.TransactOpts)
 }
 
-// Release_collator is a paid mutator transaction binding the contract method 0xd763dfd0.
+// ReleaseCollator is a paid mutator transaction binding the contract method 0xd763dfd0.
 //
 // Solidity: function release_collator() returns()
-func (_SMC *SMCTransactor) Release_collator(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) ReleaseCollator(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "release_collator")
 }
 
-// Release_collator is a paid mutator transaction binding the contract method 0xd763dfd0.
+// ReleaseCollator is a paid mutator transaction binding the contract method 0xd763dfd0.
 //
 // Solidity: function release_collator() returns()
-func (_SMC *SMCSession) Release_collator() (*types.Transaction, error) {
-	return _SMC.Contract.Release_collator(&_SMC.TransactOpts)
+func (_SMC *SMCSession) ReleaseCollator() (*types.Transaction, error) {
+	return _SMC.Contract.ReleaseCollator(&_SMC.TransactOpts)
 }
 
-// Release_collator is a paid mutator transaction binding the contract method 0xd763dfd0.
+// ReleaseCollator is a paid mutator transaction binding the contract method 0xd763dfd0.
 //
 // Solidity: function release_collator() returns()
-func (_SMC *SMCTransactorSession) Release_collator() (*types.Transaction, error) {
-	return _SMC.Contract.Release_collator(&_SMC.TransactOpts)
+func (_SMC *SMCTransactorSession) ReleaseCollator() (*types.Transaction, error) {
+	return _SMC.Contract.ReleaseCollator(&_SMC.TransactOpts)
 }
 
-// Release_proposer is a paid mutator transaction binding the contract method 0x5950d0ca.
+// ReleaseProposer is a paid mutator transaction binding the contract method 0x5950d0ca.
 //
 // Solidity: function release_proposer() returns()
-func (_SMC *SMCTransactor) Release_proposer(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_SMC *SMCTransactor) ReleaseProposer(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _SMC.contract.Transact(opts, "release_proposer")
 }
 
-// Release_proposer is a paid mutator transaction binding the contract method 0x5950d0ca.
+// ReleaseProposer is a paid mutator transaction binding the contract method 0x5950d0ca.
 //
 // Solidity: function release_proposer() returns()
-func (_SMC *SMCSession) Release_proposer() (*types.Transaction, error) {
-	return _SMC.Contract.Release_proposer(&_SMC.TransactOpts)
+func (_SMC *SMCSession) ReleaseProposer() (*types.Transaction, error) {
+	return _SMC.Contract.ReleaseProposer(&_SMC.TransactOpts)
 }
 
-// Release_proposer is a paid mutator transaction binding the contract method 0x5950d0ca.
+// ReleaseProposer is a paid mutator transaction binding the contract method 0x5950d0ca.
 //
 // Solidity: function release_proposer() returns()
-func (_SMC *SMCTransactorSession) Release_proposer() (*types.Transaction, error) {
-	return _SMC.Contract.Release_proposer(&_SMC.TransactOpts)
+func (_SMC *SMCTransactorSession) ReleaseProposer() (*types.Transaction, error) {
+	return _SMC.Contract.ReleaseProposer(&_SMC.TransactOpts)
 }
 
 // SMCCollatorDeregisteredIterator is returned from FilterCollatorDeregistered and is used to iterate over the raw logs and unpacked data for CollatorDeregistered events raised by the SMC contract.
@@ -737,8 +737,8 @@ func (it *SMCCollatorDeregisteredIterator) Close() error {
 
 // SMCCollatorDeregistered represents a CollatorDeregistered event raised by the SMC contract.
 type SMCCollatorDeregistered struct {
-	Pool_index *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
+	PoolIndex *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
 // FilterCollatorDeregistered is a free log retrieval operation binding the contract event 0x9b2d06607fbfb01da25cdaa6312dfbc880589de849cdb80dae0a0e8c87e097c6.
@@ -859,9 +859,9 @@ func (it *SMCCollatorRegisteredIterator) Close() error {
 
 // SMCCollatorRegistered represents a CollatorRegistered event raised by the SMC contract.
 type SMCCollatorRegistered struct {
-	Collator   common.Address
-	Pool_index *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
+	Collator  common.Address
+	PoolIndex *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
 // FilterCollatorRegistered is a free log retrieval operation binding the contract event 0xb3cf9a630836c5786f2ca8e1c1db9b946b76f3f7f18aa30514214a9ad16ecfc3.
@@ -982,8 +982,8 @@ func (it *SMCCollatorReleasedIterator) Close() error {
 
 // SMCCollatorReleased represents a CollatorReleased event raised by the SMC contract.
 type SMCCollatorReleased struct {
-	Pool_index *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
+	PoolIndex *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
 // FilterCollatorReleased is a free log retrieval operation binding the contract event 0x4fcc986c2008cc42fd5a116ab198ba0994004b6758ed1b6052884fc8aa5a6a28.
@@ -1104,15 +1104,15 @@ func (it *SMCHeaderAddedIterator) Close() error {
 
 // SMCHeaderAdded represents a HeaderAdded event raised by the SMC contract.
 type SMCHeaderAdded struct {
-	Shard_id           *big.Int
-	Parent_hash        [32]byte
-	Chunk_root         [32]byte
-	Period             *big.Int
-	Height             *big.Int
-	Proposer_address   common.Address
-	Proposer_bid       *big.Int
-	Proposer_signature []byte
-	Raw                types.Log // Blockchain specific contextual infos
+	ShardId           *big.Int
+	ParentHash        [32]byte
+	ChunkRoot         [32]byte
+	Period            *big.Int
+	Height            *big.Int
+	ProposerAddress   common.Address
+	ProposerBid       *big.Int
+	ProposerSignature []byte
+	Raw               types.Log // Blockchain specific contextual infos
 }
 
 // FilterHeaderAdded is a free log retrieval operation binding the contract event 0xc1e504f1768bb2e62803ca894ced8e4d82ddbd291c4f59c8213e7a36b8da56a9.
@@ -1365,8 +1365,8 @@ func (it *SMCProposerRegisteredIterator) Close() error {
 
 // SMCProposerRegistered represents a ProposerRegistered event raised by the SMC contract.
 type SMCProposerRegistered struct {
-	Pool_index *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
+	PoolIndex *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
 // FilterProposerRegistered is a free log retrieval operation binding the contract event 0xb8ab3ee85df29b051303a1468693d1fc8df07a41c749313cb7f7113a321e1327.
