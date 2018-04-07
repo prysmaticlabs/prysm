@@ -85,11 +85,11 @@ func checkSMCForCollator(c client.Client, head *types.Header) error {
 func isAccountInCollatorPool(c client.Client) (bool, error) {
 	account := c.Account()
 	// Checks if our deposit has gone through according to the SMC
-	b, err := c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
-	if !b && err != nil {
+	r, err := c.SMCCaller().CollatorRegistry(&bind.CallOpts{}, account.Address)
+	if !r.Deposited && err != nil {
 		log.Warn(fmt.Sprintf("Account %s not in collator pool.", account.Address.String()))
 	}
-	return b, err
+	return r.Deposited, err
 }
 
 // submitCollation interacts with the SMC directly to add a collation header
@@ -132,11 +132,50 @@ func joinCollatorPool(c client.Client) error {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
 
-	tx, err := c.SMCTransactor().Deposit(txOps)
+	tx, err := c.SMCTransactor().RegisterCollator(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
 	}
 	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.CollatorDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
+
+	return nil
+}
+
+// deregisterCollatorPool starts the deregistered period for the collator in SMC,
+// after period hits, collator can call release_collator to withdraw it's deposit.
+func deregisterCollatorPool(c client.Client) error {
+
+	log.Info("Deregistring collator from collator pool")
+	txOps, err := c.CreateTXOpts(big.NewInt(0))
+	if err != nil {
+		return fmt.Errorf("unable to intiate the deregistring process: %v", err)
+	}
+
+	_, err = c.SMCTransactor().DeregisterCollator(txOps)
+	if err != nil {
+		return fmt.Errorf("unable to deregister collator from SMC: %v", err)
+	}
+	log.Info(fmt.Sprintf("account %s deregistered from collator pool", c.Account().Address.String()))
+
+	return nil
+}
+
+// releaseCollatorPool lets collator  withdraw deposit from SMC,
+// this is called after collator has deregistered from the collator pool
+func releaseCollatorPool(c client.Client) error {
+
+	log.Info("Releasing collator from collator pool")
+	txOps, err := c.CreateTXOpts(big.NewInt(0))
+	if err != nil {
+
+		return fmt.Errorf("unable to intiate the releasing process: %v", err)
+	}
+
+	_, err = c.SMCTransactor().RegisterCollator(txOps)
+	if err != nil {
+		return fmt.Errorf("unable to release collator from SMC: %v", err)
+	}
+	log.Info(fmt.Sprintf("account %s released from collator pool", c.Account().Address.String()))
 
 	return nil
 }
