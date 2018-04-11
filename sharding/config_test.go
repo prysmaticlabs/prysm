@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestCollatorDeposit(t *testing.T) {
+func TestNotaryDeposit(t *testing.T) {
 	want, err := new(big.Int).SetString("1000000000000000000000", 10) // 1000 ETH
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
-	if CollatorDeposit.Cmp(want) != 0 {
-		t.Errorf("Collator deposit size incorrect. Wanted %d, got %d", want, CollatorDeposit)
+	if NotaryDeposit.Cmp(want) != 0 {
+		t.Errorf("Notary deposit size incorrect. Wanted %d, got %d", want, NotaryDeposit)
 	}
 }
 
@@ -35,12 +35,12 @@ func TestMinProposerBalance(t *testing.T) {
 	}
 }
 
-func TestCollatorSubsidy(t *testing.T) {
+func TestNotarySubsidy(t *testing.T) {
 	want, err := new(big.Int).SetString("1000000000000000", 10) // 0.001 ETH
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
-	if CollatorSubsidy.Cmp(want) != 0 {
-		t.Errorf("Collator subsidy size incorrect. Wanted %d, got %d", want, CollatorSubsidy)
+	if NotarySubsidy.Cmp(want) != 0 {
+		t.Errorf("Notary subsidy size incorrect. Wanted %d, got %d", want, NotarySubsidy)
 	}
 }
