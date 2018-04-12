@@ -18,6 +18,7 @@ type CollationHeader struct {
 	chunkRoot         *common.Hash    //the root of the chunk tree which identifies collation body
 	period            *big.Int        //the period number in which collation to be included
 	proposerAddress   *common.Address //address of the collation proposer
+	proposerSignature []byte          //the proposer's signature for calculating collation hash
 }
 
 func (c *Collation) Header() *CollationHeader           { return c.header }
