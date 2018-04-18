@@ -5,20 +5,20 @@ contract SMC {
                     bytes32 chunk_root, int128 period, int128 height,
                     address proposer_address, uint proposer_bid,
                     bytes proposer_signature);
-  event CollatorRegistered(address collator, uint pool_index);
-  event CollatorDeregistered(uint pool_index);
-  event CollatorReleased(uint pool_index);
+  event NotaryRegistered(address notary, uint pool_index);
+  event NotaryDeregistered(address notary, uint pool_index, int128 deregistered_period);
+  event NotaryReleased(address notary, uint pool_index);
   event ProposerRegistered(uint pool_index);
   event ProposerDeregistered(uint index);
   event ProposerReleased(uint index);
 
-  // Entry in collator_registry
-  struct Collator {
-    // When collator asked for unregistration
+  // Entry in notary_registry
+  struct Notary {
+    // When notary asked for unregistration
     uint deregistered;
-    // The collator's pool index
+    // The notary's pool index
     uint pool_index;
-    // False if collator has not deposited, true otherwise
+    // False if notary has not deposited, true otherwise
     bool deposited;
   }
   
@@ -45,19 +45,19 @@ contract SMC {
   struct HeaderVars {
     bytes32 entireHeaderHash;
     int score;
-    address collatorAddr;
+    address notaryAddr;
     bool isNewHead;
   }
 
-  // collatorId => Collators
-  // mapping (int => Collator) public collators;
-  address[] public collator_pool;
+  // notaryId => Notaries
+  // mapping (int => Notary) public notaries;
+  address[] public notary_pool;
   // proposerId => Proposer
   // mapping (int => Proposer) public proposers;
   Proposer[] public proposer_pool;
 
-  // Collator registry (deregistered is 0 for not yet deregistered collators)
-  mapping (address => Collator) public collator_registry;
+  // Notary registry (deregistered is 0 for not yet deregistered notaries)
+  mapping (address => Notary) public notary_registry;
   mapping (address => Proposer) public proposer_registry;
   // shard_id => (header_hash => tree root)
   mapping (uint => mapping (bytes32 => bytes32)) public collation_trees;
@@ -66,8 +66,8 @@ contract SMC {
   // shardId => headerHash
   mapping (int => bytes32) shardead;
 
-  // Number of collators
-  uint public collator_pool_len;
+  // Number of notaries
+  uint public notary_pool_len;
   // Indexes of empty slots caused by the function `withdraw`
   uint[] empty_slots_stack;
   // The top index of the stack in empty_slots_stack
@@ -77,52 +77,54 @@ contract SMC {
   uint constant PERIOD_LENGTH = 5;
   // Exact collation body size (1mb)
   uint constant COLLATION_SIZE = 2 ** 20;
-  // Subsidy in vEth
-  uint constant COLLATOR_SUBSIDY = 0.001 ether;
   // Number of shards
   uint constant SHARD_COUNT = 100;
-  // The minimum deposit size for a collator
-  uint constant COLLATOR_DEPOSIT = 1000 ether;
+  // The minimum deposit size for a notary
+  uint constant NOTARY_DEPOSIT = 1000 ether;
   // The minimum deposit size for a proposer
   uint constant PROPOSER_DEPOSIT = 1 ether;
-  // The minimum balance of a proposer (for collators)
+  // The minimum balance of a proposer (for notaries)
   uint constant MIN_PROPOSER_BALANCE = 0.1 ether;
-  // Time the ether is locked by collators (Not constant for testing)
-  uint COLLATOR_LOCKUP_LENGTH = 16128;
+  // Time the ether is locked by notaries (Not constant for testing)
+  uint constant NOTARY_LOCKUP_LENGTH = 16128;
   // Time the ether is locked by proposers (Not constant for testing)
   uint PROPOSER_LOCKUP_LENGTH = 48;
   // Number of periods ahead of current period, which the contract
-  // is able to return the collator of that period
+  // is able to return the notary of that period
   uint constant LOOKAHEAD_LENGTH = 4;
+  // Number of notaries to select from notary pool for each shard in each period
+  uint constant COMMITTEE_SIZE = 135;
+  // Threshold(number of notaries in committee) for a proposal to be deem accepted
+  uint constant QUORUM_SIZE = 90;
 
   // Log the latest period number of the shard
   mapping (int => int) public period_head;
 
-  function SMC(uint collator_lockup_length, uint proposer_lockup_length) public {
-    COLLATOR_LOCKUP_LENGTH = collator_lockup_length;
+  function SMC(uint notary_lockup_length, uint proposer_lockup_length) public {
+    COLLATOR_LOCKUP_LENGTH = notary_lockup_length;
     PROPOSER_LOCKUP_LENGTH = proposer_lockup_length; 
   }
 
   event LOG(uint L);
-  // Uses a block hash as a seed to pseudorandomly select a signer from the collator pool.
-  // [TODO] Chance of being selected should be proportional to the collator's deposit.
+  // Uses a block hash as a seed to pseudorandomly select a signer from the notary pool.
+  // [TODO] Chance of being selected should be proportional to the notary's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function get_eligible_collator(uint shard_id, uint period) public view returns(address) {
+  function get_eligible_notary(uint shard_id, uint period) public view returns(address) {
     uint current_period = block.number / PERIOD_LENGTH;
     uint period_to_look = ((period - LOOKAHEAD_LENGTH) * PERIOD_LENGTH);
     require(period >= current_period);
     require(period <= (current_period + LOOKAHEAD_LENGTH));
-    require(collator_pool_len > 0);
+    require(notary_pool_len > 0);
     if (period <= LOOKAHEAD_LENGTH)
       period_to_look = period;
     require(period_to_look < block.number);
-    return collator_pool[uint(
+    return notary_pool[uint(
       keccak256(
         block.blockhash(period_to_look),
         shard_id
       )
     ) %
-    collator_pool_len
+    notary_pool_len
     ];
   }
 
@@ -135,57 +137,57 @@ contract SMC {
 
   }
 
-  function register_collator() public payable returns(bool) {
-    address collator_address = msg.sender;
-    require(!collator_registry[collator_address].deposited);
+  function register_notary() public payable returns(bool) {
+    address notary_address = msg.sender;
+    require(!notary_registry[notary_address].deposited);
     require(msg.value == COLLATOR_DEPOSIT);
     
     uint index;
     if (!empty_stack()) {
       index = stack_pop();
-      collator_pool[index] = collator_address;
+      notary_pool[index] = notary_address;
     }
     else {
-      index = collator_pool_len; 
-      collator_pool.push(collator_address);
+      index = notary_pool_len; 
+      notary_pool.push(notary_address);
     }
-    ++collator_pool_len;
+    ++notary_pool_len;
 
-    collator_registry[collator_address] = Collator({
+    notary_registry[notary_address] = Notary({
       deregistered: 0,
       pool_index: index,
       deposited: true
     });
-    CollatorRegistered(collator_address, index);
+    NotaryRegistered(notary_address, index);
     return true;
   }
 
-  // Removes the collator from the collator pool and sets deregistered period
-  function deregister_collator() public {
-    address collator_address = msg.sender;
-    uint index = collator_registry[collator_address].pool_index;
-    // Check if collator deposited
-    require(collator_registry[collator_address].deposited);
-    require(collator_pool[index] == collator_address);
+  // Removes the notary from the notary pool and sets deregistered period
+  function deregister_notary() public {
+    address notary_address = msg.sender;
+    uint index = notary_registry[notary_address].pool_index;
+    // Check if notary deposited
+    require(notary_registry[notary_address].deposited);
+    require(notary_pool[index] == notary_address);
     
     // Deregistered period
-    collator_registry[collator_address].deregistered = block.number / PERIOD_LENGTH;
+    notary_registry[notary_address].deregistered = block.number / PERIOD_LENGTH;
 
     stack_push(index);
-    --collator_pool_len;
-    CollatorDeregistered(index);
+    --notary_pool_len;
+    NotaryDeregistered(index);
   }
 
-  function release_collator() public {
-    address collator_address = msg.sender;
-    require(collator_registry[collator_address].deposited == true);
+  function release_notary() public {
+    address notary_address = msg.sender;
+    require(notary_registry[notary_address].deposited == true);
     // Deregistered
-    require(collator_registry[collator_address].deregistered != 0);
+    require(notary_registry[notary_address].deregistered != 0);
     // Locked up period
-    require((block.number / PERIOD_LENGTH) > (collator_registry[collator_address].deregistered + COLLATOR_LOCKUP_LENGTH));
+    require((block.number / PERIOD_LENGTH) > (notary_registry[notary_address].deregistered + COLLATOR_LOCKUP_LENGTH));
 
-    delete collator_registry[collator_address];
-    collator_address.transfer(COLLATOR_DEPOSIT);
+    delete notary_registry[notary_address];
+    notary_address.transfer(COLLATOR_DEPOSIT);
   }
 
   function register_proposer() public payable returns(int) {
@@ -235,9 +237,9 @@ contract SMC {
     // assert(periodHead[_shardId] < int(_expectedPeriodNumber));
 
     // // Check the signature with validation_code_addr
-    // headerVars.collatorAddr = getEligibleCollator(_shardId, block.number/periodLength);
-    // require(headerVars.collatorAddr != 0x0);
-    // require(msg.sender == headerVars.collatorAddr);
+    // headerVars.notaryAddr = getEligibleNotary(_shardId, block.number/periodLength);
+    // require(headerVars.notaryAddr != 0x0);
+    // require(msg.sender == headerVars.notaryAddr);
 
     // // Check score == collationNumber
     // headerVars.score = collationHeaders[_shardId][_parentHash].score + 1;
