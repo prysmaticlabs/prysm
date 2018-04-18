@@ -6,7 +6,7 @@ contract SMC {
                     address proposer_address, uint proposer_bid,
                     bytes proposer_signature);
   event NotaryRegistered(address notary, uint pool_index);
-  event NotaryDeregistered(address notary, uint pool_index, int128 deregistered_period);
+  event NotaryDeregistered(address notary, uint pool_index, uint deregistered_period);
   event NotaryReleased(address notary, uint pool_index);
   event ProposerRegistered(uint pool_index);
   event ProposerDeregistered(uint index);
@@ -86,7 +86,7 @@ contract SMC {
   // The minimum balance of a proposer (for notaries)
   uint constant MIN_PROPOSER_BALANCE = 0.1 ether;
   // Time the ether is locked by notaries (Not constant for testing)
-  uint constant NOTARY_LOCKUP_LENGTH = 16128;
+  uint NOTARY_LOCKUP_LENGTH = 16128;
   // Time the ether is locked by proposers (Not constant for testing)
   uint PROPOSER_LOCKUP_LENGTH = 48;
   // Number of periods ahead of current period, which the contract
@@ -101,7 +101,7 @@ contract SMC {
   mapping (int => int) public period_head;
 
   function SMC(uint notary_lockup_length, uint proposer_lockup_length) public {
-    COLLATOR_LOCKUP_LENGTH = notary_lockup_length;
+    NOTARY_LOCKUP_LENGTH = notary_lockup_length;
     PROPOSER_LOCKUP_LENGTH = proposer_lockup_length; 
   }
 
@@ -140,7 +140,7 @@ contract SMC {
   function register_notary() public payable returns(bool) {
     address notary_address = msg.sender;
     require(!notary_registry[notary_address].deposited);
-    require(msg.value == COLLATOR_DEPOSIT);
+    require(msg.value == NOTARY_DEPOSIT);
     
     uint index;
     if (!empty_stack()) {
@@ -163,7 +163,7 @@ contract SMC {
   }
 
   // Removes the notary from the notary pool and sets deregistered period
-  function deregister_notary() public {
+  function deregister_notary() public returns(bool) {
     address notary_address = msg.sender;
     uint index = notary_registry[notary_address].pool_index;
     // Check if notary deposited
@@ -171,23 +171,28 @@ contract SMC {
     require(notary_pool[index] == notary_address);
     
     // Deregistered period
-    notary_registry[notary_address].deregistered = block.number / PERIOD_LENGTH;
+    uint deregistered_period = block.number / PERIOD_LENGTH;
+    notary_registry[notary_address].deregistered = deregistered_period;
 
     stack_push(index);
     --notary_pool_len;
-    NotaryDeregistered(index);
+    NotaryDeregistered(notary_address, index, deregistered_period);
+    return true;
   }
 
-  function release_notary() public {
+  function release_notary() public returns(bool) {
     address notary_address = msg.sender;
+    uint index = notary_registry[notary_address].pool_index;
     require(notary_registry[notary_address].deposited == true);
     // Deregistered
     require(notary_registry[notary_address].deregistered != 0);
     // Locked up period
-    require((block.number / PERIOD_LENGTH) > (notary_registry[notary_address].deregistered + COLLATOR_LOCKUP_LENGTH));
+    require((block.number / PERIOD_LENGTH) > (notary_registry[notary_address].deregistered + NOTARY_LOCKUP_LENGTH));
 
     delete notary_registry[notary_address];
-    notary_address.transfer(COLLATOR_DEPOSIT);
+    notary_address.transfer(NOTARY_DEPOSIT);
+    NotaryReleased(notary_address, index);
+    return true;
   }
 
   function register_proposer() public payable returns(int) {
