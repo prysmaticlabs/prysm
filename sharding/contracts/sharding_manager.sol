@@ -73,6 +73,11 @@ contract SMC {
   // The top index of the stack in empty_slots_stack
   uint empty_slots_stack_top;
 
+  // Notary sampling info to keep sample size unchaged through out period
+  uint current_period_notary_sample_size;
+  uint next_period_notary_sample_size;
+  uint sample_size_last_updated_period;
+
   // Constant values
   uint constant PERIOD_LENGTH = 5;
   // Exact collation body size (1mb)
@@ -81,6 +86,8 @@ contract SMC {
   uint constant SHARD_COUNT = 100;
   // The minimum deposit size for a notary
   uint constant NOTARY_DEPOSIT = 1000 ether;
+  // The reward for notary on voting for a collation
+  uint constant NOTARY_REWARD = 0.001 ether;
   // The minimum deposit size for a proposer
   uint constant PROPOSER_DEPOSIT = 1 ether;
   // The minimum balance of a proposer (for notaries)
@@ -141,6 +148,9 @@ contract SMC {
     address notary_address = msg.sender;
     require(!notary_registry[notary_address].deposited);
     require(msg.value == NOTARY_DEPOSIT);
+
+    // update notary_sample_size
+    update_notary_sample_size();
     
     uint index;
     if (!empty_stack()) {
@@ -158,6 +168,12 @@ contract SMC {
       pool_index: index,
       deposited: true
     });
+
+    // if current index is greater than notary_sample_size, increase notary_sample_size for next period
+    if (index >= next_period_notary_sample_size) {
+      next_period_notary_sample_size = index + 1;
+    }
+
     NotaryRegistered(notary_address, index);
     return true;
   }
@@ -169,6 +185,9 @@ contract SMC {
     // Check if notary deposited
     require(notary_registry[notary_address].deposited);
     require(notary_pool[index] == notary_address);
+
+    // update notary_sample_size
+    update_notary_sample_size();
     
     // Deregistered period
     uint deregistered_period = block.number / PERIOD_LENGTH;
@@ -192,6 +211,15 @@ contract SMC {
     delete notary_registry[notary_address];
     notary_address.transfer(NOTARY_DEPOSIT);
     NotaryReleased(notary_address, index);
+    return true;
+  }
+
+  function update_notary_sample_size() returns(bool) {
+    uint current_period = block.number / PERIOD_LENGTH;
+    require(current_period < sample_size_last_updated_period);
+
+    current_period_notary_sample_size = next_period_notary_sample_size;
+    sample_size_last_updated_period = current_period;
     return true;
   }
 
