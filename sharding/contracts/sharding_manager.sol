@@ -73,7 +73,7 @@ contract SMC {
   // The top index of the stack in empty_slots_stack
   uint empty_slots_stack_top;
 
-  // Notary sampling info to keep sample size unchaged through out period
+  // Notary sample size at current period and next period
   uint current_period_notary_sample_size;
   uint next_period_notary_sample_size;
   uint sample_size_last_updated_period;
@@ -116,23 +116,26 @@ contract SMC {
   // Uses a block hash as a seed to pseudorandomly select a signer from the notary pool.
   // [TODO] Chance of being selected should be proportional to the notary's deposit.
   // Should be able to return a value for the current period or any future period up to.
-  function get_eligible_notary(uint shard_id, uint period) public view returns(address) {
+  function is_notary_in_committee(uint shard_id, uint period) public view returns(bool) {
     uint current_period = block.number / PERIOD_LENGTH;
-    uint period_to_look = ((period - LOOKAHEAD_LENGTH) * PERIOD_LENGTH);
-    require(period >= current_period);
-    require(period <= (current_period + LOOKAHEAD_LENGTH));
-    require(notary_pool_len > 0);
-    if (period <= LOOKAHEAD_LENGTH)
-      period_to_look = period;
-    require(period_to_look < block.number);
-    return notary_pool[uint(
-      keccak256(
-        block.blockhash(period_to_look),
-        shard_id
-      )
-    ) %
-    notary_pool_len
-    ];
+
+    // Determine notary pool length based on notary sample size
+    uint sample_size;
+    if (period > sample_size_last_updated_period) {
+      sample_size = next_period_notary_sample_size;
+    } else {
+      sample_size = current_period_notary_sample_size;
+    }
+
+    uint period_to_look = period * PERIOD_LENGTH - 1;
+
+    for (uint i = 1; i <= QUORUM_SIZE; i++) {
+      uint index = uint(keccak256(block.blockhash(period_to_look), index)) % sample_size;
+      if (notary_pool[index] == msg.sender) {
+        return true;
+      }
+    }
+    return false; 
   }
 
   function compute_header_hash(uint256 shard_id,
@@ -214,7 +217,7 @@ contract SMC {
     return true;
   }
 
-  function update_notary_sample_size() returns(bool) {
+  function update_notary_sample_size() private returns(bool) {
     uint current_period = block.number / PERIOD_LENGTH;
     require(current_period < sample_size_last_updated_period);
 
