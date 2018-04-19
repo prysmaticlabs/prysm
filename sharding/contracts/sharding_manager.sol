@@ -12,33 +12,26 @@ contract SMC {
   event ProposerDeregistered(uint index);
   event ProposerReleased(uint index);
 
-  // Entry in notary_registry
   struct Notary {
-    // When notary asked for unregistration
-    uint deregistered;
-    // The notary's pool index
+    uint deregistered_period;
     uint pool_index;
-    // False if notary has not deposited, true otherwise
     bool deposited;
   }
   
-  // Entry in proposer_registry
   struct Proposer {
-    // Shard id of the deposit
-    uint shardId;
-    // Deposit in ether in each shard
-    uint[] deposit;
+    uint deregistered_period;
+    uint balances
   }
 
   struct CollationHeader {
-    uint256 shard_id;         // pointer to shard
-    bytes32 parent_hash;      // pointer to parent header
-    bytes32 chunk_root;       // pointer to collation body
-    int128 period;            // Period which header should be included
-    int128 height;            // Collation's height
-    address proposer_address; // Proposer's address 
-    uint256 proposer_bid;     // Proposer's bid
-    bytes proposer_signature; // Proposer's signature
+    uint shard_id;            // Number of the shard ID
+    bytes32 parent_hash;      // Hash of the parent collation
+    bytes32 chunk_root;       // Root hash of the collation body
+    uint period;              // Period which header should be included
+    uint height;              // Height of the collation
+    address proposer_address;
+    uint proposer_bid;     
+    bytes proposer_signature; 
   }
 
   // Packed variables to be used in addHeader
@@ -49,11 +42,7 @@ contract SMC {
     bool isNewHead;
   }
 
-  // notaryId => Notaries
-  // mapping (int => Notary) public notaries;
   address[] public notary_pool;
-  // proposerId => Proposer
-  // mapping (int => Proposer) public proposers;
   Proposer[] public proposer_pool;
 
   // Notary registry (deregistered is 0 for not yet deregistered notaries)
@@ -113,9 +102,8 @@ contract SMC {
   }
 
   event LOG(uint L);
-  // Uses a block hash as a seed to pseudorandomly select a signer from the notary pool.
-  // [TODO] Chance of being selected should be proportional to the notary's deposit.
-  // Should be able to return a value for the current period or any future period up to.
+
+
   function is_notary_in_committee(uint shard_id, uint period) public view returns(bool) {
     uint current_period = block.number / PERIOD_LENGTH;
 
@@ -152,7 +140,6 @@ contract SMC {
     require(!notary_registry[notary_address].deposited);
     require(msg.value == NOTARY_DEPOSIT);
 
-    // update notary_sample_size
     update_notary_sample_size();
     
     uint index;
@@ -167,7 +154,7 @@ contract SMC {
     ++notary_pool_len;
 
     notary_registry[notary_address] = Notary({
-      deregistered: 0,
+      deregistered_period: 0,
       pool_index: index,
       deposited: true
     });
@@ -181,20 +168,16 @@ contract SMC {
     return true;
   }
 
-  // Removes the notary from the notary pool and sets deregistered period
   function deregister_notary() public returns(bool) {
     address notary_address = msg.sender;
     uint index = notary_registry[notary_address].pool_index;
-    // Check if notary deposited
     require(notary_registry[notary_address].deposited);
     require(notary_pool[index] == notary_address);
 
-    // update notary_sample_size
     update_notary_sample_size();
     
-    // Deregistered period
     uint deregistered_period = block.number / PERIOD_LENGTH;
-    notary_registry[notary_address].deregistered = deregistered_period;
+    notary_registry[notary_address].deregistered_period = deregistered_period;
 
     stack_push(index);
     --notary_pool_len;
@@ -206,10 +189,8 @@ contract SMC {
     address notary_address = msg.sender;
     uint index = notary_registry[notary_address].pool_index;
     require(notary_registry[notary_address].deposited == true);
-    // Deregistered
-    require(notary_registry[notary_address].deregistered != 0);
-    // Locked up period
-    require((block.number / PERIOD_LENGTH) > (notary_registry[notary_address].deregistered + NOTARY_LOCKUP_LENGTH));
+    require(notary_registry[notary_address].deregistered_period != 0);
+    require((block.number / PERIOD_LENGTH) > (notary_registry[notary_address].deregistered_period + NOTARY_LOCKUP_LENGTH));
 
     delete notary_registry[notary_address];
     notary_address.transfer(NOTARY_DEPOSIT);
@@ -246,61 +227,12 @@ contract SMC {
 
   }
 
-  // Attempts to process a collation header, returns true on success, reverts on failure.
   function addHeader(uint _shardId, uint period, bytes32 height,
                      bytes32 _parent_hash, bytes32 chunk_root,
                      address proposer_address, uint proposer_bid,
                      bytes proposer_signature) public returns(bool) {
-    // HeaderVars memory headerVars;
-
-    // // Check if the header is valid
-    // require((_shardId >= 0) && (_shardId < shardCount));
-    // require(block.number >= periodLength);
-    // require(_expectedPeriodNumber == block.number / periodLength);
-    // require(_periodStartPrevHash == block.blockhash(_expectedPeriodNumber * periodLength - 1));
-
-    // // Check if this header already exists
-    // headerVars.entireHeaderHash = keccak256(_shardId, _expectedPeriodNumber, _periodStartPrevHash,
-    //                                _parentHash, _transactionRoot, bytes32(_coinbase),
-    //                                _stateRoot, _receiptRoot, _number);
-    // assert(collationHeaders[_shardId][headerVars.entireHeaderHash].score == 0);
-    // // Check whether the parent exists.
-    // // if (parent_collation_hash == 0), i.e., is the genesis,
-    // // then there is no need to check.
-    // if (_parentHash != 0x0)
-    //     assert(collationHeaders[_shardId][_parentHash].score > 0);
-    // // Check if only one collation in one period
-    // assert(periodHead[_shardId] < int(_expectedPeriodNumber));
-
-    // // Check the signature with validation_code_addr
-    // headerVars.notaryAddr = getEligibleNotary(_shardId, block.number/periodLength);
-    // require(headerVars.notaryAddr != 0x0);
-    // require(msg.sender == headerVars.notaryAddr);
-
-    // // Check score == collationNumber
-    // headerVars.score = collationHeaders[_shardId][_parentHash].score + 1;
-    // require(_number == headerVars.score);
-
-    // // Add the header
-    // collationHeaders[_shardId][headerVars.entireHeaderHash] = CollationHeader({
-    //   parentHash: _parentHash,
-    //   score: headerVars.score
-    // });
-
-    // // Update the latest period number
-    // periodHead[_shardId] = int(_expectedPeriodNumber);
-
-    // // Determine the head
-    // if (headerVars.score > collationHeaders[_shardId][shardHead[_shardId]].score) {
-    //   shardHead[_shardId] = headerVars.entireHeaderHash;
-    //   headerVars.isNewHead = true;
-    // }
-
-    // CollationAdded(_shardId, _expectedPeriodNumber, _periodStartPrevHash,
-    //                _parentHash, _transactionRoot, _coinbase, _stateRoot, 
-    //                _receiptRoot, _number, headerVars.isNewHead, headerVars.score);
-
-    // return true;
+  //  TODO: Anyone can call this at any time. The first header to get included for a given shard in a given period gets in,
+  //       all others don’t. This function just emits a log
   }
 
 
