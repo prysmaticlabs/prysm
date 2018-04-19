@@ -1,37 +1,23 @@
 pragma solidity ^0.4.19;
 
 contract SMC {
-  event HeaderAdded(uint indexed shard_id, bytes32 parent_hash,
-                    bytes32 chunk_root, int128 period, int128 height,
-                    address proposer_address, uint proposer_bid,
-                    bytes proposer_signature);
+  event HeaderAdded(uint indexed shard_id, bytes32 chunk_root,
+                      int128 period, address proposer_address);
   event NotaryRegistered(address notary, uint pool_index);
   event NotaryDeregistered(address notary, uint pool_index, uint deregistered_period);
   event NotaryReleased(address notary, uint pool_index);
-  event ProposerRegistered(uint pool_index);
-  event ProposerDeregistered(uint index);
-  event ProposerReleased(uint index);
 
   struct Notary {
     uint deregisteredPeriod;
     uint poolIndex;
     bool deposited;
   }
-  
-  struct Proposer {
-    uint deregisteredPeriod;
-    uint balances
-  }
 
   struct CollationHeader {
     uint shardId;             // Number of the shard ID
-    bytes32 parentHash;       // Hash of the parent collation
     bytes32 chunkRoot;        // Root hash of the collation body
     uint period;              // Period which header should be included
-    uint height;              // Height of the collation
     address proposerAddress;
-    uint proposerBid;     
-    bytes proposerSignature; 
   }
 
   // Packed variables to be used in addHeader
@@ -43,11 +29,9 @@ contract SMC {
   }
 
   address[] public notaryPool;
-  Proposer[] public proposerPool;
 
   // Notary registry (deregistered is 0 for not yet deregistered notaries)
   mapping (address => Notary) public notaryRegistry;
-  mapping (address => Proposer) public proposerRegistry;
   // shardId => (header_hash => tree root)
   mapping (uint => mapping (bytes32 => bytes32)) public collationTrees;
   // shardId => (headerHash => CollationHeader)
@@ -77,14 +61,8 @@ contract SMC {
   uint constant NOTARY_DEPOSIT = 1000 ether;
   // The reward for notary on voting for a collation
   uint constant NOTARY_REWARD = 0.001 ether;
-  // The minimum deposit size for a proposer
-  uint constant PROPOSER_DEPOSIT = 1 ether;
-  // The minimum balance of a proposer
-  uint constant MIN_PROPOSER_BALANCE = 0.1 ether;
   // Time the ether is locked by notaries
   uint NOTARY_LOCKUP_LENGTH = 16128;
-  // Time the ether is locked by proposers
-  uint PROPOSER_LOCKUP_LENGTH = 48;
   // Number of periods ahead of current period, which the contract
   // is able to return the notary of that period
   uint constant LOOKAHEAD_LENGTH = 4;
@@ -96,13 +74,9 @@ contract SMC {
   // Log the latest period number of the shard
   mapping (int => int) public periodHead;
 
-  function SMC(uint notary_lockup_length, uint proposer_lockup_length) public {
+  function SMC(uint notary_lockup_length) public {
     NOTARY_LOCKUP_LENGTH = notary_lockup_length;
-    PROPOSER_LOCKUP_LENGTH = proposer_lockup_length; 
   }
-
-  event LOG(uint L);
-
 
   function isNotaryInCommittee(uint shardId, uint period) public view returns(bool) {
     uint currentPeriod = block.number / PERIOD_LENGTH;
@@ -198,30 +172,8 @@ contract SMC {
     return true;
   }
 
-  function registerProposer() public payable returns(int) {
-
-  }
-
-  function deregisterProposer() public {
-
-  }
-
-  function releaseProposer() public {
-
-  }
-
-  function proposerAddBalance(uint shardId) payable public {
-
-  }
-
-  function proposerWithdrawBalance(uint shardId) public {
-
-  }
-
-  function addHeader(uint _shardId, uint period, bytes32 height,
-                     bytes32 _parentHash, bytes32 chunkRoot,
-                     address proposerAddress, uint proposerBid,
-                     bytes proposerSignature) public returns(bool) {
+  function addHeader(uint _shardId, uint period, bytes32 chunkRoot,
+                     address proposerAddress) public returns(bool) {
     /*
       TODO: Anyone can call this at any time. The first header to get included for a given shard in a given period gets in,
       all others don’t. This function just emits a log
@@ -254,7 +206,6 @@ contract SMC {
                                bytes32 parentHash, 
                                bytes32 chunkRoot, 
                                uint256 period,
-                               address proposerAddress,
-                               uint256 proposerBid) public returns(bytes32){
+                               address proposerAddress) public returns(bytes32){
 
   }
