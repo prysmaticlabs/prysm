@@ -13,25 +13,25 @@ contract SMC {
   event ProposerReleased(uint index);
 
   struct Notary {
-    uint deregistered_period;
-    uint pool_index;
+    uint deregisteredPeriod;
+    uint poolIndex;
     bool deposited;
   }
   
   struct Proposer {
-    uint deregistered_period;
+    uint deregisteredPeriod;
     uint balances
   }
 
   struct CollationHeader {
-    uint shard_id;            // Number of the shard ID
-    bytes32 parent_hash;      // Hash of the parent collation
-    bytes32 chunk_root;       // Root hash of the collation body
+    uint shardId;             // Number of the shard ID
+    bytes32 parentHash;       // Hash of the parent collation
+    bytes32 chunkRoot;        // Root hash of the collation body
     uint period;              // Period which header should be included
     uint height;              // Height of the collation
-    address proposer_address;
-    uint proposer_bid;     
-    bytes proposer_signature; 
+    address proposerAddress;
+    uint proposerBid;     
+    bytes proposerSignature; 
   }
 
   // Packed variables to be used in addHeader
@@ -42,30 +42,30 @@ contract SMC {
     bool isNewHead;
   }
 
-  address[] public notary_pool;
-  Proposer[] public proposer_pool;
+  address[] public notaryPool;
+  Proposer[] public proposerPool;
 
   // Notary registry (deregistered is 0 for not yet deregistered notaries)
-  mapping (address => Notary) public notary_registry;
-  mapping (address => Proposer) public proposer_registry;
-  // shard_id => (header_hash => tree root)
-  mapping (uint => mapping (bytes32 => bytes32)) public collation_trees;
+  mapping (address => Notary) public notaryRegistry;
+  mapping (address => Proposer) public proposerRegistry;
+  // shardId => (header_hash => tree root)
+  mapping (uint => mapping (bytes32 => bytes32)) public collationTrees;
   // shardId => (headerHash => CollationHeader)
   mapping (int => mapping (bytes32 => CollationHeader)) public collationHeaders;
   // shardId => headerHash
   mapping (int => bytes32) shardead;
 
   // Number of notaries
-  uint public notary_pool_len;
+  uint public notaryPoolLength;
   // Indexes of empty slots caused by the function `withdraw`
-  uint[] empty_slots_stack;
-  // The top index of the stack in empty_slots_stack
-  uint empty_slots_stack_top;
+  uint[] emptySlotsStack;
+  // The top index of the stack in emptySlotsStack
+  uint emptySlotsStackTop;
 
   // Notary sample size at current period and next period
-  uint current_period_notary_sample_size;
-  uint next_period_notary_sample_size;
-  uint sample_size_last_updated_period;
+  uint currentPeriodNotarySampleSize;
+  uint nextPeriodNotarySampleSize;
+  uint sampleSizeLastUpdatedPeriod;
 
   // Constant values
   uint constant PERIOD_LENGTH = 5;
@@ -79,11 +79,11 @@ contract SMC {
   uint constant NOTARY_REWARD = 0.001 ether;
   // The minimum deposit size for a proposer
   uint constant PROPOSER_DEPOSIT = 1 ether;
-  // The minimum balance of a proposer (for notaries)
+  // The minimum balance of a proposer
   uint constant MIN_PROPOSER_BALANCE = 0.1 ether;
-  // Time the ether is locked by notaries (Not constant for testing)
+  // Time the ether is locked by notaries
   uint NOTARY_LOCKUP_LENGTH = 16128;
-  // Time the ether is locked by proposers (Not constant for testing)
+  // Time the ether is locked by proposers
   uint PROPOSER_LOCKUP_LENGTH = 48;
   // Number of periods ahead of current period, which the contract
   // is able to return the notary of that period
@@ -94,7 +94,7 @@ contract SMC {
   uint constant QUORUM_SIZE = 90;
 
   // Log the latest period number of the shard
-  mapping (int => int) public period_head;
+  mapping (int => int) public periodHead;
 
   function SMC(uint notary_lockup_length, uint proposer_lockup_length) public {
     NOTARY_LOCKUP_LENGTH = notary_lockup_length;
@@ -104,155 +104,157 @@ contract SMC {
   event LOG(uint L);
 
 
-  function is_notary_in_committee(uint shard_id, uint period) public view returns(bool) {
-    uint current_period = block.number / PERIOD_LENGTH;
+  function isNotaryInCommittee(uint shardId, uint period) public view returns(bool) {
+    uint currentPeriod = block.number / PERIOD_LENGTH;
 
     // Determine notary pool length based on notary sample size
-    uint sample_size;
-    if (period > sample_size_last_updated_period) {
-      sample_size = next_period_notary_sample_size;
+    uint sampleSize;
+    if (period > sampleSizeLastUpdatedPeriod) {
+      sampleSize = nextPeriodNotarySampleSize;
     } else {
-      sample_size = current_period_notary_sample_size;
+      sampleSize = currentPeriodNotarySampleSize;
     }
 
-    uint period_to_look = period * PERIOD_LENGTH - 1;
+    uint periodToLook = period * PERIOD_LENGTH - 1;
 
     for (uint i = 1; i <= QUORUM_SIZE; i++) {
-      uint index = uint(keccak256(block.blockhash(period_to_look), index)) % sample_size;
-      if (notary_pool[index] == msg.sender) {
+      uint index = uint(keccak256(block.blockhash(periodToLook), index)) % sampleSize;
+      if (notaryPool[index] == msg.sender) {
         return true;
       }
     }
     return false; 
   }
 
-  function compute_header_hash(uint256 shard_id,
-                               bytes32 parent_hash, 
-                               bytes32 chunk_root, 
-                               uint256 period,
-                               address proposer_address,
-                               uint256 proposer_bid) public returns(bytes32){
-
-  }
-
-  function register_notary() public payable returns(bool) {
-    address notary_address = msg.sender;
-    require(!notary_registry[notary_address].deposited);
+  function registerNotary() public payable returns(bool) {
+    address notaryAddress = msg.sender;
+    require(!notaryRegistry[notaryAddress].deposited);
     require(msg.value == NOTARY_DEPOSIT);
 
-    update_notary_sample_size();
+    updateNotarySampleSize();
     
     uint index;
-    if (!empty_stack()) {
-      index = stack_pop();
-      notary_pool[index] = notary_address;
+    if (!emptyStack()) {
+      index = stackPop();
+      notaryPool[index] = notaryAddress;
     }
     else {
-      index = notary_pool_len; 
-      notary_pool.push(notary_address);
+      index = notaryPoolLength; 
+      notaryPool.push(notaryAddress);
     }
-    ++notary_pool_len;
+    ++notaryPoolLength;
 
-    notary_registry[notary_address] = Notary({
-      deregistered_period: 0,
-      pool_index: index,
+    notaryRegistry[notaryAddress] = Notary({
+      deregisteredPeriod: 0,
+      poolIndex: index,
       deposited: true
     });
 
-    // if current index is greater than notary_sample_size, increase notary_sample_size for next period
-    if (index >= next_period_notary_sample_size) {
-      next_period_notary_sample_size = index + 1;
+    // if current index is greater than notary sample size, increase notary sample size for next period
+    if (index >= nextPeriodNotarySampleSize) {
+      nextPeriodNotarySampleSize = index + 1;
     }
 
-    NotaryRegistered(notary_address, index);
+    NotaryRegistered(notaryAddress, index);
     return true;
   }
 
-  function deregister_notary() public returns(bool) {
-    address notary_address = msg.sender;
-    uint index = notary_registry[notary_address].pool_index;
-    require(notary_registry[notary_address].deposited);
-    require(notary_pool[index] == notary_address);
+  function deregisterNotary() public returns(bool) {
+    address notaryAddress = msg.sender;
+    uint index = notaryRegistry[notaryAddress].poolIndex;
+    require(notaryRegistry[notaryAddress].deposited);
+    require(notaryPool[index] == notaryAddress);
 
-    update_notary_sample_size();
+    updateNotarySampleSize();
     
-    uint deregistered_period = block.number / PERIOD_LENGTH;
-    notary_registry[notary_address].deregistered_period = deregistered_period;
+    uint deregisteredPeriod = block.number / PERIOD_LENGTH;
+    notaryRegistry[notaryAddress].deregisteredPeriod = deregisteredPeriod;
 
-    stack_push(index);
-    --notary_pool_len;
-    NotaryDeregistered(notary_address, index, deregistered_period);
+    stackPush(index);
+    --notaryPoolLength;
+    NotaryDeregistered(notaryAddress, index, deregisteredPeriod);
     return true;
   }
 
-  function release_notary() public returns(bool) {
-    address notary_address = msg.sender;
-    uint index = notary_registry[notary_address].pool_index;
-    require(notary_registry[notary_address].deposited == true);
-    require(notary_registry[notary_address].deregistered_period != 0);
-    require((block.number / PERIOD_LENGTH) > (notary_registry[notary_address].deregistered_period + NOTARY_LOCKUP_LENGTH));
+  function releaseNotary() public returns(bool) {
+    address notaryAddress = msg.sender;
+    uint index = notaryRegistry[notaryAddress].poolIndex;
+    require(notaryRegistry[notaryAddress].deposited == true);
+    require(notaryRegistry[notaryAddress].deregisteredPeriod != 0);
+    require((block.number / PERIOD_LENGTH) > (notaryRegistry[notaryAddress].deregisteredPeriod + NOTARY_LOCKUP_LENGTH));
 
-    delete notary_registry[notary_address];
-    notary_address.transfer(NOTARY_DEPOSIT);
-    NotaryReleased(notary_address, index);
+    delete notaryRegistry[notaryAddress];
+    notaryAddress.transfer(NOTARY_DEPOSIT);
+    NotaryReleased(notaryAddress, index);
     return true;
   }
 
-  function update_notary_sample_size() private returns(bool) {
-    uint current_period = block.number / PERIOD_LENGTH;
-    require(current_period < sample_size_last_updated_period);
+  function updateNotarySampleSize() private returns(bool) {
+    uint currentPeriod = block.number / PERIOD_LENGTH;
+    require(currentPeriod < sampleSizeLastUpdatedPeriod);
 
-    current_period_notary_sample_size = next_period_notary_sample_size;
-    sample_size_last_updated_period = current_period;
+    currentPeriodNotarySampleSize = nextPeriodNotarySampleSize;
+    sampleSizeLastUpdatedPeriod = currentPeriod;
     return true;
   }
 
-  function register_proposer() public payable returns(int) {
+  function registerProposer() public payable returns(int) {
 
   }
 
-  function deregister_proposer() public {
+  function deregisterProposer() public {
 
   }
 
-  function release_proposer() public {
+  function releaseProposer() public {
 
   }
 
-  function proposer_add_balance(uint shard_id) payable public {
+  function proposerAddBalance(uint shardId) payable public {
 
   }
 
-  function proposer_withdraw_balance(uint shard_id) public {
+  function proposerWithdrawBalance(uint shardId) public {
 
   }
 
   function addHeader(uint _shardId, uint period, bytes32 height,
-                     bytes32 _parent_hash, bytes32 chunk_root,
-                     address proposer_address, uint proposer_bid,
-                     bytes proposer_signature) public returns(bool) {
-  //  TODO: Anyone can call this at any time. The first header to get included for a given shard in a given period gets in,
-  //       all others don’t. This function just emits a log
+                     bytes32 _parentHash, bytes32 chunkRoot,
+                     address proposerAddress, uint proposerBid,
+                     bytes proposerSignature) public returns(bool) {
+    /*
+      TODO: Anyone can call this at any time. The first header to get included for a given shard in a given period gets in,
+      all others don’t. This function just emits a log
+    */
   }
 
 
-  function empty_stack() internal view returns(bool) {
-    return empty_slots_stack_top == 0;
+  function emptyStack() internal view returns(bool) {
+    return emptySlotsStackTop == 0;
   }
 
-  function stack_push(uint index) internal {
-    if (empty_slots_stack.length == empty_slots_stack_top)
-      empty_slots_stack.push(index);
+  function stackPush(uint index) internal {
+    if (emptySlotsStack.length == emptySlotsStackTop)
+      emptySlotsStack.push(index);
     else
-      empty_slots_stack[empty_slots_stack_top] = index;
+      emptySlotsStack[emptySlotsStackTop] = index;
 
-    ++empty_slots_stack_top;
+    ++emptySlotsStackTop;
   }
   // Pop element from stack
   // Caller should check if stack is empty
-  function stack_pop() internal returns(uint) {
-    require(empty_slots_stack_top > 1);
-    --empty_slots_stack_top;
-    return empty_slots_stack[empty_slots_stack_top];
+  function stackPop() internal returns(uint) {
+    require(emptySlotsStackTop > 1);
+    --emptySlotsStackTop;
+    return emptySlotsStack[emptySlotsStackTop];
   }
 }
+
+  function computeHeaderHash(uint256 shardId,
+                               bytes32 parentHash, 
+                               bytes32 chunkRoot, 
+                               uint256 period,
+                               address proposerAddress,
+                               uint256 proposerBid) public returns(bytes32){
+
+  }
