@@ -72,7 +72,7 @@ contract SMC {
     // Log the latest period number of the shard
     mapping (int => int) public periodHead;
 
-    /// Checks if a notary with given shard id and period has been chosen as 
+    /// Checks if a notary with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
     function isNotaryInCommittee(uint shardId, uint period) public view returns(bool) {
         uint currentPeriod = block.number / PERIOD_LENGTH;
@@ -94,7 +94,7 @@ contract SMC {
                 return true;
             }
         }
-        return false; 
+        return false;
     }
 
     /// Registers notary to notatery registry, locks in the notary deposit,
@@ -106,11 +106,11 @@ contract SMC {
 
         // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
-        
+
         uint index;
         if (emptyStack()) {
-            index = notaryPoolLength; 
-            notaryPool.push(notaryAddress);          
+            index = notaryPoolLength;
+            notaryPool.push(notaryAddress);
         } else {
             index = stackPop();
             notaryPool[index] = notaryAddress;
@@ -127,7 +127,7 @@ contract SMC {
         if (index >= nextPeriodNotarySampleSize) {
             nextPeriodNotarySampleSize = index + 1;
         }
-        
+
         emit NotaryRegistered(notaryAddress, index);
         return true;
     }
@@ -143,7 +143,7 @@ contract SMC {
 
         // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
-        
+
         uint deregisteredPeriod = block.number / PERIOD_LENGTH;
         notaryRegistry[notaryAddress].deregisteredPeriod = deregisteredPeriod;
 
@@ -171,7 +171,7 @@ contract SMC {
     /// Calcuates the hash of the header from the input parameters
     function computeHeaderHash(
         uint256 shardId,
-        bytes32 parentHash, 
+        bytes32 parentHash,
         bytes32 chunkRoot,
         uint256 period,
         address proposerAddress
@@ -185,7 +185,7 @@ contract SMC {
     function addHeader(
         uint _shardId,
         uint period,
-        bytes32 chunkRoot, 
+        bytes32 chunkRoot,
         address proposerAddress
         ) public returns(bool) {
       /*
@@ -199,8 +199,9 @@ contract SMC {
     /// before notary registration/deregistration so correct size can be applied next period
     function updateNotarySampleSize() internal returns(bool) {
         uint currentPeriod = block.number / PERIOD_LENGTH;
-        require(currentPeriod < sampleSizeLastUpdatedPeriod);
-
+        if (currentPeriod < sampleSizeLastUpdatedPeriod) {
+            return false;
+        }
         currentPeriodNotarySampleSize = nextPeriodNotarySampleSize;
         sampleSizeLastUpdatedPeriod = currentPeriod;
         return true;
@@ -226,5 +227,5 @@ contract SMC {
         require(emptySlotsStackTop > 1);
         --emptySlotsStackTop;
         return emptySlotsStack[emptySlotsStackTop];
-    }    
+    }
 }
