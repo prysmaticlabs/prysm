@@ -14,16 +14,16 @@ import (
 )
 
 type SMCConfig struct {
-	collatorLockupLenght *big.Int
+	notaryLockupLenght *big.Int
 	proposerLockupLength *big.Int
 }
 
 var (
 	mainKey, _               = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
-	collatorDeposit, _       = new(big.Int).SetString("1000000000000000000000", 10)
+	accountBalance1001Eth, _ = new(big.Int).SetString("5000000000000000000000", 10)
+	notaryDeposit, _       = new(big.Int).SetString("1000000000000000000000", 10)
 	smcConfig                = SMCConfig{
-		collatorLockupLenght: new(big.Int).SetInt64(1),
+		notaryLockupLenght: new(big.Int).SetInt64(1),
 		proposerLockupLength: new(big.Int).SetInt64(1),
 	}
 )
@@ -31,7 +31,7 @@ var (
 func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey) (common.Address, *types.Transaction, *SMC, error) {
 	transactOpts := bind.NewKeyedTransactor(key)
 	defer backend.Commit()
-	return DeploySMC(transactOpts, backend, smcConfig.collatorLockupLenght, smcConfig.proposerLockupLength)
+	return DeploySMC(transactOpts, backend)
 }
 
 // Test creating the SMC contract
@@ -45,113 +45,114 @@ func TestContractCreation(t *testing.T) {
 	}
 }
 
-// Test register collator
-func TestCollatorDeposit(t *testing.T) {
+// Test register notary
+func TestNotaryDeposit(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(mainKey)
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Test register_collator() function
+	// Test register_notary() function
 	// Deposit 1000 Eth
-	transactOpts.Value = collatorDeposit
+	transactOpts.Value = notaryDeposit
 
-	if _, err := smc.Register_collator(transactOpts); err != nil {
-		t.Fatalf("Collator cannot deposit: %v", err)
+	t.Log(transactOpts.)
+	if _, err := smc.RegisterNotary(transactOpts); err != nil {
+		t.Fatalf("Notary cannot deposit: %v", err)
 	}
 	backend.Commit()
 
-	// Check updated number of collators
-	numCollators, err := smc.Collator_pool_len(&bind.CallOpts{})
+	// Check updated number of notaries
+	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
-		t.Fatalf("Failed to get collator pool length: %v", err)
+		t.Fatalf("Failed to get notary pool length: %v", err)
 	}
-	if numCollators.Cmp(big.NewInt(1)) != 0 {
-		t.Fatalf("Failed to update number of collators")
+	if numNotaries.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("Failed to update number of notaries")
 	}
 
 	// Check deposited is true
-	tx, err := smc.Collator_registry(&bind.CallOpts{}, addr)
+	tx, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	if err != nil {
-		t.Fatalf("Failed to update collator registry: %v", err)
+		t.Fatalf("Failed to update notary registry: %v", err)
 	}
 	if tx.Deposited != true {
-		t.Fatalf("Collator registry not updated")
+		t.Fatalf("Notary registry not updated")
 	}
 
-	// Check for the RegisterCollator event
-	depositsEventsIterator, err := smc.FilterCollatorRegistered(&bind.FilterOpts{})
+	// Check for the RegisterNotary event
+	depositsEventsIterator, err := smc.FilterNotaryRegistered(&bind.FilterOpts{})
 	if err != nil {
 		t.Fatalf("Failed to get Deposit event: %v", err)
 	}
 	if !depositsEventsIterator.Next() {
 		t.Fatal("No Deposit event found")
 	}
-	if depositsEventsIterator.Event.Collator != addr {
-		t.Fatalf("Collator address mismatch: %x should be %x", depositsEventsIterator.Event.Collator, addr)
+	if depositsEventsIterator.Event.Notary != addr {
+		t.Fatalf("Notary address mismatch: %x should be %x", depositsEventsIterator.Event.Notary, addr)
 	}
-	if depositsEventsIterator.Event.Pool_index.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Collator index mismatch: %d should be 0", depositsEventsIterator.Event.Pool_index)
+	if depositsEventsIterator.Event.PoolIndex.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Notary index mismatch: %d should be 0", depositsEventsIterator.Event.PoolIndex)
 	}
 }
 
-// Test collator deregister from pool
-func TestCollatorDeregister(t *testing.T) {
+// Test notary deregister from pool
+func TestNotaryDeregister(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	transactOpts := bind.NewKeyedTransactor(mainKey)
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	transactOpts.Value = collatorDeposit
-	// Register collator
-	smc.Register_collator(transactOpts)
+	transactOpts.Value = notaryDeposit
+	// Register notary
+	smc.RegisterNotary(transactOpts)
 
 	transactOpts.Value = big.NewInt(0)
-	// Deregister collator
-	_, err := smc.Deregister_collator(transactOpts)
+	// Deregister notary
+	_, err := smc.DeregisterNotary(transactOpts)
 	backend.Commit()
 	if err != nil {
-		t.Fatalf("Failed to deregister collator: %v", err)
+		t.Fatalf("Failed to deregister notary: %v", err)
 	}
 
-	// Check for the CollatorDeregistered event
-	withdrawsEventsIterator, err := smc.FilterCollatorDeregistered(&bind.FilterOpts{Start: 0})
+	// Check for the NotaryDeregistered event
+	withdrawsEventsIterator, err := smc.FilterNotaryDeregistered(&bind.FilterOpts{Start: 0})
 	if err != nil {
-		t.Fatalf("Failed to get CollatorDeregistered event: %v", err)
+		t.Fatalf("Failed to get NotaryDeregistered event: %v", err)
 	}
 	if !withdrawsEventsIterator.Next() {
-		t.Fatal("No CollatorDeregistered event found")
+		t.Fatal("No NotaryDeregistered event found")
 	}
-	if withdrawsEventsIterator.Event.Pool_index.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Collator index mismatch: %d should be 0", withdrawsEventsIterator.Event.Pool_index)
+	if withdrawsEventsIterator.Event.PoolIndex.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Notary index mismatch: %d should be 0", withdrawsEventsIterator.Event.PoolIndex)
 	}
 }
 
-func TestGetEligibleCollator(t *testing.T) {
-	const numberCollators = 20
-	var collatorPoolAddr [numberCollators]common.Address
-	var collatorPoolPrivKeys [numberCollators]*ecdsa.PrivateKey
-	var transactOpts [numberCollators]*bind.TransactOpts
+func TestGetEligibleNotary(t *testing.T) {
+	const numberNotaries = 20
+	var notaryPoolAddr [numberNotaries]common.Address
+	var notaryPoolPrivKeys [numberNotaries]*ecdsa.PrivateKey
+	var transactOpts [numberNotaries]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
-	for i := 0; i < numberCollators; i++ {
+	for i := 0; i < numberNotaries; i++ {
 		key, _ := crypto.GenerateKey()
-		collatorPoolPrivKeys[i] = key
-		collatorPoolAddr[i] = crypto.PubkeyToAddress(key.PublicKey)
+		notaryPoolPrivKeys[i] = key
+		notaryPoolAddr[i] = crypto.PubkeyToAddress(key.PublicKey)
 		transactOpts[i] = bind.NewKeyedTransactor(key)
-		transactOpts[i].Value = collatorDeposit
+		transactOpts[i].Value = notaryDeposit
 
-		genesis[collatorPoolAddr[i]] = core.GenesisAccount{
+		genesis[notaryPoolAddr[i]] = core.GenesisAccount{
 			Balance: accountBalance1001Eth,
 		}
 	}
 
 	backend := backends.NewSimulatedBackend(genesis)
-	_, _, smc, _ := deploySMCContract(backend, collatorPoolPrivKeys[0])
+	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
 
-	// Register collator
-	for i := 0; i < numberCollators; i++ {
-		smc.Register_collator(transactOpts[i])
+	// Register notary
+	for i := 0; i < numberNotaries; i++ {
+		smc.RegisterNotary(transactOpts[i])
 	}
 
 	// Move blockchain 4 blocks further (Head is at 5 after) : period 1
@@ -159,16 +160,16 @@ func TestGetEligibleCollator(t *testing.T) {
 		backend.Commit()
 	}
 
-	_, err := smc.Get_eligible_collator(&bind.CallOpts{}, big.NewInt(0), big.NewInt(4))
+	_, err := smc.IsNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(4))
 	if err != nil {
-		t.Fatalf("Cannot get eligible collator: %v", err)
+		t.Fatalf("Cannot get eligible notary: %v", err)
 	}
 	// after: Head is 11, period 2
 	for i := 0; i < 6; i++ {
 		backend.Commit()
 	}
-	_, err = smc.Get_eligible_collator(&bind.CallOpts{}, big.NewInt(1), big.NewInt(6))
+	_, err = smc.IsNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(6))
 	if err != nil {
-		t.Fatalf("Cannot get eligible collator: %v\n", err)
+		t.Fatalf("Cannot get eligible notary: %v\n", err)
 	}
 }
