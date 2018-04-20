@@ -53,8 +53,6 @@ contract SMC {
 
     // Constant values
     uint constant PERIOD_LENGTH = 5;
-    // Exact collation body size (1mb)
-    uint constant COLLATION_SIZE = 2 ** 20;
     // Number of shards
     uint constant SHARD_COUNT = 100;
     // The minimum deposit size for a notary
@@ -74,6 +72,8 @@ contract SMC {
     // Log the latest period number of the shard
     mapping (int => int) public periodHead;
 
+    /// Checks if a notary with given shard id and period has been chosen as 
+    /// a committee member to vote for header added on to the main chain
     function isNotaryInCommittee(uint shardId, uint period) public view returns(bool) {
         uint currentPeriod = block.number / PERIOD_LENGTH;
 
@@ -97,11 +97,14 @@ contract SMC {
         return false; 
     }
 
+    /// Registers notary to notatery registry, locks in the notary deposit,
+    /// and returns true on success
     function registerNotary() public payable returns(bool) {
         address notaryAddress = msg.sender;
         require(!notaryRegistry[notaryAddress].deposited);
         require(msg.value == NOTARY_DEPOSIT);
 
+        // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
         
         uint index;
@@ -129,12 +132,16 @@ contract SMC {
         return true;
     }
 
+    /// Deregisters notary from notatery registry, lock up period countdowns down,
+    /// notary may call releaseNotary after lock up period finishses to withdraw deposit,
+    /// and returns true on success
     function deregisterNotary() public returns(bool) {
         address notaryAddress = msg.sender;
         uint index = notaryRegistry[notaryAddress].poolIndex;
         require(notaryRegistry[notaryAddress].deposited);
         require(notaryPool[index] == notaryAddress);
 
+        // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
         
         uint deregisteredPeriod = block.number / PERIOD_LENGTH;
@@ -146,13 +153,14 @@ contract SMC {
         return true;
     }
 
+    /// Removes an entry from notary registry, returns deposit back to the notary,
+    /// and returns true on success.
     function releaseNotary() public returns(bool) {
         address notaryAddress = msg.sender;
         uint index = notaryRegistry[notaryAddress].poolIndex;
         require(notaryRegistry[notaryAddress].deposited == true);
         require(notaryRegistry[notaryAddress].deregisteredPeriod != 0);
-        require((block.number / PERIOD_LENGTH) > 
-        (notaryRegistry[notaryAddress].deregisteredPeriod + NOTARY_LOCKUP_LENGTH));
+        require((block.number / PERIOD_LENGTH) > (notaryRegistry[notaryAddress].deregisteredPeriod + NOTARY_LOCKUP_LENGTH));
 
         delete notaryRegistry[notaryAddress];
         notaryAddress.transfer(NOTARY_DEPOSIT);
@@ -160,16 +168,26 @@ contract SMC {
         return true;
     }
 
-    function computeHeaderHash(uint256 shardId, bytes32 parentHash, 
-    bytes32 chunkRoot, uint256 period, address proposerAddress)
-    public returns(bytes32) {
+    /// Calcuates the hash of the header from the input parameters
+    function computeHeaderHash(
+        uint256 shardId,
+        bytes32 parentHash, 
+        bytes32 chunkRoot,
+        uint256 period,
+        address proposerAddress
+        ) public returns(bytes32) {
       /*
         TODO: Calculate the hash of the collation header from the input parameters
       */
     }
 
-    function addHeader(uint _shardId, uint period, bytes32 chunkRoot, 
-    address proposerAddress) public returns(bool) {
+    /// Add collation header to the main chain, anyone can call this function. It emits a log
+    function addHeader(
+        uint _shardId,
+        uint period,
+        bytes32 chunkRoot, 
+        address proposerAddress
+        ) public returns(bool) {
       /*
         TODO: Anyone can call this at any time. The first header
         to get included for a given shard in a given period gets in,
@@ -177,6 +195,8 @@ contract SMC {
       */
     }
 
+    /// To keep track of notary size in between periods, we call updateNotarySampleSize
+    /// before notary registration/deregistration so correct size can be applied next period
     function updateNotarySampleSize() internal returns(bool) {
         uint currentPeriod = block.number / PERIOD_LENGTH;
         require(currentPeriod < sampleSizeLastUpdatedPeriod);
@@ -186,10 +206,12 @@ contract SMC {
         return true;
     }
 
+    /// Check if the empty slots stack is empty
     function emptyStack() internal view returns(bool) {
         return emptySlotsStackTop == 0;
     }
 
+    /// Save one uint into the empty slots stack for notary to use later
     function stackPush(uint index) internal {
         if (emptySlotsStack.length == emptySlotsStackTop)
             emptySlotsStack.push(index);
@@ -199,6 +221,7 @@ contract SMC {
         ++emptySlotsStackTop;
     }
 
+    /// Get one uint out of the empty slots stack for notary index
     function stackPop() internal returns(uint) {
         require(emptySlotsStackTop > 1);
         --emptySlotsStackTop;
