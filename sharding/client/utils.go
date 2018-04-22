@@ -34,47 +34,36 @@ func (cb collationbody) validateBody() error {
 		return fmt.Errorf("Collation Body is over the size limit")
 	}
 
-	if cb.length() < totalDatasize {
-		x := make([]byte, (totalDatasize - cb.length()))
-		cb = append(cb, x...)
-		fmt.Printf("%b", x)
-
-	}
-
 	return nil
 }
 
-/*
- add
-*/
+// Parse Collation body and modify it accordingly
 
 func (cb collationbody) ParseBlob() {
+
 	terminalLength := cb.length() % chunkDataSize
 	chunksNumber := cb.length() / chunkDataSize
+	indicatorByte := make([]byte, 1)
+	indicatorByte[0] = 0
+	var tempbody collationbody
 
+	// Appends empty indicator bytes to non terminal-chunks
+	for i := int64(1); i <= chunksNumber; i++ {
+		tempbody = append(tempbody, append(indicatorByte, cb[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
+
+	}
+	// Appends indicator bytes to terminal-chunks , and if the index of the chunk delimiter is non-zero adds it to the chunk
 	if terminalLength != 0 {
+		indicatorByte[0] = byte(terminalLength)
+		tempbody = append(tempbody, append(indicatorByte, cb[chunksNumber*chunkDataSize:(chunksNumber*chunkDataSize)+(terminalLength+1)]...)...)
+
+	}
+	cb = tempbody
+
+	// Pad the collation body with empty bytes until it is equal to 1 Mib
+	if cb.length() < collationsizelimit {
+		emptyBytes := make([]byte, (collationsizelimit - cb.length()))
+		cb = append(cb, emptyBytes...)
 
 	}
 }
-
-/*
-func createChunks(cb collationbody) {
-	validCollation := cb.validateBody
-	if err != nil {
-		fmt.Errorf("Error %v", err)
-	}
-	if !validCollation {
-		fmt.Errorf("Error %v", err)
-	}
-	index := int64(len(cb)) / chunkDataSize
-
-
-	   for i = 0; i < index; i++ {
-	   serialisedblob[i*chunksize] = 0
-	    for f = 0; f <chunkdatasize ; f++ {
-	   serialisedblob[(f+1) + i*chunksize] = collationbody[f + i*chunkdatasize]
-	   }
-	   serialisedblob[index*chunksize ] = len(collationbody) – index*chunkdatasize
-	   }
-
-} */
