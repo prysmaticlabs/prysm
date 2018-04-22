@@ -10,8 +10,15 @@ var (
 	collationsizelimit = int64(2 ^ 20)
 	chunkSize          = int64(32)
 	indicatorSize      = int64(1)
+	numberOfChunks     = collationsizelimit / chunkSize
 	chunkDataSize      = chunkSize - indicatorSize
+	totalDatasize      = numberOfChunks * chunkDataSize
 )
+
+func (cb collationbody) length() int64 {
+
+	return int64(len(cb))
+}
 
 /* Validate that the collation body is within its bounds and if
 the size of the body is below the limit it is simply appended
@@ -19,18 +26,16 @@ till it reaches the required limit */
 
 func (cb collationbody) validateBody() error {
 
-	length := int64(len(cb))
-
-	if length == 0 {
+	if cb.length() == 0 {
 		return fmt.Errorf("Collation Body has to be a non-zero value")
 	}
 
-	if length > collationsizelimit {
+	if cb.length() > totalDatasize {
 		return fmt.Errorf("Collation Body is over the size limit")
 	}
 
-	if length < collationsizelimit {
-		x := make([]byte, (collationsizelimit - length))
+	if cb.length() < totalDatasize {
+		x := make([]byte, (totalDatasize - cb.length()))
 		cb = append(cb, x...)
 		fmt.Printf("%b", x)
 
@@ -39,12 +44,17 @@ func (cb collationbody) validateBody() error {
 	return nil
 }
 
-func main() {
+/*
+ add
+*/
 
-	x := []byte{'h', 'e', 'g', 'g'}
-	t := x.validateBody()
-	fmt.Printf("%b   %s", x, t)
+func (cb collationbody) ParseBlob() {
+	terminalLength := cb.length() % chunkDataSize
+	chunksNumber := cb.length() / chunkDataSize
 
+	if terminalLength != 0 {
+
+	}
 }
 
 /*
