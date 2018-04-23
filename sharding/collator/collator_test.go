@@ -86,7 +86,7 @@ func TestIsAccountInCollatorPool(t *testing.T) {
 
 	txOpts := transactOpts()
 	// deposit in collator pool, then it should return true
-	txOpts.Value = sharding.CollatorDeposit
+	txOpts.Value = sharding.NotaryDeposit
 	if _, err := smc.Deposit(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
