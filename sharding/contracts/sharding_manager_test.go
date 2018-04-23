@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -21,13 +22,14 @@ type SMCConfig struct {
 
 var (
 	mainKey, _                   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	accountBalance1001Eth, _     = new(big.Int).SetString("1001000000000000000000", 10)
+	accountBalance2000Eth, _     = new(big.Int).SetString("2000000000000000000000", 10)
 	notaryDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	notaryDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
 	smcConfig                    = SMCConfig{
 		notaryLockupLenght:   new(big.Int).SetInt64(1),
 		proposerLockupLength: new(big.Int).SetInt64(1),
 	}
+	ctx = context.Background()
 )
 
 func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey) (common.Address, *types.Transaction, *SMC, error) {
@@ -39,7 +41,7 @@ func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey
 // Test creating the SMC contract
 func TestContractCreation(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	_, _, _, err := deploySMCContract(backend, mainKey)
 	backend.Commit()
 	if err != nil {
@@ -62,7 +64,7 @@ func TestNotaryRegister(t *testing.T) {
 		txOpts[i] = bind.NewKeyedTransactor(key)
 		txOpts[i].Value = notaryDeposit
 		genesis[notaryPoolAddr[i]] = core.GenesisAccount{
-			Balance: accountBalance1001Eth,
+			Balance: accountBalance2000Eth,
 		}
 	}
 
@@ -133,9 +135,9 @@ func TestNotaryRegister(t *testing.T) {
 	}
 }
 
-func TestNotaryRegisterWithoutEnoughEther(t *testing.T) {
+func TestNotaryRegisterInsufficientEther(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
 	txOpts.Value = notaryDepositInsufficient
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
@@ -157,7 +159,7 @@ func TestNotaryRegisterWithoutEnoughEther(t *testing.T) {
 
 func TestNotaryDoubleRegisters(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
 	txOpts.Value = notaryDeposit
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
@@ -191,9 +193,9 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 
 }
 
-func TestNotaryDeregisters(t *testing.T) {
+func TestNotaryDeregister(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
 	txOpts.Value = notaryDeposit
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
@@ -218,6 +220,7 @@ func TestNotaryDeregisters(t *testing.T) {
 		backend.Commit()
 	}
 
+	// Notary 0 deregisters
 	txOpts = bind.NewKeyedTransactor(mainKey)
 	_, err := smc.DeregisterNotary(txOpts)
 	if err != nil {
@@ -225,7 +228,7 @@ func TestNotaryDeregisters(t *testing.T) {
 	}
 	backend.Commit()
 
-	// Verify notary has saved deregister period as (current block number / period length)
+	// Verify notary has saved the deregistered period as: current block number / period length
 	notary, _ = smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	currentPeriod := big.NewInt(int64(100 / sharding.PeriodLength))
 	if currentPeriod.Cmp(notary.DeregisteredPeriod) != 0 {
@@ -235,5 +238,179 @@ func TestNotaryDeregisters(t *testing.T) {
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
+	}
+}
+
+func TestNotaryDeregisterThenRegister(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+
+	if notary.Deposited != true {
+		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
+	}
+
+	if numNotaries.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
+	}
+
+	// Notary 0 deregisters
+	txOpts = bind.NewKeyedTransactor(mainKey)
+	_, err := smc.DeregisterNotary(txOpts)
+	if err != nil {
+		t.Fatalf("Failed to deregister notary: %v", err)
+	}
+	backend.Commit()
+
+	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
+	}
+
+	// Notary 0 re-registers again
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
+	}
+}
+
+func TestNotaryRelease(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+
+	if notary.Deposited != true {
+		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
+	}
+
+	if numNotaries.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
+	}
+
+	// Fast forward 10 blocks
+	for i := 0; i < 10; i++ {
+		backend.Commit()
+	}
+
+	// Notary 0 deregisters
+	txOpts = bind.NewKeyedTransactor(mainKey)
+	_, err := smc.DeregisterNotary(txOpts)
+	if err != nil {
+		t.Fatalf("Failed to deregister notary: %v", err)
+	}
+	backend.Commit()
+
+	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
+	}
+
+	// Fast forward until lockup ends
+	for i := 0; i < int(sharding.CollatorLockupLength*sharding.PeriodLength+1); i++ {
+		backend.Commit()
+	}
+
+	// Notary 0 releases
+	_, err = smc.ReleaseNotary(txOpts)
+	if err != nil {
+		t.Fatalf("Failed to release notary: %v", err)
+	}
+	backend.Commit()
+
+	notary, err = smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	if err != nil {
+		t.Fatalf("Can't get notary registry info: %v", err)
+	}
+
+	if notary.Deposited != false {
+		t.Fatalf("Notary deposit flag should be false after released")
+	}
+
+	balance, err := backend.BalanceAt(ctx, addr, nil)
+
+	if balance.Cmp(notaryDeposit) < 0 {
+		t.Fatalf("Notary did not receive deposit after lock up ends")
+	}
+}
+
+func TestNotaryInstantRelease(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+
+	if notary.Deposited != true {
+		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
+	}
+
+	if numNotaries.Cmp(big.NewInt(1)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
+	}
+
+	// Fast forward 10 blocks
+	for i := 0; i < 10; i++ {
+		backend.Commit()
+	}
+
+	// Notary 0 deregisters
+	txOpts = bind.NewKeyedTransactor(mainKey)
+	_, err := smc.DeregisterNotary(txOpts)
+	if err != nil {
+		t.Fatalf("Failed to deregister notary: %v", err)
+	}
+	backend.Commit()
+
+	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
+	}
+
+
+	// Notary 0 releases before lockup ends
+	_, err = smc.ReleaseNotary(txOpts)
+	backend.Commit()
+
+	notary, err = smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	if err != nil {
+		t.Fatalf("Can't get notary registry info: %v", err)
+	}
+
+	if notary.Deposited != true {
+		t.Fatalf("Notary deposit flag should be true before released")
+	}
+
+	balance, err := backend.BalanceAt(ctx, addr, nil)
+
+	if balance.Cmp(notaryDeposit) > 0 {
+		t.Fatalf("Notary received deposit before lockup ends")
 	}
 }
