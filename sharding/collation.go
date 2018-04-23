@@ -15,6 +15,7 @@ type Collation struct {
 
 type CollationHeader struct {
 	shardID           *big.Int        //the shard ID of the shard
+	parentHash        *common.Hash    //the hash of the parent collation
 	chunkRoot         *common.Hash    //the root of the chunk tree which identifies collation body
 	period            *big.Int        //the period number in which collation to be included
 	proposerAddress   *common.Address //address of the collation proposer
@@ -24,6 +25,7 @@ type CollationHeader struct {
 func (c *Collation) Header() *CollationHeader           { return c.header }
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 func (c *Collation) ShardID() *big.Int                  { return c.header.shardID }
+func (c *Collation) ParentHash() *common.Hash           { return c.header.parentHash }
 func (c *Collation) Period() *big.Int                   { return c.header.period }
 func (c *Collation) ProposerAddress() *common.Address   { return c.header.proposerAddress }
 
