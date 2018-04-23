@@ -17,7 +17,7 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
     -   [Running a Local Geth Node](#running-a-local-geth-node)
     -   [Transaction Generator](#transaction-generator)
     -   [Becoming a Collator](#becoming-a-collator)
-    -   [Becoming a Proposer](#becoming-a-proposer)
+    -   [Running a Collation Proposal Client](#running-a-collation-proposal-client)
 -   [Testing](#testing)
 -   [Contribution Guidelines](#contribution-guidelines)
 -   [License](#license)
@@ -56,7 +56,7 @@ $ make all
 
 # Sharding Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can become a collator or a proposer.
+To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin proposing collations into shard chains.
 
 ## Running a Local Geth Node
 
@@ -98,28 +98,29 @@ Now, save the passphrase you used in the geth node into a text file called passw
 
 ## Transaction Generator
 
-Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870).
+Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870). Generating test transactions on a local network will allow for benchmarking of tx throughput within our system.
 
 ## Becoming a Collator
 
-To deposit ETH and join as a collator in the Sharding Manager Contract, run the following command:
+Our system outlined below follows the [Minimal Sharding Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650) as outlined by Vitalik on ETHResearch where any actor can submit collation headers via the SMC, but only a selected committee of notaries is allowed to vote on collations in each period. Notaries are in charge of data availability checking and consensus is reached upon a collation header receiving >= 2/3 votes in a period.
+
+To deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
 
 ```
-geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --notary --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This will extract 100ETH from your account balance and insert you into the SMC's collator pool. Then, the program will listen for incoming block headers and notify you when you have been selected as an eligible collator for a certain shard in a given period. Once you are selected, the collator will request collations created by proposer nodes. We will need to run a proposer node concurrently in a separate terminal window as follows:
+This will extract 100ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding client will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
-## Becoming a Proposer
+Concurrently, you will need to run another client that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+
+## Running a Collation Proposal Client
 
 ```
-geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
-Proposers are tasked with processing pending transactions into blobs within collations. They are responsible for submitting proposals (collation headers) to collators currently assigned to a period along with an ETH bid.
 
-Collators then subscribe to incoming proposals and fetch the collation headers that offer the highest ETH deposit. Once a collator issues a commitment to a certain proposal, the proposer can be confident the collator will download the body. After this countersigning occurs, the collator can add the collation header to the Sharding Manager Contract.
-
-Once this is done, the full, end-to-end phase 1 sharding example is complete and another iteration can occur.
+This client is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
 
 # Making Changes
 
