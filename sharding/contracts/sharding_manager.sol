@@ -87,7 +87,8 @@ contract SMC {
 
       // Get the most recent block number before the period started
         uint latestBlock = period * PERIOD_LENGTH - 1;
-        uint index = uint(keccak256(block.blockhash(latestBlock), _index, shardId)) % sampleSize;
+        uint latestBlockHash = uint(block.blockhash(latestBlock));
+        uint index = uint(keccak256(latestBlockHash, _index, shardId)) % sampleSize;
 
         return notaryPool[index];
     }

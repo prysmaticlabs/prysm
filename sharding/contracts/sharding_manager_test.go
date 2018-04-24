@@ -56,6 +56,7 @@ func TestNotaryRegister(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
+	// initializes back end with 3 accounts and each with 2000 eth balances
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
@@ -420,6 +421,7 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
+	// initializes back end with 1000 accounts and each with 2000 eth balances
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
@@ -469,6 +471,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
+	// initializes back end with 11 accounts and each with 2000 eth balances
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
@@ -511,6 +514,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
+	// initializes back end with 10 accounts and each with 2000 eth balances
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
