@@ -127,7 +127,7 @@ func submitCollation(shardID int64) error {
 func joinCollatorPool(c client.Client) error {
 
 	log.Info("Joining collator pool")
-	txOps, err := c.CreateTXOpts(sharding.CollatorDeposit)
+	txOps, err := c.CreateTXOpts(sharding.NotaryDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
@@ -136,7 +136,7 @@ func joinCollatorPool(c client.Client) error {
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
 	}
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.CollatorDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
+	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
 
 	return nil
 }
