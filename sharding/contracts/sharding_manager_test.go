@@ -49,7 +49,6 @@ func TestContractCreation(t *testing.T) {
 	}
 }
 
-// Test register notary
 func TestNotaryRegister(t *testing.T) {
 	const notaryCount = 3
 	var notaryPoolAddr [notaryCount]common.Address
@@ -327,7 +326,7 @@ func TestNotaryRelease(t *testing.T) {
 	}
 
 	// Fast forward until lockup ends
-	for i := 0; i < int(sharding.CollatorLockupLength*sharding.PeriodLength+1); i++ {
+	for i := 0; i < int(sharding.NotaryLockupLength*sharding.PeriodLength+1); i++ {
 		backend.Commit()
 	}
 
@@ -394,7 +393,6 @@ func TestNotaryInstantRelease(t *testing.T) {
 		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
 	}
 
-
 	// Notary 0 releases before lockup ends
 	_, err = smc.ReleaseNotary(txOpts)
 	backend.Commit()
@@ -412,5 +410,147 @@ func TestNotaryInstantRelease(t *testing.T) {
 
 	if balance.Cmp(notaryDeposit) > 0 {
 		t.Fatalf("Notary received deposit before lockup ends")
+	}
+}
+
+func TestCommitteeListsAreDifferent(t *testing.T) {
+	const notaryCount = 1000
+	var notaryPoolAddr [notaryCount]common.Address
+	var notaryPoolPrivKeys [notaryCount]*ecdsa.PrivateKey
+	var txOpts [notaryCount]*bind.TransactOpts
+	genesis := make(core.GenesisAlloc)
+
+	for i := 0; i < notaryCount; i++ {
+		key, _ := crypto.GenerateKey()
+		notaryPoolPrivKeys[i] = key
+		notaryPoolAddr[i] = crypto.PubkeyToAddress(key.PublicKey)
+		txOpts[i] = bind.NewKeyedTransactor(key)
+		txOpts[i].Value = notaryDeposit
+		genesis[notaryPoolAddr[i]] = core.GenesisAccount{
+			Balance: accountBalance2000Eth,
+		}
+	}
+
+	backend := backends.NewSimulatedBackend(genesis)
+	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
+
+	// register 1000 notaries to SMC
+	for i := 0; i < notaryCount; i++ {
+		smc.RegisterNotary(txOpts[i])
+		backend.Commit()
+	}
+
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(1000)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 1000, Got: %v", numNotaries)
+	}
+
+	// get a list of sampled notaries from shard 0
+	var shard0CommitteeList []string
+	for i := 0; i < int(sharding.NotaryCommitSize); i++ {
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		shard0CommitteeList = append(shard0CommitteeList, addr.String())
+	}
+
+	// get a list of sampled notaries from shard 1, verify it's not identical to shard 0
+	for i := 0; i < int(sharding.NotaryCommitSize); i++ {
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(int64(i)))
+		if shard0CommitteeList[i] == addr.String() {
+			t.Log(i)
+			t.Fatalf("Shard 0 committee list is identical to shard 1's committee list")
+		}
+	}
+}
+
+func TestGetCommitteeWithNonMember(t *testing.T) {
+	const notaryCount = 11
+	var notaryPoolAddr [notaryCount]common.Address
+	var notaryPoolPrivKeys [notaryCount]*ecdsa.PrivateKey
+	var txOpts [notaryCount]*bind.TransactOpts
+	genesis := make(core.GenesisAlloc)
+
+	for i := 0; i < notaryCount; i++ {
+		key, _ := crypto.GenerateKey()
+		notaryPoolPrivKeys[i] = key
+		notaryPoolAddr[i] = crypto.PubkeyToAddress(key.PublicKey)
+		txOpts[i] = bind.NewKeyedTransactor(key)
+		txOpts[i].Value = notaryDeposit
+		genesis[notaryPoolAddr[i]] = core.GenesisAccount{
+			Balance: accountBalance2000Eth,
+		}
+	}
+
+	backend := backends.NewSimulatedBackend(genesis)
+	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
+
+	// registers 10 notaries to SMC, leave 1 address free
+	for i := 0; i < 10; i++ {
+		smc.RegisterNotary(txOpts[i])
+		backend.Commit()
+	}
+
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(10)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 135, Got: %v", numNotaries)
+	}
+
+	// verify the free address can't be sampled from the committee list
+	for i := 0; i < 10; i++ {
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		if notaryPoolAddr[10].String() == addr.String() {
+			t.Fatalf("Account %s is not a notary", notaryPoolAddr[10].String())
+		}
+	}
+
+}
+
+func TestGetCommitteeAfterDeregisters(t *testing.T) {
+	const notaryCount = 10
+	var notaryPoolAddr [notaryCount]common.Address
+	var notaryPoolPrivKeys [notaryCount]*ecdsa.PrivateKey
+	var txOpts [notaryCount]*bind.TransactOpts
+	genesis := make(core.GenesisAlloc)
+
+	for i := 0; i < notaryCount; i++ {
+		key, _ := crypto.GenerateKey()
+		notaryPoolPrivKeys[i] = key
+		notaryPoolAddr[i] = crypto.PubkeyToAddress(key.PublicKey)
+		txOpts[i] = bind.NewKeyedTransactor(key)
+		txOpts[i].Value = notaryDeposit
+		genesis[notaryPoolAddr[i]] = core.GenesisAccount{
+			Balance: accountBalance2000Eth,
+		}
+	}
+
+	backend := backends.NewSimulatedBackend(genesis)
+	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
+
+	// register 10 notaries to SMC
+	for i := 0; i < 10; i++ {
+		smc.RegisterNotary(txOpts[i])
+		backend.Commit()
+	}
+
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(10)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 10, Got: %v", numNotaries)
+	}
+
+	// deregister notary 0 from SMC
+	txOpts[0].Value = big.NewInt(0)
+	smc.DeregisterNotary(txOpts[0])
+	backend.Commit()
+
+	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
+	if numNotaries.Cmp(big.NewInt(9)) != 0 {
+		t.Fatalf("Incorrect count from notary pool. Want: 9, Got: %v", numNotaries)
+	}
+
+	// verify degistered notary 0 can't be sampled
+	for i := 0; i < 10; i++ {
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		if notaryPoolAddr[0].String() == addr.String() {
+			t.Fatalf("Account %s is not a notary", notaryPoolAddr[0].String())
+		}
 	}
 }
