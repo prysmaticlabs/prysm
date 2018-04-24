@@ -74,8 +74,8 @@ contract SMC {
 
     /// Checks if a notary with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
-    function isNotaryInCommittee(uint shardId, uint period) public view returns(bool) {
-        uint currentPeriod = block.number / PERIOD_LENGTH;
+    function getNotaryInCommittee(uint shardId, uint _index) public view returns(address) {
+        uint period = block.number / PERIOD_LENGTH;
 
         // Determine notary pool length based on notary sample size
         uint sampleSize;
@@ -87,14 +87,9 @@ contract SMC {
 
       // Get the most recent block number before the period started
         uint latestBlock = period * PERIOD_LENGTH - 1;
+        uint index = uint(keccak256(block.blockhash(latestBlock), _index, shardId)) % sampleSize;
 
-        for (uint i = 0; i < QUORUM_SIZE; i++) {
-            uint index = uint(keccak256(block.blockhash(latestBlock), index)) % sampleSize;
-            if (notaryPool[index] == msg.sender) {
-                return true;
-            }
-        }
-        return false;
+        return notaryPool[index];
     }
 
     /// Registers notary to notatery registry, locks in the notary deposit,
@@ -148,6 +143,7 @@ contract SMC {
         notaryRegistry[notaryAddress].deregisteredPeriod = deregisteredPeriod;
 
         stackPush(index);
+        delete notaryPool[index];
         --notaryPoolLength;
         emit NotaryDeregistered(notaryAddress, index, deregisteredPeriod);
         return true;
