@@ -59,7 +59,7 @@ func checkSMCForCollator(c client.Client, head *types.Header) error {
 	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible collator according to the SMC
 		for i := int64(0); i < sharding.NotaryCommitSize; s++ {
-			addr, err := c.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s), i)
+			addr, err := c.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s), big.NewInt(i))
 
 			if err != nil {
 				return err
