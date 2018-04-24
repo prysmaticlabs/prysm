@@ -56,21 +56,22 @@ func subscribeBlockHeaders(c client.Client) error {
 // conditions are met
 func checkSMCForCollator(c client.Client, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation collator for a shard...")
-	period := big.NewInt(0).Div(head.Number, big.NewInt(sharding.PeriodLength))
 	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible collator according to the SMC
-		addr, err := c.SMCCaller().GetEligibleCollator(&bind.CallOpts{}, big.NewInt(s), period)
+		for i := int64(0); i < sharding.NotaryCommitSize; s++ {
+			addr, err := c.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s), i)
 
-		if err != nil {
-			return err
-		}
-
-		// If output is non-empty and the addr == coinbase
-		if addr == c.Account().Address {
-			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
-			err := submitCollation(s)
 			if err != nil {
-				return fmt.Errorf("could not add collation. %v", err)
+				return err
+			}
+
+			// If output is non-empty and the addr == coinbase
+			if addr == c.Account().Address {
+				log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
+				err := submitCollation(s)
+				if err != nil {
+					return fmt.Errorf("could not add collation. %v", err)
+				}
 			}
 		}
 	}
@@ -85,11 +86,11 @@ func checkSMCForCollator(c client.Client, head *types.Header) error {
 func isAccountInCollatorPool(c client.Client) (bool, error) {
 	account := c.Account()
 	// Checks if our deposit has gone through according to the SMC
-	b, err := c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
-	if !b && err != nil {
+	b, err := c.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	if !b.Deposited && err != nil {
 		log.Warn(fmt.Sprintf("Account %s not in collator pool.", account.Address.String()))
 	}
-	return b, err
+	return b.Deposited, err
 }
 
 // submitCollation interacts with the SMC directly to add a collation header
@@ -132,7 +133,7 @@ func joinCollatorPool(c client.Client) error {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
 
-	tx, err := c.SMCTransactor().Deposit(txOps)
+	tx, err := c.SMCTransactor().RegisterNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
 	}
