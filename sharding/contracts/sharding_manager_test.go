@@ -77,7 +77,7 @@ func TestNotaryRegister(t *testing.T) {
 		t.Fatalf("Can't get notary registry info: %v", err)
 	}
 
-	if notary.Deposited != false {
+	if notary.Deposited {
 		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
 
@@ -89,7 +89,7 @@ func TestNotaryRegister(t *testing.T) {
 
 	notary, err = smc.NotaryRegistry(&bind.CallOpts{}, notaryPoolAddr[0])
 
-	if notary.Deposited != true &&
+	if !notary.Deposited &&
 		notary.PoolIndex.Cmp(big.NewInt(0)) != 0 &&
 		notary.DeregisteredPeriod.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("Incorrect notary registry. Want - deposited:true, index:0, period:0"+
@@ -109,7 +109,7 @@ func TestNotaryRegister(t *testing.T) {
 
 	notary, err = smc.NotaryRegistry(&bind.CallOpts{}, notaryPoolAddr[1])
 
-	if notary.Deposited != true &&
+	if !notary.Deposited &&
 		notary.PoolIndex.Cmp(big.NewInt(1)) != 0 &&
 		notary.DeregisteredPeriod.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("Incorrect notary registry. Want - deposited:true, index:1, period:0"+
@@ -118,7 +118,7 @@ func TestNotaryRegister(t *testing.T) {
 
 	notary, err = smc.NotaryRegistry(&bind.CallOpts{}, notaryPoolAddr[2])
 
-	if notary.Deposited != true &&
+	if !notary.Deposited &&
 		notary.PoolIndex.Cmp(big.NewInt(2)) != 0 &&
 		notary.DeregisteredPeriod.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("Incorrect notary registry. Want - deposited:true, index:2, period:0"+
@@ -148,7 +148,7 @@ func TestNotaryRegisterInsufficientEther(t *testing.T) {
 	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 
-	if notary.Deposited != false {
+	if notary.Deposited {
 		t.Fatalf("Notary deposited with insufficient fund")
 	}
 
@@ -171,7 +171,7 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 
-	if notary.Deposited != true {
+	if !notary.Deposited {
 		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
 
@@ -207,7 +207,7 @@ func TestNotaryDeregister(t *testing.T) {
 	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 
-	if notary.Deposited != true {
+	if !notary.Deposited {
 		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
 
@@ -255,7 +255,7 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 
-	if notary.Deposited != true {
+	if !notary.Deposited {
 		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
 
@@ -300,7 +300,7 @@ func TestNotaryRelease(t *testing.T) {
 	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 
-	if notary.Deposited != true {
+	if !notary.Deposited {
 		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
 
@@ -343,7 +343,7 @@ func TestNotaryRelease(t *testing.T) {
 		t.Fatalf("Can't get notary registry info: %v", err)
 	}
 
-	if notary.Deposited != false {
+	if notary.Deposited {
 		t.Fatalf("Notary deposit flag should be false after released")
 	}
 
@@ -368,7 +368,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 
-	if notary.Deposited != true {
+	if !notary.Deposited {
 		t.Fatalf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
 
@@ -403,7 +403,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 		t.Fatalf("Can't get notary registry info: %v", err)
 	}
 
-	if notary.Deposited != true {
+	if !notary.Deposited {
 		t.Fatalf("Notary deposit flag should be true before released")
 	}
 
