@@ -65,7 +65,7 @@ func checkSMCForCollator(c client.Client, head *types.Header) error {
 				return err
 			}
 
-			// If output is non-empty and the addr == coinbase
+			// If the account is selected as collator, submit collation
 			if addr == c.Account().Address {
 				log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
 				err := submitCollation(s)
