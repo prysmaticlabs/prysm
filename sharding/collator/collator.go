@@ -1,4 +1,4 @@
-package collator
+package notary
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
-// we are an eligible collator for collations. Then, it finds the pending tx's
+// we are an eligible notary for collations. Then, it finds the pending tx's
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation
@@ -31,17 +31,17 @@ func subscribeBlockHeaders(c client.Client) error {
 	for {
 		// TODO: Error handling for getting disconnected from the client
 		head := <-headerChan
-		// Query the current state to see if we are an eligible collator
+		// Query the current state to see if we are an eligible notary
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 
-		// Check if we are in the collator pool before checking if we are an eligible collator
-		v, err := isAccountInCollatorPool(c)
+		// Check if we are in the notary pool before checking if we are an eligible notary
+		v, err := isAccountInNotaryPool(c)
 		if err != nil {
-			return fmt.Errorf("unable to verify client in collator pool. %v", err)
+			return fmt.Errorf("unable to verify client in notary pool. %v", err)
 		}
 
 		if v {
-			if err := checkSMCForCollator(c, head); err != nil {
+			if err := checkSMCForNotary(c, head); err != nil {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		} else {
@@ -50,16 +50,16 @@ func subscribeBlockHeaders(c client.Client) error {
 	}
 }
 
-// checkSMCForCollator checks if we are an eligible collator for
+// checkSMCForNotary checks if we are an eligible notary for
 // collation for the available shards in the SMC. The function calls
-// getEligibleCollator from the SMC and collator a collation if
+// getEligibleNotary from the SMC and notary a collation if
 // conditions are met
-func checkSMCForCollator(c client.Client, head *types.Header) error {
-	log.Info("Checking if we are an eligible collation collator for a shard...")
+func checkSMCForNotary(c client.Client, head *types.Header) error {
+	log.Info("Checking if we are an eligible collation notary for a shard...")
 	period := big.NewInt(0).Div(head.Number, big.NewInt(sharding.PeriodLength))
 	for s := int64(0); s < sharding.ShardCount; s++ {
-		// Checks if we are an eligible collator according to the SMC
-		addr, err := c.SMCCaller().GetEligibleCollator(&bind.CallOpts{}, big.NewInt(s), period)
+		// Checks if we are an eligible notary according to the SMC
+		addr, err := c.SMCCaller().GetEligibleNotary(&bind.CallOpts{}, big.NewInt(s), period)
 
 		if err != nil {
 			return err
@@ -67,7 +67,7 @@ func checkSMCForCollator(c client.Client, head *types.Header) error {
 
 		// If output is non-empty and the addr == coinbase
 		if addr == c.Account().Address {
-			log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
+			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 			err := submitCollation(s)
 			if err != nil {
 				return fmt.Errorf("could not add collation. %v", err)
@@ -78,16 +78,16 @@ func checkSMCForCollator(c client.Client, head *types.Header) error {
 	return nil
 }
 
-// isAccountInCollatorPool checks if the client is in the collator pool because
+// isAccountInNotaryPool checks if the client is in the notary pool because
 // we can't guarantee our tx for deposit will be in the next block header we receive.
-// The function calls IsCollatorDeposited from the SMC and returns true if
-// the client is in the collator pool
-func isAccountInCollatorPool(c client.Client) (bool, error) {
+// The function calls IsNotaryDeposited from the SMC and returns true if
+// the client is in the notary pool
+func isAccountInNotaryPool(c client.Client) (bool, error) {
 	account := c.Account()
 	// Checks if our deposit has gone through according to the SMC
-	b, err := c.SMCCaller().IsCollatorDeposited(&bind.CallOpts{}, account.Address)
+	b, err := c.SMCCaller().IsNotaryDeposited(&bind.CallOpts{}, account.Address)
 	if !b && err != nil {
-		log.Warn(fmt.Sprintf("Account %s not in collator pool.", account.Address.String()))
+		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
 	}
 	return b, err
 }
@@ -122,11 +122,11 @@ func submitCollation(shardID int64) error {
 	return nil
 }
 
-// joinCollatorPool checks if the account is a collator in the SMC. If
+// joinNotaryPool checks if the account is a notary in the SMC. If
 // the account is not in the set, it will deposit ETH into contract.
-func joinCollatorPool(c client.Client) error {
+func joinNotaryPool(c client.Client) error {
 
-	log.Info("Joining collator pool")
+	log.Info("Joining notary pool")
 	txOps, err := c.CreateTXOpts(sharding.NotaryDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
@@ -134,7 +134,7 @@ func joinCollatorPool(c client.Client) error {
 
 	tx, err := c.SMCTransactor().Deposit(txOps)
 	if err != nil {
-		return fmt.Errorf("unable to deposit eth and become a collator: %v", err)
+		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
 	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
 
