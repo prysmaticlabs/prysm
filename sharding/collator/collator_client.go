@@ -1,5 +1,5 @@
-// Package collator holds all of the functionality to run as a collator in a sharded system.
-package collator
+// Package notary holds all of the functionality to run as a notary in a sharded system.
+package notary
 
 import (
 	"github.com/ethereum/go-ethereum/log"
@@ -7,33 +7,33 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// Collator runnable client.
-type Collator interface {
-	// Start the main routine for a collator.
+// Notary runnable client.
+type Notary interface {
+	// Start the main routine for a notary.
 	Start() error
 }
 
-type collator struct {
+type notary struct {
 	client client.Client
 }
 
-// NewCollator creates a new collator instance.
-func NewCollator(ctx *cli.Context) Collator {
-	return &collator{
+// NewNotary creates a new notary instance.
+func NewNotary(ctx *cli.Context) Notary {
+	return &notary{
 		client: client.NewClient(ctx),
 	}
 }
 
-// Start the main routine for a collator.
-func (c *collator) Start() error {
-	log.Info("Starting collator client")
+// Start the main routine for a notary.
+func (c *notary) Start() error {
+	log.Info("Starting notary client")
 	err := c.client.Start()
 	if err != nil {
 		return err
 	}
 	defer c.client.Close()
 
-	if err := joinCollatorPool(c.client); err != nil {
+	if err := joinNotaryPool(c.client); err != nil {
 		return err
 	}
 
