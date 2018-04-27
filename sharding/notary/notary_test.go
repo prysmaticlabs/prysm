@@ -104,13 +104,13 @@ func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &mockClient{smc, t}
 
-	// There should be no notarys initially
+	// There should be no notary initially
 	numNotaries, err := smc.NumNotaries(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Fatalf("Unexpected number of notarys. Got %d, wanted 0.", numNotaries)
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
 	err = joinNotaryPool(client)
@@ -125,6 +125,6 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("Unexpected number of notarys. Got %d, wanted 1.", numNotaries)
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
 }
