@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -72,7 +73,7 @@ func TestNotaryRegister(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
 
-	// Test notary 0 has not registered
+	// Notary 0 has not registered
 	notary, err := smc.NotaryRegistry(&bind.CallOpts{}, notaryPoolAddr[0])
 	if err != nil {
 		t.Fatalf("Can't get notary registry info: %v", err)

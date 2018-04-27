@@ -95,7 +95,7 @@ contract SMC {
 
     /// Registers notary to notatery registry, locks in the notary deposit,
     /// and returns true on success
-    function registerNotary() public payable returns(bool) {
+    function registerNotary() public payable {
         address notaryAddress = msg.sender;
         require(!notaryRegistry[notaryAddress].deposited);
         require(msg.value == NOTARY_DEPOSIT);
@@ -125,13 +125,12 @@ contract SMC {
         }
 
         emit NotaryRegistered(notaryAddress, index);
-        return true;
     }
 
     /// Deregisters notary from notatery registry, lock up period countdowns down,
     /// notary may call releaseNotary after lock up period finishses to withdraw deposit,
     /// and returns true on success
-    function deregisterNotary() public returns(bool) {
+    function deregisterNotary() public {
         address notaryAddress = msg.sender;
         uint index = notaryRegistry[notaryAddress].poolIndex;
         require(notaryRegistry[notaryAddress].deposited);
@@ -147,12 +146,11 @@ contract SMC {
         delete notaryPool[index];
         --notaryPoolLength;
         emit NotaryDeregistered(notaryAddress, index, deregisteredPeriod);
-        return true;
     }
 
     /// Removes an entry from notary registry, returns deposit back to the notary,
     /// and returns true on success.
-    function releaseNotary() public returns(bool) {
+    function releaseNotary() public {
         address notaryAddress = msg.sender;
         uint index = notaryRegistry[notaryAddress].poolIndex;
         require(notaryRegistry[notaryAddress].deposited == true);
@@ -162,7 +160,6 @@ contract SMC {
         delete notaryRegistry[notaryAddress];
         notaryAddress.transfer(NOTARY_DEPOSIT);
         emit NotaryReleased(notaryAddress, index);
-        return true;
     }
 
     /// Calcuates the hash of the header from the input parameters
@@ -184,7 +181,7 @@ contract SMC {
         uint period,
         bytes32 chunkRoot,
         address proposerAddress
-        ) public returns(bool) {
+        ) public {
       /*
         TODO: Anyone can call this at any time. The first header
         to get included for a given shard in a given period gets in,
@@ -194,14 +191,13 @@ contract SMC {
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
     /// before notary registration/deregistration so correct size can be applied next period
-    function updateNotarySampleSize() internal returns(bool) {
+    function updateNotarySampleSize() internal {
         uint currentPeriod = block.number / PERIOD_LENGTH;
         if (currentPeriod < sampleSizeLastUpdatedPeriod) {
-            return false;
+            return;
         }
         currentPeriodNotarySampleSize = nextPeriodNotarySampleSize;
         sampleSizeLastUpdatedPeriod = currentPeriod;
-        return true;
     }
 
     /// Check if the empty slots stack is empty
