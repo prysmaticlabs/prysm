@@ -87,7 +87,7 @@ func TestIsAccountInCollatorPool(t *testing.T) {
 	txOpts := transactOpts()
 	// deposit in collator pool, then it should return true
 	txOpts.Value = sharding.NotaryDeposit
-	if _, err := smc.Deposit(txOpts); err != nil {
+	if _, err := smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
@@ -105,7 +105,7 @@ func TestJoinCollatorPool(t *testing.T) {
 	client := &mockClient{smc, t}
 
 	// There should be no collators initially
-	numCollators, err := smc.NumCollators(&bind.CallOpts{})
+	numCollators, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestJoinCollatorPool(t *testing.T) {
 	backend.Commit()
 
 	// Now there should be one collator
-	numCollators, err = smc.NumCollators(&bind.CallOpts{})
+	numCollators, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
