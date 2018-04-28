@@ -59,7 +59,7 @@ func checkSMCForNotary(c client.Client, head *types.Header) error {
 	period := big.NewInt(0).Div(head.Number, big.NewInt(sharding.PeriodLength))
 	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible notary according to the SMC
-		addr, err := c.SMCCaller().GetEligibleNotary(&bind.CallOpts{}, big.NewInt(s), period)
+		addr, err := c.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s), period)
 
 		if err != nil {
 			return err
@@ -70,7 +70,16 @@ func checkSMCForNotary(c client.Client, head *types.Header) error {
 			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 			err := submitCollation(s)
 			if err != nil {
-				return fmt.Errorf("could not add collation. %v", err)
+				return err
+			}
+
+			// If the account is selected as collator, submit collation
+			if addr == c.Account().Address {
+				log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
+				err := submitCollation(s)
+				if err != nil {
+					return fmt.Errorf("could not add collation. %v", err)
+				}
 			}
 		}
 	}
@@ -85,11 +94,11 @@ func checkSMCForNotary(c client.Client, head *types.Header) error {
 func isAccountInNotaryPool(c client.Client) (bool, error) {
 	account := c.Account()
 	// Checks if our deposit has gone through according to the SMC
-	b, err := c.SMCCaller().IsNotaryDeposited(&bind.CallOpts{}, account.Address)
-	if !b && err != nil {
+	n, err := c.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	if !n.Deposited && err != nil {
 		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
 	}
-	return b, err
+	return n.Deposited, err
 }
 
 // submitCollation interacts with the SMC directly to add a collation header
@@ -132,7 +141,7 @@ func joinNotaryPool(c client.Client) error {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
 
-	tx, err := c.SMCTransactor().Deposit(txOps)
+	tx, err := c.SMCTransactor().RegisterNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
