@@ -36,7 +36,7 @@ Launches a sharding proposer client that connects to a running geth node and pro
 )
 
 func notaryClient(ctx *cli.Context) error {
-	c := notary.NewCollator(ctx)
+	c := notary.NewNotary(ctx)
 	return c.Start()
 }
 
