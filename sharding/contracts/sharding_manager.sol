@@ -20,32 +20,24 @@ contract SMC {
         address proposerAddress;
     }
 
-  // Packed variables to be used in addHeader
-    struct HeaderVars {
-        bytes32 entireHeaderHash;
-        int score;
-        address notaryAddr;
-        bool isNewHead;
-    }
-
+    // Notary state variables
     address[] public notaryPool;
-
     // notaryAddress => notaryStruct
     mapping (address => Notary) public notaryRegistry;
-    // shardId => (headerHash => treeRoot)
-    mapping (uint => mapping (bytes32 => bytes32)) public collationTrees;
-    // shardId => (headerHash => collationHeader)
-    mapping (int => mapping (bytes32 => CollationHeader)) public collationHeaders;
-    // shardId => headerHash
-    mapping (int => bytes32) shardHead;
-
-    // Number of notaries
+    // number of notaries
     uint public notaryPoolLength;
+
+    // Collation state variables
+    // shardId => (period => CollationHeader), collation records been appended by proposer
+    mapping (uint => mapping (uint => CollationHeader)) public collationRecords;
+    // shardId => period, latest period which new collation header submitted
+    mapping (uint => uint) public lastUpdatedPeriod;
+
+    // Internal help functions variables 
     // Stack of empty notary slot indicies
     uint[] emptySlotsStack;
     // Top index of the stack
     uint emptySlotsStackTop;
-
     // Notary sample size at current period and next period
     uint currentPeriodNotarySampleSize;
     uint nextPeriodNotarySampleSize;
@@ -68,9 +60,6 @@ contract SMC {
     uint constant COMMITTEE_SIZE = 135;
     // Threshold(number of notaries in committee) for a proposal to be accepted
     uint constant QUORUM_SIZE = 90;
-
-    // Log the latest period number of the shard
-    mapping (int => int) public periodHead;
 
     /// Checks if a notary with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
@@ -182,11 +171,10 @@ contract SMC {
         bytes32 chunkRoot,
         address proposerAddress
         ) public {
-      /*
-        TODO: Anyone can call this at any time. The first header
-        to get included for a given shard in a given period gets in,
-        all others don’t. This function just emits a log
-      */
+        require((_shardId >= 0) && (_shardId < SHARD_COUNT));
+        require(block.number >= PERIOD_LENGTH);
+        require(period == block.number / PERIOD_LENGTH);
+        require(period != lastUpdatedPeriod[_shardId]);
     }
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
