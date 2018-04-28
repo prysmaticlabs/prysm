@@ -2,7 +2,7 @@ pragma solidity ^0.4.23;
 
 
 contract SMC {
-    event HeaderAdded(uint indexed shardId, bytes32 chunkRoot, int128 period, address proposerAddress);
+    event HeaderAdded(uint indexed shardId, bytes32 chunkRoot, uint period, address proposerAddress);
     event NotaryRegistered(address notary, uint poolIndex);
     event NotaryDeregistered(address notary, uint poolIndex, uint deregisteredPeriod);
     event NotaryReleased(address notary, uint poolIndex);
@@ -26,12 +26,16 @@ contract SMC {
     mapping (address => Notary) public notaryRegistry;
     // number of notaries
     uint public notaryPoolLength;
+    // current vote count of each shard
+    // first 31 bytes are bitfield of individual notary's vote
+    // last 1 byte is total notary's vote count
+    mapping (uint => byte32) public currentVote
 
     // Collation state variables
     // shardId => (period => CollationHeader), collation records been appended by proposer
     mapping (uint => mapping (uint => CollationHeader)) public collationRecords;
     // shardId => period, latest period which new collation header submitted
-    mapping (uint => uint) public lastUpdatedPeriod;
+    mapping (uint => uint) public shardLastUpdatedPeriod;
 
     // Internal help functions variables 
     // Stack of empty notary slot indicies
@@ -157,7 +161,6 @@ contract SMC {
         bytes32 parentHash,
         bytes32 chunkRoot,
         uint256 period,
-        address proposerAddress
         ) public returns(bytes32) {
       /*
         TODO: Calculate the hash of the collation header from the input parameters
@@ -167,14 +170,41 @@ contract SMC {
     /// Add collation header to the main chain, anyone can call this function. It emits a log
     function addHeader(
         uint _shardId,
-        uint period,
-        bytes32 chunkRoot,
-        address proposerAddress
+        uint _period,
+        bytes32 _chunkRoot,
         ) public {
         require((_shardId >= 0) && (_shardId < SHARD_COUNT));
         require(block.number >= PERIOD_LENGTH);
-        require(period == block.number / PERIOD_LENGTH);
-        require(period != lastUpdatedPeriod[_shardId]);
+        require(_period == block.number / PERIOD_LENGTH);
+        require(_period > shardLastUpdatedPeriod[_shardId]);
+
+        // Track the numbers of participating notaries in between periods
+        updateNotarySampleSize();
+
+        collationRecords[_shardId][_period] = CollationHeader({
+            shardId: _shardId,
+            chunkRoot: _chunkRoot,
+            period: _period,
+            proposerAddress: msg.sender
+        });
+
+        shardLastUpdatedPeriod[_shardId] = block.number / PERIOD_LENGTH;
+
+        emit HeaderAdded(_shardId, _chunkRoot, _period, msg.sender);
+    }
+
+    /// Sampled notary can call the following funtion to submit vote,
+    /// a vote log will be emitted which client will monitor
+    function submitVote(
+        uint _shardId,
+        uint _period,
+        uint _index,
+        bytes32 _chunkRoot,        
+    ) public {
+        require(notaryRegister[msg.sender].deposited)
+        require(collationRecords[_shardId][_period].chunkRoot == _chunkRoot)
+
+        require(getNotaryInCommittee(_shardId, _index) == msg.sender)
     }
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
