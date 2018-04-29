@@ -13,11 +13,10 @@ contract SMC {
         bool deposited;
     }
 
-    struct CollationHeader {
-        uint shardId;             // Number of the shard ID
+    struct CollationRecord {
         bytes32 chunkRoot;        // Root hash of the collation body
-        uint period;              // Period which header should be included
-        address proposerAddress;
+        address proposer;         // Address of the proposer
+        bool isElected;           // True if the collation has reached quorum size
     }
 
     // Notary state variables
@@ -29,13 +28,15 @@ contract SMC {
     // current vote count of each shard
     // first 31 bytes are bitfield of individual notary's vote
     // last 1 byte is total notary's vote count
-    mapping (uint => byte32) public currentVote
+    mapping (uint => bytes32) public currentVote;
 
     // Collation state variables
     // shardId => (period => CollationHeader), collation records been appended by proposer
-    mapping (uint => mapping (uint => CollationHeader)) public collationRecords;
-    // shardId => period, latest period which new collation header submitted
-    mapping (uint => uint) public shardLastUpdatedPeriod;
+    mapping (uint => mapping (uint => CollationRecord)) public collationRecords;
+    // shardId => period, last period of the submitted collation header
+    mapping (uint => uint) public lastSubmittedCollation;
+    // shardId => period, last period of the approved collation header
+    mapping (uint => uint) public lastApprovedCollation;
 
     // Internal help functions variables 
     // Stack of empty notary slot indicies
@@ -155,40 +156,26 @@ contract SMC {
         emit NotaryReleased(notaryAddress, index);
     }
 
-    /// Calcuates the hash of the header from the input parameters
-    function computeHeaderHash(
-        uint256 shardId,
-        bytes32 parentHash,
-        bytes32 chunkRoot,
-        uint256 period,
-        ) public returns(bytes32) {
-      /*
-        TODO: Calculate the hash of the collation header from the input parameters
-      */
-    }
-
     /// Add collation header to the main chain, anyone can call this function. It emits a log
     function addHeader(
         uint _shardId,
         uint _period,
-        bytes32 _chunkRoot,
+        bytes32 _chunkRoot
         ) public {
         require((_shardId >= 0) && (_shardId < SHARD_COUNT));
         require(block.number >= PERIOD_LENGTH);
         require(_period == block.number / PERIOD_LENGTH);
-        require(_period > shardLastUpdatedPeriod[_shardId]);
+        require(_period > lastSubmittedCollation[_shardId]);
 
         // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
 
-        collationRecords[_shardId][_period] = CollationHeader({
-            shardId: _shardId,
+        collationRecords[_shardId][_period] = CollationRecord({
             chunkRoot: _chunkRoot,
-            period: _period,
-            proposerAddress: msg.sender
+            proposer: msg.sender
         });
 
-        shardLastUpdatedPeriod[_shardId] = block.number / PERIOD_LENGTH;
+        lastSubmittedCollation[_shardId] = block.number / PERIOD_LENGTH;
 
         emit HeaderAdded(_shardId, _chunkRoot, _period, msg.sender);
     }
@@ -199,12 +186,13 @@ contract SMC {
         uint _shardId,
         uint _period,
         uint _index,
-        bytes32 _chunkRoot,        
+        bytes32 _chunkRoot        
     ) public {
-        require(notaryRegister[msg.sender].deposited)
-        require(collationRecords[_shardId][_period].chunkRoot == _chunkRoot)
+        require(notaryRegistry[msg.sender].deposited);
+        require(collationRecords[_shardId][_period].chunkRoot == _chunkRoot);
+        require(!hasVoted(_shardId, _index));
+        require(getNotaryInCommittee(_shardId, _index) == msg.sender);
 
-        require(getNotaryInCommittee(_shardId, _index) == msg.sender)
     }
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
@@ -239,4 +227,14 @@ contract SMC {
         --emptySlotsStackTop;
         return emptySlotsStack[emptySlotsStackTop];
     }
+
+    /// Check if a bit is set from a given byte, this function is used to check
+    /// if a notary has casted the vote, return true if voted, false if not
+    function hasVoted(uint _shardId, uint _index) internal returns (bool) {
+        uint byteIndex = _index / 8;
+        uint bitIndex = _index % 8;
+        byte _byte = currentVote[_shardId][byteIndex];
+        byte bitPos = byte(2 ** (7 - bitIndex));
+        return (_byte & bitPos) == bitPos;
+    } 
 }
