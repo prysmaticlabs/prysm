@@ -6,6 +6,7 @@ contract SMC {
     event NotaryRegistered(address notary, uint poolIndex);
     event NotaryDeregistered(address notary, uint poolIndex, uint deregisteredPeriod);
     event NotaryReleased(address notary, uint poolIndex);
+    event Voted(uint indexed shardId, bytes32 chunkRoot, uint period, address notaryAddress);
 
     struct Notary {
         uint deregisteredPeriod;
@@ -49,6 +50,9 @@ contract SMC {
     uint sampleSizeLastUpdatedPeriod;
 
     // Constant values
+    uint constant ONE = 1;
+    uint constant ONES = 255;
+    uint constant LAST_BYTE = 31;
     uint constant PERIOD_LENGTH = 5;
     // Number of shards
     uint constant SHARD_COUNT = 100;
@@ -172,7 +176,8 @@ contract SMC {
 
         collationRecords[_shardId][_period] = CollationRecord({
             chunkRoot: _chunkRoot,
-            proposer: msg.sender
+            proposer: msg.sender,
+            isElected: false
         });
 
         lastSubmittedCollation[_shardId] = block.number / PERIOD_LENGTH;
@@ -181,7 +186,7 @@ contract SMC {
     }
 
     /// Sampled notary can call the following funtion to submit vote,
-    /// a vote log will be emitted which client will monitor
+    /// a vote log will be emitted for client to monitor
     function submitVote(
         uint _shardId,
         uint _period,
@@ -193,6 +198,12 @@ contract SMC {
         require(!hasVoted(_shardId, _index));
         require(getNotaryInCommittee(_shardId, _index) == msg.sender);
 
+        uint8 voteCount = castVote(_shardId, _index);
+        if (voteCount >= QUORUM_SIZE) {
+            lastApprovedCollation[_shardId] = _period;
+            collationRecords[_shardId][_period].isElected = true;
+        }
+        emit Voted(_shardId, _chunkRoot, _period, msg.sender);
     }
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
@@ -228,13 +239,20 @@ contract SMC {
         return emptySlotsStack[emptySlotsStackTop];
     }
 
-    /// Check if a bit is set from a given byte, this function is used to check
+    /// Check if a bit is set, this function is used to check
     /// if a notary has casted the vote, return true if voted, false if not
     function hasVoted(uint _shardId, uint _index) internal returns (bool) {
-        uint byteIndex = _index / 8;
-        uint bitIndex = _index % 8;
-        byte _byte = currentVote[_shardId][byteIndex];
-        byte bitPos = byte(2 ** (7 - bitIndex));
-        return (_byte & bitPos) == bitPos;
-    } 
-}
+        return currentVote[_shardId] & bytes32(ONE << uint(ONES - _index)) == bytes32(ONE << uint(ONES - _index));
+    }
+
+    /// Set a bit to one, notary uses this function to cast it's vote,
+    /// After the notary casts it's vote, we increase the vote count by 1 (last byte)
+    /// Returns the total numbers of votes
+    function castVote(uint _shardId, uint _index) internal returns (uint8) {
+        currentVote[_shardId] = currentVote[_shardId] | bytes32(ONE << (ONES - _index));
+        uint8 voteCount = uint8(currentVote[_shardId][LAST_BYTE]) + 1;
+        bytes32 mask = bytes32(0xff);
+        currentVote[_shardId] = (currentVote[_shardId] & ~mask) | bytes32(voteCount);
+        return voteCount;
+    }    
+} 
