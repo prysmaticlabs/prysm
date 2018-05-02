@@ -1,4 +1,4 @@
-package collator
+package notary
 
 import (
 	"math/big"
@@ -20,7 +20,7 @@ var (
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
 
-// Mock client for testing collator. Should this go into sharding/client/testing?
+// Mock client for testing notary. Should this go into sharding/client/testing?
 type mockClient struct {
 	smc *contracts.SMC
 	t   *testing.T
@@ -59,7 +59,7 @@ func (m *mockClient) Close() {
 }
 
 // Helper/setup methods
-// TODO: consider moving these to common sharding testing package as the collator and smc tests
+// TODO: consider moving these to common sharding testing package as the notary and smc tests
 // use them.
 func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
@@ -71,60 +71,60 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 	return backend, smc
 }
 
-func TestIsAccountInCollatorPool(t *testing.T) {
+func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &mockClient{smc: smc, t: t}
 
 	// address should not be in pool initially
-	b, err := isAccountInCollatorPool(client)
+	b, err := isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if b {
-		t.Fatal("Account unexpectedly in collator pool")
+		t.Fatal("Account unexpectedly in notary pool")
 	}
 
 	txOpts := transactOpts()
-	// deposit in collator pool, then it should return true
+	// deposit in notary pool, then it should return true
 	txOpts.Value = sharding.NotaryDeposit
-	if _, err := smc.Deposit(txOpts); err != nil {
+	if _, err := smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
-	b, err = isAccountInCollatorPool(client)
+	b, err = isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !b {
-		t.Fatal("Account not in collator pool when expected to be")
+		t.Fatal("Account not in notary pool when expected to be")
 	}
 }
 
-func TestJoinCollatorPool(t *testing.T) {
+func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &mockClient{smc, t}
 
-	// There should be no collators initially
-	numCollators, err := smc.NumCollators(&bind.CallOpts{})
+	// There should be no notary initially
+	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if big.NewInt(0).Cmp(numCollators) != 0 {
-		t.Fatalf("Unexpected number of collators. Got %d, wanted 0.", numCollators)
+	if big.NewInt(0).Cmp(numNotaries) != 0 {
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	err = joinCollatorPool(client)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
 	backend.Commit()
 
-	// Now there should be one collator
-	numCollators, err = smc.NumCollators(&bind.CallOpts{})
+	// Now there should be one notary
+	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if big.NewInt(1).Cmp(numCollators) != 0 {
-		t.Fatalf("Unexpected number of collators. Got %d, wanted 1.", numCollators)
+	if big.NewInt(1).Cmp(numNotaries) != 0 {
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
 }
