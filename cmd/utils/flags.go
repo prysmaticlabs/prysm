@@ -536,7 +536,7 @@ var (
 	//Sharding Settings
 	DepositFlag = cli.BoolFlag{
 		Name:  "deposit",
-		Usage: "To become a collator with your sharding client, 100 ETH will be deposited from user's account into SMC ",
+		Usage: "To become a notary with your sharding client, 100 ETH will be deposited from user's account into SMC ",
 	}
 )
 

@@ -33,7 +33,7 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
-// General client for Collator/Proposer. Communicates to Geth node via JSON RPC.
+// General client for Notary/Proposer. Communicates to Geth node via JSON RPC.
 
 type shardingClient struct {
 	endpoint  string             // Endpoint to JSON RPC
@@ -96,7 +96,7 @@ func (c *shardingClient) Start() error {
 	c.rpcClient = rpcClient
 	c.client = ethclient.NewClient(rpcClient)
 
-	// Check account existence and unlock account before starting collator client
+	// Check account existence and unlock account before starting notary client
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
 		return fmt.Errorf("no accounts found")
