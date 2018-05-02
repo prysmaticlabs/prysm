@@ -15,7 +15,7 @@ var (
 	totalDatasize      = numberOfChunks * chunkDataSize
 )
 
-type collationbody []byte
+type txblob []byte
 
 type body interface {
 	length() int64
@@ -23,7 +23,7 @@ type body interface {
 	serializeBlob() []byte
 }
 
-func (cb collationbody) length() int64 {
+func (cb txblob) length() int64 {
 
 	return int64(len(cb))
 }
@@ -32,7 +32,7 @@ func (cb collationbody) length() int64 {
 the size of the body is below the limit it is simply appended
 till it reaches the required limit */
 
-func (cb collationbody) validateBody() error {
+func (cb txblob) validateBody() error {
 
 	if cb.length() == 0 {
 		return fmt.Errorf("Collation Body has to be a non-zero value")
@@ -45,27 +45,36 @@ func (cb collationbody) validateBody() error {
 	return nil
 }
 
-func deserializeBlob(blob body) []byte {
-	deserializedblob := blob.(collationbody)
-	length := deserializedblob.length()
+func deserializebody(collationbody []byte) []body {
+	length := int64(len(collationbody))
 	chunksNumber := chunkSize / length
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
-	tempbody := []byte{0}
+	txblobs := []body{}
+	var tempbody txblob
 
 	for i := int64(1); i <= chunksNumber; i++ {
 
-		if reflect.TypeOf(deserializedblob[:(i-1)*chunksNumber]) == reflect.TypeOf(indicatorByte) {
+		if reflect.TypeOf(collationbody[(i-1)*chunkSize]) == reflect.TypeOf(indicatorByte) {
+			tempbody = append(tempbody, collationbody[((i-1)*chunkSize+1):(i)*chunkSize]...)
+
+		} else {
+			terminalIndex := int64(collationbody[(i-1)*chunkSize])
+			tempbody = append(tempbody, collationbody[((i-1)*chunkSize+1):((i-1)*chunkSize+2+terminalIndex)]...)
+			txblobs = append(txblobs, tempbody)
+			tempbody = txblob{}
 
 		}
 
 	}
 
+	return txblobs
+
 }
 
 // Parse Collation body and modify it accordingly
 
-func (cb collationbody) serializeBlob() []byte {
+func (cb txblob) serializeBlob() []byte {
 
 	terminalLength := cb.length() % chunkDataSize
 	chunksNumber := cb.length() / chunkDataSize
