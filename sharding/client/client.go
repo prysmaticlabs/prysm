@@ -55,7 +55,7 @@ type Client interface {
 }
 
 // NewClient forms a new struct instance
-func NewClient(ctx *cli.Context) *shardingClient {
+func NewClient(ctx *cli.Context) Client {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
