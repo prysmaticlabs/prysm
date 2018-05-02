@@ -1,4 +1,3 @@
-// Package notary holds all of the functionality to run as a notary in a sharded system.
 package notary
 
 import (
@@ -7,9 +6,9 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// Notary runnable client.
+// Notary runnable client
 type Notary interface {
-	// Start the main routine for a notary.
+	// Start the main routine for a notary
 	Start() error
 }
 
@@ -17,14 +16,14 @@ type notary struct {
 	client client.Client
 }
 
-// NewNotary creates a new notary instance.
+// NewNotary creates a new notary instance
 func NewNotary(ctx *cli.Context) Notary {
 	return &notary{
 		client: client.NewClient(ctx),
 	}
 }
 
-// Start the main routine for a notary.
+// Start the main routine for a notary
 func (c *notary) Start() error {
 	log.Info("Starting notary client")
 	err := c.client.Start()

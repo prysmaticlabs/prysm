@@ -1,6 +1,6 @@
 // Package client provides an interface for interacting with a running ethereum full node.
 // As part of the initial phases of sharding, actors will need access to the sharding management
-// contract on the main PoW chain.
+// contract on the main PoW chain
 package client
 
 import (
@@ -33,8 +33,7 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
-// General client for Notary/Proposer. Communicates to Geth node via JSON RPC.
-
+// General client for Notary/Proposer - Communicates to Geth node via JSON RPC
 type shardingClient struct {
 	endpoint  string             // Endpoint to JSON RPC
 	client    *ethclient.Client  // Ethereum RPC client.
@@ -44,6 +43,7 @@ type shardingClient struct {
 	rpcClient *rpc.Client        // The RPC client connection to the main geth node
 }
 
+// Client methods that must be implemented to run a sharded system
 type Client interface {
 	Start() error
 	Close()
@@ -54,7 +54,8 @@ type Client interface {
 	SMCTransactor() *contracts.SMCTransactor
 }
 
-func NewClient(ctx *cli.Context) *shardingClient {
+// NewClient forms a new struct instance
+func NewClient(ctx *cli.Context) Client {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
@@ -85,9 +86,9 @@ func NewClient(ctx *cli.Context) *shardingClient {
 	}
 }
 
-// Start the sharding client.
-// * Connects to Geth node.
-// * Verifies or deploys the sharding manager contract.
+// Start the sharding client
+// Connects to Geth node
+// Verifies or deploys the sharding manager contract
 func (c *shardingClient) Start() error {
 	rpcClient, err := dialRPC(c.endpoint)
 	if err != nil {
@@ -184,6 +185,7 @@ func (c *shardingClient) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
 }
 
+// SMCTransactor allows us to send tx's to the SMC programmatically
 func (c *shardingClient) SMCTransactor() *contracts.SMCTransactor {
 	return &c.smc.SMCTransactor
 }
