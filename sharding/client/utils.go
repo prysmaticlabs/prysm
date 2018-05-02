@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"math"
+	"reflect"
 )
 
 var (
@@ -18,8 +19,8 @@ type collationbody []byte
 
 type body interface {
 	length() int64
-	validateblob() error
-	ParseBlob()
+	validateBody() error
+	serializeBlob() []byte
 }
 
 func (cb collationbody) length() int64 {
@@ -44,6 +45,24 @@ func (cb collationbody) validateBody() error {
 	return nil
 }
 
+func deserializeBlob(blob body) []byte {
+	deserializedblob := blob.(collationbody)
+	length := deserializedblob.length()
+	chunksNumber := chunkSize / length
+	indicatorByte := make([]byte, 1)
+	indicatorByte[0] = 0
+	tempbody := []byte{0}
+
+	for i := int64(1); i <= chunksNumber; i++ {
+
+		if reflect.TypeOf(deserializedblob[:(i-1)*chunksNumber]) == reflect.TypeOf(indicatorByte) {
+
+		}
+
+	}
+
+}
+
 // Parse Collation body and modify it accordingly
 
 func (cb collationbody) serializeBlob() []byte {
@@ -52,7 +71,7 @@ func (cb collationbody) serializeBlob() []byte {
 	chunksNumber := cb.length() / chunkDataSize
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
-	var tempbody []byte
+	tempbody := []byte{}
 
 	// if blob is less than 31 bytes, it adds the indicator chunk and pads the remaining empty bytes to the right
 
