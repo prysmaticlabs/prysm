@@ -638,7 +638,7 @@ func TestNormalAddHeader(t *testing.T) {
 	}
 }
 
-func TestAddHeadersInSamePeriod(t *testing.T) {
+func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
@@ -673,5 +673,56 @@ func TestAddHeadersInSamePeriod(t *testing.T) {
 	_, err = smc.AddHeader(txOpts, shard0, period1, chunkRoot)
 	if err == nil {
 		t.Errorf("Proposer is not allowed to add 2 headers within same period")
+	}
+}
+
+func TestAddHeadersAtWrongPeriod(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Fast forward to the next period to submit header. Period 1
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	// Proposer adds header at wrong period, shard 0, period 0 and chunkroot 0xA
+	period0 := big.NewInt(0)
+	shard0 := big.NewInt(0)
+	chunkRoot := [32]byte{'A'}
+	chunkRootEmpty := [32]byte{}
+	_, err := smc.AddHeader(txOpts, shard0, period0, chunkRoot)
+	if err == nil {
+		t.Errorf("Proposer adds header at wrong period should have failed")
+	}
+
+	cr, err := smc.CollationRecords(&bind.CallOpts{}, shard0, period0)
+	if cr.ChunkRoot != chunkRootEmpty {
+		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
+	}
+
+	// Proposer adds header at wrong period, shard 0, period 2 and chunkroot 0xA
+	period2 := big.NewInt(2)
+	_, err = smc.AddHeader(txOpts, shard0, period2, chunkRoot)
+	if err == nil {
+		t.Errorf("Proposer adds header at wrong period should have failed")
+	}
+
+	cr, err = smc.CollationRecords(&bind.CallOpts{}, shard0, period2)
+	if cr.ChunkRoot != chunkRootEmpty {
+		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
+	}
+
+	// Proposer adds header at correct period, shard 0, period 1 and chunkroot 0xA
+	period1 := big.NewInt(1)
+	_, err = smc.AddHeader(txOpts, shard0, period1, chunkRoot)
+	if err != nil {
+		t.Fatalf("Proposer adds header failed: %v", err)
+	}
+
+	cr, err = smc.CollationRecords(&bind.CallOpts{}, shard0, period1)
+	if cr.ChunkRoot != chunkRootEmpty {
+		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 }
