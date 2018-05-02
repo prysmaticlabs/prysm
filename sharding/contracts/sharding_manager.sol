@@ -167,12 +167,11 @@ contract SMC {
         bytes32 _chunkRoot
         ) public {
         require((_shardId >= 0) && (_shardId < SHARD_COUNT));
-        require(block.number >= PERIOD_LENGTH);
         require(_period == block.number / PERIOD_LENGTH);
         require(_period > lastSubmittedCollation[_shardId]);
 
-        // Track the numbers of participating notaries in between periods
-        updateNotarySampleSize();
+        //Track the numbers of participating notaries in between periods
+        //updateNotarySampleSize();
 
         collationRecords[_shardId][_period] = CollationRecord({
             chunkRoot: _chunkRoot,
