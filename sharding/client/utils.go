@@ -17,7 +17,7 @@ var (
 
 type txblob []byte
 
-type body interface {
+type blob interface {
 	length() int64
 	validateBody() error
 	serializeBlob() []byte
@@ -45,12 +45,12 @@ func (cb txblob) validateBody() error {
 	return nil
 }
 
-func deserializebody(collationbody []byte) []body {
+func deserializebody(collationbody []byte) []blob {
 	length := int64(len(collationbody))
 	chunksNumber := chunkSize / length
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
-	txblobs := []body{}
+	txblobs := []blob{}
 	var tempbody txblob
 
 	for i := int64(1); i <= chunksNumber; i++ {
@@ -72,7 +72,21 @@ func deserializebody(collationbody []byte) []body {
 
 }
 
-// Parse Collation body and modify it accordingly
+func serialize(rawtx []blob) []byte {
+	length := int64(len(rawtx))
+	serialisedData := []byte{}
+
+	for i := int64(1); i < length; i++ {
+		data := rawtx[length].(txblob)
+		refinedData := data.serializeBlob()
+		serialisedData = append(serialisedData, refinedData...)
+		txblob(serialisedData).validateBody()
+
+	}
+	return serialisedData
+}
+
+// Parse blob and modify it accordingly
 
 func (cb txblob) serializeBlob() []byte {
 
