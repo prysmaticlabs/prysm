@@ -180,6 +180,7 @@ contract SMC {
         });
 
         lastSubmittedCollation[_shardId] = block.number / PERIOD_LENGTH;
+        delete currentVote[_shardId];
 
         emit HeaderAdded(_shardId, _chunkRoot, _period, msg.sender);
     }
@@ -253,5 +254,6 @@ contract SMC {
         bytes32 mask = bytes32(0xff);
         currentVote[_shardId] = (currentVote[_shardId] & ~mask) | bytes32(voteCount);
         return voteCount;
-    }    
+    }
+       
 } 
