@@ -185,6 +185,7 @@ func (c *shardingClient) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
 }
 
+// SMCTransactor allows us to send tx's to the SMC programmatically
 func (c *shardingClient) SMCTransactor() *contracts.SMCTransactor {
 	return &c.smc.SMCTransactor
 }
