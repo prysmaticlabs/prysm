@@ -18,6 +18,7 @@ var (
 	totalDatasize      = numberOfChunks * chunkDataSize
 )
 
+// convertInterface converts inputted interface to the required type, ex: slice.
 func convertInterface(arg interface{}, kind reflect.Kind) (reflect.Value, error) {
 	val := reflect.ValueOf(arg)
 	if val.Kind() == kind {
@@ -28,8 +29,7 @@ func convertInterface(arg interface{}, kind reflect.Kind) (reflect.Value, error)
 	return val, err
 }
 
-// Parse blob and modify it accordingly
-
+// serializeBlob parses the blob and serializes it appropriately.
 func serializeBlob(cb interface{}) ([]byte, error) {
 
 	blob, err := convertInterface(cb, reflect.Slice)
@@ -39,6 +39,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	length := int64(blob.Len())
 	terminalLength := length % chunkDataSize
 	chunksNumber := length / chunkDataSize
+	finalchunkIndex := totalDatasize + (terminalLength + 1)
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
 	tempbody := []byte{}
@@ -46,34 +47,56 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	// if blob is less than 31 bytes, it adds the indicator chunk and pads the remaining empty bytes to the right
 
 	if chunksNumber == 0 {
-		paddedbytes := make([]byte, length-terminalLength)
+		paddedbytes := make([]byte, (length - terminalLength))
 		indicatorByte[0] = byte(terminalLength)
-		tempbody = append(indicatorByte, append(cb.([]byte), paddedbytes...)...)
+		tempbody = append(indicatorByte, append(blob.Bytes(), paddedbytes...)...)
 		return tempbody, nil
 	}
 
 	//if there is no need to pad empty bytes, then the indicator byte is added as 00011111
+	// Then this chunk is returned to the main Serialize function
 
 	if terminalLength == 0 {
 
 		for i := int64(1); i < chunksNumber; i++ {
-			tempbody = append(tempbody, append(indicatorByte, blob.Bytes()[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
+			// This loop loops through all non-terminal chunks and add a indicator byte of 00000000, each chunk
+			// is created by appending the indcator byte to the data chunks. The data chunks are separated into sets of
+			// 31
+			tempbody = append(tempbody,
+				append(indicatorByte,
+					blob.Bytes()[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
 
 		}
 		indicatorByte[0] = byte(chunkDataSize)
-		tempbody = append(tempbody, append(indicatorByte, blob.Bytes()[(chunksNumber-1)*chunkDataSize:chunksNumber*chunkDataSize]...)...)
+
+		// Terminal chunk has its indicator byte added, chunkDataSize*chunksNumber refers to the total size of the blob
+		tempbody = append(tempbody,
+			append(indicatorByte,
+				blob.Bytes()[(chunksNumber-1)*chunkDataSize:chunkDataSize*chunksNumber]...)...)
+
 		return tempbody, nil
 
 	}
 
-	// Appends empty indicator bytes to non terminal-chunks
+	// This loop loops through all non-terminal chunks and add a indicator byte of 00000000, each chunk
+	// is created by appending the indcator byte to the data chunks. The data chunks are separated into sets of
+	// 31
 	for i := int64(1); i <= chunksNumber; i++ {
-		tempbody = append(tempbody, append(indicatorByte, blob.Bytes()[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
+
+		tempbody = append(tempbody,
+			append(indicatorByte,
+				blob.Bytes()[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
 
 	}
-	// Appends indicator bytes to terminal-chunks , and if the index of the chunk delimiter is non-zero adds it to the chunk
+	// Appends indicator bytes to terminal-chunks , and if the index of the chunk delimiter is non-zero adds it to the chunk.
+	// Also pads empty bytes to the terminal chunk.chunkDataSize*chunksNumber refers to the total size of the blob.
+	// finalchunkIndex refers to the index of the last data byte
+
 	indicatorByte[0] = byte(terminalLength)
-	tempbody = append(tempbody, append(indicatorByte, blob.Bytes()[chunksNumber*chunkDataSize:(chunksNumber*chunkDataSize)+(terminalLength+1)]...)...)
+	tempbody = append(tempbody,
+		append(indicatorByte,
+			blob.Bytes()[chunkDataSize*chunksNumber:finalchunkIndex]...)...)
+
 	emptyBytes := make([]byte, (chunkDataSize - terminalLength))
 	tempbody = append(tempbody, emptyBytes...)
 
@@ -81,7 +104,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 
 }
 
-// Serialize takes a set of transactions and converts them to a single byte array
+// Serialize takes a set of transaction blobs and converts them to a single byte array.
 func Serialize(rawtx []interface{}) ([]byte, error) {
 	length := int64(len(rawtx))
 
@@ -90,6 +113,7 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 	}
 	serialisedData := []byte{}
 
+	//Loops through all the blobs and serializes them into chunks
 	for i := int64(0); i < length; i++ {
 
 		blobLength := int64(len(serialisedData))
@@ -111,31 +135,34 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 	return serialisedData, nil
 }
 
-// Deserializebody results in the Collation body being deserialised and separated into its respective interfaces
+// Deserializebody results in the Collation body being deserialised and separated into its respective interfaces.
 func Deserializebody(collationbody []byte, rawtx []interface{}) error {
 
 	length := int64(len(collationbody))
 	chunksNumber := chunkSize / length
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
-	var txblobs []interface{}
 	tempbody := []byte{}
 
+	// This separates the collation body into its respective transaction blobs
 	for i := int64(1); i <= chunksNumber; i++ {
+		indicatorIndex := (i - 1) * chunkSize
+		// Tests if the chunk delimiter is zero, if it is it will append the data chunk
+		// to tempbody
+		if collationbody[indicatorIndex] == indicatorByte[0] {
+			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(i)*chunkSize]...)
 
-		if reflect.ValueOf(collationbody[(i-1)*chunkSize]) == reflect.ValueOf(indicatorByte) {
-			tempbody = append(tempbody, collationbody[((i-1)*chunkSize+1):(i)*chunkSize]...)
-
+			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
+			// add it and append to the rawtx slice. The tempbody signifies a deserialized blob
 		} else {
-			terminalIndex := int64(collationbody[(i-1)*chunkSize])
-			tempbody = append(tempbody, collationbody[((i-1)*chunkSize+1):((i-1)*chunkSize+2+terminalIndex)]...)
-			txblobs = append(txblobs, tempbody)
+			terminalIndex := int64(collationbody[indicatorIndex])
+			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(indicatorIndex+2+terminalIndex)]...)
+			rawtx = append(rawtx, tempbody)
 			tempbody = []byte{}
 
 		}
 
 	}
-	rawtx = txblobs
 
 	return nil
 
