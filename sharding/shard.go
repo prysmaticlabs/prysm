@@ -22,28 +22,39 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 	return nil
 }
 
+// SetHeader adds the collation header to shardDB
+func (s *Shard) SetHeader(h *CollationHeader) error {
+	if err := s.ValidateShardID(h); err != nil {
+		return err
+	}
+	encoded, err := rlp.EncodeToBytes(h)
+	if err != nil {
+		return fmt.Errorf("Error: Cannot Encode Header")
+	}
+	s.shardDB.Put(h.Hash(), encoded)
+	return nil
+}
+
 // GetHeaderByHash of collation.
-func (s *Shard) GetHeaderByHash(hash *common.Hash) (*CollationHeader, error) {
-	encoded := s.shardDB.Get(hash)
+func (s *Shard) GetHeaderByHash(hash common.Hash) (*CollationHeader, error) {
+	encoded, err := s.shardDB.Get(hash)
+	if err != nil {
+		return nil, fmt.Errorf("Error: Header Not Found")
+	}
 	var header CollationHeader
 	if err := rlp.DecodeBytes(encoded, &header); err != nil {
-		return nil, fmt.Errorf("Error Decoding Header: %v", err)
+		return nil, fmt.Errorf("Error: Problem Decoding Header: %v", err)
 	}
 	return &header, nil
 }
 
-// GetHeaderByPeriod the header was added.
-func (s *Shard) GetHeaderByPeriod(period *big.Int) *CollationHeader {
-	return nil
-}
-
 // GetCollationByHash fetches full collation.
-func (s *Shard) GetCollationByHash(hash *common.Hash) (*Collation, error) {
+func (s *Shard) GetCollationByHash(hash common.Hash) (*Collation, error) {
 	header, err := s.GetHeaderByHash(hash)
 	if err != nil {
 		return nil, err
 	}
-	body, err := s.GetBodyByChunkRoot(header.chunkRoot)
+	body, err := s.GetBodyByChunkRoot(*header.chunkRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -51,9 +62,9 @@ func (s *Shard) GetCollationByHash(hash *common.Hash) (*Collation, error) {
 }
 
 // GetBodyByChunkRoot fetches a collation body
-func (s *Shard) GetBodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
-	body := s.shardDB.Get(chunkRoot)
-	if body == nil {
+func (s *Shard) GetBodyByChunkRoot(chunkRoot common.Hash) ([]byte, error) {
+	body, err := s.shardDB.Get(chunkRoot)
+	if err != nil {
 		return nil, fmt.Errorf("Error: No Corresponding Body With Chunk Root Found")
 	}
 	return body, nil
@@ -68,11 +79,3 @@ func (s *Shard) CheckAvailability(header *CollationHeader) bool {
 func (s *Shard) SetUnavailable(header *CollationHeader) error {
 	return nil
 }
-
-// SetCanonical is called after >= 2/3 notaries vote on header and period ends.
-func (s *Shard) SetCanonical(header *CollationHeader) error {
-	return nil
-}
-
-// Set Header and Set Body Methods
-// TODO: error in Get from the kv store
