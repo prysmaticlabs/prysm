@@ -10,7 +10,7 @@ import (
 
 // Shard base struct.
 type Shard struct {
-	shardDB *shardBackend
+	shardDB *shardKV
 	shardID *big.Int
 }
 
@@ -22,8 +22,8 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 	return nil
 }
 
-// SetHeader adds the collation header to shardDB
-func (s *Shard) SetHeader(h *CollationHeader) error {
+// SaveHeader adds the collation header to shardDB.
+func (s *Shard) SaveHeader(h *CollationHeader) error {
 	if err := s.ValidateShardID(h); err != nil {
 		return err
 	}
@@ -32,6 +32,15 @@ func (s *Shard) SetHeader(h *CollationHeader) error {
 		return fmt.Errorf("Error: Cannot Encode Header")
 	}
 	s.shardDB.Put(h.Hash(), encoded)
+	return nil
+}
+
+// SaveCollationBody adds the collation body to shardDB.
+func (s *Shard) SaveCollationBody(body []byte) error {
+	// TODO: dependent on blob serialization.
+	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
+	// s.shardDB.Put(chunkRoot, body)
+	// s.SetAvailability(chunkRoot, true)
 	return nil
 }
 
@@ -61,7 +70,7 @@ func (s *Shard) GetCollationByHash(hash common.Hash) (*Collation, error) {
 	return &Collation{header: header, body: body}, nil
 }
 
-// GetBodyByChunkRoot fetches a collation body
+// GetBodyByChunkRoot fetches a collation body.
 func (s *Shard) GetBodyByChunkRoot(chunkRoot common.Hash) ([]byte, error) {
 	body, err := s.shardDB.Get(chunkRoot)
 	if err != nil {
@@ -75,7 +84,7 @@ func (s *Shard) CheckAvailability(header *CollationHeader) bool {
 	return true
 }
 
-// SetUnavailable ensures to set a collation as unavailable in the shardDB.
-func (s *Shard) SetUnavailable(header *CollationHeader) error {
+// SetAvailability saves the availability of the chunk root in the shardDB.
+func (s *Shard) SetAvailability(chunkRoot *common.Hash) error {
 	return nil
 }
