@@ -81,22 +81,26 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 
 }
 
+// Serialize takes a set of transactions and converts them to a single byte array
 func Serialize(rawtx []interface{}) ([]byte, error) {
 	length := int64(len(rawtx))
 
 	if length == 0 {
 		return nil, fmt.Errorf("Validation failed: Collation Body has to be a non-zero value")
 	}
-	serialisedData := []byte{0, 2}
+	serialisedData := []byte{}
 
 	for i := int64(0); i < length; i++ {
 
-		blobLength := length(serialisedData)
-		data := rawtx[i].(txblob)
-		refinedData := data.serializeBlob()
+		blobLength := int64(len(serialisedData))
+		data := rawtx[i]
+		refinedData, err := serializeBlob(data)
+		if err != nil {
+			return nil, fmt.Errorf("Error: %v", err)
+		}
 		serialisedData = append(serialisedData, refinedData...)
 
-		if txblob(serialisedData).length() > collationsizelimit {
+		if int64(len(serialisedData)) > collationsizelimit {
 			log.Info(fmt.Sprintf("The total number of interfaces added to the collation body are: %d", i))
 			serialisedData = serialisedData[:blobLength]
 			return serialisedData, nil
@@ -107,32 +111,32 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 	return serialisedData, nil
 }
 
-// Collation body deserialised and separated into its respective interfaces
-
-func Deserializebody(collationbody []byte) []blob {
+// Deserializebody results in the Collation body being deserialised and separated into its respective interfaces
+func Deserializebody(collationbody []byte, rawtx []interface{}) error {
 
 	length := int64(len(collationbody))
 	chunksNumber := chunkSize / length
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
-	txblobs := []blob{}
-	var tempbody txblob
+	var txblobs []interface{}
+	tempbody := []byte{}
 
 	for i := int64(1); i <= chunksNumber; i++ {
 
-		if reflect.TypeOf(collationbody[(i-1)*chunkSize]) == reflect.TypeOf(indicatorByte) {
+		if reflect.ValueOf(collationbody[(i-1)*chunkSize]) == reflect.ValueOf(indicatorByte) {
 			tempbody = append(tempbody, collationbody[((i-1)*chunkSize+1):(i)*chunkSize]...)
 
 		} else {
 			terminalIndex := int64(collationbody[(i-1)*chunkSize])
 			tempbody = append(tempbody, collationbody[((i-1)*chunkSize+1):((i-1)*chunkSize+2+terminalIndex)]...)
 			txblobs = append(txblobs, tempbody)
-			tempbody = txblob{}
+			tempbody = []byte{}
 
 		}
 
 	}
+	rawtx = txblobs
 
-	return txblobs
+	return nil
 
 }
