@@ -14,31 +14,22 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     -   [System Architecture](#system-architecture)
     -   [System Start and User Entrypoint](#system-start-and-user-entrypoint)
     -   [The Sharding Manager Contract](#the-sharding-manager-contract)
-        -   [Necessary Functionality](#necessary-functionality)
-            -   [Registering Collators and Proposers](#registering-collators-and-proposers)
-            -   [Determining an Eligible Collator for a Period on a Shard](#determining-an-eligible-collator-for-a-period-on-a-shard)
-            -   [Processing and Verifying a Collation Header](#processing-and-verifying-a-collation-header)
-        -   [Collator Sampling](#collator-sampling)
-        -   [Collation Header Approval](#collation-header-approval)
-        -   [Event Logs](#event-logs)
-    -   [The Collator Client](#the-collator-client)
+        -   [Notary Sampling](#notary-sampling)
+    -   [The Notary Client](#the-notary-client)
         -   [Local Shard Storage](#local-shard-storage)
     -   [The Proposer Client](#the-proposer-client)
         -   [Collation Headers](#collation-headers)
-    -   [Peer Discovery and Shard Wire Protocol](#peer-discovery-and-shard-wire-protocol)
     -   [Protocol Modifications](#protocol-modifications)
         -   [Protocol Primitives: Collations, Blocks, Transactions, Accounts](#protocol-primitives-collations-blocks-transactions-accounts)
         -   [The EVM: What You Need to Know](#the-evm-what-you-need-to-know)
     -   [Sharding In-Practice](#sharding-in-practice)
-        -   [Fork Choice Rule](#fork-choice-rule)
         -   [Use-Case Stories: Proposers](#use-case-stories-proposers)
-        -   [Use-Case Stories: Collators](#use-case-stories-collators)
+        -   [Use-Case Stories: Notaries](#use-case-stories-notaries)
     -   [Current Status](#current-status)
 -   [Security Considerations](#security-considerations)
     -   [Not Included in Ruby Release](#not-included-in-ruby-release)
     -   [Bribing, Coordinated Attack Models](#bribing-coordinated-attack-models)
     -   [Enforced Windback](#enforced-windback)
-        -   [Explicit Finality for Stateless Clients](#explicit-finality-for-stateless-clients)
     -   [The Data Availability Problem](#the-data-availability-problem)
         -   [Introduction and Background](#introduction-and-background)
         -   [On Uniquely Attributable Faults](#on-uniquely-attributable-faults)
@@ -51,8 +42,6 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     -   [Transparent Sharding](#transparent-sharding)
     -   [Tightly-Coupled Sharding (Fork-Free Sharding)](#tightly-coupled-sharding-fork-free-sharding)
 -   [Active Questions and Research](#active-questions-and-research)
-    -   [Separation of Proposals and Consensus](#separation-of-proposals-and-consensus)
-    -   [Selecting Eligible Collators Off-Chain](#selecting-eligible-collators-off-chain)
 -   [Community Updates and Contributions](#community-updates-and-contributions)
 -   [Acknowledgements](#acknowledgements)
 -   [References](#references)
@@ -242,49 +231,25 @@ At that point, the attacker has the ability to conduct 51% attacks against that 
 
 However, this problem transcends the sharding scheme itself and goes into the broader problem of fraud detection, which we have yet to comprehensively address.
 
-### Collation Header Approval
+## The Notary Client
 
-Explains the on-chain verification of a collation header.
+One of the main running threads of our implementation is the notary client, which serves as a bridge between users staking their ETH to become notaries and the **Sharding Manager Contract** that verifies collation headers on the canonical chain.
 
-Work in progress.
-
-### Event Logs
-
-Explain how CollationAdded logs will later on be used.
-
-Work in progress.
-
-## The Collator Client
-
-The main running thread of our implementation is the collator client, which serves as a bridge between users staking their ETH, proposers offering collations to these collators, and the **Sharding Manager Contract** that verifies collation headers on the canonical chain.
-
-When we launch the client with
-
-```
-geth sharding-collator --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
-```
-
-The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and call `getEligibleCollator` on receiving each header. Once we are selected within a LOOKAHEAD_PERIOD, our client fetches proposed, unsigned collations created by proposer nodes. The collator client accepts a collation that offer the highest payout, countersigns it, and adds it to the SMC.
+When we launch the client, The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and determine if the user is a notary on receiving each header. Once we are selected within a LOOKAHEAD_PERIOD, our client fetches data associated with submitted collation headers to that shard. The notary votes on the SMC, and if other notaries reach consensus, the collation is accepted as canonical.
 
 ### Local Shard Storage
 
-Local shard information is done through the same LevelDB, key-value store used to store the mainchain information in the local data directory specified by the running geth node. Adding a collation to a shard will effectively modify this key-value store.
+Local shard information is done through a key-value store used to store the mainchain information in the local data directory specified by the running geth node. Adding a collation to a shard will effectively modify this key-value store.
 
 Work in progress.
 
 ## The Proposer Client
 
-In addition to launching a collator client, our system requires a user to concurrently launch a proposer client that is tasked with fetching pending tx’s from the network and creating collations that can be sent to collators.
+In addition to launching a notary client, our system requires a user to concurrently launch a proposer client that is tasked with fetching pending tx’s from the network and creating collations that can be sent to the SMC.
 
-Users launch a proposal client as another geth entrypoint as follows:
+This client connects via JSON-RPC to give the client the ability to call required functions on the SMC. The proposer is tasked with packaging pending transaction data into _blobs_ and **not** executing these transactions. This is very important, we will not consider state execution until later phases of a sharding roadmap.
 
-```
-geth sharding-collator --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
-```
-
-Launching this command connects via JSON-RPC to give the client the ability to call required functions on the SMC. The proposer is tasked with packaging pending transaction data into _blobs_ and **not** executing these transactions. This is very important, we will not consider state execution until later phases of a sharding roadmap. The proposer broadcasts the unsigned header **(note: the body is not broadcasted)** to a proposals folder in the local, shared filesystem along with a guaranteed ETH deposit that is extracted from the proposer’s account upfront. Then, the current collator assigned for the period will find proposals for him/her assigned shard and sign the one with the highest payout.
-
-Then, the collator node calls the addHeader function on the SMC by submitting this collation header. We’ll explore the structure of collation headers in this next section.
+Then, the proposer node calls the `addHeader` function on the SMC by submitting this collation header. We’ll explore the structure of collation headers in this next section.
 
 ### Collation Headers
 
@@ -330,37 +295,29 @@ Work in progress.
 
 ## Sharding In-Practice
 
-### Fork Choice Rule
-
-In the sharding consensus mechanism, it is important to consider that we now have two layers of longest chain rules when adding a collation. When we are reaching consensus on the best shard chain, we not only have to check for the longest canonical main chain, but also the longest shard chain **within** this longest main chain. Vlad Zamfir has elaborated on this fork-choice rule in a [tweet](https://twitter.com/VladZamfir/status/945358660187893761) that is important for our sharding scheme.
-
 ### Use-Case Stories: Proposers
 
-The primary purpose of proposers is to package transaction data into collations that can then be put on an open market for collators to take. Upon offering a proposal, proposers will deposit part of their ETH as a payout to the collator that adds its collation header to the SMC, __even if the collation gets orphaned__. By forcing proposers to take on this risk, we prevent a certain degree of collation proposal spamming, albeit not without a few other security problems: (See: [Active Research](#active-questions-and-research)).
+The primary purpose of proposers is to package transaction data into collations that can then be submitted to the SMC.
 
-The primary incentive for proposers to generate these collations is to receive a payout to their coinbase address along with transactions fees from the ones they process once added to a block in the canonical chain. This process, however, cannot occur until we have state execution in our protocol, so proposers will be running at a loss for our Phase 1 implementation.
+The primary incentive for proposers to generate these collations is to receive a payout to their coinbase address from transactions fees once these collations are added to a block in the canonical chain. This process, however, cannot occur until we have state execution in our protocol, so proposers will be running at a loss for our Phase 1 implementation.
 
-### Use-Case Stories: Collators
+### Use-Case Stories: Notaries
 
-The primary purpose of collators is to use Proof of Stake and reach **consensus** on valid shard chains based on the collations they process and add to the Sharding Manager Contract. They have two primary options they can choose to do:
+The primary purpose of notaries is to use Proof of Stake and reach **consensus** on valid shard chains based on the collations they process and add to the Sharding Manager Contract. They have three primary things to do:
 
--   They can deposit ETH into the SMC and become a collator. They then have to wait to be selected by the SMC on a particular period to add a collation header to the SMC.
--   They can accept a collation proposal from the collation pool during their eligible period.
--   They can withdraw their stake and stop being a part of the collator pool
-
-The primary incentive for collators is to earn the payouts from the proposers offering them collations within their period.
+-   They can deposit ETH into the SMC and become a notary. They then have to wait to be selected by the SMC on a particular period to vote on collation headers in the SMC.
+-   They download availability of collation headers submitted to their assigned shard in the period.
+-   They vote on available collation headers
 
 ## Current Status
 
-Currently, Prysmatic Labs is focusing its initial implementation around the logic of the collator and proposer clients. We have built the command line entrypoints as well as the minimum, required functions of the Sharding Manager Contract that is deployed to a local Ethereum blockchain instance. Our collator client is able to subscribe for block headers from the running Geth node and determine when we are selected as an eligible collator in a given period if we have deposited ETH into the contract.
+Currently, Prysmatic Labs is focusing its initial implementation around the logic of the notary and proposer clients, as well as shard state local storage and p2p networking. We have built the command line entrypoints as well as the minimum, required functions of the Sharding Manager Contract that is deployed to a local Ethereum blockchain instance. Our notary client is able to subscribe for block headers from the running Geth node and determine when we are selected as an eligible notary in a given period if we have deposited ETH into the contract.
 
 You can track our progress, open issues, and projects in our repository [here](https://github.com/prysmaticlabs/geth-sharding).
 
 # Security Considerations
 
 ## Not Included in Ruby Release
-
-Under the uncoordinated majority model, in order to prevent a single shard takeover, random sampling is utilized. Each shard is assigned a certain number of collators. Collators that approve the collations on that shard are sampled randomly. However for the ruby release we will not be implementing any random sampling of the collators of the shard, as the primary objective of this release is to launch an archival sharding client which deploys the Sharding Management Contract to a locally running geth node.
 
 We will not be considering data availability proofs (part of the stateless client model) as part of the ruby release we will not be implementing them as it just yet as they are an area of active research.
 
@@ -370,26 +327,13 @@ Work in progress.
 
 ## Enforced Windback
 
-When collators are extending collator chains by adding headers to the SMC, it is critical that they are able to verify some of the collation headers in the immediate past for security purposes. There have already been instances where mining blindly has led to invalid transactions that forced Bitcoin to undergo a fork (See: [BIP66 Incident](https://bitcoin.stackexchange.com/questions/38437/what-is-spv-mining-and-how-did-it-inadvertently-cause-the-fork-after-bip66-wa)).
+When notaries are extending shard chains, it is critical that they are able to verify some of the collation headers in the immediate past for security purposes. There have already been instances where mining blindly has led to invalid transactions that forced Bitcoin to undergo a fork (See: [BIP66 Incident](https://bitcoin.stackexchange.com/questions/38437/what-is-spv-mining-and-how-did-it-inadvertently-cause-the-fork-after-bip66-wa)).
 
-As part of the sharding process, we want to ensure collators do two things when they look at the immediate past:
+This process of checking previous blocks is known as **“windback”**. In a [post](https://ethresear.ch/t/enforcing-windback-validity-and-availability-and-a-proof-of-custody/949) by Justin Drake on ETHResearch, he outlines that this is necessary for security, but is counterintuitive to the end-goal of scalability as this obviously imposes more computational and network constraints on nodes.
 
-Validity of collations through checking the integrity of transactions within their body.
-Checking for availability of the data within past collation bodies.
+One way to enforce **validity** during the windback process is for nodes to produce zero-knowedge proofs of validity that can then be stored in collation headers for quick verification.
 
-This checking process is known as **“windback”**. In a [post](https://ethresear.ch/t/enforcing-windback-validity-and-availability-and-a-proof-of-custody/949) by Justin Drake on ETHResearch, he outlines that this is necessary for security, but is counterintuitive to the end-goal of scalability as this obviously imposes more computational and network constraints on collator nodes.
-
-One way to enforce **validity** during the windback process is for collators to produce zero-knowedge proofs of validity that can then be stored in collation headers for quick verification.
-
-On the other hand, to enforce **availability** for the windback process, a possible approach is for collators to produce “proofs of custody” in collation headers that prove the collator was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for collators to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the collator's private key through a hashing scheme. The security in this relies in the idea that a collator would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a collator processed the collation body and proof was created.
-
-### Explicit Finality for Stateless Clients
-
-Vitalik has [mentioned](https://ethresear.ch/t/detailed-analysis-of-stateless-client-witness-size-and-gains-from-batching-and-multi-state-roots/862/5?u=rauljordan) that the average amount of windback, or how many immediate periods in the past a collator has to check before adding a collation header, is around 25. In a [medium post](https://medium.com/@icebearhww/ethereum-sharding-and-finality-65248951f649) on the value of explicit finality for sharding, Hsiao-Wei Wang mentions how the finality that Casper FFG provides would mean stateless clients would be entirely confident of blocks ahead to prevent complete reshuffling and faster collation processing. In her own words:
-
-_“Casper FFG will provide explicit finality threshold after about 2.5 “epoch times”, i.e., 125 block times [1][7]. If validators [collators] can verify more than 125 / PERIOD_LENGTH = 25 collations during reshuffling, the shard system can benefit from explicit finality and be more confident of the 25 ahead collations from now are all finalized.”_
-
-Casper allows us to forego some of these windback considerations and reduces the number of constraints on scalability from a collation header verification standpoint.
+On the other hand, to enforce **availability** for the windback process, a possible approach is for nodes to produce “proofs of custody” in collation headers that prove the collator was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for collators to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the node's private key through a hashing scheme. The security in this relies in the idea that a node would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a node processed the collation body and proof was created.
 
 ## The Data Availability Problem
 
@@ -445,38 +389,11 @@ Work in progress.
 
 # Active Questions and Research
 
-## Separation of Proposals and Consensus
+## Selecting Notaries Via Random Beacon Chains
 
-In a recent [blog post](https://ethresear.ch/t/separating-proposing-and-confirmation-of-collations/1000/7), Vitalik has outlined a novel system to the sharding mechanism through better separation of concerns. In the current reference documentation for a sharding systems, collators are responsible for proposing transactions into collations and reaching consensus on these proposals. That is, this process happens _all at once_, as proposing a collation happens in tandem with consensus.
+In our current implementation for the Ruby Release, we are selecting collators through a pseudorandom method built into the SMC directly. Inspired by dfinity's Random Beacon chains, the Ethereum Research team has been proposing better solutions that have faster finality guarantees.
 
-This leads to significant computational burdens on collators that need to keep track of the state of a particular shard in the proposal process as part of the transaction packaging process. The potentially better approach outlined above is the idea of separating the transaction packaging process and the consensus mechanism into two separate nodes with different responsibilities. **Our model will be based on this separation and we will be releasing a proposer client alongside a collator client in our Ruby release**.
-
-The two nodes would interact through a cryptoeconomic incentive system where proposers would package transactions and send unsigned collation headers (with obfuscated collation bodies) over to collators with a signed message including a deposit. If a collator chooses to accept the proposal, he/she would be rewarded by the amount specified in the deposit.
-
-Along the same lines, it will make it easier for collators to constantly jump across shards to validate collations, as they no longer have the need for resyncing an entire state tree because they can simply receive collation proposals from proposer nodes. This is very important, as collator reshuffling is a crucial security consideration to prevent shard hostile takeovers.
-
-A key question asked in the post is whether _“this makes it easy for a proposer to censor a transaction by paying a high pass-through fee for collations without a certain transaction?”_ and the answer to that is that yes, this could happen but in the current system a proposer could censor transactions by simply not including them (see: [The Data Availability Problem](#the-data-availability-problem)).
-
-It is important to note a possible attack vector in this case: which is that a an attacker could spam proposals on a particular shard and take on the price of excluding certain transactions as a censorship mechanism while the collators would have no idea this is happening. However, given a competitive enough proposal economy, this would be very similar to the current problem of transaction spam in traditional blockchains.
-
-In this system, collators would get paid the proposal’s deposit __even if the collation does not get appended to the shard__. Proposers would have to take on this risk to mitigate the possibilities of malicious intent to make an obfuscated-collation-body proposal system work. Only collations that are double signed and have an available body can be included in the main chain, fee F goes to the collator regardless whether collation gets into the main chain, but fee T only goes to the proposer if the collation gets included to the main chain.
-
-In practice, we would end up with a system of 3 types of nodes to ensure the functioning of a sharded blockchain
-
-1.  Proposer nodes that are tasked with the creation of unsigned collation headers, obfuscated collation bodies, and an ETH deposit to be relayed to collators.
-2.  Collator nodes that accept proposals through an open auction system similar to way transactions fees currently work. These nodes then sign these collations and pass them through the SMC for inclusion into a shard through PoS.
-
-## Selecting Eligible Collators Off-Chain
-
-In our current implementation for the Ruby Release, we are selecting collators on-chain by calling the `getEligibleCollator` function from the SMC directly. Justin Drake proposes an alternative scheme that could potentially open up new collator selection mechanisms off-chain through a fork-choice rule in [this](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922) post on ETHResearch.
-
-In his own words, this scheme “saves gas when calling addHeader and unlocks the possibility for fancier proposer eligibility functions”. A potential way to do so would be through private collator sampling which is elaborated on below:
-
-_“We now look at the problem of private sampling. That is, can we find a proposal mechanism which selects a single validator [collator] per period and provides “private lookahead”, i.e. it does not reveal to others which validators will be selected next?
-There are various possible private sampling strategies (based on MPCs, SNARKs/STARKs, cryptoeconomic signalling, or fancy crypto) but finding a workable scheme is hard. Below we present our best attempt based on one-time ring signatures. The scheme has several nice properties:
-Perfect privacy: private lookahead and private lookbehind (i.e. the scheme never matches eligible collators with specific validators)
-Full lookahead: the lookahead extends to the end of the epoch (epochs are defined below, and have roughly the same size as the validator set)
-Perfect fairness: within an epoch validators are selected proportionally according to deposit size, with zero variance”_  - Justin Drake
+<https://ethresear.ch/t/posw-random-beacon/1814/6>
 
 # Community Updates and Contributions
 
