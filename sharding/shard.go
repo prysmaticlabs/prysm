@@ -14,6 +14,17 @@ type Shard struct {
 	shardID *big.Int
 }
 
+// MakeShard creates an instance of a Shard struct given a shardID.
+func MakeShard(shardID *big.Int) *Shard {
+	// Swappable.
+	shardDB := &shardKV{kv: make(map[common.Hash][]byte)}
+
+	return &Shard{
+		shardID: shardID,
+		shardDB: shardDB,
+	}
+}
+
 // ValidateShardID checks if header belongs to shard.
 func (s *Shard) ValidateShardID(h *CollationHeader) error {
 	if s.shardID.Cmp(h.shardID) != 0 {
