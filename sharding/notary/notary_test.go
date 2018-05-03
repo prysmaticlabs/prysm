@@ -49,7 +49,7 @@ func (m *mockClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	return txOpts, nil
 }
 
-// Unused mockClient methods
+// Unused mockClient methods.
 func (m *mockClient) Start() error {
 	m.t.Fatal("Start called")
 	return nil
@@ -58,7 +58,7 @@ func (m *mockClient) Close() {
 	m.t.Fatal("Close called")
 }
 
-// Helper/setup methods
+// Helper/setup methods.
 // TODO: consider moving these to common sharding testing package as the notary and smc tests
 // use them.
 func transactOpts() *bind.TransactOpts {
@@ -75,7 +75,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &mockClient{smc: smc, t: t}
 
-	// address should not be in pool initially
+	// address should not be in pool initially.
 	b, err := isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +85,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	}
 
 	txOpts := transactOpts()
-	// deposit in notary pool, then it should return true
+	// deposit in notary pool, then it should return true.
 	txOpts.Value = sharding.NotaryDeposit
 	if _, err := smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
@@ -104,7 +104,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &mockClient{smc, t}
 
-	// There should be no notary initially
+	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 	backend.Commit()
 
-	// Now there should be one notary
+	// Now there should be one notary.
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)

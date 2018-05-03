@@ -6,7 +6,7 @@ import (
 )
 
 func TestNotaryDeposit(t *testing.T) {
-	want, err := new(big.Int).SetString("1000000000000000000000", 10) // 1000 ETH
+	want, err := new(big.Int).SetString("1000000000000000000000", 10) // 1000 ETH.
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
@@ -16,7 +16,7 @@ func TestNotaryDeposit(t *testing.T) {
 }
 
 func TestProposerDeposit(t *testing.T) {
-	want, err := new(big.Int).SetString("1000000000000000000", 10) // 1 ETH
+	want, err := new(big.Int).SetString("1000000000000000000", 10) // 1 ETH.
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
@@ -26,7 +26,7 @@ func TestProposerDeposit(t *testing.T) {
 }
 
 func TestMinProposerBalance(t *testing.T) {
-	want, err := new(big.Int).SetString("100000000000000000", 10) // 0.1 ETH
+	want, err := new(big.Int).SetString("100000000000000000", 10) // 0.1 ETH.
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
@@ -36,7 +36,7 @@ func TestMinProposerBalance(t *testing.T) {
 }
 
 func TestNotarySubsidy(t *testing.T) {
-	want, err := new(big.Int).SetString("1000000000000000", 10) // 0.001 ETH
+	want, err := new(big.Int).SetString("1000000000000000", 10) // 0.001 ETH.
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
