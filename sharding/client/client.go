@@ -35,7 +35,7 @@ const (
 
 // General client for Notary/Proposer - Communicates to Geth node via JSON RPC.
 type shardingClient struct {
-	endpoint  string             // Endpoint to JSON RPC
+	endpoint  string             // Endpoint to JSON RPC.
 	client    *ethclient.Client  // Ethereum RPC client.
 	keystore  *keystore.KeyStore // Keystore containing the single signer.
 	ctx       *cli.Context       // Command line context.

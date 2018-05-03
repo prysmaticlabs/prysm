@@ -64,8 +64,8 @@ These collations are holistic descriptions of the state and transactions on a ce
 
 For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have two types of nodes that do the heavy lifting of our sharding logic: **proposers and notaries**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, and submit them to a smart contract on the Ethereum main chain.
 
-<!--[Proposer{bg:wheat}]fetch txs-.->[TXPool], [TXPool]-.->[Proposer{bg:wheat}], [Proposer{bg:wheat}]-package txs>[Collation|header|ETH Deposit], [Collation|header|ETH Deposit]-submit>[Proposals Pool], [Collator{bg:wheat}]subscribe to-.->[Proposals Pool]-->
-![proposers](https://yuml.me/6da583d7.png)
+<!--[Proposer{bg:wheat}]fetch txs-.->[TXPool], [TXPool]-.->[Proposer{bg:wheat}], [Proposer{bg:wheat}]-package txs>[Collation|header|body], [Collation|header|body]-submit header>[Sharding Manager Contract], [Notary{bg:wheat}]downloads collation availability and votes-.->[Sharding Manager Contract]-->
+![proposers](https://yuml.me/69cbd7da.png)
 
 Notaries stake ETH into the contract and vote on collations submitted by proposers during a certain period. Notaries are in charge of checking for data availability of such collations and reach consensus on canonical shard chains.
 
@@ -79,7 +79,7 @@ Given that we are splitting up the global state of the Ethereum blockchain into 
 
 The Ethereum Wiki’s [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) suggests pseudorandom sampling of notaries on each shard. The goal is so that these notaries will not know which shard they will get in advance. Otherwise, malicious actors could concentrate resources into a single shard and try to overtake it (See: [1% Attack](https://medium.com/@icebearhww/ethereum-sharding-and-finality-65248951f649)).
 
-Casper Proof of Stake (Casper [FFG](https://arxiv.org/abs/1710.09437) and [CBC](https://arxiv.org/abs/1710.09437)) makes this quite trivial because there is already a set of global validators that we can select notaries from. The source of randomness needs to be common to ensure that this sampling is entirely compulsory and can’t be gamed by the collators in question.
+Casper Proof of Stake (Casper [FFG](https://arxiv.org/abs/1710.09437) and [CBC](https://arxiv.org/abs/1710.09437)) makes this quite trivial because there is already a set of global validators that we can select notaries from. The source of randomness needs to be common to ensure that this sampling is entirely compulsory and can’t be gamed by the notaries in question.
 
 In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage submitted collation headers and manage notaries.
 
@@ -131,7 +131,7 @@ ETA: To be determined
 
 ## The Sapphire Release: Ropsten Testnet
 
-Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a set of notaries voting on collations through the **on-chain SMC**. This will require a lot more elaborate simulations around the safety of the randomness behind the collator assignments in the SMC. Futhermore we need to pass stress testing against DoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently with notaries reaching consensus on these collations.
+Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a set of notaries voting on collations through the **on-chain SMC**. This will require a lot more elaborate simulations around the safety of the randomness behind the notary assignments in the SMC. Futhermore we need to pass stress testing against DoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently with notaries reaching consensus on these collations.
 
 Part 2 of the **Sapphire Release** will focus on implementing state execution and defining the State Transition Function for sharding on a local testnet (as outlined in [Beyond Phase 1](#beyond-phase-1)) as an extenstion to the Ruby Release.
 
@@ -165,7 +165,7 @@ Our initial implementation will function through simple command line arguments t
 
 A basic, end-to-end example of the system is as follows:
 
-1.  _**User starts a notary client and deposits 100ETH into the SMC:**_ the sharding client connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
+1.  _**User starts a notary client and deposits 1000ETH into the SMC:**_ the sharding client connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
 
 2.  _**Client connects & listens to incoming headers from the geth node and assigns user as notary on a shard per period:**_ The notary is selected in CURRENT_PERIOD + LOOKEAD_PERIOD (which is around a 5 minutes notice) and must download data for collation headers submitted in that time period.
 
@@ -181,13 +181,13 @@ Now, we’ll explore our architecture and implementation in detail as part of th
 
 Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **SMC** into. Users can spin up a notary client as a command line entrypoint into geth while the node is running as follows:
 
-    geth sharding --notary --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+    geth sharding-notary --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 
-This will extract 100ETH from the user's account balance and insert him/her into the SMC's notaries. Then, the program will listen for incoming block headers and notify the user when he/she has been selected as to vote on collations for a certain shard in a given period. Once you are selected, the sharding client will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will extract 1000ETH from the user's account balance and insert him/her into the SMC's notaries. Then, the program will listen for incoming block headers and notify the user when he/she has been selected as to vote on collations for a certain shard in a given period. Once you are selected, the sharding client will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
 Users can also run a proposer client that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
 
-    geth sharding --proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+    geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 
 This client is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
 
@@ -203,12 +203,12 @@ The sharding client begins to work by its main loop, which involves the followin
 
 6.  _**Other notaries vote, period ends, and header is selected as canonical shard chain header:**_ Once notaries vote, headers that received >=2/3 votes are selected as canonical
 
-<!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Collator Client],[Collator Client]add collation header->[Sharding Manager Contract{bg:wheat}]-->
-![system functioning](https://yuml.me/4a7c8c5b.png)
+<!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Sharding Manager Contract],[Notary Client]download availability and vote->[Sharding Manager Contract{bg:wheat}]-->
+![system functioning](https://yuml.me/6c2f90a5.png)
 
 ## The Sharding Manager Contract
 
-Our solidity implementation of the Collator Manager Contract follows the reference spec outlined in ETHResearch's [minimal sharding protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
+Our solidity implementation of the Sharding Manager Contract follows the reference spec outlined in ETHResearch's [minimal sharding protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
 
 <!-- removed old solidity code cause it will be bound to change -->
 
@@ -235,7 +235,7 @@ However, this problem transcends the sharding scheme itself and goes into the br
 
 One of the main running threads of our implementation is the notary client, which serves as a bridge between users staking their ETH to become notaries and the **Sharding Manager Contract** that verifies collation headers on the canonical chain.
 
-When we launch the client, The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a collator set. Then, we subscribe for updates on incoming block headers and determine if the user is a notary on receiving each header. Once we are selected within a LOOKAHEAD_PERIOD, our client fetches data associated with submitted collation headers to that shard. The notary votes on the SMC, and if other notaries reach consensus, the collation is accepted as canonical.
+When we launch the client, The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a notary pool. Then, we subscribe for updates on incoming block headers and determine if the user is a notary on receiving each header. Once we are selected within a LOOKAHEAD_PERIOD, our client fetches data associated with submitted collation headers to that shard. The notary votes on the SMC, and if other notaries reach consensus, the collation is accepted as canonical.
 
 ### Local Shard Storage
 
@@ -333,7 +333,7 @@ This process of checking previous blocks is known as **“windback”**. In a [p
 
 One way to enforce **validity** during the windback process is for nodes to produce zero-knowedge proofs of validity that can then be stored in collation headers for quick verification.
 
-On the other hand, to enforce **availability** for the windback process, a possible approach is for nodes to produce “proofs of custody” in collation headers that prove the collator was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for collators to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the node's private key through a hashing scheme. The security in this relies in the idea that a node would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a node processed the collation body and proof was created.
+On the other hand, to enforce **availability** for the windback process, a possible approach is for nodes to produce “proofs of custody” in collation headers that prove the notary was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for notaries to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the node's private key through a hashing scheme. The security in this relies in the idea that a node would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a node processed the collation body and proof was created.
 
 ## The Data Availability Problem
 
@@ -391,7 +391,7 @@ Work in progress.
 
 ## Selecting Notaries Via Random Beacon Chains
 
-In our current implementation for the Ruby Release, we are selecting collators through a pseudorandom method built into the SMC directly. Inspired by dfinity's Random Beacon chains, the Ethereum Research team has been proposing better solutions that have faster finality guarantees.
+In our current implementation for the Ruby Release, we are selecting notaries through a pseudorandom method built into the SMC directly. Inspired by dfinity's Random Beacon chains, the Ethereum Research team has been proposing better solutions that have faster finality guarantees.
 
 <https://ethresear.ch/t/posw-random-beacon/1814/6>
 
