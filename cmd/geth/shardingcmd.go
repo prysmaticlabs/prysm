@@ -1,24 +1,24 @@
 package main
 
 import (
-	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/notary"
+	"github.com/ethereum/go-ethereum/sharding/proposer"
 
-	"fmt"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
-	collatorClientCommand = cli.Command{
-		Action:    utils.MigrateFlags(collatorClient),
-		Name:      "sharding-collator",
-		Aliases:   []string{"shard-collator"},
-		Usage:     "Start a sharding collator client",
+	notaryClientCommand = cli.Command{
+		Action:    utils.MigrateFlags(notaryClient),
+		Name:      "sharding-notary",
+		Aliases:   []string{"shard-notary"},
+		Usage:     "Start a sharding notary client",
 		ArgsUsage: "[endpoint]",
 		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
-Launches a sharding collator client that connects to a running geth node and submit collations to a Sharding Manager Contract. This feature is a work in progress.
+Launches a sharding notary client that connects to a running geth node and submit collations to a Sharding Manager Contract. This feature is a work in progress.
 `,
 	}
 	proposerClientCommand = cli.Command{
@@ -30,21 +30,17 @@ Launches a sharding collator client that connects to a running geth node and sub
 		Flags:     []cli.Flag{utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
-Launches a sharding proposer client that connects to a running geth node and proposes collations to collator node. This feature is a work in progress.
+Launches a sharding proposer client that connects to a running geth node and proposes collations to notary node. This feature is a work in progress.
 `,
 	}
 )
 
-func collatorClient(ctx *cli.Context) error {
-	c := sharding.MakeCollatorClient(ctx)
-	if err := c.Start(); err != nil {
-		return err
-	}
-	c.Wait()
-	return nil
+func notaryClient(ctx *cli.Context) error {
+	c := notary.NewNotary(ctx)
+	return c.Start()
 }
 
 func proposerClient(ctx *cli.Context) error {
-	fmt.Println("Starting proposer client")
-	return nil
+	p := proposer.NewProposer(ctx)
+	return p.Start()
 }
