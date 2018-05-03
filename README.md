@@ -16,7 +16,7 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
 -   [Sharding Instructions](#sharding)
     -   [Running a Local Geth Node](#running-a-local-geth-node)
     -   [Transaction Generator](#transaction-generator)
-    -   [Becoming a Collator](#becoming-a-collator)
+    -   [Becoming a Notary](#becoming-a-notary)
     -   [Running a Collation Proposal Client](#running-a-collation-proposal-client)
 -   [Testing](#testing)
 -   [Contribution Guidelines](#contribution-guidelines)
@@ -100,7 +100,7 @@ Now, save the passphrase you used in the geth node into a text file called passw
 
 Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870). Generating test transactions on a local network will allow for benchmarking of tx throughput within our system.
 
-## Becoming a Collator
+## Becoming a Notary
 
 Our system outlined below follows the [Minimal Sharding Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650) as outlined by Vitalik on ETHResearch where any actor can submit collation headers via the SMC, but only a selected committee of notaries is allowed to vote on collations in each period. Notaries are in charge of data availability checking and consensus is reached upon a collation header receiving >= 2/3 votes in a period.
 
