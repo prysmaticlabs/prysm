@@ -16,10 +16,10 @@ import (
 )
 
 // SMCABI is the input ABI used to generate the binding from.
-const SMCABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"int256\"},{\"name\":\"_expectedPeriodNumber\",\"type\":\"uint256\"},{\"name\":\"_periodStartPrevHash\",\"type\":\"bytes32\"},{\"name\":\"_parentHash\",\"type\":\"bytes32\"},{\"name\":\"_transactionRoot\",\"type\":\"bytes32\"},{\"name\":\"_coinbase\",\"type\":\"address\"},{\"name\":\"_stateRoot\",\"type\":\"bytes32\"},{\"name\":\"_receiptRoot\",\"type\":\"bytes32\"},{\"name\":\"_number\",\"type\":\"int256\"}],\"name\":\"addHeader\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"shardCount\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"numCollators\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_receiptId\",\"type\":\"int256\"},{\"name\":\"_txGasprice\",\"type\":\"uint256\"}],\"name\":\"updateGasPrice\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_to\",\"type\":\"address\"},{\"name\":\"_shardId\",\"type\":\"int256\"},{\"name\":\"_txStartgas\",\"type\":\"uint256\"},{\"name\":\"_txGasprice\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes12\"}],\"name\":\"txToShard\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"name\":\"periodHead\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"int256\"},{\"name\":\"_period\",\"type\":\"uint256\"}],\"name\":\"getEligibleCollator\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_collatorIndex\",\"type\":\"int256\"}],\"name\":\"withdraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getCollationGasLimit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"name\":\"collators\",\"outputs\":[{\"name\":\"deposit\",\"type\":\"uint256\"},{\"name\":\"addr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"},{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"collationHeaders\",\"outputs\":[{\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"name\":\"score\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"isCollatorDeposited\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deposit\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"name\":\"receipts\",\"outputs\":[{\"name\":\"shardId\",\"type\":\"int256\"},{\"name\":\"txStartgas\",\"type\":\"uint256\"},{\"name\":\"txGasprice\",\"type\":\"uint256\"},{\"name\":\"value\",\"type\":\"uint256\"},{\"name\":\"data\",\"type\":\"bytes32\"},{\"name\":\"sender\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"shardId\",\"type\":\"int256\"},{\"indexed\":false,\"name\":\"receiptId\",\"type\":\"int256\"}],\"name\":\"TxToShard\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"int256\"},{\"indexed\":false,\"name\":\"expectedPeriodNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"periodStartPrevHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"transactionRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"coinbase\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"stateRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"receiptRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"number\",\"type\":\"int256\"},{\"indexed\":false,\"name\":\"isNewHead\",\"type\":\"bool\"},{\"indexed\":false,\"name\":\"score\",\"type\":\"int256\"}],\"name\":\"CollationAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"collator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"index\",\"type\":\"int256\"}],\"name\":\"Deposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"index\",\"type\":\"int256\"}],\"name\":\"Withdraw\",\"type\":\"event\"}]"
+const SMCABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"collationTrees\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"name\":\"periodHead\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerNotary\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"notaryRegistry\",\"outputs\":[{\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"},{\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"name\":\"deposited\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"releaseNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"notaryPool\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"getNotaryInCommittee\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"period\",\"type\":\"uint256\"},{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"addHeader\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"period\",\"type\":\"uint256\"},{\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"computeHeaderHash\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"},{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"collationHeaders\",\"outputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"period\",\"type\":\"uint256\"},{\"name\":\"proposerAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"notaryPoolLength\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"int128\"},{\"indexed\":false,\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"HeaderAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"}],\"name\":\"NotaryDeregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryReleased\",\"type\":\"event\"}]"
 
 // SMCBin is the compiled bytecode used for deploying new contracts.
-const SMCBin = `0x6060604052341561000f57600080fd5b610bcd8061001e6000396000f3006060604052600436106100cf5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416630341518d81146100d457806304e9c77a146101205780630908fb31146101455780632213138914610158578063372a9e2a14610166578063584475db146101905780636115a1c3146101a65780637e62eab8146101db578063934586ec146101f35780639c23c6ab14610206578063b9d8ef961461023d578063ccb180e91461026e578063d0e30db01461028d578063d19ca56814610295575b600080fd5b34156100df57600080fd5b61010c600435602435604435606435608435600160a060020a0360a4351660c43560e435610104356102f4565b604051901515815260200160405180910390f35b341561012b57600080fd5b6101336105da565b60405190815260200160405180910390f35b341561015057600080fd5b6101336105df565b61010c6004356024356105e5565b610133600160a060020a0360043516602435604435606435600160a060020a03196084351661062a565b341561019b57600080fd5b61013360043561074d565b34156101b157600080fd5b6101bf60043560243561075f565b604051600160a060020a03909116815260200160405180910390f35b34156101e657600080fd5b6101f16004356107ed565b005b34156101fe57600080fd5b6101336108f0565b341561021157600080fd5b61021c6004356108f8565b604051918252600160a060020a031660208201526040908101905180910390f35b341561024857600080fd5b61025660043560243561091a565b60405191825260208201526040908101905180910390f35b341561027957600080fd5b61010c600160a060020a036004351661093b565b610133610950565b34156102a057600080fd5b6102ab600435610a75565b604051968752602087019590955260408087019490945260608601929092526080850152600160a060020a0390811660a085015290911660c083015260e0909101905180910390f35b60006102fe610b7a565b60008b1215801561030f575060648b125b151561031a57600080fd5b600543101561032857600080fd5b600543048a1461033757600080fd5b60001960058b020140891461034b57600080fd5b8a8a8a8a8a600160a060020a038b168a8a8a60405198895260208901979097526040808901969096526060880194909452608087019290925260a086015260c085015260e08401526101008301919091526101209091019051908190039020815260008b81526001602052604081209082518152602081019190915260400160002060010154156103d857fe5b87156104005760008b81526001602081815260408084208c8552909152822001541361040057fe5b60008b8152600960205260409020548a901261041857fe5b6104258b6005430461075f565b600160a060020a03166040820190815251600160a060020a0316151561044a57600080fd5b8060400151600160a060020a031633600160a060020a031614151561046e57600080fd5b60008b81526001602081815260408084208c855282529092208101540190820190815251831461049d57600080fd5b60408051908101604052888152602080820190830151905260008c81526001602052604081209083518152602081019190915260400160002081518155602082015160019182015560008d81526009602090815260408083208f9055838252808320600383528184205484528252909120909101549150820151131561053657805160008c815260036020526040902055600160608201525b8a7f788a01fdbeb989d24e706cdd2993ca4213400e7b5fa631819b2acfe8ebad41358b8b8b8b8b8b8b8b8a606001518b60200151604051998a5260208a01989098526040808a01979097526060890195909552600160a060020a03909316608088015260a087019190915260c086015260e08501521515610100840152610120830191909152610140909101905180910390a25060019a9950505050505050505050565b606481565b60045481565b60008281526002602052604081206005015433600160a060020a0390811691161461060f57600080fd5b50600091825260026020819052604090922090910155600190565b60008060e060405190810160409081528782526020808301889052818301879052346060840152600160a060020a031986166080840152600160a060020a0333811660a08501528a1660c08401526005546000908152600290915220815181556020820151816001015560408201518160020155606082015181600301556080820151600482015560a0820151600582018054600160a060020a031916600160a060020a039290921691909117905560c08201516006919091018054600160a060020a031916600160a060020a039283161790556005805460018101909155925087915088167ffc322e0c42ee41e0d74b940ceeee9cd5971acdd6ace8ff8010ee7134c31d9ea58360405190815260200160405180910390a39695505050505050565b60096020526000908152604090205481565b6000600482101561076f57600080fd5b4360031983016005021061078257600080fd5b6004546000901361079257600080fd5b60008061079d610abf565b600319850160050240866040519182526020820152604090810190519081900390208115156107c857fe5b068152602081019190915260400160002060010154600160a060020a03169392505050565b60008181526020819052604090206001015433600160a060020a0390811691161461081757600080fd5b6000818152602081905260409081902060018101549054600160a060020a039091169181156108fc02919051600060405180830381858888f19350505050151561086057600080fd5b600081815260208181526040808320600181018054600160a060020a0316855260088452918420805460ff19169055848452918390529190558054600160a060020a03191690556108b081610b1d565b600480546000190190557fe13f360aa18d414ccdb598da6c447faa89d0477ffc7549dab5678fca76910b8c8160405190815260200160405180910390a150565b629896805b90565b60006020819052908152604090208054600190910154600160a060020a031682565b60016020818152600093845260408085209091529183529120805491015482565b60086020526000908152604090205460ff1681565b600160a060020a033316600090815260086020526040812054819060ff161561097857600080fd5b3468056bc75e2d631000001461098d57600080fd5b610995610b3c565b15156109aa576109a3610b43565b90506109af565b506004545b604080519081016040908152348252600160a060020a0333166020808401919091526000848152908190522081518155602082015160019182018054600160a060020a031916600160a060020a0392831617905560048054830190553390811660009081526008602052604090819020805460ff19169093179092557fd8a6d38df847dcba70dfdeb4948fb1457d61a81d132801f40dc9c00d52dfd478925090839051600160a060020a03909216825260208201526040908101905180910390a1919050565b60026020819052600091825260409091208054600182015492820154600383015460048401546005850154600690950154939594929391929091600160a060020a03918216911687565b600754600454600091829101815b610400811215610b1257818112610ae357610b12565b600081815260208190526040902060010154600160a060020a031615610b0a576001830192505b600101610acd565b505060075401919050565b6007805460009081526006602052604090209190915580546001019055565b6007541590565b6000610b4d610b3c565b15610b5b57506000196108f5565b5060078054600019019081905560009081526006602052604090205490565b608060405190810160409081526000808352602083018190529082018190526060820152905600a165627a7a72305820e74c5f0d761bed99e7db7b5a22246f7c6ae14be8070080933401dec29f2447410029`
+const SMCBin = `0x608060405234801561001057600080fd5b506108ec806100206000396000f3006080604052600436106100b95763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166303dde97781146100be57806358377bd1146100eb578063584475db1461010257806368e9513e1461011a5780636bdd3271146101225780639910851d14610163578063a81f451014610178578063b09f427e146101ac578063b8bc055f146101c7578063b9505ea4146101f1578063b9d8ef961461021e578063f6f67d3614610268575b600080fd5b3480156100ca57600080fd5b506100d960043560243561027d565b60408051918252519081900360200190f35b3480156100f757600080fd5b5061010061029a565b005b34801561010e57600080fd5b506100d96004356103c5565b6101006103d7565b34801561012e57600080fd5b50610143600160a060020a036004351661058a565b604080519384526020840192909252151582820152519081900360600190f35b34801561016f57600080fd5b506101006105ad565b34801561018457600080fd5b506101906004356106d9565b60408051600160a060020a039092168252519081900360200190f35b3480156101b857600080fd5b50610190600435602435610701565b3480156101d357600080fd5b50610100600435602435604435600160a060020a0360643516610796565b3480156101fd57600080fd5b506100d9600435602435604435606435600160a060020a036084351661079c565b34801561022a57600080fd5b506102396004356024356107a7565b60408051948552602085019390935283830191909152600160a060020a03166060830152519081900360800190f35b34801561027457600080fd5b506100d96107e1565b600260209081526000928352604080842090915290825290205481565b33600160a060020a038116600090815260016020819052604082209081015460029091015490919060ff1615156102d057600080fd5b82600160a060020a03166000838154811015156102e957fe5b600091825260209091200154600160a060020a03161461030857600080fd5b6103106107e7565b50600160a060020a0382166000908152600160205260409020600543049081905561033a8261080a565b600080548390811061034857fe5b600091825260209182902001805473ffffffffffffffffffffffffffffffffffffffff191690556005805460001901905560408051600160a060020a0386168152918201849052818101839052517f90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a759181900360600190a1505050565b600b6020526000908152604090205481565b33600160a060020a03811660009081526001602052604081206002015460ff161561040157600080fd5b34683635c9adc5dea000001461041657600080fd5b61041e6107e7565b61042661087b565b156104895750600554600080546001810182559080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56301805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0384161790556104d2565b610491610882565b9050816000828154811015156104a357fe5b9060005260206000200160006101000a815481600160a060020a030219169083600160a060020a031602179055505b6005805460019081019091556040805160608101825260008082526020808301868152838501868152600160a060020a0389168452918690529390912091518255915192810192909255516002909101805460ff1916911515919091179055600954811061054257600181016009555b60408051600160a060020a03841681526020810183905281517fa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7929181900390910190a15050565b600160208190526000918252604090912080549181015460029091015460ff1683565b33600160a060020a038116600090815260016020819052604090912080820154600290910154909160ff9091161515146105e657600080fd5b600160a060020a038216600090815260016020526040902054151561060a57600080fd5b600160a060020a038216600090815260016020526040902054613f0001600543041161063557600080fd5b600160a060020a03821660008181526001602081905260408083208381559182018390556002909101805460ff1916905551683635c9adc5dea000009082818181858883f19350505050158015610690573d6000803e3d6000fd5b5060408051600160a060020a03841681526020810183905281517faee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680929181900390910190a15050565b60008054829081106106e757fe5b600091825260209091200154600160a060020a0316905081565b60008080808080600543049450600a54851115610722576009549350610728565b60085493505b6040805160001960058802018040808352602083018b90528284018c9052925191829003606001909120909450909250849081151561076357fe5b06905060008181548110151561077557fe5b600091825260209091200154600160a060020a031698975050505050505050565b50505050565b600095945050505050565b60036020818152600093845260408085209091529183529120805460018201546002830154929093015490929190600160a060020a031684565b60055481565b600a5460054304908110156107fb57610807565b600954600855600a8190555b50565b600754600654141561085057600680546001810182556000919091527ff652222313e28459528d920b65115c16c04f3efc82aaedc97be59f3f377c0d3f0181905561086f565b80600660075481548110151561086257fe5b6000918252602090912001555b50600780546001019055565b6007541590565b6000600160075411151561089557600080fd5b6007805460001901908190556006805490919081106108b057fe5b90600052602060002001549050905600a165627a7a723058206a18c219259d03462104b10265828f09d0a7edbae0d8cc91dad68df76b9ad2820029`
 
 // DeploySMC deploys a new Ethereum contract, binding an instance of SMC to it.
 func DeploySMC(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SMC, error) {
@@ -178,14 +178,18 @@ func (_SMC *SMCTransactorRaw) Transact(opts *bind.TransactOpts, method string, p
 
 // CollationHeaders is a free data retrieval call binding the contract method 0xb9d8ef96.
 //
-// Solidity: function collationHeaders( int256,  bytes32) constant returns(parentHash bytes32, score int256)
+// Solidity: function collationHeaders( int256,  bytes32) constant returns(shardId uint256, chunkRoot bytes32, period uint256, proposerAddress address)
 func (_SMC *SMCCaller) CollationHeaders(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) (struct {
-	ParentHash [32]byte
-	Score      *big.Int
+	ShardId         *big.Int
+	ChunkRoot       [32]byte
+	Period          *big.Int
+	ProposerAddress common.Address
 }, error) {
 	ret := new(struct {
-		ParentHash [32]byte
-		Score      *big.Int
+		ShardId         *big.Int
+		ChunkRoot       [32]byte
+		Period          *big.Int
+		ProposerAddress common.Address
 	})
 	out := ret
 	err := _SMC.contract.Call(opts, out, "collationHeaders", arg0, arg1)
@@ -194,162 +198,170 @@ func (_SMC *SMCCaller) CollationHeaders(opts *bind.CallOpts, arg0 *big.Int, arg1
 
 // CollationHeaders is a free data retrieval call binding the contract method 0xb9d8ef96.
 //
-// Solidity: function collationHeaders( int256,  bytes32) constant returns(parentHash bytes32, score int256)
+// Solidity: function collationHeaders( int256,  bytes32) constant returns(shardId uint256, chunkRoot bytes32, period uint256, proposerAddress address)
 func (_SMC *SMCSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
-	ParentHash [32]byte
-	Score      *big.Int
+	ShardId         *big.Int
+	ChunkRoot       [32]byte
+	Period          *big.Int
+	ProposerAddress common.Address
 }, error) {
 	return _SMC.Contract.CollationHeaders(&_SMC.CallOpts, arg0, arg1)
 }
 
 // CollationHeaders is a free data retrieval call binding the contract method 0xb9d8ef96.
 //
-// Solidity: function collationHeaders( int256,  bytes32) constant returns(parentHash bytes32, score int256)
+// Solidity: function collationHeaders( int256,  bytes32) constant returns(shardId uint256, chunkRoot bytes32, period uint256, proposerAddress address)
 func (_SMC *SMCCallerSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
-	ParentHash [32]byte
-	Score      *big.Int
+	ShardId         *big.Int
+	ChunkRoot       [32]byte
+	Period          *big.Int
+	ProposerAddress common.Address
 }, error) {
 	return _SMC.Contract.CollationHeaders(&_SMC.CallOpts, arg0, arg1)
 }
 
-// Collators is a free data retrieval call binding the contract method 0x9c23c6ab.
+// CollationTrees is a free data retrieval call binding the contract method 0x03dde977.
 //
-// Solidity: function collators( int256) constant returns(deposit uint256, addr address)
-func (_SMC *SMCCaller) Collators(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	Deposit *big.Int
-	Addr    common.Address
-}, error) {
-	ret := new(struct {
-		Deposit *big.Int
-		Addr    common.Address
-	})
-	out := ret
-	err := _SMC.contract.Call(opts, out, "collators", arg0)
-	return *ret, err
-}
-
-// Collators is a free data retrieval call binding the contract method 0x9c23c6ab.
-//
-// Solidity: function collators( int256) constant returns(deposit uint256, addr address)
-func (_SMC *SMCSession) Collators(arg0 *big.Int) (struct {
-	Deposit *big.Int
-	Addr    common.Address
-}, error) {
-	return _SMC.Contract.Collators(&_SMC.CallOpts, arg0)
-}
-
-// Collators is a free data retrieval call binding the contract method 0x9c23c6ab.
-//
-// Solidity: function collators( int256) constant returns(deposit uint256, addr address)
-func (_SMC *SMCCallerSession) Collators(arg0 *big.Int) (struct {
-	Deposit *big.Int
-	Addr    common.Address
-}, error) {
-	return _SMC.Contract.Collators(&_SMC.CallOpts, arg0)
-}
-
-// GetCollationGasLimit is a free data retrieval call binding the contract method 0x934586ec.
-//
-// Solidity: function getCollationGasLimit() constant returns(uint256)
-func (_SMC *SMCCaller) GetCollationGasLimit(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function collationTrees( uint256,  bytes32) constant returns(bytes32)
+func (_SMC *SMCCaller) CollationTrees(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
 	var (
-		ret0 = new(*big.Int)
+		ret0 = new([32]byte)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "getCollationGasLimit")
+	err := _SMC.contract.Call(opts, out, "collationTrees", arg0, arg1)
 	return *ret0, err
 }
 
-// GetCollationGasLimit is a free data retrieval call binding the contract method 0x934586ec.
+// CollationTrees is a free data retrieval call binding the contract method 0x03dde977.
 //
-// Solidity: function getCollationGasLimit() constant returns(uint256)
-func (_SMC *SMCSession) GetCollationGasLimit() (*big.Int, error) {
-	return _SMC.Contract.GetCollationGasLimit(&_SMC.CallOpts)
+// Solidity: function collationTrees( uint256,  bytes32) constant returns(bytes32)
+func (_SMC *SMCSession) CollationTrees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
+	return _SMC.Contract.CollationTrees(&_SMC.CallOpts, arg0, arg1)
 }
 
-// GetCollationGasLimit is a free data retrieval call binding the contract method 0x934586ec.
+// CollationTrees is a free data retrieval call binding the contract method 0x03dde977.
 //
-// Solidity: function getCollationGasLimit() constant returns(uint256)
-func (_SMC *SMCCallerSession) GetCollationGasLimit() (*big.Int, error) {
-	return _SMC.Contract.GetCollationGasLimit(&_SMC.CallOpts)
+// Solidity: function collationTrees( uint256,  bytes32) constant returns(bytes32)
+func (_SMC *SMCCallerSession) CollationTrees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
+	return _SMC.Contract.CollationTrees(&_SMC.CallOpts, arg0, arg1)
 }
 
-// GetEligibleCollator is a free data retrieval call binding the contract method 0x6115a1c3.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
 //
-// Solidity: function getEligibleCollator(_shardId int256, _period uint256) constant returns(address)
-func (_SMC *SMCCaller) GetEligibleCollator(opts *bind.CallOpts, _shardId *big.Int, _period *big.Int) (common.Address, error) {
+// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
+func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, shardId *big.Int, _index *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "getEligibleCollator", _shardId, _period)
+	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", shardId, _index)
 	return *ret0, err
 }
 
-// GetEligibleCollator is a free data retrieval call binding the contract method 0x6115a1c3.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
 //
-// Solidity: function getEligibleCollator(_shardId int256, _period uint256) constant returns(address)
-func (_SMC *SMCSession) GetEligibleCollator(_shardId *big.Int, _period *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetEligibleCollator(&_SMC.CallOpts, _shardId, _period)
+// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
+func (_SMC *SMCSession) GetNotaryInCommittee(shardId *big.Int, _index *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, shardId, _index)
 }
 
-// GetEligibleCollator is a free data retrieval call binding the contract method 0x6115a1c3.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
 //
-// Solidity: function getEligibleCollator(_shardId int256, _period uint256) constant returns(address)
-func (_SMC *SMCCallerSession) GetEligibleCollator(_shardId *big.Int, _period *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetEligibleCollator(&_SMC.CallOpts, _shardId, _period)
+// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
+func (_SMC *SMCCallerSession) GetNotaryInCommittee(shardId *big.Int, _index *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, shardId, _index)
 }
 
-// IsCollatorDeposited is a free data retrieval call binding the contract method 0xccb180e9.
+// NotaryPool is a free data retrieval call binding the contract method 0xa81f4510.
 //
-// Solidity: function isCollatorDeposited( address) constant returns(bool)
-func (_SMC *SMCCaller) IsCollatorDeposited(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
+// Solidity: function notaryPool( uint256) constant returns(address)
+func (_SMC *SMCCaller) NotaryPool(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var (
-		ret0 = new(bool)
+		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "isCollatorDeposited", arg0)
+	err := _SMC.contract.Call(opts, out, "notaryPool", arg0)
 	return *ret0, err
 }
 
-// IsCollatorDeposited is a free data retrieval call binding the contract method 0xccb180e9.
+// NotaryPool is a free data retrieval call binding the contract method 0xa81f4510.
 //
-// Solidity: function isCollatorDeposited( address) constant returns(bool)
-func (_SMC *SMCSession) IsCollatorDeposited(arg0 common.Address) (bool, error) {
-	return _SMC.Contract.IsCollatorDeposited(&_SMC.CallOpts, arg0)
+// Solidity: function notaryPool( uint256) constant returns(address)
+func (_SMC *SMCSession) NotaryPool(arg0 *big.Int) (common.Address, error) {
+	return _SMC.Contract.NotaryPool(&_SMC.CallOpts, arg0)
 }
 
-// IsCollatorDeposited is a free data retrieval call binding the contract method 0xccb180e9.
+// NotaryPool is a free data retrieval call binding the contract method 0xa81f4510.
 //
-// Solidity: function isCollatorDeposited( address) constant returns(bool)
-func (_SMC *SMCCallerSession) IsCollatorDeposited(arg0 common.Address) (bool, error) {
-	return _SMC.Contract.IsCollatorDeposited(&_SMC.CallOpts, arg0)
+// Solidity: function notaryPool( uint256) constant returns(address)
+func (_SMC *SMCCallerSession) NotaryPool(arg0 *big.Int) (common.Address, error) {
+	return _SMC.Contract.NotaryPool(&_SMC.CallOpts, arg0)
 }
 
-// NumCollators is a free data retrieval call binding the contract method 0x0908fb31.
+// NotaryPoolLength is a free data retrieval call binding the contract method 0xf6f67d36.
 //
-// Solidity: function numCollators() constant returns(int256)
-func (_SMC *SMCCaller) NumCollators(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function notaryPoolLength() constant returns(uint256)
+func (_SMC *SMCCaller) NotaryPoolLength(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "numCollators")
+	err := _SMC.contract.Call(opts, out, "notaryPoolLength")
 	return *ret0, err
 }
 
-// NumCollators is a free data retrieval call binding the contract method 0x0908fb31.
+// NotaryPoolLength is a free data retrieval call binding the contract method 0xf6f67d36.
 //
-// Solidity: function numCollators() constant returns(int256)
-func (_SMC *SMCSession) NumCollators() (*big.Int, error) {
-	return _SMC.Contract.NumCollators(&_SMC.CallOpts)
+// Solidity: function notaryPoolLength() constant returns(uint256)
+func (_SMC *SMCSession) NotaryPoolLength() (*big.Int, error) {
+	return _SMC.Contract.NotaryPoolLength(&_SMC.CallOpts)
 }
 
-// NumCollators is a free data retrieval call binding the contract method 0x0908fb31.
+// NotaryPoolLength is a free data retrieval call binding the contract method 0xf6f67d36.
 //
-// Solidity: function numCollators() constant returns(int256)
-func (_SMC *SMCCallerSession) NumCollators() (*big.Int, error) {
-	return _SMC.Contract.NumCollators(&_SMC.CallOpts)
+// Solidity: function notaryPoolLength() constant returns(uint256)
+func (_SMC *SMCCallerSession) NotaryPoolLength() (*big.Int, error) {
+	return _SMC.Contract.NotaryPoolLength(&_SMC.CallOpts)
+}
+
+// NotaryRegistry is a free data retrieval call binding the contract method 0x6bdd3271.
+//
+// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, deposited bool)
+func (_SMC *SMCCaller) NotaryRegistry(opts *bind.CallOpts, arg0 common.Address) (struct {
+	DeregisteredPeriod *big.Int
+	PoolIndex          *big.Int
+	Deposited          bool
+}, error) {
+	ret := new(struct {
+		DeregisteredPeriod *big.Int
+		PoolIndex          *big.Int
+		Deposited          bool
+	})
+	out := ret
+	err := _SMC.contract.Call(opts, out, "notaryRegistry", arg0)
+	return *ret, err
+}
+
+// NotaryRegistry is a free data retrieval call binding the contract method 0x6bdd3271.
+//
+// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, deposited bool)
+func (_SMC *SMCSession) NotaryRegistry(arg0 common.Address) (struct {
+	DeregisteredPeriod *big.Int
+	PoolIndex          *big.Int
+	Deposited          bool
+}, error) {
+	return _SMC.Contract.NotaryRegistry(&_SMC.CallOpts, arg0)
+}
+
+// NotaryRegistry is a free data retrieval call binding the contract method 0x6bdd3271.
+//
+// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, deposited bool)
+func (_SMC *SMCCallerSession) NotaryRegistry(arg0 common.Address) (struct {
+	DeregisteredPeriod *big.Int
+	PoolIndex          *big.Int
+	Deposited          bool
+}, error) {
+	return _SMC.Contract.NotaryRegistry(&_SMC.CallOpts, arg0)
 }
 
 // PeriodHead is a free data retrieval call binding the contract method 0x584475db.
@@ -378,196 +390,114 @@ func (_SMC *SMCCallerSession) PeriodHead(arg0 *big.Int) (*big.Int, error) {
 	return _SMC.Contract.PeriodHead(&_SMC.CallOpts, arg0)
 }
 
-// Receipts is a free data retrieval call binding the contract method 0xd19ca568.
+// AddHeader is a paid mutator transaction binding the contract method 0xb8bc055f.
 //
-// Solidity: function receipts( int256) constant returns(shardId int256, txStartgas uint256, txGasprice uint256, value uint256, data bytes32, sender address, to address)
-func (_SMC *SMCCaller) Receipts(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	ShardId    *big.Int
-	TxStartgas *big.Int
-	TxGasprice *big.Int
-	Value      *big.Int
-	Data       [32]byte
-	Sender     common.Address
-	To         common.Address
-}, error) {
-	ret := new(struct {
-		ShardId    *big.Int
-		TxStartgas *big.Int
-		TxGasprice *big.Int
-		Value      *big.Int
-		Data       [32]byte
-		Sender     common.Address
-		To         common.Address
-	})
-	out := ret
-	err := _SMC.contract.Call(opts, out, "receipts", arg0)
-	return *ret, err
+// Solidity: function addHeader(_shardId uint256, period uint256, chunkRoot bytes32, proposerAddress address) returns()
+func (_SMC *SMCTransactor) AddHeader(opts *bind.TransactOpts, _shardId *big.Int, period *big.Int, chunkRoot [32]byte, proposerAddress common.Address) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "addHeader", _shardId, period, chunkRoot, proposerAddress)
 }
 
-// Receipts is a free data retrieval call binding the contract method 0xd19ca568.
+// AddHeader is a paid mutator transaction binding the contract method 0xb8bc055f.
 //
-// Solidity: function receipts( int256) constant returns(shardId int256, txStartgas uint256, txGasprice uint256, value uint256, data bytes32, sender address, to address)
-func (_SMC *SMCSession) Receipts(arg0 *big.Int) (struct {
-	ShardId    *big.Int
-	TxStartgas *big.Int
-	TxGasprice *big.Int
-	Value      *big.Int
-	Data       [32]byte
-	Sender     common.Address
-	To         common.Address
-}, error) {
-	return _SMC.Contract.Receipts(&_SMC.CallOpts, arg0)
+// Solidity: function addHeader(_shardId uint256, period uint256, chunkRoot bytes32, proposerAddress address) returns()
+func (_SMC *SMCSession) AddHeader(_shardId *big.Int, period *big.Int, chunkRoot [32]byte, proposerAddress common.Address) (*types.Transaction, error) {
+	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, period, chunkRoot, proposerAddress)
 }
 
-// Receipts is a free data retrieval call binding the contract method 0xd19ca568.
+// AddHeader is a paid mutator transaction binding the contract method 0xb8bc055f.
 //
-// Solidity: function receipts( int256) constant returns(shardId int256, txStartgas uint256, txGasprice uint256, value uint256, data bytes32, sender address, to address)
-func (_SMC *SMCCallerSession) Receipts(arg0 *big.Int) (struct {
-	ShardId    *big.Int
-	TxStartgas *big.Int
-	TxGasprice *big.Int
-	Value      *big.Int
-	Data       [32]byte
-	Sender     common.Address
-	To         common.Address
-}, error) {
-	return _SMC.Contract.Receipts(&_SMC.CallOpts, arg0)
+// Solidity: function addHeader(_shardId uint256, period uint256, chunkRoot bytes32, proposerAddress address) returns()
+func (_SMC *SMCTransactorSession) AddHeader(_shardId *big.Int, period *big.Int, chunkRoot [32]byte, proposerAddress common.Address) (*types.Transaction, error) {
+	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, period, chunkRoot, proposerAddress)
 }
 
-// ShardCount is a free data retrieval call binding the contract method 0x04e9c77a.
+// ComputeHeaderHash is a paid mutator transaction binding the contract method 0xb9505ea4.
 //
-// Solidity: function shardCount() constant returns(int256)
-func (_SMC *SMCCaller) ShardCount(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _SMC.contract.Call(opts, out, "shardCount")
-	return *ret0, err
+// Solidity: function computeHeaderHash(shardId uint256, parentHash bytes32, chunkRoot bytes32, period uint256, proposerAddress address) returns(bytes32)
+func (_SMC *SMCTransactor) ComputeHeaderHash(opts *bind.TransactOpts, shardId *big.Int, parentHash [32]byte, chunkRoot [32]byte, period *big.Int, proposerAddress common.Address) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "computeHeaderHash", shardId, parentHash, chunkRoot, period, proposerAddress)
 }
 
-// ShardCount is a free data retrieval call binding the contract method 0x04e9c77a.
+// ComputeHeaderHash is a paid mutator transaction binding the contract method 0xb9505ea4.
 //
-// Solidity: function shardCount() constant returns(int256)
-func (_SMC *SMCSession) ShardCount() (*big.Int, error) {
-	return _SMC.Contract.ShardCount(&_SMC.CallOpts)
+// Solidity: function computeHeaderHash(shardId uint256, parentHash bytes32, chunkRoot bytes32, period uint256, proposerAddress address) returns(bytes32)
+func (_SMC *SMCSession) ComputeHeaderHash(shardId *big.Int, parentHash [32]byte, chunkRoot [32]byte, period *big.Int, proposerAddress common.Address) (*types.Transaction, error) {
+	return _SMC.Contract.ComputeHeaderHash(&_SMC.TransactOpts, shardId, parentHash, chunkRoot, period, proposerAddress)
 }
 
-// ShardCount is a free data retrieval call binding the contract method 0x04e9c77a.
+// ComputeHeaderHash is a paid mutator transaction binding the contract method 0xb9505ea4.
 //
-// Solidity: function shardCount() constant returns(int256)
-func (_SMC *SMCCallerSession) ShardCount() (*big.Int, error) {
-	return _SMC.Contract.ShardCount(&_SMC.CallOpts)
+// Solidity: function computeHeaderHash(shardId uint256, parentHash bytes32, chunkRoot bytes32, period uint256, proposerAddress address) returns(bytes32)
+func (_SMC *SMCTransactorSession) ComputeHeaderHash(shardId *big.Int, parentHash [32]byte, chunkRoot [32]byte, period *big.Int, proposerAddress common.Address) (*types.Transaction, error) {
+	return _SMC.Contract.ComputeHeaderHash(&_SMC.TransactOpts, shardId, parentHash, chunkRoot, period, proposerAddress)
 }
 
-// AddHeader is a paid mutator transaction binding the contract method 0x0341518d.
+// DeregisterNotary is a paid mutator transaction binding the contract method 0x58377bd1.
 //
-// Solidity: function addHeader(_shardId int256, _expectedPeriodNumber uint256, _periodStartPrevHash bytes32, _parentHash bytes32, _transactionRoot bytes32, _coinbase address, _stateRoot bytes32, _receiptRoot bytes32, _number int256) returns(bool)
-func (_SMC *SMCTransactor) AddHeader(opts *bind.TransactOpts, _shardId *big.Int, _expectedPeriodNumber *big.Int, _periodStartPrevHash [32]byte, _parentHash [32]byte, _transactionRoot [32]byte, _coinbase common.Address, _stateRoot [32]byte, _receiptRoot [32]byte, _number *big.Int) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "addHeader", _shardId, _expectedPeriodNumber, _periodStartPrevHash, _parentHash, _transactionRoot, _coinbase, _stateRoot, _receiptRoot, _number)
+// Solidity: function deregisterNotary() returns()
+func (_SMC *SMCTransactor) DeregisterNotary(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "deregisterNotary")
 }
 
-// AddHeader is a paid mutator transaction binding the contract method 0x0341518d.
+// DeregisterNotary is a paid mutator transaction binding the contract method 0x58377bd1.
 //
-// Solidity: function addHeader(_shardId int256, _expectedPeriodNumber uint256, _periodStartPrevHash bytes32, _parentHash bytes32, _transactionRoot bytes32, _coinbase address, _stateRoot bytes32, _receiptRoot bytes32, _number int256) returns(bool)
-func (_SMC *SMCSession) AddHeader(_shardId *big.Int, _expectedPeriodNumber *big.Int, _periodStartPrevHash [32]byte, _parentHash [32]byte, _transactionRoot [32]byte, _coinbase common.Address, _stateRoot [32]byte, _receiptRoot [32]byte, _number *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, _expectedPeriodNumber, _periodStartPrevHash, _parentHash, _transactionRoot, _coinbase, _stateRoot, _receiptRoot, _number)
+// Solidity: function deregisterNotary() returns()
+func (_SMC *SMCSession) DeregisterNotary() (*types.Transaction, error) {
+	return _SMC.Contract.DeregisterNotary(&_SMC.TransactOpts)
 }
 
-// AddHeader is a paid mutator transaction binding the contract method 0x0341518d.
+// DeregisterNotary is a paid mutator transaction binding the contract method 0x58377bd1.
 //
-// Solidity: function addHeader(_shardId int256, _expectedPeriodNumber uint256, _periodStartPrevHash bytes32, _parentHash bytes32, _transactionRoot bytes32, _coinbase address, _stateRoot bytes32, _receiptRoot bytes32, _number int256) returns(bool)
-func (_SMC *SMCTransactorSession) AddHeader(_shardId *big.Int, _expectedPeriodNumber *big.Int, _periodStartPrevHash [32]byte, _parentHash [32]byte, _transactionRoot [32]byte, _coinbase common.Address, _stateRoot [32]byte, _receiptRoot [32]byte, _number *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, _expectedPeriodNumber, _periodStartPrevHash, _parentHash, _transactionRoot, _coinbase, _stateRoot, _receiptRoot, _number)
+// Solidity: function deregisterNotary() returns()
+func (_SMC *SMCTransactorSession) DeregisterNotary() (*types.Transaction, error) {
+	return _SMC.Contract.DeregisterNotary(&_SMC.TransactOpts)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0xd0e30db0.
+// RegisterNotary is a paid mutator transaction binding the contract method 0x68e9513e.
 //
-// Solidity: function deposit() returns(int256)
-func (_SMC *SMCTransactor) Deposit(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "deposit")
+// Solidity: function registerNotary() returns()
+func (_SMC *SMCTransactor) RegisterNotary(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "registerNotary")
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0xd0e30db0.
+// RegisterNotary is a paid mutator transaction binding the contract method 0x68e9513e.
 //
-// Solidity: function deposit() returns(int256)
-func (_SMC *SMCSession) Deposit() (*types.Transaction, error) {
-	return _SMC.Contract.Deposit(&_SMC.TransactOpts)
+// Solidity: function registerNotary() returns()
+func (_SMC *SMCSession) RegisterNotary() (*types.Transaction, error) {
+	return _SMC.Contract.RegisterNotary(&_SMC.TransactOpts)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0xd0e30db0.
+// RegisterNotary is a paid mutator transaction binding the contract method 0x68e9513e.
 //
-// Solidity: function deposit() returns(int256)
-func (_SMC *SMCTransactorSession) Deposit() (*types.Transaction, error) {
-	return _SMC.Contract.Deposit(&_SMC.TransactOpts)
+// Solidity: function registerNotary() returns()
+func (_SMC *SMCTransactorSession) RegisterNotary() (*types.Transaction, error) {
+	return _SMC.Contract.RegisterNotary(&_SMC.TransactOpts)
 }
 
-// TxToShard is a paid mutator transaction binding the contract method 0x372a9e2a.
+// ReleaseNotary is a paid mutator transaction binding the contract method 0x9910851d.
 //
-// Solidity: function txToShard(_to address, _shardId int256, _txStartgas uint256, _txGasprice uint256, _data bytes12) returns(int256)
-func (_SMC *SMCTransactor) TxToShard(opts *bind.TransactOpts, _to common.Address, _shardId *big.Int, _txStartgas *big.Int, _txGasprice *big.Int, _data [12]byte) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "txToShard", _to, _shardId, _txStartgas, _txGasprice, _data)
+// Solidity: function releaseNotary() returns()
+func (_SMC *SMCTransactor) ReleaseNotary(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "releaseNotary")
 }
 
-// TxToShard is a paid mutator transaction binding the contract method 0x372a9e2a.
+// ReleaseNotary is a paid mutator transaction binding the contract method 0x9910851d.
 //
-// Solidity: function txToShard(_to address, _shardId int256, _txStartgas uint256, _txGasprice uint256, _data bytes12) returns(int256)
-func (_SMC *SMCSession) TxToShard(_to common.Address, _shardId *big.Int, _txStartgas *big.Int, _txGasprice *big.Int, _data [12]byte) (*types.Transaction, error) {
-	return _SMC.Contract.TxToShard(&_SMC.TransactOpts, _to, _shardId, _txStartgas, _txGasprice, _data)
+// Solidity: function releaseNotary() returns()
+func (_SMC *SMCSession) ReleaseNotary() (*types.Transaction, error) {
+	return _SMC.Contract.ReleaseNotary(&_SMC.TransactOpts)
 }
 
-// TxToShard is a paid mutator transaction binding the contract method 0x372a9e2a.
+// ReleaseNotary is a paid mutator transaction binding the contract method 0x9910851d.
 //
-// Solidity: function txToShard(_to address, _shardId int256, _txStartgas uint256, _txGasprice uint256, _data bytes12) returns(int256)
-func (_SMC *SMCTransactorSession) TxToShard(_to common.Address, _shardId *big.Int, _txStartgas *big.Int, _txGasprice *big.Int, _data [12]byte) (*types.Transaction, error) {
-	return _SMC.Contract.TxToShard(&_SMC.TransactOpts, _to, _shardId, _txStartgas, _txGasprice, _data)
+// Solidity: function releaseNotary() returns()
+func (_SMC *SMCTransactorSession) ReleaseNotary() (*types.Transaction, error) {
+	return _SMC.Contract.ReleaseNotary(&_SMC.TransactOpts)
 }
 
-// UpdateGasPrice is a paid mutator transaction binding the contract method 0x22131389.
-//
-// Solidity: function updateGasPrice(_receiptId int256, _txGasprice uint256) returns(bool)
-func (_SMC *SMCTransactor) UpdateGasPrice(opts *bind.TransactOpts, _receiptId *big.Int, _txGasprice *big.Int) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "updateGasPrice", _receiptId, _txGasprice)
-}
-
-// UpdateGasPrice is a paid mutator transaction binding the contract method 0x22131389.
-//
-// Solidity: function updateGasPrice(_receiptId int256, _txGasprice uint256) returns(bool)
-func (_SMC *SMCSession) UpdateGasPrice(_receiptId *big.Int, _txGasprice *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.UpdateGasPrice(&_SMC.TransactOpts, _receiptId, _txGasprice)
-}
-
-// UpdateGasPrice is a paid mutator transaction binding the contract method 0x22131389.
-//
-// Solidity: function updateGasPrice(_receiptId int256, _txGasprice uint256) returns(bool)
-func (_SMC *SMCTransactorSession) UpdateGasPrice(_receiptId *big.Int, _txGasprice *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.UpdateGasPrice(&_SMC.TransactOpts, _receiptId, _txGasprice)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0x7e62eab8.
-//
-// Solidity: function withdraw(_collatorIndex int256) returns()
-func (_SMC *SMCTransactor) Withdraw(opts *bind.TransactOpts, _collatorIndex *big.Int) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "withdraw", _collatorIndex)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0x7e62eab8.
-//
-// Solidity: function withdraw(_collatorIndex int256) returns()
-func (_SMC *SMCSession) Withdraw(_collatorIndex *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Withdraw(&_SMC.TransactOpts, _collatorIndex)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0x7e62eab8.
-//
-// Solidity: function withdraw(_collatorIndex int256) returns()
-func (_SMC *SMCTransactorSession) Withdraw(_collatorIndex *big.Int) (*types.Transaction, error) {
-	return _SMC.Contract.Withdraw(&_SMC.TransactOpts, _collatorIndex)
-}
-
-// SMCCollationAddedIterator is returned from FilterCollationAdded and is used to iterate over the raw logs and unpacked data for CollationAdded events raised by the SMC contract.
-type SMCCollationAddedIterator struct {
-	Event *SMCCollationAdded // Event containing the contract specifics and raw log
+// SMCHeaderAddedIterator is returned from FilterHeaderAdded and is used to iterate over the raw logs and unpacked data for HeaderAdded events raised by the SMC contract.
+type SMCHeaderAddedIterator struct {
+	Event *SMCHeaderAdded // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -581,7 +511,7 @@ type SMCCollationAddedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *SMCCollationAddedIterator) Next() bool {
+func (it *SMCHeaderAddedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -590,7 +520,7 @@ func (it *SMCCollationAddedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(SMCCollationAdded)
+			it.Event = new(SMCHeaderAdded)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -605,7 +535,7 @@ func (it *SMCCollationAddedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(SMCCollationAdded)
+		it.Event = new(SMCHeaderAdded)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -621,61 +551,54 @@ func (it *SMCCollationAddedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *SMCCollationAddedIterator) Error() error {
+func (it *SMCHeaderAddedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *SMCCollationAddedIterator) Close() error {
+func (it *SMCHeaderAddedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// SMCCollationAdded represents a CollationAdded event raised by the SMC contract.
-type SMCCollationAdded struct {
-	ShardId              *big.Int
-	ExpectedPeriodNumber *big.Int
-	PeriodStartPrevHash  [32]byte
-	ParentHash           [32]byte
-	TransactionRoot      [32]byte
-	Coinbase             common.Address
-	StateRoot            [32]byte
-	ReceiptRoot          [32]byte
-	Number               *big.Int
-	IsNewHead            bool
-	Score                *big.Int
-	Raw                  types.Log // Blockchain specific contextual infos
+// SMCHeaderAdded represents a HeaderAdded event raised by the SMC contract.
+type SMCHeaderAdded struct {
+	ShardId         *big.Int
+	ChunkRoot       [32]byte
+	Period          *big.Int
+	ProposerAddress common.Address
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterCollationAdded is a free log retrieval operation binding the contract event 0x788a01fdbeb989d24e706cdd2993ca4213400e7b5fa631819b2acfe8ebad4135.
+// FilterHeaderAdded is a free log retrieval operation binding the contract event 0x5585108fa6e3c23be15f85641f8d891b72782aaeca2573e7360a4519e67a2bee.
 //
-// Solidity: event CollationAdded(shardId indexed int256, expectedPeriodNumber uint256, periodStartPrevHash bytes32, parentHash bytes32, transactionRoot bytes32, coinbase address, stateRoot bytes32, receiptRoot bytes32, number int256, isNewHead bool, score int256)
-func (_SMC *SMCFilterer) FilterCollationAdded(opts *bind.FilterOpts, shardId []*big.Int) (*SMCCollationAddedIterator, error) {
+// Solidity: event HeaderAdded(shardId indexed uint256, chunkRoot bytes32, period int128, proposerAddress address)
+func (_SMC *SMCFilterer) FilterHeaderAdded(opts *bind.FilterOpts, shardId []*big.Int) (*SMCHeaderAddedIterator, error) {
 
 	var shardIdRule []interface{}
 	for _, shardIdItem := range shardId {
 		shardIdRule = append(shardIdRule, shardIdItem)
 	}
 
-	logs, sub, err := _SMC.contract.FilterLogs(opts, "CollationAdded", shardIdRule)
+	logs, sub, err := _SMC.contract.FilterLogs(opts, "HeaderAdded", shardIdRule)
 	if err != nil {
 		return nil, err
 	}
-	return &SMCCollationAddedIterator{contract: _SMC.contract, event: "CollationAdded", logs: logs, sub: sub}, nil
+	return &SMCHeaderAddedIterator{contract: _SMC.contract, event: "HeaderAdded", logs: logs, sub: sub}, nil
 }
 
-// WatchCollationAdded is a free log subscription operation binding the contract event 0x788a01fdbeb989d24e706cdd2993ca4213400e7b5fa631819b2acfe8ebad4135.
+// WatchHeaderAdded is a free log subscription operation binding the contract event 0x5585108fa6e3c23be15f85641f8d891b72782aaeca2573e7360a4519e67a2bee.
 //
-// Solidity: event CollationAdded(shardId indexed int256, expectedPeriodNumber uint256, periodStartPrevHash bytes32, parentHash bytes32, transactionRoot bytes32, coinbase address, stateRoot bytes32, receiptRoot bytes32, number int256, isNewHead bool, score int256)
-func (_SMC *SMCFilterer) WatchCollationAdded(opts *bind.WatchOpts, sink chan<- *SMCCollationAdded, shardId []*big.Int) (event.Subscription, error) {
+// Solidity: event HeaderAdded(shardId indexed uint256, chunkRoot bytes32, period int128, proposerAddress address)
+func (_SMC *SMCFilterer) WatchHeaderAdded(opts *bind.WatchOpts, sink chan<- *SMCHeaderAdded, shardId []*big.Int) (event.Subscription, error) {
 
 	var shardIdRule []interface{}
 	for _, shardIdItem := range shardId {
 		shardIdRule = append(shardIdRule, shardIdItem)
 	}
 
-	logs, sub, err := _SMC.contract.WatchLogs(opts, "CollationAdded", shardIdRule)
+	logs, sub, err := _SMC.contract.WatchLogs(opts, "HeaderAdded", shardIdRule)
 	if err != nil {
 		return nil, err
 	}
@@ -685,8 +608,8 @@ func (_SMC *SMCFilterer) WatchCollationAdded(opts *bind.WatchOpts, sink chan<- *
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(SMCCollationAdded)
-				if err := _SMC.contract.UnpackLog(event, "CollationAdded", log); err != nil {
+				event := new(SMCHeaderAdded)
+				if err := _SMC.contract.UnpackLog(event, "HeaderAdded", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -707,9 +630,9 @@ func (_SMC *SMCFilterer) WatchCollationAdded(opts *bind.WatchOpts, sink chan<- *
 	}), nil
 }
 
-// SMCDepositIterator is returned from FilterDeposit and is used to iterate over the raw logs and unpacked data for Deposit events raised by the SMC contract.
-type SMCDepositIterator struct {
-	Event *SMCDeposit // Event containing the contract specifics and raw log
+// SMCNotaryDeregisteredIterator is returned from FilterNotaryDeregistered and is used to iterate over the raw logs and unpacked data for NotaryDeregistered events raised by the SMC contract.
+type SMCNotaryDeregisteredIterator struct {
+	Event *SMCNotaryDeregistered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -723,7 +646,7 @@ type SMCDepositIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *SMCDepositIterator) Next() bool {
+func (it *SMCNotaryDeregisteredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -732,7 +655,7 @@ func (it *SMCDepositIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(SMCDeposit)
+			it.Event = new(SMCNotaryDeregistered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -747,7 +670,7 @@ func (it *SMCDepositIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(SMCDeposit)
+		it.Event = new(SMCNotaryDeregistered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -763,42 +686,43 @@ func (it *SMCDepositIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *SMCDepositIterator) Error() error {
+func (it *SMCNotaryDeregisteredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *SMCDepositIterator) Close() error {
+func (it *SMCNotaryDeregisteredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// SMCDeposit represents a Deposit event raised by the SMC contract.
-type SMCDeposit struct {
-	Collator common.Address
-	Index    *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
+// SMCNotaryDeregistered represents a NotaryDeregistered event raised by the SMC contract.
+type SMCNotaryDeregistered struct {
+	Notary             common.Address
+	PoolIndex          *big.Int
+	DeregisteredPeriod *big.Int
+	Raw                types.Log // Blockchain specific contextual infos
 }
 
-// FilterDeposit is a free log retrieval operation binding the contract event 0xd8a6d38df847dcba70dfdeb4948fb1457d61a81d132801f40dc9c00d52dfd478.
+// FilterNotaryDeregistered is a free log retrieval operation binding the contract event 0x90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a75.
 //
-// Solidity: event Deposit(collator address, index int256)
-func (_SMC *SMCFilterer) FilterDeposit(opts *bind.FilterOpts) (*SMCDepositIterator, error) {
+// Solidity: event NotaryDeregistered(notary address, poolIndex uint256, deregisteredPeriod uint256)
+func (_SMC *SMCFilterer) FilterNotaryDeregistered(opts *bind.FilterOpts) (*SMCNotaryDeregisteredIterator, error) {
 
-	logs, sub, err := _SMC.contract.FilterLogs(opts, "Deposit")
+	logs, sub, err := _SMC.contract.FilterLogs(opts, "NotaryDeregistered")
 	if err != nil {
 		return nil, err
 	}
-	return &SMCDepositIterator{contract: _SMC.contract, event: "Deposit", logs: logs, sub: sub}, nil
+	return &SMCNotaryDeregisteredIterator{contract: _SMC.contract, event: "NotaryDeregistered", logs: logs, sub: sub}, nil
 }
 
-// WatchDeposit is a free log subscription operation binding the contract event 0xd8a6d38df847dcba70dfdeb4948fb1457d61a81d132801f40dc9c00d52dfd478.
+// WatchNotaryDeregistered is a free log subscription operation binding the contract event 0x90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a75.
 //
-// Solidity: event Deposit(collator address, index int256)
-func (_SMC *SMCFilterer) WatchDeposit(opts *bind.WatchOpts, sink chan<- *SMCDeposit) (event.Subscription, error) {
+// Solidity: event NotaryDeregistered(notary address, poolIndex uint256, deregisteredPeriod uint256)
+func (_SMC *SMCFilterer) WatchNotaryDeregistered(opts *bind.WatchOpts, sink chan<- *SMCNotaryDeregistered) (event.Subscription, error) {
 
-	logs, sub, err := _SMC.contract.WatchLogs(opts, "Deposit")
+	logs, sub, err := _SMC.contract.WatchLogs(opts, "NotaryDeregistered")
 	if err != nil {
 		return nil, err
 	}
@@ -808,8 +732,8 @@ func (_SMC *SMCFilterer) WatchDeposit(opts *bind.WatchOpts, sink chan<- *SMCDepo
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(SMCDeposit)
-				if err := _SMC.contract.UnpackLog(event, "Deposit", log); err != nil {
+				event := new(SMCNotaryDeregistered)
+				if err := _SMC.contract.UnpackLog(event, "NotaryDeregistered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -830,9 +754,9 @@ func (_SMC *SMCFilterer) WatchDeposit(opts *bind.WatchOpts, sink chan<- *SMCDepo
 	}), nil
 }
 
-// SMCTxToShardIterator is returned from FilterTxToShard and is used to iterate over the raw logs and unpacked data for TxToShard events raised by the SMC contract.
-type SMCTxToShardIterator struct {
-	Event *SMCTxToShard // Event containing the contract specifics and raw log
+// SMCNotaryRegisteredIterator is returned from FilterNotaryRegistered and is used to iterate over the raw logs and unpacked data for NotaryRegistered events raised by the SMC contract.
+type SMCNotaryRegisteredIterator struct {
+	Event *SMCNotaryRegistered // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -846,7 +770,7 @@ type SMCTxToShardIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *SMCTxToShardIterator) Next() bool {
+func (it *SMCNotaryRegisteredIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -855,7 +779,7 @@ func (it *SMCTxToShardIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(SMCTxToShard)
+			it.Event = new(SMCNotaryRegistered)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -870,7 +794,7 @@ func (it *SMCTxToShardIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(SMCTxToShard)
+		it.Event = new(SMCNotaryRegistered)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -886,61 +810,42 @@ func (it *SMCTxToShardIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *SMCTxToShardIterator) Error() error {
+func (it *SMCNotaryRegisteredIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *SMCTxToShardIterator) Close() error {
+func (it *SMCNotaryRegisteredIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// SMCTxToShard represents a TxToShard event raised by the SMC contract.
-type SMCTxToShard struct {
-	To        common.Address
-	ShardId   *big.Int
-	ReceiptId *big.Int
+// SMCNotaryRegistered represents a NotaryRegistered event raised by the SMC contract.
+type SMCNotaryRegistered struct {
+	Notary    common.Address
+	PoolIndex *big.Int
 	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterTxToShard is a free log retrieval operation binding the contract event 0xfc322e0c42ee41e0d74b940ceeee9cd5971acdd6ace8ff8010ee7134c31d9ea5.
+// FilterNotaryRegistered is a free log retrieval operation binding the contract event 0xa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7.
 //
-// Solidity: event TxToShard(to indexed address, shardId indexed int256, receiptId int256)
-func (_SMC *SMCFilterer) FilterTxToShard(opts *bind.FilterOpts, to []common.Address, shardId []*big.Int) (*SMCTxToShardIterator, error) {
+// Solidity: event NotaryRegistered(notary address, poolIndex uint256)
+func (_SMC *SMCFilterer) FilterNotaryRegistered(opts *bind.FilterOpts) (*SMCNotaryRegisteredIterator, error) {
 
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var shardIdRule []interface{}
-	for _, shardIdItem := range shardId {
-		shardIdRule = append(shardIdRule, shardIdItem)
-	}
-
-	logs, sub, err := _SMC.contract.FilterLogs(opts, "TxToShard", toRule, shardIdRule)
+	logs, sub, err := _SMC.contract.FilterLogs(opts, "NotaryRegistered")
 	if err != nil {
 		return nil, err
 	}
-	return &SMCTxToShardIterator{contract: _SMC.contract, event: "TxToShard", logs: logs, sub: sub}, nil
+	return &SMCNotaryRegisteredIterator{contract: _SMC.contract, event: "NotaryRegistered", logs: logs, sub: sub}, nil
 }
 
-// WatchTxToShard is a free log subscription operation binding the contract event 0xfc322e0c42ee41e0d74b940ceeee9cd5971acdd6ace8ff8010ee7134c31d9ea5.
+// WatchNotaryRegistered is a free log subscription operation binding the contract event 0xa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7.
 //
-// Solidity: event TxToShard(to indexed address, shardId indexed int256, receiptId int256)
-func (_SMC *SMCFilterer) WatchTxToShard(opts *bind.WatchOpts, sink chan<- *SMCTxToShard, to []common.Address, shardId []*big.Int) (event.Subscription, error) {
+// Solidity: event NotaryRegistered(notary address, poolIndex uint256)
+func (_SMC *SMCFilterer) WatchNotaryRegistered(opts *bind.WatchOpts, sink chan<- *SMCNotaryRegistered) (event.Subscription, error) {
 
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
-	}
-	var shardIdRule []interface{}
-	for _, shardIdItem := range shardId {
-		shardIdRule = append(shardIdRule, shardIdItem)
-	}
-
-	logs, sub, err := _SMC.contract.WatchLogs(opts, "TxToShard", toRule, shardIdRule)
+	logs, sub, err := _SMC.contract.WatchLogs(opts, "NotaryRegistered")
 	if err != nil {
 		return nil, err
 	}
@@ -950,8 +855,8 @@ func (_SMC *SMCFilterer) WatchTxToShard(opts *bind.WatchOpts, sink chan<- *SMCTx
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(SMCTxToShard)
-				if err := _SMC.contract.UnpackLog(event, "TxToShard", log); err != nil {
+				event := new(SMCNotaryRegistered)
+				if err := _SMC.contract.UnpackLog(event, "NotaryRegistered", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -972,9 +877,9 @@ func (_SMC *SMCFilterer) WatchTxToShard(opts *bind.WatchOpts, sink chan<- *SMCTx
 	}), nil
 }
 
-// SMCWithdrawIterator is returned from FilterWithdraw and is used to iterate over the raw logs and unpacked data for Withdraw events raised by the SMC contract.
-type SMCWithdrawIterator struct {
-	Event *SMCWithdraw // Event containing the contract specifics and raw log
+// SMCNotaryReleasedIterator is returned from FilterNotaryReleased and is used to iterate over the raw logs and unpacked data for NotaryReleased events raised by the SMC contract.
+type SMCNotaryReleasedIterator struct {
+	Event *SMCNotaryReleased // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -988,7 +893,7 @@ type SMCWithdrawIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *SMCWithdrawIterator) Next() bool {
+func (it *SMCNotaryReleasedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -997,7 +902,7 @@ func (it *SMCWithdrawIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(SMCWithdraw)
+			it.Event = new(SMCNotaryReleased)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1012,7 +917,7 @@ func (it *SMCWithdrawIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(SMCWithdraw)
+		it.Event = new(SMCNotaryReleased)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1028,41 +933,42 @@ func (it *SMCWithdrawIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *SMCWithdrawIterator) Error() error {
+func (it *SMCNotaryReleasedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *SMCWithdrawIterator) Close() error {
+func (it *SMCNotaryReleasedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// SMCWithdraw represents a Withdraw event raised by the SMC contract.
-type SMCWithdraw struct {
-	Index *big.Int
-	Raw   types.Log // Blockchain specific contextual infos
+// SMCNotaryReleased represents a NotaryReleased event raised by the SMC contract.
+type SMCNotaryReleased struct {
+	Notary    common.Address
+	PoolIndex *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterWithdraw is a free log retrieval operation binding the contract event 0xe13f360aa18d414ccdb598da6c447faa89d0477ffc7549dab5678fca76910b8c.
+// FilterNotaryReleased is a free log retrieval operation binding the contract event 0xaee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680.
 //
-// Solidity: event Withdraw(index int256)
-func (_SMC *SMCFilterer) FilterWithdraw(opts *bind.FilterOpts) (*SMCWithdrawIterator, error) {
+// Solidity: event NotaryReleased(notary address, poolIndex uint256)
+func (_SMC *SMCFilterer) FilterNotaryReleased(opts *bind.FilterOpts) (*SMCNotaryReleasedIterator, error) {
 
-	logs, sub, err := _SMC.contract.FilterLogs(opts, "Withdraw")
+	logs, sub, err := _SMC.contract.FilterLogs(opts, "NotaryReleased")
 	if err != nil {
 		return nil, err
 	}
-	return &SMCWithdrawIterator{contract: _SMC.contract, event: "Withdraw", logs: logs, sub: sub}, nil
+	return &SMCNotaryReleasedIterator{contract: _SMC.contract, event: "NotaryReleased", logs: logs, sub: sub}, nil
 }
 
-// WatchWithdraw is a free log subscription operation binding the contract event 0xe13f360aa18d414ccdb598da6c447faa89d0477ffc7549dab5678fca76910b8c.
+// WatchNotaryReleased is a free log subscription operation binding the contract event 0xaee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680.
 //
-// Solidity: event Withdraw(index int256)
-func (_SMC *SMCFilterer) WatchWithdraw(opts *bind.WatchOpts, sink chan<- *SMCWithdraw) (event.Subscription, error) {
+// Solidity: event NotaryReleased(notary address, poolIndex uint256)
+func (_SMC *SMCFilterer) WatchNotaryReleased(opts *bind.WatchOpts, sink chan<- *SMCNotaryReleased) (event.Subscription, error) {
 
-	logs, sub, err := _SMC.contract.WatchLogs(opts, "Withdraw")
+	logs, sub, err := _SMC.contract.WatchLogs(opts, "NotaryReleased")
 	if err != nil {
 		return nil, err
 	}
@@ -1072,8 +978,8 @@ func (_SMC *SMCFilterer) WatchWithdraw(opts *bind.WatchOpts, sink chan<- *SMCWit
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(SMCWithdraw)
-				if err := _SMC.contract.UnpackLog(event, "Withdraw", log); err != nil {
+				event := new(SMCNotaryReleased)
+				if err := _SMC.contract.UnpackLog(event, "NotaryReleased", log); err != nil {
 					return err
 				}
 				event.Raw = log

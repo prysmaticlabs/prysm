@@ -96,8 +96,8 @@ type ProtocolManager struct {
 	wg sync.WaitGroup
 }
 
-// NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
-// with the ethereum network.
+// NewProtocolManager returns a new Ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
+// with the Ethereum network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
@@ -249,7 +249,8 @@ func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *p
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p *peer) error {
-	if pm.peers.Len() >= pm.maxPeers {
+	// Ignore maxPeers if this is a trusted peer
+	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.Log().Debug("Ethereum peer connected", "name", p.Name())
@@ -497,20 +498,20 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Deliver them all to the downloader for queuing
-		trasactions := make([][]*types.Transaction, len(request))
+		transactions := make([][]*types.Transaction, len(request))
 		uncles := make([][]*types.Header, len(request))
 
 		for i, body := range request {
-			trasactions[i] = body.Transactions
+			transactions[i] = body.Transactions
 			uncles[i] = body.Uncles
 		}
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
-		filter := len(trasactions) > 0 || len(uncles) > 0
+		filter := len(transactions) > 0 || len(uncles) > 0
 		if filter {
-			trasactions, uncles = pm.fetcher.FilterBodies(p.id, trasactions, uncles, time.Now())
+			transactions, uncles = pm.fetcher.FilterBodies(p.id, transactions, uncles, time.Now())
 		}
-		if len(trasactions) > 0 || len(uncles) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.id, trasactions, uncles)
+		if len(transactions) > 0 || len(uncles) > 0 || !filter {
+			err := pm.downloader.DeliverBodies(p.id, transactions, uncles)
 			if err != nil {
 				log.Debug("Failed to deliver bodies", "err", err)
 			}
