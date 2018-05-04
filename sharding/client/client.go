@@ -33,17 +33,17 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
-// General client for Notary/Proposer. Communicates to Geth node via JSON RPC.
-
+// General client for Notary/Proposer - Communicates to Geth node via JSON RPC.
 type shardingClient struct {
-	endpoint  string             // Endpoint to JSON RPC
+	endpoint  string             // Endpoint to JSON RPC.
 	client    *ethclient.Client  // Ethereum RPC client.
-	keystore  *keystore.KeyStore // Keystore containing the single signer
-	ctx       *cli.Context       // Command line context
-	smc       *contracts.SMC     // The deployed sharding management contract
-	rpcClient *rpc.Client        // The RPC client connection to the main geth node
+	keystore  *keystore.KeyStore // Keystore containing the single signer.
+	ctx       *cli.Context       // Command line context.
+	smc       *contracts.SMC     // The deployed sharding management contract.
+	rpcClient *rpc.Client        // The RPC client connection to the main geth node.
 }
 
+// Client methods that must be implemented to run a sharded system.
 type Client interface {
 	Start() error
 	Close()
@@ -54,7 +54,8 @@ type Client interface {
 	SMCTransactor() *contracts.SMCTransactor
 }
 
-func NewClient(ctx *cli.Context) *shardingClient {
+// NewClient forms a new struct instance.
+func NewClient(ctx *cli.Context) Client {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
@@ -74,7 +75,7 @@ func NewClient(ctx *cli.Context) *shardingClient {
 
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
-		panic(err) // TODO(prestonvanloon): handle this
+		panic(err) // TODO(prestonvanloon): handle this.
 	}
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
@@ -86,8 +87,8 @@ func NewClient(ctx *cli.Context) *shardingClient {
 }
 
 // Start the sharding client.
-// * Connects to Geth node.
-// * Verifies or deploys the sharding manager contract.
+// Connects to Geth node.
+// Verifies or deploys the sharding manager contract.
 func (c *shardingClient) Start() error {
 	rpcClient, err := dialRPC(c.endpoint)
 	if err != nil {
@@ -96,7 +97,7 @@ func (c *shardingClient) Start() error {
 	c.rpcClient = rpcClient
 	c.client = ethclient.NewClient(rpcClient)
 
-	// Check account existence and unlock account before starting notary client
+	// Check account existence and unlock account before starting notary client.
 	accounts := c.keystore.Accounts()
 	if len(accounts) == 0 {
 		return fmt.Errorf("no accounts found")
@@ -115,7 +116,7 @@ func (c *shardingClient) Start() error {
 	return nil
 }
 
-// Close the RPC client connection
+// Close the RPC client connection.
 func (c *shardingClient) Close() {
 	c.rpcClient.Close()
 }
@@ -184,6 +185,7 @@ func (c *shardingClient) SMCCaller() *contracts.SMCCaller {
 	return &c.smc.SMCCaller
 }
 
+// SMCTransactor allows us to send tx's to the SMC programmatically.
 func (c *shardingClient) SMCTransactor() *contracts.SMCTransactor {
 	return &c.smc.SMCTransactor
 }
