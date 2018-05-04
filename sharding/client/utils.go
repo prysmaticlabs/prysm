@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	//"runtime"
-
-	"github.com/ethereum/go-ethereum/log"
 )
 
 var (
@@ -39,14 +36,25 @@ func convertbyteToInterface(arg []byte) []interface{} {
 	return newtype
 }
 
+func interfacetoByte(arg []interface{}) []byte {
+	length := int64(len(arg))
+	newtype := make([]byte, length)
+	for i, v := range arg {
+		newtype[i] = v.(byte)
+	}
+
+	return newtype
+}
+
 // serializeBlob parses the blob and serializes it appropriately.
 func serializeBlob(cb interface{}) ([]byte, error) {
 
-	blob, err := convertInterface(cb, reflect.Slice)
+	interfaceblob, err := convertInterface(cb, reflect.Slice)
 	if err != nil {
 		return nil, fmt.Errorf("Error: %v", err)
 	}
-	length := int64(blob.Len())
+	blob := interfacetoByte(interfaceblob.Interface().([]interface{}))
+	length := int64(len(blob))
 	terminalLength := length % chunkDataSize
 	chunksNumber := length / chunkDataSize
 	finalchunkIndex := length - 1
@@ -59,7 +67,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	if chunksNumber == 0 {
 		paddedbytes := make([]byte, (length - terminalLength))
 		indicatorByte[0] = byte(terminalLength)
-		tempbody = append(indicatorByte, append(blob.Bytes(), paddedbytes...)...)
+		tempbody = append(indicatorByte, append(blob, paddedbytes...)...)
 		return tempbody, nil
 	}
 
@@ -74,7 +82,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 			// 31
 			tempbody = append(tempbody,
 				append(indicatorByte,
-					blob.Bytes()[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
+					blob[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
 
 		}
 		indicatorByte[0] = byte(chunkDataSize)
@@ -82,7 +90,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 		// Terminal chunk has its indicator byte added, chunkDataSize*chunksNumber refers to the total size of the blob
 		tempbody = append(tempbody,
 			append(indicatorByte,
-				blob.Bytes()[(chunksNumber-1)*chunkDataSize:chunkDataSize*chunksNumber]...)...)
+				blob[(chunksNumber-1)*chunkDataSize:chunkDataSize*chunksNumber]...)...)
 
 		return tempbody, nil
 
@@ -96,7 +104,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 
 		tempbody = append(tempbody,
 			append(indicatorByte,
-				blob.Bytes()[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
+				blob[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
 
 	}
 	// Appends indicator bytes to terminal-chunks , and if the index of the chunk delimiter is non-zero adds it to the chunk.
@@ -105,7 +113,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	indicatorByte[0] = byte(terminalLength)
 	tempbody = append(tempbody,
 		append(indicatorByte,
-			blob.Bytes()[chunkDataSize*chunksNumber-1:finalchunkIndex]...)...)
+			blob[chunkDataSize*chunksNumber-1:finalchunkIndex]...)...)
 
 	emptyBytes := make([]byte, (chunkDataSize - terminalLength))
 	tempbody = append(tempbody, emptyBytes...)
@@ -135,7 +143,6 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 		serialisedData = append(serialisedData, refinedData...)
 
 		if int64(len(serialisedData)) > collationsizelimit {
-			log.Info(fmt.Sprintf("The total number of interfaces added to the collation body are: %d", i))
 			serialisedData = serialisedData[:blobLength]
 			return serialisedData, nil
 
