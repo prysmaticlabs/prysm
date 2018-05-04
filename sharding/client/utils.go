@@ -146,7 +146,7 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 }
 
 // Deserializebody results in the Collation body being deserialised and separated into its respective interfaces.
-func Deserializebody(collationbody []byte, rawtx []interface{}) error {
+func Deserializebody(collationbody []byte, rawtx interface{}) error {
 
 	length := int64(len(collationbody))
 	chunksNumber := length / chunkSize
@@ -155,7 +155,7 @@ func Deserializebody(collationbody []byte, rawtx []interface{}) error {
 	deserializedblob := []byte{}
 
 	// This separates the collation body into its respective transaction blobs
-	for i := int64(1); i <= chunksNumber+1; i++ {
+	for i := int64(1); i <= chunksNumber; i++ {
 		indicatorIndex := (i - 1) * chunkSize
 		// Tests if the chunk delimiter is zero, if it is it will append the data chunk
 		// to tempbody
@@ -166,7 +166,7 @@ func Deserializebody(collationbody []byte, rawtx []interface{}) error {
 			// add it and append to the rawtx slice. The tempbody signifies a deserialized blob
 		} else {
 			terminalIndex := int64(collationbody[indicatorIndex])
-			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(indicatorIndex+2+terminalIndex)]...)
+			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(indicatorIndex+1+terminalIndex)]...)
 			deserializedblob = append(deserializedblob, tempbody...)
 			tempbody = []byte{}
 
