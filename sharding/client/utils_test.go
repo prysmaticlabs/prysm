@@ -53,14 +53,14 @@ func TestSize(t *testing.T) {
 
 	if int64(len(serializedblob)) != sizeafterSerialize {
 
-		t.Fatalf("Error Serializing blob,Lengths are not the same: %v , %v", int64(len(serializedblob)), sizeafterSerialize)
+		t.Fatalf("Error Serializing blobs the lengths are not the same: %v , %v", int64(len(serializedblob)), sizeafterSerialize)
 
 	}
 
 }
 func TestSerializeAndDeserializeblob(t *testing.T) {
 
-	blob := buildtxblobs(31)
+	blob := buildtxblobs(30)
 
 	serializedblob, err := Serialize(blob)
 
@@ -74,7 +74,7 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 	if !reflect.DeepEqual(blob, testbody) {
 
-		t.Fatalf("Error Serializing blob with %v %v", blob, testbody)
+		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same: %v %v", blob, testbody)
 	}
 
 }

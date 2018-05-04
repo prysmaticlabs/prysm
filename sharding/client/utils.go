@@ -138,7 +138,7 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 		data := rawtx[i]
 		refinedData, err := serializeBlob(data)
 		if err != nil {
-			return nil, fmt.Errorf("Error: %v at index: %v %v %v", err, i, data, rawtx)
+			return nil, fmt.Errorf("Error: %v at index: %v", i, err)
 		}
 		serialisedData = append(serialisedData, refinedData...)
 
