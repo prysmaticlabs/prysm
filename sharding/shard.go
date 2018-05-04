@@ -16,8 +16,8 @@ type Shard struct {
 
 // MakeShard creates an instance of a Shard struct given a shardID.
 func MakeShard(shardID *big.Int) *Shard {
-	// Swappable.
-	shardDB := &shardKV{kv: make(map[common.Hash][]byte)}
+	// Swappable - can be makeShardLevelDB, makeShardSparseTrie, etc.
+	shardDB := makeShardKV()
 
 	return &Shard{
 		shardID: shardID,
@@ -81,6 +81,31 @@ func (s *Shard) GetCollationByHash(hash common.Hash) (*Collation, error) {
 	return &Collation{header: header, body: body}, nil
 }
 
+// GetCanonicalCollationHash gets a collation header hash that has been set as canonical for
+// shardID/period pair
+func (s *Shard) GetCanonicalCollationHash(shardID *big.Int, period *big.Int) (*common.Hash, error) {
+	key := canonicalCollationLookupKey(shardID, period)
+	collationHashBytes, err := s.shardDB.Get(common.BytesToHash(key))
+	if err != nil {
+		return nil, fmt.Errorf("Error: No Canonical Collation Set for Period/ShardID")
+	}
+	collationHash := common.BytesToHash(collationHashBytes)
+	return &collationHash, nil
+}
+
+// GetCanonicalCollation fetches the collation set as canonical in the shardDB.
+func (s *Shard) GetCanonicalCollation(shardID *big.Int, period *big.Int) (*Collation, error) {
+	h, err := s.GetCanonicalCollationHash(shardID, period)
+	if err != nil {
+		return nil, fmt.Errorf("Error: No Hash Found")
+	}
+	collation, err := s.GetCollationByHash(*h)
+	if err != nil {
+		return nil, fmt.Errorf("Error: No Canonical Collation Found for Hash")
+	}
+	return collation, nil
+}
+
 // GetBodyByChunkRoot fetches a collation body.
 func (s *Shard) GetBodyByChunkRoot(chunkRoot common.Hash) ([]byte, error) {
 	body, err := s.shardDB.Get(chunkRoot)
@@ -98,4 +123,19 @@ func (s *Shard) CheckAvailability(header *CollationHeader) bool {
 // SetAvailability saves the availability of the chunk root in the shardDB.
 func (s *Shard) SetAvailability(chunkRoot *common.Hash) error {
 	return nil
+}
+
+// dataAvailabilityLookupKey formats a string that will become a lookup
+// key in the shardDB.
+func dataAvailabilityLookupKey(chunkRoot *common.Hash) []byte {
+	return []byte(fmt.Sprintf("availability-lookup:%s", chunkRoot.Str()))
+}
+
+// dataAvailabilityLookupKey formats a string that will become a lookup key
+// in the shardDB that takes into account the shardID and the period
+// of the shard.
+func canonicalCollationLookupKey(shardID *big.Int, period *big.Int) []byte {
+	str := "canonical-collation-lookup:shardID=%s,period=%s"
+	key := fmt.Sprintf(str, shardID.String(), period.String())
+	return []byte(key)
 }
