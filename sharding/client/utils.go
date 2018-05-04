@@ -130,7 +130,7 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 		data := rawtx[i]
 		refinedData, err := serializeBlob(data)
 		if err != nil {
-			return nil, fmt.Errorf("Error: %v", err)
+			return nil, fmt.Errorf("Error: %v at index: %v %v %v", err, i, data, rawtx)
 		}
 		serialisedData = append(serialisedData, refinedData...)
 
@@ -174,7 +174,7 @@ func Deserializebody(collationbody []byte, rawtx interface{}) error {
 
 	}
 
-	rawtx = convertbyteToInterface(deserializedblob)
+	*rawtx.(*interface{}) = convertbyteToInterface(deserializedblob)
 
 	return nil
 
