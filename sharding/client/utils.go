@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	//"runtime"
 
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -15,7 +16,6 @@ var (
 	indicatorSize      = int64(1)
 	numberOfChunks     = collationsizelimit / chunkSize
 	chunkDataSize      = chunkSize - indicatorSize
-	totalDatasize      = numberOfChunks * chunkDataSize
 )
 
 // convertInterface converts inputted interface to the required type, ex: slice.
@@ -29,6 +29,16 @@ func convertInterface(arg interface{}, kind reflect.Kind) (reflect.Value, error)
 	return val, err
 }
 
+func convertbyteToInterface(arg []byte) []interface{} {
+	length := int64(len(arg))
+	newtype := make([]interface{}, length)
+	for i, v := range arg {
+		newtype[i] = v
+	}
+
+	return newtype
+}
+
 // serializeBlob parses the blob and serializes it appropriately.
 func serializeBlob(cb interface{}) ([]byte, error) {
 
@@ -39,7 +49,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	length := int64(blob.Len())
 	terminalLength := length % chunkDataSize
 	chunksNumber := length / chunkDataSize
-	finalchunkIndex := totalDatasize + (terminalLength + 1)
+	finalchunkIndex := length - 1
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
 	tempbody := []byte{}
@@ -81,6 +91,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	// This loop loops through all non-terminal chunks and add a indicator byte of 00000000, each chunk
 	// is created by appending the indcator byte to the data chunks. The data chunks are separated into sets of
 	// 31
+
 	for i := int64(1); i <= chunksNumber; i++ {
 
 		tempbody = append(tempbody,
@@ -91,11 +102,10 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	// Appends indicator bytes to terminal-chunks , and if the index of the chunk delimiter is non-zero adds it to the chunk.
 	// Also pads empty bytes to the terminal chunk.chunkDataSize*chunksNumber refers to the total size of the blob.
 	// finalchunkIndex refers to the index of the last data byte
-
 	indicatorByte[0] = byte(terminalLength)
 	tempbody = append(tempbody,
 		append(indicatorByte,
-			blob.Bytes()[chunkDataSize*chunksNumber:finalchunkIndex]...)...)
+			blob.Bytes()[chunkDataSize*chunksNumber-1:finalchunkIndex]...)...)
 
 	emptyBytes := make([]byte, (chunkDataSize - terminalLength))
 	tempbody = append(tempbody, emptyBytes...)
@@ -139,17 +149,17 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 func Deserializebody(collationbody []byte, rawtx []interface{}) error {
 
 	length := int64(len(collationbody))
-	chunksNumber := chunkSize / length
-	indicatorByte := make([]byte, 1)
-	indicatorByte[0] = 0
+	chunksNumber := length / chunkSize
+	indicatorByte := byte(0)
 	tempbody := []byte{}
+	deserializedblob := []byte{}
 
 	// This separates the collation body into its respective transaction blobs
-	for i := int64(1); i <= chunksNumber; i++ {
+	for i := int64(1); i <= chunksNumber+1; i++ {
 		indicatorIndex := (i - 1) * chunkSize
 		// Tests if the chunk delimiter is zero, if it is it will append the data chunk
 		// to tempbody
-		if collationbody[indicatorIndex] == indicatorByte[0] {
+		if collationbody[indicatorIndex] == indicatorByte {
 			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(i)*chunkSize]...)
 
 			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
@@ -157,12 +167,14 @@ func Deserializebody(collationbody []byte, rawtx []interface{}) error {
 		} else {
 			terminalIndex := int64(collationbody[indicatorIndex])
 			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(indicatorIndex+2+terminalIndex)]...)
-			rawtx = append(rawtx, tempbody)
+			deserializedblob = append(deserializedblob, tempbody...)
 			tempbody = []byte{}
 
 		}
 
 	}
+
+	rawtx = convertbyteToInterface(deserializedblob)
 
 	return nil
 
