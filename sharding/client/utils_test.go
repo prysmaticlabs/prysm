@@ -3,7 +3,6 @@ package client
 import (
 	"math/rand"
 	"reflect"
-	//"runtime"
 	"testing"
 )
 
@@ -39,10 +38,10 @@ func TestConvertInterface(t *testing.T) {
 
 }
 func TestSize(t *testing.T) {
-	size := int64(20)
+	size := int64(84)
 	blob := buildtxblobs(size)
-	chunksafterSerialize := size / chunkDataSize
-	terminalchunk := size % chunkDataSize
+	chunksafterSerialize := size * size / chunkDataSize
+	terminalchunk := size * size % chunkDataSize
 	if terminalchunk != 0 {
 		chunksafterSerialize = chunksafterSerialize + 1
 	}
@@ -59,17 +58,15 @@ func TestSize(t *testing.T) {
 	}
 
 }
-func TestSerializeblob(t *testing.T) {
+func TestSerializeAndDeserializeblob(t *testing.T) {
 
-	blob := buildblob(200)
+	blob := buildtxblobs(31)
 
-	serializedblob, err := serializeBlob(blob)
+	serializedblob, err := Serialize(blob)
 
 	if err != nil {
 		t.Fatalf("Error Serializing blob:%v %v", err, serializedblob)
 	}
-	//test := &testbody
-	//runtime.Breakpoint()
 	err2 := Deserializebody(serializedblob, &testbody)
 	if err2 != nil {
 		t.Fatalf("Error Serializing blob:%v", err2)
