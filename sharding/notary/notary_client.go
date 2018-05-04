@@ -1,4 +1,3 @@
-// Package notary holds all of the functionality to run as a notary in a sharded system.
 package notary
 
 import (

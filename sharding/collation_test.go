@@ -1,13 +1,14 @@
 package sharding
 
 import (
-	"math"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
+
+// TODO: this test needs to change as we will be serializing tx's into blobs
+// within the collation body instead.
 
 func TestCollation_AddTransactions(t *testing.T) {
 	tests := []struct {
@@ -38,40 +39,6 @@ func TestCollation_AddTransactions(t *testing.T) {
 			if results[i] != tx {
 				t.Fatalf("Mismatched transactions. wanted=%+v. got=%+v", tt.transactions, results)
 			}
-		}
-	}
-}
-
-func TestCollation_GasUsed(t *testing.T) {
-	tests := []struct {
-		transactions []*types.Transaction
-		gasUsed      *big.Int
-	}{
-		{
-			transactions: []*types.Transaction{
-				makeTxWithGasLimit(100),
-				makeTxWithGasLimit(100000),
-				makeTxWithGasLimit(899900),
-			},
-			gasUsed: big.NewInt(1000000),
-		}, {
-			transactions: []*types.Transaction{},
-			gasUsed:      big.NewInt(0),
-		},
-		{
-			transactions: []*types.Transaction{
-				makeTxWithGasLimit(math.MaxUint64),
-				makeTxWithGasLimit(9001),
-				makeTxWithGasLimit(math.MaxUint64),
-			},
-			gasUsed: big.NewInt(0).SetUint64(math.MaxUint64),
-		},
-	}
-
-	for _, tt := range tests {
-		got := (&Collation{transactions: tt.transactions}).GasUsed()
-		if tt.gasUsed.Cmp(got) != 0 {
-			t.Errorf("Returned unexpected gasUsed. Got=%v, wanted=%v", got, tt.gasUsed)
 		}
 	}
 }
