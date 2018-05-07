@@ -15,8 +15,12 @@ func makeShardKV() *shardKV {
 }
 
 func (sb *shardKV) Get(k *common.Hash) ([]byte, error) {
-	v := sb.kv[k]
-	if v == nil {
+	v, ok := sb.kv[k]
+	fmt.Printf("Map: %v\n", sb.kv)
+	fmt.Printf("Key: %v\n", k)
+	fmt.Printf("Val: %v\n", sb.kv[k])
+	fmt.Printf("Ok: %v\n", ok)
+	if !ok {
 		return nil, fmt.Errorf("Key Not Found")
 	}
 	return v, nil
@@ -32,6 +36,7 @@ func (sb *shardKV) Has(k *common.Hash) bool {
 
 func (sb *shardKV) Put(k *common.Hash, v []byte) {
 	sb.kv[k] = v
+	fmt.Printf("Put: %v\n", sb.kv[k])
 	return
 }
 

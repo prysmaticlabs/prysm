@@ -42,7 +42,7 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 func (s *Shard) GetHeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 	encoded, err := s.shardDB.Get(hash)
 	if err != nil {
-		return nil, fmt.Errorf("Error: Header Not Found")
+		return nil, fmt.Errorf("Error: Header Not Found: %v", err)
 	}
 	var header CollationHeader
 	if err := rlp.DecodeBytes(encoded, &header); err != nil {
@@ -143,6 +143,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 	}
 	// Uses the hash of the header as the key.
 	hash := header.Hash()
+	fmt.Printf("In SaveHeader: %s\n", hash.String())
 	s.shardDB.Put(&hash, encoded)
 	return nil
 }
