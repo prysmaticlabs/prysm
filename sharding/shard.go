@@ -32,15 +32,15 @@ func (s *Shard) ShardID() *big.Int {
 
 // ValidateShardID checks if header belongs to shard.
 func (s *Shard) ValidateShardID(h *CollationHeader) error {
-	if s.shardID.Cmp(h.shardID) != 0 {
-		return fmt.Errorf("Error: Collation Does Not Belong to Shard %d but Instead Has ShardID %d", h.shardID, s.shardID)
+	if s.ShardID().Cmp(h.ShardID()) != 0 {
+		return fmt.Errorf("Error: Collation Does Not Belong to Shard %d but Instead Has ShardID %d", h.ShardID(), s.ShardID())
 	}
 	return nil
 }
 
 // GetHeaderByHash of collation.
 func (s *Shard) GetHeaderByHash(hash *common.Hash) (*CollationHeader, error) {
-	encoded, err := s.shardDB.Get(hash)
+	encoded, err := s.shardDB.Get(*hash)
 	if err != nil {
 		return nil, fmt.Errorf("Error: Header Not Found: %v", err)
 	}
@@ -69,7 +69,7 @@ func (s *Shard) GetCollationByHash(headerHash *common.Hash) (*Collation, error) 
 func (s *Shard) GetCanonicalCollationHash(shardID *big.Int, period *big.Int) (*common.Hash, error) {
 	key := canonicalCollationLookupKey(shardID, period)
 	hash := common.BytesToHash(key.Bytes())
-	collationHashBytes, err := s.shardDB.Get(&hash)
+	collationHashBytes, err := s.shardDB.Get(hash)
 	if err != nil {
 		return nil, fmt.Errorf("Error: No Canonical Collation Set for Period/ShardID")
 	}
@@ -92,7 +92,7 @@ func (s *Shard) GetCanonicalCollation(shardID *big.Int, period *big.Int) (*Colla
 
 // GetBodyByChunkRoot fetches a collation body.
 func (s *Shard) GetBodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
-	body, err := s.shardDB.Get(chunkRoot)
+	body, err := s.shardDB.Get(*chunkRoot)
 	if err != nil {
 		return nil, fmt.Errorf("Error: No Corresponding Body With Chunk Root Found")
 	}
@@ -102,7 +102,7 @@ func (s *Shard) GetBodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 // CheckAvailability is used by notaries to confirm a header's data availability.
 func (s *Shard) CheckAvailability(header *CollationHeader) (bool, error) {
 	key := dataAvailabilityLookupKey(header.ChunkRoot())
-	availabilityVal, err := s.shardDB.Get(&key)
+	availabilityVal, err := s.shardDB.Get(key)
 	if err != nil {
 		return false, fmt.Errorf("Error: Key Not Found")
 	}
@@ -124,13 +124,13 @@ func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error
 		if err != nil {
 			return fmt.Errorf("Cannot RLP encode availability: %v", err)
 		}
-		s.shardDB.Put(&key, enc)
+		s.shardDB.Put(key, enc)
 	} else {
 		enc, err := rlp.EncodeToBytes(false)
 		if err != nil {
 			return fmt.Errorf("Cannot RLP encode availability: %v", err)
 		}
-		s.shardDB.Put(&key, enc)
+		s.shardDB.Put(key, enc)
 	}
 	return nil
 }
@@ -144,7 +144,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 	// Uses the hash of the header as the key.
 	hash := header.Hash()
 	fmt.Printf("In SaveHeader: %s\n", hash.String())
-	s.shardDB.Put(&hash, encoded)
+	s.shardDB.Put(hash, encoded)
 	return nil
 }
 
@@ -154,7 +154,7 @@ func (s *Shard) SaveBody(body []byte) error {
 	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
 	// right now we will just take the raw keccak256 of the body until #92 is merged.
 	chunkRoot := common.BytesToHash(body)
-	s.shardDB.Put(&chunkRoot, body)
+	s.shardDB.Put(chunkRoot, body)
 	s.SetAvailability(&chunkRoot, true)
 	return nil
 }
@@ -187,7 +187,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	if err != nil {
 		return fmt.Errorf("Error: Cannot Encode Header")
 	}
-	s.shardDB.Put(&key, encoded)
+	s.shardDB.Put(key, encoded)
 	return nil
 }
 
