@@ -52,8 +52,8 @@ func (s *Shard) GetHeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 }
 
 // GetCollationByHash fetches full collation.
-func (s *Shard) GetCollationByHash(hash *common.Hash) (*Collation, error) {
-	header, err := s.GetHeaderByHash(hash)
+func (s *Shard) GetCollationByHash(headerHash *common.Hash) (*Collation, error) {
+	header, err := s.GetHeaderByHash(headerHash)
 	if err != nil {
 		return nil, err
 	}
