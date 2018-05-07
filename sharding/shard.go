@@ -33,30 +33,8 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 	return nil
 }
 
-// SaveHeader adds the collation header to shardDB.
-func (s *Shard) SaveHeader(h *CollationHeader) error {
-	if err := s.ValidateShardID(h); err != nil {
-		return err
-	}
-	encoded, err := rlp.EncodeToBytes(h)
-	if err != nil {
-		return fmt.Errorf("Error: Cannot Encode Header")
-	}
-	s.shardDB.Put(h.Hash(), encoded)
-	return nil
-}
-
-// SaveCollationBody adds the collation body to shardDB.
-func (s *Shard) SaveCollationBody(body []byte) error {
-	// TODO: dependent on blob serialization.
-	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
-	// s.shardDB.Put(chunkRoot, body)
-	// s.SetAvailability(chunkRoot, true)
-	return nil
-}
-
 // GetHeaderByHash of collation.
-func (s *Shard) GetHeaderByHash(hash common.Hash) (*CollationHeader, error) {
+func (s *Shard) GetHeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 	encoded, err := s.shardDB.Get(hash)
 	if err != nil {
 		return nil, fmt.Errorf("Error: Header Not Found")
@@ -69,12 +47,12 @@ func (s *Shard) GetHeaderByHash(hash common.Hash) (*CollationHeader, error) {
 }
 
 // GetCollationByHash fetches full collation.
-func (s *Shard) GetCollationByHash(hash common.Hash) (*Collation, error) {
+func (s *Shard) GetCollationByHash(hash *common.Hash) (*Collation, error) {
 	header, err := s.GetHeaderByHash(hash)
 	if err != nil {
 		return nil, err
 	}
-	body, err := s.GetBodyByChunkRoot(*header.chunkRoot)
+	body, err := s.GetBodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +63,8 @@ func (s *Shard) GetCollationByHash(hash common.Hash) (*Collation, error) {
 // shardID/period pair
 func (s *Shard) GetCanonicalCollationHash(shardID *big.Int, period *big.Int) (*common.Hash, error) {
 	key := canonicalCollationLookupKey(shardID, period)
-	collationHashBytes, err := s.shardDB.Get(common.BytesToHash(key))
+	hash := common.BytesToHash(key.Bytes())
+	collationHashBytes, err := s.shardDB.Get(&hash)
 	if err != nil {
 		return nil, fmt.Errorf("Error: No Canonical Collation Set for Period/ShardID")
 	}
@@ -99,7 +78,7 @@ func (s *Shard) GetCanonicalCollation(shardID *big.Int, period *big.Int) (*Colla
 	if err != nil {
 		return nil, fmt.Errorf("Error: No Hash Found")
 	}
-	collation, err := s.GetCollationByHash(*h)
+	collation, err := s.GetCollationByHash(h)
 	if err != nil {
 		return nil, fmt.Errorf("Error: No Canonical Collation Found for Hash")
 	}
@@ -107,7 +86,7 @@ func (s *Shard) GetCanonicalCollation(shardID *big.Int, period *big.Int) (*Colla
 }
 
 // GetBodyByChunkRoot fetches a collation body.
-func (s *Shard) GetBodyByChunkRoot(chunkRoot common.Hash) ([]byte, error) {
+func (s *Shard) GetBodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 	body, err := s.shardDB.Get(chunkRoot)
 	if err != nil {
 		return nil, fmt.Errorf("Error: No Corresponding Body With Chunk Root Found")
@@ -116,26 +95,108 @@ func (s *Shard) GetBodyByChunkRoot(chunkRoot common.Hash) ([]byte, error) {
 }
 
 // CheckAvailability is used by notaries to confirm a header's data availability.
-func (s *Shard) CheckAvailability(header *CollationHeader) bool {
-	return true
+func (s *Shard) CheckAvailability(header *CollationHeader) (bool, error) {
+	key := dataAvailabilityLookupKey(header.ChunkRoot())
+	availabilityVal, err := s.shardDB.Get(&key)
+	if err != nil {
+		return false, fmt.Errorf("Error: Key Not Found")
+	}
+	var availability int
+	if err := rlp.DecodeBytes(availabilityVal, &availability); err != nil {
+		return false, fmt.Errorf("Error: Cannot RLP Decode Availability: %v", err)
+	}
+	if availability != 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 // SetAvailability saves the availability of the chunk root in the shardDB.
-func (s *Shard) SetAvailability(chunkRoot *common.Hash) error {
+func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error {
+	key := dataAvailabilityLookupKey(chunkRoot)
+	if availability {
+		enc, err := rlp.EncodeToBytes(true)
+		if err != nil {
+			return fmt.Errorf("Cannot RLP encode availability: %v", err)
+		}
+		s.shardDB.Put(&key, enc)
+	} else {
+		enc, err := rlp.EncodeToBytes(false)
+		if err != nil {
+			return fmt.Errorf("Cannot RLP encode availability: %v", err)
+		}
+		s.shardDB.Put(&key, enc)
+	}
+	return nil
+}
+
+// SaveHeader adds the collation header to shardDB.
+func (s *Shard) SaveHeader(header *CollationHeader) error {
+	encoded, err := rlp.EncodeToBytes(header)
+	if err != nil {
+		return fmt.Errorf("Error: Cannot Encode Header")
+	}
+	// Uses the hash of the header as the key.
+	hash := header.Hash()
+	s.shardDB.Put(&hash, encoded)
+	return nil
+}
+
+// SaveBody adds the collation body to the shardDB and sets availability.
+func (s *Shard) SaveBody(body []byte) error {
+	// TODO: dependent on blob serialization.
+	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
+	// right now we will just take the raw keccak256 of the body until #92 is merged.
+	chunkRoot := common.BytesToHash(body)
+	s.shardDB.Put(&chunkRoot, body)
+	s.SetAvailability(&chunkRoot, true)
+	return nil
+}
+
+// SaveCollation adds the collation's header and body to shardDB.
+func (s *Shard) SaveCollation(collation *Collation) error {
+	if err := s.ValidateShardID(collation.Header()); err != nil {
+		return err
+	}
+	s.SaveHeader(collation.Header())
+	s.SaveBody(collation.Body())
+	return nil
+}
+
+// SetCanonical sets the collation as canonical in the shardDB. This is called
+// after the period is over and over 2/3 notaries voted on the header.
+func (s *Shard) SetCanonical(header *CollationHeader) error {
+	if err := s.ValidateShardID(header); err != nil {
+		return err
+	}
+	// the header needs to have been stored in the DB previously, so we
+	// fetch it from the shardDB.
+	hash := header.Hash()
+	dbHeader, err := s.GetHeaderByHash(&hash)
+	if err != nil {
+		return err
+	}
+	key := canonicalCollationLookupKey(dbHeader.ShardID(), dbHeader.Period())
+	encoded, err := rlp.EncodeToBytes(dbHeader)
+	if err != nil {
+		return fmt.Errorf("Error: Cannot Encode Header")
+	}
+	s.shardDB.Put(&key, encoded)
 	return nil
 }
 
 // dataAvailabilityLookupKey formats a string that will become a lookup
 // key in the shardDB.
-func dataAvailabilityLookupKey(chunkRoot *common.Hash) []byte {
-	return []byte(fmt.Sprintf("availability-lookup:%s", chunkRoot.Str()))
+func dataAvailabilityLookupKey(chunkRoot *common.Hash) common.Hash {
+	key := fmt.Sprintf("availability-lookup:%s", chunkRoot.Str())
+	return common.BytesToHash([]byte(key))
 }
 
 // dataAvailabilityLookupKey formats a string that will become a lookup key
 // in the shardDB that takes into account the shardID and the period
-// of the shard.
-func canonicalCollationLookupKey(shardID *big.Int, period *big.Int) []byte {
+// of the shard for ease of use.
+func canonicalCollationLookupKey(shardID *big.Int, period *big.Int) common.Hash {
 	str := "canonical-collation-lookup:shardID=%s,period=%s"
 	key := fmt.Sprintf(str, shardID.String(), period.String())
-	return []byte(key)
+	return common.BytesToHash([]byte(key))
 }

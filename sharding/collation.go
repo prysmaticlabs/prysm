@@ -33,17 +33,23 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 	return hash
 }
 
+// ShardID is the identifier for a shard.
+func (h *CollationHeader) ShardID() *big.Int { return h.shardID }
+
+// Period the collation corresponds to.
+func (h *CollationHeader) Period() *big.Int { return h.period }
+
+// ChunkRoot of the serialized collation body.
+func (h *CollationHeader) ChunkRoot() *common.Hash { return h.chunkRoot }
+
 // Header returns the collation's header.
 func (c *Collation) Header() *CollationHeader { return c.header }
 
+// Body returns the collation's byte body.
+func (c *Collation) Body() []byte { return c.body }
+
 // Transactions returns an array of tx's in the collation.
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
-
-// ShardID is the identifier for a shard.
-func (c *Collation) ShardID() *big.Int { return c.header.shardID }
-
-// Period the collation corresponds to.
-func (c *Collation) Period() *big.Int { return c.header.period }
 
 // ProposerAddress is the coinbase addr of the creator for the collation.
 func (c *Collation) ProposerAddress() *common.Address { return c.header.proposerAddress }
