@@ -25,6 +25,11 @@ func MakeShard(shardID *big.Int) *Shard {
 	}
 }
 
+// ShardID gets the shard's identifier.
+func (s *Shard) ShardID() *big.Int {
+	return s.shardID
+}
+
 // ValidateShardID checks if header belongs to shard.
 func (s *Shard) ValidateShardID(h *CollationHeader) error {
 	if s.shardID.Cmp(h.shardID) != 0 {
