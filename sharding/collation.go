@@ -48,6 +48,14 @@ func (c *Collation) Header() *CollationHeader { return c.header }
 // Body returns the collation's byte body.
 func (c *Collation) Body() []byte { return c.body }
 
+// Hash returns the hash of a collation's entire contents. Useful for tests.
+func (c *Collation) Hash() (hash common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, c)
+	hw.Sum(hash[:0])
+	return hash
+}
+
 // Transactions returns an array of tx's in the collation.
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 

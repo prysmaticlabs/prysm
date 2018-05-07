@@ -7,14 +7,14 @@ import (
 )
 
 type shardKV struct {
-	kv map[*common.Hash][]byte
+	kv map[common.Hash][]byte
 }
 
 func makeShardKV() *shardKV {
-	return &shardKV{kv: make(map[*common.Hash][]byte)}
+	return &shardKV{kv: make(map[common.Hash][]byte)}
 }
 
-func (sb *shardKV) Get(k *common.Hash) ([]byte, error) {
+func (sb *shardKV) Get(k common.Hash) ([]byte, error) {
 	v, ok := sb.kv[k]
 	fmt.Printf("Map: %v\n", sb.kv)
 	fmt.Printf("Key: %v\n", k)
@@ -26,7 +26,7 @@ func (sb *shardKV) Get(k *common.Hash) ([]byte, error) {
 	return v, nil
 }
 
-func (sb *shardKV) Has(k *common.Hash) bool {
+func (sb *shardKV) Has(k common.Hash) bool {
 	v := sb.kv[k]
 	if v == nil {
 		return false
@@ -34,13 +34,13 @@ func (sb *shardKV) Has(k *common.Hash) bool {
 	return true
 }
 
-func (sb *shardKV) Put(k *common.Hash, v []byte) {
+func (sb *shardKV) Put(k common.Hash, v []byte) {
 	sb.kv[k] = v
 	fmt.Printf("Put: %v\n", sb.kv[k])
 	return
 }
 
-func (sb *shardKV) Delete(k *common.Hash) {
+func (sb *shardKV) Delete(k common.Hash) {
 	delete(sb.kv, k)
 	return
 }
