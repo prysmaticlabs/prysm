@@ -17,16 +17,12 @@ func ConvertInterface(arg interface{}, kind reflect.Kind) ([]interface{}, error)
 	val := reflect.ValueOf(arg)
 	if val.Kind() == kind {
 
-		newtype := make([]interface{}, val.Len())
-		for i := 1; i < val.Len(); i++ {
-			newtype[i] = val.Index(i)
-		}
-
-		return newtype, nil
+		return val.Interface().([]interface{}), nil
 
 	}
 	err := errors.New("Interface Conversion a failure")
 	return nil, err
+
 }
 
 func convertbyteToInterface(arg []byte) []interface{} {
@@ -124,7 +120,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 
 }
 
-// Serialize takes a set of transaction blobs and converts them to a single byte array.
+// Serialize takes a set of blobs and converts them to a single byte array.
 func Serialize(rawtx []interface{}) ([]byte, error) {
 	length := int64(len(rawtx))
 

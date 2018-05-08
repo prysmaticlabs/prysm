@@ -90,11 +90,15 @@ func TestSerialize(t *testing.T) {
 
 	for _, tt := range tests {
 		c := &Collation{}
-
-		results, err := c.Serialize()
-		if err != nil {
-			t.Fatalf("%v --- %v ----%v", err, tt, results)
+		for _, tx := range tt.transactions {
+			c.AddTransaction(tx)
 		}
+		/*
+			results, err := c.Serialize()
+			if err != nil {
+				t.Fatalf("%v ----%v---%v", err, results, c.transactions)
+			}
+		*/
 
 	}
 
