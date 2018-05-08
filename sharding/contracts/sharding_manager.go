@@ -16,10 +16,10 @@ import (
 )
 
 // SMCABI is the input ABI used to generate the binding from.
-const SMCABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"currentVote\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_period\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"},{\"name\":\"_chunkRoot\",\"type\":\"bytes32\"}],\"name\":\"submitVote\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerNotary\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"notaryRegistry\",\"outputs\":[{\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"},{\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"name\":\"deposited\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_period\",\"type\":\"uint256\"},{\"name\":\"_chunkRoot\",\"type\":\"bytes32\"}],\"name\":\"addHeader\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"lastSubmittedCollation\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"lastApprovedCollation\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"releaseNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"notaryPool\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"getNotaryInCommittee\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"collationRecords\",\"outputs\":[{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"proposer\",\"type\":\"address\"},{\"name\":\"isElected\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"notaryPoolLength\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"HeaderAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"}],\"name\":\"NotaryDeregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryReleased\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"notaryAddress\",\"type\":\"address\"}],\"name\":\"Voted\",\"type\":\"event\"}]"
+const SMCABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"currentVote\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_period\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"},{\"name\":\"_chunkRoot\",\"type\":\"bytes32\"}],\"name\":\"submitVote\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerNotary\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"notaryRegistry\",\"outputs\":[{\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"},{\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"name\":\"deposited\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_period\",\"type\":\"uint256\"},{\"name\":\"_chunkRoot\",\"type\":\"bytes32\"}],\"name\":\"addHeader\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"lastSubmittedCollation\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"lastApprovedCollation\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"releaseNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"notaryPool\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"getNotaryInCommittee\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"collationRecords\",\"outputs\":[{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"proposer\",\"type\":\"address\"},{\"name\":\"isElected\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"notaryPoolLength\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"HeaderAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"}],\"name\":\"NotaryDeregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryReleased\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"notaryAddress\",\"type\":\"address\"}],\"name\":\"VoteSubmitted\",\"type\":\"event\"}]"
 
 // SMCBin is the compiled bytecode used for deploying new contracts.
-const SMCBin = `0x608060405234801561001057600080fd5b50610c01806100206000396000f3006080604052600436106100c45763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416630c8da4cc81146100c95780634f33ffa0146100f357806358377bd11461011657806368e9513e1461012b5780636bdd32711461013357806375bd99121461017457806383ceeabe1461019257806397d369a2146101aa5780639910851d146101c2578063a81f4510146101d7578063b09f427e1461020b578063e9e0b68314610226578063f6f67d3614610269575b600080fd5b3480156100d557600080fd5b506100e160043561027e565b60408051918252519081900360200190f35b3480156100ff57600080fd5b50610114600435602435604435606435610290565b005b34801561012257600080fd5b506101146103dd565b610114610508565b34801561013f57600080fd5b50610154600160a060020a03600435166106b7565b604080519384526020840192909252151582820152519081900360600190f35b34801561018057600080fd5b506101146004356024356044356106da565b34801561019e57600080fd5b506100e1600435610824565b3480156101b657600080fd5b506100e1600435610836565b3480156101ce57600080fd5b50610114610848565b3480156101e357600080fd5b506101ef600435610974565b60408051600160a060020a039092168252519081900360200190f35b34801561021757600080fd5b506101ef60043560243561099c565b34801561023257600080fd5b50610241600435602435610a31565b60408051938452600160a060020a039092166020840152151582820152519081900360600190f35b34801561027557600080fd5b506100e1610a7b565b60036020526000908152604090205481565b600160a060020a03331660009081526001602052604081206002015460ff1615156102ba57600080fd5b600085815260046020908152604080832087845290915290205482146102df57600080fd5b6102e98584610a81565b156102f357600080fd5b33600160a060020a0316610307868561099c565b600160a060020a03161461031a57600080fd5b6103248584610aa1565b9050605a60ff82161061038b576000858152600660209081526040808320879055600482528083208784529091529020600101805474ff00000000000000000000000000000000000000001916740100000000000000000000000000000000000000001790555b6040805183815260208101869052600160a060020a03331681830152905186917f851c50486c052e1ef001debf138975070f2b85ac90df7276fc8eb410675ed644919081900360600190a25050505050565b33600160a060020a038116600090815260016020819052604082209081015460029091015490919060ff16151561041357600080fd5b82600160a060020a031660008381548110151561042c57fe5b600091825260209091200154600160a060020a03161461044b57600080fd5b610453610afc565b50600160a060020a0382166000908152600160205260409020600543049081905561047d82610b1f565b600080548390811061048b57fe5b600091825260209182902001805473ffffffffffffffffffffffffffffffffffffffff191690556002805460001901905560408051600160a060020a0386168152918201849052818101839052517f90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a759181900360600190a1505050565b33600160a060020a03811660009081526001602052604081206002015460ff161561053257600080fd5b34683635c9adc5dea000001461054757600080fd5b61054f610afc565b610557610b90565b156105ba5750600254600080546001810182559080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56301805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a038416179055610603565b6105c2610b97565b9050816000828154811015156105d457fe5b9060005260206000200160006101000a815481600160a060020a030219169083600160a060020a031602179055505b60028054600190810182556040805160608101825260008082526020808301878152838501868152600160a060020a038a168452918690529390912091518255915192810192909255519101805460ff1916911515919091179055600a54811061066f5760018101600a555b60408051600160a060020a03841681526020810183905281517fa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7929181900390910190a15050565b600160208190526000918252604090912080549181015460029091015460ff1683565b600083101580156106eb5750606483105b15156106f657600080fd5b60054304821461070557600080fd5b600083815260056020526040902054821161071f57600080fd5b604080516060808201835283825233600160a060020a03908116602080850182815260008688018181528b8252600484528882208b8352845288822097518855915160019097018054925173ffffffffffffffffffffffffffffffffffffffff19909316979095169690961774ff000000000000000000000000000000000000000019167401000000000000000000000000000000000000000091151591909102179092558784526005808352858520439190910490556003825284842093909355835185815290810186905280840192909252915185927f2d0a86178d2fd307b47be157a766e6bee19bc26161c32f9781ee0e818636f09c928290030190a2505050565b60056020526000908152604090205481565b60066020526000908152604090205481565b33600160a060020a038116600090815260016020819052604090912080820154600290910154909160ff90911615151461088157600080fd5b600160a060020a03821660009081526001602052604090205415156108a557600080fd5b600160a060020a038216600090815260016020526040902054613f000160054304116108d057600080fd5b600160a060020a03821660008181526001602081905260408083208381559182018390556002909101805460ff1916905551683635c9adc5dea000009082818181858883f1935050505015801561092b573d6000803e3d6000fd5b5060408051600160a060020a03841681526020810183905281517faee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680929181900390910190a15050565b600080548290811061098257fe5b600091825260209091200154600160a060020a0316905081565b60008080808080600543049450600b548511156109bd57600a5493506109c3565b60095493505b6040805160001960058802018040808352602083018b90528284018c905292519182900360600190912090945090925084908115156109fe57fe5b069050600081815481101515610a1057fe5b600091825260209091200154600160a060020a031698975050505050505050565b600460209081526000928352604080842090915290825290208054600190910154600160a060020a0381169074010000000000000000000000000000000000000000900460ff1683565b60025481565b6000918252600360205260409091205460ff9190910360020a9081161490565b600091825260036020526040909120805460ff1960ff93840360020a9091179081167f0100000000000000000000000000000000000000000000000000000000000000601f9290921a82029190910460010192831617905590565b600b546005430490811015610b1057610b1c565b600a54600955600b8190555b50565b6008546007541415610b6557600780546001810182556000919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c68801819055610b84565b806007600854815481101515610b7757fe5b6000918252602090912001555b50600880546001019055565b6008541590565b60006001600854111515610baa57600080fd5b600880546000190190819055600780549091908110610bc557fe5b90600052602060002001549050905600a165627a7a72305820e489c3a71c7e5d17a9de496d26c34576878a7a182ee5dd35db62447cd210575c0029`
+const SMCBin = `0x608060405234801561001057600080fd5b50610c43806100206000396000f3006080604052600436106100c45763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416630c8da4cc81146100c95780634f33ffa0146100f357806358377bd11461011657806368e9513e1461012b5780636bdd32711461013357806375bd99121461017457806383ceeabe1461019257806397d369a2146101aa5780639910851d146101c2578063a81f4510146101d7578063b09f427e1461020b578063e9e0b68314610226578063f6f67d3614610269575b600080fd5b3480156100d557600080fd5b506100e160043561027e565b60408051918252519081900360200190f35b3480156100ff57600080fd5b50610114600435602435604435606435610290565b005b34801561012257600080fd5b50610114610436565b610114610561565b34801561013f57600080fd5b50610154600160a060020a0360043516610710565b604080519384526020840192909252151582820152519081900360600190f35b34801561018057600080fd5b50610114600435602435604435610733565b34801561019e57600080fd5b506100e1600435610885565b3480156101b657600080fd5b506100e1600435610897565b3480156101ce57600080fd5b506101146108a9565b3480156101e357600080fd5b506101ef6004356109d5565b60408051600160a060020a039092168252519081900360200190f35b34801561021757600080fd5b506101ef6004356024356109fd565b34801561023257600080fd5b50610241600435602435610a92565b60408051938452600160a060020a039092166020840152151582820152519081900360600190f35b34801561027557600080fd5b506100e1610adc565b60036020526000908152604090205481565b60008085101580156102a25750606485105b15156102ad57600080fd5b6005430484146102bc57600080fd5b60008581526005602052604090205484146102d657600080fd5b608783106102e357600080fd5b6000858152600460209081526040808320878452909152902054821461030857600080fd5b600160a060020a03331660009081526001602052604090206002015460ff16151561033257600080fd5b61033c8584610ae2565b1561034657600080fd5b33600160a060020a031661035a86856109fd565b600160a060020a03161461036d57600080fd5b6103778584610b05565b61038085610b29565b9050605a81106103e4576000858152600660209081526040808320879055600482528083208784529091529020600101805474ff00000000000000000000000000000000000000001916740100000000000000000000000000000000000000001790555b6040805183815260208101869052600160a060020a03331681830152905186917fc99370212b708f699fb6945a17eb34d0fc1ccd5b45d88f4d9682593a45d6e833919081900360600190a25050505050565b33600160a060020a038116600090815260016020819052604082209081015460029091015490919060ff16151561046c57600080fd5b82600160a060020a031660008381548110151561048557fe5b600091825260209091200154600160a060020a0316146104a457600080fd5b6104ac610b3e565b50600160a060020a038216600090815260016020526040902060054304908190556104d682610b61565b60008054839081106104e457fe5b600091825260209182902001805473ffffffffffffffffffffffffffffffffffffffff191690556002805460001901905560408051600160a060020a0386168152918201849052818101839052517f90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a759181900360600190a1505050565b33600160a060020a03811660009081526001602052604081206002015460ff161561058b57600080fd5b34683635c9adc5dea00000146105a057600080fd5b6105a8610b3e565b6105b0610bd2565b156106135750600254600080546001810182559080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56301805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a03841617905561065c565b61061b610bd9565b90508160008281548110151561062d57fe5b9060005260206000200160006101000a815481600160a060020a030219169083600160a060020a031602179055505b60028054600190810182556040805160608101825260008082526020808301878152838501868152600160a060020a038a168452918690529390912091518255915192810192909255519101805460ff1916911515919091179055600a5481106106c85760018101600a555b60408051600160a060020a03841681526020810183905281517fa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7929181900390910190a15050565b600160208190526000918252604090912080549181015460029091015460ff1683565b600083101580156107445750606483105b151561074f57600080fd5b60054304821461075e57600080fd5b600083815260056020526040902054821161077857600080fd5b610780610b3e565b604080516060808201835283825233600160a060020a03908116602080850182815260008688018181528b8252600484528882208b8352845288822097518855915160019097018054925173ffffffffffffffffffffffffffffffffffffffff19909316979095169690961774ff000000000000000000000000000000000000000019167401000000000000000000000000000000000000000091151591909102179092558784526005808352858520439190910490556003825284842093909355835185815290810186905280840192909252915185927f2d0a86178d2fd307b47be157a766e6bee19bc26161c32f9781ee0e818636f09c928290030190a2505050565b60056020526000908152604090205481565b60066020526000908152604090205481565b33600160a060020a038116600090815260016020819052604090912080820154600290910154909160ff9091161515146108e257600080fd5b600160a060020a038216600090815260016020526040902054151561090657600080fd5b600160a060020a038216600090815260016020526040902054613f0001600543041161093157600080fd5b600160a060020a03821660008181526001602081905260408083208381559182018390556002909101805460ff1916905551683635c9adc5dea000009082818181858883f1935050505015801561098c573d6000803e3d6000fd5b5060408051600160a060020a03841681526020810183905281517faee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680929181900390910190a15050565b60008054829081106109e357fe5b600091825260209091200154600160a060020a0316905081565b60008080808080600543049450600b54851115610a1e57600a549350610a24565b60095493505b6040805160001960058802018040808352602083018b90528284018c90529251918290036060019091209094509092508490811515610a5f57fe5b069050600081815481101515610a7157fe5b600091825260209091200154600160a060020a031698975050505050505050565b600460209081526000928352604080842090915290825290208054600190910154600160a060020a0381169074010000000000000000000000000000000000000000900460ff1683565b60025481565b60009182526003602052604090912054600160ff9290920360020a900481161490565b600091825260036020526040909120805460ff9290920360020a9091176001019055565b60009081526003602052604090205460ff1690565b600b546005430490811015610b5257610b5e565b600a54600955600b8190555b50565b6008546007541415610ba757600780546001810182556000919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c68801819055610bc6565b806007600854815481101515610bb957fe5b6000918252602090912001555b50600880546001019055565b6008541590565b60006001600854111515610bec57600080fd5b600880546000190190819055600780549091908110610c0757fe5b90600052602060002001549050905600a165627a7a7230582025e4cd50e9d13e755d9e6ea3c2abfa8998c6141cc47c803fe8a649cade7c12140029`
 
 // DeploySMC deploys a new Ethereum contract, binding an instance of SMC to it.
 func DeploySMC(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SMC, error) {
@@ -244,28 +244,28 @@ func (_SMC *SMCCallerSession) CurrentVote(arg0 *big.Int) ([32]byte, error) {
 
 // GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
 //
-// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, shardId *big.Int, _index *big.Int) (common.Address, error) {
+// Solidity: function getNotaryInCommittee(_shardId uint256, _index uint256) constant returns(address)
+func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, _shardId *big.Int, _index *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", shardId, _index)
+	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", _shardId, _index)
 	return *ret0, err
 }
 
 // GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
 //
-// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCSession) GetNotaryInCommittee(shardId *big.Int, _index *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, shardId, _index)
+// Solidity: function getNotaryInCommittee(_shardId uint256, _index uint256) constant returns(address)
+func (_SMC *SMCSession) GetNotaryInCommittee(_shardId *big.Int, _index *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId, _index)
 }
 
 // GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
 //
-// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCCallerSession) GetNotaryInCommittee(shardId *big.Int, _index *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, shardId, _index)
+// Solidity: function getNotaryInCommittee(_shardId uint256, _index uint256) constant returns(address)
+func (_SMC *SMCCallerSession) GetNotaryInCommittee(_shardId *big.Int, _index *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId, _index)
 }
 
 // LastApprovedCollation is a free data retrieval call binding the contract method 0x97d369a2.
@@ -1022,9 +1022,9 @@ func (_SMC *SMCFilterer) WatchNotaryReleased(opts *bind.WatchOpts, sink chan<- *
 	}), nil
 }
 
-// SMCVotedIterator is returned from FilterVoted and is used to iterate over the raw logs and unpacked data for Voted events raised by the SMC contract.
-type SMCVotedIterator struct {
-	Event *SMCVoted // Event containing the contract specifics and raw log
+// SMCVoteSubmittedIterator is returned from FilterVoteSubmitted and is used to iterate over the raw logs and unpacked data for VoteSubmitted events raised by the SMC contract.
+type SMCVoteSubmittedIterator struct {
+	Event *SMCVoteSubmitted // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1038,7 +1038,7 @@ type SMCVotedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *SMCVotedIterator) Next() bool {
+func (it *SMCVoteSubmittedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1047,7 +1047,7 @@ func (it *SMCVotedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(SMCVoted)
+			it.Event = new(SMCVoteSubmitted)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1062,7 +1062,7 @@ func (it *SMCVotedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(SMCVoted)
+		it.Event = new(SMCVoteSubmitted)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1078,19 +1078,19 @@ func (it *SMCVotedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *SMCVotedIterator) Error() error {
+func (it *SMCVoteSubmittedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *SMCVotedIterator) Close() error {
+func (it *SMCVoteSubmittedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// SMCVoted represents a Voted event raised by the SMC contract.
-type SMCVoted struct {
+// SMCVoteSubmitted represents a VoteSubmitted event raised by the SMC contract.
+type SMCVoteSubmitted struct {
 	ShardId       *big.Int
 	ChunkRoot     [32]byte
 	Period        *big.Int
@@ -1098,34 +1098,34 @@ type SMCVoted struct {
 	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterVoted is a free log retrieval operation binding the contract event 0x851c50486c052e1ef001debf138975070f2b85ac90df7276fc8eb410675ed644.
+// FilterVoteSubmitted is a free log retrieval operation binding the contract event 0xc99370212b708f699fb6945a17eb34d0fc1ccd5b45d88f4d9682593a45d6e833.
 //
-// Solidity: event Voted(shardId indexed uint256, chunkRoot bytes32, period uint256, notaryAddress address)
-func (_SMC *SMCFilterer) FilterVoted(opts *bind.FilterOpts, shardId []*big.Int) (*SMCVotedIterator, error) {
+// Solidity: event VoteSubmitted(shardId indexed uint256, chunkRoot bytes32, period uint256, notaryAddress address)
+func (_SMC *SMCFilterer) FilterVoteSubmitted(opts *bind.FilterOpts, shardId []*big.Int) (*SMCVoteSubmittedIterator, error) {
 
 	var shardIdRule []interface{}
 	for _, shardIdItem := range shardId {
 		shardIdRule = append(shardIdRule, shardIdItem)
 	}
 
-	logs, sub, err := _SMC.contract.FilterLogs(opts, "Voted", shardIdRule)
+	logs, sub, err := _SMC.contract.FilterLogs(opts, "VoteSubmitted", shardIdRule)
 	if err != nil {
 		return nil, err
 	}
-	return &SMCVotedIterator{contract: _SMC.contract, event: "Voted", logs: logs, sub: sub}, nil
+	return &SMCVoteSubmittedIterator{contract: _SMC.contract, event: "VoteSubmitted", logs: logs, sub: sub}, nil
 }
 
-// WatchVoted is a free log subscription operation binding the contract event 0x851c50486c052e1ef001debf138975070f2b85ac90df7276fc8eb410675ed644.
+// WatchVoteSubmitted is a free log subscription operation binding the contract event 0xc99370212b708f699fb6945a17eb34d0fc1ccd5b45d88f4d9682593a45d6e833.
 //
-// Solidity: event Voted(shardId indexed uint256, chunkRoot bytes32, period uint256, notaryAddress address)
-func (_SMC *SMCFilterer) WatchVoted(opts *bind.WatchOpts, sink chan<- *SMCVoted, shardId []*big.Int) (event.Subscription, error) {
+// Solidity: event VoteSubmitted(shardId indexed uint256, chunkRoot bytes32, period uint256, notaryAddress address)
+func (_SMC *SMCFilterer) WatchVoteSubmitted(opts *bind.WatchOpts, sink chan<- *SMCVoteSubmitted, shardId []*big.Int) (event.Subscription, error) {
 
 	var shardIdRule []interface{}
 	for _, shardIdItem := range shardId {
 		shardIdRule = append(shardIdRule, shardIdItem)
 	}
 
-	logs, sub, err := _SMC.contract.WatchLogs(opts, "Voted", shardIdRule)
+	logs, sub, err := _SMC.contract.WatchLogs(opts, "VoteSubmitted", shardIdRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1135,8 +1135,8 @@ func (_SMC *SMCFilterer) WatchVoted(opts *bind.WatchOpts, sink chan<- *SMCVoted,
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(SMCVoted)
-				if err := _SMC.contract.UnpackLog(event, "Voted", log); err != nil {
+				event := new(SMCVoteSubmitted)
+				if err := _SMC.contract.UnpackLog(event, "VoteSubmitted", log); err != nil {
 					return err
 				}
 				event.Raw = log
