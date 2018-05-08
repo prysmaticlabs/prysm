@@ -6,7 +6,7 @@ contract SMC {
     event NotaryRegistered(address notary, uint poolIndex);
     event NotaryDeregistered(address notary, uint poolIndex, uint deregisteredPeriod);
     event NotaryReleased(address notary, uint poolIndex);
-    event Voted(uint indexed shardId, bytes32 chunkRoot, uint period, address notaryAddress);
+    event VoteSubmitted(uint indexed shardId, bytes32 chunkRoot, uint period, address notaryAddress);
 
     struct Notary {
         uint deregisteredPeriod;
@@ -27,8 +27,8 @@ contract SMC {
     // number of notaries
     uint public notaryPoolLength;
     // current vote count of each shard
-    // first 31 bytes are bitfield of individual notary's vote
-    // last 1 byte is total notary's vote count
+    // first 31 bytes are bitfield of notary's vote
+    // last 1 byte is the number of the total votes
     mapping (uint => bytes32) public currentVote;
 
     // Collation state variables
@@ -50,9 +50,6 @@ contract SMC {
     uint sampleSizeLastUpdatedPeriod;
 
     // Constant values
-    uint constant ONE = 1;
-    uint constant ONES = 255;
-    uint constant LAST_BYTE = 31;
     uint constant PERIOD_LENGTH = 5;
     // Number of shards
     uint constant SHARD_COUNT = 100;
@@ -72,7 +69,7 @@ contract SMC {
 
     /// Checks if a notary with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
-    function getNotaryInCommittee(uint shardId, uint _index) public view returns(address) {
+    function getNotaryInCommittee(uint _shardId, uint _index) public view returns(address) {
         uint period = block.number / PERIOD_LENGTH;
 
         // Determine notary pool length based on notary sample size
@@ -86,7 +83,7 @@ contract SMC {
       // Get the most recent block number before the period started
         uint latestBlock = period * PERIOD_LENGTH - 1;
         uint latestBlockHash = uint(block.blockhash(latestBlock));
-        uint index = uint(keccak256(latestBlockHash, _index, shardId)) % sampleSize;
+        uint index = uint(keccak256(latestBlockHash, _index, _shardId)) % sampleSize;
 
         return notaryPool[index];
     }
@@ -98,7 +95,6 @@ contract SMC {
         require(!notaryRegistry[notaryAddress].deposited);
         require(msg.value == NOTARY_DEPOSIT);
 
-        // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
 
         uint index;
@@ -134,7 +130,6 @@ contract SMC {
         require(notaryRegistry[notaryAddress].deposited);
         require(notaryPool[index] == notaryAddress);
 
-        // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
 
         uint deregisteredPeriod = block.number / PERIOD_LENGTH;
@@ -170,8 +165,7 @@ contract SMC {
         require(_period == block.number / PERIOD_LENGTH);
         require(_period > lastSubmittedCollation[_shardId]);
 
-        //Track the numbers of participating notaries in between periods
-        //updateNotarySampleSize();
+        updateNotarySampleSize();
 
         collationRecords[_shardId][_period] = CollationRecord({
             chunkRoot: _chunkRoot,
@@ -193,17 +187,22 @@ contract SMC {
         uint _index,
         bytes32 _chunkRoot        
     ) public {
+        require((_shardId >= 0) && (_shardId < SHARD_COUNT));
+        require(_period == block.number / PERIOD_LENGTH);
+        require(_period == lastSubmittedCollation[_shardId]);
+        require(_index < COMMITTEE_SIZE);
+        require(_chunkRoot == collationRecords[_shardId][_period].chunkRoot);
         require(notaryRegistry[msg.sender].deposited);
-        require(collationRecords[_shardId][_period].chunkRoot == _chunkRoot);
         require(!hasVoted(_shardId, _index));
         require(getNotaryInCommittee(_shardId, _index) == msg.sender);
 
-        uint8 voteCount = castVote(_shardId, _index);
+        castVote(_shardId, _index);
+        uint voteCount = getVoteCount(_shardId);
         if (voteCount >= QUORUM_SIZE) {
             lastApprovedCollation[_shardId] = _period;
             collationRecords[_shardId][_period].isElected = true;
         }
-        emit Voted(_shardId, _chunkRoot, _period, msg.sender);
+        emit VoteSubmitted(_shardId, _chunkRoot, _period, msg.sender);
     }
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
@@ -223,11 +222,11 @@ contract SMC {
     }
 
     /// Save one uint into the empty slots stack for notary to use later
-    function stackPush(uint index) internal {
+    function stackPush(uint _index) internal {
         if (emptySlotsStack.length == emptySlotsStackTop)
-            emptySlotsStack.push(index);
+            emptySlotsStack.push(_index);
         else
-            emptySlotsStack[emptySlotsStackTop] = index;
+            emptySlotsStack[emptySlotsStackTop] = _index;
 
         ++emptySlotsStackTop;
     }
@@ -240,20 +239,35 @@ contract SMC {
     }
 
     /// Check if a bit is set, this function is used to check
-    /// if a notary has casted the vote, return true if voted, false if not
+    /// if a notary has casted the vote. Right shift currentVote by index 
+    /// and AND with 1, return true if voted, false if not
     function hasVoted(uint _shardId, uint _index) internal returns (bool) {
-        return currentVote[_shardId] & bytes32(ONE << uint(ONES - _index)) == bytes32(ONE << uint(ONES - _index));
+        uint votes = uint(currentVote[_shardId]);
+        // Shift currentVote to right by given index 
+        votes = votes >> (255 - _index);
+        // AND 1 to neglect everything but bit 0, then compare to 1
+        return votes & 1 == 1;
     }
 
-    /// Set a bit to one, notary uses this function to cast it's vote,
-    /// After the notary casts it's vote, we increase the vote count by 1 (last byte)
-    /// Returns the total numbers of votes
-    function castVote(uint _shardId, uint _index) internal returns (uint8) {
-        currentVote[_shardId] = currentVote[_shardId] | bytes32(ONE << (ONES - _index));
-        uint8 voteCount = uint8(currentVote[_shardId][LAST_BYTE]) + 1;
-        bytes32 mask = bytes32(0xff);
-        currentVote[_shardId] = (currentVote[_shardId] & ~mask) | bytes32(voteCount);
-        return voteCount;
+    /// Set the index bit to one, notary uses this function to cast its vote,
+    /// after the notary casts its vote, we increase currentVote's count by 1
+    function castVote(uint _shardId, uint _index) internal {
+        uint votes = uint(currentVote[_shardId]);
+        // Get the bitfield by shifting 1 to the index field
+        uint indexToFlag = 2 ** (255 - _index);
+        // OR with currentVote to set index to 1
+        votes = votes | indexToFlag;
+        // Update vote count
+        votes++;
+        currentVote[_shardId] = bytes32(votes);
+    }
+
+    /// Returns total vote count of currentVote
+    /// the vote count is stored in the last byte of currentVote 
+    function getVoteCount(uint _shardId) internal returns (uint) {
+        uint votes = uint(currentVote[_shardId]);
+        // Extra the last byte of currentVote
+        return votes % 256;
     }
        
 } 
