@@ -1,12 +1,16 @@
 package sharding
 
 import (
+	"fmt"
+	"math"
 	"math/big"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/sharding/utils"
 )
 
 // Collation base struct.
@@ -90,6 +94,12 @@ func (c *Collation) Header() *CollationHeader { return c.header }
 func (c *Collation) Body() []byte { return c.body }
 
 // Transactions returns an array of tx's in the collation.
+var (
+	collationsizelimit = int64(math.Pow(float64(2), float64(20)))
+	chunkSize          = int64(32)
+	numberOfChunks     = collationsizelimit / chunkSize
+)
+
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 
 // ProposerAddress is the coinbase addr of the creator for the collation.
@@ -104,4 +114,38 @@ func (c *Collation) CalculateChunkRoot() {
 	// take the merkle root of that.
 	chunkRoot := common.BytesToHash(c.body)
 	c.header.data.ChunkRoot = &chunkRoot
+}
+
+// Serialize method  serializes the collation body
+func (c *Collation) Serialize() ([]byte, error) {
+
+	blob, err := utils.ConvertInterface(c.transactions, reflect.Slice)
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
+	serializedtx, err := utils.Serialize(blob)
+
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
+
+	if int64(len(serializedtx)) > collationsizelimit {
+		serializedtx = serializedtx[0:collationsizelimit]
+
+	}
+
+	return serializedtx, nil
+
+}
+
+func (c *Collation) GasUsed() *big.Int {
+	g := uint64(0)
+	for _, tx := range c.transactions {
+		if g > math.MaxUint64-(g+tx.Gas()) {
+			g = math.MaxUint64
+			break
+		}
+		g += tx.Gas()
+	}
+	return big.NewInt(0).SetUint64(g)
 }
