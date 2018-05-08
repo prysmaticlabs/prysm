@@ -58,7 +58,6 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	length := int64(len(blob))
 	terminalLength := length % chunkDataSize
 	chunksNumber := length / chunkDataSize
-	finalchunkIndex := length - 1
 	indicatorByte := make([]byte, 1)
 	indicatorByte[0] = 0
 	tempbody := []byte{}
@@ -114,7 +113,7 @@ func serializeBlob(cb interface{}) ([]byte, error) {
 	indicatorByte[0] = byte(terminalLength)
 	tempbody = append(tempbody,
 		append(indicatorByte,
-			blob[chunkDataSize*chunksNumber-1:finalchunkIndex]...)...)
+			blob[chunkDataSize*chunksNumber:length]...)...)
 
 	emptyBytes := make([]byte, (chunkDataSize - terminalLength))
 	tempbody = append(tempbody, emptyBytes...)
@@ -172,6 +171,12 @@ func Deserialize(collationbody []byte, rawtx interface{}) error {
 
 			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
 			// add it and append to the rawtx slice. The tempbody signifies a deserialized blob
+		} else if collationbody[indicatorIndex] == byte(1) {
+
+			tempbody = append(tempbody, collationbody[(indicatorIndex+1)])
+			deserializedblob = append(deserializedblob, convertbyteToInterface(tempbody))
+			tempbody = []byte{}
+
 		} else {
 			terminalIndex := int64(collationbody[indicatorIndex])
 			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(indicatorIndex+1+terminalIndex)]...)

@@ -3,6 +3,7 @@ package utils
 import (
 	"math/rand"
 	"reflect"
+	//"runtime"
 	"testing"
 )
 
@@ -61,7 +62,7 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 	var testbody interface{}
 
-	blob := buildtxblobs(31)
+	blob := buildtxblobs(1000)
 
 	serializedblob, err := Serialize(blob)
 
@@ -75,7 +76,7 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 	if !reflect.DeepEqual(blob, testbody) {
 
-		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same: %v ------ %v", blob, testbody)
+		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same: %v ------%v ------ %v", blob, serializedblob, testbody)
 	}
 
 }
