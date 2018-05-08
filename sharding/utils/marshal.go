@@ -3,24 +3,26 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"math"
 	"reflect"
 )
 
 var (
-	collationsizelimit = int64(math.Pow(float64(2), float64(20)))
-	chunkSize          = int64(32)
-	indicatorSize      = int64(1)
-	numberOfChunks     = collationsizelimit / chunkSize
-	chunkDataSize      = chunkSize - indicatorSize
+	chunkSize     = int64(32)
+	indicatorSize = int64(1)
+	chunkDataSize = chunkSize - indicatorSize
 )
 
-// convertInterface converts inputted interface to the required type of interface, ex: slice.
-func convertInterface(arg interface{}, kind reflect.Kind) ([]interface{}, error) {
+// ConvertInterface converts inputted interface to the required type of interface, ex: slice.
+func ConvertInterface(arg interface{}, kind reflect.Kind) ([]interface{}, error) {
 	val := reflect.ValueOf(arg)
 	if val.Kind() == kind {
 
-		return val.Interface().([]interface{}), nil
+		newtype := make([]interface{}, val.Len())
+		for i := 1; i < val.Len(); i++ {
+			newtype[i] = val.Index(i)
+		}
+
+		return newtype, nil
 
 	}
 	err := errors.New("Interface Conversion a failure")
@@ -50,7 +52,7 @@ func interfacetoByte(arg []interface{}) []byte {
 // serializeBlob parses the blob and serializes it appropriately.
 func serializeBlob(cb interface{}) ([]byte, error) {
 
-	interfaceblob, err := convertInterface(cb, reflect.Slice)
+	interfaceblob, err := ConvertInterface(cb, reflect.Slice)
 	if err != nil {
 		return nil, fmt.Errorf("Error: %v", err)
 	}
@@ -134,7 +136,6 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 	//Loops through all the blobs and serializes them into chunks
 	for i := int64(0); i < length; i++ {
 
-		blobLength := int64(len(serialisedData))
 		data := rawtx[i]
 		refinedData, err := serializeBlob(data)
 		if err != nil {
@@ -142,17 +143,11 @@ func Serialize(rawtx []interface{}) ([]byte, error) {
 		}
 		serialisedData = append(serialisedData, refinedData...)
 
-		if int64(len(serialisedData)) > collationsizelimit {
-			serialisedData = serialisedData[:blobLength]
-			return serialisedData, nil
-
-		}
-
 	}
 	return serialisedData, nil
 }
 
-// Deserialize results in the Collation body being deserialised and separated into its respective interfaces.
+// Deserialize results in the byte array being deserialised and separated into its respective interfaces.
 func Deserialize(collationbody []byte, rawtx interface{}) error {
 
 	length := int64(len(collationbody))
@@ -161,7 +156,7 @@ func Deserialize(collationbody []byte, rawtx interface{}) error {
 	tempbody := []byte{}
 	var deserializedblob []interface{}
 
-	// This separates the collation body into its respective transaction blobs
+	// This separates the byte array into its separate blobs
 	for i := int64(1); i <= chunksNumber; i++ {
 		indicatorIndex := (i - 1) * chunkSize
 		// Tests if the chunk delimiter is zero, if it is it will append the data chunk
@@ -169,8 +164,6 @@ func Deserialize(collationbody []byte, rawtx interface{}) error {
 		if collationbody[indicatorIndex] == indicatorByte {
 			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(i)*chunkSize]...)
 
-			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
-			// add it and append to the rawtx slice. The tempbody signifies a deserialized blob
 		} else if collationbody[indicatorIndex] == byte(1) {
 
 			tempbody = append(tempbody, collationbody[(indicatorIndex+1)])
@@ -178,6 +171,8 @@ func Deserialize(collationbody []byte, rawtx interface{}) error {
 			tempbody = []byte{}
 
 		} else {
+			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
+			// add it and append to the deserializedblob slice. The tempbody signifies a single deserialized blob
 			terminalIndex := int64(collationbody[indicatorIndex])
 			tempbody = append(tempbody, collationbody[(indicatorIndex+1):(indicatorIndex+1+terminalIndex)]...)
 			deserializedblob = append(deserializedblob, convertbyteToInterface(tempbody))
