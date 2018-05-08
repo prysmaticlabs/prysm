@@ -27,8 +27,7 @@ func buildblob(size int64) []interface{} {
 
 }
 func TestConvertInterface(t *testing.T) {
-	var slice interface{}
-	slice = []interface{}{0, 1, 2, 3, 4, 5}
+	slice := []interface{}{0, 1, 2, 3, 4, 5}
 	convertedValue, err := ConvertInterface(slice, reflect.Slice)
 	if err != nil {
 		t.Fatalf("Error: %v %v", err, convertedValue)
