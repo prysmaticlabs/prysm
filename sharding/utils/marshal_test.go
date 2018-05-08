@@ -1,4 +1,4 @@
-package client
+package utils
 
 import (
 	"math/rand"
@@ -36,13 +36,14 @@ func TestConvertInterface(t *testing.T) {
 
 }
 func TestSize(t *testing.T) {
-	size := int64(2)
+	size := int64(800)
 	blob := buildtxblobs(size)
-	chunksafterSerialize := size * size / chunkDataSize
-	terminalchunk := size * size % chunkDataSize
+	chunksafterSerialize := size / chunkDataSize
+	terminalchunk := size % chunkDataSize
 	if terminalchunk != 0 {
 		chunksafterSerialize = chunksafterSerialize + 1
 	}
+	chunksafterSerialize = chunksafterSerialize * size
 	sizeafterSerialize := chunksafterSerialize * chunkSize
 	serializedblob, err := Serialize(blob)
 	if err != nil {
@@ -60,21 +61,21 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 	var testbody interface{}
 
-	blob := buildtxblobs(30)
+	blob := buildtxblobs(31)
 
 	serializedblob, err := Serialize(blob)
 
 	if err != nil {
 		t.Fatalf("Error Serializing blob:%v %v", err, serializedblob)
 	}
-	err2 := Deserializebody(serializedblob, &testbody)
+	err2 := Deserialize(serializedblob, &testbody)
 	if err2 != nil {
 		t.Fatalf("Error Serializing blob:%v", err2)
 	}
 
 	if !reflect.DeepEqual(blob, testbody) {
 
-		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same: %v %v", blob, testbody)
+		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same: %v ------ %v", blob, testbody)
 	}
 
 }
