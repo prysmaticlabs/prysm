@@ -38,7 +38,7 @@ func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.In
 		ProposerAddress:   proposerAddress,
 		ProposerSignature: proposerSignature,
 	}
-	return &CollationHeader{data: data}
+	return &CollationHeader{data}
 }
 
 // Hash takes the keccak256 of the collation header's contents.
@@ -93,8 +93,9 @@ func (c *Collation) AddTransaction(tx *types.Transaction) {
 	c.transactions = append(c.transactions, tx)
 }
 
-// SetChunkRoot updates the collation header's chunk root.
-func (c *Collation) SetChunkRoot() {
+// CalculateChunkRoot updates the collation header's chunk root based on the body.
+func (c *Collation) CalculateChunkRoot() {
+	// TODO: this needs to be based on blob serialization.
 	chunkRoot := common.BytesToHash(c.body)
 	c.header.data.ChunkRoot = &chunkRoot
 }

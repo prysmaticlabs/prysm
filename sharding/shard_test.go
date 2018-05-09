@@ -70,7 +70,7 @@ func TestShard_CollationByHash(t *testing.T) {
 	}
 
 	// We set the chunk root.
-	collation.SetChunkRoot()
+	collation.CalculateChunkRoot()
 
 	shardDB := makeShardKV()
 	shard := MakeShard(big.NewInt(1), shardDB)
