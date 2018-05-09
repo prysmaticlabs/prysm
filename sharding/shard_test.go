@@ -1,7 +1,6 @@
 package sharding
 
 import (
-	"log"
 	"math/big"
 	"testing"
 
@@ -79,7 +78,7 @@ func TestShard_CollationByHash(t *testing.T) {
 		t.Fatalf("cannot save collation: %v", err)
 	}
 	hash := collation.Header().Hash()
-	log.Printf("header hash: %v", hash)
+
 	dbCollation, err := shard.CollationByHash(&hash)
 	if err != nil {
 		t.Fatalf("could not fetch collation by hash: %v", err)
