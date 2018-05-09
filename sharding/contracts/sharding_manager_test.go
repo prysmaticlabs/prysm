@@ -420,7 +420,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 }
 
 func TestCommitteeListsAreDifferent(t *testing.T) {
-	const notaryCount = 10000
+	const notaryCount = 1000
 	var notaryPoolAddr [notaryCount]common.Address
 	var notaryPoolPrivKeys [notaryCount]*ecdsa.PrivateKey
 	var txOpts [notaryCount]*bind.TransactOpts
@@ -441,31 +441,27 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
 
-	// register 10000 notaries to SMC
+	// register 1000 notaries to SMC
 	for i := 0; i < notaryCount; i++ {
 		smc.RegisterNotary(txOpts[i])
 		backend.Commit()
 	}
 
+
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(10000)) != 0 {
+	if numNotaries.Cmp(big.NewInt(1000)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1000, Got: %v", numNotaries)
 	}
 
-	// get a list of sampled notaries from shard 0
-	var shard0CommitteeList []string
-	for i := 0; i < int(sharding.NotaryCommitSize); i++ {
-		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
-		shard0CommitteeList = append(shard0CommitteeList, addr.String())
-	}
-
-	// get a list of sampled notaries from shard 1, verify it's not identical to shard 0
-	for i := 0; i < int(sharding.NotaryCommitSize); i++ {
-		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(int64(i)))
-		if shard0CommitteeList[i] == addr.String() {
+	// compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical
+	for i := 0; i < 5; i++ {
+		addr0, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		addr1, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(int64(i)))
+		if addr0 == addr1 {
 			t.Errorf("Shard 0 committee list is identical to shard 1's committee list")
 		}
 	}
+
 }
 
 func TestGetCommitteeWithNonMember(t *testing.T) {
@@ -772,7 +768,6 @@ func TestSubmitVote(t *testing.T) {
 
 	// Check notary 0's vote is correctly casted
 	v, err := smc.HasVoted(&bind.CallOpts{}, shard0, index0)
-	t.Log(v)
 	if err != nil {
 		t.Fatalf("Check notary's vote failed: %v", err)
 	}
@@ -800,5 +795,174 @@ func TestSubmitVote(t *testing.T) {
 	}
 	if p.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect period submitted, want: 0, got: %v", p)
+	}
+
+}
+
+func TestSubmitVoteTwice(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	// Fast forward to the next period to submit header. Period 1
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	period1 := big.NewInt(1)
+	shard0 := big.NewInt(0)
+	index0 := big.NewInt(0)
+	chunkRoot := [32]byte{'A'}
+	txOpts.Value = big.NewInt(0)
+	_, err := smc.AddHeader(txOpts, shard0, period1, chunkRoot)
+	if err != nil {
+		t.Fatalf("Proposer adds header failed: %v", err)
+	}
+	backend.Commit()
+
+	// Notary 0 votes on header
+	smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
+	backend.Commit()
+
+	// Check notary 0's vote is correctly casted
+	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if c.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+	}
+
+	// Notary 0 votes on header again, it should fail
+	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
+	if err == nil {
+		t.Errorf("notary voting twice should have failed")
+	}
+	backend.Commit()
+
+	// Check notary 0's vote is correctly casted
+	c, _ = smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if c.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+	}
+}
+
+func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Fast forward to the next period to submit header. Period 1
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	period1 := big.NewInt(1)
+	shard0 := big.NewInt(0)
+	index0 := big.NewInt(0)
+	chunkRoot := [32]byte{'A'}
+	txOpts.Value = big.NewInt(0)
+	_, err := smc.AddHeader(txOpts, shard0, period1, chunkRoot)
+	if err != nil {
+		t.Fatalf("Proposer adds header failed: %v", err)
+	}
+	backend.Commit()
+
+	// Unregistered Notary 0 votes on header, it should fail
+	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
+	backend.Commit()
+	if err == nil {
+		t.Errorf("Non registered notary submits vote should have failed")
+	}
+	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if c.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
+	}
+}
+
+func TestSubmitVoteWithOutAHeader(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	// Fast forward to the next period to submit header. Period 1
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	period1 := big.NewInt(1)
+	shard0 := big.NewInt(0)
+	index0 := big.NewInt(0)
+	chunkRoot := [32]byte{'A'}
+	txOpts.Value = big.NewInt(0)
+
+	// Notary 0 votes on header, it should fail because no header has added
+	_, err := smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
+	if err == nil {
+		t.Errorf("Notary votes should have failed due to missing header")
+	}
+	backend.Commit()
+
+	// Check notary 0's vote is correctly casted
+	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if c.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+	}
+}
+
+func TestSubmitVoteWithInvalidArgs(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	// Fast forward to the next period to submit header. Period 1
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	period1 := big.NewInt(1)
+	shard0 := big.NewInt(0)
+	index0 := big.NewInt(0)
+	chunkRoot := [32]byte{'A'}
+	txOpts.Value = big.NewInt(0)
+	_, err := smc.AddHeader(txOpts, shard0, period1, chunkRoot)
+	if err != nil {
+		t.Fatalf("Proposer adds header failed: %v", err)
+	}
+	backend.Commit()
+
+	// Notary voting with incorrect period
+	period2 := big.NewInt(2)
+	_, err = smc.SubmitVote(txOpts, shard0, period2, index0, chunkRoot)
+	if err == nil {
+		t.Errorf("Notary votes should have failed due to incorrect period")
+	}
+
+	// Notary voting with incorrect chunk root
+	chunkRootWrong := [32]byte{'B'}
+	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRootWrong)
+	if err == nil {
+		t.Errorf("Notary votes should have failed due to incorrect chunk root")
 	}
 }
