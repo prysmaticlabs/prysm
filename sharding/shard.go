@@ -194,7 +194,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 		return err
 	}
 	key := canonicalCollationLookupKey(dbHeader.ShardID(), dbHeader.Period())
-	encoded, err := rlp.EncodeToBytes(dbHeader)
+	encoded, err := dbHeader.EncodeRLP()
 	if err != nil {
 		return fmt.Errorf("cannot encode header: %v", err)
 	}
