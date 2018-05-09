@@ -574,7 +574,7 @@ func TestNormalAddHeader(t *testing.T) {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists of shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	chunkRoot := [32]byte{'A'}
@@ -602,7 +602,7 @@ func TestNormalAddHeader(t *testing.T) {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists of shard 0, period 2 and chunkroot 0xB
+	// Proposer adds header consists shard 0, period 2 and chunkroot 0xB
 	period2 := big.NewInt(2)
 	chunkRoot = [32]byte{'B'}
 	_, err = smc.AddHeader(txOpts, shard0, period2, chunkRoot)
@@ -621,7 +621,7 @@ func TestNormalAddHeader(t *testing.T) {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
-	// Proposer adds header consists of shard 1, period 2 and chunkroot 0xC
+	// Proposer adds header consists shard 1, period 2 and chunkroot 0xC
 	shard1 := big.NewInt(1)
 	chunkRoot = [32]byte{'C'}
 	_, err = smc.AddHeader(txOpts, shard1, period2, chunkRoot)
@@ -649,7 +649,7 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists of shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	chunkRoot := [32]byte{'A'}
@@ -724,5 +724,81 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	cr, err = smc.CollationRecords(&bind.CallOpts{}, shard0, period1)
 	if cr.ChunkRoot != chunkRootEmpty {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
+	}
+}
+
+func TestSubmitVote(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	// Fast forward to the next period to submit header. Period 1
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	period1 := big.NewInt(1)
+	shard0 := big.NewInt(0)
+	index0 := big.NewInt(0)
+	chunkRoot := [32]byte{'A'}
+	txOpts.Value = big.NewInt(0)
+	_, err := smc.AddHeader(txOpts, shard0, period1, chunkRoot)
+	if err != nil {
+		t.Fatalf("Proposer adds header failed: %v", err)
+	}
+	backend.Commit()
+
+	// Notary 0 votes on header
+	c, err := smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if err != nil {
+		t.Fatalf("Get notary vote count failed: %v", err)
+	}
+	if c.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
+	}
+
+	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
+	backend.Commit()
+	if err != nil {
+		t.Fatalf("Notary submits vote failed: %v", err)
+	}
+
+	// Check notary 0's vote is correctly casted
+	v, err := smc.HasVoted(&bind.CallOpts{}, shard0, index0)
+	t.Log(v)
+	if err != nil {
+		t.Fatalf("Check notary's vote failed: %v", err)
+	}
+	if v == false {
+		t.Errorf("Notary's indexd bit did not cast to 1 in index %v", index0)
+	}
+	c, err = smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if c.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+	}
+
+	// Check header's submitted with the current period, should be period 1
+	p, err := smc.LastSubmittedCollation(&bind.CallOpts{}, shard0)
+	if err != nil {
+		t.Fatalf("Get period of last submitted header failed: %v", err)
+	}
+	if p.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("Incorrect period submitted, want: 1, got: %v", p)
+	}
+
+	// Check header's approved with the current period, should be period 0
+	p, err = smc.LastApprovedCollation(&bind.CallOpts{}, shard0)
+	if err != nil {
+		t.Fatalf("Get period of last approved header failed: %v", err)
+	}
+	if p.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("Incorrect period submitted, want: 0, got: %v", p)
 	}
 }
