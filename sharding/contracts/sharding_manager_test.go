@@ -771,7 +771,7 @@ func TestSubmitVote(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Check notary's vote failed: %v", err)
 	}
-	if v == false {
+	if !v {
 		t.Errorf("Notary's indexd bit did not cast to 1 in index %v", index0)
 	}
 	c, err = smc.GetVoteCount(&bind.CallOpts{}, shard0)
