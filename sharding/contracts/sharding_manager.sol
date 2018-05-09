@@ -205,15 +205,23 @@ contract SMC {
         emit VoteSubmitted(_shardId, _chunkRoot, _period, msg.sender);
     }
 
-    /// To keep track of notary size in between periods, we call updateNotarySampleSize
-    /// before notary registration/deregistration so correct size can be applied next period
-    function updateNotarySampleSize() internal {
-        uint currentPeriod = block.number / PERIOD_LENGTH;
-        if (currentPeriod < sampleSizeLastUpdatedPeriod) {
-            return;
-        }
-        currentPeriodNotarySampleSize = nextPeriodNotarySampleSize;
-        sampleSizeLastUpdatedPeriod = currentPeriod;
+    /// Returns total vote count of currentVote
+    /// the vote count is stored in the last byte of currentVote 
+    function getVoteCount(uint _shardId) public view returns (uint) {
+        uint votes = uint(currentVote[_shardId]);
+        // Extra the last byte of currentVote
+        return votes % 256;
+    }
+
+    /// Check if a bit is set, this function is used to check
+    /// if a notary has casted the vote. Right shift currentVote by index 
+    /// and AND with 1, return true if voted, false if not
+    function hasVoted(uint _shardId, uint _index) public view returns (bool) {
+        uint votes = uint(currentVote[_shardId]);
+        // Shift currentVote to right by given index 
+        votes = votes >> (255 - _index);
+        // AND 1 to neglect everything but bit 0, then compare to 1
+        return votes & 1 == 1;
     }
 
     /// Check if the empty slots stack is empty
@@ -231,6 +239,17 @@ contract SMC {
         ++emptySlotsStackTop;
     }
 
+    /// To keep track of notary size in between periods, we call updateNotarySampleSize
+    /// before notary registration/deregistration so correct size can be applied next period
+    function updateNotarySampleSize() internal {
+        uint currentPeriod = block.number / PERIOD_LENGTH;
+        if (currentPeriod < sampleSizeLastUpdatedPeriod) {
+            return;
+        }
+        currentPeriodNotarySampleSize = nextPeriodNotarySampleSize;
+        sampleSizeLastUpdatedPeriod = currentPeriod;
+    }
+
     /// Get one uint out of the empty slots stack for notary index
     function stackPop() internal returns(uint) {
         require(emptySlotsStackTop > 1);
@@ -238,36 +257,17 @@ contract SMC {
         return emptySlotsStack[emptySlotsStackTop];
     }
 
-    /// Check if a bit is set, this function is used to check
-    /// if a notary has casted the vote. Right shift currentVote by index 
-    /// and AND with 1, return true if voted, false if not
-    function hasVoted(uint _shardId, uint _index) internal returns (bool) {
-        uint votes = uint(currentVote[_shardId]);
-        // Shift currentVote to right by given index 
-        votes = votes >> (255 - _index);
-        // AND 1 to neglect everything but bit 0, then compare to 1
-        return votes & 1 == 1;
-    }
-
     /// Set the index bit to one, notary uses this function to cast its vote,
     /// after the notary casts its vote, we increase currentVote's count by 1
     function castVote(uint _shardId, uint _index) internal {
         uint votes = uint(currentVote[_shardId]);
-        // Get the bitfield by shifting 1 to the index field
+        // Get the bitfield by shifting 1 to the index
         uint indexToFlag = 2 ** (255 - _index);
-        // OR with currentVote to set index to 1
+        // OR with currentVote to cast notary index to 1
         votes = votes | indexToFlag;
         // Update vote count
         votes++;
         currentVote[_shardId] = bytes32(votes);
-    }
-
-    /// Returns total vote count of currentVote
-    /// the vote count is stored in the last byte of currentVote 
-    function getVoteCount(uint _shardId) internal returns (uint) {
-        uint votes = uint(currentVote[_shardId]);
-        // Extra the last byte of currentVote
-        return votes % 256;
     }
        
 } 
