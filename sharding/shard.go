@@ -1,8 +1,8 @@
 package sharding
 
 import (
+	"bytes"
 	"fmt"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -49,12 +49,14 @@ func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 	if err != nil {
 		return nil, fmt.Errorf("header not found: %v", err)
 	}
-	log.Printf("encoded header in func: %v", encoded)
+
 	var header CollationHeader
-	if err := rlp.DecodeBytes(encoded, &header); err != nil {
-		return nil, fmt.Errorf("could not decode header: %v", err)
+
+	stream := rlp.NewStream(bytes.NewReader(encoded), uint64(len(encoded)))
+	if err := header.DecodeRLP(stream); err != nil {
+		return nil, fmt.Errorf("could not decode RLP header: %v", err)
 	}
-	log.Printf("decoded header in func: %v", header)
+
 	return &header, nil
 }
 
@@ -64,9 +66,7 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	if err != nil {
 		return nil, err
 	}
-	if header.ChunkRoot() == nil {
-		return nil, fmt.Errorf("invalid header fetched: %v", header)
-	}
+
 	body, err := s.BodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
 		return nil, err
@@ -102,7 +102,6 @@ func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collatio
 
 // BodyByChunkRoot fetches a collation body.
 func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
-	log.Printf("Chunk Root: %v", chunkRoot)
 	body, err := s.shardDB.Get(*chunkRoot)
 	if err != nil {
 		return nil, fmt.Errorf("no corresponding body with chunk root found: %v", err)
@@ -148,10 +147,11 @@ func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error
 
 // SaveHeader adds the collation header to shardDB.
 func (s *Shard) SaveHeader(header *CollationHeader) error {
-	encoded, err := rlp.EncodeToBytes(header)
+	encoded, err := header.EncodeRLP()
 	if err != nil {
 		return fmt.Errorf("cannot encode header: %v", err)
 	}
+
 	// Uses the hash of the header as the key.
 	hash := header.Hash()
 	s.shardDB.Put(hash, encoded)

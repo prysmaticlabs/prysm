@@ -18,11 +18,27 @@ type Collation struct {
 
 // CollationHeader base struct.
 type CollationHeader struct {
-	shardID           *big.Int        //the shard ID of the shard.
-	chunkRoot         *common.Hash    //the root of the chunk tree which identifies collation body.
-	period            *big.Int        //the period number in which collation to be included.
-	proposerAddress   *common.Address //address of the collation proposer.
-	proposerSignature []byte          //the proposer's signature for calculating collation hash.
+	data collationHeaderData
+}
+
+type collationHeaderData struct {
+	ShardID           *big.Int        // the shard ID of the shard.
+	ChunkRoot         *common.Hash    // the root of the chunk tree which identifies collation body.
+	Period            *big.Int        // the period number in which collation to be Pncluded.
+	ProposerAddress   *common.Address // address of the collation proposer.
+	ProposerSignature []byte          // the proposer's signature for calculating collation hash.
+}
+
+// NewCollationHeader initializes a collation header struct.
+func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.Int, proposerAddress *common.Address, proposerSignature []byte) *CollationHeader {
+	data := collationHeaderData{
+		ShardID:           shardID,
+		ChunkRoot:         chunkRoot,
+		Period:            period,
+		ProposerAddress:   proposerAddress,
+		ProposerSignature: proposerSignature,
+	}
+	return &CollationHeader{data: data}
 }
 
 // Hash takes the keccak256 of the collation header's contents.
@@ -34,13 +50,28 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 }
 
 // ShardID is the identifier for a shard.
-func (h *CollationHeader) ShardID() *big.Int { return h.shardID }
+func (h *CollationHeader) ShardID() *big.Int { return h.data.ShardID }
 
 // Period the collation corresponds to.
-func (h *CollationHeader) Period() *big.Int { return h.period }
+func (h *CollationHeader) Period() *big.Int { return h.data.Period }
 
 // ChunkRoot of the serialized collation body.
-func (h *CollationHeader) ChunkRoot() *common.Hash { return h.chunkRoot }
+func (h *CollationHeader) ChunkRoot() *common.Hash { return h.data.ChunkRoot }
+
+// EncodeRLP gives an encoded representation of the collation header.
+func (h *CollationHeader) EncodeRLP() ([]byte, error) {
+	encoded, err := rlp.EncodeToBytes(&h.data)
+	if err != nil {
+		return nil, err
+	}
+	return encoded, nil
+}
+
+// DecodeRLP uses an RLP Stream to populate the data field of a collation header.
+func (h *CollationHeader) DecodeRLP(s *rlp.Stream) error {
+	err := s.Decode(&h.data)
+	return err
+}
 
 // Header returns the collation's header.
 func (c *Collation) Header() *CollationHeader { return c.header }
@@ -52,13 +83,18 @@ func (c *Collation) Body() []byte { return c.body }
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 
 // ProposerAddress is the coinbase addr of the creator for the collation.
-func (c *Collation) ProposerAddress() *common.Address { return c.header.proposerAddress }
-
-// SetHeader updates the collation's header.
-func (c *Collation) SetHeader(h *CollationHeader) { c.header = h }
+func (c *Collation) ProposerAddress() *common.Address {
+	return c.header.data.ProposerAddress
+}
 
 // AddTransaction adds to the collation's body of tx blobs.
 func (c *Collation) AddTransaction(tx *types.Transaction) {
 	// TODO: Include blob serialization instead.
 	c.transactions = append(c.transactions, tx)
+}
+
+// SetChunkRoot updates the collation header's chunk root.
+func (c *Collation) SetChunkRoot() {
+	chunkRoot := common.BytesToHash(c.body)
+	c.header.data.ChunkRoot = &chunkRoot
 }
