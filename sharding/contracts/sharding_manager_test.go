@@ -457,7 +457,7 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 	}
 
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1000)) != 0 {
+	if numNotaries.Cmp(big.NewInt(notaryCount)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1000, Got: %v", numNotaries)
 	}
 
