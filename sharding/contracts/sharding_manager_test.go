@@ -34,13 +34,14 @@ var (
 	ctx = context.Background()
 )
 
+// deploySMCContract is a helper function for deploying SMC.
 func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey) (common.Address, *types.Transaction, *SMC, error) {
 	transactOpts := bind.NewKeyedTransactor(key)
 	defer backend.Commit()
 	return DeploySMC(transactOpts, backend)
 }
 
-// Test creating the SMC contract.
+// TestContractCreation tests SMC smart contract can successfully be deployed.
 func TestContractCreation(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -51,6 +52,7 @@ func TestContractCreation(t *testing.T) {
 	}
 }
 
+// TestNotaryRegister tests notary registers in a normal condition.
 func TestNotaryRegister(t *testing.T) {
 	const notaryCount = 3
 	var notaryPoolAddr [notaryCount]common.Address
@@ -58,7 +60,7 @@ func TestNotaryRegister(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
-	// initializes back end with 3 accounts and each with 2000 eth balances.
+	// Initializes back end with 3 accounts and each with 2000 eth balances.
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
@@ -137,6 +139,7 @@ func TestNotaryRegister(t *testing.T) {
 	}
 }
 
+// TestNotaryRegisterInsufficientEther tests notary registers with insufficient deposit.
 func TestNotaryRegisterInsufficientEther(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -162,6 +165,7 @@ func TestNotaryRegisterInsufficientEther(t *testing.T) {
 
 }
 
+// TestNotaryDoubleRegisters tests notary registers twice.
 func TestNotaryDoubleRegisters(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -195,6 +199,7 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 
 }
 
+// TestNotaryDeregister tests notary deregisters in a normal condition.
 func TestNotaryDeregister(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -243,6 +248,7 @@ func TestNotaryDeregister(t *testing.T) {
 	}
 }
 
+// TestNotaryDeregisterThenRegister tests notary deregisters then registers before lock up ends.
 func TestNotaryDeregisterThenRegister(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -288,6 +294,7 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	}
 }
 
+// TestNotaryRelease tests notary releases in a normal condition.
 func TestNotaryRelease(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -359,6 +366,7 @@ func TestNotaryRelease(t *testing.T) {
 	}
 }
 
+// TestNotaryInstantRelease tests notary releases before lockup ends.
 func TestNotaryInstantRelease(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -419,6 +427,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 	}
 }
 
+// TestCommitteeListsAreDifferent tests different shards have different notary committee.
 func TestCommitteeListsAreDifferent(t *testing.T) {
 	const notaryCount = 1000
 	var notaryPoolAddr [notaryCount]common.Address
@@ -441,19 +450,18 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
 
-	// register 1000 notaries to SMC
+	// Register 1000 notaries to SMC.
 	for i := 0; i < notaryCount; i++ {
 		smc.RegisterNotary(txOpts[i])
 		backend.Commit()
 	}
-
 
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(1000)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1000, Got: %v", numNotaries)
 	}
 
-	// compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical
+	// Compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical.
 	for i := 0; i < 5; i++ {
 		addr0, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
 		addr1, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(int64(i)))
@@ -464,6 +472,7 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 
 }
 
+// TestGetCommitteeWithNonMember tests unregistered notary tries to be in the committee.
 func TestGetCommitteeWithNonMember(t *testing.T) {
 	const notaryCount = 11
 	var notaryPoolAddr [notaryCount]common.Address
@@ -471,7 +480,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
-	// initialize back end with 11 accounts and each with 2000 eth balances.
+	// Initialize back end with 11 accounts and each with 2000 eth balances.
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
@@ -486,7 +495,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
 
-	// register 10 notaries to SMC, leave 1 address free.
+	// Register 10 notaries to SMC, leave 1 address free.
 	for i := 0; i < 10; i++ {
 		smc.RegisterNotary(txOpts[i])
 		backend.Commit()
@@ -497,7 +506,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 		t.Fatalf("Incorrect count from notary pool. Want: 135, Got: %v", numNotaries)
 	}
 
-	// verify the unregistered account is not in the notary pool list.
+	// Verify the unregistered account is not in the notary pool list.
 	for i := 0; i < 10; i++ {
 		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
 		if notaryPoolAddr[10].String() == addr.String() {
@@ -507,6 +516,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 
 }
 
+// TestGetCommitteeAfterDeregisters tests notary tries to be in committee after deregistered.
 func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	const notaryCount = 10
 	var notaryPoolAddr [notaryCount]common.Address
@@ -514,7 +524,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	var txOpts [notaryCount]*bind.TransactOpts
 	genesis := make(core.GenesisAlloc)
 
-	// initialize back end with 10 accounts and each with 2000 eth balances.
+	// Initialize back end with 10 accounts and each with 2000 eth balances.
 	for i := 0; i < notaryCount; i++ {
 		key, _ := crypto.GenerateKey()
 		notaryPoolPrivKeys[i] = key
@@ -529,7 +539,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPoolPrivKeys[0])
 
-	// register 10 notaries to SMC.
+	// Register 10 notaries to SMC.
 	for i := 0; i < 10; i++ {
 		smc.RegisterNotary(txOpts[i])
 		backend.Commit()
@@ -540,7 +550,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 		t.Errorf("Incorrect count from notary pool. Want: 10, Got: %v", numNotaries)
 	}
 
-	// deregister notary 0 from SMC.
+	// Deregister notary 0 from SMC.
 	txOpts[0].Value = big.NewInt(0)
 	smc.DeregisterNotary(txOpts[0])
 	backend.Commit()
@@ -550,7 +560,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 		t.Errorf("Incorrect count from notary pool. Want: 9, Got: %v", numNotaries)
 	}
 
-	// verify degistered notary 0 is not in the notary pool list.
+	// Verify degistered notary 0 is not in the notary pool list.
 	for i := 0; i < 10; i++ {
 		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
 		if notaryPoolAddr[0].String() == addr.String() {
@@ -559,18 +569,19 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	}
 }
 
+// TestNormalAddHeader tests proposer add header in normal condition.
 func TestNormalAddHeader(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	chunkRoot := [32]byte{'A'}
@@ -593,12 +604,12 @@ func TestNormalAddHeader(t *testing.T) {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
-	// Fast forward to the next period. Period 2
+	// Fast forward to the next period. Period 2.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 2 and chunkroot 0xB
+	// Proposer adds header consists shard 0, period 2 and chunkroot 0xB.
 	period2 := big.NewInt(2)
 	chunkRoot = [32]byte{'B'}
 	_, err = smc.AddHeader(txOpts, shard0, period2, chunkRoot)
@@ -617,7 +628,7 @@ func TestNormalAddHeader(t *testing.T) {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
-	// Proposer adds header consists shard 1, period 2 and chunkroot 0xC
+	// Proposer adds header consists shard 1, period 2 and chunkroot 0xC.
 	shard1 := big.NewInt(1)
 	chunkRoot = [32]byte{'C'}
 	_, err = smc.AddHeader(txOpts, shard1, period2, chunkRoot)
@@ -634,18 +645,19 @@ func TestNormalAddHeader(t *testing.T) {
 	}
 }
 
+// TestAddTwoHeadersAtSamePeriod tests we can't add two headers within the same period.
 func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	chunkRoot := [32]byte{'A'}
@@ -664,7 +676,7 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
-	// Proposer attempts to add another header chunkroot 0xB on the same period for the same shard
+	// Proposer attempts to add another header chunkroot 0xB on the same period for the same shard.
 	chunkRoot = [32]byte{'B'}
 	_, err = smc.AddHeader(txOpts, shard0, period1, chunkRoot)
 	if err == nil {
@@ -672,18 +684,19 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	}
 }
 
+// TestAddHeadersAtWrongPeriod tests proposer adds header in the wrong period.
 func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
 	txOpts := bind.NewKeyedTransactor(mainKey)
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header at wrong period, shard 0, period 0 and chunkroot 0xA
+	// Proposer adds header at wrong period, shard 0, period 0 and chunkroot 0xA.
 	period0 := big.NewInt(0)
 	shard0 := big.NewInt(0)
 	chunkRoot := [32]byte{'A'}
@@ -698,7 +711,7 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
-	// Proposer adds header at wrong period, shard 0, period 2 and chunkroot 0xA
+	// Proposer adds header at wrong period, shard 0, period 2 and chunkroot 0xA.
 	period2 := big.NewInt(2)
 	_, err = smc.AddHeader(txOpts, shard0, period2, chunkRoot)
 	if err == nil {
@@ -710,7 +723,7 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
-	// Proposer adds header at correct period, shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header at correct period, shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	_, err = smc.AddHeader(txOpts, shard0, period1, chunkRoot)
 	if err != nil {
@@ -723,6 +736,7 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	}
 }
 
+// TestSubmitVote tests notary submit votes in normal condition.
 func TestSubmitVote(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -730,16 +744,16 @@ func TestSubmitVote(t *testing.T) {
 	txOpts.Value = notaryDeposit
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Notary 0 registers
+	// Notary 0 registers.
 	smc.RegisterNotary(txOpts)
 	backend.Commit()
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
@@ -751,7 +765,7 @@ func TestSubmitVote(t *testing.T) {
 	}
 	backend.Commit()
 
-	// Notary 0 votes on header
+	// Notary 0 votes on header.
 	c, err := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if err != nil {
 		t.Fatalf("Get notary vote count failed: %v", err)
@@ -766,7 +780,7 @@ func TestSubmitVote(t *testing.T) {
 		t.Fatalf("Notary submits vote failed: %v", err)
 	}
 
-	// Check notary 0's vote is correctly casted
+	// Check notary 0's vote is correctly casted.
 	v, err := smc.HasVoted(&bind.CallOpts{}, shard0, index0)
 	if err != nil {
 		t.Fatalf("Check notary's vote failed: %v", err)
@@ -779,7 +793,7 @@ func TestSubmitVote(t *testing.T) {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
 	}
 
-	// Check header's submitted with the current period, should be period 1
+	// Check header's submitted with the current period, should be period 1.
 	p, err := smc.LastSubmittedCollation(&bind.CallOpts{}, shard0)
 	if err != nil {
 		t.Fatalf("Get period of last submitted header failed: %v", err)
@@ -788,7 +802,7 @@ func TestSubmitVote(t *testing.T) {
 		t.Errorf("Incorrect period submitted, want: 1, got: %v", p)
 	}
 
-	// Check header's approved with the current period, should be period 0
+	// Check header's approved with the current period, should be period 0.
 	p, err = smc.LastApprovedCollation(&bind.CallOpts{}, shard0)
 	if err != nil {
 		t.Fatalf("Get period of last approved header failed: %v", err)
@@ -799,6 +813,7 @@ func TestSubmitVote(t *testing.T) {
 
 }
 
+// TestSubmitVoteTwice tests notary tries to submit same vote twice.
 func TestSubmitVoteTwice(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -806,16 +821,16 @@ func TestSubmitVoteTwice(t *testing.T) {
 	txOpts.Value = notaryDeposit
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Notary 0 registers
+	// Notary 0 registers.
 	smc.RegisterNotary(txOpts)
 	backend.Commit()
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
@@ -827,30 +842,31 @@ func TestSubmitVoteTwice(t *testing.T) {
 	}
 	backend.Commit()
 
-	// Notary 0 votes on header
+	// Notary 0 votes on header.
 	smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
 	backend.Commit()
 
-	// Check notary 0's vote is correctly casted
+	// Check notary 0's vote is correctly casted.
 	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
 	}
 
-	// Notary 0 votes on header again, it should fail
+	// Notary 0 votes on header again, it should fail.
 	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
 	if err == nil {
 		t.Errorf("notary voting twice should have failed")
 	}
 	backend.Commit()
 
-	// Check notary 0's vote is correctly casted
+	// Check notary 0's vote is correctly casted.
 	c, _ = smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
 	}
 }
 
+// TestSubmitVoteByNonEligibleNotary tests a non-eligible notary tries to submit vote.
 func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -858,12 +874,12 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	txOpts.Value = notaryDeposit
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
@@ -875,7 +891,7 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	}
 	backend.Commit()
 
-	// Unregistered Notary 0 votes on header, it should fail
+	// Unregistered Notary 0 votes on header, it should fail.
 	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
 	backend.Commit()
 	if err == nil {
@@ -887,6 +903,7 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	}
 }
 
+// TestSubmitVoteWithOutAHeader tests a notary tries to submit vote before header gets added.
 func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -894,36 +911,37 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	txOpts.Value = notaryDeposit
 	_, _, smc, _ := deploySMCContract(backend, mainKey)
 
-	// Notary 0 registers
+	// Notary 0 registers.
 	smc.RegisterNotary(txOpts)
 	backend.Commit()
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
 	chunkRoot := [32]byte{'A'}
 	txOpts.Value = big.NewInt(0)
 
-	// Notary 0 votes on header, it should fail because no header has added
+	// Notary 0 votes on header, it should fail because no header has added.
 	_, err := smc.SubmitVote(txOpts, shard0, period1, index0, chunkRoot)
 	if err == nil {
 		t.Errorf("Notary votes should have failed due to missing header")
 	}
 	backend.Commit()
 
-	// Check notary 0's vote is correctly casted
+	// Check notary 0's vote is correctly casted.
 	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
 	}
 }
 
+// TestSubmitVoteWithInvalidArgs tests notary submits vote using wrong chunkroot and period.
 func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
@@ -935,12 +953,12 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	smc.RegisterNotary(txOpts)
 	backend.Commit()
 
-	// Fast forward to the next period to submit header. Period 1
+	// Fast forward to the next period to submit header. Period 1.
 	for i := 0; i < int(sharding.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA
+	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
@@ -952,14 +970,14 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	}
 	backend.Commit()
 
-	// Notary voting with incorrect period
+	// Notary voting with incorrect period.
 	period2 := big.NewInt(2)
 	_, err = smc.SubmitVote(txOpts, shard0, period2, index0, chunkRoot)
 	if err == nil {
 		t.Errorf("Notary votes should have failed due to incorrect period")
 	}
 
-	// Notary voting with incorrect chunk root
+	// Notary voting with incorrect chunk root.
 	chunkRootWrong := [32]byte{'B'}
 	_, err = smc.SubmitVote(txOpts, shard0, period1, index0, chunkRootWrong)
 	if err == nil {
