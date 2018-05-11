@@ -33,6 +33,8 @@ func (p *proposer) Start() error {
 	defer p.client.Close()
 
 	// TODO: Propose collations.
+	// TODO: For every period, check if someone has added a header.
+	// TODO: If no one has added, it's our turn, send addHeader transaction.
 
 	return nil
 }
