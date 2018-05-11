@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/sharding/database"
 )
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.
@@ -20,7 +21,7 @@ func TestShard_ValidateShardID(t *testing.T) {
 	emptyHash := common.StringToHash("")
 	emptyAddr := common.StringToAddress("")
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
-	shardDB := makeShardKV()
+	shardDB := database.MakeShardKV()
 	shard := MakeShard(big.NewInt(3), shardDB)
 
 	if err := shard.ValidateShardID(header); err == nil {
@@ -39,7 +40,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	emptyHash := common.StringToHash("")
 	emptyAddr := common.StringToAddress("")
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
-	shardDB := makeShardKV()
+	shardDB := database.MakeShardKV()
 	shard := MakeShard(big.NewInt(1), shardDB)
 
 	if err := shard.SaveHeader(header); err != nil {
@@ -71,7 +72,7 @@ func TestShard_CollationByHash(t *testing.T) {
 	// We set the chunk root.
 	collation.CalculateChunkRoot()
 
-	shardDB := makeShardKV()
+	shardDB := database.MakeShardKV()
 	shard := MakeShard(big.NewInt(1), shardDB)
 
 	if err := shard.SaveCollation(collation); err != nil {

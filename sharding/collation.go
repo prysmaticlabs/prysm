@@ -49,7 +49,7 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 	return hash
 }
 
-// ShardID is the identifier for a shard.
+// ShardID the collation corresponds to.
 func (h *CollationHeader) ShardID() *big.Int { return h.data.ShardID }
 
 // Period the collation corresponds to.
@@ -69,8 +69,7 @@ func (h *CollationHeader) EncodeRLP() ([]byte, error) {
 
 // DecodeRLP uses an RLP Stream to populate the data field of a collation header.
 func (h *CollationHeader) DecodeRLP(s *rlp.Stream) error {
-	err := s.Decode(&h.data)
-	return err
+	return s.Decode(&h.data)
 }
 
 // Header returns the collation's header.
@@ -96,6 +95,8 @@ func (c *Collation) AddTransaction(tx *types.Transaction) {
 // CalculateChunkRoot updates the collation header's chunk root based on the body.
 func (c *Collation) CalculateChunkRoot() {
 	// TODO: this needs to be based on blob serialization.
+	// For proof of custody we need to split chunks (body) into chunk + salt and
+	// take the merkle root of that.
 	chunkRoot := common.BytesToHash(c.body)
 	c.header.data.ChunkRoot = &chunkRoot
 }
