@@ -43,7 +43,7 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 	return nil
 }
 
-// HeaderByHash of collation.
+// HeaderByHash looks up a collation header from the shardDB using the header's hash.
 func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 	encoded, err := s.shardDB.Get(*hash)
 	if err != nil {
@@ -66,6 +66,9 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	if err != nil {
 		return nil, err
 	}
+	if header == nil {
+		return nil, fmt.Errorf("header not found")
+	}
 
 	body, err := s.BodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
@@ -80,7 +83,7 @@ func (s *Shard) CanonicalCollationHash(shardID *big.Int, period *big.Int) (*comm
 	key := canonicalCollationLookupKey(shardID, period)
 	hash := common.BytesToHash(key.Bytes())
 	collationHashBytes, err := s.shardDB.Get(hash)
-	if err != nil {
+	if err != nil || len(collationHashBytes) == 0 {
 		return nil, fmt.Errorf("no canonical collation set for period, shardID pair: %v", err)
 	}
 	collationHash := common.BytesToHash(collationHashBytes)
@@ -153,8 +156,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 	}
 
 	// Uses the hash of the header as the key.
-	hash := header.Hash()
-	s.shardDB.Put(hash, encoded)
+	s.shardDB.Put(header.Hash(), encoded)
 	return nil
 }
 
@@ -209,7 +211,7 @@ func dataAvailabilityLookupKey(chunkRoot *common.Hash) common.Hash {
 	return common.BytesToHash([]byte(key))
 }
 
-// dataAvailabilityLookupKey formats a string that will become a lookup key
+// canonicalCollationLookupKey formats a string that will become a lookup key
 // in the shardDB that takes into account the shardID and the period
 // of the shard for ease of use.
 func canonicalCollationLookupKey(shardID *big.Int, period *big.Int) common.Hash {
