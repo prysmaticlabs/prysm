@@ -12,8 +12,8 @@ import (
 type shardBackend interface {
 	Get(k common.Hash) ([]byte, error)
 	Has(k common.Hash) bool
-	Put(k common.Hash, val []byte)
-	Delete(k common.Hash)
+	Put(k common.Hash, val []byte) error
+	Delete(k common.Hash) error
 }
 
 // Shard base struct.
@@ -137,13 +137,17 @@ func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error
 		if err != nil {
 			return fmt.Errorf("cannot RLP encode availability: %v", err)
 		}
-		s.shardDB.Put(key, enc)
+		if err := s.shardDB.Put(key, enc); err != nil {
+			return fmt.Errorf("cannot update shardDB: %v", err)
+		}
 	} else {
 		enc, err := rlp.EncodeToBytes(false)
 		if err != nil {
 			return fmt.Errorf("cannot RLP encode availability: %v", err)
 		}
-		s.shardDB.Put(key, enc)
+		if err := s.shardDB.Put(key, enc); err != nil {
+			return fmt.Errorf("cannot update shardDB: %v", err)
+		}
 	}
 	return nil
 }
@@ -156,7 +160,9 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 	}
 
 	// Uses the hash of the header as the key.
-	s.shardDB.Put(header.Hash(), encoded)
+	if err := s.shardDB.Put(header.Hash(), encoded); err != nil {
+		return fmt.Errorf("cannot update shardDB: %v", err)
+	}
 	return nil
 }
 
@@ -167,7 +173,9 @@ func (s *Shard) SaveBody(body []byte) error {
 	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
 	// right now we will just take the raw keccak256 of the body until #92 is merged.
 	chunkRoot := common.BytesToHash(body)
-	s.shardDB.Put(chunkRoot, body)
+	if err := s.shardDB.Put(chunkRoot, body); err != nil {
+		return fmt.Errorf("cannot update shardDB: %v", err)
+	}
 	s.SetAvailability(&chunkRoot, true)
 	return nil
 }
@@ -200,7 +208,9 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	if err != nil {
 		return fmt.Errorf("cannot encode header: %v", err)
 	}
-	s.shardDB.Put(key, encoded)
+	if err := s.shardDB.Put(key, encoded); err != nil {
+		return fmt.Errorf("cannot update shardDB: %v", err)
+	}
 	return nil
 }
 

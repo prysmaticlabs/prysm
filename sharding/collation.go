@@ -11,13 +11,21 @@ import (
 
 // Collation base struct.
 type Collation struct {
-	header       *CollationHeader
-	body         []byte
+	header *CollationHeader
+	// body represents the serialized blob of a collation's transactions.
+	body []byte
+	// transactions serves as a useful slice to store deserialized chunks from the
+	// collation's body. Every time this transactions slice is updated, the serialized
+	// body would need to be recalculated. This will be a useful property for proposers
+	// in our system.
 	transactions []*types.Transaction
 }
 
 // CollationHeader base struct.
 type CollationHeader struct {
+	// RLP decoding only works on exported properties of structs. In this case, we want
+	// to keep collation properties as read-only and only accessible through getters.
+	// We can accomplish this through this nested data property.
 	data collationHeaderData
 }
 

@@ -18,4 +18,10 @@ func Test_ShardKVGet(t *testing.T) {
 	if val == nil {
 		t.Errorf("no value stored for key")
 	}
+
+	hash2 := common.StringToHash("")
+	val2, err := kv.Get(hash2)
+	if err == nil {
+		t.Errorf("non-existent key should not have a value. key=%v, value=%v", hash2, val2)
+	}
 }

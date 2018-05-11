@@ -35,11 +35,15 @@ func (sb *ShardKV) Has(k common.Hash) bool {
 }
 
 // Put updates a key's value in the mapping.
-func (sb *ShardKV) Put(k common.Hash, v []byte) {
+func (sb *ShardKV) Put(k common.Hash, v []byte) error {
+	// there is no error in a simple setting of a value in a go map.
 	sb.kv[k] = v
+	return nil
 }
 
 // Delete removes the key and value from the mapping.
-func (sb *ShardKV) Delete(k common.Hash) {
+func (sb *ShardKV) Delete(k common.Hash) error {
+	// There is no return value for deleting a simple key in a go map.
 	delete(sb.kv, k)
+	return nil
 }
