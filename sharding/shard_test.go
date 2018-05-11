@@ -90,3 +90,34 @@ func TestShard_CollationByHash(t *testing.T) {
 		t.Errorf("collations do not match. want=%v. got=%v", collation, dbCollation)
 	}
 }
+
+func TestShard_CanonicalHeaderHash(t *testing.T) {
+	shardID := big.NewInt(1)
+	period := big.NewInt(1)
+	proposerAddress := common.StringToAddress("")
+	proposerSignature := []byte{}
+	emptyHash := common.StringToHash("")
+	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
+
+	shardDB := database.MakeShardKV()
+	shard := MakeShard(shardID, shardDB)
+
+	if err := shard.SaveHeader(header); err != nil {
+		t.Fatalf("failed to save header to shardDB: %v", err)
+	}
+
+	if err := shard.SetCanonical(header); err != nil {
+		t.Fatalf("failed to set header as canonical: %v", err)
+	}
+
+	headerHash := header.Hash()
+
+	canonicalHeaderHash, err := shard.CanonicalHeaderHash(shardID, period)
+	if err != nil {
+		t.Fatalf("failed to get canonical header hash from shardDB: %v", err)
+	}
+
+	if canonicalHeaderHash.String() != headerHash.String() {
+		t.Errorf("header hashes do not match. want=%v. got=%v", headerHash.String(), canonicalHeaderHash.String())
+	}
+}
