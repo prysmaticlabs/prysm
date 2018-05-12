@@ -154,6 +154,9 @@ func TestShard_CanonicalCollation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get canonical collation from shardDB: %v", err)
 	}
+	if canonicalCollation.Hash() != collation.Hash() {
+		t.Errorf("collations are not equal. want=%v. got=%v.", collation, canonicalCollation)
+	}
 }
 
 func TestShard_BodyByChunkRoot(t *testing.T) {
@@ -182,5 +185,33 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 }
 
 func TestShard_CheckAvailability(t *testing.T) {
-	t.Fatalf("cannot save availability")
+	shardID := big.NewInt(1)
+	period := big.NewInt(1)
+	proposerAddress := common.StringToAddress("")
+	proposerSignature := []byte{}
+	emptyHash := common.StringToHash("")
+	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
+
+	shardDB := database.MakeShardKV()
+	shard := MakeShard(shardID, shardDB)
+
+	collation := &Collation{
+		header: header,
+		body:   []byte{1, 2, 3},
+	}
+
+	// We set the chunk root.
+	collation.CalculateChunkRoot()
+
+	if err := shard.SaveBody(collation.body); err != nil {
+		t.Fatalf("cannot save body: %v", err)
+	}
+
+	available, err := shard.CheckAvailability(header)
+	if err != nil {
+		t.Errorf("could not check availability: %v", err)
+	}
+	if !available {
+		t.Errorf("collation body is not available: chunkRoot=%v, body=%v", header.ChunkRoot(), collation.body)
+	}
 }
