@@ -125,39 +125,24 @@ func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 // CheckAvailability is used by notaries to confirm a header's data availability.
 func (s *Shard) CheckAvailability(header *CollationHeader) (bool, error) {
 	key := dataAvailabilityLookupKey(header.ChunkRoot())
-	availabilityVal, err := s.shardDB.Get(key)
+	availability, err := s.shardDB.Get(key)
 	if err != nil {
 		return false, fmt.Errorf("key not found: %v", key)
 	}
-	var availability int
-	if err := rlp.DecodeBytes(availabilityVal, &availability); err != nil {
-		return false, fmt.Errorf("cannot RLP decode availability: %v", err)
-	}
-	if availability != 0 {
-		return true, nil
-	}
-	return false, nil
+	return availability[0] != 0, nil
 }
 
 // SetAvailability saves the availability of the chunk root in the shardDB.
 func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error {
 	key := dataAvailabilityLookupKey(chunkRoot)
+	var encoded []byte
 	if availability {
-		enc, err := rlp.EncodeToBytes(true)
-		if err != nil {
-			return fmt.Errorf("cannot RLP encode availability: %v", err)
-		}
-		if err := s.shardDB.Put(key, enc); err != nil {
-			return fmt.Errorf("cannot update shardDB: %v", err)
-		}
+		encoded = []byte{1}
 	} else {
-		enc, err := rlp.EncodeToBytes(false)
-		if err != nil {
-			return fmt.Errorf("cannot RLP encode availability: %v", err)
-		}
-		if err := s.shardDB.Put(key, enc); err != nil {
-			return fmt.Errorf("cannot update shardDB: %v", err)
-		}
+		encoded = []byte{0}
+	}
+	if err := s.shardDB.Put(key, encoded); err != nil {
+		return fmt.Errorf("cannot update shardDB: %v", err)
 	}
 	return nil
 }
