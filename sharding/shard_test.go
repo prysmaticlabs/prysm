@@ -1,6 +1,7 @@
 package sharding
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
@@ -120,4 +121,66 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 	if canonicalHeaderHash.String() != headerHash.String() {
 		t.Errorf("header hashes do not match. want=%v. got=%v", headerHash.String(), canonicalHeaderHash.String())
 	}
+}
+
+func TestShard_CanonicalCollation(t *testing.T) {
+	shardID := big.NewInt(1)
+	period := big.NewInt(1)
+	proposerAddress := common.StringToAddress("")
+	proposerSignature := []byte{}
+	emptyHash := common.StringToHash("")
+	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
+
+	shardDB := database.MakeShardKV()
+	shard := MakeShard(shardID, shardDB)
+
+	collation := &Collation{
+		header: header,
+		body:   []byte{1, 2, 3},
+	}
+
+	// We set the chunk root.
+	collation.CalculateChunkRoot()
+
+	if err := shard.SaveCollation(collation); err != nil {
+		t.Fatalf("failed to save collation to shardDB: %v", err)
+	}
+
+	if err := shard.SetCanonical(header); err != nil {
+		t.Fatalf("failed to set header as canonical: %v", err)
+	}
+
+	canonicalCollation, err := shard.CanonicalCollation(shardID, period)
+	if err != nil {
+		t.Fatalf("failed to get canonical collation from shardDB: %v", err)
+	}
+}
+
+func TestShard_BodyByChunkRoot(t *testing.T) {
+	body := []byte{1, 2, 3, 4, 5}
+	shardID := big.NewInt(1)
+	shardDB := database.MakeShardKV()
+	shard := MakeShard(shardID, shardDB)
+
+	if err := shard.SaveBody(body); err != nil {
+		t.Fatalf("cannot save body: %v", err)
+	}
+
+	// Right now this just hashes the body. We will instead need to
+	// blob serialize.
+	// TODO: blob serialization.
+	chunkRoot := common.BytesToHash(body)
+
+	dbBody, err := shard.BodyByChunkRoot(&chunkRoot)
+	if err != nil {
+		t.Errorf("cannot fetch body by chunk root: %v", err)
+	}
+
+	if !bytes.Equal(body, dbBody) {
+		t.Errorf("bodies not equal. want=%v. got=%v", body, dbBody)
+	}
+}
+
+func TestShard_CheckAvailability(t *testing.T) {
+	t.Fatalf("cannot save availability")
 }
