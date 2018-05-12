@@ -77,8 +77,8 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	return &Collation{header: header, body: body}, nil
 }
 
-// CanonicalHeaderHash gets a collation header hash that has been set as canonical for
-// shardID/period pair
+// CanonicalHeaderHash gets a collation header hash that has been set as
+// canonical for shardID/period pair
 func (s *Shard) CanonicalHeaderHash(shardID *big.Int, period *big.Int) (*common.Hash, error) {
 	key := canonicalCollationLookupKey(shardID, period)
 
@@ -129,6 +129,7 @@ func (s *Shard) CheckAvailability(header *CollationHeader) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("key not found: %v", key)
 	}
+	// availability is a byte array of length 1.
 	return availability[0] != 0, nil
 }
 
@@ -168,6 +169,7 @@ func (s *Shard) SaveBody(body []byte) error {
 	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
 	// right now we will just take the raw keccak256 of the body until #92 is merged.
 	chunkRoot := common.BytesToHash(body)
+
 	if err := s.shardDB.Put(chunkRoot, body); err != nil {
 		return fmt.Errorf("cannot update shardDB: %v", err)
 	}
@@ -215,7 +217,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 // dataAvailabilityLookupKey formats a string that will become a lookup
 // key in the shardDB.
 func dataAvailabilityLookupKey(chunkRoot *common.Hash) common.Hash {
-	key := fmt.Sprintf("availability-lookup:%s", chunkRoot.Str())
+	key := fmt.Sprintf("availability-lookup:%s", chunkRoot.String())
 	return common.BytesToHash([]byte(key))
 }
 
