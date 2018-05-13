@@ -241,6 +241,7 @@ func initSMC(c *shardingClient) (*contracts.SMC, error) {
 	return contract, nil
 }
 
+// DepositFlagSet returns true for cli flag --deposit.
 func (c *shardingClient) DepositFlagSet() bool {
 	return c.ctx.GlobalBool(utils.DepositFlag.Name)
 }
