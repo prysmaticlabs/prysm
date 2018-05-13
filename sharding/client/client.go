@@ -242,5 +242,5 @@ func initSMC(c *shardingClient) (*contracts.SMC, error) {
 }
 
 func (c *shardingClient) DepositFlagSet() bool {
-	return false
+	return c.ctx.GlobalBool(utils.DepositFlag.Name)
 }
