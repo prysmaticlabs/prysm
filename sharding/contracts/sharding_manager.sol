@@ -2,10 +2,11 @@ pragma solidity ^0.4.23;
 
 
 contract SMC {
-    event HeaderAdded(uint indexed shardId, bytes32 chunkRoot, int128 period, address proposerAddress);
+    event HeaderAdded(uint indexed shardId, bytes32 chunkRoot, uint period, address proposerAddress);
     event NotaryRegistered(address notary, uint poolIndex);
     event NotaryDeregistered(address notary, uint poolIndex, uint deregisteredPeriod);
     event NotaryReleased(address notary, uint poolIndex);
+    event VoteSubmitted(uint indexed shardId, bytes32 chunkRoot, uint period, address notaryAddress);
 
     struct Notary {
         uint deregisteredPeriod;
@@ -13,39 +14,36 @@ contract SMC {
         bool deposited;
     }
 
-    struct CollationHeader {
-        uint shardId;             // Number of the shard ID
+    struct CollationRecord {
         bytes32 chunkRoot;        // Root hash of the collation body
-        uint period;              // Period which header should be included
-        address proposerAddress;
+        address proposer;         // Address of the proposer
+        bool isElected;           // True if the collation has reached quorum size
     }
 
-  // Packed variables to be used in addHeader
-    struct HeaderVars {
-        bytes32 entireHeaderHash;
-        int score;
-        address notaryAddr;
-        bool isNewHead;
-    }
-
+    // Notary state variables
     address[] public notaryPool;
-
     // notaryAddress => notaryStruct
     mapping (address => Notary) public notaryRegistry;
-    // shardId => (headerHash => treeRoot)
-    mapping (uint => mapping (bytes32 => bytes32)) public collationTrees;
-    // shardId => (headerHash => collationHeader)
-    mapping (int => mapping (bytes32 => CollationHeader)) public collationHeaders;
-    // shardId => headerHash
-    mapping (int => bytes32) shardHead;
-
-    // Number of notaries
+    // number of notaries
     uint public notaryPoolLength;
+    // current vote count of each shard
+    // first 31 bytes are bitfield of notary's vote
+    // last 1 byte is the number of the total votes
+    mapping (uint => bytes32) public currentVote;
+
+    // Collation state variables
+    // shardId => (period => CollationHeader), collation records been appended by proposer
+    mapping (uint => mapping (uint => CollationRecord)) public collationRecords;
+    // shardId => period, last period of the submitted collation header
+    mapping (uint => uint) public lastSubmittedCollation;
+    // shardId => period, last period of the approved collation header
+    mapping (uint => uint) public lastApprovedCollation;
+
+    // Internal help functions variables 
     // Stack of empty notary slot indicies
     uint[] emptySlotsStack;
     // Top index of the stack
     uint emptySlotsStackTop;
-
     // Notary sample size at current period and next period
     uint currentPeriodNotarySampleSize;
     uint nextPeriodNotarySampleSize;
@@ -69,13 +67,12 @@ contract SMC {
     // Threshold(number of notaries in committee) for a proposal to be accepted
     uint constant QUORUM_SIZE = 90;
 
-    // Log the latest period number of the shard
-    mapping (int => int) public periodHead;
-
     /// Checks if a notary with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
-    function getNotaryInCommittee(uint shardId, uint _index) public view returns(address) {
+    function getNotaryInCommittee(uint _shardId) public view returns(address) {
         uint period = block.number / PERIOD_LENGTH;
+
+        updateNotarySampleSize();
 
         // Determine notary pool length based on notary sample size
         uint sampleSize;
@@ -85,10 +82,13 @@ contract SMC {
             sampleSize = currentPeriodNotarySampleSize;
         }
 
-      // Get the most recent block number before the period started
+        // Get the notary pool index to concatenate with shardId and blockHash for random sample
+        uint poolIndex = notaryRegistry[msg.sender].poolIndex;
+
+        // Get the most recent block number before the period started
         uint latestBlock = period * PERIOD_LENGTH - 1;
         uint latestBlockHash = uint(block.blockhash(latestBlock));
-        uint index = uint(keccak256(latestBlockHash, _index, shardId)) % sampleSize;
+        uint index = uint(keccak256(latestBlockHash, poolIndex, _shardId)) % sampleSize;
 
         return notaryPool[index];
     }
@@ -100,7 +100,6 @@ contract SMC {
         require(!notaryRegistry[notaryAddress].deposited);
         require(msg.value == NOTARY_DEPOSIT);
 
-        // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
 
         uint index;
@@ -136,7 +135,6 @@ contract SMC {
         require(notaryRegistry[notaryAddress].deposited);
         require(notaryPool[index] == notaryAddress);
 
-        // Track the numbers of participating notaries in between periods
         updateNotarySampleSize();
 
         uint deregisteredPeriod = block.number / PERIOD_LENGTH;
@@ -162,31 +160,88 @@ contract SMC {
         emit NotaryReleased(notaryAddress, index);
     }
 
-    /// Calcuates the hash of the header from the input parameters
-    function computeHeaderHash(
-        uint256 shardId,
-        bytes32 parentHash,
-        bytes32 chunkRoot,
-        uint256 period,
-        address proposerAddress
-        ) public returns(bytes32) {
-      /*
-        TODO: Calculate the hash of the collation header from the input parameters
-      */
-    }
-
     /// Add collation header to the main chain, anyone can call this function. It emits a log
     function addHeader(
         uint _shardId,
-        uint period,
-        bytes32 chunkRoot,
-        address proposerAddress
+        uint _period,
+        bytes32 _chunkRoot
         ) public {
-      /*
-        TODO: Anyone can call this at any time. The first header
-        to get included for a given shard in a given period gets in,
-        all others don’t. This function just emits a log
-      */
+        require((_shardId >= 0) && (_shardId < SHARD_COUNT));
+        require(_period == block.number / PERIOD_LENGTH);
+        require(_period > lastSubmittedCollation[_shardId]);
+
+        updateNotarySampleSize();
+
+        collationRecords[_shardId][_period] = CollationRecord({
+            chunkRoot: _chunkRoot,
+            proposer: msg.sender,
+            isElected: false
+        });
+
+        lastSubmittedCollation[_shardId] = block.number / PERIOD_LENGTH;
+        delete currentVote[_shardId];
+
+        emit HeaderAdded(_shardId, _chunkRoot, _period, msg.sender);
+    }
+
+    /// Sampled notary can call the following funtion to submit vote,
+    /// a vote log will be emitted for client to monitor
+    function submitVote(
+        uint _shardId,
+        uint _period,
+        uint _index,
+        bytes32 _chunkRoot        
+    ) public {
+        require((_shardId >= 0) && (_shardId < SHARD_COUNT));
+        require(_period == block.number / PERIOD_LENGTH);
+        require(_period == lastSubmittedCollation[_shardId]);
+        require(_index < COMMITTEE_SIZE);
+        require(_chunkRoot == collationRecords[_shardId][_period].chunkRoot);
+        require(notaryRegistry[msg.sender].deposited);
+        require(!hasVoted(_shardId, _index));
+        require(getNotaryInCommittee(_shardId) == msg.sender);
+
+        castVote(_shardId, _index);
+        uint voteCount = getVoteCount(_shardId);
+        if (voteCount >= QUORUM_SIZE) {
+            lastApprovedCollation[_shardId] = _period;
+            collationRecords[_shardId][_period].isElected = true;
+        }
+        emit VoteSubmitted(_shardId, _chunkRoot, _period, msg.sender);
+    }
+
+    /// Returns total vote count of currentVote
+    /// the vote count is stored in the last byte of currentVote 
+    function getVoteCount(uint _shardId) public view returns (uint) {
+        uint votes = uint(currentVote[_shardId]);
+        // Extra the last byte of currentVote
+        return votes % 256;
+    }
+
+    /// Check if a bit is set, this function is used to check
+    /// if a notary has casted the vote. Right shift currentVote by index 
+    /// and AND with 1, return true if voted, false if not
+    function hasVoted(uint _shardId, uint _index) public view returns (bool) {
+        uint votes = uint(currentVote[_shardId]);
+        // Shift currentVote to right by given index 
+        votes = votes >> (255 - _index);
+        // AND 1 to neglect everything but bit 0, then compare to 1
+        return votes & 1 == 1;
+    }
+
+    /// Check if the empty slots stack is empty
+    function emptyStack() internal view returns(bool) {
+        return emptySlotsStackTop == 0;
+    }
+
+    /// Save one uint into the empty slots stack for notary to use later
+    function stackPush(uint _index) internal {
+        if (emptySlotsStack.length == emptySlotsStackTop)
+            emptySlotsStack.push(_index);
+        else
+            emptySlotsStack[emptySlotsStackTop] = _index;
+
+        ++emptySlotsStackTop;
     }
 
     /// To keep track of notary size in between periods, we call updateNotarySampleSize
@@ -200,25 +255,24 @@ contract SMC {
         sampleSizeLastUpdatedPeriod = currentPeriod;
     }
 
-    /// Check if the empty slots stack is empty
-    function emptyStack() internal view returns(bool) {
-        return emptySlotsStackTop == 0;
-    }
-
-    /// Save one uint into the empty slots stack for notary to use later
-    function stackPush(uint index) internal {
-        if (emptySlotsStack.length == emptySlotsStackTop)
-            emptySlotsStack.push(index);
-        else
-            emptySlotsStack[emptySlotsStackTop] = index;
-
-        ++emptySlotsStackTop;
-    }
-
     /// Get one uint out of the empty slots stack for notary index
     function stackPop() internal returns(uint) {
         require(emptySlotsStackTop > 1);
         --emptySlotsStackTop;
         return emptySlotsStack[emptySlotsStackTop];
     }
-}
+
+    /// Set the index bit to one, notary uses this function to cast its vote,
+    /// after the notary casts its vote, we increase currentVote's count by 1
+    function castVote(uint _shardId, uint _index) internal {
+        uint votes = uint(currentVote[_shardId]);
+        // Get the bitfield by shifting 1 to the index
+        uint indexToFlag = 2 ** (255 - _index);
+        // OR with currentVote to cast notary index to 1
+        votes = votes | indexToFlag;
+        // Update vote count
+        votes++;
+        currentVote[_shardId] = bytes32(votes);
+    }
+       
+} 
