@@ -516,6 +516,37 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 
 }
 
+// TestGetCommitteeWithinSamePeriod tests notary registers and samples within the same period
+func TestGetCommitteeWithinSamePeriod(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers.
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+
+	if !notary.Deposited {
+		t.Errorf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
+	}
+
+	if numNotaries.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
+	}
+
+	// Notary 0 samples for itself within the same period after registration
+	sampledAddr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+
+	if addr != sampledAddr {
+		t.Errorf("Unable to sample notary address within same period of registration, got addr: %v", sampledAddr)
+	}
+}
+
 // TestGetCommitteeAfterDeregisters tests notary tries to be in committee after deregistered.
 func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	const notaryCount = 10
