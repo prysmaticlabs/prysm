@@ -52,6 +52,7 @@ type Client interface {
 	Account() *accounts.Account
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
+	DepositFlagSet() bool
 }
 
 // NewClient forms a new struct instance.
@@ -238,4 +239,8 @@ func initSMC(c *shardingClient) (*contracts.SMC, error) {
 
 	}
 	return contract, nil
+}
+
+func (c *shardingClient) DepositFlagSet() bool {
+	return false
 }

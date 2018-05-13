@@ -2,6 +2,7 @@ package notary
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -131,9 +132,13 @@ func submitCollation(shardID int64) error {
 	return nil
 }
 
-// joinNotaryPool checks if the account is a notary in the SMC. If
-// the account is not in the set, it will deposit ETH into contract.
+// joinNotaryPool checks if the deposit flag is true and the account is a
+// notary in the SMC. If the account is not in the set, it will deposit ETH
+// into contract.
 func joinNotaryPool(c client.Client) error {
+	if !c.DepositFlagSet() {
+		return errors.New("join notary pool called when deposit flag was not set")
+	}
 
 	log.Info("Joining notary pool")
 	txOps, err := c.CreateTXOpts(sharding.NotaryDeposit)
