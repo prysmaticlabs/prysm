@@ -463,8 +463,8 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 
 	// Compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical.
 	for i := 0; i < 5; i++ {
-		addr0, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
-		addr1, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(int64(i)))
+		addr0, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+		addr1, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1))
 		if addr0 == addr1 {
 			t.Errorf("Shard 0 committee list is identical to shard 1's committee list")
 		}
@@ -508,7 +508,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 
 	// Verify the unregistered account is not in the notary pool list.
 	for i := 0; i < 10; i++ {
-		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
 		if notaryPoolAddr[10].String() == addr.String() {
 			t.Errorf("Account %s is not a notary", notaryPoolAddr[10].String())
 		}
@@ -562,7 +562,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 
 	// Verify degistered notary 0 is not in the notary pool list.
 	for i := 0; i < 10; i++ {
-		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
 		if notaryPoolAddr[0].String() == addr.String() {
 			t.Errorf("Account %s is not a notary", notaryPoolAddr[0].String())
 		}
