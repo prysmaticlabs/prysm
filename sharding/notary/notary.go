@@ -137,7 +137,7 @@ func submitCollation(shardID int64) error {
 // into contract.
 func joinNotaryPool(c client.Client) error {
 	if !c.DepositFlagSet() {
-		return errors.New("join notary pool called when deposit flag was not set")
+		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
 
 	log.Info("Joining notary pool")
