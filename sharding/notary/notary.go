@@ -140,6 +140,10 @@ func joinNotaryPool(c client.Client) error {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
 
+	if b, err := isAccountInNotaryPool(c); b || err != nil {
+		return err
+	}
+
 	log.Info("Joining notary pool")
 	txOps, err := c.CreateTXOpts(sharding.NotaryDeposit)
 	if err != nil {
