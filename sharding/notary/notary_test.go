@@ -22,8 +22,9 @@ var (
 
 // Mock client for testing notary. Should this go into sharding/client/testing?
 type mockClient struct {
-	smc *contracts.SMC
-	t   *testing.T
+	smc         *contracts.SMC
+	t           *testing.T
+	DepositFlag bool
 }
 
 func (m *mockClient) Account() *accounts.Account {
@@ -47,6 +48,10 @@ func (m *mockClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
+}
+
+func (m *mockClient) DepositFlagSet() bool {
+	return m.DepositFlag
 }
 
 // Unused mockClient methods.
@@ -102,8 +107,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	client := &mockClient{smc, t}
-
+	client := &mockClient{smc: smc, t: t, DepositFlag: false}
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -113,6 +117,13 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
+	client.DepositFlag = false
+	err = joinNotaryPool(client)
+	if err == nil {
+		t.Error("Joined notary pool while --deposit was not present")
+	}
+
+	client.DepositFlag = true
 	err = joinNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
@@ -127,4 +138,20 @@ func TestJoinNotaryPool(t *testing.T) {
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
+
+	// Trying to join while deposited should do nothing
+	err = joinNotaryPool(client)
+	if err != nil {
+		t.Error(err)
+	}
+	backend.Commit()
+
+	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(1).Cmp(numNotaries) != 0 {
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+	}
+
 }
