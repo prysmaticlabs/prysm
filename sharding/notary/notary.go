@@ -72,9 +72,9 @@ func checkSMCForNotary(c client.Client, head *types.Header) error {
 				return err
 			}
 
-			// If the account is selected as collator, submit collation.
+			// If the account is selected as notary, submit collation.
 			if addr == c.Account().Address {
-				log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
+				log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 				err := submitCollation(s)
 				if err != nil {
 					return fmt.Errorf("could not add collation. %v", err)
