@@ -138,4 +138,20 @@ func TestJoinNotaryPool(t *testing.T) {
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
+
+	// Trying to join while deposited should do nothing
+	err = joinNotaryPool(client)
+	if err != nil {
+		t.Error(err)
+	}
+	backend.Commit()
+
+	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(1).Cmp(numNotaries) != 0 {
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+	}
+
 }
