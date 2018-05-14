@@ -69,8 +69,10 @@ contract SMC {
 
     /// Checks if a notary with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
-    function getNotaryInCommittee(uint _shardId, uint _index) public view returns(address) {
+    function getNotaryInCommittee(uint _shardId) public view returns(address) {
         uint period = block.number / PERIOD_LENGTH;
+
+        updateNotarySampleSize();
 
         // Determine notary pool length based on notary sample size
         uint sampleSize;
@@ -80,10 +82,13 @@ contract SMC {
             sampleSize = currentPeriodNotarySampleSize;
         }
 
-      // Get the most recent block number before the period started
+        // Get the notary pool index to concatenate with shardId and blockHash for random sample
+        uint poolIndex = notaryRegistry[msg.sender].poolIndex;
+
+        // Get the most recent block number before the period started
         uint latestBlock = period * PERIOD_LENGTH - 1;
         uint latestBlockHash = uint(block.blockhash(latestBlock));
-        uint index = uint(keccak256(latestBlockHash, _index, _shardId)) % sampleSize;
+        uint index = uint(keccak256(latestBlockHash, poolIndex, _shardId)) % sampleSize;
 
         return notaryPool[index];
     }
@@ -194,7 +199,7 @@ contract SMC {
         require(_chunkRoot == collationRecords[_shardId][_period].chunkRoot);
         require(notaryRegistry[msg.sender].deposited);
         require(!hasVoted(_shardId, _index));
-        require(getNotaryInCommittee(_shardId, _index) == msg.sender);
+        require(getNotaryInCommittee(_shardId) == msg.sender);
 
         castVote(_shardId, _index);
         uint voteCount = getVoteCount(_shardId);
