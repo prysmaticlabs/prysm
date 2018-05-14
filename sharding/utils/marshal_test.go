@@ -48,44 +48,49 @@ func TestConvertInterface(t *testing.T) {
 
 } */
 func TestSize(t *testing.T) {
-	size := int64(8)
-	blob := buildrawblob(size)
-	chunksafterSerialize := size / chunkDataSize
-	terminalchunk := size % chunkDataSize
-	if terminalchunk != 0 {
-		chunksafterSerialize = chunksafterSerialize + 1
-	}
-	chunksafterSerialize = chunksafterSerialize * size
-	sizeafterSerialize := chunksafterSerialize * chunkSize
-	serializedblob, err := Serialize(blob)
-	if err != nil {
-		t.Fatalf("Error Serializing blob:%v %v", err, serializedblob)
-	}
+	for i := 0; i < 300; i++ {
+		size := int64(i)
+		blob := buildrawblob(size)
+		chunksafterSerialize := size / chunkDataSize
+		terminalchunk := size % chunkDataSize
+		if terminalchunk != 0 {
+			chunksafterSerialize = chunksafterSerialize + 1
+		}
+		chunksafterSerialize = chunksafterSerialize * size
+		sizeafterSerialize := chunksafterSerialize * chunkSize
+		serializedblob, err := Serialize(blob)
+		if err != nil {
+			t.Errorf("Error Serializing blob:%v\n %v", err, serializedblob)
+		}
 
-	if int64(len(serializedblob)) != sizeafterSerialize {
+		if int64(len(serializedblob)) != sizeafterSerialize {
 
-		t.Fatalf("Error Serializing blobs the lengths are not the same: %v , %v", int64(len(serializedblob)), sizeafterSerialize)
+			t.Errorf("Error Serializing blobs the lengths are not the same:\n %d \n %d", int64(len(serializedblob)), sizeafterSerialize)
 
+		}
 	}
 
 }
 func TestSerializeAndDeserializeblob(t *testing.T) {
 
-	blob := buildrawblob(330)
+	for i := 1; i < 300; i++ {
 
-	serializedblob, err := Serialize(blob)
+		blob := buildrawblob(int64(i))
 
-	if err != nil {
-		t.Fatalf("Error Serializing blob:%v %v", err, serializedblob)
-	}
-	raw, err2 := Deserialize(serializedblob)
-	if err2 != nil {
-		t.Fatalf("Error Serializing blob:%v due to %v", raw, err2)
-	}
+		serializedblob, err := Serialize(blob)
 
-	if !reflect.DeepEqual(blob, raw) {
+		if err != nil {
+			t.Errorf("Error Serializing blob at index %d:\n%v\n%v", i, err, serializedblob)
+		}
+		raw, err2 := Deserialize(serializedblob)
+		if err2 != nil {
+			t.Errorf("Error Serializing blob at index %d:\n%v due to \n%v", i, raw, err2)
+		}
 
-		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same:\n\n %v \n\n %v \n\n %v", blob, serializedblob, raw)
+		if !reflect.DeepEqual(blob, raw) {
+
+			t.Errorf("Error Serializing blobs at index %d, the serialized and deserialized versions are not the same:\n\n %v \n\n %v \n\n %v", i, blob, serializedblob, raw)
+		}
 	}
 
 }
