@@ -48,7 +48,7 @@ func TestConvertInterface(t *testing.T) {
 
 } */
 func TestSize(t *testing.T) {
-	size := int64(800)
+	size := int64(8)
 	blob := buildrawblob(size)
 	chunksafterSerialize := size / chunkDataSize
 	terminalchunk := size % chunkDataSize
@@ -71,9 +71,7 @@ func TestSize(t *testing.T) {
 }
 func TestSerializeAndDeserializeblob(t *testing.T) {
 
-	var testbody interface{}
-
-	blob := buildrawblob(10)
+	blob := buildrawblob(330)
 
 	serializedblob, err := Serialize(blob)
 
@@ -85,9 +83,9 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 		t.Fatalf("Error Serializing blob:%v due to %v", raw, err2)
 	}
 
-	if !reflect.DeepEqual(blob, testbody) {
+	if !reflect.DeepEqual(blob, raw) {
 
-		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same: %v ------%v ------ %v", blob, serializedblob, testbody)
+		t.Fatalf("Error Serializing blobs, the serialized and deserialized versions are not the same:\n\n %v \n\n %v \n\n %v", blob, serializedblob, raw)
 	}
 
 }
