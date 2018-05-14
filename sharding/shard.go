@@ -22,8 +22,8 @@ type Shard struct {
 	shardID *big.Int
 }
 
-// MakeShard creates an instance of a Shard struct given a shardID.
-func MakeShard(shardID *big.Int, shardDB shardBackend) *Shard {
+// NewShard creates an instance of a Shard struct given a shardID.
+func NewShard(shardID *big.Int, shardDB shardBackend) *Shard {
 	return &Shard{
 		shardID: shardID,
 		shardDB: shardDB,
@@ -66,15 +66,15 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	if err != nil {
 		return nil, err
 	}
-	if header == nil {
-		return nil, fmt.Errorf("header not found")
-	}
 
 	body, err := s.BodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
 		return nil, err
 	}
-	return &Collation{header: header, body: body}, nil
+	// TODO: deserializes the body into a tx's object instead of using
+	// nil as the third arg to MakeCollation.
+	col := NewCollation(header, body, nil)
+	return col, nil
 }
 
 // CanonicalHeaderHash gets a collation header hash that has been set as
@@ -104,8 +104,12 @@ func (s *Shard) CanonicalHeaderHash(shardID *big.Int, period *big.Int) (*common.
 func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collation, error) {
 	h, err := s.CanonicalHeaderHash(shardID, period)
 	if err != nil {
-		return nil, fmt.Errorf("hash not found: %v", err)
+		return nil, fmt.Errorf("error while getting canoncial header hash: %v", err)
 	}
+	if h == nil {
+		return nil, fmt.Errorf("header not found")
+	}
+
 	collation, err := s.CollationByHash(h)
 	if err != nil {
 		return nil, fmt.Errorf("no canonical collation found for hash: %v", err)
