@@ -37,6 +37,12 @@ type collationHeaderData struct {
 	ProposerSignature []byte          // the proposer's signature for calculating collation hash.
 }
 
+// NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
+// and provide the body and transactions upon creation.
+func NewCollation(header *CollationHeader, body []byte, transactions []*types.Transaction) *Collation {
+	return &Collation{header, body, transactions}
+}
+
 // NewCollationHeader initializes a collation header struct.
 func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.Int, proposerAddress *common.Address, proposerSignature []byte) *CollationHeader {
 	data := collationHeaderData{
@@ -92,12 +98,6 @@ func (c *Collation) Transactions() []*types.Transaction { return c.transactions 
 // ProposerAddress is the coinbase addr of the creator for the collation.
 func (c *Collation) ProposerAddress() *common.Address {
 	return c.header.data.ProposerAddress
-}
-
-// AddTransaction adds to the collation's body of tx blobs.
-func (c *Collation) AddTransaction(tx *types.Transaction) {
-	// TODO: Include blob serialization instead.
-	c.transactions = append(c.transactions, tx)
 }
 
 // CalculateChunkRoot updates the collation header's chunk root based on the body.

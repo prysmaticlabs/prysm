@@ -14,8 +14,8 @@ type ShardKV struct {
 	kv map[common.Hash][]byte
 }
 
-// MakeShardKV initializes a keyval store in memory.
-func MakeShardKV() *ShardKV {
+// NewShardKV initializes a keyval store in memory.
+func NewShardKV() *ShardKV {
 	return &ShardKV{kv: make(map[common.Hash][]byte)}
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 func Test_ShardKVPut(t *testing.T) {
-	kv := MakeShardKV()
+	kv := NewShardKV()
 	hash := common.StringToHash("ralph merkle")
 
 	if err := kv.Put(hash, []byte{1, 2, 3}); err != nil {
@@ -16,7 +16,7 @@ func Test_ShardKVPut(t *testing.T) {
 }
 
 func Test_ShardKVHas(t *testing.T) {
-	kv := MakeShardKV()
+	kv := NewShardKV()
 	hash := common.StringToHash("ralph merkle")
 
 	if err := kv.Put(hash, []byte{1, 2, 3}); err != nil {
@@ -34,7 +34,7 @@ func Test_ShardKVHas(t *testing.T) {
 }
 
 func Test_ShardKVGet(t *testing.T) {
-	kv := MakeShardKV()
+	kv := NewShardKV()
 	hash := common.StringToHash("ralph merkle")
 
 	if err := kv.Put(hash, []byte{1, 2, 3}); err != nil {
@@ -57,7 +57,7 @@ func Test_ShardKVGet(t *testing.T) {
 }
 
 func Test_ShardKVDelete(t *testing.T) {
-	kv := MakeShardKV()
+	kv := NewShardKV()
 	hash := common.StringToHash("ralph merkle")
 
 	if err := kv.Put(hash, []byte{1, 2, 3}); err != nil {
