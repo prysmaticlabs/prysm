@@ -27,6 +27,9 @@ func TestCollation_Transactions(t *testing.T) {
 	}
 }
 
+//TODO: Add test for converting *types.Transaction into raw blobs
+
+//Tests thta Transactions can be serialised
 func TestSerialize(t *testing.T) {
 	tests := []struct {
 		transactions []*types.Transaction
@@ -51,7 +54,7 @@ func TestSerialize(t *testing.T) {
 
 		results, err := c.Serialize()
 		if err != nil {
-			t.Fatalf("%v ----%v---%v", err, results, c.transactions)
+			t.Fatalf("%v\n %v\n %v", err, results, c.transactions)
 		}
 
 	}

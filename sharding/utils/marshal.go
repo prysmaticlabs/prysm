@@ -1,9 +1,7 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 )
 
 var (
@@ -12,16 +10,20 @@ var (
 	chunkDataSize = chunkSize - indicatorSize
 )
 
+// Flags to add to chunk delimiter.
 type Flags struct {
 	skipEvmExecution bool
 }
 
+// RawBlob type which will contain flags and data for serialization.
 type RawBlob struct {
 	flags Flags
 	data  []byte
 }
 
-// ConvertInterface converts inputted interface to the required type of interface, ex: slice.
+/*
+* Might be needed in part 2 of serialisation
+* ConvertInterface converts inputted interface to the required type of interface, ex: slice.
 func ConvertInterfacetoBytes(arg interface{}) ([]byte, error) {
 	val := reflect.ValueOf(arg)
 	if val.Kind() == reflect.Slice {
@@ -39,26 +41,12 @@ func ConvertInterfacetoBytes(arg interface{}) ([]byte, error) {
 	return nil, err
 
 }
+*/
 
-func convertbyteToInterface(arg []byte) []interface{} {
-	length := int64(len(arg))
-	newtype := make([]interface{}, length)
-	for i, v := range arg {
-		newtype[i] = v
-	}
-
-	return newtype
-}
-
-func ConvertToInterface(arg interface{}) []interface{} {
-	val := reflect.ValueOf(arg)
-	length := val.Len()
-	newtype := make([]interface{}, length)
-	for i := 0; i < length; i++ {
-		newtype[i] = val.Index(i)
-	}
-
-	return newtype
+// ConvertToRawBlob will convert any supported type into a the RawBlob type.
+func ConvertToRawBlob(arg interface{}) ([]RawBlob, error) {
+	//TODO: will be done in part 2 to convert any type to a rawBlob
+	return nil, nil
 }
 
 // serializeBlob parses the blob and serializes it appropriately.
@@ -148,9 +136,6 @@ func serializeBlob(cb RawBlob) ([]byte, error) {
 func Serialize(rawblobs []RawBlob) ([]byte, error) {
 	length := int64(len(rawblobs))
 
-	if length == 0 {
-		return nil, fmt.Errorf("Validation failed: Collation Body has to be a non-zero value")
-	}
 	serialisedData := []byte{}
 
 	//Loops through all the blobs and serializes them into chunks
@@ -168,9 +153,9 @@ func Serialize(rawblobs []RawBlob) ([]byte, error) {
 }
 
 // Deserialize results in the byte array being deserialised and separated into its respective interfaces.
-func Deserialize(collationbody []byte) ([]RawBlob, error) {
+func Deserialize(data []byte) ([]RawBlob, error) {
 
-	length := int64(len(collationbody))
+	length := int64(len(data))
 	chunksNumber := length / chunkSize
 	indicatorByte := byte(0)
 	tempbody := RawBlob{}
@@ -182,28 +167,28 @@ func Deserialize(collationbody []byte) ([]RawBlob, error) {
 
 		// Tests if the chunk delimiter is zero, if it is it will append the data chunk
 		// to tempbody
-		if collationbody[indicatorIndex] == indicatorByte || collationbody[indicatorIndex] == byte(128) {
-			tempbody.data = append(tempbody.data, collationbody[(indicatorIndex+1):(i)*chunkSize]...)
+		if data[indicatorIndex] == indicatorByte || data[indicatorIndex] == byte(128) {
+			tempbody.data = append(tempbody.data, data[(indicatorIndex+1):(i)*chunkSize]...)
 
-		} else if collationbody[indicatorIndex] == byte(31) || collationbody[indicatorIndex] == byte(159) {
-			if collationbody[indicatorIndex] == byte(159) {
+		} else if data[indicatorIndex] == byte(31) || data[indicatorIndex] == byte(159) {
+			if data[indicatorIndex] == byte(159) {
 				tempbody.flags.skipEvmExecution = true
 			}
-			tempbody.data = append(tempbody.data, collationbody[(indicatorIndex+1)])
+			tempbody.data = append(tempbody.data, data[(indicatorIndex+1):indicatorIndex+1+chunkDataSize]...)
 			deserializedblob = append(deserializedblob, tempbody)
 			tempbody = RawBlob{}
 
 		} else {
 			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
 			// add it and append to the deserializedblob slice. The tempbody signifies a single deserialized blob
-			terminalIndex := int64(collationbody[indicatorIndex])
+			terminalIndex := int64(data[indicatorIndex])
 			//Check if EVM flag is equal to 1
-			flagindex := collationbody[indicatorIndex] >> 7
+			flagindex := data[indicatorIndex] >> 7
 			if flagindex == byte(1) {
-				terminalIndex = int64(collationbody[indicatorIndex]) - 128
+				terminalIndex = int64(data[indicatorIndex]) - 128
 				tempbody.flags.skipEvmExecution = true
 			}
-			tempbody.data = append(tempbody.data, collationbody[(indicatorIndex+1):(indicatorIndex+1+terminalIndex)]...)
+			tempbody.data = append(tempbody.data, data[(indicatorIndex+1):(indicatorIndex+1+terminalIndex)]...)
 			deserializedblob = append(deserializedblob, tempbody)
 			tempbody = RawBlob{}
 

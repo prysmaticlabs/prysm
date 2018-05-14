@@ -118,7 +118,10 @@ func (c *Collation) CalculateChunkRoot() {
 // Serialize method  serializes the collation body
 func (c *Collation) Serialize() ([]byte, error) {
 
-	blob := utils.ConvertToInterface(c.transactions)
+	blob, err := utils.ConvertToRawBlob(c.transactions)
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
 
 	serializedtx, err := utils.Serialize(blob)
 
