@@ -79,6 +79,9 @@ func serializeBlob(cb RawBlob) ([]byte, error) {
 	if chunksNumber == 0 {
 		paddedbytes := make([]byte, (chunkDataSize - length))
 		indicatorByte[0] = byte(terminalLength)
+		if cb.flags.skipEvmExecution {
+			indicatorByte[0] |= (1 << 7)
+		}
 		tempbody = append(indicatorByte, append(cb.data, paddedbytes...)...)
 		return tempbody, nil
 	}
@@ -170,13 +173,13 @@ func Deserialize(collationbody []byte) ([]RawBlob, error) {
 	length := int64(len(collationbody))
 	chunksNumber := length / chunkSize
 	indicatorByte := byte(0)
-	var tempbody RawBlob
+	tempbody := RawBlob{}
 	var deserializedblob []RawBlob
 
 	// This separates the byte array into its separate blobs
 	for i := int64(1); i <= chunksNumber; i++ {
 		indicatorIndex := (i - 1) * chunkSize
-		var terminalIndex int64
+
 		// Tests if the chunk delimiter is zero, if it is it will append the data chunk
 		// to tempbody
 		if collationbody[indicatorIndex] == indicatorByte || collationbody[indicatorIndex] == byte(128) {
@@ -193,12 +196,12 @@ func Deserialize(collationbody []byte) ([]RawBlob, error) {
 		} else {
 			// Since the chunk delimiter in non-zero now we can infer that it is a terminal chunk and
 			// add it and append to the deserializedblob slice. The tempbody signifies a single deserialized blob
+			terminalIndex := int64(collationbody[indicatorIndex])
+			//Check if EVM flag is equal to 1
 			flagindex := collationbody[indicatorIndex] >> 7
 			if flagindex == byte(1) {
 				terminalIndex = int64(collationbody[indicatorIndex]) - 128
 				tempbody.flags.skipEvmExecution = true
-			} else {
-				terminalIndex = int64(collationbody[indicatorIndex])
 			}
 			tempbody.data = append(tempbody.data, collationbody[(indicatorIndex+1):(indicatorIndex+1+terminalIndex)]...)
 			deserializedblob = append(deserializedblob, tempbody)
