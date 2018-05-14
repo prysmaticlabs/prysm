@@ -48,12 +48,11 @@ func TestSerialize(t *testing.T) {
 		for _, tx := range tt.transactions {
 			c.AddTransaction(tx)
 		}
-		/*
-			results, err := c.Serialize()
-			if err != nil {
-				t.Fatalf("%v ----%v---%v", err, results, c.transactions)
-			}
-		*/
+
+		results, err := c.Serialize()
+		if err != nil {
+			t.Fatalf("%v ----%v---%v", err, results, c.transactions)
+		}
 
 	}
 

@@ -6,18 +6,27 @@ import (
 	"testing"
 )
 
-func buildtxblobs(size int64) []interface{} {
-	tempbody := make([]interface{}, size)
+func buildrawblob(size int64) []RawBlob {
+	tempbody := make([]RawBlob, size)
 	for i := int64(0); i < size; i++ {
-		tempbody[i] = buildblob(size)
+		var rawblob RawBlob
+		rawblob.data = buildblob(size)
+		flagset := byte(rand.Int()) >> 7
+		if flagset == byte(1) {
+			rawblob.flags.skipEvmExecution = true
+
+		}
+
+		tempbody[i] = rawblob
 
 	}
 	return tempbody
+
 }
 
-func buildblob(size int64) []interface{} {
+func buildblob(size int64) []byte {
 
-	tempbody := make([]interface{}, size)
+	tempbody := make([]byte, size)
 	for i := int64(0); i < size; i++ {
 		tempbody[i] = byte(rand.Int())
 
@@ -26,6 +35,10 @@ func buildblob(size int64) []interface{} {
 	return tempbody
 
 }
+
+/*
+Might be required in the future for part 2 of serialization
+
 func TestConvertInterface(t *testing.T) {
 	slice := []interface{}{0, 1, 2, 3, 4, 5}
 	convertedValue, err := ConvertInterface(slice, reflect.Slice)
@@ -33,10 +46,10 @@ func TestConvertInterface(t *testing.T) {
 		t.Fatalf("Error: %v %v", err, convertedValue)
 	}
 
-}
+} */
 func TestSize(t *testing.T) {
 	size := int64(800)
-	blob := buildtxblobs(size)
+	blob := buildrawblob(size)
 	chunksafterSerialize := size / chunkDataSize
 	terminalchunk := size % chunkDataSize
 	if terminalchunk != 0 {
@@ -60,16 +73,16 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 	var testbody interface{}
 
-	blob := buildtxblobs(1000)
+	blob := buildrawblob(10)
 
 	serializedblob, err := Serialize(blob)
 
 	if err != nil {
 		t.Fatalf("Error Serializing blob:%v %v", err, serializedblob)
 	}
-	err2 := Deserialize(serializedblob, &testbody)
+	raw, err2 := Deserialize(serializedblob)
 	if err2 != nil {
-		t.Fatalf("Error Serializing blob:%v", err2)
+		t.Fatalf("Error Serializing blob:%v due to %v", raw, err2)
 	}
 
 	if !reflect.DeepEqual(blob, testbody) {
