@@ -242,30 +242,30 @@ func (_SMC *SMCCallerSession) CurrentVote(arg0 *big.Int) ([32]byte, error) {
 	return _SMC.Contract.CurrentVote(&_SMC.CallOpts, arg0)
 }
 
-// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0x673221af.
 //
-// Solidity: function getNotaryInCommittee(_shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, _shardId *big.Int, _index *big.Int) (common.Address, error) {
+// Solidity: function getNotaryInCommittee(_shardId uint256) constant returns(address)
+func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, _shardId *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", _shardId, _index)
+	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", _shardId)
 	return *ret0, err
 }
 
-// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0x673221af.
 //
-// Solidity: function getNotaryInCommittee(_shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCSession) GetNotaryInCommittee(_shardId *big.Int, _index *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId, _index)
+// Solidity: function getNotaryInCommittee(_shardId uint256) constant returns(address)
+func (_SMC *SMCSession) GetNotaryInCommittee(_shardId *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId)
 }
 
-// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0x673221af.
 //
-// Solidity: function getNotaryInCommittee(_shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCCallerSession) GetNotaryInCommittee(_shardId *big.Int, _index *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId, _index)
+// Solidity: function getNotaryInCommittee(_shardId uint256) constant returns(address)
+func (_SMC *SMCCallerSession) GetNotaryInCommittee(_shardId *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId)
 }
 
 // GetVoteCount is a free data retrieval call binding the contract method 0xb2c2f2e8.
