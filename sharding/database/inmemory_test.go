@@ -8,7 +8,7 @@ import (
 )
 
 // Verifies that ShardKV implements the ShardBackend interface.
-var _ = sharding.ShardBackend(&shardKV{})
+var _ = sharding.ShardBackend(&ShardKV{})
 
 func Test_ShardKVPut(t *testing.T) {
 	kv := NewShardKV()
@@ -55,7 +55,7 @@ func Test_ShardKVGet(t *testing.T) {
 
 	hash2 := common.StringToHash("")
 	val2, err := kv.Get(hash2)
-	if err == nil {
+	if val2 != nil {
 		t.Errorf("non-existent key should not have a value. key=%v, value=%v", hash2, val2)
 	}
 }
