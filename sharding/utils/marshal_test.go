@@ -16,9 +16,7 @@ func buildrawblob(size int64) []RawBlob {
 			rawblob.flags.skipEvmExecution = true
 
 		}
-
 		tempbody[i] = rawblob
-
 	}
 	return tempbody
 
@@ -29,9 +27,7 @@ func buildblob(size int64) []byte {
 	tempbody := make([]byte, size)
 	for i := int64(0); i < size; i++ {
 		tempbody[i] = byte(rand.Int())
-
 	}
-
 	return tempbody
 
 }

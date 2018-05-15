@@ -22,6 +22,7 @@ type RawBlob struct {
 	data  []byte
 }
 
+// NewRawBlob builds a raw blob from any interface by using RLP encoding
 func NewRawBlob(i interface{}, skipevm bool) (*RawBlob, error) {
 	data, err := rlp.EncodeToBytes(i)
 	if err != nil {
@@ -30,6 +31,7 @@ func NewRawBlob(i interface{}, skipevm bool) (*RawBlob, error) {
 	return &RawBlob{data: data, flags: Flags{skipEvmExecution: skipevm}}, nil
 }
 
+// ConvertfromRawBlob converts raw blob back from a byte array to its interface
 func ConvertfromRawBlob(blob *RawBlob, i interface{}) error {
 	data := (*blob).data
 	err := rlp.DecodeBytes(data, i)
