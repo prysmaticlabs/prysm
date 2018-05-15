@@ -99,6 +99,7 @@ var (
 	numberOfChunks     = collationsizelimit / chunkSize
 )
 
+// Transactions returns an array of tx's in the collation.
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
 
 // ProposerAddress is the coinbase addr of the creator for the collation.
@@ -115,10 +116,10 @@ func (c *Collation) CalculateChunkRoot() {
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
+// CreateRawBlobs creates raw blobs from transactions.
 func (c *Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
 
 	// It does not skip evm execution by default
-
 	blobs := make([]*utils.RawBlob, len(c.transactions))
 	for i := 0; i < len(c.transactions); i++ {
 
@@ -135,30 +136,22 @@ func (c *Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
 
 }
 
+// ConvertBacktoTx converts raw blobs back to their original transactions.
 func (c *Collation) ConvertBacktoTx(rawblobs []utils.RawBlob) error {
 
-	//	tx := make([]*types.Transaction, len(rawblobs))
 	for i := 0; i < len(rawblobs); i++ {
 
 		err := utils.ConvertfromRawBlob(&rawblobs[i], c.transactions[i])
-
 		if err != nil {
 			return fmt.Errorf("Creation of transactions from raw blobs failed %v", err)
 		}
-
 	}
-
 	return nil
 
 }
 
-// Serialize method  serializes the collation body
+// Serialize method  serializes the collation body to a byte array.
 func (c *Collation) Serialize() ([]byte, error) {
-
-	/*blob, err := utils.ConvertToRawBlob(c.transactions)
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}**/
 
 	blobs, err := c.CreateRawBlobs()
 
@@ -181,6 +174,7 @@ func (c *Collation) Serialize() ([]byte, error) {
 
 }
 
+// Deserialize takes a byte array and converts its back to its original transactions.
 func (c *Collation) Deserialize(serialisedblob []byte) error {
 
 	deserializedblobs, err := utils.Deserialize(serialisedblob)
