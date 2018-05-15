@@ -94,9 +94,9 @@ func (c *Collation) Body() []byte { return c.body }
 
 // Transactions returns an array of tx's in the collation.
 var (
-	collationsizelimit = int64(math.Pow(float64(2), float64(20)))
+	collationSizelimit = int64(math.Pow(float64(2), float64(20)))
 	chunkSize          = int64(32)
-	numberOfChunks     = collationsizelimit / chunkSize
+	numberOfChunks     = collationSizelimit / chunkSize
 )
 
 // Transactions returns an array of tx's in the collation.
@@ -159,30 +159,31 @@ func (c *Collation) Serialize() ([]byte, error) {
 		return nil, fmt.Errorf("%v", err)
 	}
 
-	serializedtx, err := utils.Serialize(blobs)
+	serializedTx, err := utils.Serialize(blobs)
 
 	if err != nil {
 		return nil, fmt.Errorf("%v", err)
 	}
 
-	if int64(len(serializedtx)) > collationsizelimit {
-		serializedtx = serializedtx[0:collationsizelimit]
+	if int64(len(serializedTx)) > collationSizelimit {
+
+		return nil, fmt.Errorf("The serialized body exceeded the collation size limit", serializedTx)
 
 	}
 
-	return serializedtx, nil
+	return serializedTx, nil
 
 }
 
 // Deserialize takes a byte array and converts its back to its original transactions.
-func (c *Collation) Deserialize(serialisedblob []byte) error {
+func (c *Collation) Deserialize(serialisedBlob []byte) error {
 
-	deserializedblobs, err := utils.Deserialize(serialisedblob)
+	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
 
-	err = c.ConvertBacktoTx(deserializedblobs)
+	err = c.ConvertBacktoTx(deserializedBlobs)
 
 	if err != nil {
 		return fmt.Errorf("%v", err)
