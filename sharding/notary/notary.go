@@ -57,10 +57,9 @@ func subscribeBlockHeaders(c client.Client) error {
 // conditions are met.
 func checkSMCForNotary(c client.Client, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
-	period := big.NewInt(0).Div(head.Number, big.NewInt(sharding.PeriodLength))
 	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible notary according to the SMC.
-		addr, err := c.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s), period)
+		addr, err := c.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s))
 
 		if err != nil {
 			return err
@@ -74,9 +73,9 @@ func checkSMCForNotary(c client.Client, head *types.Header) error {
 				return err
 			}
 
-			// If the account is selected as collator, submit collation.
+			// If the account is selected as notary, submit collation.
 			if addr == c.Account().Address {
-				log.Info(fmt.Sprintf("Selected as collator on shard: %d", s))
+				log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 				err := submitCollation(s)
 				if err != nil {
 					return fmt.Errorf("could not add collation. %v", err)
