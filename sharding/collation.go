@@ -135,20 +135,20 @@ func (c *Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
 
 }
 
-func (c *Collation) ConvertBacktoTx(rawblobs []utils.RawBlob) ([]*types.Transaction, error) {
+func (c *Collation) ConvertBacktoTx(rawblobs []utils.RawBlob) error {
 
-	tx := make([]*types.Transaction, len(rawblobs))
+	//	tx := make([]*types.Transaction, len(rawblobs))
 	for i := 0; i < len(rawblobs); i++ {
 
-		err := utils.ConvertfromRawBlob(&rawblobs[i], tx[i])
+		err := utils.ConvertfromRawBlob(&rawblobs[i], c.transactions[i])
 
 		if err != nil {
-			return nil, fmt.Errorf("Creation of transactions from raw blobs failed %v", err)
+			return fmt.Errorf("Creation of transactions from raw blobs failed %v", err)
 		}
 
 	}
 
-	return tx, nil
+	return nil
 
 }
 
@@ -188,7 +188,7 @@ func (c *Collation) Deserialize(serialisedblob []byte) error {
 		return fmt.Errorf("%v", err)
 	}
 
-	c.transactions, err = c.ConvertBacktoTx(deserializedblobs)
+	err = c.ConvertBacktoTx(deserializedblobs)
 
 	if err != nil {
 		return fmt.Errorf("%v", err)
