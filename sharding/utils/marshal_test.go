@@ -47,7 +47,13 @@ func TestSize(t *testing.T) {
 		}
 		chunksafterSerialize = chunksafterSerialize * size
 		sizeafterSerialize := chunksafterSerialize * chunkSize
-		serializedblob, err := Serialize(blob)
+
+		drefbody := make([]*RawBlob, len(blob))
+		for s := 0; s < len(blob); s++ {
+			drefbody[s] = &(blob[s])
+
+		}
+		serializedblob, err := Serialize(drefbody)
 		if err != nil {
 			t.Errorf("Error Serializing blob:%v\n %v", err, serializedblob)
 		}
@@ -66,7 +72,13 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 		blob := buildrawblob(int64(i))
 
-		serializedblob, err := Serialize(blob)
+		drefbody := make([]*RawBlob, len(blob))
+		for s := 0; s < len(blob); s++ {
+			drefbody[s] = &(blob[s])
+
+		}
+
+		serializedblob, err := Serialize(drefbody)
 
 		if err != nil {
 			t.Errorf("Error Serializing blob at index %d:\n%v\n%v", i, err, serializedblob)
