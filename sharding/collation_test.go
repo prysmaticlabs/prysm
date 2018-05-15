@@ -2,6 +2,8 @@ package sharding
 
 import (
 	"math/big"
+	//"github.com/ethereum/go-ethereum/rlp"
+	//"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -52,8 +54,25 @@ func TestSerialize(t *testing.T) {
 			c.AddTransaction(tx)
 		}
 
-		results, err := c.Serialize()
+		/*var tests *types.Transaction
+		yadd := reflect.ValueOf(*c.transactions[3])
+		d := yadd.FieldByName("data").FieldByName("Hash")
+
+		test, err := rlp.EncodeToBytes(c.transactions[3])
 		if err != nil {
+			t.Fatalf("%v\n %v\n %v", err, test, *(c.transactions[0]))
+		}
+		erx := rlp.DecodeBytes(test, &tests)
+
+		dd := reflect.ValueOf(*tests)
+		cv := dd.FieldByName("data").FieldByName("Hash")
+
+		if cv != d {
+			t.Fatalf("%v\n %v\n %v", erx, cv, d)
+		} */
+
+		results, err := c.Serialize()
+		if err == nil {
 			t.Fatalf("%v\n %v\n %v", err, results, c.transactions)
 		}
 

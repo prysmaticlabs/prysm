@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -21,27 +22,22 @@ type RawBlob struct {
 	data  []byte
 }
 
-/*
-* Might be needed in part 2 of serialisation
-* ConvertInterface converts inputted interface to the required type of interface, ex: slice.
-func ConvertInterfacetoBytes(arg interface{}) ([]byte, error) {
-	val := reflect.ValueOf(arg)
-	if val.Kind() == reflect.Slice {
-
-		length := val.Len()
-		newtype := make([]byte, length)
-		for i := 0; i < length; i++ {
-			newtype[i] = val.Index(i).Interface().(byte)
-		}
-
-		return newtype, nil
-
+func NewRawBlob(i interface{}, skipevm bool) (*RawBlob, error) {
+	data, err := rlp.EncodeToBytes(i)
+	if err != nil {
+		return nil, fmt.Errorf("RLP encoding was a failure:%v", err)
 	}
-	err := errors.New("Interface Conversion a failure")
-	return nil, err
-
+	return &RawBlob{data: data, flags: Flags{skipEvmExecution: skipevm}}, nil
 }
-*/
+
+func ConvertfromRawBlob(blob RawBlob, i interface{}) error {
+	err := rlp.DecodeBytes(blob.data, i)
+	if err != nil {
+		return fmt.Errorf("RLP decoding was a failure:%v", err)
+	}
+
+	return nil
+}
 
 // ConvertToRawBlob will convert any supported type into a the RawBlob type.
 func ConvertToRawBlob(arg interface{}) ([]RawBlob, error) {
@@ -50,7 +46,7 @@ func ConvertToRawBlob(arg interface{}) ([]RawBlob, error) {
 }
 
 // serializeBlob parses the blob and serializes it appropriately.
-func serializeBlob(cb RawBlob) ([]byte, error) {
+func SerializeBlob(cb RawBlob) ([]byte, error) {
 
 	length := int64(len(cb.data))
 	terminalLength := length % chunkDataSize
@@ -133,7 +129,7 @@ func serializeBlob(cb RawBlob) ([]byte, error) {
 }
 
 // Serialize takes a set of blobs and converts them to a single byte array.
-func Serialize(rawblobs []RawBlob) ([]byte, error) {
+func Serialize(rawblobs []*RawBlob) ([]byte, error) {
 	length := int64(len(rawblobs))
 
 	serialisedData := []byte{}
@@ -142,7 +138,7 @@ func Serialize(rawblobs []RawBlob) ([]byte, error) {
 	for i := int64(0); i < length; i++ {
 
 		data := rawblobs[i]
-		refinedData, err := serializeBlob(data)
+		refinedData, err := SerializeBlob(*data)
 		if err != nil {
 			return nil, fmt.Errorf("Index %v :  %v", i, err)
 		}
