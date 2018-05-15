@@ -36,17 +36,6 @@ func buildblob(size int64) []byte {
 
 }
 
-/*
-Might be required in the future for part 2 of serialization
-
-func TestConvertInterface(t *testing.T) {
-	slice := []interface{}{0, 1, 2, 3, 4, 5}
-	convertedValue, err := ConvertInterface(slice, reflect.Slice)
-	if err != nil {
-		t.Fatalf("Error: %v %v", err, convertedValue)
-	}
-
-} */
 func TestSize(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		size := int64(i)
