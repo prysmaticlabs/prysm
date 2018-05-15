@@ -30,8 +30,9 @@ func NewRawBlob(i interface{}, skipevm bool) (*RawBlob, error) {
 	return &RawBlob{data: data, flags: Flags{skipEvmExecution: skipevm}}, nil
 }
 
-func ConvertfromRawBlob(blob RawBlob, i interface{}) error {
-	err := rlp.DecodeBytes(blob.data, i)
+func ConvertfromRawBlob(blob *RawBlob, i interface{}) error {
+	data := (*blob).data
+	err := rlp.DecodeBytes(data, i)
 	if err != nil {
 		return fmt.Errorf("RLP decoding was a failure:%v", err)
 	}
@@ -137,8 +138,8 @@ func Serialize(rawblobs []*RawBlob) ([]byte, error) {
 	//Loops through all the blobs and serializes them into chunks
 	for i := int64(0); i < length; i++ {
 
-		data := rawblobs[i]
-		refinedData, err := SerializeBlob(*data)
+		data := *rawblobs[i]
+		refinedData, err := SerializeBlob(data)
 		if err != nil {
 			return nil, fmt.Errorf("Index %v :  %v", i, err)
 		}

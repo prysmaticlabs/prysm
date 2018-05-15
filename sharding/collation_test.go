@@ -72,9 +72,12 @@ func TestSerialize(t *testing.T) {
 		} */
 
 		results, err := c.Serialize()
-		if err == nil {
-			t.Fatalf("%v\n %v\n %v", err, results, c.transactions)
-		}
+
+		t.Errorf("%v\n %v\n %v", err, results, c.transactions)
+
+		err = c.Deserialize(results)
+
+		t.Errorf("%v\n %v\n %v", err, results, c.transactions)
 
 	}
 
