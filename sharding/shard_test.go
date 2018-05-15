@@ -2,6 +2,7 @@ package sharding
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -10,6 +11,26 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/sharding/database"
 )
+
+type mockShardDB struct {
+	kv map[common.Hash][]byte
+}
+
+func (m *mockShardDB) Get(k common.Hash) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockShardDB) Has(k common.Hash) bool {
+	return false
+}
+
+func (m *mockShardDB) Put(k common.Hash, v []byte) error {
+	return fmt.Errorf("error updating db")
+}
+
+func (m *mockShardDB) Delete(k common.Hash) error {
+	return fmt.Errorf("error deleting value in db")
+}
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.
 func (c *Collation) Hash() (hash common.Hash) {
@@ -41,8 +62,16 @@ func TestShard_HeaderByHash(t *testing.T) {
 	emptyHash := common.StringToHash("")
 	emptyAddr := common.StringToAddress("")
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
+
+	// creates a mockDB that always returns nil values from .Get and errors in every other method.
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
+
+	// creates a well-functioning shardDB.
 	shardDB := database.NewShardKV()
+
+	// creates a shard with a functioning DB and another one with a faulty DB.
 	shard := NewShard(big.NewInt(1), shardDB)
+	errorShard := NewShard(big.NewInt(1), mockDB)
 
 	if err := shard.SaveHeader(header); err != nil {
 		t.Fatalf("cannot save collation header: %v", err)
@@ -53,6 +82,13 @@ func TestShard_HeaderByHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not fetch collation header by hash: %v", err)
 	}
+
+	// checks for errors if shardDB value decoding fails (in the case of the
+	// shard with the faulty DB).
+	if _, err := errorShard.HeaderByHash(&hash); err == nil {
+		t.Errorf("if a faulty db is used, RLP decoding should fail")
+	}
+
 	// Compare the hashes.
 	if header.Hash() != dbHeader.Hash() {
 		t.Errorf("headers do not match. want=%v. got=%v", header, dbHeader)
@@ -70,19 +106,25 @@ func TestShard_CollationByHash(t *testing.T) {
 		body:   []byte{1, 2, 3},
 	}
 
-	// TODO: check if body by chunk root fails!
-
-	// We set the chunk root.
-	collation.CalculateChunkRoot()
-
 	shardDB := database.NewShardKV()
 	shard := NewShard(big.NewInt(1), shardDB)
 
 	hash := collation.Header().Hash()
 
+	// should throw error if saving the collation before setting the chunk root
+	// in header.
+	if err := shard.SaveCollation(collation); err == nil {
+		t.Errorf("should not be able to save collation before setting header chunk root")
+	}
+
+	// we set the chunk root.
+	collation.CalculateChunkRoot()
+
+	// calculate a new hash now that chunk root is set.
+	newHash := collation.Header().Hash()
+
 	// should not be able to fetch collation without saving first.
-	_, err := shard.CollationByHash(&hash)
-	if err == nil {
+	if _, err := shard.CollationByHash(&newHash); err == nil {
 		t.Errorf("should not be able to fetch collation before saving first")
 	}
 
@@ -106,19 +148,22 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 	period := big.NewInt(1)
 	proposerAddress := common.StringToAddress("")
 	proposerSignature := []byte{}
-	emptyHash := common.StringToHash("")
-	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
+	header := NewCollationHeader(shardID, nil, period, &proposerAddress, proposerSignature)
+
+	collation := NewCollation(header, []byte{1, 2, 3}, nil)
+
+	collation.CalculateChunkRoot()
 
 	shardDB := database.NewShardKV()
 	shard := NewShard(shardID, shardDB)
 
-	// should not be able to set as canonical before saving the header.
+	// should not be able to set as canonical before saving the header and body first.
 	if err := shard.SetCanonical(header); err == nil {
-		t.Errorf("cannot set as canonical before saving header first")
+		t.Errorf("cannot set as canonical before saving header and body first")
 	}
 
-	if err := shard.SaveHeader(header); err != nil {
-		t.Fatalf("failed to save header to shardDB: %v", err)
+	if err := shard.SaveCollation(collation); err != nil {
+		t.Fatalf("failed to save collation to shardDB: %v", err)
 	}
 
 	if err := shard.SetCanonical(header); err != nil {
@@ -130,6 +175,10 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 	canonicalHeaderHash, err := shard.CanonicalHeaderHash(shardID, period)
 	if err != nil {
 		t.Fatalf("failed to get canonical header hash from shardDB: %v", err)
+	}
+
+	if _, err := shard.CanonicalHeaderHash(big.NewInt(100), big.NewInt(300)); err == nil {
+		t.Errorf("should throw error if a non-existent period, shardID pair is used")
 	}
 
 	if canonicalHeaderHash.String() != headerHash.String() {
@@ -147,35 +196,61 @@ func TestShard_CanonicalCollation(t *testing.T) {
 
 	shardDB := database.NewShardKV()
 	shard := NewShard(shardID, shardDB)
-	otherShard := NewShard(big.NewInt(2), shardDB)
 
 	collation := &Collation{
 		header: header,
 		body:   []byte{1, 2, 3},
 	}
 
-	// We set the chunk root.
+	// we set the chunk root.
 	collation.CalculateChunkRoot()
 
+	// saves the full collation in the shardDB.
 	if err := shard.SaveCollation(collation); err != nil {
 		t.Fatalf("failed to save collation to shardDB: %v", err)
 	}
 
-	if err := shard.SetCanonical(header); err != nil {
-		t.Fatalf("failed to set header as canonical: %v", err)
+	// fetching non-existent shardID, period pair should throw error.
+	if _, err := shard.CanonicalCollation(big.NewInt(100), big.NewInt(100)); err == nil {
+		t.Errorf("fetching a")
 	}
 
-	// should not be allowed to set as canonical in a different shard.
-	if err := otherShard.SetCanonical(header); err == nil {
-		t.Errorf("should not be able to set header with ShardID=%v as canonical in other shard=%v", header.ShardID(), big.NewInt(2))
+	// sets the correct information as canonical once the collation has been saved to shardDB.
+	if err := shard.SetCanonical(header); err != nil {
+		t.Fatalf("was not able to set header as canonical: %v", err)
 	}
 
 	canonicalCollation, err := shard.CanonicalCollation(shardID, period)
 	if err != nil {
 		t.Fatalf("failed to get canonical collation from shardDB: %v", err)
 	}
+
 	if canonicalCollation.Hash() != collation.Hash() {
 		t.Errorf("collations are not equal. want=%v. got=%v.", collation, canonicalCollation)
+	}
+}
+
+func TestShard_SetCanonical(t *testing.T) {
+	chunkRoot := common.StringToHash("")
+	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
+
+	shardDB := database.NewShardKV()
+	shard := NewShard(big.NewInt(1), shardDB)
+	otherShard := NewShard(big.NewInt(2), shardDB)
+
+	// saving the header but not the full collation, and then trying to fetch
+	// a canonical collation should throw an error.
+	if err := shard.SaveHeader(header); err != nil {
+		t.Fatalf("failed to save header to shardDB: %v", err)
+	}
+
+	if err := shard.SetCanonical(header); err == nil {
+		t.Errorf("should not be able to set collation as canonical if header has no corresponding saved body")
+	}
+
+	// should not be allowed to set as canonical in a different shard.
+	if err := otherShard.SetCanonical(header); err == nil {
+		t.Errorf("should not be able to set header with ShardID=%v as canonical in other shard=%v", header.ShardID(), big.NewInt(2))
 	}
 }
 
@@ -199,6 +274,12 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 		t.Errorf("cannot fetch body by chunk root: %v", err)
 	}
 
+	// it should throw error if fetching non-existent chunk root.
+	emptyHash := common.StringToHash("")
+	if _, err := shard.BodyByChunkRoot(&emptyHash); err == nil {
+		t.Errorf("non-existent chunk root should throw error")
+	}
+
 	if !bytes.Equal(body, dbBody) {
 		t.Errorf("bodies not equal. want=%v. got=%v", body, dbBody)
 	}
@@ -220,8 +301,13 @@ func TestShard_CheckAvailability(t *testing.T) {
 		body:   []byte{1, 2, 3},
 	}
 
-	// We set the chunk root.
+	// we set the chunk root.
 	collation.CalculateChunkRoot()
+
+	// should throw error if checking availability before header is even saved.
+	if _, err := shard.CheckAvailability(header); err == nil {
+		t.Errorf("error should be thrown: cannot check availability before saving header first")
+	}
 
 	if err := shard.SaveBody(collation.body); err != nil {
 		t.Fatalf("cannot save body: %v", err)
@@ -233,6 +319,40 @@ func TestShard_CheckAvailability(t *testing.T) {
 	}
 	if !available {
 		t.Errorf("collation body is not available: chunkRoot=%v, body=%v", header.ChunkRoot(), collation.body)
+	}
+}
+
+func TestShard_SetAvailability(t *testing.T) {
+	chunkRoot := common.StringToHash("")
+	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
+
+	// creates a mockDB that always returns nil values from .Get and errors in every other method.
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
+
+	// creates a well-functioning shardDB.
+	shardDB := database.NewShardKV()
+
+	// creates a shard with a functioning DB and another one with a faulty DB.
+	shard := NewShard(big.NewInt(1), shardDB)
+	errorShard := NewShard(big.NewInt(1), mockDB)
+
+	if err := errorShard.SetAvailability(&chunkRoot, false); err == nil {
+		t.Errorf("should not be able to set availability when using a faulty DB")
+	}
+
+	// sets the availability in a well-functioning shard with a good shardDB.
+	if err := shard.SetAvailability(&chunkRoot, false); err != nil {
+		t.Errorf("could not set availability for chunk root")
+	}
+
+	available, err := shard.CheckAvailability(header)
+	if err != nil {
+		t.Fatalf("unable to check availability for header: %v", err)
+	}
+
+	// availability should have been set to false.
+	if available {
+		t.Errorf("collation header should have been set to unavailable, instead was saved as available")
 	}
 }
 
@@ -257,5 +377,27 @@ func TestShard_SaveCollation(t *testing.T) {
 
 	if err := shard.SaveCollation(collation); err == nil {
 		t.Errorf("cannot save collation in shard with wrong shardID")
+	}
+}
+
+func TestShard_SaveHeader(t *testing.T) {
+	// creates a mockDB that always returns nil values from .Get and errors in every other method.
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
+	emptyHash := common.StringToHash("")
+	errorShard := NewShard(big.NewInt(1), mockDB)
+
+	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), nil, []byte{})
+	if err := errorShard.SaveHeader(header); err == nil {
+		t.Errorf("should not be able to save header if a faulty shardDB is used")
+	}
+}
+
+func TestShard_SaveBody(t *testing.T) {
+	// creates a mockDB that always returns nil values from .Get and errors in every other method.
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
+	errorShard := NewShard(big.NewInt(1), mockDB)
+
+	if err := errorShard.SaveBody([]byte{1, 2, 3}); err == nil {
+		t.Errorf("should not be able to save body if a faulty shardDB is used")
 	}
 }

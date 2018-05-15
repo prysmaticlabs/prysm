@@ -4,7 +4,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/sharding"
 )
+
+// Verifies that ShardKV implements the ShardBackend interface.
+var _ = sharding.ShardBackend(&shardKV{})
 
 func Test_ShardKVPut(t *testing.T) {
 	kv := NewShardKV()

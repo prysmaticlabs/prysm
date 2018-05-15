@@ -74,11 +74,7 @@ func (h *CollationHeader) ChunkRoot() *common.Hash { return h.data.ChunkRoot }
 
 // EncodeRLP gives an encoded representation of the collation header.
 func (h *CollationHeader) EncodeRLP() ([]byte, error) {
-	encoded, err := rlp.EncodeToBytes(&h.data)
-	if err != nil {
-		return nil, err
-	}
-	return encoded, nil
+	return rlp.EncodeToBytes(&h.data)
 }
 
 // DecodeRLP uses an RLP Stream to populate the data field of a collation header.

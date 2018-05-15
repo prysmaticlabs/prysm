@@ -9,7 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-type shardBackend interface {
+// ShardBackend defines an interface for a shardDB's necessary method
+// signatures.
+type ShardBackend interface {
 	Get(k common.Hash) ([]byte, error)
 	Has(k common.Hash) bool
 	Put(k common.Hash, val []byte) error
@@ -18,12 +20,12 @@ type shardBackend interface {
 
 // Shard base struct.
 type Shard struct {
-	shardDB shardBackend
+	shardDB ShardBackend
 	shardID *big.Int
 }
 
 // NewShard creates an instance of a Shard struct given a shardID.
-func NewShard(shardID *big.Int, shardDB shardBackend) *Shard {
+func NewShard(shardID *big.Int, shardDB ShardBackend) *Shard {
 	return &Shard{
 		shardID: shardID,
 		shardDB: shardDB,
@@ -64,28 +66,28 @@ func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	header, err := s.HeaderByHash(headerHash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot fetch header by hash: %v", err)
 	}
 
 	body, err := s.BodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot fetch body by chunk root: %v", err)
 	}
-	// TODO: deserializes the body into a tx's object instead of using
+	// TODO: deserializes the body into a txs slice instead of using
 	// nil as the third arg to MakeCollation.
 	col := NewCollation(header, body, nil)
 	return col, nil
 }
 
 // CanonicalHeaderHash gets a collation header hash that has been set as
-// canonical for shardID/period pair
+// canonical for shardID/period pair.
 func (s *Shard) CanonicalHeaderHash(shardID *big.Int, period *big.Int) (*common.Hash, error) {
 	key := canonicalCollationLookupKey(shardID, period)
 
 	// fetches the RLP encoded collation header corresponding to the key.
 	encoded, err := s.shardDB.Get(key)
-	if err != nil || len(encoded) == 0 {
-		return nil, fmt.Errorf("no canonical collation header set for period, shardID pair: %v", err)
+	if err != nil {
+		return nil, fmt.Errorf("no canonical collation header set for period=%v, shardID=%v pair: %v", shardID, period, err)
 	}
 
 	// RLP decodes the header, computes its hash.
@@ -104,10 +106,7 @@ func (s *Shard) CanonicalHeaderHash(shardID *big.Int, period *big.Int) (*common.
 func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collation, error) {
 	h, err := s.CanonicalHeaderHash(shardID, period)
 	if err != nil {
-		return nil, fmt.Errorf("error while getting canoncial header hash: %v", err)
-	}
-	if h == nil {
-		return nil, fmt.Errorf("header not found")
+		return nil, fmt.Errorf("error while getting canonical header hash: %v", err)
 	}
 
 	collation, err := s.CollationByHash(h)
@@ -154,12 +153,17 @@ func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error
 
 // SaveHeader adds the collation header to shardDB.
 func (s *Shard) SaveHeader(header *CollationHeader) error {
+	// checks if the header has a chunk root set before saving.
+	if header.ChunkRoot() == nil {
+		return fmt.Errorf("header needs to have a chunk root set before saving")
+	}
+
 	encoded, err := header.EncodeRLP()
 	if err != nil {
 		return fmt.Errorf("cannot encode header: %v", err)
 	}
 
-	// Uses the hash of the header as the key.
+	// uses the hash of the header as the key.
 	if err := s.shardDB.Put(header.Hash(), encoded); err != nil {
 		return fmt.Errorf("cannot update shardDB: %v", err)
 	}
@@ -186,12 +190,16 @@ func (s *Shard) SaveCollation(collation *Collation) error {
 	if err := s.ValidateShardID(collation.Header()); err != nil {
 		return err
 	}
-	s.SaveHeader(collation.Header())
-	s.SaveBody(collation.Body())
+	if err := s.SaveHeader(collation.Header()); err != nil {
+		return err
+	}
+	if err := s.SaveBody(collation.Body()); err != nil {
+		return err
+	}
 	return nil
 }
 
-// SetCanonical sets the collation as canonical in the shardDB. This is called
+// SetCanonical sets the collation header as canonical in the shardDB. This is called
 // after the period is over and over 2/3 notaries voted on the header.
 func (s *Shard) SetCanonical(header *CollationHeader) error {
 	if err := s.ValidateShardID(header); err != nil {
@@ -203,6 +211,12 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	dbHeader, err := s.HeaderByHash(&hash)
 	if err != nil {
 		return err
+	}
+
+	// checks if the header has a corresponding body in the DB.
+	body, err := s.BodyByChunkRoot(dbHeader.ChunkRoot())
+	if err != nil {
+		return fmt.Errorf("no corresponding collation body saved in shardDB: %v", body)
 	}
 
 	key := canonicalCollationLookupKey(dbHeader.ShardID(), dbHeader.Period())
