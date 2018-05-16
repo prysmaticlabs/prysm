@@ -11,6 +11,7 @@ contract SMC {
     struct Notary {
         uint deregisteredPeriod;
         uint poolIndex;
+        uint balance;
         bool deposited;
     }
 
@@ -115,6 +116,7 @@ contract SMC {
         notaryRegistry[notaryAddress] = Notary({
             deregisteredPeriod: 0,
             poolIndex: index,
+            balance: msg.value,
             deposited: true
         });
 
@@ -155,8 +157,9 @@ contract SMC {
         require(notaryRegistry[notaryAddress].deregisteredPeriod != 0);
         require((block.number / PERIOD_LENGTH) > (notaryRegistry[notaryAddress].deregisteredPeriod + NOTARY_LOCKUP_LENGTH));
 
+        uint balance = notaryRegistry[notaryAddress].balance;
         delete notaryRegistry[notaryAddress];
-        notaryAddress.transfer(NOTARY_DEPOSIT);
+        notaryAddress.transfer(balance);
         emit NotaryReleased(notaryAddress, index);
     }
 
