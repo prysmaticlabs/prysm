@@ -248,6 +248,6 @@ func dataAvailabilityLookupKey(chunkRoot *common.Hash) common.Hash {
 // of the shard for ease of use.
 func canonicalCollationLookupKey(shardID *big.Int, period *big.Int) common.Hash {
 	str := "canonical-collation-lookup:shardID=%s,period=%s"
-	key := fmt.Sprintf(str, shardID.String(), period.String())
+	key := fmt.Sprintf(str, shardID, period)
 	return common.BytesToHash([]byte(key))
 }
