@@ -41,6 +41,8 @@ type collationHeaderData struct {
 	ProposerSignature []byte          // the proposer's signature for calculating collation hash.
 }
 
+var collationSizelimit = int64(math.Pow(float64(2), float64(20)))
+
 // NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
 // and provide the body and transactions upon creation.
 func NewCollation(header *CollationHeader, body []byte, transactions []*types.Transaction) *Collation {
@@ -91,13 +93,6 @@ func (c *Collation) Header() *CollationHeader { return c.header }
 
 // Body returns the collation's byte body.
 func (c *Collation) Body() []byte { return c.body }
-
-// Transactions returns an array of tx's in the collation.
-var (
-	collationSizelimit = int64(math.Pow(float64(2), float64(20)))
-	chunkSize          = int64(32)
-	numberOfChunks     = collationSizelimit / chunkSize
-)
 
 // Transactions returns an array of tx's in the collation.
 func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
