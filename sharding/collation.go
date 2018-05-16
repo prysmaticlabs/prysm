@@ -13,6 +13,7 @@ import (
 type Collation struct {
 	header *CollationHeader
 	// body represents the serialized blob of a collation's transactions.
+	// this is a read-only property.
 	body []byte
 	// transactions serves as a useful slice to store deserialized chunks from the
 	// collation's body. Every time this transactions slice is updated, the serialized

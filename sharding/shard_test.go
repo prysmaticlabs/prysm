@@ -192,7 +192,7 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 	}
 
 	if canonicalHeaderHash.String() != headerHash.String() {
-		t.Errorf("header hashes do not match. want=%v. got=%v", headerHash.String(), canonicalHeaderHash.String())
+		t.Errorf("header hashes do not match. want=%s. got=%s", headerHash.String(), canonicalHeaderHash.String())
 	}
 }
 
