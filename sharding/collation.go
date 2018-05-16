@@ -136,17 +136,21 @@ func (c *Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
 
 }
 
-// ConvertBacktoTx converts raw blobs back to their original transactions.
-func (c *Collation) ConvertBacktoTx(rawblobs []utils.RawBlob) error {
+// ConvertBackToTx converts raw blobs back to their original transactions.
+func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 
-	for i := 0; i < len(rawblobs); i++ {
+	blobs := make([]*types.Transaction, len(rawBlobs))
 
-		err := utils.ConvertfromRawBlob(&rawblobs[i], c.transactions[i])
+	for i := 0; i < len(rawBlobs); i++ {
+
+		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+
+		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
 		if err != nil {
-			return fmt.Errorf("Creation of transactions from raw blobs failed %v", err)
+			return nil, fmt.Errorf("Creation of transactions from raw blobs failed %v", err)
 		}
 	}
-	return nil
+	return blobs, nil
 
 }
 
@@ -167,7 +171,7 @@ func (c *Collation) Serialize() ([]byte, error) {
 
 	if int64(len(serializedTx)) > collationSizelimit {
 
-		return nil, fmt.Errorf("The serialized body exceeded the collation size limit", serializedTx)
+		return nil, fmt.Errorf("The serialized body exceeded the collation size limit: %v", serializedTx)
 
 	}
 
@@ -176,18 +180,18 @@ func (c *Collation) Serialize() ([]byte, error) {
 }
 
 // Deserialize takes a byte array and converts its back to its original transactions.
-func (c *Collation) Deserialize(serialisedBlob []byte) error {
+func Deserialize(serialisedBlob []byte) (*[]*types.Transaction, error) {
 
 	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return nil, fmt.Errorf("%v", err)
 	}
 
-	err = c.ConvertBacktoTx(deserializedBlobs)
+	txs, err := ConvertBackToTx(deserializedBlobs)
 
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return nil, fmt.Errorf("%v", err)
 	}
 
-	return nil
+	return &txs, nil
 }
