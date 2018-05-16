@@ -28,7 +28,7 @@ func TestCollation_Transactions(t *testing.T) {
 }
 
 func TestCollation_ProposerAddress(t *testing.T) {
-	proposerAddr := common.StringToAddress("proposer")
+	proposerAddr := common.BytesToAddress([]byte("proposer"))
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), &proposerAddr, []byte{})
 	body := []byte{}
 
