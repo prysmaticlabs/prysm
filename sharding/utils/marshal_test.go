@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-func buildrawblob(size int64) []RawBlob {
+func buildRawBlob(size int64) []RawBlob {
 	tempbody := make([]RawBlob, size)
 	for i := int64(0); i < size; i++ {
 		var rawblob RawBlob
-		rawblob.data = buildblob(size)
+		rawblob.data = buildBlob(size)
 		flagset := byte(rand.Int()) >> 7
 		if flagset == byte(1) {
 			rawblob.flags.skipEvmExecution = true
@@ -22,7 +22,7 @@ func buildrawblob(size int64) []RawBlob {
 
 }
 
-func buildblob(size int64) []byte {
+func buildBlob(size int64) []byte {
 
 	tempbody := make([]byte, size)
 	for i := int64(0); i < size; i++ {
@@ -35,7 +35,7 @@ func buildblob(size int64) []byte {
 func TestSize(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		size := int64(i)
-		blob := buildrawblob(size)
+		blob := buildRawBlob(size)
 		chunksafterSerialize := size / chunkDataSize
 		terminalchunk := size % chunkDataSize
 		if terminalchunk != 0 {
@@ -66,7 +66,7 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 
 	for i := 1; i < 300; i++ {
 
-		blob := buildrawblob(int64(i))
+		blob := buildRawBlob(int64(i))
 
 		drefbody := make([]*RawBlob, len(blob))
 		for s := 0; s < len(blob); s++ {

@@ -4,6 +4,7 @@ import (
 	"math/big"
 	//"github.com/ethereum/go-ethereum/rlp"
 	//"reflect"
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -71,64 +72,60 @@ func TestSerialize_Deserialize(t *testing.T) {
 			t.Errorf("Unable to Serialize transactions, %v", err)
 		}
 
-		err = c.Deserialize(results)
+		deserializedTxs, err := Deserialize(results)
 
 		if err != nil {
 			t.Errorf("Unable to deserialize collation body, %v", err)
 		}
 
-		if len(tx) != len(c.transactions) {
-			t.Errorf("Transaction length is different before and after serialization: %v, %v", len(tx), len(c.transactions))
+		if len(tx) != len(*deserializedTxs) {
+			t.Errorf("Transaction length is different before and after serialization: %v, %v", len(tx), len(*deserializedTxs))
 		}
 
 		for i := 0; i < len(tx); i++ {
 
-			aval := fieldAccess(tx[i], []string{"data", "AccountNonce"})
-			aval2 := fieldAccess(c.transactions[i], []string{"data", "AccountNonce"})
+			beforeSerialization := tx[i]
+			afterDeserialization := (*deserializedTxs)[i]
 
-			if aval != aval2 {
+			if beforeSerialization.Nonce() != afterDeserialization.Nonce() {
 
-				t.Errorf("Data before serialization and after deserialization are not the same: %v, %v", aval, aval2)
-
-			}
-
-			gval := fieldAccess(tx[i], []string{"data", "GasLimit"})
-			gval2 := fieldAccess(c.transactions[i], []string{"data", "GasLimit"})
-			if gval != gval2 {
-
-				t.Errorf("Data before serialization and after deserialization are not the same: %v, %v", gval, gval2)
+				t.Errorf("Data before serialization and after deserialization are not the same ,AccountNonce: %v, %v", beforeSerialization.Nonce(), afterDeserialization.Nonce())
 
 			}
 
-			pval := fieldAccess(tx[i], []string{"data", "Price"})
-			pval2 := fieldAccess(c.transactions[i], []string{"data", "Price"})
-			if pval != pval2 {
+			if beforeSerialization.Gas() != afterDeserialization.Gas() {
 
-				t.Errorf("Data before serialization and after deserialization are not the same: %v, %v", pval, pval2)
+				t.Errorf("Data before serialization and after deserialization are not the same ,GasLimit: %v, %v", beforeSerialization.Gas(), afterDeserialization.Gas())
 
 			}
 
-			rval := fieldAccess(tx[i], []string{"data", "Recipient"})
-			rval2 := fieldAccess(c.transactions[i], []string{"data", "Recipient"})
-			if rval != rval2 {
+			if beforeSerialization.GasPrice().Cmp(afterDeserialization.GasPrice()) != 0 {
 
-				t.Errorf("Data before serialization and after deserialization are not the same: %v, %v", rval, rval2)
+				t.Errorf("Data before serialization and after deserialization are not the same ,Price: %v, %v", beforeSerialization.GasPrice(), afterDeserialization.GasPrice())
 
 			}
 
-			amval := fieldAccess(tx[i], []string{"data", "Amount"})
-			amval2 := fieldAccess(c.transactions[i], []string{"data", "Amount"})
-			if amval != amval2 {
+			beforeAddress := reflect.ValueOf(beforeSerialization.To())
+			afterAddress := reflect.ValueOf(afterDeserialization.To())
 
-				t.Errorf("Data before serialization and after deserialization are not the same: %v, %v", amval, amval2)
+			if reflect.DeepEqual(beforeAddress, afterAddress) {
+
+				t.Errorf("Data before serialization and after deserialization are not the same ,Recipient: %v, %v", beforeAddress, afterAddress)
 
 			}
 
-			paval := fieldAccess(tx[i], []string{"data", "Payload"})
-			paval2 := fieldAccess(c.transactions[i], []string{"data", "Payload"})
-			if paval != paval2 {
+			if beforeSerialization.Value().Cmp(afterDeserialization.Value()) != 0 {
 
-				t.Errorf("Data before serialization and after deserialization are not the same: %v, %v", paval, paval2)
+				t.Errorf("Data before serialization and after deserialization are not the same ,Amount: %v, %v", beforeSerialization.Value(), afterDeserialization.Value())
+
+			}
+
+			beforeData := beforeSerialization.Data()
+			afterData := afterDeserialization.Data()
+
+			if !bytes.Equal(beforeData, afterData) {
+
+				t.Errorf("Data before serialization and after deserialization are not the same ,Payload: %v, %v", beforeData, afterData)
 
 			}
 
