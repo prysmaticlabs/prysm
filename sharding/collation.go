@@ -33,7 +33,7 @@ type CollationHeader struct {
 type collationHeaderData struct {
 	ShardID           *big.Int        // the shard ID of the shard.
 	ChunkRoot         *common.Hash    // the root of the chunk tree which identifies collation body.
-	Period            *big.Int        // the period number in which collation to be Pncluded.
+	Period            *big.Int        // the period number in which collation to be included.
 	ProposerAddress   *common.Address // address of the collation proposer.
 	ProposerSignature []byte          // the proposer's signature for calculating collation hash.
 }
