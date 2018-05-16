@@ -191,8 +191,8 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 		t.Errorf("should throw error if a non-existent period, shardID pair is used")
 	}
 
-	if canonicalHeaderHash.String() != headerHash.String() {
-		t.Errorf("header hashes do not match. want=%s. got=%s", headerHash.String(), canonicalHeaderHash.String())
+	if canonicalHeaderHash.Hex() != headerHash.Hex() {
+		t.Errorf("header hashes do not match. want=%s. got=%s", headerHash.Hex(), canonicalHeaderHash.Hex())
 	}
 }
 
@@ -337,7 +337,7 @@ func TestShard_CheckAvailability(t *testing.T) {
 		t.Errorf("could not check availability: %v", err)
 	}
 	if !available {
-		t.Errorf("collation body is not available: chunkRoot=%v, body=%v", header.ChunkRoot(), collation.body)
+		t.Errorf("collation body is not available: chunkRoot=%s, body=%v", header.ChunkRoot().Hex(), collation.body)
 	}
 }
 

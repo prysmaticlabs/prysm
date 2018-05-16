@@ -52,7 +52,7 @@ func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 		return nil, fmt.Errorf("get failed: %v", err)
 	}
 	if encoded == nil {
-		return nil, fmt.Errorf("no value set for header hash: %v", hash.String())
+		return nil, fmt.Errorf("no value set for header hash: %vs", hash.Hex())
 	}
 
 	var header CollationHeader
@@ -158,10 +158,7 @@ func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error
 	} else {
 		encoded = []byte{0}
 	}
-	if err := s.shardDB.Put(key, encoded); err != nil {
-		return err
-	}
-	return nil
+	return s.shardDB.Put(key, encoded)
 }
 
 // SaveHeader adds the collation header to shardDB.
@@ -177,10 +174,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 	}
 
 	// uses the hash of the header as the key.
-	if err := s.shardDB.Put(header.Hash(), encoded); err != nil {
-		return fmt.Errorf("cannot update shardDB: %v", err)
-	}
-	return nil
+	return s.shardDB.Put(header.Hash(), encoded)
 }
 
 // SaveBody adds the collation body to the shardDB and sets availability.
@@ -245,7 +239,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 // dataAvailabilityLookupKey formats a string that will become a lookup
 // key in the shardDB.
 func dataAvailabilityLookupKey(chunkRoot *common.Hash) common.Hash {
-	key := fmt.Sprintf("availability-lookup:%s", chunkRoot.String())
+	key := fmt.Sprintf("availability-lookup:%s", chunkRoot.Hex())
 	return common.BytesToHash([]byte(key))
 }
 
