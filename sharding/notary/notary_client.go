@@ -32,8 +32,10 @@ func (c *notary) Start() error {
 	}
 	defer c.client.Close()
 
-	if err := joinNotaryPool(c.client); err != nil {
-		return err
+	if c.client.DepositFlagSet() {
+		if err := joinNotaryPool(c.client); err != nil {
+			return err
+		}
 	}
 
 	return subscribeBlockHeaders(c.client)

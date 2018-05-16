@@ -83,6 +83,12 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.LightKDFFlag,
 		},
 	},
+	{
+		Name: "SHARDING",
+		Flags: []cli.Flag{
+			utils.DepositFlag,
+		},
+	},
 	{Name: "DEVELOPER CHAIN",
 		Flags: []cli.Flag{
 			utils.DeveloperFlag,
