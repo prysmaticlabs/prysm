@@ -115,11 +115,7 @@ func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collatio
 		return nil, fmt.Errorf("error while getting canonical header hash: %v", err)
 	}
 
-	collation, err := s.CollationByHash(h)
-	if err != nil {
-		return nil, fmt.Errorf("no canonical collation found for hash: %v", err)
-	}
-	return collation, nil
+	return s.CollationByHash(h)
 }
 
 // BodyByChunkRoot fetches a collation body.
@@ -184,12 +180,8 @@ func (s *Shard) SaveBody(body []byte) error {
 	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
 	// right now we will just take the raw keccak256 of the body until #92 is merged.
 	chunkRoot := common.BytesToHash(body)
-
-	if err := s.shardDB.Put(chunkRoot, body); err != nil {
-		return err
-	}
 	s.SetAvailability(&chunkRoot, true)
-	return nil
+	return s.shardDB.Put(chunkRoot, body)
 }
 
 // SaveCollation adds the collation's header and body to shardDB.
