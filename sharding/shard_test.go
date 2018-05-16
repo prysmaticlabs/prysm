@@ -109,8 +109,6 @@ func TestShard_CollationByHash(t *testing.T) {
 	shardDB := database.NewShardKV()
 	shard := NewShard(big.NewInt(1), shardDB)
 
-	hash := collation.Header().Hash()
-
 	// should throw error if saving the collation before setting the chunk root
 	// in header.
 	if err := shard.SaveCollation(collation); err == nil {
@@ -119,6 +117,8 @@ func TestShard_CollationByHash(t *testing.T) {
 
 	// we set the chunk root.
 	collation.CalculateChunkRoot()
+
+	hash := collation.Header().Hash()
 
 	// calculate a new hash now that chunk root is set.
 	newHash := collation.Header().Hash()
