@@ -117,7 +117,7 @@ func (c *Collation) CalculateChunkRoot() {
 }
 
 // CreateRawBlobs creates raw blobs from transactions.
-func (c *Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
+func (c Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
 
 	// It does not skip evm execution by default
 	blobs := make([]*utils.RawBlob, len(c.transactions))
