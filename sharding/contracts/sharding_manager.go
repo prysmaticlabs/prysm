@@ -16,10 +16,10 @@ import (
 )
 
 // SMCABI is the input ABI used to generate the binding from.
-const SMCABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"collationTrees\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"name\":\"periodHead\",\"outputs\":[{\"name\":\"\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerNotary\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"notaryRegistry\",\"outputs\":[{\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"},{\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"name\":\"deposited\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"releaseNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"notaryPool\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"getNotaryInCommittee\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"period\",\"type\":\"uint256\"},{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"addHeader\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"parentHash\",\"type\":\"bytes32\"},{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"period\",\"type\":\"uint256\"},{\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"computeHeaderHash\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"int256\"},{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"collationHeaders\",\"outputs\":[{\"name\":\"shardId\",\"type\":\"uint256\"},{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"period\",\"type\":\"uint256\"},{\"name\":\"proposerAddress\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"notaryPoolLength\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"int128\"},{\"indexed\":false,\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"HeaderAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"}],\"name\":\"NotaryDeregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryReleased\",\"type\":\"event\"}]"
+const SMCABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"currentVote\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_period\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"},{\"name\":\"_chunkRoot\",\"type\":\"bytes32\"}],\"name\":\"submitVote\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"hasVoted\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"}],\"name\":\"getNotaryInCommittee\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerNotary\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"notaryRegistry\",\"outputs\":[{\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"},{\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"name\":\"balance\",\"type\":\"uint256\"},{\"name\":\"deposited\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"},{\"name\":\"_period\",\"type\":\"uint256\"},{\"name\":\"_chunkRoot\",\"type\":\"bytes32\"}],\"name\":\"addHeader\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"lastSubmittedCollation\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"lastApprovedCollation\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"releaseNotary\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"notaryPool\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_shardId\",\"type\":\"uint256\"}],\"name\":\"getVoteCount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"},{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"collationRecords\",\"outputs\":[{\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"name\":\"proposer\",\"type\":\"address\"},{\"name\":\"isElected\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"notaryPoolLength\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"proposerAddress\",\"type\":\"address\"}],\"name\":\"HeaderAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"deregisteredPeriod\",\"type\":\"uint256\"}],\"name\":\"NotaryDeregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"notary\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"poolIndex\",\"type\":\"uint256\"}],\"name\":\"NotaryReleased\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"shardId\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"chunkRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"period\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"notaryAddress\",\"type\":\"address\"}],\"name\":\"VoteSubmitted\",\"type\":\"event\"}]"
 
 // SMCBin is the compiled bytecode used for deploying new contracts.
-const SMCBin = `0x608060405234801561001057600080fd5b506108ec806100206000396000f3006080604052600436106100b95763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166303dde97781146100be57806358377bd1146100eb578063584475db1461010257806368e9513e1461011a5780636bdd3271146101225780639910851d14610163578063a81f451014610178578063b09f427e146101ac578063b8bc055f146101c7578063b9505ea4146101f1578063b9d8ef961461021e578063f6f67d3614610268575b600080fd5b3480156100ca57600080fd5b506100d960043560243561027d565b60408051918252519081900360200190f35b3480156100f757600080fd5b5061010061029a565b005b34801561010e57600080fd5b506100d96004356103c5565b6101006103d7565b34801561012e57600080fd5b50610143600160a060020a036004351661058a565b604080519384526020840192909252151582820152519081900360600190f35b34801561016f57600080fd5b506101006105ad565b34801561018457600080fd5b506101906004356106d9565b60408051600160a060020a039092168252519081900360200190f35b3480156101b857600080fd5b50610190600435602435610701565b3480156101d357600080fd5b50610100600435602435604435600160a060020a0360643516610796565b3480156101fd57600080fd5b506100d9600435602435604435606435600160a060020a036084351661079c565b34801561022a57600080fd5b506102396004356024356107a7565b60408051948552602085019390935283830191909152600160a060020a03166060830152519081900360800190f35b34801561027457600080fd5b506100d96107e1565b600260209081526000928352604080842090915290825290205481565b33600160a060020a038116600090815260016020819052604082209081015460029091015490919060ff1615156102d057600080fd5b82600160a060020a03166000838154811015156102e957fe5b600091825260209091200154600160a060020a03161461030857600080fd5b6103106107e7565b50600160a060020a0382166000908152600160205260409020600543049081905561033a8261080a565b600080548390811061034857fe5b600091825260209182902001805473ffffffffffffffffffffffffffffffffffffffff191690556005805460001901905560408051600160a060020a0386168152918201849052818101839052517f90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a759181900360600190a1505050565b600b6020526000908152604090205481565b33600160a060020a03811660009081526001602052604081206002015460ff161561040157600080fd5b34683635c9adc5dea000001461041657600080fd5b61041e6107e7565b61042661087b565b156104895750600554600080546001810182559080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56301805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0384161790556104d2565b610491610882565b9050816000828154811015156104a357fe5b9060005260206000200160006101000a815481600160a060020a030219169083600160a060020a031602179055505b6005805460019081019091556040805160608101825260008082526020808301868152838501868152600160a060020a0389168452918690529390912091518255915192810192909255516002909101805460ff1916911515919091179055600954811061054257600181016009555b60408051600160a060020a03841681526020810183905281517fa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7929181900390910190a15050565b600160208190526000918252604090912080549181015460029091015460ff1683565b33600160a060020a038116600090815260016020819052604090912080820154600290910154909160ff9091161515146105e657600080fd5b600160a060020a038216600090815260016020526040902054151561060a57600080fd5b600160a060020a038216600090815260016020526040902054613f0001600543041161063557600080fd5b600160a060020a03821660008181526001602081905260408083208381559182018390556002909101805460ff1916905551683635c9adc5dea000009082818181858883f19350505050158015610690573d6000803e3d6000fd5b5060408051600160a060020a03841681526020810183905281517faee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680929181900390910190a15050565b60008054829081106106e757fe5b600091825260209091200154600160a060020a0316905081565b60008080808080600543049450600a54851115610722576009549350610728565b60085493505b6040805160001960058802018040808352602083018b90528284018c9052925191829003606001909120909450909250849081151561076357fe5b06905060008181548110151561077557fe5b600091825260209091200154600160a060020a031698975050505050505050565b50505050565b600095945050505050565b60036020818152600093845260408085209091529183529120805460018201546002830154929093015490929190600160a060020a031684565b60055481565b600a5460054304908110156107fb57610807565b600954600855600a8190555b50565b600754600654141561085057600680546001810182556000919091527ff652222313e28459528d920b65115c16c04f3efc82aaedc97be59f3f377c0d3f0181905561086f565b80600660075481548110151561086257fe5b6000918252602090912001555b50600780546001019055565b6007541590565b6000600160075411151561089557600080fd5b6007805460001901908190556006805490919081106108b057fe5b90600052602060002001549050905600a165627a7a723058206a18c219259d03462104b10265828f09d0a7edbae0d8cc91dad68df76b9ad2820029`
+const SMCBin = `0x608060405234801561001057600080fd5b50610ced806100206000396000f3006080604052600436106100da5763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416630c8da4cc81146100df5780634f33ffa01461010957806358377bd11461012c57806364390ff114610141578063673221af1461017057806368e9513e146101a45780636bdd3271146101ac57806375bd9912146101f557806383ceeabe1461021357806397d369a21461022b5780639910851d14610243578063a81f451014610258578063b2c2f2e814610270578063e9e0b68314610288578063f6f67d36146102cb575b600080fd5b3480156100eb57600080fd5b506100f76004356102e0565b60408051918252519081900360200190f35b34801561011557600080fd5b5061012a6004356024356044356064356102f2565b005b34801561013857600080fd5b5061012a610497565b34801561014d57600080fd5b5061015c6004356024356105c2565b604080519115158252519081900360200190f35b34801561017c57600080fd5b506101886004356105e5565b60408051600160a060020a039092168252519081900360200190f35b61012a61069e565b3480156101b857600080fd5b506101cd600160a060020a0360043516610861565b6040805194855260208501939093528383019190915215156060830152519081900360800190f35b34801561020157600080fd5b5061012a60043560243560443561088c565b34801561021f57600080fd5b506100f76004356109de565b34801561023757600080fd5b506100f76004356109f0565b34801561024f57600080fd5b5061012a610a02565b34801561026457600080fd5b50610188600435610b37565b34801561027c57600080fd5b506100f7600435610b5f565b34801561029457600080fd5b506102a3600435602435610b74565b60408051938452600160a060020a039092166020840152151582820152519081900360600190f35b3480156102d757600080fd5b506100f7610bbe565b60036020526000908152604090205481565b60008085101580156103045750606485105b151561030f57600080fd5b60054304841461031e57600080fd5b600085815260056020526040902054841461033857600080fd5b6087831061034557600080fd5b6000858152600460209081526040808320878452909152902054821461036a57600080fd5b600160a060020a03331660009081526001602052604090206003015460ff16151561039457600080fd5b61039e85846105c2565b156103a857600080fd5b33600160a060020a03166103bb866105e5565b600160a060020a0316146103ce57600080fd5b6103d88584610bc4565b6103e185610b5f565b9050605a8110610445576000858152600660209081526040808320879055600482528083208784529091529020600101805474ff00000000000000000000000000000000000000001916740100000000000000000000000000000000000000001790555b6040805183815260208101869052600160a060020a03331681830152905186917fc99370212b708f699fb6945a17eb34d0fc1ccd5b45d88f4d9682593a45d6e833919081900360600190a25050505050565b33600160a060020a038116600090815260016020819052604082209081015460039091015490919060ff1615156104cd57600080fd5b82600160a060020a03166000838154811015156104e657fe5b600091825260209091200154600160a060020a03161461050557600080fd5b61050d610be8565b50600160a060020a0382166000908152600160205260409020600543049081905561053782610c0b565b600080548390811061054557fe5b600091825260209182902001805473ffffffffffffffffffffffffffffffffffffffff191690556002805460001901905560408051600160a060020a0386168152918201849052818101839052517f90e5afdc8fd31453dcf6e37154fa117ddf3b0324c96c65015563df9d5e4b5a759181900360600190a1505050565b60009182526003602052604090912054600160ff9290920360020a900481161490565b60006005430481808080806105f8610be8565b600b5486111561060c57600a549450610612565b60095494505b600160a060020a03331660009081526001602081815260409283902090910154825160001960058b020180408083529382018390528185018d905293519081900360600190209096509194509250859081151561066b57fe5b06905060008181548110151561067d57fe5b600091825260209091200154600160a060020a031698975050505050505050565b33600160a060020a03811660009081526001602052604081206003015460ff16156106c857600080fd5b34683635c9adc5dea00000146106dd57600080fd5b6106e5610be8565b6106ed610c7c565b156107505750600254600080546001810182559080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56301805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a038416179055610799565b610758610c83565b90508160008281548110151561076a57fe5b9060005260206000200160006101000a815481600160a060020a030219169083600160a060020a031602179055505b600280546001908101825560408051608081018252600080825260208083018781523484860190815260608501878152600160a060020a038b168552928790529490922092518355905193820193909355905192810192909255516003909101805460ff1916911515919091179055600a5481106108195760018101600a555b60408051600160a060020a03841681526020810183905281517fa4fe15c53db34d35a5117acc26c27a2653dc68e2dadfc21ed211e38b7864d7a7929181900390910190a15050565b6001602081905260009182526040909120805491810154600282015460039092015490919060ff1684565b6000831015801561089d5750606483105b15156108a857600080fd5b6005430482146108b757600080fd5b60008381526005602052604090205482116108d157600080fd5b6108d9610be8565b604080516060808201835283825233600160a060020a03908116602080850182815260008688018181528b8252600484528882208b8352845288822097518855915160019097018054925173ffffffffffffffffffffffffffffffffffffffff19909316979095169690961774ff000000000000000000000000000000000000000019167401000000000000000000000000000000000000000091151591909102179092558784526005808352858520439190910490556003825284842093909355835185815290810186905280840192909252915185927f2d0a86178d2fd307b47be157a766e6bee19bc26161c32f9781ee0e818636f09c928290030190a2505050565b60056020526000908152604090205481565b60066020526000908152604090205481565b33600160a060020a038116600090815260016020819052604082208082015460039091015490929160ff909116151514610a3b57600080fd5b600160a060020a0383166000908152600160205260409020541515610a5f57600080fd5b600160a060020a038316600090815260016020526040902054613f00016005430411610a8a57600080fd5b50600160a060020a0382166000818152600160208190526040808320600281018054858355938201859055849055600301805460ff191690555190929183156108fc02918491818181858888f19350505050158015610aed573d6000803e3d6000fd5b5060408051600160a060020a03851681526020810184905281517faee20171b64b7f3360a142659094ce929970d6963dcea8c34a9bf1ece8033680929181900390910190a1505050565b6000805482908110610b4557fe5b600091825260209091200154600160a060020a0316905081565b60009081526003602052604090205460ff1690565b600460209081526000928352604080842090915290825290208054600190910154600160a060020a0381169074010000000000000000000000000000000000000000900460ff1683565b60025481565b600091825260036020526040909120805460ff9290920360020a9091176001019055565b600b546005430490811015610bfc57610c08565b600a54600955600b8190555b50565b6008546007541415610c5157600780546001810182556000919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c68801819055610c70565b806007600854815481101515610c6357fe5b6000918252602090912001555b50600880546001019055565b6008541590565b60006001600854111515610c9657600080fd5b600880546000190190819055600780549091908110610cb157fe5b90600052602060002001549050905600a165627a7a723058209a7811a563281b78fdce2a1c70eb0dda99d200722a2db5228e0fc184db93b7810029`
 
 // DeploySMC deploys a new Ethereum contract, binding an instance of SMC to it.
 func DeploySMC(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SMC, error) {
@@ -176,100 +176,200 @@ func (_SMC *SMCTransactorRaw) Transact(opts *bind.TransactOpts, method string, p
 	return _SMC.Contract.contract.Transact(opts, method, params...)
 }
 
-// CollationHeaders is a free data retrieval call binding the contract method 0xb9d8ef96.
+// CollationRecords is a free data retrieval call binding the contract method 0xe9e0b683.
 //
-// Solidity: function collationHeaders( int256,  bytes32) constant returns(shardId uint256, chunkRoot bytes32, period uint256, proposerAddress address)
-func (_SMC *SMCCaller) CollationHeaders(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) (struct {
-	ShardId         *big.Int
-	ChunkRoot       [32]byte
-	Period          *big.Int
-	ProposerAddress common.Address
+// Solidity: function collationRecords( uint256,  uint256) constant returns(chunkRoot bytes32, proposer address, isElected bool)
+func (_SMC *SMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
 }, error) {
 	ret := new(struct {
-		ShardId         *big.Int
-		ChunkRoot       [32]byte
-		Period          *big.Int
-		ProposerAddress common.Address
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
 	})
 	out := ret
-	err := _SMC.contract.Call(opts, out, "collationHeaders", arg0, arg1)
+	err := _SMC.contract.Call(opts, out, "collationRecords", arg0, arg1)
 	return *ret, err
 }
 
-// CollationHeaders is a free data retrieval call binding the contract method 0xb9d8ef96.
+// CollationRecords is a free data retrieval call binding the contract method 0xe9e0b683.
 //
-// Solidity: function collationHeaders( int256,  bytes32) constant returns(shardId uint256, chunkRoot bytes32, period uint256, proposerAddress address)
-func (_SMC *SMCSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
-	ShardId         *big.Int
-	ChunkRoot       [32]byte
-	Period          *big.Int
-	ProposerAddress common.Address
+// Solidity: function collationRecords( uint256,  uint256) constant returns(chunkRoot bytes32, proposer address, isElected bool)
+func (_SMC *SMCSession) CollationRecords(arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
 }, error) {
-	return _SMC.Contract.CollationHeaders(&_SMC.CallOpts, arg0, arg1)
+	return _SMC.Contract.CollationRecords(&_SMC.CallOpts, arg0, arg1)
 }
 
-// CollationHeaders is a free data retrieval call binding the contract method 0xb9d8ef96.
+// CollationRecords is a free data retrieval call binding the contract method 0xe9e0b683.
 //
-// Solidity: function collationHeaders( int256,  bytes32) constant returns(shardId uint256, chunkRoot bytes32, period uint256, proposerAddress address)
-func (_SMC *SMCCallerSession) CollationHeaders(arg0 *big.Int, arg1 [32]byte) (struct {
-	ShardId         *big.Int
-	ChunkRoot       [32]byte
-	Period          *big.Int
-	ProposerAddress common.Address
+// Solidity: function collationRecords( uint256,  uint256) constant returns(chunkRoot bytes32, proposer address, isElected bool)
+func (_SMC *SMCCallerSession) CollationRecords(arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
 }, error) {
-	return _SMC.Contract.CollationHeaders(&_SMC.CallOpts, arg0, arg1)
+	return _SMC.Contract.CollationRecords(&_SMC.CallOpts, arg0, arg1)
 }
 
-// CollationTrees is a free data retrieval call binding the contract method 0x03dde977.
+// CurrentVote is a free data retrieval call binding the contract method 0x0c8da4cc.
 //
-// Solidity: function collationTrees( uint256,  bytes32) constant returns(bytes32)
-func (_SMC *SMCCaller) CollationTrees(opts *bind.CallOpts, arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
+// Solidity: function currentVote( uint256) constant returns(bytes32)
+func (_SMC *SMCCaller) CurrentVote(opts *bind.CallOpts, arg0 *big.Int) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "collationTrees", arg0, arg1)
+	err := _SMC.contract.Call(opts, out, "currentVote", arg0)
 	return *ret0, err
 }
 
-// CollationTrees is a free data retrieval call binding the contract method 0x03dde977.
+// CurrentVote is a free data retrieval call binding the contract method 0x0c8da4cc.
 //
-// Solidity: function collationTrees( uint256,  bytes32) constant returns(bytes32)
-func (_SMC *SMCSession) CollationTrees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
-	return _SMC.Contract.CollationTrees(&_SMC.CallOpts, arg0, arg1)
+// Solidity: function currentVote( uint256) constant returns(bytes32)
+func (_SMC *SMCSession) CurrentVote(arg0 *big.Int) ([32]byte, error) {
+	return _SMC.Contract.CurrentVote(&_SMC.CallOpts, arg0)
 }
 
-// CollationTrees is a free data retrieval call binding the contract method 0x03dde977.
+// CurrentVote is a free data retrieval call binding the contract method 0x0c8da4cc.
 //
-// Solidity: function collationTrees( uint256,  bytes32) constant returns(bytes32)
-func (_SMC *SMCCallerSession) CollationTrees(arg0 *big.Int, arg1 [32]byte) ([32]byte, error) {
-	return _SMC.Contract.CollationTrees(&_SMC.CallOpts, arg0, arg1)
+// Solidity: function currentVote( uint256) constant returns(bytes32)
+func (_SMC *SMCCallerSession) CurrentVote(arg0 *big.Int) ([32]byte, error) {
+	return _SMC.Contract.CurrentVote(&_SMC.CallOpts, arg0)
 }
 
-// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0x673221af.
 //
-// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, shardId *big.Int, _index *big.Int) (common.Address, error) {
+// Solidity: function getNotaryInCommittee(_shardId uint256) constant returns(address)
+func (_SMC *SMCCaller) GetNotaryInCommittee(opts *bind.CallOpts, _shardId *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", shardId, _index)
+	err := _SMC.contract.Call(opts, out, "getNotaryInCommittee", _shardId)
 	return *ret0, err
 }
 
-// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0x673221af.
 //
-// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCSession) GetNotaryInCommittee(shardId *big.Int, _index *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, shardId, _index)
+// Solidity: function getNotaryInCommittee(_shardId uint256) constant returns(address)
+func (_SMC *SMCSession) GetNotaryInCommittee(_shardId *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId)
 }
 
-// GetNotaryInCommittee is a free data retrieval call binding the contract method 0xb09f427e.
+// GetNotaryInCommittee is a free data retrieval call binding the contract method 0x673221af.
 //
-// Solidity: function getNotaryInCommittee(shardId uint256, _index uint256) constant returns(address)
-func (_SMC *SMCCallerSession) GetNotaryInCommittee(shardId *big.Int, _index *big.Int) (common.Address, error) {
-	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, shardId, _index)
+// Solidity: function getNotaryInCommittee(_shardId uint256) constant returns(address)
+func (_SMC *SMCCallerSession) GetNotaryInCommittee(_shardId *big.Int) (common.Address, error) {
+	return _SMC.Contract.GetNotaryInCommittee(&_SMC.CallOpts, _shardId)
+}
+
+// GetVoteCount is a free data retrieval call binding the contract method 0xb2c2f2e8.
+//
+// Solidity: function getVoteCount(_shardId uint256) constant returns(uint256)
+func (_SMC *SMCCaller) GetVoteCount(opts *bind.CallOpts, _shardId *big.Int) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _SMC.contract.Call(opts, out, "getVoteCount", _shardId)
+	return *ret0, err
+}
+
+// GetVoteCount is a free data retrieval call binding the contract method 0xb2c2f2e8.
+//
+// Solidity: function getVoteCount(_shardId uint256) constant returns(uint256)
+func (_SMC *SMCSession) GetVoteCount(_shardId *big.Int) (*big.Int, error) {
+	return _SMC.Contract.GetVoteCount(&_SMC.CallOpts, _shardId)
+}
+
+// GetVoteCount is a free data retrieval call binding the contract method 0xb2c2f2e8.
+//
+// Solidity: function getVoteCount(_shardId uint256) constant returns(uint256)
+func (_SMC *SMCCallerSession) GetVoteCount(_shardId *big.Int) (*big.Int, error) {
+	return _SMC.Contract.GetVoteCount(&_SMC.CallOpts, _shardId)
+}
+
+// HasVoted is a free data retrieval call binding the contract method 0x64390ff1.
+//
+// Solidity: function hasVoted(_shardId uint256, _index uint256) constant returns(bool)
+func (_SMC *SMCCaller) HasVoted(opts *bind.CallOpts, _shardId *big.Int, _index *big.Int) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _SMC.contract.Call(opts, out, "hasVoted", _shardId, _index)
+	return *ret0, err
+}
+
+// HasVoted is a free data retrieval call binding the contract method 0x64390ff1.
+//
+// Solidity: function hasVoted(_shardId uint256, _index uint256) constant returns(bool)
+func (_SMC *SMCSession) HasVoted(_shardId *big.Int, _index *big.Int) (bool, error) {
+	return _SMC.Contract.HasVoted(&_SMC.CallOpts, _shardId, _index)
+}
+
+// HasVoted is a free data retrieval call binding the contract method 0x64390ff1.
+//
+// Solidity: function hasVoted(_shardId uint256, _index uint256) constant returns(bool)
+func (_SMC *SMCCallerSession) HasVoted(_shardId *big.Int, _index *big.Int) (bool, error) {
+	return _SMC.Contract.HasVoted(&_SMC.CallOpts, _shardId, _index)
+}
+
+// LastApprovedCollation is a free data retrieval call binding the contract method 0x97d369a2.
+//
+// Solidity: function lastApprovedCollation( uint256) constant returns(uint256)
+func (_SMC *SMCCaller) LastApprovedCollation(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _SMC.contract.Call(opts, out, "lastApprovedCollation", arg0)
+	return *ret0, err
+}
+
+// LastApprovedCollation is a free data retrieval call binding the contract method 0x97d369a2.
+//
+// Solidity: function lastApprovedCollation( uint256) constant returns(uint256)
+func (_SMC *SMCSession) LastApprovedCollation(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.LastApprovedCollation(&_SMC.CallOpts, arg0)
+}
+
+// LastApprovedCollation is a free data retrieval call binding the contract method 0x97d369a2.
+//
+// Solidity: function lastApprovedCollation( uint256) constant returns(uint256)
+func (_SMC *SMCCallerSession) LastApprovedCollation(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.LastApprovedCollation(&_SMC.CallOpts, arg0)
+}
+
+// LastSubmittedCollation is a free data retrieval call binding the contract method 0x83ceeabe.
+//
+// Solidity: function lastSubmittedCollation( uint256) constant returns(uint256)
+func (_SMC *SMCCaller) LastSubmittedCollation(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _SMC.contract.Call(opts, out, "lastSubmittedCollation", arg0)
+	return *ret0, err
+}
+
+// LastSubmittedCollation is a free data retrieval call binding the contract method 0x83ceeabe.
+//
+// Solidity: function lastSubmittedCollation( uint256) constant returns(uint256)
+func (_SMC *SMCSession) LastSubmittedCollation(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.LastSubmittedCollation(&_SMC.CallOpts, arg0)
+}
+
+// LastSubmittedCollation is a free data retrieval call binding the contract method 0x83ceeabe.
+//
+// Solidity: function lastSubmittedCollation( uint256) constant returns(uint256)
+func (_SMC *SMCCallerSession) LastSubmittedCollation(arg0 *big.Int) (*big.Int, error) {
+	return _SMC.Contract.LastSubmittedCollation(&_SMC.CallOpts, arg0)
 }
 
 // NotaryPool is a free data retrieval call binding the contract method 0xa81f4510.
@@ -326,15 +426,17 @@ func (_SMC *SMCCallerSession) NotaryPoolLength() (*big.Int, error) {
 
 // NotaryRegistry is a free data retrieval call binding the contract method 0x6bdd3271.
 //
-// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, deposited bool)
+// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, balance uint256, deposited bool)
 func (_SMC *SMCCaller) NotaryRegistry(opts *bind.CallOpts, arg0 common.Address) (struct {
 	DeregisteredPeriod *big.Int
 	PoolIndex          *big.Int
+	Balance            *big.Int
 	Deposited          bool
 }, error) {
 	ret := new(struct {
 		DeregisteredPeriod *big.Int
 		PoolIndex          *big.Int
+		Balance            *big.Int
 		Deposited          bool
 	})
 	out := ret
@@ -344,10 +446,11 @@ func (_SMC *SMCCaller) NotaryRegistry(opts *bind.CallOpts, arg0 common.Address) 
 
 // NotaryRegistry is a free data retrieval call binding the contract method 0x6bdd3271.
 //
-// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, deposited bool)
+// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, balance uint256, deposited bool)
 func (_SMC *SMCSession) NotaryRegistry(arg0 common.Address) (struct {
 	DeregisteredPeriod *big.Int
 	PoolIndex          *big.Int
+	Balance            *big.Int
 	Deposited          bool
 }, error) {
 	return _SMC.Contract.NotaryRegistry(&_SMC.CallOpts, arg0)
@@ -355,81 +458,35 @@ func (_SMC *SMCSession) NotaryRegistry(arg0 common.Address) (struct {
 
 // NotaryRegistry is a free data retrieval call binding the contract method 0x6bdd3271.
 //
-// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, deposited bool)
+// Solidity: function notaryRegistry( address) constant returns(deregisteredPeriod uint256, poolIndex uint256, balance uint256, deposited bool)
 func (_SMC *SMCCallerSession) NotaryRegistry(arg0 common.Address) (struct {
 	DeregisteredPeriod *big.Int
 	PoolIndex          *big.Int
+	Balance            *big.Int
 	Deposited          bool
 }, error) {
 	return _SMC.Contract.NotaryRegistry(&_SMC.CallOpts, arg0)
 }
 
-// PeriodHead is a free data retrieval call binding the contract method 0x584475db.
+// AddHeader is a paid mutator transaction binding the contract method 0x75bd9912.
 //
-// Solidity: function periodHead( int256) constant returns(int256)
-func (_SMC *SMCCaller) PeriodHead(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _SMC.contract.Call(opts, out, "periodHead", arg0)
-	return *ret0, err
+// Solidity: function addHeader(_shardId uint256, _period uint256, _chunkRoot bytes32) returns()
+func (_SMC *SMCTransactor) AddHeader(opts *bind.TransactOpts, _shardId *big.Int, _period *big.Int, _chunkRoot [32]byte) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "addHeader", _shardId, _period, _chunkRoot)
 }
 
-// PeriodHead is a free data retrieval call binding the contract method 0x584475db.
+// AddHeader is a paid mutator transaction binding the contract method 0x75bd9912.
 //
-// Solidity: function periodHead( int256) constant returns(int256)
-func (_SMC *SMCSession) PeriodHead(arg0 *big.Int) (*big.Int, error) {
-	return _SMC.Contract.PeriodHead(&_SMC.CallOpts, arg0)
+// Solidity: function addHeader(_shardId uint256, _period uint256, _chunkRoot bytes32) returns()
+func (_SMC *SMCSession) AddHeader(_shardId *big.Int, _period *big.Int, _chunkRoot [32]byte) (*types.Transaction, error) {
+	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, _period, _chunkRoot)
 }
 
-// PeriodHead is a free data retrieval call binding the contract method 0x584475db.
+// AddHeader is a paid mutator transaction binding the contract method 0x75bd9912.
 //
-// Solidity: function periodHead( int256) constant returns(int256)
-func (_SMC *SMCCallerSession) PeriodHead(arg0 *big.Int) (*big.Int, error) {
-	return _SMC.Contract.PeriodHead(&_SMC.CallOpts, arg0)
-}
-
-// AddHeader is a paid mutator transaction binding the contract method 0xb8bc055f.
-//
-// Solidity: function addHeader(_shardId uint256, period uint256, chunkRoot bytes32, proposerAddress address) returns()
-func (_SMC *SMCTransactor) AddHeader(opts *bind.TransactOpts, _shardId *big.Int, period *big.Int, chunkRoot [32]byte, proposerAddress common.Address) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "addHeader", _shardId, period, chunkRoot, proposerAddress)
-}
-
-// AddHeader is a paid mutator transaction binding the contract method 0xb8bc055f.
-//
-// Solidity: function addHeader(_shardId uint256, period uint256, chunkRoot bytes32, proposerAddress address) returns()
-func (_SMC *SMCSession) AddHeader(_shardId *big.Int, period *big.Int, chunkRoot [32]byte, proposerAddress common.Address) (*types.Transaction, error) {
-	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, period, chunkRoot, proposerAddress)
-}
-
-// AddHeader is a paid mutator transaction binding the contract method 0xb8bc055f.
-//
-// Solidity: function addHeader(_shardId uint256, period uint256, chunkRoot bytes32, proposerAddress address) returns()
-func (_SMC *SMCTransactorSession) AddHeader(_shardId *big.Int, period *big.Int, chunkRoot [32]byte, proposerAddress common.Address) (*types.Transaction, error) {
-	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, period, chunkRoot, proposerAddress)
-}
-
-// ComputeHeaderHash is a paid mutator transaction binding the contract method 0xb9505ea4.
-//
-// Solidity: function computeHeaderHash(shardId uint256, parentHash bytes32, chunkRoot bytes32, period uint256, proposerAddress address) returns(bytes32)
-func (_SMC *SMCTransactor) ComputeHeaderHash(opts *bind.TransactOpts, shardId *big.Int, parentHash [32]byte, chunkRoot [32]byte, period *big.Int, proposerAddress common.Address) (*types.Transaction, error) {
-	return _SMC.contract.Transact(opts, "computeHeaderHash", shardId, parentHash, chunkRoot, period, proposerAddress)
-}
-
-// ComputeHeaderHash is a paid mutator transaction binding the contract method 0xb9505ea4.
-//
-// Solidity: function computeHeaderHash(shardId uint256, parentHash bytes32, chunkRoot bytes32, period uint256, proposerAddress address) returns(bytes32)
-func (_SMC *SMCSession) ComputeHeaderHash(shardId *big.Int, parentHash [32]byte, chunkRoot [32]byte, period *big.Int, proposerAddress common.Address) (*types.Transaction, error) {
-	return _SMC.Contract.ComputeHeaderHash(&_SMC.TransactOpts, shardId, parentHash, chunkRoot, period, proposerAddress)
-}
-
-// ComputeHeaderHash is a paid mutator transaction binding the contract method 0xb9505ea4.
-//
-// Solidity: function computeHeaderHash(shardId uint256, parentHash bytes32, chunkRoot bytes32, period uint256, proposerAddress address) returns(bytes32)
-func (_SMC *SMCTransactorSession) ComputeHeaderHash(shardId *big.Int, parentHash [32]byte, chunkRoot [32]byte, period *big.Int, proposerAddress common.Address) (*types.Transaction, error) {
-	return _SMC.Contract.ComputeHeaderHash(&_SMC.TransactOpts, shardId, parentHash, chunkRoot, period, proposerAddress)
+// Solidity: function addHeader(_shardId uint256, _period uint256, _chunkRoot bytes32) returns()
+func (_SMC *SMCTransactorSession) AddHeader(_shardId *big.Int, _period *big.Int, _chunkRoot [32]byte) (*types.Transaction, error) {
+	return _SMC.Contract.AddHeader(&_SMC.TransactOpts, _shardId, _period, _chunkRoot)
 }
 
 // DeregisterNotary is a paid mutator transaction binding the contract method 0x58377bd1.
@@ -493,6 +550,27 @@ func (_SMC *SMCSession) ReleaseNotary() (*types.Transaction, error) {
 // Solidity: function releaseNotary() returns()
 func (_SMC *SMCTransactorSession) ReleaseNotary() (*types.Transaction, error) {
 	return _SMC.Contract.ReleaseNotary(&_SMC.TransactOpts)
+}
+
+// SubmitVote is a paid mutator transaction binding the contract method 0x4f33ffa0.
+//
+// Solidity: function submitVote(_shardId uint256, _period uint256, _index uint256, _chunkRoot bytes32) returns()
+func (_SMC *SMCTransactor) SubmitVote(opts *bind.TransactOpts, _shardId *big.Int, _period *big.Int, _index *big.Int, _chunkRoot [32]byte) (*types.Transaction, error) {
+	return _SMC.contract.Transact(opts, "submitVote", _shardId, _period, _index, _chunkRoot)
+}
+
+// SubmitVote is a paid mutator transaction binding the contract method 0x4f33ffa0.
+//
+// Solidity: function submitVote(_shardId uint256, _period uint256, _index uint256, _chunkRoot bytes32) returns()
+func (_SMC *SMCSession) SubmitVote(_shardId *big.Int, _period *big.Int, _index *big.Int, _chunkRoot [32]byte) (*types.Transaction, error) {
+	return _SMC.Contract.SubmitVote(&_SMC.TransactOpts, _shardId, _period, _index, _chunkRoot)
+}
+
+// SubmitVote is a paid mutator transaction binding the contract method 0x4f33ffa0.
+//
+// Solidity: function submitVote(_shardId uint256, _period uint256, _index uint256, _chunkRoot bytes32) returns()
+func (_SMC *SMCTransactorSession) SubmitVote(_shardId *big.Int, _period *big.Int, _index *big.Int, _chunkRoot [32]byte) (*types.Transaction, error) {
+	return _SMC.Contract.SubmitVote(&_SMC.TransactOpts, _shardId, _period, _index, _chunkRoot)
 }
 
 // SMCHeaderAddedIterator is returned from FilterHeaderAdded and is used to iterate over the raw logs and unpacked data for HeaderAdded events raised by the SMC contract.
@@ -571,9 +649,9 @@ type SMCHeaderAdded struct {
 	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterHeaderAdded is a free log retrieval operation binding the contract event 0x5585108fa6e3c23be15f85641f8d891b72782aaeca2573e7360a4519e67a2bee.
+// FilterHeaderAdded is a free log retrieval operation binding the contract event 0x2d0a86178d2fd307b47be157a766e6bee19bc26161c32f9781ee0e818636f09c.
 //
-// Solidity: event HeaderAdded(shardId indexed uint256, chunkRoot bytes32, period int128, proposerAddress address)
+// Solidity: event HeaderAdded(shardId indexed uint256, chunkRoot bytes32, period uint256, proposerAddress address)
 func (_SMC *SMCFilterer) FilterHeaderAdded(opts *bind.FilterOpts, shardId []*big.Int) (*SMCHeaderAddedIterator, error) {
 
 	var shardIdRule []interface{}
@@ -588,9 +666,9 @@ func (_SMC *SMCFilterer) FilterHeaderAdded(opts *bind.FilterOpts, shardId []*big
 	return &SMCHeaderAddedIterator{contract: _SMC.contract, event: "HeaderAdded", logs: logs, sub: sub}, nil
 }
 
-// WatchHeaderAdded is a free log subscription operation binding the contract event 0x5585108fa6e3c23be15f85641f8d891b72782aaeca2573e7360a4519e67a2bee.
+// WatchHeaderAdded is a free log subscription operation binding the contract event 0x2d0a86178d2fd307b47be157a766e6bee19bc26161c32f9781ee0e818636f09c.
 //
-// Solidity: event HeaderAdded(shardId indexed uint256, chunkRoot bytes32, period int128, proposerAddress address)
+// Solidity: event HeaderAdded(shardId indexed uint256, chunkRoot bytes32, period uint256, proposerAddress address)
 func (_SMC *SMCFilterer) WatchHeaderAdded(opts *bind.WatchOpts, sink chan<- *SMCHeaderAdded, shardId []*big.Int) (event.Subscription, error) {
 
 	var shardIdRule []interface{}
@@ -980,6 +1058,141 @@ func (_SMC *SMCFilterer) WatchNotaryReleased(opts *bind.WatchOpts, sink chan<- *
 				// New log arrived, parse the event and forward to the user
 				event := new(SMCNotaryReleased)
 				if err := _SMC.contract.UnpackLog(event, "NotaryReleased", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// SMCVoteSubmittedIterator is returned from FilterVoteSubmitted and is used to iterate over the raw logs and unpacked data for VoteSubmitted events raised by the SMC contract.
+type SMCVoteSubmittedIterator struct {
+	Event *SMCVoteSubmitted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *SMCVoteSubmittedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(SMCVoteSubmitted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(SMCVoteSubmitted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *SMCVoteSubmittedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *SMCVoteSubmittedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// SMCVoteSubmitted represents a VoteSubmitted event raised by the SMC contract.
+type SMCVoteSubmitted struct {
+	ShardId       *big.Int
+	ChunkRoot     [32]byte
+	Period        *big.Int
+	NotaryAddress common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterVoteSubmitted is a free log retrieval operation binding the contract event 0xc99370212b708f699fb6945a17eb34d0fc1ccd5b45d88f4d9682593a45d6e833.
+//
+// Solidity: event VoteSubmitted(shardId indexed uint256, chunkRoot bytes32, period uint256, notaryAddress address)
+func (_SMC *SMCFilterer) FilterVoteSubmitted(opts *bind.FilterOpts, shardId []*big.Int) (*SMCVoteSubmittedIterator, error) {
+
+	var shardIdRule []interface{}
+	for _, shardIdItem := range shardId {
+		shardIdRule = append(shardIdRule, shardIdItem)
+	}
+
+	logs, sub, err := _SMC.contract.FilterLogs(opts, "VoteSubmitted", shardIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &SMCVoteSubmittedIterator{contract: _SMC.contract, event: "VoteSubmitted", logs: logs, sub: sub}, nil
+}
+
+// WatchVoteSubmitted is a free log subscription operation binding the contract event 0xc99370212b708f699fb6945a17eb34d0fc1ccd5b45d88f4d9682593a45d6e833.
+//
+// Solidity: event VoteSubmitted(shardId indexed uint256, chunkRoot bytes32, period uint256, notaryAddress address)
+func (_SMC *SMCFilterer) WatchVoteSubmitted(opts *bind.WatchOpts, sink chan<- *SMCVoteSubmitted, shardId []*big.Int) (event.Subscription, error) {
+
+	var shardIdRule []interface{}
+	for _, shardIdItem := range shardId {
+		shardIdRule = append(shardIdRule, shardIdItem)
+	}
+
+	logs, sub, err := _SMC.contract.WatchLogs(opts, "VoteSubmitted", shardIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(SMCVoteSubmitted)
+				if err := _SMC.contract.UnpackLog(event, "VoteSubmitted", log); err != nil {
 					return err
 				}
 				event.Raw = log
