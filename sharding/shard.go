@@ -192,10 +192,7 @@ func (s *Shard) SaveCollation(collation *Collation) error {
 	if err := s.SaveHeader(collation.Header()); err != nil {
 		return err
 	}
-	if err := s.SaveBody(collation.Body()); err != nil {
-		return err
-	}
-	return nil
+	return s.SaveBody(collation.Body())
 }
 
 // SetCanonical sets the collation header as canonical in the shardDB. This is called
