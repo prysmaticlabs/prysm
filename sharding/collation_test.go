@@ -1,10 +1,8 @@
 package sharding
 
 import (
-	"math/big"
-	//"github.com/ethereum/go-ethereum/rlp"
-	//"reflect"
 	"bytes"
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -45,89 +43,79 @@ func TestCollation_Transactions(t *testing.T) {
 //Tests that Transactions can be serialised
 func TestSerialize_Deserialize(t *testing.T) {
 
-	tests := []struct {
-		transactions []*types.Transaction
-	}{
-		{
-			transactions: []*types.Transaction{
-				makeTxWithGasLimit(0),
-				makeTxWithGasLimit(5),
-				makeTxWithGasLimit(20),
-				makeTxWithGasLimit(100),
-			},
-		},
+	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, []byte{})
+	body := []byte{}
+	transactions := []*types.Transaction{
+		makeTxWithGasLimit(0),
+		makeTxWithGasLimit(5),
+		makeTxWithGasLimit(20),
+		makeTxWithGasLimit(100),
 	}
 
-	for _, tt := range tests {
-		c := &Collation{}
-		for _, tx := range tt.transactions {
-			c.AddTransaction(tx)
+	c := NewCollation(header, body, transactions)
+
+	tx := c.transactions
+
+	results, err := c.Serialize()
+
+	if err != nil {
+		t.Errorf("Unable to Serialize transactions, %v", err)
+	}
+
+	deserializedTxs, err := Deserialize(results)
+
+	if err != nil {
+		t.Errorf("Unable to deserialize collation body, %v", err)
+	}
+
+	if len(tx) != len(*deserializedTxs) {
+		t.Errorf("Transaction length is different before and after serialization: %v, %v", len(tx), len(*deserializedTxs))
+	}
+
+	for i := 0; i < len(tx); i++ {
+
+		beforeSerialization := tx[i]
+		afterDeserialization := (*deserializedTxs)[i]
+
+		if beforeSerialization.Nonce() != afterDeserialization.Nonce() {
+
+			t.Errorf("Data before serialization and after deserialization are not the same ,AccountNonce: %v, %v", beforeSerialization.Nonce(), afterDeserialization.Nonce())
+
 		}
 
-		tx := c.transactions
+		if beforeSerialization.Gas() != afterDeserialization.Gas() {
 
-		results, err := c.Serialize()
+			t.Errorf("Data before serialization and after deserialization are not the same ,GasLimit: %v, %v", beforeSerialization.Gas(), afterDeserialization.Gas())
 
-		if err != nil {
-			t.Errorf("Unable to Serialize transactions, %v", err)
 		}
 
-		deserializedTxs, err := Deserialize(results)
+		if beforeSerialization.GasPrice().Cmp(afterDeserialization.GasPrice()) != 0 {
 
-		if err != nil {
-			t.Errorf("Unable to deserialize collation body, %v", err)
+			t.Errorf("Data before serialization and after deserialization are not the same ,Price: %v, %v", beforeSerialization.GasPrice(), afterDeserialization.GasPrice())
+
 		}
 
-		if len(tx) != len(*deserializedTxs) {
-			t.Errorf("Transaction length is different before and after serialization: %v, %v", len(tx), len(*deserializedTxs))
+		beforeAddress := reflect.ValueOf(beforeSerialization.To())
+		afterAddress := reflect.ValueOf(afterDeserialization.To())
+
+		if reflect.DeepEqual(beforeAddress, afterAddress) {
+
+			t.Errorf("Data before serialization and after deserialization are not the same ,Recipient: %v, %v", beforeAddress, afterAddress)
+
 		}
 
-		for i := 0; i < len(tx); i++ {
+		if beforeSerialization.Value().Cmp(afterDeserialization.Value()) != 0 {
 
-			beforeSerialization := tx[i]
-			afterDeserialization := (*deserializedTxs)[i]
+			t.Errorf("Data before serialization and after deserialization are not the same ,Amount: %v, %v", beforeSerialization.Value(), afterDeserialization.Value())
 
-			if beforeSerialization.Nonce() != afterDeserialization.Nonce() {
+		}
 
-				t.Errorf("Data before serialization and after deserialization are not the same ,AccountNonce: %v, %v", beforeSerialization.Nonce(), afterDeserialization.Nonce())
+		beforeData := beforeSerialization.Data()
+		afterData := afterDeserialization.Data()
 
-			}
+		if !bytes.Equal(beforeData, afterData) {
 
-			if beforeSerialization.Gas() != afterDeserialization.Gas() {
-
-				t.Errorf("Data before serialization and after deserialization are not the same ,GasLimit: %v, %v", beforeSerialization.Gas(), afterDeserialization.Gas())
-
-			}
-
-			if beforeSerialization.GasPrice().Cmp(afterDeserialization.GasPrice()) != 0 {
-
-				t.Errorf("Data before serialization and after deserialization are not the same ,Price: %v, %v", beforeSerialization.GasPrice(), afterDeserialization.GasPrice())
-
-			}
-
-			beforeAddress := reflect.ValueOf(beforeSerialization.To())
-			afterAddress := reflect.ValueOf(afterDeserialization.To())
-
-			if reflect.DeepEqual(beforeAddress, afterAddress) {
-
-				t.Errorf("Data before serialization and after deserialization are not the same ,Recipient: %v, %v", beforeAddress, afterAddress)
-
-			}
-
-			if beforeSerialization.Value().Cmp(afterDeserialization.Value()) != 0 {
-
-				t.Errorf("Data before serialization and after deserialization are not the same ,Amount: %v, %v", beforeSerialization.Value(), afterDeserialization.Value())
-
-			}
-
-			beforeData := beforeSerialization.Data()
-			afterData := afterDeserialization.Data()
-
-			if !bytes.Equal(beforeData, afterData) {
-
-				t.Errorf("Data before serialization and after deserialization are not the same ,Payload: %v, %v", beforeData, afterData)
-
-			}
+			t.Errorf("Data before serialization and after deserialization are not the same ,Payload: %v, %v", beforeData, afterData)
 
 		}
 
