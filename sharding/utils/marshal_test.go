@@ -18,18 +18,17 @@ func buildRawBlob(size int64) []RawBlob {
 		}
 		tempbody[i] = rawblob
 	}
-	return tempbody
 
+	return tempbody
 }
 
 func buildBlob(size int64) []byte {
-
 	tempbody := make([]byte, size)
 	for i := int64(0); i < size; i++ {
 		tempbody[i] = byte(rand.Int())
 	}
-	return tempbody
 
+	return tempbody
 }
 
 func TestSize(t *testing.T) {
@@ -55,9 +54,7 @@ func TestSize(t *testing.T) {
 		}
 
 		if int64(len(serializedblob)) != sizeafterSerialize {
-
 			t.Errorf("Error Serializing blobs the lengths are not the same:\n %d \n %d", int64(len(serializedblob)), sizeafterSerialize)
-
 		}
 	}
 
@@ -71,7 +68,6 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 		drefbody := make([]*RawBlob, len(blob))
 		for s := 0; s < len(blob); s++ {
 			drefbody[s] = &(blob[s])
-
 		}
 
 		serializedblob, err := Serialize(drefbody)
@@ -85,7 +81,6 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(blob, raw) {
-
 			t.Errorf("Error Serializing blobs at index %d, the serialized and deserialized versions are not the same:\n\n %v \n\n %v \n\n %v", i, blob, serializedblob, raw)
 		}
 	}
