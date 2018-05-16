@@ -18,13 +18,13 @@ matrix:
     - os: linux
       dist: trusty
       sudo: required
-      go: "1.10"
+      go: 1.10.x
       script:
         - sudo modprobe fuse
         - sudo chmod 666 /dev/fuse
         - sudo chown root:$USER /etc/fuse.conf
         - go run build/ci.go install
-        - go run build/ci.go test -coverage
+        - go run build/ci.go test -coverage $TEST_PACKAGES
 
     #- os: osx
     #  go: "1.10"
@@ -39,7 +39,7 @@ matrix:
     # This builder only tests code linters on latest version of Go
     - os: linux
       dist: trusty
-      go: "1.10"
+      go: 1.10.x
       env:
         - lint
       git:
