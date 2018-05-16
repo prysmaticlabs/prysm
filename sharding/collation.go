@@ -127,7 +127,7 @@ func (c Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
 		blobs[i], err = utils.NewRawBlob(c.transactions[i], false)
 
 		if err != nil {
-			return nil, fmt.Errorf("Creation of raw blobs from transactions failed %v", err)
+			return nil, fmt.Errorf("Creation of raw blobs from transactions failed: %v", err)
 		}
 
 	}
@@ -147,7 +147,7 @@ func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 
 		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
 		if err != nil {
-			return nil, fmt.Errorf("Creation of transactions from raw blobs failed %v", err)
+			return nil, fmt.Errorf("Creation of transactions from raw blobs failed: %v", err)
 		}
 	}
 	return blobs, nil
