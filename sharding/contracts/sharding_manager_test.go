@@ -27,10 +27,10 @@ var (
 	notaryDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	notaryDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
 	FastForward100Blocks         = 100
-	smcConfig                    = SMCConfig{
-		notaryLockupLenght:   new(big.Int).SetInt64(1),
-		proposerLockupLength: new(big.Int).SetInt64(1),
-	}
+	// smcConfig                    = SMCConfig{
+	// 	notaryLockupLenght:   new(big.Int).SetInt64(1),
+	// 	proposerLockupLength: new(big.Int).SetInt64(1),
+	// }
 	ctx = context.Background()
 )
 
