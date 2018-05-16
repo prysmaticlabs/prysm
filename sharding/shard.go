@@ -129,7 +129,7 @@ func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 		return nil, err
 	}
 	if body == nil {
-		return nil, fmt.Errorf("no corresponding body with chunk root found: %v", chunkRoot.String())
+		return nil, fmt.Errorf("no corresponding body with chunk root found: %s", chunkRoot)
 	}
 	return *body, nil
 }
@@ -239,10 +239,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	}
 	// sets the key to be the canonical collation lookup key and val as RLP encoded
 	// collation header.
-	if err := s.shardDB.Put(key, encoded); err != nil {
-		return err
-	}
-	return nil
+	return s.shardDB.Put(key, encoded)
 }
 
 // dataAvailabilityLookupKey formats a string that will become a lookup
