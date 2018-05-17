@@ -42,8 +42,8 @@ var (
 	ctx = context.Background()
 )
 
-// initAccounts is a helper function to initialize backend with the n accounts
-// returns an array of testAccount struct
+// initAccounts is a helper function to initialize backend with the n accounts,
+// returns an array of testAccount struct.
 func initAccounts(n int) (testAcconts, map[common.Address]core.GenesisAccount) {
 	genesis := make(core.GenesisAlloc)
 	var testAccounts []testAccount
@@ -67,8 +67,8 @@ func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey
 	return DeploySMC(transactOpts, backend)
 }
 
-// registerNotaries is a helper function register notaries in batch
-// it also verifies notary registration is successful
+// registerNotaries is a helper function register notaries in batch,
+// it also verifies notary registration is successful.
 func (a testAcconts) registerNotaries(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, deposit *big.Int, params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		a[i].txOpts.Value = deposit
@@ -89,8 +89,25 @@ func (a testAcconts) registerNotaries(t *testing.T, backend *backends.SimulatedB
 	return nil
 }
 
-// addHeader is a helper function to add header to smc
-// it also verifies header is correctly added to the SMC
+// deregisterNotaries is a helper function that deregister notaries in batch,
+// it also verifies notary deregistration is successful.
+func (a testAcconts) deregisterNotaries(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, params ...int) {
+	for i := params[0]; i < params[1]; i++ {
+		a[i].txOpts.Value = big.NewInt(0)
+		_, err := smc.DeregisterNotary(a[i].txOpts)
+		if err != nil {
+			t.Fatalf("Failed to deregister notary: %v", err)
+		}
+		backend.Commit()
+		notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, a[i].addr)
+		if notary.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
+			t.Errorf("Degistered period can not be 0 right after deregistration")
+		}
+	}
+}
+
+// addHeader is a helper function to add header to smc,
+// it also verifies header is correctly added to the SMC.
 func (a testAccount) addHeader(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, shard *big.Int, period *big.Int, chunkRoot uint8) error {
 	_, err := smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot})
 	if err != nil {
@@ -113,8 +130,8 @@ func (a testAccount) addHeader(t *testing.T, backend *backends.SimulatedBackend,
 	return nil
 }
 
-// addHeader is a helper function for notary to submit vote on a given header
-// it also verifies vote is properly submitted and casted
+// addHeader is a helper function for notary to submit vote on a given header,
+// it also verifies vote is properly submitted and casted.
 func (a testAccount) submitVote(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
 	_, err := smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
 	if err != nil {
@@ -145,11 +162,9 @@ func TestContractCreation(t *testing.T) {
 
 // TestNotaryRegister tests notary registers in a normal condition.
 func TestNotaryRegister(t *testing.T) {
-	const notaryCount = 3
-
 	// Initializes 3 accounts to register as notaries.
+	const notaryCount = 3
 	notaryPool, genesis := initAccounts(notaryCount)
-
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPool[0].privKey)
 
@@ -158,7 +173,6 @@ func TestNotaryRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't get notary registry info: %v", err)
 	}
-
 	if notary.Deposited {
 		t.Errorf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
 	}
@@ -202,7 +216,6 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-
 	if numNotaries.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
@@ -226,7 +239,6 @@ func TestNotaryDeregister(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-
 	if numNotaries.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
@@ -237,20 +249,7 @@ func TestNotaryDeregister(t *testing.T) {
 	}
 
 	// Notary 0 deregisters.
-	notaryPool[0].txOpts = bind.NewKeyedTransactor(notaryPool[0].privKey)
-	_, err := smc.DeregisterNotary(notaryPool[0].txOpts)
-	if err != nil {
-		t.Fatalf("Failed to deregister notary: %v", err)
-	}
-	backend.Commit()
-
-	// Verify notary has saved the deregistered period as: current block number / period length.
-	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, notaryPool[0].addr)
-	currentPeriod := big.NewInt(int64(FastForward100Blocks) / sharding.PeriodLength)
-	if currentPeriod.Cmp(notary.DeregisteredPeriod) != 0 {
-		t.Errorf("Incorrect notary degister period. Want: %v, Got: %v ", currentPeriod, notary.DeregisteredPeriod)
-	}
-
+	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
@@ -266,19 +265,17 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-
 	if numNotaries.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
 
-	// Notary 0 deregisters.
-	notaryPool[0].txOpts = bind.NewKeyedTransactor(notaryPool[0].privKey)
-	_, err := smc.DeregisterNotary(notaryPool[0].txOpts)
-	if err != nil {
-		t.Fatalf("Failed to deregister notary: %v", err)
+	// Fast forward to the next period to deregister.
+	for i := 0; i < int(sharding.PeriodLength); i++ {
+		backend.Commit()
 	}
-	backend.Commit()
 
+	// Notary 0 deregisters.
+	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
@@ -286,7 +283,6 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 
 	// Notary 0 re-registers again.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
@@ -302,7 +298,6 @@ func TestNotaryRelease(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-
 	if numNotaries.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
@@ -313,13 +308,7 @@ func TestNotaryRelease(t *testing.T) {
 	}
 
 	// Notary 0 deregisters.
-	notaryPool[0].txOpts = bind.NewKeyedTransactor(notaryPool[0].privKey)
-	_, err := smc.DeregisterNotary(notaryPool[0].txOpts)
-	if err != nil {
-		t.Fatalf("Failed to deregister notary: %v", err)
-	}
-	backend.Commit()
-
+	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
@@ -331,26 +320,22 @@ func TestNotaryRelease(t *testing.T) {
 	}
 
 	// Notary 0 releases.
-	_, err = smc.ReleaseNotary(notaryPool[0].txOpts)
+	_, err := smc.ReleaseNotary(notaryPool[0].txOpts)
 	if err != nil {
 		t.Fatalf("Failed to release notary: %v", err)
 	}
 	backend.Commit()
-
 	notary, err := smc.NotaryRegistry(&bind.CallOpts{}, notaryPool[0].addr)
 	if err != nil {
 		t.Fatalf("Can't get notary registry info: %v", err)
 	}
-
 	if notary.Deposited {
 		t.Errorf("Notary deposit flag should be false after released")
 	}
-
 	balance, err := backend.BalanceAt(ctx, notaryPool[0].addr, nil)
 	if err != nil {
 		t.Errorf("Can't get account balance, err: %s", err)
 	}
-
 	if balance.Cmp(notaryDeposit) < 0 {
 		t.Errorf("Notary did not receive deposit after lock up ends")
 	}
@@ -365,7 +350,6 @@ func TestNotaryInstantRelease(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-
 	if numNotaries.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
@@ -376,33 +360,23 @@ func TestNotaryInstantRelease(t *testing.T) {
 	}
 
 	// Notary 0 deregisters.
-	notaryPool[0].txOpts = bind.NewKeyedTransactor(notaryPool[0].privKey)
-	_, err := smc.DeregisterNotary(notaryPool[0].txOpts)
-	if err != nil {
-		t.Fatalf("Failed to deregister notary: %v", err)
-	}
-	backend.Commit()
-
+	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
 		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
 	}
 
 	// Notary 0 tries to release before lockup ends.
-	_, err = smc.ReleaseNotary(notaryPool[0].txOpts)
+	_, err := smc.ReleaseNotary(notaryPool[0].txOpts)
 	backend.Commit()
-
 	notary, err := smc.NotaryRegistry(&bind.CallOpts{}, notaryPool[0].addr)
 	if err != nil {
 		t.Fatalf("Can't get notary registry info: %v", err)
 	}
-
 	if !notary.Deposited {
 		t.Errorf("Notary deposit flag should be true before released")
 	}
-
 	balance, err := backend.BalanceAt(ctx, notaryPool[0].addr, nil)
-
 	if balance.Cmp(notaryDeposit) > 0 {
 		t.Errorf("Notary received deposit before lockup ends")
 	}
@@ -417,7 +391,6 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 
 	// Register 1000 notaries to SMC.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1000)
-
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(int64(notaryCount))) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1000, Got: %v", numNotaries)
@@ -443,7 +416,6 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 
 	// Register 10 notaries to SMC, leave 1 address free.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 10)
-
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(10)) != 0 {
 		t.Fatalf("Incorrect count from notary pool. Want: 10, Got: %v", numNotaries)
@@ -467,14 +439,12 @@ func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-
 	if numNotaries.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
 
 	// Notary 0 samples for itself within the same period after registration
 	sampledAddr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
-
 	if notaryPool[0].addr != sampledAddr {
 		t.Errorf("Unable to sample notary address within same period of registration, got addr: %v", sampledAddr)
 	}
@@ -489,17 +459,13 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 
 	// Register 10 notaries to SMC.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, notaryCount)
-
 	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(10)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 10, Got: %v", numNotaries)
 	}
 
 	// Deregister notary 0 from SMC.
-	notaryPool[0].txOpts.Value = big.NewInt(0)
-	smc.DeregisterNotary(notaryPool[0].txOpts)
-	backend.Commit()
-
+	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(9)) != 0 {
 		t.Errorf("Incorrect count from notary pool. Want: 9, Got: %v", numNotaries)
