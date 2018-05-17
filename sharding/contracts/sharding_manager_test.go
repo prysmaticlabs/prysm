@@ -89,8 +89,8 @@ func (a testAcconts) registerNotaries(t *testing.T, backend *backends.SimulatedB
 	return nil
 }
 
-// addHeader is a helper function to add header and verify
-// header is correctly added to the SMC
+// addHeader is a helper function to add header to smc
+// it also verifies header is correctly added to the SMC
 func (a testAccount) addHeader(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, shard *big.Int, period *big.Int, chunkRoot uint8) error {
 	_, err := smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot})
 	if err != nil {
@@ -114,27 +114,13 @@ func (a testAccount) addHeader(t *testing.T, backend *backends.SimulatedBackend,
 }
 
 // addHeader is a helper function for notary to submit vote on a given header
-// it also verifies vote is correctly submitted
+// it also verifies vote is properly submitted and casted
 func (a testAccount) submitVote(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
 	_, err := smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
 	if err != nil {
 		return err
 	}
 	backend.Commit()
-
-	p, err := smc.LastSubmittedCollation(&bind.CallOpts{}, shard)
-	if err != nil {
-		t.Fatalf("Can't get last submitted collation's period number: %v", err)
-	}
-	if p.Cmp(period) != 0 {
-		t.Errorf("Incorrect last period, when header was added. Got: %v", p)
-	}
-
-	cr, err := smc.CollationRecords(&bind.CallOpts{}, shard, period)
-	if cr.ChunkRoot != [32]byte{chunkRoot} {
-		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
-	}
-	return nil
 
 	v, err := smc.HasVoted(&bind.CallOpts{}, shard, index)
 	if err != nil {
@@ -299,8 +285,7 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	}
 
 	// Notary 0 re-registers again.
-	smc.RegisterNotary(notaryPool[0].txOpts)
-	backend.Commit()
+	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 
 	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
 	if numNotaries.Cmp(big.NewInt(0)) != 0 {
