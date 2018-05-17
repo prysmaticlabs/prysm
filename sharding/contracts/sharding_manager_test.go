@@ -90,7 +90,7 @@ func (a testAcconts) registerNotaries(t *testing.T, backend *backends.SimulatedB
 }
 
 // addHeader is a helper function to add header and verify
-// header is successfully added to the SMC
+// header is correctly added to the SMC
 func (a testAccount) addHeader(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, shard *big.Int, period *big.Int, chunkRoot uint8) error {
 	_, err := smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot})
 	if err != nil {
@@ -109,6 +109,39 @@ func (a testAccount) addHeader(t *testing.T, backend *backends.SimulatedBackend,
 	cr, err := smc.CollationRecords(&bind.CallOpts{}, shard, period)
 	if cr.ChunkRoot != [32]byte{chunkRoot} {
 		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
+	}
+	return nil
+}
+
+// addHeader is a helper function for notary to submit vote on a given header
+// it also verifies vote is correctly submitted
+func (a testAccount) submitVote(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
+	_, err := smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
+	if err != nil {
+		return err
+	}
+	backend.Commit()
+
+	p, err := smc.LastSubmittedCollation(&bind.CallOpts{}, shard)
+	if err != nil {
+		t.Fatalf("Can't get last submitted collation's period number: %v", err)
+	}
+	if p.Cmp(period) != 0 {
+		t.Errorf("Incorrect last period, when header was added. Got: %v", p)
+	}
+
+	cr, err := smc.CollationRecords(&bind.CallOpts{}, shard, period)
+	if cr.ChunkRoot != [32]byte{chunkRoot} {
+		t.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
+	}
+	return nil
+
+	v, err := smc.HasVoted(&bind.CallOpts{}, shard, index)
+	if err != nil {
+		t.Fatalf("Check notary's vote failed: %v", err)
+	}
+	if !v {
+		t.Errorf("Notary's indexd bit did not cast to 1 in index %v", index)
 	}
 	return nil
 }
@@ -600,7 +633,6 @@ func TestSubmitVote(t *testing.T) {
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
-	chunkRoot := [32]byte{'A'}
 	notaryPool[0].txOpts.Value = big.NewInt(0)
 	err := notaryPool[0].addHeader(t, backend, smc, shard0, period1, 'A')
 	if err != nil {
@@ -616,36 +648,18 @@ func TestSubmitVote(t *testing.T) {
 		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
 	}
 
-	_, err = smc.SubmitVote(notaryPool[0].txOpts, shard0, period1, index0, chunkRoot)
-	backend.Commit()
+	// Notary votes on the header that was submitted
+	err = notaryPool[0].submitVote(t, backend, smc, shard0, period1, index0, 'A')
 	if err != nil {
 		t.Fatalf("Notary submits vote failed: %v", err)
-	}
-
-	// Check notary 0's vote is correctly casted.
-	v, err := smc.HasVoted(&bind.CallOpts{}, shard0, index0)
-	if err != nil {
-		t.Fatalf("Check notary's vote failed: %v", err)
-	}
-	if !v {
-		t.Errorf("Notary's indexd bit did not cast to 1 in index %v", index0)
 	}
 	c, err = smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
 	}
 
-	// Check header's submitted with the current period, should be period 1.
-	p, err := smc.LastSubmittedCollation(&bind.CallOpts{}, shard0)
-	if err != nil {
-		t.Fatalf("Get period of last submitted header failed: %v", err)
-	}
-	if p.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect period submitted, want: 1, got: %v", p)
-	}
-
 	// Check header's approved with the current period, should be period 0.
-	p, err = smc.LastApprovedCollation(&bind.CallOpts{}, shard0)
+	p, err := smc.LastApprovedCollation(&bind.CallOpts{}, shard0)
 	if err != nil {
 		t.Fatalf("Get period of last approved header failed: %v", err)
 	}
@@ -673,7 +687,6 @@ func TestSubmitVoteTwice(t *testing.T) {
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
-	chunkRoot := [32]byte{'A'}
 	notaryPool[0].txOpts.Value = big.NewInt(0)
 	err := notaryPool[0].addHeader(t, backend, smc, shard0, period1, 'A')
 	if err != nil {
@@ -681,24 +694,19 @@ func TestSubmitVoteTwice(t *testing.T) {
 	}
 
 	// Notary 0 votes on header.
-	smc.SubmitVote(notaryPool[0].txOpts, shard0, period1, index0, chunkRoot)
-	backend.Commit()
-
-	// Check notary 0's vote is correctly casted.
-	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
-	if c.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+	err = notaryPool[0].submitVote(t, backend, smc, shard0, period1, index0, 'A')
+	if err != nil {
+		t.Fatalf("Notary submits vote failed: %v", err)
 	}
 
 	// Notary 0 votes on header again, it should fail.
-	_, err = smc.SubmitVote(notaryPool[0].txOpts, shard0, period1, index0, chunkRoot)
+	err = notaryPool[0].submitVote(t, backend, smc, shard0, period1, index0, 'A')
 	if err == nil {
 		t.Errorf("notary voting twice should have failed")
 	}
-	backend.Commit()
 
-	// Check notary 0's vote is correctly casted.
-	c, _ = smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	// Check notary's vote count is correct in shard.
+	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
 	}
@@ -719,19 +727,18 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
-	chunkRoot := [32]byte{'A'}
-	notaryPool[0].txOpts.Value = big.NewInt(0)
 	err := notaryPool[0].addHeader(t, backend, smc, shard0, period1, 'A')
 	if err != nil {
 		t.Fatalf("Proposer adds header failed: %v", err)
 	}
 
 	// Unregistered Notary 0 votes on header, it should fail.
-	_, err = smc.SubmitVote(notaryPool[0].txOpts, shard0, period1, index0, chunkRoot)
-	backend.Commit()
+	err = notaryPool[0].submitVote(t, backend, smc, shard0, period1, index0, 'A')
 	if err == nil {
 		t.Errorf("Non registered notary submits vote should have failed")
 	}
+
+	// Check notary's vote count is correct in shard
 	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
@@ -756,17 +763,15 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
-	chunkRoot := [32]byte{'A'}
 	notaryPool[0].txOpts.Value = big.NewInt(0)
 
 	// Notary 0 votes on header, it should fail because no header has added.
-	_, err := smc.SubmitVote(notaryPool[0].txOpts, shard0, period1, index0, chunkRoot)
+	err := notaryPool[0].submitVote(t, backend, smc, shard0, period1, index0, 'A')
 	if err == nil {
 		t.Errorf("Notary votes should have failed due to missing header")
 	}
-	backend.Commit()
 
-	// Check notary 0's vote is correctly casted.
+	// Check notary's vote count is correct in shard
 	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
@@ -791,7 +796,6 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	period1 := big.NewInt(1)
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
-	chunkRoot := [32]byte{'A'}
 	notaryPool[0].txOpts.Value = big.NewInt(0)
 	err := notaryPool[0].addHeader(t, backend, smc, shard0, period1, 'A')
 	if err != nil {
@@ -800,14 +804,13 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 
 	// Notary voting with incorrect period.
 	period2 := big.NewInt(2)
-	_, err = smc.SubmitVote(notaryPool[0].txOpts, shard0, period2, index0, chunkRoot)
+	err = notaryPool[0].submitVote(t, backend, smc, shard0, period2, index0, 'A')
 	if err == nil {
 		t.Errorf("Notary votes should have failed due to incorrect period")
 	}
 
 	// Notary voting with incorrect chunk root.
-	chunkRootWrong := [32]byte{'B'}
-	_, err = smc.SubmitVote(notaryPool[0].txOpts, shard0, period1, index0, chunkRootWrong)
+	err = notaryPool[0].submitVote(t, backend, smc, shard0, period2, index0, 'B')
 	if err == nil {
 		t.Errorf("Notary votes should have failed due to incorrect chunk root")
 	}
