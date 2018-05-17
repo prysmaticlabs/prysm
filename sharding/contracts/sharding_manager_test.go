@@ -42,6 +42,13 @@ var (
 	ctx = context.Background()
 )
 
+// fastForward is a helper function to skip through n period
+func fastForward(backend *backends.SimulatedBackend, p int) {
+	for i := 0; i < p*int(sharding.PeriodLength); i++ {
+		backend.Commit()
+	}
+}
+
 // initAccounts is a helper function to initialize backend with the n accounts,
 // returns an array of testAccount struct.
 func initAccounts(n int) (testAcconts, map[common.Address]core.GenesisAccount) {
@@ -243,10 +250,8 @@ func TestNotaryDeregister(t *testing.T) {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
 
-	// Fast forward 100 blocks to check notary's deregistered period field is set correctly.
-	for i := 0; i < FastForward100Blocks; i++ {
-		backend.Commit()
-	}
+	// Fast forward 20 periods to check notary's deregistered period field is set correctly.
+	fastForward(backend, 20)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
@@ -269,10 +274,7 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
 
-	// Fast forward to the next period to deregister.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
@@ -302,10 +304,7 @@ func TestNotaryRelease(t *testing.T) {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
 
-	// Fast forward to the next period to deregister.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
@@ -315,9 +314,7 @@ func TestNotaryRelease(t *testing.T) {
 	}
 
 	// Fast forward until lockup ends.
-	for i := 0; i < int(sharding.NotaryLockupLength*sharding.PeriodLength+1); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, int(sharding.NotaryLockupLength+1))
 
 	// Notary 0 releases.
 	_, err := smc.ReleaseNotary(notaryPool[0].txOpts)
@@ -354,10 +351,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
 	}
 
-	// Fast forward to the next period to deregister.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
@@ -486,10 +480,7 @@ func TestNormalAddHeader(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPool[0].privKey)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	err := notaryPool[0].addHeader(t, backend, smc, big.NewInt(0), big.NewInt(1), 'A')
@@ -497,10 +488,7 @@ func TestNormalAddHeader(t *testing.T) {
 		t.Fatalf("Proposer adds header failed: %v", err)
 	}
 
-	// Fast forward to the next period. Period 2.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 2 and chunkroot 0xB.
 	err = notaryPool[0].addHeader(t, backend, smc, big.NewInt(0), big.NewInt(2), 'B')
@@ -520,10 +508,7 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPool[0].privKey)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	err := notaryPool[0].addHeader(t, backend, smc, big.NewInt(0), big.NewInt(1), 'A')
@@ -544,10 +529,7 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPool[0].privKey)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header at wrong period, shard 0, period 0 and chunkroot 0xA.
 	err := notaryPool[0].addHeader(t, backend, smc, big.NewInt(0), big.NewInt(0), 'A')
@@ -575,10 +557,7 @@ func TestSubmitVote(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -629,10 +608,7 @@ func TestSubmitVoteTwice(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -669,10 +645,7 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPool[0].privKey)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -705,10 +678,7 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -738,10 +708,7 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 
-	// Fast forward to the next period to submit header. Period 1.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
+	fastForward(backend, 1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
