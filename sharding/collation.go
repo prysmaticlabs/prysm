@@ -1,12 +1,15 @@
 package sharding
 
 import (
+	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/sharding/utils"
 )
 
 // Collation base struct.
@@ -37,6 +40,8 @@ type collationHeaderData struct {
 	ProposerAddress   *common.Address // address of the collation proposer.
 	ProposerSignature []byte          // the proposer's signature for calculating collation hash.
 }
+
+var collationSizelimit = int64(math.Pow(float64(2), float64(20)))
 
 // NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
 // and provide the body and transactions upon creation.
@@ -104,4 +109,84 @@ func (c *Collation) CalculateChunkRoot() {
 	// take the merkle root of that.
 	chunkRoot := common.BytesToHash(c.body)
 	c.header.data.ChunkRoot = &chunkRoot
+}
+
+// CreateRawBlobs creates raw blobs from transactions.
+func (c Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
+
+	// It does not skip evm execution by default
+	blobs := make([]*utils.RawBlob, len(c.transactions))
+	for i := 0; i < len(c.transactions); i++ {
+
+		err := error(nil)
+		blobs[i], err = utils.NewRawBlob(c.transactions[i], false)
+
+		if err != nil {
+			return nil, fmt.Errorf("Creation of raw blobs from transactions failed: %v", err)
+		}
+
+	}
+
+	return blobs, nil
+
+}
+
+// ConvertBackToTx converts raw blobs back to their original transactions.
+func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
+
+	blobs := make([]*types.Transaction, len(rawBlobs))
+
+	for i := 0; i < len(rawBlobs); i++ {
+
+		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+
+		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("Creation of transactions from raw blobs failed: %v", err)
+		}
+	}
+	return blobs, nil
+
+}
+
+// Serialize method  serializes the collation body to a byte array.
+func (c *Collation) Serialize() ([]byte, error) {
+
+	blobs, err := c.CreateRawBlobs()
+
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
+
+	serializedTx, err := utils.Serialize(blobs)
+
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
+
+	if int64(len(serializedTx)) > collationSizelimit {
+
+		return nil, fmt.Errorf("The serialized body exceeded the collation size limit: %v", serializedTx)
+
+	}
+
+	return serializedTx, nil
+
+}
+
+// Deserialize takes a byte array and converts its back to its original transactions.
+func Deserialize(serialisedBlob []byte) (*[]*types.Transaction, error) {
+
+	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
+
+	txs, err := ConvertBackToTx(deserializedBlobs)
+
+	if err != nil {
+		return nil, fmt.Errorf("%v", err)
+	}
+
+	return &txs, nil
 }
