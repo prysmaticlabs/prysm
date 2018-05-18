@@ -16,11 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 )
 
-type SMCConfig struct {
-	notaryLockupLenght   *big.Int
-	proposerLockupLength *big.Int
-}
-
 type testAccount struct {
 	addr    common.Address
 	privKey *ecdsa.PrivateKey
@@ -35,11 +30,7 @@ var (
 	notaryDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	notaryDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
 	FastForward100Blocks         = 100
-	smcConfig                    = SMCConfig{
-		notaryLockupLenght:   new(big.Int).SetInt64(1),
-		proposerLockupLength: new(big.Int).SetInt64(1),
-	}
-	ctx = context.Background()
+	ctx                          = context.Background()
 )
 
 // fastForward is a helper function to skip through n period
@@ -156,6 +147,18 @@ func (a testAccount) submitVote(t *testing.T, backend *backends.SimulatedBackend
 	return nil
 }
 
+// checkNotaryPoolLength is a helper function to verify current notary pool
+// length is equal to n.
+func checkNotaryPoolLength(t *testing.T, backend *backends.SimulatedBackend, smc *SMC, n *big.Int) {
+	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+	if err != nil {
+		t.Fatalf("Failed to get notary pool length: %v", err)
+	}
+	if numNotaries.Cmp(n) != 0 {
+		t.Errorf("Incorrect count from notary pool. Want: %v, Got: %v", n, numNotaries)
+	}
+}
+
 // TestContractCreation tests SMC smart contract can successfully be deployed.
 func TestContractCreation(t *testing.T) {
 	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
@@ -186,18 +189,10 @@ func TestNotaryRegister(t *testing.T) {
 
 	// Test notary 0 has registered.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-
 	// Test notary 1 and 2 have registered.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 1, 3)
-
-	// Check total numbers of notaries in pool.
-	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
-	if err != nil {
-		t.Fatalf("Failed to get notary pool length: %v", err)
-	}
-	if numNotaries.Cmp(big.NewInt(3)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 3, Got: %v", numNotaries)
-	}
+	// Check total numbers of notaries in pool, should be 3
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(3))
 }
 
 // TestNotaryRegisterInsufficientEther tests notary registers with insufficient deposit.
@@ -208,10 +203,7 @@ func TestNotaryRegisterInsufficientEther(t *testing.T) {
 	if err := notaryPool.registerNotaries(t, backend, smc, notaryDepositInsufficient, 0, 1); err == nil {
 		t.Errorf("Notary register should have failed with insufficient deposit")
 	}
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(0))
 }
 
 // TestNotaryDoubleRegisters tests notary registers twice.
@@ -222,19 +214,13 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
 	// Notary 0 registers again. This time should fail
 	if err := notaryPool.registerNotaries(t, backend, smc, big.NewInt(0), 0, 1); err == nil {
 		t.Errorf("Notary register should have failed with double registers")
 	}
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
-
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 }
 
 // TestNotaryDeregister tests notary deregisters in a normal condition.
@@ -245,20 +231,14 @@ func TestNotaryDeregister(t *testing.T) {
 
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
 	// Fast forward 20 periods to check notary's deregistered period field is set correctly.
 	fastForward(backend, 20)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
-	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(0))
 }
 
 // TestNotaryDeregisterThenRegister tests notary deregisters then registers before lock up ends.
@@ -269,26 +249,17 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
 	fastForward(backend, 1)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
-	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(0))
 
 	// Notary 0 re-registers again.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(0))
 }
 
 // TestNotaryRelease tests notary releases in a normal condition.
@@ -299,19 +270,13 @@ func TestNotaryRelease(t *testing.T) {
 
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
 	fastForward(backend, 1)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
-	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(0))
 
 	// Fast forward until lockup ends.
 	fastForward(backend, int(sharding.NotaryLockupLength+1))
@@ -346,19 +311,13 @@ func TestNotaryInstantRelease(t *testing.T) {
 
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
 	fastForward(backend, 1)
 
 	// Notary 0 deregisters.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
-	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("Incorrect count from notary pool. Want: 0, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(0))
 
 	// Notary 0 tries to release before lockup ends.
 	_, err := smc.ReleaseNotary(notaryPool[0].txOpts)
@@ -378,17 +337,14 @@ func TestNotaryInstantRelease(t *testing.T) {
 
 // TestCommitteeListsAreDifferent tests different shards have different notary committee.
 func TestCommitteeListsAreDifferent(t *testing.T) {
-	notaryCount := 1000
+	const notaryCount = 1000
 	notaryPool, genesis := initAccounts(notaryCount)
 	backend := backends.NewSimulatedBackend(genesis)
 	_, _, smc, _ := deploySMCContract(backend, notaryPool[0].privKey)
 
 	// Register 1000 notaries to SMC.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1000)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(int64(notaryCount))) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1000, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1000))
 
 	// Compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical.
 	for i := 0; i < 5; i++ {
@@ -410,10 +366,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 
 	// Register 10 notaries to SMC, leave 1 address free.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 10)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(10)) != 0 {
-		t.Fatalf("Incorrect count from notary pool. Want: 10, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(10))
 
 	// Verify the unregistered account is not in the notary pool list.
 	for i := 0; i < 10; i++ {
@@ -432,10 +385,7 @@ func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 
 	// Notary 0 registers.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
 	// Notary 0 samples for itself within the same period after registration
 	sampledAddr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
@@ -453,17 +403,11 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 
 	// Register 10 notaries to SMC.
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, notaryCount)
-	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(10)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 10, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(10))
 
 	// Deregister notary 0 from SMC.
 	notaryPool.deregisterNotaries(t, backend, smc, 0, 1)
-	numNotaries, _ = smc.NotaryPoolLength(&bind.CallOpts{})
-	if numNotaries.Cmp(big.NewInt(9)) != 0 {
-		t.Errorf("Incorrect count from notary pool. Want: 9, Got: %v", numNotaries)
-	}
+	checkNotaryPoolLength(t, backend, smc, big.NewInt(9))
 
 	// Verify degistered notary 0 is not in the notary pool list.
 	for i := 0; i < 10; i++ {
