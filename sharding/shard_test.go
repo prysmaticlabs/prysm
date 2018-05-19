@@ -40,8 +40,8 @@ func (c *Collation) Hash() (hash common.Hash) {
 	return hash
 }
 func TestShard_ValidateShardID(t *testing.T) {
-	emptyHash := common.StringToHash("")
-	emptyAddr := common.StringToAddress("")
+	emptyHash := common.BytesToHash([]byte{})
+	emptyAddr := common.BytesToAddress([]byte{})
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
 	shardDB := database.NewShardKV()
 	shard := NewShard(big.NewInt(3), shardDB)
@@ -59,8 +59,8 @@ func TestShard_ValidateShardID(t *testing.T) {
 }
 
 func TestShard_HeaderByHash(t *testing.T) {
-	emptyHash := common.StringToHash("")
-	emptyAddr := common.StringToAddress("")
+	emptyHash := common.BytesToHash([]byte{})
+	emptyAddr := common.BytesToAddress([]byte{})
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
@@ -96,7 +96,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 }
 
 func TestShard_CollationByHash(t *testing.T) {
-	emptyAddr := common.StringToAddress("")
+	emptyAddr := common.BytesToAddress([]byte{})
 
 	// Empty chunk root.
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), &emptyAddr, []byte{})
@@ -156,7 +156,7 @@ func TestShard_CollationByHash(t *testing.T) {
 func TestShard_CanonicalHeaderHash(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
-	proposerAddress := common.StringToAddress("")
+	proposerAddress := common.BytesToAddress([]byte{})
 	proposerSignature := []byte{}
 	header := NewCollationHeader(shardID, nil, period, &proposerAddress, proposerSignature)
 
@@ -199,9 +199,9 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 func TestShard_CanonicalCollation(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
-	proposerAddress := common.StringToAddress("")
+	proposerAddress := common.BytesToAddress([]byte{})
 	proposerSignature := []byte{}
-	emptyHash := common.StringToHash("")
+	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
 	shardDB := database.NewShardKV()
@@ -241,7 +241,7 @@ func TestShard_CanonicalCollation(t *testing.T) {
 }
 
 func TestShard_SetCanonical(t *testing.T) {
-	chunkRoot := common.StringToHash("")
+	chunkRoot := common.BytesToHash([]byte{})
 	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
 
 	shardDB := database.NewShardKV()
@@ -285,7 +285,7 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 	}
 
 	// it should throw error if fetching non-existent chunk root.
-	emptyHash := common.StringToHash("")
+	emptyHash := common.BytesToHash([]byte{})
 	if _, err := shard.BodyByChunkRoot(&emptyHash); err == nil {
 		t.Errorf("non-existent chunk root should throw error: %v", err)
 	}
@@ -307,9 +307,9 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 func TestShard_CheckAvailability(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
-	proposerAddress := common.StringToAddress("")
+	proposerAddress := common.BytesToAddress([]byte{})
 	proposerSignature := []byte{}
-	emptyHash := common.StringToHash("")
+	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
 	shardDB := database.NewShardKV()
@@ -342,7 +342,7 @@ func TestShard_CheckAvailability(t *testing.T) {
 }
 
 func TestShard_SetAvailability(t *testing.T) {
-	chunkRoot := common.StringToHash("")
+	chunkRoot := common.BytesToHash([]byte{})
 	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
@@ -378,9 +378,9 @@ func TestShard_SetAvailability(t *testing.T) {
 func TestShard_SaveCollation(t *testing.T) {
 	headerShardID := big.NewInt(1)
 	period := big.NewInt(1)
-	proposerAddress := common.StringToAddress("")
+	proposerAddress := common.BytesToAddress([]byte{})
 	proposerSignature := []byte{}
-	emptyHash := common.StringToHash("")
+	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(headerShardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
 	shardDB := database.NewShardKV()
@@ -402,7 +402,7 @@ func TestShard_SaveCollation(t *testing.T) {
 func TestShard_SaveHeader(t *testing.T) {
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
 	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
-	emptyHash := common.StringToHash("")
+	emptyHash := common.BytesToHash([]byte{})
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), nil, []byte{})
