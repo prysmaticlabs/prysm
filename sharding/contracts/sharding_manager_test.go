@@ -33,7 +33,7 @@ var (
 	ctx                          = context.Background()
 )
 
-// fastForward is a helper function to skip through n period
+// fastForward is a helper function to skip through n period.
 func fastForward(backend *backends.SimulatedBackend, p int) {
 	for i := 0; i < p*int(sharding.PeriodLength); i++ {
 		backend.Commit()
@@ -216,7 +216,7 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
-	// Notary 0 registers again. This time should fail
+	// Notary 0 registers again, this time should fail.
 	if err := notaryPool.registerNotaries(t, backend, smc, big.NewInt(0), 0, 1); err == nil {
 		t.Errorf("Notary register should have failed with double registers")
 	}
@@ -377,7 +377,7 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 	}
 }
 
-// TestGetCommitteeWithinSamePeriod tests notary registers and samples within the same period
+// TestGetCommitteeWithinSamePeriod tests notary registers and samples within the same period.
 func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 	notaryPool, genesis := initAccounts(1)
 	backend := backends.NewSimulatedBackend(genesis)
@@ -387,7 +387,7 @@ func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 	notaryPool.registerNotaries(t, backend, smc, notaryDeposit, 0, 1)
 	checkNotaryPoolLength(t, backend, smc, big.NewInt(1))
 
-	// Notary 0 samples for itself within the same period after registration
+	// Notary 0 samples for itself within the same period after registration.
 	sampledAddr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
 	if notaryPool[0].addr != sampledAddr {
 		t.Errorf("Unable to sample notary address within same period of registration, got addr: %v", sampledAddr)
@@ -522,7 +522,7 @@ func TestSubmitVote(t *testing.T) {
 		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
 	}
 
-	// Notary votes on the header that was submitted
+	// Notary votes on the header that was submitted.
 	err = notaryPool[0].submitVote(t, backend, smc, shard0, period1, index0, 'A')
 	if err != nil {
 		t.Fatalf("Notary submits vote failed: %v", err)
@@ -606,7 +606,7 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 		t.Errorf("Non registered notary submits vote should have failed")
 	}
 
-	// Check notary's vote count is correct in shard
+	// Check notary's vote count is correct in shard.
 	c, _ := smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
