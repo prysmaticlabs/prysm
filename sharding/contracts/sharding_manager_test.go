@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"math/big"
+	"testing"
 
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -13,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
-	"testing"
 )
 
 type smcTestHelper struct {
@@ -186,7 +186,7 @@ func TestNotaryRegister(t *testing.T) {
 	// Verify notary 0 has not registered.
 	notary, err := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
-		t.Fatalf("Can't get notary registry info: %v", err)
+		t.Errorf("Can't get notary registry info: %v", err)
 	}
 	if notary.Deposited {
 		t.Errorf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
@@ -195,17 +195,17 @@ func TestNotaryRegister(t *testing.T) {
 	// Test notary 0 has registered.
 	err = s.registerNotaries(notaryDeposit, 0, 1)
 	if err != nil {
-		t.Fatalf("Register notary failed: %v", err)
+		t.Errorf("Register notary failed: %v", err)
 	}
 	// Test notary 1 and 2 have registered.
 	err = s.registerNotaries(notaryDeposit, 1, 3)
 	if err != nil {
-		t.Fatalf("Register notary failed: %v", err)
+		t.Errorf("Register notary failed: %v", err)
 	}
 	// Check total numbers of notaries in pool, should be 3
 	err = checkNotaryPoolLength(s.smc, big.NewInt(notaryCount))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 }
 
@@ -224,11 +224,11 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
 	if err != nil {
-		t.Fatalf("Register notary failed: %v", err)
+		t.Errorf("Register notary failed: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Notary 0 registers again, This time should fail.
@@ -237,7 +237,7 @@ func TestNotaryDoubleRegisters(t *testing.T) {
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 }
 
@@ -248,11 +248,11 @@ func TestNotaryDeregister(t *testing.T) {
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
 	if err != nil {
-		t.Fatalf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release notary: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 	// Fast forward 20 periods to check notary's deregistered period field is set correctly.
 	s.fastForward(20)
@@ -261,7 +261,7 @@ func TestNotaryDeregister(t *testing.T) {
 	s.deregisterNotaries(0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 }
 
@@ -272,11 +272,11 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
 	if err != nil {
-		t.Fatalf("Failed to register notary: %v", err)
+		t.Errorf("Failed to register notary: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 	s.fastForward(1)
 
@@ -284,14 +284,14 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	s.deregisterNotaries(0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Notary 0 re-registers again.
 	err = s.registerNotaries(notaryDeposit, 0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 }
 
@@ -301,9 +301,12 @@ func TestNotaryRelease(t *testing.T) {
 
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
+	if err != nil {
+		t.Errorf("Failed to register notary: %v", err)
+	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 	s.fastForward(1)
 
@@ -311,7 +314,7 @@ func TestNotaryRelease(t *testing.T) {
 	s.deregisterNotaries(0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Fast forward until lockup ends.
@@ -320,12 +323,12 @@ func TestNotaryRelease(t *testing.T) {
 	// Notary 0 releases.
 	_, err = s.smc.ReleaseNotary(s.testAccounts[0].txOpts)
 	if err != nil {
-		t.Fatalf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release notary: %v", err)
 	}
 	s.backend.Commit()
 	notary, err := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
-		t.Fatalf("Can't get notary registry info: %v", err)
+		t.Errorf("Can't get notary registry info: %v", err)
 	}
 	if notary.Deposited {
 		t.Errorf("Notary deposit flag should be false after released")
@@ -347,7 +350,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 	err := s.registerNotaries(notaryDeposit, 0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 	s.fastForward(1)
 
@@ -355,7 +358,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 	s.deregisterNotaries(0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Notary 0 tries to release before lockup ends.
@@ -363,7 +366,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 	s.backend.Commit()
 	notary, err := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
-		t.Fatalf("Can't get notary registry info: %v", err)
+		t.Errorf("Can't get notary registry info: %v", err)
 	}
 	if !notary.Deposited {
 		t.Errorf("Notary deposit flag should be true before released")
@@ -382,11 +385,11 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 	// Register 1000 notaries to s.smc.
 	err := s.registerNotaries(notaryDeposit, 0, 1000)
 	if err != nil {
-		t.Fatalf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release notary: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1000))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical.
@@ -407,11 +410,11 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 	// Register 10 notaries to s.smc, leave 1 address free.
 	err := s.registerNotaries(notaryDeposit, 0, 10)
 	if err != nil {
-		t.Fatalf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release notary: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(10))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Verify the unregistered account is not in the notary pool list.
@@ -430,11 +433,11 @@ func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
 	if err != nil {
-		t.Fatalf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release notary: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Notary 0 samples for itself within the same period after registration.
@@ -452,18 +455,18 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	// Register 10 notaries to s.smc.
 	err := s.registerNotaries(notaryDeposit, 0, notaryCount)
 	if err != nil {
-		t.Fatalf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release notary: %v", err)
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(10))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Deregister notary 0 from s.smc.
 	s.deregisterNotaries(0, 1)
 	err = checkNotaryPoolLength(s.smc, big.NewInt(9))
 	if err != nil {
-		t.Fatalf("Notary pool length mismatched: %v", err)
+		t.Errorf("Notary pool length mismatched: %v", err)
 	}
 
 	// Verify degistered notary 0 is not in the notary pool list.
@@ -483,19 +486,19 @@ func TestNormalAddHeader(t *testing.T) {
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	err := s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(1), 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 2 and chunkroot 0xB.
 	err = s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(2), 'B')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 	// Proposer adds header consists shard 1, period 2 and chunkroot 0xC.
 	err = s.addHeader(&s.testAccounts[0], big.NewInt(1), big.NewInt(2), 'C')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 }
 
@@ -507,7 +510,7 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	err := s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(1), 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
 	// Proposer attempts to add another header chunkroot 0xB on the same period for the same shard.
@@ -535,7 +538,7 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	// Proposer adds header at correct period, shard 0, period 1 and chunkroot 0xA.
 	err = s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(1), 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 }
 
@@ -553,13 +556,13 @@ func TestSubmitVote(t *testing.T) {
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
 	err = s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
 	// Notary 0 votes on header.
 	c, err := s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if err != nil {
-		t.Fatalf("Get notary vote count failed: %v", err)
+		t.Errorf("Get notary vote count failed: %v", err)
 	}
 	if c.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
@@ -600,13 +603,13 @@ func TestSubmitVoteTwice(t *testing.T) {
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
 	err = s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
 	// Notary 0 votes on header.
 	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
 	if err != nil {
-		t.Fatalf("Notary submits vote failed: %v", err)
+		t.Errorf("Notary submits vote failed: %v", err)
 	}
 
 	// Notary 0 votes on header again, it should fail.
@@ -633,7 +636,7 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	index0 := big.NewInt(0)
 	err := s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
 	// Unregistered Notary 0 votes on header, it should fail.
@@ -689,7 +692,7 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
 	err = s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
 	if err != nil {
-		t.Fatalf("Proposer adds header failed: %v", err)
+		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
 	// Notary voting with incorrect period.
