@@ -36,13 +36,6 @@ var (
 	ctx                          = context.Background()
 )
 
-// fastForward is a helper function to skip through n period.
-func fastForward(backend *backends.SimulatedBackend, p int) {
-	for i := 0; i < p*int(sharding.PeriodLength); i++ {
-		backend.Commit()
-	}
-}
-
 // newSMCTestHelper is a helper function to initialize backend with the n test accounts,
 // a smc struct to interact with smc, and a simulated back end to for deployment.
 func newSMCTestHelper(n int) (*smcTestHelper, error) {
@@ -71,6 +64,13 @@ func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey
 	transactOpts := bind.NewKeyedTransactor(key)
 	defer backend.Commit()
 	return DeploySMC(transactOpts, backend)
+}
+
+// fastForward is a helper function to skip through n period.
+func (s *smcTestHelper) fastForward(p int) {
+	for i := 0; i < p*int(sharding.PeriodLength); i++ {
+		s.backend.Commit()
+	}
 }
 
 // registerNotaries is a helper function register notaries in batch,
@@ -255,7 +255,7 @@ func TestNotaryDeregister(t *testing.T) {
 		t.Fatalf("Notary pool length mismatched: %v", err)
 	}
 	// Fast forward 20 periods to check notary's deregistered period field is set correctly.
-	fastForward(s.backend, 20)
+	s.fastForward(20)
 
 	// Notary 0 deregisters.
 	s.deregisterNotaries(0, 1)
@@ -278,7 +278,7 @@ func TestNotaryDeregisterThenRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Notary pool length mismatched: %v", err)
 	}
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Notary 0 deregisters.
 	s.deregisterNotaries(0, 1)
@@ -305,7 +305,7 @@ func TestNotaryRelease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Notary pool length mismatched: %v", err)
 	}
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Notary 0 deregisters.
 	s.deregisterNotaries(0, 1)
@@ -315,7 +315,7 @@ func TestNotaryRelease(t *testing.T) {
 	}
 
 	// Fast forward until lockup ends.
-	fastForward(s.backend, int(sharding.NotaryLockupLength+1))
+	s.fastForward(int(sharding.NotaryLockupLength + 1))
 
 	// Notary 0 releases.
 	_, err = s.smc.ReleaseNotary(s.testAccounts[0].txOpts)
@@ -349,7 +349,7 @@ func TestNotaryInstantRelease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Notary pool length mismatched: %v", err)
 	}
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Notary 0 deregisters.
 	s.deregisterNotaries(0, 1)
@@ -478,14 +478,14 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 // TestNormalAddHeader tests proposer add header in normal condition.
 func TestNormalAddHeader(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	err := s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(1), 'A')
 	if err != nil {
 		t.Fatalf("Proposer adds header failed: %v", err)
 	}
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 2 and chunkroot 0xB.
 	err = s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(2), 'B')
@@ -502,7 +502,7 @@ func TestNormalAddHeader(t *testing.T) {
 // TestAddTwoHeadersAtSamePeriod tests we can't add two headers within the same period.
 func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	err := s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(1), 'A')
@@ -520,7 +520,7 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 // TestAddHeadersAtWrongPeriod tests proposer adds header in the wrong period.
 func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header at wrong period, shard 0, period 0 and chunkroot 0xA.
 	err := s.addHeader(&s.testAccounts[0], big.NewInt(0), big.NewInt(0), 'A')
@@ -544,7 +544,7 @@ func TestSubmitVote(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -591,7 +591,7 @@ func TestSubmitVoteTwice(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -625,7 +625,7 @@ func TestSubmitVoteTwice(t *testing.T) {
 // TestSubmitVoteByNonEligibleNotary tests a non-eligible notary tries to submit vote.
 func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -654,7 +654,7 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
@@ -680,7 +680,7 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Notary 0 registers.
 	err := s.registerNotaries(notaryDeposit, 0, 1)
-	fastForward(s.backend, 1)
+	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
 	period1 := big.NewInt(1)
