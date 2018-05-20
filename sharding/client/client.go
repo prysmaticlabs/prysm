@@ -76,21 +76,36 @@ func NewClient(ctx *cli.Context) Client {
 	}
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	// Registers required services. Notary/Proposer are services in a sharding client,
-	// and they are selected based on command line flags at runtime.
-
 	c := &shardingClient{
 		endpoint: endpoint,
 		keystore: ks,
 		ctx:      ctx,
 	}
+
+	// Sets up all the config options for the sharding client based on cli flags.
+	if err := c.configClient(); err != nil {
+		panic(err) // TODO(rauljordan): handle this.
+	}
+
+	// Registers all required services the sharding client will run upon start.
+	// These include shardp2p servers, notary/proposer event loops, and more.
 	if err := c.registerShardingServices(); err != nil {
 		panic(err) // TODO(rauljordan): handle this.
 	}
 	return c
 }
 
+func (c *shardingClient) configClient() error {
+	return nil
+}
+
 func (c *shardingClient) registerShardingServices() error {
+	// Registers either a notary or proposer sharding service dependent on
+	// the ClientType cli flag.
+
+	// Registers the shardp2p service.
+
+	// Registers the SMC interactions service.
 	return nil
 }
 
