@@ -168,8 +168,7 @@ func init() {
 		attachCommand,
 		javascriptCommand,
 		// See shardingcmd.go:
-		notaryClientCommand,
-		proposerClientCommand,
+		shardingCommand,
 		// See misccmd.go:
 		makecacheCommand,
 		makedagCommand,
