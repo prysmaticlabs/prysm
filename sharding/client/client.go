@@ -4,13 +4,9 @@
 package client
 
 import (
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
-	"os"
-	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 
@@ -21,10 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -33,7 +27,8 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
-// General client for Notary/Proposer - Communicates to Geth node via JSON RPC.
+// General client for a sharding-enabled system.
+// Communicates to Geth node via JSON RPC.
 type shardingClient struct {
 	endpoint  string             // Endpoint to JSON RPC.
 	client    *ethclient.Client  // Ethereum RPC client.
@@ -43,7 +38,7 @@ type shardingClient struct {
 	rpcClient *rpc.Client        // The RPC client connection to the main geth node.
 }
 
-// Client methods that must be implemented to run a sharded system.
+// Client methods that must be implemented to run a sharding node.
 type Client interface {
 	Start() error
 	Close()
@@ -55,7 +50,8 @@ type Client interface {
 	DepositFlagSet() bool
 }
 
-// NewClient forms a new struct instance.
+// NewClient setups the sharding config, registers the services required
+// by the sharded system.
 func NewClient(ctx *cli.Context) Client {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
@@ -80,11 +76,22 @@ func NewClient(ctx *cli.Context) Client {
 	}
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	return &shardingClient{
+	// Registers required services. Notary/Proposer are services in a sharding client,
+	// and they are selected based on command line flags at runtime.
+
+	c := &shardingClient{
 		endpoint: endpoint,
 		keystore: ks,
 		ctx:      ctx,
 	}
+	if err := c.registerShardingServices(); err != nil {
+		panic(err) // TODO(rauljordan): handle this.
+	}
+	return c
+}
+
+func (c *shardingClient) registerShardingServices() error {
+	return nil
 }
 
 // Start the sharding client.
@@ -104,7 +111,7 @@ func (c *shardingClient) Start() error {
 		return fmt.Errorf("no accounts found")
 	}
 
-	if err := c.unlockAccount(accounts[0]); err != nil {
+	if err := unlockAccount(c, accounts[0]); err != nil {
 		return fmt.Errorf("cannot unlock account. %v", err)
 	}
 
@@ -120,31 +127,6 @@ func (c *shardingClient) Start() error {
 // Close the RPC client connection.
 func (c *shardingClient) Close() {
 	c.rpcClient.Close()
-}
-
-// UnlockAccount will unlock the specified account using utils.PasswordFileFlag or empty string if unset.
-func (c *shardingClient) unlockAccount(account accounts.Account) error {
-	pass := ""
-
-	if c.ctx.GlobalIsSet(utils.PasswordFileFlag.Name) {
-		file, err := os.Open(c.ctx.GlobalString(utils.PasswordFileFlag.Name))
-		if err != nil {
-			return fmt.Errorf("unable to open file containing account password %s. %v", utils.PasswordFileFlag.Value, err)
-		}
-		scanner := bufio.NewScanner(file)
-		scanner.Split(bufio.ScanWords)
-		if !scanner.Scan() {
-			err = scanner.Err()
-			if err != nil {
-				return fmt.Errorf("unable to read contents of file %v", err)
-			}
-			return errors.New("password not found in file")
-		}
-
-		pass = scanner.Text()
-	}
-
-	return c.keystore.Unlock(account, pass)
 }
 
 // CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
@@ -189,56 +171,6 @@ func (c *shardingClient) SMCCaller() *contracts.SMCCaller {
 // SMCTransactor allows us to send tx's to the SMC programmatically.
 func (c *shardingClient) SMCTransactor() *contracts.SMCTransactor {
 	return &c.smc.SMCTransactor
-}
-
-// dialRPC endpoint to node.
-func dialRPC(endpoint string) (*rpc.Client, error) {
-	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
-	}
-	return rpc.Dial(endpoint)
-}
-
-// initSMC initializes the sharding manager contract bindings.
-// If the SMC does not exist, it will be deployed.
-func initSMC(c *shardingClient) (*contracts.SMC, error) {
-	b, err := c.client.CodeAt(context.Background(), sharding.ShardingManagerAddress, nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get contract code at %s: %v", sharding.ShardingManagerAddress, err)
-	}
-
-	// Deploy SMC for development only.
-	// TODO: Separate contract deployment from the sharding client. It would only need to be deployed
-	// once on the mainnet, so this code would not need to ship with the client.
-	if len(b) == 0 {
-		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", sharding.ShardingManagerAddress.String()))
-
-		txOps, err := c.CreateTXOpts(big.NewInt(0))
-		if err != nil {
-			return nil, fmt.Errorf("unable to intiate the transaction: %v", err)
-		}
-
-		addr, tx, contract, err := contracts.DeploySMC(txOps, c.client)
-		if err != nil {
-			return nil, fmt.Errorf("unable to deploy sharding manager contract: %v", err)
-		}
-
-		for pending := true; pending; _, pending, err = c.client.TransactionByHash(context.Background(), tx.Hash()) {
-			if err != nil {
-				return nil, fmt.Errorf("unable to get transaction by hash: %v", err)
-			}
-			time.Sleep(1 * time.Second)
-		}
-
-		log.Info(fmt.Sprintf("New contract deployed at %s", addr.String()))
-		return contract, nil
-	}
-
-	contract, err := contracts.NewSMC(sharding.ShardingManagerAddress, c.client)
-	if err != nil {
-
-	}
-	return contract, nil
 }
 
 // DepositFlagSet returns true for cli flag --deposit.
