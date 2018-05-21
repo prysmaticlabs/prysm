@@ -14,7 +14,7 @@ import (
 // an addHeader transaction to the sharding manager contract.
 // There can only exist one header per period per shard, it's proposer's
 // responsibility to check if a header has been added.
-func addHeader(c client.Client, header sharding.Collation) error {
+func addHeader(c client.Client, collation sharding.Collation) error {
 	log.Info("Adding header to SMC")
 
 	txOps, err := c.CreateTXOpts(big.NewInt(0))
@@ -22,7 +22,10 @@ func addHeader(c client.Client, header sharding.Collation) error {
 		return fmt.Errorf("unable to initiate add header transaction: %v", err)
 	}
 
-	_, err = c.SMCTransactor().AddHeader(txOps, header.ShardID(), header.Period(), header.ChunkRoot())
+	var churnkRoot [32]byte
+	copy(churnkRoot[:], collation.Header().ChunkRoot().String())
+
+	_, err = c.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), churnkRoot)
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}
