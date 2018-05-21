@@ -27,10 +27,10 @@ var (
 	notaryDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	notaryDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
 	FastForward100Blocks         = 100
-	smcConfig                    = SMCConfig{
-		notaryLockupLenght:   new(big.Int).SetInt64(1),
-		proposerLockupLength: new(big.Int).SetInt64(1),
-	}
+	// smcConfig                    = SMCConfig{
+	// 	notaryLockupLenght:   new(big.Int).SetInt64(1),
+	// 	proposerLockupLength: new(big.Int).SetInt64(1),
+	// }
 	ctx = context.Background()
 )
 
@@ -463,8 +463,8 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 
 	// Compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical.
 	for i := 0; i < 5; i++ {
-		addr0, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
-		addr1, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1), big.NewInt(int64(i)))
+		addr0, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+		addr1, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1))
 		if addr0 == addr1 {
 			t.Errorf("Shard 0 committee list is identical to shard 1's committee list")
 		}
@@ -508,12 +508,43 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 
 	// Verify the unregistered account is not in the notary pool list.
 	for i := 0; i < 10; i++ {
-		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
 		if notaryPoolAddr[10].String() == addr.String() {
 			t.Errorf("Account %s is not a notary", notaryPoolAddr[10].String())
 		}
 	}
 
+}
+
+// TestGetCommitteeWithinSamePeriod tests notary registers and samples within the same period
+func TestGetCommitteeWithinSamePeriod(t *testing.T) {
+	addr := crypto.PubkeyToAddress(mainKey.PublicKey)
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance2000Eth}})
+	txOpts := bind.NewKeyedTransactor(mainKey)
+	txOpts.Value = notaryDeposit
+	_, _, smc, _ := deploySMCContract(backend, mainKey)
+
+	// Notary 0 registers.
+	smc.RegisterNotary(txOpts)
+	backend.Commit()
+
+	notary, _ := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	numNotaries, _ := smc.NotaryPoolLength(&bind.CallOpts{})
+
+	if !notary.Deposited {
+		t.Errorf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
+	}
+
+	if numNotaries.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("Incorrect count from notary pool. Want: 1, Got: %v", numNotaries)
+	}
+
+	// Notary 0 samples for itself within the same period after registration
+	sampledAddr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+
+	if addr != sampledAddr {
+		t.Errorf("Unable to sample notary address within same period of registration, got addr: %v", sampledAddr)
+	}
 }
 
 // TestGetCommitteeAfterDeregisters tests notary tries to be in committee after deregistered.
@@ -562,7 +593,7 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 
 	// Verify degistered notary 0 is not in the notary pool list.
 	for i := 0; i < 10; i++ {
-		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0), big.NewInt(int64(i)))
+		addr, _ := smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
 		if notaryPoolAddr[0].String() == addr.String() {
 			t.Errorf("Account %s is not a notary", notaryPoolAddr[0].String())
 		}
