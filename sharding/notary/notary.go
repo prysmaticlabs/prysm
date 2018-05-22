@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/node"
 )
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
@@ -18,7 +19,7 @@ import (
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation.
-func subscribeBlockHeaders(n sharding.Node) error {
+func subscribeBlockHeaders(n node.Node) error {
 	headerChan := make(chan *types.Header, 16)
 
 	_, err := n.ChainReader().SubscribeNewHead(context.Background(), headerChan)
@@ -54,7 +55,7 @@ func subscribeBlockHeaders(n sharding.Node) error {
 // collation for the available shards in the SMC. The function calls
 // getEligibleNotary from the SMC and notary a collation if
 // conditions are met.
-func checkSMCForNotary(n sharding.Node, head *types.Header) error {
+func checkSMCForNotary(n node.Node, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
 	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible notary according to the SMC.
@@ -90,7 +91,7 @@ func checkSMCForNotary(n sharding.Node, head *types.Header) error {
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsNotaryDeposited from the SMC and returns true if
 // the user is in the notary pool.
-func isAccountInNotaryPool(n sharding.Node) (bool, error) {
+func isAccountInNotaryPool(n node.Node) (bool, error) {
 	account := n.Account()
 	// Checks if our deposit has gone through according to the SMC.
 	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
@@ -133,7 +134,7 @@ func submitCollation(shardID int64) error {
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(n sharding.Node) error {
+func joinNotaryPool(n node.Node) error {
 	if !n.DepositFlagSet() {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}

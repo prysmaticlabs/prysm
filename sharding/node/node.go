@@ -1,4 +1,4 @@
-// Package sharding/node provides an interface for interacting with a running ethereum full node.
+// Package node provides an interface for interacting with a running ethereum full node.
 // As part of the initial phases of sharding, actors will need access to the sharding management
 // contract on the main PoW chain.
 package node
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"sync"
 
 	ethereum "github.com/ethereum/go-ethereum"
 
@@ -22,9 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
-	"github.com/ethereum/go-ethereum/sharding/notary"
-	"github.com/ethereum/go-ethereum/sharding/proposer"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -32,20 +32,36 @@ const (
 	clientIdentifier = "geth" // Used to determine the ipc name.
 )
 
+// Node methods that must be implemented to run a sharding node.
+type Node interface {
+	Start() error
+	Close()
+	Context() *cli.Context
+	Register(sharding.ServiceConstructor) error
+	CreateTXOpts(*big.Int) (*bind.TransactOpts, error)
+	ChainReader() ethereum.ChainReader
+	Account() *accounts.Account
+	SMCCaller() *contracts.SMCCaller
+	SMCTransactor() *contracts.SMCTransactor
+	DepositFlagSet() bool
+}
+
 // General node for a sharding-enabled system.
 // Communicates to Geth node via JSON RPC.
 type shardingNode struct {
-	endpoint  string             // Endpoint to JSON RPC.
-	client    *ethclient.Client  // Ethereum RPC client.
-	keystore  *keystore.KeyStore // Keystore containing the single signer.
-	ctx       *cli.Context       // Command line context.
-	smc       *contracts.SMC     // The deployed sharding management contract.
-	rpcClient *rpc.Client        // The RPC client connection to the main geth node.
+	endpoint     string                        // Endpoint to JSON RPC.
+	client       *ethclient.Client             // Ethereum RPC client.
+	keystore     *keystore.KeyStore            // Keystore containing the single signer.
+	ctx          *cli.Context                  // Command line context.
+	smc          *contracts.SMC                // The deployed sharding management contract.
+	rpcClient    *rpc.Client                   // The RPC client connection to the main geth node.
+	lock         sync.RWMutex                  // Mutex lock for concurrency management.
+	serviceFuncs []sharding.ServiceConstructor // Stores an array of service callbacks to start upon running.
 }
 
-// NewCNode setups the sharding config, registers the services required
+// NewNode setups the sharding config, registers the services required
 // by the sharded system.
-func NewNode(ctx *cli.Context) Client {
+func NewNode(ctx *cli.Context) Node {
 	c := &shardingNode{ctx: ctx}
 
 	// Sets up all configuration options based on cli flags.
@@ -53,12 +69,51 @@ func NewNode(ctx *cli.Context) Client {
 		panic(err) // TODO(rauljordan): handle this
 	}
 
-	// Registers all required services the sharding node will run upon start.
-	// These include shardp2p servers, notary/proposer event loops, and more.
-	if err := c.registerShardingServices(); err != nil {
-		panic(err) // TODO(rauljordan): handle this.
-	}
 	return c
+}
+
+// Start is the main entrypoint of a sharding node. It starts off every service
+// attached to it.
+func (n *shardingNode) Start() error {
+	// Sets up a connection to a Geth node via RPC.
+	rpcClient, err := dialRPC(n.endpoint)
+	if err != nil {
+		return fmt.Errorf("cannot start rpc client. %v", err)
+	}
+	n.rpcClient = rpcClient
+	n.client = ethclient.NewClient(rpcClient)
+
+	// Check account existence and unlock account before starting.
+	accounts := n.keystore.Accounts()
+	if len(accounts) == 0 {
+		return fmt.Errorf("no accounts found")
+	}
+
+	if err := n.unlockAccount(accounts[0]); err != nil {
+		return fmt.Errorf("cannot unlock account. %v", err)
+	}
+
+	// Initializes bindings to SMC.
+	smc, err := initSMC(n)
+	if err != nil {
+		return err
+	}
+	n.smc = smc
+
+	// Starts every service attached to the sharding node.
+	for _, serviceFunc := range n.serviceFuncs {
+		// Initializes each service by passing in the node's cli context.
+		service, err := serviceFunc(n.ctx)
+		if err != nil {
+			return err
+		}
+		if err := service.Start(); err != nil {
+			// Handles the stopping of a service on error.
+			service.Stop()
+			return err
+		}
+	}
+	return nil
 }
 
 // configShardingNode uses cli flags to configure the data
@@ -94,62 +149,15 @@ func (n *shardingNode) configShardingNode() error {
 	return nil
 }
 
-// registerShardingServices sets up either a notary or proposer
-// sharding service dependent on the ClientType cli flag
-func (n *shardingNode) registerShardingServices() error {
-	clientType := n.ctx.GlobalString(utils.ClientType.Name)
-
-	err := n.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// TODO(terenc3t): handle case when we just want to start an observer node.
-		if clientType == "notary" {
-			return notary.NewNotary(n.ctx)
-		}
-		return proposer.NewProposer(n.ctx)
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to register the main sharding services: %v", err)
-	}
-	// TODO: registers the shardp2p service.
-
-	return nil
-}
-
 // Register appends a struct to the sharding node's services that
 // satisfies the Service interface containing lifecycle handlers. Notary, Proposer,
 // and ShardP2P are examples of services. The rationale behind this is that the
 // sharding node should know very little about the functioning of its underlying
 // services as they should be extensible.
-func (n *shardingNode) Register(a interface{}) error {
-	return nil
-}
-
-// Start is the main entrypoint of a sharding node. It starts off every service
-// attached to it.
-func (n *shardingNode Start() error {
-	rpcClient, err := dialRPC(c.endpoint)
-	if err != nil {
-		return fmt.Errorf("cannot start rpc client. %v", err)
-	}
-	n.rpcClient = rpcClient
-	n.client = ethclient.NewClient(rpcClient)
-
-	// Check account existence and unlock account before starting notary client.
-	accounts := n.keystore.Accounts()
-	if len(accounts) == 0 {
-		return fmt.Errorf("no accounts found")
-	}
-
-	if err := n.unlockAccount(accounts[0]); err != nil {
-		return fmt.Errorf("cannot unlock account. %v", err)
-	}
-
-	smc, err := initSMC(c)
-	if err != nil {
-		return err
-	}
-	n.smc = smc
-
+func (n *shardingNode) Register(service sharding.ServiceConstructor) error {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	n.serviceFuncs = append(n.serviceFuncs, service)
 	return nil
 }
 
@@ -180,6 +188,11 @@ func (n *shardingNode) Account() *accounts.Account {
 	accounts := n.keystore.Accounts()
 
 	return &accounts[0]
+}
+
+// Context returns the cli context.
+func (n *shardingNode) Context() *cli.Context {
+	return n.ctx
 }
 
 // ChainReader for interacting with the chain.

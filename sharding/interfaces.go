@@ -1,12 +1,7 @@
 package sharding
 
 import (
-	"math/big"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Service defines items that can be registered into a sharding client.
@@ -24,14 +19,6 @@ type Service interface {
 	Stop() error
 }
 
-// Node methods that must be implemented to run a sharding node.
-type Node interface {
-	Start() error
-	Close()
-	CreateTXOpts(*big.Int) (*bind.TransactOpts, error)
-	ChainReader() ethereum.ChainReader
-	Account() *accounts.Account
-	SMCCaller() *contracts.SMCCaller
-	SMCTransactor() *contracts.SMCTransactor
-	DepositFlagSet() bool
-}
+// ServiceConstructor defines the callback passed in when registering a service
+// to a sharding node.
+type ServiceConstructor func(ctx *cli.Context) (Service, error)
