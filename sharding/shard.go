@@ -78,7 +78,11 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	}
 	// TODO: deserializes the body into a txs slice instead of using
 	// nil as the third arg to MakeCollation.
-	col := NewCollation(header, body, nil)
+	txs, err := Deserialize(body)
+	if err != nil {
+		return nil, fmt.Errorf("cannot deserialize body", err)
+	}
+	col := NewCollation(header, body, *txs)
 	return col, nil
 }
 
