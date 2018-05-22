@@ -30,6 +30,5 @@ func (p *Proposer) Start() error {
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
 	log.Info("Stopping proposer service")
-	// TODO: Propose collations.
 	return nil
 }
