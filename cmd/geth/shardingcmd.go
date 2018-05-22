@@ -30,6 +30,7 @@ func shardingClient(ctx *cli.Context) error {
 	shardingNode := node.NewNode(ctx)
 	registerShardingServices(shardingNode)
 	defer shardingNode.Close()
+	// starts a connection to a geth node and kicks off every registered service.
 	return shardingNode.Start()
 }
 

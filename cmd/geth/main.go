@@ -119,6 +119,7 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		utils.DepositFlag,
+		utils.ProtocolFlag,
 		configFileFlag,
 	}
 
