@@ -102,7 +102,7 @@ func (n *shardingNode) Start() error {
 
 	// Starts every service attached to the sharding node.
 	for _, serviceFunc := range n.serviceFuncs {
-		// Initializes each service by passing in the node's cli context.
+		// Initializes each service.
 		service, err := serviceFunc()
 		if err != nil {
 			return err
