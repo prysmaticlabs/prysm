@@ -119,9 +119,9 @@ To concretize these phases, we will be releasing our implementation of sharding 
 
 Our current work is focused on creating a localized version of phase 1, quadratic sharding that would include the following:
 
--   A minimal, **sharding client** system that will interact with a **Sharding Manager Contract** on a locally running geth node
+-   A minimal, **sharding node** system that will interact with a **Sharding Manager Contract** on a locally running geth node
 -   Ability to deposit ETH into the SMC through the command line and to be selected as a notary by the local **SMC** in addition to the ability to withdraw the ETH staked
--   A **proposer client** that listens for pending tx’s, creates collations, and submits them to the SMC
+-   A **proposer protocol** that listens for pending tx’s, creates collations, and submits them to the SMC
 -   Ability to inspect the shard states and visualize the working system locally
 
 
@@ -147,7 +147,7 @@ ETA: To Be determined
 
 # Go-Ethereum Sharding Alpha Implementation
 
-Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a sharding client that allows staking to become a notary, a proposer client that allows for the creation of collation proposals, shard  state local storage, and on-chain voting of collation headers via the Sharding Manager Contract.
+Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a sharding node that allows staking to become a notary, proposer, manages shard state local storage, and does on-chain voting of collation headers via the Sharding Manager Contract.
 
 Here is a full reference spec explaining how our initial system will function:
 
@@ -157,19 +157,19 @@ Our implementation revolves around 5 core components:
 
 -   A **locally-running geth node** that spins up an instance of the Ethereum blockchain and mines on the Proof of Work chain
 -   A **Sharding Manager Contract (SMC)** that is deployed onto this blockchain instance
--   A **sharding client** that connects to the running geth node through JSON-RPC, provides bindings to the SMC
--   A **notary client** that allows users to stake ETH into the SMC and be selected as a notary in a certain period on a shard
--   A **proposer client** that is tasked with processing pending tx's into collations that are then submitted to the SMC. In phase 1, proposers _do not_ execute state, but rather just serialize pending tx data into possibly valid/invalid data blobs.
+-   A **sharding node** that connects to the running geth node through JSON-RPC, provides bindings to the SMC
+-   A **notary protocol** that allows users to stake ETH into the SMC and be selected as a notary in a certain period on a shard
+-   A **proposer protocol** that is tasked with processing pending tx's into collations that are then submitted to the SMC. In phase 1, proposers _do not_ execute state, but rather just serialize pending tx data into possibly valid/invalid data blobs.
 
 Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the SMC and join as a notary that is randomly assigned to a shard in a certain period.
 
 A basic, end-to-end example of the system is as follows:
 
-1.  _**User starts a notary client and deposits 1000ETH into the SMC:**_ the sharding client connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
+1.  _**User starts a sharding node and deposits 1000ETH into the SMC:**_ the sharding node connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
 
 2.  _**Client connects & listens to incoming headers from the geth node and assigns user as notary on a shard per period:**_ The notary is selected in CURRENT_PERIOD + LOOKEAD_PERIOD (which is around a 5 minutes notice) and must download data for collation headers submitted in that time period.
 
-3.  _**Concurrently, a proposer client processes pending transaction data into blobs:**_ the proposer client will create collation bodies and submit their headers to the SMC. In Phase 1, it is important to note that we will _not_ have any state execution. Proposers will just serialize pending tx into fixed collation body sizes without executing them for state transition validity.
+3.  _**Concurrently, a proposer protocol processes pending transaction data into blobs:**_ the proposer client will create collation bodies and submit their headers to the SMC. In Phase 1, it is important to note that we will _not_ have any state execution. Proposers will just serialize pending tx into fixed collation body sizes without executing them for state transition validity.
 
 5.  _**The set of notaries vote on collation headers as canonical unitl the period ends:**_ the headers that received >= 2/3 votes are accepted as canonical.
 
@@ -183,7 +183,7 @@ Our Ruby Release requires users to start a local geth node running a localized, 
 
     geth sharding-notary --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 
-This will extract 1000ETH from the user's account balance and insert him/her into the SMC's notaries. Then, the program will listen for incoming block headers and notify the user when he/she has been selected as to vote on collations for a certain shard in a given period. Once you are selected, the sharding client will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will extract 1000ETH from the user's account balance and insert him/her into the SMC's notaries. Then, the program will listen for incoming block headers and notify the user when he/she has been selected as to vote on collations for a certain shard in a given period. Once you are selected, the sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
 Users can also run a proposer client that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
 
@@ -191,7 +191,7 @@ Users can also run a proposer client that is tasked with processing transactions
 
 This client is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
 
-The sharding client begins to work by its main loop, which involves the following steps:
+The sharding node begins to work by its main loop, which involves the following steps:
 
 1.  _**Subscribe to incoming block headers:**_ the client will begin by issuing a subscription over JSON-RPC for block headers from the running geth node.
 

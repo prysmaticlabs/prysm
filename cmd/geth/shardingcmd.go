@@ -20,7 +20,7 @@ var (
 		Flags:     []cli.Flag{utils.ProtocolFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
-Launches a sharding client that submits collations to a Sharding Manager Contract, handles notary and proposer services, and manages shardp2p connections. This feature is a work in progress.
+Launches a sharding node that manages services related to submitting collations to a Sharding Manager Contract, notary and proposer services, and shardp2p connections. This feature is a work in progress.
 `,
 	}
 )
