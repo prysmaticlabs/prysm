@@ -40,7 +40,7 @@ func initSMC(n *shardingNode) (*contracts.SMC, error) {
 			return nil, fmt.Errorf("unable to intiate the transaction: %v", err)
 		}
 
-		addr, tx, contract, err := contracts.DeploySMC(txOps, c.client)
+		addr, tx, contract, err := contracts.DeploySMC(txOps, n.client)
 		if err != nil {
 			return nil, fmt.Errorf("unable to deploy sharding manager contract: %v", err)
 		}

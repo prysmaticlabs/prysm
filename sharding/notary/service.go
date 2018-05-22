@@ -2,7 +2,7 @@ package notary
 
 import (
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/node"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -10,29 +10,31 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	node sharding.Node
+	node node.Node
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(ctx *cli.Context, node sharding.Node) *Notary {
-	return &Notary{node}
+func NewNotary(ctx *cli.Context, node node.Node) (*Notary, error) {
+	return &Notary{node}, nil
 }
 
 // Start the main routine for a notary.
 func (n *Notary) Start() error {
-	log.Info("Starting notary client")
-	// err := c.client.Start()
-	// if err != nil {
-	// 	return err
-	// }
-	// defer c.client.Close()
+	log.Info("Starting notary service")
 
-	// if c.client.DepositFlagSet() {
-	// 	if err := joinNotaryPool(c.client); err != nil {
+	// if n.node.DepositFlagSet() {
+	// 	if err := joinNotaryPool(n.node); err != nil {
 	// 		return err
 	// 	}
 	// }
 
-	// return subscribeBlockHeaders(c.client)
+	// return subscribeBlockHeaders(n.node)
+	return nil
+}
+
+// Stop the main loop for notarizing collations.
+func (n *Notary) Stop() error {
+	log.Info("Stopping notary service")
+	// TODO: Propose collations.
 	return nil
 }

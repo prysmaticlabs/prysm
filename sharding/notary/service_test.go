@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -37,6 +38,14 @@ func (m *mockNode) SMCCaller() *contracts.SMCCaller {
 
 func (m *mockNode) ChainReader() ethereum.ChainReader {
 	m.t.Fatal("ChainReader not implemented")
+	return nil
+}
+
+func (m *mockNode) Context() *cli.Context {
+	return nil
+}
+
+func (m *mockNode) Register(s sharding.ServiceConstructor) error {
 	return nil
 }
 
