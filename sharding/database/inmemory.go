@@ -23,6 +23,8 @@ func NewShardKV() *ShardKV {
 
 // Get fetches a val from the mappping by key.
 func (sb *ShardKV) Get(k common.Hash) (*[]byte, error) {
+	sb.lock.RLock()
+	defer sb.lock.RUnlock()
 	v, ok := sb.kv[k]
 	if !ok {
 		return nil, fmt.Errorf("key not found: %v", k)
@@ -32,6 +34,8 @@ func (sb *ShardKV) Get(k common.Hash) (*[]byte, error) {
 
 // Has checks if the key exists in the mapping.
 func (sb *ShardKV) Has(k common.Hash) bool {
+	sb.lock.RLock()
+	defer sb.lock.RUnlock()
 	v := sb.kv[k]
 	return v != nil
 }
