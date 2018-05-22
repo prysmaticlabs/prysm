@@ -9,13 +9,14 @@ import (
 	"github.com/micro/cli"
 )
 
-// CreateShardDB initializes a shardDB that writes to local disk.
-func CreateShardDB(ctx *cli.Context, name string) (sharding.ShardBackend, error) {
+// NewShardDB initializes a shardDB that writes to local disk.
+func NewShardDB(ctx *cli.Context, name string) (sharding.ShardBackend, error) {
 
-	dataDir := ctx.GlobalString(utils.DataDir.Name)
+	dataDir := ctx.GlobalString(utils.DataDirFlag.Name)
 	path := filepath.Join(dataDir, name)
 
 	// Uses default cache and handles values.
-	// TODO: fix interface.
+	// TODO: allow these to be set based on cli context.
+	// TODO: fix interface - lots of methods do not match.
 	return ethdb.NewLDBDatabase(path, 16, 16)
 }
