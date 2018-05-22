@@ -22,14 +22,16 @@ func NewNotary(ctx *cli.Context, node node.Node) (*Notary, error) {
 func (n *Notary) Start() error {
 	log.Info("Starting notary service")
 
-	// if n.node.DepositFlagSet() {
-	// 	if err := joinNotaryPool(n.node); err != nil {
-	// 		return err
-	// 	}
-	// }
+	// TODO: handle this better through goroutines. Right now, these methods
+	// have their own nested channels and goroutines within them. We need
+	// to make this as flat as possible at the Notary layer.
+	if n.node.DepositFlagSet() {
+		if err := joinNotaryPool(n.node); err != nil {
+			return err
+		}
+	}
 
-	// return subscribeBlockHeaders(n.node)
-	return nil
+	return subscribeBlockHeaders(n.node)
 }
 
 // Stop the main loop for notarizing collations.
