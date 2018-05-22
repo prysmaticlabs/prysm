@@ -3,6 +3,7 @@ package notary
 import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/node"
+
 	cli "gopkg.in/urfave/cli.v1"
 )
 

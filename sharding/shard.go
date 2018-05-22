@@ -9,15 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// ShardBackend defines an interface for a shardDB's necessary method
-// signatures.
-type ShardBackend interface {
-	Get(k common.Hash) (*[]byte, error)
-	Has(k common.Hash) bool
-	Put(k common.Hash, val []byte) error
-	Delete(k common.Hash) error
-}
-
 // Shard base struct.
 type Shard struct {
 	shardDB ShardBackend
