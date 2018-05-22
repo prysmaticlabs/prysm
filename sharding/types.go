@@ -1,5 +1,14 @@
 package sharding
 
+import (
+	"math/big"
+
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
+)
+
 // Service defines items that can be registered into a sharding client.
 //
 // life-cycle management is delegated to the sharding client. The service is allowed to
@@ -13,4 +22,16 @@ type Service interface {
 	// Stop terminates all goroutines belonging to the service, blocking until they
 	// are all terminated.
 	Stop() error
+}
+
+// Node methods that must be implemented to run a sharding node.
+type Node interface {
+	Start() error
+	Close()
+	CreateTXOpts(*big.Int) (*bind.TransactOpts, error)
+	ChainReader() ethereum.ChainReader
+	Account() *accounts.Account
+	SMCCaller() *contracts.SMCCaller
+	SMCTransactor() *contracts.SMCTransactor
+	DepositFlagSet() bool
 }

@@ -43,18 +43,6 @@ type shardingNode struct {
 	rpcClient *rpc.Client        // The RPC client connection to the main geth node.
 }
 
-// Node methods that must be implemented to run a sharding node.
-type Node interface {
-	Start() error
-	Close()
-	CreateTXOpts(*big.Int) (*bind.TransactOpts, error)
-	ChainReader() ethereum.ChainReader
-	Account() *accounts.Account
-	SMCCaller() *contracts.SMCCaller
-	SMCTransactor() *contracts.SMCTransactor
-	DepositFlagSet() bool
-}
-
 // NewCNode setups the sharding config, registers the services required
 // by the sharded system.
 func NewNode(ctx *cli.Context) Client {
