@@ -534,10 +534,14 @@ var (
 		Value: whisper.DefaultMinimumPoW,
 	}
 
-	//Sharding Settings
+	// Sharding Settings
 	DepositFlag = cli.BoolFlag{
 		Name:  "deposit",
 		Usage: "To become a notary with your sharding client, " + new(big.Int).Div(sharding.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
+	}
+	ClientType = cli.StringFlag{
+		Name:  "client-type",
+		Usage: "notary | proposer",
 	}
 )
 
