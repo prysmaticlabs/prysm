@@ -2,6 +2,8 @@ package notary
 
 import (
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/node"
 
 	cli "gopkg.in/urfave/cli.v1"
@@ -11,12 +13,20 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	node node.Node
+	node    node.Node
+	shardDB sharding.ShardBackend
 }
 
 // NewNotary creates a new notary instance.
 func NewNotary(ctx *cli.Context, node node.Node) (*Notary, error) {
-	return &Notary{node}, nil
+	// Initializes a shardDB that writes to disk at /path/to/datadir/shardchaindata.
+	// This DB can be used by the Notary service to create Shard struct
+	// instances.
+	shardDB, err := database.NewShardDB(node.Context(), "shardchaindata")
+	if err != nil {
+		return nil, err
+	}
+	return &Notary{node, shardDB}, nil
 }
 
 // Start the main routine for a notary.
