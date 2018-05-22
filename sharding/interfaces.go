@@ -4,9 +4,9 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// Service defines items that can be registered into a sharding client.
+// Service defines items that can be registered into a sharding node's serviceFuncs.
 //
-// life-cycle management is delegated to the sharding client. The service is allowed to
+// life-cycle management is delegated to the sharding node. The service is allowed to
 // initialize itself upon creation, but no goroutines should be spun up outside of the
 // Start method.
 type Service interface {

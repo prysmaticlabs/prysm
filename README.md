@@ -2,7 +2,7 @@
 
 ![Travis Build](https://travis-ci.org/prysmaticlabs/geth-sharding.svg?branch=master)
 
-This is the main repository for the sharding implementation of the go-ethereum client by [Prysmatic Labs](https://prysmaticlabs.com). For the original, go-ethereum project, refer to the following [link](https://github.com/ethereum/go-ethereum).
+This is the main repository for the sharding implementation for the go-ethereum project by [Prysmatic Labs](https://prysmaticlabs.com). For the original, go-ethereum project, refer to the following [link](https://github.com/ethereum/go-ethereum).
 
 Before you begin, check out our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc serves as the single source of truth for our team, our milestones, and details on the different components of our architecture.
 
@@ -17,7 +17,7 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
     -   [Running a Local Geth Node](#running-a-local-geth-node)
     -   [Transaction Generator](#transaction-generator)
     -   [Becoming a Notary](#becoming-a-notary)
-    -   [Running a Collation Proposal Client](#running-a-collation-proposal-client)
+    -   [Running a Collation Proposal Node](#running-a-collation-proposal-node)
 -   [Testing](#testing)
 -   [Contribution Guidelines](#contribution-guidelines)
 -   [License](#license)
@@ -107,26 +107,26 @@ Our system outlined below follows the [Minimal Sharding Protocol](https://ethres
 To deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
 
 ```
-geth sharding-notary --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --protocol "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding client will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
-Concurrently, you will need to run another client that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+Concurrently, you will need to run another node that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
 
-## Running a Collation Proposal Client
+## Running a Collation Proposal Node
 
 ```
-geth sharding-proposer --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --protocol "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This client is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
+This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
 
 # Making Changes
 
 ## Rebuilding the Sharding Manager Contract Bindings
 
-The Sharding Manager Contract is built in Solidity and deployed to the geth node upon launch of the client if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
+The Sharding Manager Contract is built in Solidity and deployed to a running geth node upon launch of the sharding node if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
 
     go generate github.com/ethereum/go-ethereum/sharding
     # OR
