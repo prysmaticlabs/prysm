@@ -5,7 +5,6 @@ package observer
 import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/node"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Observer holds functionality required to run an observer service
@@ -16,7 +15,7 @@ type Observer struct {
 }
 
 // NewObserver creates a new observer instance.
-func NewObserver(ctx *cli.Context, node node.Node) (*Observer, error) {
+func NewObserver(node node.Node) (*Observer, error) {
 	return &Observer{node}, nil
 }
 

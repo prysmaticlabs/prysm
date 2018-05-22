@@ -103,7 +103,7 @@ func (n *shardingNode) Start() error {
 	// Starts every service attached to the sharding node.
 	for _, serviceFunc := range n.serviceFuncs {
 		// Initializes each service by passing in the node's cli context.
-		service, err := serviceFunc(n.ctx)
+		service, err := serviceFunc()
 		if err != nil {
 			return err
 		}
@@ -154,10 +154,10 @@ func (n *shardingNode) configShardingNode() error {
 // and ShardP2P are examples of services. The rationale behind this is that the
 // sharding node should know very little about the functioning of its underlying
 // services as they should be extensible.
-func (n *shardingNode) Register(service sharding.ServiceConstructor) error {
+func (n *shardingNode) Register(constructor sharding.ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	n.serviceFuncs = append(n.serviceFuncs, service)
+	n.serviceFuncs = append(n.serviceFuncs, constructor)
 	return nil
 }
 
