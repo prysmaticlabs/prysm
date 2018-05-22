@@ -112,6 +112,7 @@ func (n *shardingNode) registerShardingServices() error {
 	clientType := n.ctx.GlobalString(utils.ClientType.Name)
 
 	err := n.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		// TODO(terenc3t): handle case when we just want to start an observer node.
 		if clientType == "notary" {
 			return notary.NewNotary(n.ctx)
 		}
