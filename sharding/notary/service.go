@@ -37,6 +37,5 @@ func (n *Notary) Start() error {
 // Stop the main loop for notarizing collations.
 func (n *Notary) Stop() error {
 	log.Info("Stopping notary service")
-	// TODO: Propose collations.
 	return nil
 }

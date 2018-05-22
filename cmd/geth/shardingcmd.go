@@ -4,20 +4,20 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/node"
 	"github.com/ethereum/go-ethereum/sharding/notary"
+	"github.com/ethereum/go-ethereum/sharding/observer"
 	"github.com/ethereum/go-ethereum/sharding/proposer"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
 	shardingCommand = cli.Command{
-		Action:    utils.MigrateFlags(shardingClient),
+		Action:    utils.MigrateFlags(sharding),
 		Name:      "sharding",
 		Usage:     "Start a sharding-enabled node",
 		ArgsUsage: "[endpoint]",
-		Flags:     []cli.Flag{utils.ProtocolFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
+		Flags:     []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
 Launches a sharding node that manages services related to submitting collations to a Sharding Manager Contract, notary and proposer services, and shardp2p connections. This feature is a work in progress.
@@ -25,7 +25,10 @@ Launches a sharding node that manages services related to submitting collations 
 	}
 )
 
-func shardingClient(ctx *cli.Context) error {
+// sharding is the main cmd line entry point for starting a sharding-enabled node.
+// A sharding node launches a suite of services including notary services,
+// proposer services, and a shardp2p protocol.
+func sharding(ctx *cli.Context) error {
 	// configures a sharding-enabled node using the cli's context.
 	shardingNode := node.NewNode(ctx)
 	registerShardingServices(shardingNode)
@@ -39,14 +42,15 @@ func shardingClient(ctx *cli.Context) error {
 // the services we want to register here, as this is the geth command entry point
 // for sharding.
 func registerShardingServices(n node.Node) error {
-	protocolFlag := n.Context().GlobalString(utils.ProtocolFlag.Name)
+	actorFlag := n.Context().GlobalString(utils.ActorFlag.Name)
 
 	err := n.Register(func(ctx *cli.Context) (sharding.Service, error) {
-		// TODO(terenc3t): handle case when we just want to start an observer node.
-		if protocolFlag == "notary" {
+		if actorFlag == "notary" {
 			return notary.NewNotary(n.Context(), n)
+		} else if actorFlag == "proposer" {
+			return proposer.NewProposer(n.Context(), n)
 		}
-		return proposer.NewProposer(n.Context(), n)
+		return observer.NewObserver(n.Context(), n)
 	})
 
 	if err != nil {
