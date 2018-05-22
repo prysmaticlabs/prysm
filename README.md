@@ -112,7 +112,7 @@ geth sharding --actor "notary" --deposit --datadir /path/to/your/datadir --passw
 
 This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
-Concurrently, you will need to run another node that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
 
 ## Running a Collation Proposal Node
 
