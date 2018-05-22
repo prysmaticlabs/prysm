@@ -107,7 +107,7 @@ Our system outlined below follows the [Minimal Sharding Protocol](https://ethres
 To deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
 
 ```
-geth sharding --protocol "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --actor "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
 This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
@@ -117,10 +117,16 @@ Concurrently, you will need to run another node that is tasked with processing t
 ## Running a Collation Proposal Node
 
 ```
-geth sharding --protocol "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
 This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
+
+## Running an Observer Node
+
+    geth sharding --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+
+Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network.
 
 # Making Changes
 
