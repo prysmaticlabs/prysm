@@ -55,21 +55,19 @@ type shardingNode struct {
 	ctx          *cli.Context                  // Command line context.
 	smc          *contracts.SMC                // The deployed sharding management contract.
 	rpcClient    *rpc.Client                   // The RPC client connection to the main geth node.
-	lock         sync.RWMutex                  // Mutex lock for concurrency management.
+	lock         sync.Mutex                    // Mutex lock for concurrency management.
 	serviceFuncs []sharding.ServiceConstructor // Stores an array of service callbacks to start upon running.
 }
 
 // NewNode setups the sharding config, registers the services required
 // by the sharded system.
-func NewNode(ctx *cli.Context) Node {
+func NewNode(ctx *cli.Context) (Node, error) {
 	c := &shardingNode{ctx: ctx}
-
 	// Sets up all configuration options based on cli flags.
 	if err := c.configShardingNode(); err != nil {
-		panic(err) // TODO(rauljordan): handle this
+		return nil, err
 	}
-
-	return c
+	return c, nil
 }
 
 // Start is the main entrypoint of a sharding node. It starts off every service

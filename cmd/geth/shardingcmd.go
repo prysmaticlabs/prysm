@@ -31,7 +31,10 @@ Launches a sharding node that manages services related to submitting collations 
 // proposer services, and a shardp2p protocol.
 func shardingCmd(ctx *cli.Context) error {
 	// configures a sharding-enabled node using the cli's context.
-	shardingNode := node.NewNode(ctx)
+	shardingNode, err := node.NewNode(ctx)
+	if err != nil {
+		return fmt.Errorf("could not initialize node instance: %v", err)
+	}
 	if err := registerShardingServices(shardingNode); err != nil {
 		return fmt.Errorf("could not start sharding node: %v", err)
 	}
