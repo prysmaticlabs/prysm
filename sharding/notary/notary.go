@@ -157,3 +157,11 @@ func joinNotaryPool(n node.Node) error {
 
 	return nil
 }
+
+func leaveNotaryPool() error {
+	return nil
+}
+
+func VoteforCollation() error {
+	return nil
+}
