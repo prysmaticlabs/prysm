@@ -119,6 +119,7 @@ var (
 		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		utils.DepositFlag,
+		utils.ActorFlag,
 		configFileFlag,
 	}
 
@@ -168,8 +169,7 @@ func init() {
 		attachCommand,
 		javascriptCommand,
 		// See shardingcmd.go:
-		notaryClientCommand,
-		proposerClientCommand,
+		shardingCommand,
 		// See misccmd.go:
 		makecacheCommand,
 		makedagCommand,
