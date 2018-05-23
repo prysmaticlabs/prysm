@@ -193,7 +193,7 @@ func Deserialize(serialisedBlob []byte) (*[]*types.Transaction, error) {
 
 
 // Chunks is a wrapper around a chunk array to implement DerivableList,
-// which allows us to Merklize the chunks into the chunkRoot
+// which allows us to Merklize the chunks into the chunkRoot.
 type Chunks []byte
 
 // Len returns the number of chunks in this list.
