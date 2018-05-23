@@ -77,11 +77,12 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch body by chunk root: %v", err)
 	}
-	// TODO: deserializes the body into a txs slice instead of using
+	
+	// deserialize the body into a txs slice instead of using
 	// nil as the third arg to MakeCollation.
 	txs, err := Deserialize(body)
 	if err != nil {
-		return nil, fmt.Errorf("cannot deserialize body", err)
+		return nil, fmt.Errorf("cannot deserialize body: %v", err)
 	}
 	col := NewCollation(header, body, *txs)
 	return col, nil
