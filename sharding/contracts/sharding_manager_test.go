@@ -103,6 +103,7 @@ func (s *smcTestHelper) registerNotaries(deposit *big.Int, params ...int) error 
 		if log.Event.Notary != s.testAccounts[i].addr {
 			return fmt.Errorf("incorrect address in notaryRegistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Notary)
 		}
+		// Verify notaryPoolIndex is incremental starting from 1st registered Notary.
 		if log.Event.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 {
 			return fmt.Errorf("incorrect index in notaryRegistered log. Want: %v Got: %v", i, log.Event.Notary)
 		}
