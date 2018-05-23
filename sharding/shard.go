@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -179,11 +180,13 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 
 // SaveBody adds the collation body to the shardDB and sets availability.
 func (s *Shard) SaveBody(body []byte) error {
-	// TODO: check if body is empty and throw error.
-	// TODO: dependent on blob serialization.
-	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
-	// right now we will just take the raw keccak256 of the body until #92 is merged.
-	chunkRoot := common.BytesToHash(body)
+	// check if body is empty and throw error.
+	if body == nil {
+		return fmt.Errorf("body is empty")
+	}
+
+	chunks := Chunks(body)
+	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs
 	s.SetAvailability(&chunkRoot, true)
 	return s.shardDB.Put(chunkRoot, body)
 }

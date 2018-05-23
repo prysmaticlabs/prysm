@@ -190,3 +190,20 @@ func Deserialize(serialisedBlob []byte) (*[]*types.Transaction, error) {
 
 	return &txs, nil
 }
+
+
+// Chunks is a wrapper around a chunk array to implement DerivableList,
+// which allows us to Merklize the chunks into the chunkRoot
+type Chunks []byte
+
+// Len returns the number of chunks in this list.
+func (ch Chunks) Len() int { return len(ch) }
+
+// GetRlp returns the RLP encoding of one chunk from the list.
+func (ch Chunks) GetRlp(i int) []byte {
+	bytes, err := rlp.EncodeToBytes(ch[i])
+	if err != nil {
+		panic(err)
+	}
+	return bytes
+}
