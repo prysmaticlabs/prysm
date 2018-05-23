@@ -136,7 +136,7 @@ func (n *shardingNode) configShardingNode() error {
 
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
-		panic(err) // TODO(prestonvanloon): handle this.
+		return err
 	}
 
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
