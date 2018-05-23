@@ -33,11 +33,11 @@ func initSMC(n *shardingNode) (*contracts.SMC, error) {
 	// TODO: Separate contract deployment from the sharding node. It would only need to be deployed
 	// once on the mainnet, so this code would not need to ship with the node.
 	if len(b) == 0 {
-		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", sharding.ShardingManagerAddress.String()))
+		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", sharding.ShardingManagerAddress))
 
 		txOps, err := n.CreateTXOpts(big.NewInt(0))
 		if err != nil {
-			return nil, fmt.Errorf("unable to intiate the transaction: %v", err)
+			return nil, fmt.Errorf("unable to initiate the transaction: %v", err)
 		}
 
 		addr, tx, contract, err := contracts.DeploySMC(txOps, n.client)
@@ -52,13 +52,9 @@ func initSMC(n *shardingNode) (*contracts.SMC, error) {
 			time.Sleep(1 * time.Second)
 		}
 
-		log.Info(fmt.Sprintf("New contract deployed at %s", addr.String()))
+		log.Info(fmt.Sprintf("New contract deployed at %s", addr))
 		return contract, nil
 	}
 
-	contract, err := contracts.NewSMC(sharding.ShardingManagerAddress, n.client)
-	if err != nil {
-		// TODO(terenc3t): handle this
-	}
-	return contract, nil
+	return contracts.NewSMC(sharding.ShardingManagerAddress, n.client)
 }
