@@ -111,26 +111,6 @@ func (c *Collation) CalculateChunkRoot() {
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
-// CreateRawBlobs creates raw blobs from transactions.
-func (c Collation) CreateRawBlobs() ([]*utils.RawBlob, error) {
-
-	// It does not skip evm execution by default
-	blobs := make([]*utils.RawBlob, len(c.transactions))
-	for i := 0; i < len(c.transactions); i++ {
-
-		err := error(nil)
-		blobs[i], err = utils.NewRawBlob(c.transactions[i], false)
-
-		if err != nil {
-			return nil, fmt.Errorf("Creation of raw blobs from transactions failed: %v", err)
-		}
-
-	}
-
-	return blobs, nil
-
-}
-
 // ConvertBackToTx converts raw blobs back to their original transactions.
 func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 
@@ -149,29 +129,28 @@ func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 
 }
 
-// Serialize method  serializes the collation body to a byte array.
-func (c *Collation) Serialize() ([]byte, error) {
+// Serialize method serializes the input transactions
+// and returns the chunks in byte arrays.
+func Serialize(txs []*types.Transaction) ([]byte, error) {
 
-	blobs, err := c.CreateRawBlobs()
-
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+	blobs := make([]*utils.RawBlob, len(txs))
+	for i := 0; i < len(txs); i++ {
+		err := error(nil)
+		blobs[i], err = utils.NewRawBlob(txs[i], false)
+		if err != nil {
+			return nil, fmt.Errorf("%v", err)
+		}
 	}
-
 	serializedTx, err := utils.Serialize(blobs)
-
 	if err != nil {
 		return nil, fmt.Errorf("%v", err)
 	}
 
 	if int64(len(serializedTx)) > collationSizelimit {
-
 		return nil, fmt.Errorf("The serialized body exceeded the collation size limit: %v", serializedTx)
-
 	}
 
 	return serializedTx, nil
-
 }
 
 // Deserialize takes a byte array and converts its back to its original transactions.
