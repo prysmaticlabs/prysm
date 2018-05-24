@@ -56,7 +56,7 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 	tx := c.transactions
 
-	results, err := c.Serialize()
+	results, err := Serialize(tx)
 
 	if err != nil {
 		t.Errorf("Unable to Serialize transactions, %v", err)
