@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -21,45 +22,54 @@ var (
 )
 
 // Mock client for testing notary. Should this go into sharding/client/testing?
-type mockClient struct {
+type mockNode struct {
 	smc         *contracts.SMC
 	t           *testing.T
 	DepositFlag bool
 }
 
-func (m *mockClient) Account() *accounts.Account {
+func (m *mockNode) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (m *mockClient) SMCCaller() *contracts.SMCCaller {
+func (m *mockNode) SMCCaller() *contracts.SMCCaller {
 	return &m.smc.SMCCaller
 }
 
-func (m *mockClient) ChainReader() ethereum.ChainReader {
+func (m *mockNode) ChainReader() ethereum.ChainReader {
 	m.t.Fatal("ChainReader not implemented")
 	return nil
 }
 
-func (m *mockClient) SMCTransactor() *contracts.SMCTransactor {
+func (m *mockNode) Context() *cli.Context {
+	return nil
+}
+
+func (m *mockNode) Register(s sharding.ServiceConstructor) error {
+	return nil
+}
+
+func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
 
-func (m *mockClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (m *mockClient) DepositFlagSet() bool {
+func (m *mockNode) DepositFlagSet() bool {
 	return m.DepositFlag
 }
 
 // Unused mockClient methods.
-func (m *mockClient) Start() error {
+func (m *mockNode) Start() error {
 	m.t.Fatal("Start called")
 	return nil
 }
-func (m *mockClient) Close() {
+
+func (m *mockNode) Close() {
 	m.t.Fatal("Close called")
 }
 
@@ -69,6 +79,7 @@ func (m *mockClient) Close() {
 func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
+
 func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend)
@@ -78,10 +89,10 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	client := &mockClient{smc: smc, t: t}
+	node := &mockNode{smc: smc, t: t}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(client)
+	b, err := isAccountInNotaryPool(node)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +107,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
-	b, err = isAccountInNotaryPool(client)
+	b, err = isAccountInNotaryPool(node)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +118,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	client := &mockClient{smc: smc, t: t, DepositFlag: false}
+	node := &mockNode{smc: smc, t: t, DepositFlag: false}
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -117,14 +128,14 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	client.DepositFlag = false
-	err = joinNotaryPool(client)
+	node.DepositFlag = false
+	err = joinNotaryPool(node)
 	if err == nil {
 		t.Error("Joined notary pool while --deposit was not present")
 	}
 
-	client.DepositFlag = true
-	err = joinNotaryPool(client)
+	node.DepositFlag = true
+	err = joinNotaryPool(node)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +151,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(client)
+	err = joinNotaryPool(node)
 	if err != nil {
 		t.Error(err)
 	}
