@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/micro/cli"
 )
 
 // ShardBackend defines an interface for a shardDB's necessary method
@@ -19,13 +18,9 @@ type ShardBackend interface {
 
 // NewShardDB initializes a shardDB that writes to local disk.
 // TODO: make it return ShardBackend but modify interface methods.
-func NewShardDB(ctx *cli.Context, name string) (*ethdb.LDBDatabase, error) {
-
-	dataDir := ""
-	path := filepath.Join(dataDir, name)
-
+func NewShardDB(dataDir string, name string) (*ethdb.LDBDatabase, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these to be set based on cli context.
 	// TODO: fix interface - lots of methods do not match.
-	return ethdb.NewLDBDatabase(path, 16, 16)
+	return ethdb.NewLDBDatabase(filepath.Join(dataDir, name), 16, 16)
 }
