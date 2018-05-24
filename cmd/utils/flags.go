@@ -540,7 +540,7 @@ var (
 	}
 	ActorFlag = cli.StringFlag{
 		Name:  "actor",
-		Usage: `use the --actor "notary" or --actor "proposer" to start a notary or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
+		Usage: `use the --actor notary or --actor proposer to start a notary or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
 	}
 )
 

@@ -55,21 +55,19 @@ type shardingNode struct {
 	ctx          *cli.Context                  // Command line context.
 	smc          *contracts.SMC                // The deployed sharding management contract.
 	rpcClient    *rpc.Client                   // The RPC client connection to the main geth node.
-	lock         sync.RWMutex                  // Mutex lock for concurrency management.
+	lock         sync.Mutex                    // Mutex lock for concurrency management.
 	serviceFuncs []sharding.ServiceConstructor // Stores an array of service callbacks to start upon running.
 }
 
 // NewNode setups the sharding config, registers the services required
 // by the sharded system.
-func NewNode(ctx *cli.Context) Node {
+func NewNode(ctx *cli.Context) (Node, error) {
 	c := &shardingNode{ctx: ctx}
-
 	// Sets up all configuration options based on cli flags.
 	if err := c.configShardingNode(); err != nil {
-		panic(err) // TODO(rauljordan): handle this
+		return nil, err
 	}
-
-	return c
+	return c, nil
 }
 
 // Start is the main entrypoint of a sharding node. It starts off every service
@@ -102,8 +100,8 @@ func (n *shardingNode) Start() error {
 
 	// Starts every service attached to the sharding node.
 	for _, serviceFunc := range n.serviceFuncs {
-		// Initializes each service by passing in the node's cli context.
-		service, err := serviceFunc(n.ctx)
+		// Initializes each service.
+		service, err := serviceFunc()
 		if err != nil {
 			return err
 		}
@@ -138,7 +136,7 @@ func (n *shardingNode) configShardingNode() error {
 
 	scryptN, scryptP, keydir, err := config.AccountConfig()
 	if err != nil {
-		panic(err) // TODO(prestonvanloon): handle this.
+		return err
 	}
 
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
@@ -154,10 +152,10 @@ func (n *shardingNode) configShardingNode() error {
 // and ShardP2P are examples of services. The rationale behind this is that the
 // sharding node should know very little about the functioning of its underlying
 // services as they should be extensible.
-func (n *shardingNode) Register(service sharding.ServiceConstructor) error {
+func (n *shardingNode) Register(constructor sharding.ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	n.serviceFuncs = append(n.serviceFuncs, service)
+	n.serviceFuncs = append(n.serviceFuncs, constructor)
 	return nil
 }
 

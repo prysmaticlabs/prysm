@@ -3,7 +3,6 @@ package proposer
 import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/node"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -16,7 +15,7 @@ type Proposer struct {
 // NewProposer creates a struct instance. It is initialized and
 // registered as a service upon start of a sharding node.
 // Has access to the public methods of this node.
-func NewProposer(ctx *cli.Context, node node.Node) (*Proposer, error) {
+func NewProposer(node node.Node) (*Proposer, error) {
 	return &Proposer{node}, nil
 }
 

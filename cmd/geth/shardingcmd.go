@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/node"
 	"github.com/ethereum/go-ethereum/sharding/notary"
 	"github.com/ethereum/go-ethereum/sharding/observer"
@@ -13,7 +14,7 @@ import (
 
 var (
 	shardingCommand = cli.Command{
-		Action:    utils.MigrateFlags(sharding),
+		Action:    utils.MigrateFlags(shardingCmd),
 		Name:      "sharding",
 		Usage:     "Start a sharding-enabled node",
 		ArgsUsage: "[endpoint]",
@@ -25,13 +26,18 @@ Launches a sharding node that manages services related to submitting collations 
 	}
 )
 
-// sharding is the main cmd line entry point for starting a sharding-enabled node.
+// shardingCmd is the main cmd line entry point for starting a sharding-enabled node.
 // A sharding node launches a suite of services including notary services,
 // proposer services, and a shardp2p protocol.
-func sharding(ctx *cli.Context) error {
+func shardingCmd(ctx *cli.Context) error {
 	// configures a sharding-enabled node using the cli's context.
-	shardingNode := node.NewNode(ctx)
-	registerShardingServices(shardingNode)
+	shardingNode, err := node.NewNode(ctx)
+	if err != nil {
+		return fmt.Errorf("could not initialize node instance: %v", err)
+	}
+	if err := registerShardingServices(shardingNode); err != nil {
+		return fmt.Errorf("could not start sharding node: %v", err)
+	}
 	defer shardingNode.Close()
 	// starts a connection to a geth node and kicks off every registered service.
 	return shardingNode.Start()
@@ -44,13 +50,13 @@ func sharding(ctx *cli.Context) error {
 func registerShardingServices(n node.Node) error {
 	actorFlag := n.Context().GlobalString(utils.ActorFlag.Name)
 
-	err := n.Register(func(ctx *cli.Context) (sharding.Service, error) {
+	err := n.Register(func() (sharding.Service, error) {
 		if actorFlag == "notary" {
-			return notary.NewNotary(n.Context(), n)
+			return notary.NewNotary(n)
 		} else if actorFlag == "proposer" {
-			return proposer.NewProposer(n.Context(), n)
+			return proposer.NewProposer(n)
 		}
-		return observer.NewObserver(n.Context(), n)
+		return observer.NewObserver(n)
 	})
 
 	if err != nil {

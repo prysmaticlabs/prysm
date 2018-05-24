@@ -5,8 +5,6 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/node"
-
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Notary holds functionality required to run a collation notary
@@ -18,7 +16,7 @@ type Notary struct {
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(ctx *cli.Context, node node.Node) (*Notary, error) {
+func NewNotary(node node.Node) (*Notary, error) {
 	// Initializes a shardDB that writes to disk at /path/to/datadir/shardchaindata.
 	// This DB can be used by the Notary service to create Shard struct
 	// instances.
