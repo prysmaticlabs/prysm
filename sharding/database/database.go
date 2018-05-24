@@ -3,16 +3,25 @@ package database
 import (
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/micro/cli"
 )
 
-// NewShardDB initializes a shardDB that writes to local disk.
-func NewShardDB(ctx *cli.Context, name string) (sharding.ShardBackend, error) {
+// ShardBackend defines an interface for a shardDB's necessary method
+// signatures.
+type ShardBackend interface {
+	Get(k common.Hash) (*[]byte, error)
+	Has(k common.Hash) bool
+	Put(k common.Hash, val []byte) error
+	Delete(k common.Hash) error
+}
 
-	dataDir := ctx.GlobalString(utils.DataDirFlag.Name)
+// NewShardDB initializes a shardDB that writes to local disk.
+// TODO: make it return ShardBackend but modify interface methods.
+func NewShardDB(ctx *cli.Context, name string) (*ethdb.LDBDatabase, error) {
+
+	dataDir := ""
 	path := filepath.Join(dataDir, name)
 
 	// Uses default cache and handles values.

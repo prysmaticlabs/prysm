@@ -7,16 +7,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/sharding/database"
 )
 
 // Shard base struct.
 type Shard struct {
-	shardDB ShardBackend
+	shardDB database.ShardBackend
 	shardID *big.Int
 }
 
 // NewShard creates an instance of a Shard struct given a shardID.
-func NewShard(shardID *big.Int, shardDB ShardBackend) *Shard {
+func NewShard(shardID *big.Int, shardDB database.ShardBackend) *Shard {
 	return &Shard{
 		shardID: shardID,
 		shardDB: shardDB,

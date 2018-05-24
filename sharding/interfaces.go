@@ -1,10 +1,5 @@
 package sharding
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-	cli "gopkg.in/urfave/cli.v1"
-)
-
 // Service defines items that can be registered into a sharding node's serviceFuncs.
 //
 // life-cycle management is delegated to the sharding node. The service is allowed to
@@ -22,13 +17,4 @@ type Service interface {
 
 // ServiceConstructor defines the callback passed in when registering a service
 // to a sharding node.
-type ServiceConstructor func(ctx *cli.Context) (Service, error)
-
-// ShardBackend defines an interface for a shardDB's necessary method
-// signatures.
-type ShardBackend interface {
-	Get(k common.Hash) (*[]byte, error)
-	Has(k common.Hash) bool
-	Put(k common.Hash, val []byte) error
-	Delete(k common.Hash) error
-}
+type ServiceConstructor func() (Service, error)
