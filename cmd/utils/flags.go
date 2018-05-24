@@ -533,11 +533,14 @@ var (
 		Usage: "Minimum POW accepted",
 		Value: whisper.DefaultMinimumPoW,
 	}
-
-	//Sharding Settings
+	// Sharding Settings
 	DepositFlag = cli.BoolFlag{
 		Name:  "deposit",
-		Usage: "To become a notary with your sharding client, " + new(big.Int).Div(sharding.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
+		Usage: "To become a notary in a sharding node, " + new(big.Int).Div(sharding.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
+	}
+	ActorFlag = cli.StringFlag{
+		Name:  "actor",
+		Usage: `use the --actor notary or --actor proposer to start a notary or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
 	}
 )
 
