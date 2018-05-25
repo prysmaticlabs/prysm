@@ -129,9 +129,9 @@ func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 
 }
 
-// Serialize method serializes the input transactions
-// and returns the chunks in byte arrays.
-func Serialize(txs []*types.Transaction) ([]byte, error) {
+// Serialize method serializes the input tx
+// and returns the blobs in byte array.
+func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 
 	blobs := make([]*utils.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
@@ -153,8 +153,9 @@ func Serialize(txs []*types.Transaction) ([]byte, error) {
 	return serializedTx, nil
 }
 
-// Deserialize takes a byte array and converts its back to its original transactions.
-func Deserialize(serialisedBlob []byte) (*[]*types.Transaction, error) {
+// DeserializeBlobToTx takes byte array blob and converts it back
+// to original txs and returns the txs in tx array.
+func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
 
 	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
 	if err != nil {
