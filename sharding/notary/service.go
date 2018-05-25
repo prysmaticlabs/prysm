@@ -23,8 +23,7 @@ func NewNotary(node node.Node) (*Notary, error) {
 	if err != nil {
 		return nil, err
 	}
-	// return &Notary{node, shardDB}, nil
-	return &Notary{node: node}, nil
+	return &Notary{node, shardDB}, nil
 }
 
 // Start the main routine for a notary.
