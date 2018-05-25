@@ -13,23 +13,23 @@ import (
 )
 
 type mockShardDB struct {
-	kv map[common.Hash]*[]byte
+	kv map[common.Hash][]byte
 }
 
 // TOOD: FINISH MOCK CLIENT
-func (m *mockShardDB) Get(k common.Hash) ([]byte, error) {
-	return []byte{, nil
+func (m *mockShardDB) Get(k []byte) ([]byte, error) {
+	return []byte{}, nil
 }
 
-func (m *mockShardDB) Has(k common.Hash) bool {
-	return false
+func (m *mockShardDB) Has(k []byte) (bool, error) {
+	return false, nil
 }
 
-func (m *mockShardDB) Put(k common.Hash, v []byte) error {
+func (m *mockShardDB) Put(k []byte, v []byte) error {
 	return fmt.Errorf("error updating db")
 }
 
-func (m *mockShardDB) Delete(k common.Hash) error {
+func (m *mockShardDB) Delete(k []byte) error {
 	return fmt.Errorf("error deleting value in db")
 }
 
@@ -65,7 +65,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 
 	// creates a well-functioning shardDB.
 	shardDB := database.NewShardKV()
@@ -296,10 +296,10 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 	}
 
 	// setting the val of the key to nil.
-	if err := shard.shardDB.Put(emptyHash, nil); err != nil {
+	if err := shard.shardDB.Put([]byte{}, nil); err != nil {
 		t.Fatalf("could not update shardDB: %v", err)
 	}
-	if _, err := shard.BodyByChunkRoot(&emptyHash); err != nil {
+	if _, err := shard.BodyByChunkRoot(&emptyHash); err == nil {
 		t.Errorf("value set as nil in shardDB should return error from BodyByChunkRoot")
 	}
 
@@ -347,7 +347,7 @@ func TestShard_SetAvailability(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 
 	// creates a well-functioning shardDB.
 	shardDB := database.NewShardKV()
@@ -402,7 +402,7 @@ func TestShard_SaveCollation(t *testing.T) {
 
 func TestShard_SaveHeader(t *testing.T) {
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 	emptyHash := common.BytesToHash([]byte{})
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
@@ -414,7 +414,7 @@ func TestShard_SaveHeader(t *testing.T) {
 
 func TestShard_SaveBody(t *testing.T) {
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
 	if err := errorShard.SaveBody([]byte{1, 2, 3}); err == nil {
