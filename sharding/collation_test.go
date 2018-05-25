@@ -130,7 +130,7 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 
 // BENCHMARK TESTS
 
-// Helper function to generate test that completes round trip transaction tests for a specific number of transactions.
+// Helper function to generate test that completes round trip serialization tests for a specific number of transactions.
 func runBenchTest(b *testing.B, numTransactions int) {
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
