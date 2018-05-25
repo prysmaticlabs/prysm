@@ -129,7 +129,7 @@ func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 
 }
 
-// Serialize method serializes the input tx
+// SerializeTxToBlob method serializes the input tx
 // and returns the blobs in byte array.
 func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 
