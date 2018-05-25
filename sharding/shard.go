@@ -114,7 +114,7 @@ func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collatio
 func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 	body, err := s.shardDB.Get(chunkRoot.Bytes())
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
 	if len(body) == 0 {
 		return nil, fmt.Errorf("no corresponding body with chunk root found: %s", chunkRoot)
