@@ -133,7 +133,7 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 // Helper function to generate test that completes round trip serialization tests for a specific number of transactions.
 func runBenchTest(b *testing.B, numTransactions int) {
 	var txs []*types.Transaction
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numTransactions; i++ {
 		data := make([]byte, 650)
 		rand.Read(data)
 		txs = append(txs, types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
