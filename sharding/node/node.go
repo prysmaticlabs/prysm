@@ -12,7 +12,7 @@ import (
 	"os"
 	"sync"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -25,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -44,6 +44,7 @@ type Node interface {
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
 	DepositFlagSet() bool
+	Sign(hash common.Hash) ([]byte, error)
 }
 
 // General node for a sharding-enabled system.
@@ -179,6 +180,13 @@ func (n *shardingNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) 
 			return n.keystore.SignTx(*account, tx, networkID /* chainID */)
 		},
 	}, nil
+}
+
+// Sign signs the hash of collationHeader contents by
+// using default account on keystore and returns signed signature.
+func (n *shardingNode) Sign(hash common.Hash) ([]byte, error) {
+	account := n.Account()
+	return n.keystore.SignHash(*account, hash.Bytes())
 }
 
 // Account to use for sharding transactions.
