@@ -73,8 +73,7 @@ func (s *smcTestHelper) fastForward(p int) {
 	}
 }
 
-// registerNotaries is a helper function register notaries in batch,
-// it also verifies notary registration is successful.
+// registerNotaries is a helper function register notaries in batch.
 func (s *smcTestHelper) registerNotaries(deposit *big.Int, params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		s.testAccounts[i].txOpts.Value = deposit
@@ -111,8 +110,7 @@ func (s *smcTestHelper) registerNotaries(deposit *big.Int, params ...int) error 
 	return nil
 }
 
-// deregisterNotaries is a helper function that deregister notaries in batch,
-// it also verifies notary deregistration is successful.
+// deregisterNotaries is a helper function that deregister notaries in batch.
 func (s *smcTestHelper) deregisterNotaries(params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		s.testAccounts[i].txOpts.Value = big.NewInt(0)
@@ -147,8 +145,7 @@ func (s *smcTestHelper) deregisterNotaries(params ...int) error {
 	return nil
 }
 
-// addHeader is a helper function to add header to smc,
-// it also verifies header is correctly added to the SMC.
+// addHeader is a helper function to add header to smc.
 func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.Int, chunkRoot uint8) error {
 	_, err := s.smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot})
 	if err != nil {
@@ -186,8 +183,7 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 	return nil
 }
 
-// submitVote is a helper function for notary to submit vote on a given header,
-// it also verifies vote is properly submitted and casted.
+// submitVote is a helper function for notary to submit vote on a given header.
 func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
 	_, err := s.smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
 	if err != nil {
@@ -214,7 +210,7 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 		return fmt.Errorf("incorrect notary address in submitVote log. Want: %v Got: %v", s.testAccounts[0].addr, a.addr)
 	}
 	if log.Event.ChunkRoot != [32]byte{chunkRoot} {
-		return fmt.Errorf("chunk root missmatch in submitVote log. Want: %v Got: %v", [32]byte{chunkRoot}, log.Event.ChunkRoot)
+		return fmt.Errorf("chunk root missmatch in submitVote log. Want: %v Got: %v", common.BytesToHash([]byte{chunkRoot}), common.BytesToHash(log.Event.ChunkRoot[:]))
 	}
 	return nil
 }
