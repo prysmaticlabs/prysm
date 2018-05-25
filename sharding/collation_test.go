@@ -56,13 +56,13 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 	tx := c.transactions
 
-	results, err := c.Serialize()
+	results, err := SerializeTxToBlob(tx)
 
 	if err != nil {
 		t.Errorf("Unable to Serialize transactions, %v", err)
 	}
 
-	deserializedTxs, err := Deserialize(results)
+	deserializedTxs, err := DeserializeBlobToTx(results)
 
 	if err != nil {
 		t.Errorf("Unable to deserialize collation body, %v", err)
