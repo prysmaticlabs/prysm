@@ -2,6 +2,7 @@ package sharding
 
 import (
 	"bytes"
+	"crypto/rand"
 	"math/big"
 	"reflect"
 	"testing"
@@ -56,13 +57,13 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 	tx := c.transactions
 
-	results, err := c.Serialize()
+	results, err := SerializeTxToBlob(tx)
 
 	if err != nil {
 		t.Errorf("Unable to Serialize transactions, %v", err)
 	}
 
-	deserializedTxs, err := Deserialize(results)
+	deserializedTxs, err := DeserializeBlobToTx(results)
 
 	if err != nil {
 		t.Errorf("Unable to deserialize collation body, %v", err)
@@ -125,4 +126,39 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 func makeTxWithGasLimit(gl uint64) *types.Transaction {
 	return types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, gl, nil /*gasPrice*/, nil /*data*/)
+}
+
+// BENCHMARK TESTS
+
+// Helper function to generate test that completes round trip serialization tests for a specific number of transactions.
+func runBenchTest(b *testing.B, numTransactions int) {
+	var txs []*types.Transaction
+	for i := 0; i < numTransactions; i++ {
+		data := make([]byte, 650)
+		rand.Read(data)
+		txs = append(txs, types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		results, _ := SerializeTxToBlob(txs)
+		_, _ = DeserializeBlobToTx(results)
+	}
+
+}
+
+func BenchmarkSerialization10(b *testing.B) {
+	runBenchTest(b, 10)
+}
+
+func BenchmarkSerialization100(b *testing.B) {
+	runBenchTest(b, 100)
+}
+
+func BenchmarkSerialization1000(b *testing.B) {
+	runBenchTest(b, 1000)
+}
+
+func BenchmarkSerialization10000(b *testing.B) {
+	runBenchTest(b, 10000)
 }
