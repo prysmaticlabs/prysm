@@ -18,6 +18,7 @@ type Proposer struct {
 // registered as a service upon start of a sharding node.
 // Has access to the public methods of this node.
 func NewProposer(node node.Node) (*Proposer, error) {
+	// Initializes a shardchaindata directory persistent db.
 	shardDB, err := database.NewShardDB(node.DataDirFlag(), "shardchaindata")
 	if err != nil {
 		return nil, err
