@@ -16,7 +16,6 @@ type mockShardDB struct {
 	kv map[common.Hash][]byte
 }
 
-// TOOD: FINISH MOCK CLIENT
 func (m *mockShardDB) Get(k []byte) ([]byte, error) {
 	return []byte{}, nil
 }
