@@ -140,6 +140,11 @@ func joinNotaryPool(n node.Node) error {
 	}
 
 	if b, err := isAccountInNotaryPool(n); b || err != nil {
+		if b {
+
+			return errors.New("Account has already deposited into the Notary Pool")
+		}
+
 		return err
 	}
 
@@ -158,8 +163,24 @@ func joinNotaryPool(n node.Node) error {
 	return nil
 }
 
-func leaveNotaryPool() error {
+// leaveNotaryPool checks if the account is a Notary in  the SMC.
+// if it is then it checks if it has deposited , if it has it deregisters
+// itself from the pool and leaves the pool getting back their balance
+// which has been deposited previously.
+func leaveNotaryPool(n node.Node) error {
+
+	account := n.Account()
+	// Checks if our deposit has gone through according to the SMC.
+	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	if !nreg.Deposited && err != nil {
+		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
+	}
+	if nreg.Deposited || err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func VoteforCollation() error {

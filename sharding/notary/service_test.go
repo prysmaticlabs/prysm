@@ -152,8 +152,8 @@ func TestJoinNotaryPool(t *testing.T) {
 
 	// Trying to join while deposited should do nothing
 	err = joinNotaryPool(node)
-	if err != nil {
-		t.Error(err)
+	if err == nil {
+		t.Error("Tried to join Notary Pool while already deposited")
 	}
 	backend.Commit()
 
