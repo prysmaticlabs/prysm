@@ -42,6 +42,7 @@ type Node interface {
 	ChainReader() ethereum.ChainReader
 	Account() *accounts.Account
 	SMCCaller() *contracts.SMCCaller
+	SMCFilterer() *contracts.SMCFilterer
 	SMCTransactor() *contracts.SMCTransactor
 	DepositFlagSet() bool
 }
@@ -206,6 +207,11 @@ func (n *shardingNode) SMCCaller() *contracts.SMCCaller {
 // SMCTransactor allows us to send tx's to the SMC programmatically.
 func (n *shardingNode) SMCTransactor() *contracts.SMCTransactor {
 	return &n.smc.SMCTransactor
+}
+
+// SMCFilterer allows us to watch events generated from the SMC
+func (n *shardingNode) SMCFilterer() *contracts.SMCFilterer {
+	return &n.smc.SMCFilterer
 }
 
 // DepositFlagSet returns true for cli flag --deposit.

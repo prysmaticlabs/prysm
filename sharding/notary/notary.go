@@ -165,21 +165,38 @@ func joinNotaryPool(n node.Node) error {
 
 // leaveNotaryPool checks if the account is a Notary in  the SMC.
 // if it is then it checks if it has deposited , if it has it deregisters
-// itself from the pool and leaves the pool getting back their balance
-// which has been deposited previously.
+// itself from the pool and the lockup period counts down.
 func leaveNotaryPool(n node.Node) error {
 
 	account := n.Account()
-	// Checks if our deposit has gone through according to the SMC.
+
 	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
-	if !nreg.Deposited && err != nil {
-		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
+
+	if err != nil {
+		return fmt.Errorf("Account %s not in notary pool", account.Address.String())
 	}
-	if nreg.Deposited || err != nil {
-		return err
+	if !nreg.Deposited {
+		return errors.New("Account has not deposited in the Notary Pool")
 	}
 
-	return nil
+	txOps, err := n.CreateTXOpts(nil)
+	if err != nil {
+		return fmt.Errorf("unable to create txOpts: %v", err)
+	}
+	tx, err := n.SMCTransactor().DeregisterNotary(txOps)
+
+	if err != nil {
+		return fmt.Errorf("Unable to deregister Notary: %v", err)
+	}
+
+	log.Info(fmt.Sprintf("Notary Deregistered from the pool with hash: %s", tx.Hash().String()))
+
+	filterOps := &bind.FilterOpts{0, nil, nil}
+	events, err := n.SMCFilterer().FilterNotaryDeregistered(filterOps)
+	if err != nil {
+		return fmt.Errorf("Unable to filter events: %v", err)
+	}
+	return fmt.Errorf("%v", events)
 
 }
 

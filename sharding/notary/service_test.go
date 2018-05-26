@@ -53,6 +53,10 @@ func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
 
+func (m *mockNode) SMCFilterer() *contracts.SMCFilterer {
+	return &m.smc.SMCFilterer
+}
+
 func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
@@ -150,7 +154,7 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
 
-	// Trying to join while deposited should do nothing
+	// Trying to join while deposited should return an error
 	err = joinNotaryPool(node)
 	if err == nil {
 		t.Error("Tried to join Notary Pool while already deposited")
@@ -163,6 +167,34 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+	}
+
+}
+
+func TestLeaveNotaryPool(t *testing.T) {
+	backend, smc := setup()
+	node := &mockNode{smc: smc, t: t, DepositFlag: true}
+
+	err := joinNotaryPool(node)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	backend.Commit()
+
+	err = leaveNotaryPool(node)
+	backend.Commit()
+
+	filterOps := &bind.FilterOpts{0, nil, nil}
+	events, err := node.SMCFilterer().FilterNotaryDeregistered(filterOps)
+	yes := events.Next()
+	if err == nil {
+		t.Errorf("Unable to filter events: %v\n%v\n %v", yes, err, events.Event)
+	}
+
+	if err != nil {
+
+		t.Fatal(err)
 	}
 
 }
