@@ -107,7 +107,9 @@ func (c *Collation) CalculateChunkRoot() {
 	// TODO: this needs to be based on blob serialization.
 	// For proof of custody we need to split chunks (body) into chunk + salt and
 	// take the merkle root of that.
-	chunkRoot := common.BytesToHash(c.body)
+
+	chunks := Chunks(c.body) // wrapper allowing us to merklizing the chunks
+	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
