@@ -63,6 +63,10 @@ func (m *mockNode) DepositFlagSet() bool {
 	return m.DepositFlag
 }
 
+func (m *mockNode) DataDirFlag() string {
+	return "/tmp/datadir"
+}
+
 // Unused mockClient methods.
 func (m *mockNode) Start() error {
 	m.t.Fatal("Start called")

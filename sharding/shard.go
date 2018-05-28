@@ -8,25 +8,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/sharding/database"
 )
-
-// ShardBackend defines an interface for a shardDB's necessary method
-// signatures.
-type ShardBackend interface {
-	Get(k common.Hash) (*[]byte, error)
-	Has(k common.Hash) bool
-	Put(k common.Hash, val []byte) error
-	Delete(k common.Hash) error
-}
 
 // Shard base struct.
 type Shard struct {
-	shardDB ShardBackend
+	shardDB database.ShardBackend
 	shardID *big.Int
 }
 
 // NewShard creates an instance of a Shard struct given a shardID.
-func NewShard(shardID *big.Int, shardDB ShardBackend) *Shard {
+func NewShard(shardID *big.Int, shardDB database.ShardBackend) *Shard {
 	return &Shard{
 		shardID: shardID,
 		shardDB: shardDB,
@@ -48,17 +40,17 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 
 // HeaderByHash looks up a collation header from the shardDB using the header's hash.
 func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
-	encoded, err := s.shardDB.Get(*hash)
+	encoded, err := s.shardDB.Get(hash.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("get failed: %v", err)
 	}
-	if encoded == nil {
+	if len(encoded) == 0 {
 		return nil, fmt.Errorf("no value set for header hash: %vs", hash.Hex())
 	}
 
 	var header CollationHeader
 
-	stream := rlp.NewStream(bytes.NewReader(*encoded), uint64(len(*encoded)))
+	stream := rlp.NewStream(bytes.NewReader(encoded), uint64(len(encoded)))
 	if err := header.DecodeRLP(stream); err != nil {
 		return nil, fmt.Errorf("could not decode RLP header: %v", err)
 	}
@@ -94,18 +86,18 @@ func (s *Shard) CanonicalHeaderHash(shardID *big.Int, period *big.Int) (*common.
 	key := canonicalCollationLookupKey(shardID, period)
 
 	// fetches the RLP encoded collation header corresponding to the key.
-	encoded, err := s.shardDB.Get(key)
+	encoded, err := s.shardDB.Get(key.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	if encoded == nil {
+	if len(encoded) == 0 {
 		return nil, fmt.Errorf("no canonical collation header set for period=%v, shardID=%v pair: %v", shardID, period, err)
 	}
 
 	// RLP decodes the header, computes its hash.
 	var header CollationHeader
 
-	stream := rlp.NewStream(bytes.NewReader(*encoded), uint64(len(*encoded)))
+	stream := rlp.NewStream(bytes.NewReader(encoded), uint64(len(encoded)))
 	if err := header.DecodeRLP(stream); err != nil {
 		return nil, fmt.Errorf("could not decode RLP header: %v", err)
 	}
@@ -126,27 +118,26 @@ func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collatio
 
 // BodyByChunkRoot fetches a collation body.
 func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
-	body, err := s.shardDB.Get(*chunkRoot)
+	body, err := s.shardDB.Get(chunkRoot.Bytes())
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
-	if body == nil {
+	if len(body) == 0 {
 		return nil, fmt.Errorf("no corresponding body with chunk root found: %s", chunkRoot)
 	}
-	return *body, nil
+	return body, nil
 }
 
 // CheckAvailability is used by notaries to confirm a header's data availability.
 func (s *Shard) CheckAvailability(header *CollationHeader) (bool, error) {
 	key := dataAvailabilityLookupKey(header.ChunkRoot())
-	val, err := s.shardDB.Get(key)
+	availability, err := s.shardDB.Get(key.Bytes())
 	if err != nil {
 		return false, err
 	}
-	if val == nil {
+	if len(availability) == 0 {
 		return false, fmt.Errorf("availability not set for header")
 	}
-	availability := *val
 	// availability is a byte array of length 1.
 	return availability[0] != 0, nil
 }
@@ -160,7 +151,7 @@ func (s *Shard) SetAvailability(chunkRoot *common.Hash, availability bool) error
 	} else {
 		encoded = []byte{0}
 	}
-	return s.shardDB.Put(key, encoded)
+	return s.shardDB.Put(key.Bytes(), encoded)
 }
 
 // SaveHeader adds the collation header to shardDB.
@@ -176,7 +167,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 	}
 
 	// uses the hash of the header as the key.
-	return s.shardDB.Put(header.Hash(), encoded)
+	return s.shardDB.Put(header.Hash().Bytes(), encoded)
 }
 
 // SaveBody adds the collation body to the shardDB and sets availability.
@@ -189,7 +180,7 @@ func (s *Shard) SaveBody(body []byte) error {
 	chunks := Chunks(body) // wrapper allowing us to merklizing the chunks
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	s.SetAvailability(&chunkRoot, true)
-	return s.shardDB.Put(chunkRoot, body)
+	return s.shardDB.Put(chunkRoot.Bytes(), body)
 }
 
 // SaveCollation adds the collation's header and body to shardDB.
@@ -230,7 +221,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	}
 	// sets the key to be the canonical collation lookup key and val as RLP encoded
 	// collation header.
-	return s.shardDB.Put(key, encoded)
+	return s.shardDB.Put(key.Bytes(), encoded)
 }
 
 // dataAvailabilityLookupKey formats a string that will become a lookup
