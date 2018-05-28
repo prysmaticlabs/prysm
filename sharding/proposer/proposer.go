@@ -16,15 +16,28 @@ import (
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
 func createCollation(n node.Node, shardId *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
-	addr := n.Account().Address
+	// shardId has to be within range
+	if shardId.Cmp(big.NewInt(0)) < 0 || shardId.Cmp(big.NewInt(sharding.ShardCount)) > 0 {
+		return nil, fmt.Errorf("can't create collation for shard %v. Must be between 0 and %v", shardId, sharding.ShardCount)
+	}
 
-	// serialized tx to blob for collation body
+	// period can't be less than current period.
+	//ctx := context.Background()
+	//b, _ := n.ChainReader().BlockByNumber(ctx, nil)
+	b := big.NewInt(5)
+	currentPeriod := new(big.Int).Div(b, big.NewInt(sharding.PeriodLength))
+	if period.Cmp(currentPeriod) < 0 {
+		return nil, fmt.Errorf("can't create collation with period %v less than current period %v", period, currentPeriod)
+	}
+
+	// serialized tx to blob for collation body.
 	blobs, err := sharding.SerializeTxToBlob(txs)
 	if err != nil {
-		return nil, fmt.Errorf("Can not create collation. Serialization to blob failed: %v", err)
+		return nil, fmt.Errorf("can't create collation, serialization to blob failed: %v", err)
 	}
 
 	// construct the header, leave chunkRoot and signature fields empty, to be filled later.
+	addr := n.Account().Address
 	header := sharding.NewCollationHeader(shardId, nil, period, &addr, nil)
 
 	// construct the body with header, blobs(serialized txs) and txs.
@@ -32,10 +45,10 @@ func createCollation(n node.Node, shardId *big.Int, period *big.Int, txs []*type
 	collation.CalculateChunkRoot()
 	sig, err := n.Sign(collation.Header().Hash())
 	if err != nil {
-		return nil, fmt.Errorf("Can not create collation. Sign collationHeader failed: %v", err)
+		return nil, fmt.Errorf("can't create collation, sign collationHeader failed: %v", err)
 	}
 
-	// add proposer signature to collation header
+	// add proposer signature to collation header.
 	collation.Header().AddSig(sig)
 
 	return collation, nil

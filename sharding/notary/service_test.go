@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -65,6 +66,10 @@ func (m *mockNode) DepositFlagSet() bool {
 
 func (m *mockNode) DataDirFlag() string {
 	return "/tmp/datadir"
+}
+
+func (m *mockNode) Sign(hash common.Hash) ([]byte, error) {
+	return nil, nil
 }
 
 // Unused mockClient methods.
