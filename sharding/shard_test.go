@@ -275,7 +275,7 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 		t.Fatalf("cannot save body: %v", err)
 	}
 
-	chunks := Chunks(body) // wrapper allowing us to merklizing the chunks
+	chunks := Chunks(body) // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 
 	dbBody, err := shard.BodyByChunkRoot(&chunkRoot)
