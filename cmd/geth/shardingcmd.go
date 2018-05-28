@@ -50,6 +50,12 @@ func shardingCmd(ctx *cli.Context) error {
 func registerShardingServices(n node.Node) error {
 	actorFlag := n.Context().GlobalString(utils.ActorFlag.Name)
 
+	// if err := n.Register(func() (sharding.Service, error) {
+	// 	return shardp2p.NewP2P()
+	// }); err != nil {
+	// 	return fmt.Errorf("failed to register p2p service: %v", err)
+	// }
+
 	err := n.Register(func() (sharding.Service, error) {
 		if actorFlag == "notary" {
 			return notary.NewNotary(n)
@@ -63,7 +69,5 @@ func registerShardingServices(n node.Node) error {
 		return fmt.Errorf("failed to register the main sharding services: %v", err)
 	}
 
-	// TODO(prestonvanloon) registers the shardp2p service.
-	// we can do n.Register and initialize a shardp2p.NewServer() or something like that.
 	return nil
 }

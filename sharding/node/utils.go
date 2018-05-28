@@ -52,7 +52,7 @@ func initSMC(n *shardingNode) (*contracts.SMC, error) {
 			time.Sleep(1 * time.Second)
 		}
 
-		log.Info(fmt.Sprintf("New contract deployed at %s", addr))
+		log.Info(fmt.Sprintf("New contract deployed at %s", addr.Str()))
 		return contract, nil
 	}
 
