@@ -172,7 +172,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 // SaveBody adds the collation body to the shardDB and sets availability.
 func (s *Shard) SaveBody(body []byte) error {
 	// check if body is empty and throw error.
-	if body == nil || len(body) == 0 {
+	if len(body) == 0 {
 		return fmt.Errorf("body is empty")
 	}
 
