@@ -73,8 +73,7 @@ func (s *smcTestHelper) fastForward(p int) {
 	}
 }
 
-// registerNotaries is a helper function register notaries in batch,
-// it also verifies notary registration is successful.
+// registerNotaries is a helper function register notaries in batch.
 func (s *smcTestHelper) registerNotaries(deposit *big.Int, params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		s.testAccounts[i].txOpts.Value = deposit
@@ -92,11 +91,26 @@ func (s *smcTestHelper) registerNotaries(deposit *big.Int, params ...int) error 
 				"Got - deposited:%v, index:%v, period:%v ", i, notary.Deposited, notary.PoolIndex, notary.DeregisteredPeriod)
 		}
 	}
+	// Filter SMC logs by notaryRegistered.
+	log, err := s.smc.FilterNotaryRegistered(&bind.FilterOpts{})
+	if err != nil {
+		return err
+	}
+	// Iterate notaryRegistered logs, compare each address and poolIndex.
+	for i := 0; i < params[1]; i++ {
+		log.Next()
+		if log.Event.Notary != s.testAccounts[i].addr {
+			return fmt.Errorf("incorrect address in notaryRegistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Notary)
+		}
+		// Verify notaryPoolIndex is incremental starting from 1st registered Notary.
+		if log.Event.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 {
+			return fmt.Errorf("incorrect index in notaryRegistered log. Want: %v Got: %v", i, log.Event.Notary)
+		}
+	}
 	return nil
 }
 
-// deregisterNotaries is a helper function that deregister notaries in batch,
-// it also verifies notary deregistration is successful.
+// deregisterNotaries is a helper function that deregister notaries in batch.
 func (s *smcTestHelper) deregisterNotaries(params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		s.testAccounts[i].txOpts.Value = big.NewInt(0)
@@ -110,11 +124,28 @@ func (s *smcTestHelper) deregisterNotaries(params ...int) error {
 			return fmt.Errorf("Degistered period can not be 0 right after deregistration")
 		}
 	}
+	// Filter SMC logs by notaryDeregistered.
+	log, err := s.smc.FilterNotaryDeregistered(&bind.FilterOpts{})
+	if err != nil {
+		return err
+	}
+	// Iterate notaryDeregistered logs, compare each address, poolIndex and verify period is set.
+	for i := 0; i < params[1]; i++ {
+		log.Next()
+		if log.Event.Notary != s.testAccounts[i].addr {
+			return fmt.Errorf("incorrect address in notaryDeregistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Notary)
+		}
+		if log.Event.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 {
+			return fmt.Errorf("incorrect index in notaryDeregistered log. Want: %v Got: %v", i, log.Event.Notary)
+		}
+		if log.Event.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
+			return fmt.Errorf("incorrect period in notaryDeregistered log. Got: %v", log.Event.DeregisteredPeriod)
+		}
+	}
 	return nil
 }
 
-// addHeader is a helper function to add header to smc,
-// it also verifies header is correctly added to the SMC.
+// addHeader is a helper function to add header to smc.
 func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.Int, chunkRoot uint8) error {
 	_, err := s.smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot})
 	if err != nil {
@@ -134,11 +165,25 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 	if cr.ChunkRoot != [32]byte{chunkRoot} {
 		return fmt.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
+
+	// Filter SMC logs by headerAdded.
+	shardIndex := []*big.Int{shard}
+	logPeriod := uint64(period.Int64() * sharding.PeriodLength)
+	log, err := s.smc.FilterHeaderAdded(&bind.FilterOpts{Start: logPeriod}, shardIndex)
+	if err != nil {
+		return err
+	}
+	log.Next()
+	if log.Event.ProposerAddress != s.testAccounts[0].addr {
+		return fmt.Errorf("incorrect proposer address in addHeader log. Want: %v Got: %v", s.testAccounts[0].addr, log.Event.ProposerAddress)
+	}
+	if log.Event.ChunkRoot != [32]byte{chunkRoot} {
+		return fmt.Errorf("chunk root missmatch in addHeader log. Want: %v Got: %v", [32]byte{chunkRoot}, log.Event.ChunkRoot)
+	}
 	return nil
 }
 
-// addHeader is a helper function for notary to submit vote on a given header,
-// it also verifies vote is properly submitted and casted.
+// submitVote is a helper function for notary to submit vote on a given header.
 func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
 	_, err := s.smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
 	if err != nil {
@@ -152,6 +197,20 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 	}
 	if !v {
 		return fmt.Errorf("Notary's indexd bit did not cast to 1 in index %v", index)
+	}
+	// Filter SMC logs by submitVote.
+	shardIndex := []*big.Int{shard}
+	logPeriod := uint64(period.Int64() * sharding.PeriodLength)
+	log, err := s.smc.FilterVoteSubmitted(&bind.FilterOpts{Start: logPeriod}, shardIndex)
+	if err != nil {
+		return err
+	}
+	log.Next()
+	if log.Event.NotaryAddress != a.addr {
+		return fmt.Errorf("incorrect notary address in submitVote log. Want: %v Got: %v", s.testAccounts[0].addr, a.addr)
+	}
+	if log.Event.ChunkRoot != [32]byte{chunkRoot} {
+		return fmt.Errorf("chunk root missmatch in submitVote log. Want: %v Got: %v", common.BytesToHash([]byte{chunkRoot}), common.BytesToHash(log.Event.ChunkRoot[:]))
 	}
 	return nil
 }
