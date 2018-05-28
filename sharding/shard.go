@@ -176,7 +176,7 @@ func (s *Shard) SaveBody(body []byte) error {
 		return fmt.Errorf("body is empty")
 	}
 
-	chunks := Chunks(body) // wrapper allowing us to merklizing the chunks.
+	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	s.SetAvailability(&chunkRoot, true)
 	return s.shardDB.Put(chunkRoot.Bytes(), body)

@@ -107,7 +107,7 @@ func (c *Collation) CalculateChunkRoot() {
 	// TODO: For proof of custody we need to split chunks (body) into chunk + salt
 	// and take the merkle root of that.
 
-	chunks := Chunks(c.body) // wrapper allowing us to merklizing the chunks.
+	chunks := Chunks(c.body)             // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
 }
@@ -171,7 +171,6 @@ func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
 
 	return &txs, nil
 }
-
 
 // Chunks is a wrapper around a chunk array to implement DerivableList,
 // which allows us to Merklize the chunks into the chunkRoot.
