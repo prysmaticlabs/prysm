@@ -162,7 +162,10 @@ func (n *shardingNode) Register(constructor sharding.ServiceConstructor) error {
 
 // Close the RPC client connection.
 func (n *shardingNode) Close() {
-	n.rpcClient.Close()
+	// rpcClient could be nil if the connection failed.
+	if n.rpcClient != nil {
+		n.rpcClient.Close()
+	}
 }
 
 // CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
