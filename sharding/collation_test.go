@@ -172,7 +172,7 @@ func runSerializeBenchmark(b *testing.B, numTransactions int) {
 	}
 }
 
-func runSerializeBlobOnlyBenchmark(b *testing.B, numTransactions int) {
+func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
 	blobs, err := SerializeTxToRawBlob(txs)
 	if err != nil {
@@ -206,7 +206,7 @@ func runDeserializeBenchmark(b *testing.B, numTransactions int) {
 	}
 }
 
-func runDeserializeBlobOnlyBenchmark(b *testing.B, numTransactions int) {
+func runDeserializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
 	blob, err := SerializeTxToBlob(txs)
 	if err != nil {
@@ -223,16 +223,16 @@ func runDeserializeBlobOnlyBenchmark(b *testing.B, numTransactions int) {
 	}
 }
 
-func BenchmarkSerializeBlobOnly10(b *testing.B) {
-	runSerializeBlobOnlyBenchmark(b, 10)
+func BenchmarkSerializeNoRLP10(b *testing.B) {
+	runSerializeNoRLPBenchmark(b, 10)
 }
 
-func BenchmarkSerializeBlobOnly100(b *testing.B) {
-	runSerializeBlobOnlyBenchmark(b, 100)
+func BenchmarkSerializeNoRLP100(b *testing.B) {
+	runSerializeNoRLPBenchmark(b, 100)
 }
 
-func BenchmarkSerializeBlobOnly1000(b *testing.B) {
-	runSerializeBlobOnlyBenchmark(b, 1000)
+func BenchmarkSerializeNoRLP1000(b *testing.B) {
+	runSerializeNoRLPBenchmark(b, 1000)
 }
 
 func BenchmarkSerialize10(b *testing.B) {
@@ -259,16 +259,16 @@ func BenchmarkDeserialize1000(b *testing.B) {
 	runDeserializeBenchmark(b, 1000)
 }
 
-func BenchmarkDeserializeBlobOnly10(b *testing.B) {
-	runDeserializeBlobOnlyBenchmark(b, 10)
+func BenchmarkDeserializeNoRLP10(b *testing.B) {
+	runDeserializeNoRLPBenchmark(b, 10)
 }
 
-func BenchmarkDeserializeBlobOnly100(b *testing.B) {
-	runDeserializeBlobOnlyBenchmark(b, 100)
+func BenchmarkDeserializeNoRLP100(b *testing.B) {
+	runDeserializeNoRLPBenchmark(b, 100)
 }
 
-func BenchmarkDeserializeBlobOnly1000(b *testing.B) {
-	runDeserializeBlobOnlyBenchmark(b, 1000)
+func BenchmarkDeserializeNoRLP1000(b *testing.B) {
+	runDeserializeNoRLPBenchmark(b, 1000)
 }
 
 func BenchmarkSerializeRoundtrip10(b *testing.B) {
