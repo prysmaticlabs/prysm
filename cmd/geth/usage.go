@@ -86,6 +86,7 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "SHARDING",
 		Flags: []cli.Flag{
+			utils.ActorFlag,
 			utils.DepositFlag,
 		},
 	},
