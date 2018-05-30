@@ -2,14 +2,16 @@ package utils
 
 import (
 	"fmt"
-
+	"math"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
-	chunkSize     = int64(32)
-	indicatorSize = int64(1)
-	chunkDataSize = chunkSize - indicatorSize
+	chunkSize      = int64(32)
+	indicatorSize  = int64(1)
+	chunkDataSize  = chunkSize - indicatorSize
+	skipEvmBits    = byte(0x80)
+	dataLengthBits = byte(0x1F)
 )
 
 // Flags to add to chunk delimiter.
@@ -45,119 +47,81 @@ func ConvertFromRawBlob(blob *RawBlob, i interface{}) error {
 	return nil
 }
 
-// SerializeBlob parses the blob and serializes it appropriately.
-func SerializeBlob(cb RawBlob) ([]byte, error) {
 
-	length := int64(len(cb.data))
-	terminalLength := length % chunkDataSize
-	chunksNumber := length / chunkDataSize
-	indicatorByte := make([]byte, 1)
-	indicatorByte[0] = 0
-	if cb.flags.skipEvmExecution {
-		indicatorByte[0] |= (1 << 7)
-	}
-	tempBody := []byte{}
+func getNumChunks(dataSize int) int {
+	numChunks := math.Ceil(float64(dataSize) / float64(chunkDataSize))
+	return int(numChunks)
+}
 
-	// if blob is less than 31 bytes, adds the indicator chunk
-	// and pad the remaining empty bytes to the right.
-	if chunksNumber == 0 {
-		paddedBytes := make([]byte, (chunkDataSize - length))
-		indicatorByte[0] = byte(terminalLength)
-		if cb.flags.skipEvmExecution {
-			indicatorByte[0] |= (1 << 7)
-		}
-		return append(indicatorByte, append(cb.data, paddedBytes...)...), nil
-	}
+func getSerializedDatasize(dataSize int) int {
+	return getNumChunks(dataSize) * int(chunkSize)
+}
 
-	// if there is no need to pad empty bytes, then the indicator byte
-	// is added as 0001111 and this chunk is returned to the
-	// main Serialize function.
-	if terminalLength == 0 {
-
-		for i := int64(1); i < chunksNumber; i++ {
-			// This loop loops through all non-terminal chunks and add a indicator
-			// byte of 00000000, each chunk is created by appending the indicator
-			// byte to the data chunks. The data chunks are separated into sets of
-			// 31 bytes.
-
-			tempBody = append(tempBody,
-				append(indicatorByte,
-					cb.data[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
-
-		}
-		indicatorByte[0] = byte(chunkDataSize)
-		if cb.flags.skipEvmExecution {
-			indicatorByte[0] |= (1 << 7)
-		}
-
-		// Terminal chunk has its indicator byte added, chunkDataSize*chunksNumber refers to the total size of the blob
-		tempBody = append(tempBody,
-			append(indicatorByte,
-				cb.data[(chunksNumber-1)*chunkDataSize:chunkDataSize*chunksNumber]...)...)
-
-		return tempBody, nil
-	}
-
-	// This loop loops through all non-terminal chunks and add a indicator byte
-	// of 00000000, each chunk is created by appending the indcator byte
-	// to the data chunks. The data chunks are separated into sets of 31.
-	for i := int64(1); i <= chunksNumber; i++ {
-		tempBody = append(tempBody,
-			append(indicatorByte,
-				cb.data[(i-1)*chunkDataSize:i*chunkDataSize]...)...)
-	}
-
-	// Appends indicator bytes to terminal-chunks, and if the index of the chunk
-	// delimiter is non-zero adds it to the chunk. Also pads empty bytes to
-	// the terminal chunk. chunkDataSize*chunksNumber refers to the total
-	// size of the blob. finalchunkIndex refers to the index of the last data byte.
-	indicatorByte[0] = byte(terminalLength)
-	if cb.flags.skipEvmExecution {
-		indicatorByte[0] |= (1 << 7)
-	}
-	tempBody = append(tempBody,
-		append(indicatorByte,
-			cb.data[chunkDataSize*chunksNumber:length]...)...)
-
-	emptyBytes := make([]byte, (chunkDataSize - terminalLength))
-	tempBody = append(tempBody, emptyBytes...)
-
-	return tempBody, nil
-
+func getTerminalLength(dataSize int) int {
+	numChunks := getNumChunks(dataSize)
+	return dataSize - ((numChunks - 1) * int(chunkDataSize))
 }
 
 // Serialize takes a set of blobs and converts them to a single byte array.
-func Serialize(rawblobs []*RawBlob) ([]byte, error) {
-	numBlobs := int64(len(rawblobs))
-	dataSize := 0
-
-	serializedData := make([][]byte, numBlobs)
-
-	// Loop through all blobs and store the serialized data
-	for i := int64(0); i < numBlobs; i++ {
-		data := *rawblobs[i]
-		refinedData, err := SerializeBlob(data)
-		if err != nil {
-			return nil, fmt.Errorf("Index %v: %v", i, err)
-		}
-
-		serializedData[i] = refinedData
-		dataSize += len(refinedData)
+func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
+	// Loop through all blobs and determine the amount of space that needs to be allocated
+	totalDataSize := 0
+	for i := 0; i < len(rawBlobs); i++ {
+		blobDataSize := len(rawBlobs[i].data)
+		totalDataSize += getSerializedDatasize(blobDataSize)
 	}
 
-	returnData := make([]byte, 0, dataSize)
-	for i := int64(0); i < numBlobs; i++ {
-		returnData = append(returnData, serializedData[i]...)
+	returnData := make([]byte, 0, totalDataSize)
+
+	// Loop through every blob and copy one chunk at a time
+	for i := 0; i < len(rawBlobs); i++ {
+		rawBlob := rawBlobs[i]
+		numChunks := getNumChunks(len(rawBlob.data))
+
+		for j := 0; j < numChunks; j++ {
+			var terminalLength int
+
+			// if non-terminal chunk
+			if j != numChunks-1 {
+				terminalLength = int(chunkDataSize)
+
+				// append indicating byte with just the length bits
+				returnData = append(returnData, byte(0))
+			 } else {
+				terminalLength = getTerminalLength(len(rawBlob.data))
+
+				indicatorByte := byte(terminalLength)
+				// include skipEvm flag if true
+				if rawBlob.flags.skipEvmExecution {
+					indicatorByte = indicatorByte | skipEvmBits
+				}
+
+				returnData = append(returnData, indicatorByte)
+			}
+
+			// append data bytes
+			chunkStart := j * int(chunkDataSize)
+			chunkEnd := chunkStart + terminalLength
+			blobSlice := rawBlob.data[chunkStart:chunkEnd]
+			returnData = append(returnData, blobSlice...)
+
+			// append filler bytes, if necessary
+			if terminalLength != int(chunkDataSize ) {
+				numFillerBytes := numChunks * int(chunkDataSize) - len(rawBlob.data)
+				fillerBytes := make([]byte, numFillerBytes)
+				returnData = append(returnData, fillerBytes...)
+			}
+		}
 	}
 
 	return returnData, nil
 }
 
 func isSkipEvm(indicator byte) bool {
-	return indicator & 0xE0 >> 7 == 1
+	return indicator & skipEvmBits >> 7 == 1
 }
 func getDatabyteLength(indicator byte) int {
-	return int(indicator & 0x1F)
+	return int(indicator & dataLengthBits)
 }
 
 type SerializedBlob struct {

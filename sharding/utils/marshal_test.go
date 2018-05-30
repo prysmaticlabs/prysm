@@ -31,31 +31,6 @@ func buildBlob(size int64) []byte {
 	return tempbody
 }
 
-func TestSerializeBlob(t *testing.T) {
-	for i := 1; i < 300; i++ {
-		blobSize := int64(i)
-		var rawBlob RawBlob
-		rawBlob.data = buildBlob(blobSize)
-
-		chunksAfterSerialize := blobSize / chunkDataSize
-		terminalChunk := blobSize % chunkDataSize
-		if terminalChunk != 0 {
-			chunksAfterSerialize = chunksAfterSerialize + 1
-		}
-
-		serializedBlobSize := chunksAfterSerialize * chunkSize
-		serializedBlob, err := SerializeBlob(rawBlob)
-
-		if err != nil {
-			t.Errorf("Error serializing blob: %v\n %v", err, serializedBlob)
-		}
-
-		if int64(len(serializedBlob)) != serializedBlobSize {
-			t.Errorf("Size of serialized blob is %v but should be %v", len(serializedBlob), serializedBlobSize)
-		}
-	}
-}
-
 func TestSize(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		size := int64(i)
@@ -157,3 +132,45 @@ func TestNotSkipEvm(t *testing.T) {
 	}
 }
 
+func TestSimpleSerialize(t *testing.T) {
+	rawBlobs := make([]*RawBlob, 1)
+	rawBlobs[0] = &RawBlob{data: make([]byte, 32)}
+	rawBlobs[0].data[31] = byte(1)
+	rawBlobs[0].flags.skipEvmExecution = true
+
+	data, err := Serialize(rawBlobs)
+	if err != nil {
+		t.Errorf("Serialize failed: %v", err)
+	}
+
+	if len(data) != 64 {
+		t.Errorf("Length of serialized data incorrect. Should be %v but is %v", 64, len(data))
+	}
+
+	if data[0] != 0 {
+		t.Errorf("Indicating byte for first chunk should be %v but is %v", 0, data[0])
+	}
+
+	if data[32] != 0x81 {
+		t.Errorf("Indicating byte for second chunk should be %v but is %v", 0x81, data[32])
+	}
+	t.Logf("data: %v", data)
+}
+
+func TestSimpleSerialize2(t *testing.T) {
+	rawBlobs := make([]*RawBlob, 1)
+	rawBlobs[0] = &RawBlob{data: make([]byte, 31)}
+
+	data, err := Serialize(rawBlobs)
+	if err != nil {
+		t.Errorf("Serialize failed: %v", err)
+	}
+
+	if len(data) != 32 {
+		t.Errorf("Length of serialized data incorrect. Should be %v but is %v", 32, len(data))
+	}
+
+	if data[0] != 31 {
+		t.Errorf("Indicating byte for second should be %v but is %v", 31, data[0])
+	}
+}
