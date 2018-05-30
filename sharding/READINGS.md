@@ -92,6 +92,8 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 - [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ)
 - [Sharding Introduction: R&D Compendium](https://github.com/ethereum/wiki/wiki/Sharding-introduction-R&D-compendium)
 
+After reading the Sharding FAQ, it is important to understand the minimal implementation notes and the research that went into writing it up.
+
 **Sharding Concepts and Notes**
 
 - [Sharding Concepts Mental Map](https://www.mindomo.com/zh/mindmap/sharding-d7cf8b6dee714d01a77388cb5d9d2a01)
