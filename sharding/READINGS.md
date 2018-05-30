@@ -17,6 +17,7 @@ This document serves as an outline of the required readings to catch up with and
 
 - [What is Ethereum?](http://ethdocs.org/en/latest/introduction/what-is-ethereum.html)
 - [How Does Ethereum Work Anyway?](https://medium.com/@preethikasireddy/how-does-ethereum-work-anyway-22d1df506369)
+- [Ethereum Introduction](https://github.com/ethereum/wiki/wiki/Ethereum-introduction)
 - [Ethereum Frequently Asked Questions](https://github.com/ethereum/wiki/wiki/FAQs)
 - [What is Hashing?](https://blockgeeks.com/guides/what-is-hashing/)
 - [Hashing Algorithms and Security](https://www.youtube.com/watch?v=b4b8ktEV4Bg)
@@ -76,22 +77,35 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 
 - [Blockchain Scalability: Why?](https://blockgeeks.com/guides/blockchain-scalability/)
 - [What Are Ethereum Nodes and Sharding](https://blockgeeks.com/guides/what-are-ethereum-nodes-and-sharding/)
-
+- [How to Scale Ethereum: Sharding Explained](https://medium.com/prysmatic-labs/how-to-scale-ethereum-sharding-explained-ba2e283b7fce)
+- [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ)
+- [Sharding Introduction: R&D Compendium](https://github.com/ethereum/wiki/wiki/Sharding-introduction-R&D-compendium)
+- [Sharding Minimal Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
 
 ### For Core Contributors
 
 **Fundamentals**
 
-<https://github.com/ewasm/design>
-<https://ethereum.stackexchange.com/questions/45043/what-is-ewasm-and-why-is-it-the-direction-for-the-next-version-of-the-evm>
-<https://medium.com/javascript-scene/what-is-webassembly-the-dawn-of-a-new-era-61256ec5a8f6>
+- [Blockchain Scalability: Why?](https://blockgeeks.com/guides/blockchain-scalability/)
+- [What Are Ethereum Nodes and Sharding](https://blockgeeks.com/guides/what-are-ethereum-nodes-and-sharding/)
+- [How to Scale Ethereum: Sharding Explained](https://medium.com/prysmatic-labs/how-to-scale-ethereum-sharding-explained-ba2e283b7fce)
+- [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ)
+- [Sharding Introduction: R&D Compendium](https://github.com/ethereum/wiki/wiki/Sharding-introduction-R&D-compendium)
 
-**Minimal Protocol**
+**Sharding Research Posts in Order**
 
-**Sharding Research in Chronological Order**
+**Sharding Concepts and Notes**
 
-**Other Approaches & Research Papers**
-
-**Sharding Concepts Mental Map**
+- [Sharding Concepts Mental Map](https://www.mindomo.com/zh/mindmap/sharding-d7cf8b6dee714d01a77388cb5d9d2a01)
+- [Sharding Minimal Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
+- [Sharding Roadmap](https://github.com/ethereum/wiki/wiki/Sharding-roadmap)
+- [Taiwan Sharding Workshop Notes](https://hackmd.io/s/HJ_BbgCFz#%E2%9F%A0-General-Introduction)
+- [Sharding Research Compendium](http://notes.ethereum.org/s/BJc_eGVFM)
 
 ## Necessary Go Knowledge & Readings
+
+- [The Go Programming Language (Only Recommended Book)](https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440)
+- [How to Write Go Code](http://golang.org/doc/code.html)
+- [The Go Programming Language Tour](http://tour.golang.org/)
+- [Getting Started With Go](http://www.youtube.com/watch?v=2KmHtgtEZ1s)
+- [Go Official Website](https://golang.org/)
