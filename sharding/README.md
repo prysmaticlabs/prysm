@@ -391,9 +391,59 @@ Work in progress.
 
 ## Selecting Notaries Via Random Beacon Chains
 
-In our current implementation for the Ruby Release, we are selecting notaries through a pseudorandom method built into the SMC directly. Inspired by dfinity's Random Beacon chains, the Ethereum Research team has been proposing better solutions that have faster finality guarantees.
+In our current implementation for the Ruby Release, we are selecting notaries through a pseudorandom method built into the SMC directly. Inspired by dfinity's random beacon chains, the Ethereum Research team has been proposing [better solutions](https://github.com/ethereum/research/tree/master/sharding_fork_choice_poc) that have faster finality guarantees. The random beacon chain would be in charge for pseudorandomly sampling notaries and would allow for cool stuff such as off-chain collation headers that were not possible before. Through this, no gas would need to be paid for including collation headers and we can achieve faster finality guarantees, making the system way better than before.
 
 <https://ethresear.ch/t/posw-random-beacon/1814/6>
+
+## Leaderless Random Beacons
+
+In the prevous research on random beacons, committees are able to generate random numbers if a certain number of participants participate correctly. This is similar to the random beacon used in Dfinity without the use of BLS threshold signatures. The scheme is separated into two separate sections.
+
+In the first section, each participant is committed to a secret key and shares the resulting public key.
+In the second section, each participant will use their secret key to deterministically build a polynomial and that polynomial is used to to create n shares (where n is the size of the committee) which can then be encrypted with respect to the public keys and then shared publicly.
+
+Then, in the resolution, all participants are then to reveal their private keys, once the key is revealed anyone can check if the participant committed correctly. We can define the random output as the sum of the private keys for which the participants committed correctly.
+
+<https://ethresear.ch/t/leaderless-k-of-n-random-beacon/2046/3>
+
+## Torus-shaped Sharded P2P Network
+
+One recommendation is using a [Torus-shaped sharding network](https://commons.wikimedia.org/wiki/File:Toroidal_coord.png). In this paradigm, there would be a single network that all shards share rather than a network for each shard. Nodes would propagate messages to peers interested in neighboring shards. A node listening on shard 16 would relay messages for shards in range of 11 to 21 (i.e +/-5). Nodes that need to listen on multiple shards can quickly change shards to find peers that may relay necessary messages. A node could potentially have access to messages from all shards with only 10 distinct peers for a 100 shard network. At the same time, we're considering replacing [DEVp2p](https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol) with [libp2p](https://github.com/libp2p) framework, which is actively maintained, proven to work with IPFS, and comes with client libraries for Go and Javascript. 
+Active research is on going for moving Ethereum fron DEVp2p to libp2p. We are looking into how to map shards to libp2p and how to balance flood/gossipsub progagation vs active connections. Here is the current work of [poc](https://github.com/mhchia/go-libp2p/tree/poc-testing/examples/minimal) on [gossiphub](https://github.com/libp2p/go-floodsub/pull/67/). It utilizies pubsub for propagating messages such as transactions, proposals and sharded collations.
+
+<https://ethresear.ch/t/torus-shaped-sharding-network/1720>
+
+ 
+## Sparse Merkle Tree for State Storage
+
+With a sharded network comes sharded state storage. State sync today is difficult for clients today. While the blockchain data stored on disk might use~80gb for a fast sync, less than 5gb of that disk is state data while state sync accounts for the majority of time spent syncing. As the state grows, this issue will also grow. We imagine that it might be difficult to sync effectively when there are 100 shards and 100 different state tries. One recommendation from the Ethereum Research team outlines using [sparse merkle trees].(https://www.links.org/files/RevocationTransparency.pdf)
+
+<https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453>
+
+## Proof of Custody
+
+A critique against the notary scheme currently followed in the minimal sharding protocol is the susceptibility of these agents towards the “validator’s dilemma”, wherein agents are incentivized to be “lazy” and trust the work of other validators when making coordinated decisions. Specifically, notaries are tasked with checking data availability of collation headers submitted to the SMC during their assigned period. This means notaries have to download headers via a shardp2p network and commit their votes after confirming availability. Proposers can try to game validators by publishing unavailable proposals and then challenging lazy validators to take their deposits. In order to prevent abuse of collation availability traps, the responsibility of notaries is extended to also provide a “Merkle root of a signature tree, where each signature in the signature tree is the signature of the corresponding chunk of the original collation data.” (ETHResearch) This means that at challenge time, notaries must have the fully available collation data in order to construct a signature tree of all its chunks.
+
+<https://ethresear.ch/t/extending-skin-in-the-game-of-notarization-with-proofs-of-custody/1639>
+
+## Safe Notary Pool Sizes: RANDAO Exploration
+
+When notary pool sizes are too small a few things can happen: A small pool would result in the notary requiring a large amount of bandwidth. The amount of bandwidth required by each notary is inversely proportional to the size of the pool, so in order to be sufficiently decentralized the notary pool should be large enough so that the bandwidth required should be manageable with poor internet connection. Secondly the notary pool size has a direct effect on the capital requirements in order to take over notarisation and revert/censor transactions. An acceptable notary pool size would be one that required a minimum acceptable capital threshold for a takeover of the chain. In Vitalik’s RANDAO analysis he looked at how vulnerable the RANDAO chain was comparatively to a POW(Proof of Work) chain. The result of the exercise was that an attacker with a 40% of stake on the RANDAO chain can effectively revert transactions; to achieve the same result on a POW chain they would require 50% of the hashpower. On the other hand if the chain utilised a 2/2 notarization committee, the attacker would need to up their stake to 46% on the chain to be able to effectively censor transactions.
+
+<https://ethresear.ch/t/safe-notary-pool-size/1728>
+
+## Cross Links Between Shard Chain and Main Chain
+
+For synchronizing cross shard chain communications, we are researching how to properly link between the shard chain and the beacon chain. In order to accomplish this, a randomly sampled committee will vote to approve a collation in a sharded chain per period and per shard. As Vitalik wrote, there are two ways create cross links between main shard and shards. On-chain aggregation and off-chain aggregation. For on-chain aggregation, the state of beacon chain will keep track of the randomly sampled committee as validators. Each validator can make one vote casper FFG style, the vote will also contain cross-link of that committee. For off-chain aggregation, every beacon chain block creator will choose one CAS to link the sharded chain to main chain. Off chain aggregation mechanisms have benefits as there is no need for the beacon chain to track of vote counts.
+
+<https://ethresear.ch/t/extending-minimal-sharding-with-cross-links/1989/8>
+<https://ethresear.ch/t/two-ways-to-do-cross-links/2074/2>
+
+## Fixed ETH Deposit Size for Notaries
+
+A notary must submit a deposit to the Sharding Manager Contract in order to get randomly selected to vote on a block. A fixed size deposit is good for making the random selection convenient and work well with slashing, as it can always destroy at least a minimum amount of ether. However, a fixed-size deposit does not do well with rewards and penalties. An alternative solution is to design incentive system where rewards and penalties are tracked in a separate variable, and when the final balance when the withdrawal penalties minus rewards reach a threshold, the notary can be voted out. Such a design might ignore an important function which is to reduce the influence of notaries that are offline. In Casper FFG, if more than 1/3 of validators to offline around same time, the deposits will begin to leak quickly. This is called quadratic leak.
+
+<https://ethresear.ch/t/fixed-size-deposits-and-rewards-penalties-quad-leak/2073/7>
 
 # Community Updates and Contributions
 
@@ -448,3 +498,19 @@ A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/get
 [Model for Phase 4 Tightly-Coupled Sharding](https://ethresear.ch/t/a-model-for-stage-4-tightly-coupled-sharding-plus-full-casper/1065)
 
 [History, State, and Asynchronous Accumulators in the Stateless Model](https://ethresear.ch/t/history-state-and-asynchronous-accumulators-in-the-stateless-model/287)
+
+[Torus Shaped Sharding Network](https://ethresear.ch/t/torus-shaped-sharding-network/1720)
+
+[Data Availability Proof-friendly State Tree Transitions](https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453)
+
+[General Framework of Overhead and Finality Time in Sharding](https://ethresear.ch/t/a-general-framework-of-overhead-and-finality-time-in-sharding-and-a-proposal/1638)
+
+[Safety Notary Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728)
+
+[Fixed Size Deposits and Rewards Penalties Quadleak](https://ethresear.ch/t/fixed-size-deposits-and-rewards-penalties-quad-leak/2073/7)
+
+[Two Ways To Do Cross Links](https://ethresear.ch/t/two-ways-to-do-cross-links/2074/2)
+
+[Extending Minimal Sharding with Cross Links](https://ethresear.ch/t/two-ways-to-do-cross-links/2074/2)
+
+[Leaderless K of N Random Beacon](https://ethresear.ch/t/leaderless-k-of-n-random-beacon/2046/3)
