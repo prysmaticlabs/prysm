@@ -391,7 +391,7 @@ Work in progress.
 
 ## Selecting Notaries Via Random Beacon Chains
 
-In our current implementation for the Ruby Release, we are selecting notaries through a pseudorandom method built into the SMC directly. Inspired by dfinity's random beacon chains, the Ethereum Research team has been proposing [better solutions](https://github.com/ethereum/research/tree/master/sharding_fork_choice_poc) that have faster finality guarantees. The random beacon chain would be in charge for pseudorandomly sampling notaries and would allow for cool stuff such as off-chain collation headers that were not possible before. Through this, no gas would need to be paid for including collation headers and we can achieve faster finality guarantees, making the system way better than before
+In our current implementation for the Ruby Release, we are selecting notaries through a pseudorandom method built into the SMC directly. Inspired by dfinity's random beacon chains, the Ethereum Research team has been proposing [better solutions](https://github.com/ethereum/research/tree/master/sharding_fork_choice_poc) that have faster finality guarantees. The random beacon chain would be in charge for pseudorandomly sampling notaries and would allow for cool stuff such as off-chain collation headers that were not possible before. Through this, no gas would need to be paid for including collation headers and we can achieve faster finality guarantees, making the system way better than before.
 
 <https://ethresear.ch/t/posw-random-beacon/1814/6>
 
@@ -408,13 +408,15 @@ Then, in the resolution, all participants are then to reveal their private keys,
 
 ## Torus-shaped Sharded P2P Network
 
-One recommendation is using a [Torus-shaped sharding network](https://commons.wikimedia.org/wiki/File:Toroidal_coord.png). In this paradigm, there would be a single network that all shards share rather than a network for each shard. Nodes would propagate messages to peers interested in neighboring shards. A node listening on shard 16 would relay messages for shards in range of 11 to 21 (i.e +/-5). Nodes that need to listen on multiple shards can quickly change shards to find peers that may relay necessary messages. A node could potentially have access to messages from all shards with only 10 distinct peers for a 100 shard network. At the same time, we're considering replacing [DEVp2p](https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol) with [libp2p](https://github.com/libp2p) framework, which is actively maintained, proven to work with IPFS, and comes with client libraries for Go and Javascript.
+One recommendation is using a [Torus-shaped sharding network](https://commons.wikimedia.org/wiki/File:Toroidal_coord.png). In this paradigm, there would be a single network that all shards share rather than a network for each shard. Nodes would propagate messages to peers interested in neighboring shards. A node listening on shard 16 would relay messages for shards in range of 11 to 21 (i.e +/-5). Nodes that need to listen on multiple shards can quickly change shards to find peers that may relay necessary messages. A node could potentially have access to messages from all shards with only 10 distinct peers for a 100 shard network. At the same time, we're considering replacing [DEVp2p](https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol) with [libp2p](https://github.com/libp2p) framework, which is actively maintained, proven to work with IPFS, and comes with client libraries for Go and Javascript. 
+Active research is on going for moving Ethereum fron DEVp2p to libp2p. We are looking into how to map shards to libp2p and how to balance flood/gossipsub progagation vs active connections. Here is the current work of [poc](https://github.com/mhchia/go-libp2p/tree/poc-testing/examples/minimal) on [gossiphub](https://github.com/libp2p/go-floodsub/pull/67/). It utilizies pubsub for propagating messages such as transactions, proposals and sharded collations.
 
 <https://ethresear.ch/t/torus-shaped-sharding-network/1720>
 
+ 
 ## Sparse Merkle Tree for State Storage
 
-With a sharded network comes sharded state storage. State sync today is difficult for clients today. While the blockchain data stored on disk might use~80gb for a fast sync, less than 5gb of that disk is state data while state sync accounts for the majority of time spent syncing. As the state grows, this issue will also grow. We imagine that it might be difficult to sync effectively when there are 100 shards and 100 different state tries. One recommendation from the Ethereum Research team outlines using [sparse merkle trees](https://www.links.org/files/RevocationTransparency.pdf)
+With a sharded network comes sharded state storage. State sync today is difficult for clients today. While the blockchain data stored on disk might use~80gb for a fast sync, less than 5gb of that disk is state data while state sync accounts for the majority of time spent syncing. As the state grows, this issue will also grow. We imagine that it might be difficult to sync effectively when there are 100 shards and 100 different state tries. One recommendation from the Ethereum Research team outlines using [sparse merkle trees].(https://www.links.org/files/RevocationTransparency.pdf)
 
 <https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453>
 
