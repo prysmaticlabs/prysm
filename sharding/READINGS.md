@@ -92,8 +92,6 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 - [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ)
 - [Sharding Introduction: R&D Compendium](https://github.com/ethereum/wiki/wiki/Sharding-introduction-R&D-compendium)
 
-**Sharding Research Posts in Order**
-
 **Sharding Concepts and Notes**
 
 - [Sharding Concepts Mental Map](https://www.mindomo.com/zh/mindmap/sharding-d7cf8b6dee714d01a77388cb5d9d2a01)
@@ -101,6 +99,27 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 - [Sharding Roadmap](https://github.com/ethereum/wiki/wiki/Sharding-roadmap)
 - [Taiwan Sharding Workshop Notes](https://hackmd.io/s/HJ_BbgCFz#%E2%9F%A0-General-Introduction)
 - [Sharding Research Compendium](http://notes.ethereum.org/s/BJc_eGVFM)
+- [Torus Shaped Sharding Network](https://ethresear.ch/t/torus-shaped-sharding-network/1720/8)
+- [General Theory of Sharding](https://ethresear.ch/t/a-general-theory-of-what-quadratically-sharded-validation-is/1730/10)
+- [Sharding Design Compendium](https://ethresear.ch/t/sharding-designs-compendium/1888/25)
+
+**Sharding Research Posts in Order**
+
+- [RETIRED! Sharding Phase 1 Spec](https://ethresear.ch/t/sharding-phase-1-spec-retired/1407/92)
+- [Exploring the Proposer/Collator Spec and Why it Was Retired](https://ethresear.ch/t/exploring-the-proposer-collator-split/1632/24)
+- [The Stateless Client Concept](https://ethresear.ch/t/the-stateless-client-concept/172/4)
+- [Shard Chain Blocks vs. Collators](https://ethresear.ch/t/shard-chain-blocks-vs-collators/429)
+- [Ethereum Concurrency Actors and Per Contract Sharding](https://ethresear.ch/t/ethereum-concurrency-actors-and-per-contract-sharding/375)
+- [Future Compatibility for Sharding](https://ethresear.ch/t/future-compatibility-for-sharding/386)
+- [Fork Choice Rule for Collation Proposal Mechanisms](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922/8)
+- [State Execution](https://ethresear.ch/t/state-execution-scalability-and-cost-under-dos-attacks/1048)
+- [Enforcing Windback](https://ethresear.ch/t/enforcing-windback-validity-and-availability-and-a-proof-of-custody/949/5)
+- [Fork Free Sharding](https://ethresear.ch/t/fork-free-sharding/1058/12)
+- [Merge Blocks](https://ethresear.ch/t/merge-blocks-and-synchronous-cross-shard-state-execution/1240/4)
+- [Fast Shard Chains With Notarization](https://ethresear.ch/t/as-fast-as-possible-shard-chains-with-notarization/1806/2)
+- [RANDAO Notary Committees](https://ethresear.ch/t/fork-free-randao/1835/3)
+- [Safe Notary Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728/3)
+- [Cross Links Between Main and Shard Chains](https://ethresear.ch/t/cross-links-between-main-chain-and-shards/1860/2)
 
 ## Necessary Go Knowledge & Readings
 
