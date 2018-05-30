@@ -44,6 +44,7 @@ type Node interface {
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
 	DepositFlagSet() bool
+	DataDirFlag() string
 }
 
 // General node for a sharding-enabled system.
@@ -161,7 +162,10 @@ func (n *shardingNode) Register(constructor sharding.ServiceConstructor) error {
 
 // Close the RPC client connection.
 func (n *shardingNode) Close() {
-	n.rpcClient.Close()
+	// rpcClient could be nil if the connection failed.
+	if n.rpcClient != nil {
+		n.rpcClient.Close()
+	}
 }
 
 // CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
@@ -211,6 +215,11 @@ func (n *shardingNode) SMCTransactor() *contracts.SMCTransactor {
 // DepositFlagSet returns true for cli flag --deposit.
 func (n *shardingNode) DepositFlagSet() bool {
 	return n.ctx.GlobalBool(utils.DepositFlag.Name)
+}
+
+// DataDirFlag returns the datadir flag as a string.
+func (n *shardingNode) DataDirFlag() string {
+	return n.ctx.GlobalString(utils.DataDirFlag.Name)
 }
 
 // Client to interact with a geth node via JSON-RPC.
