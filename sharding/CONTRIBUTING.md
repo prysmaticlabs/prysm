@@ -10,9 +10,9 @@ You can explore our [Current Projects](https://github.com/prysmaticlabs/geth-sha
 
 -   Create a folder in your `$GOPATH` and navigate to it `mkdir -p $GOPATH/src/github.com/ethereum && cd $GOPATH/src/github.com/ethereum`
 -   Clone our repository as `go-ethereum`, `git clone https://github.com/prysmaticlabs/geth-sharding ./go-ethereum`
--   Fork the `go-ethereum` repository on Github: <https://github.com/ethereum/go-ethereum>
+-   Fork the our repository on Github: <https://github.com/prysmaticlabs/geth-sharding>
 -   Add a remote to your fork
-    \`git remote add YOURNAME <https://github.com/YOURNAME/go-ethereum>
+    \`git remote add YOURNAME <https://github.com/YOURNAME/geth-sharding>
 
 Now you should have a remote pointing to the `origin` repo (geth-sharding) and to your forked, go-ethereum repo on Github. To commit changes and start a Pull Request, our workflow is as follows:
 
