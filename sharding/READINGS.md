@@ -2,63 +2,89 @@
 
 This document serves as an outline of the required readings to catch up with and contribute to the sharding implementation for the Ethereum protocol. Whether you are an expert at Ethereum and want to contribute to sharding, or are a beginner and want to take the time to learn the concepts, this will serve as a comprehensive set of readings and links to get you up to speed.
 
-## Required Ethereum Knowledge
+## Required Blockchain & Ethereum Knowledge
 
-**Fundamentals**
+**Blockchain Fundamentals**
 
-- [Ethereum White Paper]
-<https://medium.com/@preethikasireddy/how-does-ethereum-work-anyway-22d1df506369>
-<https://blockgeeks.com/guides/what-is-hashing/>
-<https://www.youtube.com/watch?v=b4b8ktEV4Bg>
-<https://www.codeproject.com/Articles/1176140/Understanding-Merkle-Trees-Why-use-them-who-uses-t>
-<https://ethereum.stackexchange.com/questions/268/ethereum-block-architecture/6413#6413>
-<https://github.com/chronaeon/beigepaper/blob/master/beigepaper.pdf>
-<https://blockgeeks.com/guides/what-is-cryptoeconomics/>
-<https://medium.com/blockchannel/a-crash-course-in-mechanism-design-for-cryptoeconomic-applications-a9f06ab6a976>
-<https://blockgeeks.com/guides/proof-of-work-vs-proof-of-stake/>
+- [What is Blockchain Technology? A Step by Step Guide for Beginners](https://blockgeeks.com/guides/what-is-blockchain-technology/)
+- [What is Bitcoin? A Step by Step Guide for Beginners](https://blockgeeks.com/guides/what-is-bitcoin/)
+- [The Science Behind Cryptocurrencies' Cryptography](https://blockgeeks.com/guides/cryptocurrencies-cryptography/)
+- [The Ins and Outs of Cryptographic Hash Functions](https://blockgeeks.com/guides/cryptographic-hash-functions/)
+- [Blockchain Glossary from A-Z](https://blockgeeks.com/guides/blockchain-glossary-from-a-z/)
+- [Blockchain Addresses 101: What Are They?](https://blockgeeks.com/guides/blockchain-address-101/)
 
-<https://github.com/ethereum/wiki/wiki/Subtleties>
+**Ethereum**
+
+- [What is Ethereum?](http://ethdocs.org/en/latest/introduction/what-is-ethereum.html)
+- [How Does Ethereum Work Anyway?](https://medium.com/@preethikasireddy/how-does-ethereum-work-anyway-22d1df506369)
+- [Ethereum Frequently Asked Questions](https://github.com/ethereum/wiki/wiki/FAQs)
+- [What is Hashing?](https://blockgeeks.com/guides/what-is-hashing/)
+- [Hashing Algorithms and Security](https://www.youtube.com/watch?v=b4b8ktEV4Bg)
+- [Understanding Merkle Trees](https://www.codeproject.com/Articles/1176140/Understanding-Merkle-Trees-Why-use-them-who-uses-t)
+- [Ethereum White Paper](https://github.com/ethereum/wiki/wiki/White-Paper)
+- [Ethereum Block Architecture](https://ethereum.stackexchange.com/questions/268/ethereum-block-architecture/6413#6413)
+- [Ethereum Beige Paper](https://github.com/chronaeon/beigepaper/blob/master/beigepaper.pdf)
+- [What is an Ethereum Token?](https://blockgeeks.com/guides/ethereum-token/)
+- [What is Ethereum Gas?](https://blockgeeks.com/guides/ethereum-gas-step-by-step-guide/)
 
 - Ethereum Client Implementations
-  - Geth: (known also as go-ethereum) is the Golang implementation of the Ethereum protocol
-  - Parity: the fastest and most performant implementation - written in Rust
-  - Trintiy: new project implements Ethereum in Python
-  - Cpp-Ethereum: a C++ implementation of Ethereum
+  - [Geth](https://github.com/ethereum/go-ethereum) (known also as go-ethereum) is the Golang implementation of the Ethereum protocol
+  - [Parity](https://github.com/paritytech/parity) the fastest and most performant implementation - written in Rust
+  - [Trinity](https://github.com/ethereum/py-evm/tree/master/trinity) new project implements Ethereum in Python
+  - [Cpp-Ethereum](https://github.com/ethereum/cpp-ethereum) a C++ implementation of Ethereum
 
 **Consensus**
 
-<https://github.com/ethereum/wiki/wiki/Proof-of-Stake-FAQ>
-<https://www.coindesk.com/information/ethereum-mining-works/>
-<https://github.com/ethereum/wiki/wiki/Ethash>
-<https://blockgeeks.com/guides/proof-of-work-vs-proof-of-stake/>
+- [Bitcoin Original White Paper](https://bitcoin.org/bitcoin.pdf)
+- [Basic Primer: Blockchain Consensus](https://blockgeeks.com/guides/blockchain-consensus/)
+- [Understanding Blockchain Fundamentals: Byzantine Fault Tolerance](https://medium.com/loom-network/understanding-blockchain-fundamentals-part-1-byzantine-fault-tolerance-245f46fe8419)
+- [Understanding Blockchain Fundamentals: Proof of Work vs. Proof of Stake](https://medium.com/loom-network/understanding-blockchain-fundamentals-part-2-proof-of-work-proof-of-stake-b6ae907c7edb)
+- [Proof of Work vs. Proof of Stake](https://blockgeeks.com/guides/proof-of-work-vs-proof-of-stake/)
+- [Proof of Stake FAQ](https://github.com/ethereum/wiki/wiki/Proof-of-Stake-FAQ)
+- [How Does Ethereum Mining Work?](https://www.coindesk.com/information/ethereum-mining-works/)
+- [ETHash Algorithm](https://github.com/ethereum/wiki/wiki/Ethash)
 
 **Ethereum Virtual Machine**
 
-<https://themerkle.com/what-is-the-ethereum-virtual-machine/>
-<https://medium.com/@jeff.ethereum/go-ethereums-jit-evm-27ef88277520>
+- [What is the Ethereum Virtual Machine?](https://themerkle.com/what-is-the-ethereum-virtual-machine/)
+- [Ethereum VM](https://medium.com/@jeff.ethereum/go-ethereums-jit-evm-27ef88277520)
+- [Ethereum Protocol Subtleties](https://github.com/ethereum/wiki/wiki/Subtleties)
+- [Awesome Ethereum Virtual Machine](https://github.com/ethereum/wiki/wiki/Ethereum-Virtual-Machine-(EVM)-Awesome-List)
+
+**Smart Contracts, dApps, and Cryptoeconomics**
+
+- [What are dApps? The New Decentralized Future](https://blockgeeks.com/guides/dapps/)
+- [How to Learn Solidity](https://blockgeeks.com/guides/solidity/)
+- [Ethereum Development Tutorial](https://github.com/ethereum/wiki/wiki/Ethereum-Development-Tutorial)
+- [What is Cryptocurrency Game Theory?](https://blockgeeks.com/guides/cryptocurrency-game-theory/)
+- [What is Cryptoeconomics?](https://blockgeeks.com/guides/what-is-cryptoeconomics/)
+- [Mechanism Design for Cryptoeconomic Applications](https://medium.com/blockchannel/a-crash-course-in-mechanism-design-for-cryptoeconomic-applications-a9f06ab6a976)
+- [Cryptoeconomics: An Introduction](https://cryptoeconomics.study/)
 
 **Peer-to-Peer Networking**
 
-<http://gleamly.com/article/introduction-kademlia-dht-how-it-works>
-<http://www.divms.uiowa.edu/~ghosh/kademlia.pdf>
-
-**Smart Contracts & dApps**
-
-<https://github.com/ethereum/wiki/wiki/Ethereum-Development-Tutorial>
-
-**Full Nodes, Light Nodes, and Syncing**
+- [Ethereum Peer to Peer Networking](https://github.com/ethereum/go-ethereum/wiki/Peer-to-Peer)
+- [How Does the P2P on Ethereum Work?](https://www.reddit.com/r/ethereum/comments/3918u0/how_does_the_p2p_network_on_ethereum_work/)
+- [How Does Kademlia Work?](http://gleamly.com/article/introduction-kademlia-dht-how-it-works)
+- [Kademlia Protocol](http://www.divms.uiowa.edu/~ghosh/kademlia.pdf)
 
 ## Required Sharding Knowledge
 
 With respect to knowing enough about sharding, we will cover the requirements for both part-time and core contributors to Prysmatic Labs.
 
+### For Part Time Contributors
+
+- [Blockchain Scalability: Why?](https://blockgeeks.com/guides/blockchain-scalability/)
+- [What Are Ethereum Nodes and Sharding](https://blockgeeks.com/guides/what-are-ethereum-nodes-and-sharding/)
+
+
 ### For Core Contributors
 
 **Fundamentals**
 
-<https://medium.com/javascript-scene/what-is-webassembly-the-dawn-of-a-new-era-61256ec5a8f6>
 <https://github.com/ewasm/design>
 <https://ethereum.stackexchange.com/questions/45043/what-is-ewasm-and-why-is-it-the-direction-for-the-next-version-of-the-evm>
+<https://medium.com/javascript-scene/what-is-webassembly-the-dawn-of-a-new-era-61256ec5a8f6>
 
 **Minimal Protocol**
 
@@ -67,13 +93,5 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 **Other Approaches & Research Papers**
 
 **Sharding Concepts Mental Map**
-
-### For Part Time Contributors
-
-**Fundamentals**
-
-**Implementation Notes & Roadmap**
-
-**Sharding Mental Map**
 
 ## Necessary Go Knowledge & Readings
