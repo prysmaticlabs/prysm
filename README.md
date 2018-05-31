@@ -4,11 +4,13 @@
 
 This is the main repository for the sharding implementation for the go-ethereum project by [Prysmatic Labs](https://prysmaticlabs.com). For the original, go-ethereum project, refer to the following [link](https://github.com/ethereum/go-ethereum).
 
-Before you begin, check out our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc serves as the single source of truth for our team, our milestones, and details on the different components of our architecture.
-
-Interested in contributing? Check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
+Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+
+Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc serves as a source of truth for the sharding implementation we follow at Prysmatic Labs.
+
 
 # Table of Contents
 
@@ -19,7 +21,7 @@ Interested in contributing? Check out our [Contribution Guidelines](#contributio
     -   [Becoming a Notary](#becoming-a-notary)
     -   [Running a Collation Proposal Node](#running-a-collation-proposal-node)
 -   [Testing](#testing)
--   [Contribution Guidelines](#contribution-guidelines)
+-   [Contributing](#contributing)
 -   [License](#license)
 
 # Installation
@@ -148,28 +150,11 @@ go test github.com/ethereum/go-ethereum/sharding
 
 We will require more complex testing scenarios (fuzz tests) to measure the full integrity of the system as it evolves.
 
-# Contribution Guidelines
+# Contributing
 
-Excited by our work and want to get involved in building out our sharding releases? Our  [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md) has all you need to know in order to begin helping us make this happen. We created this document as a single source of reference for all things related to sharding Ethereum, and we need as much help as we can get!
+We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/CONTRIBUTING.md)! Check it out to get started.
 
-You can explore our [Current Projects](https://github.com/prysmaticlabs/geth-sharding/projects) in-the works for the Ruby release. Each of the project boards contain a full collection of open and closed issues relevant to the different parts of our first implementation that we use to track our open source progress. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Gitter](https://gitter.im/prysmaticlabs/geth-sharding), so drop us a line there if you want to get more involved or have any questions on our implementation!
-
-**Contribution Steps**
-
--   Create a folder in your `$GOPATH` and navigate to it `mkdir -p $GOPATH/src/github.com/ethereum && cd $GOPATH/src/github.com/ethereum`
--   Clone our repository as `go-ethereum`, `git clone https://github.com/prysmaticlabs/geth-sharding ./go-ethereum`
--   Fork the `go-ethereum` repository on Github: <https://github.com/ethereum/go-ethereum>
--   Add a remote to your fork
-    \`git remote add YOURNAME <https://github.com/YOURNAME/go-ethereum>
-
-Now you should have a remote pointing to the `origin` repo (geth-sharding) and to your forked, go-ethereum repo on Github. To commit changes and start a Pull Request, our workflow is as follows:
-
--   Create a new branch with a clear feature name such as `git checkout -b collations-pool`
--   Issue changes with clear commit messages
--   Run the linter and CI tester as follows `go run build/ci.go test && go run build/ci.go lint`
--   Push to your remote `git push YOURNAME collations-pool`
--   Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `go-ethereum:collations-pool` (your fork on your profile).
--   Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
+![nyancat](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBSus2ozk_HuGdHMHKWjb1W5CmwwoxmYIjIBmERE1u-WeONpJJXg)
 
 # License
 
