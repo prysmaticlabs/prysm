@@ -21,13 +21,9 @@ func createCollation(n node.Node, shardId *big.Int, period *big.Int, txs []*type
 		return nil, fmt.Errorf("can't create collation for shard %v. Must be between 0 and %v", shardId, sharding.ShardCount)
 	}
 
-	// period can't be less than current period.
-	//ctx := context.Background()
-	//b, _ := n.ChainReader().BlockByNumber(ctx, nil)
-	b := big.NewInt(5)
-	currentPeriod := new(big.Int).Div(b, big.NewInt(sharding.PeriodLength))
-	if period.Cmp(currentPeriod) < 0 {
-		return nil, fmt.Errorf("can't create collation with period %v less than current period %v", period, currentPeriod)
+	// check with SMC to see if we can add the header.
+	if a, _ := checkHeaderAvailability(n, shardId, period); !a {
+		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
 	}
 
 	// serialized tx to blob for collation body.
@@ -66,10 +62,10 @@ func addHeader(n node.Node, collation sharding.Collation) error {
 		return fmt.Errorf("unable to initiate add header transaction: %v", err)
 	}
 
-	var churnkRoot [32]byte
-	copy(churnkRoot[:], collation.Header().ChunkRoot().String())
+	var chunkRoot [32]byte
+	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
 
-	_, err = n.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), churnkRoot)
+	_, err = n.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}
@@ -80,11 +76,11 @@ func addHeader(n node.Node, collation sharding.Collation) error {
 // added to the main chain. There can only be one header per shard
 // per period, proposer should check if anyone else has added the header.
 // checkHeaderAvailability returns true if it's available, false if it's unavailable.
-func checkHeaderAvailability(n node.Node, shardId big.Int, period big.Int) (bool, error) {
+func checkHeaderAvailability(n node.Node, shardId *big.Int, period *big.Int) (bool, error) {
 	log.Info("Checking header in shard: %d, period: %d", shardId, period)
 
 	// Get the period of the last header.
-	lastPeriod, err := n.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, &shardId)
+	lastPeriod, err := n.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardId)
 	if err != nil {
 		return false, fmt.Errorf("unable to get the period of last submitted collation: %v", err)
 	}
