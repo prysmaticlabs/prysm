@@ -175,7 +175,14 @@ func TestLeaveNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	node := &mockNode{smc: smc, t: t, DepositFlag: true}
 
-	err := joinNotaryPool(node)
+	err := leaveNotaryPool(node)
+	backend.Commit()
+
+	if err == nil {
+		t.Fatal("Able to leave Notary pool despite having not joined it")
+	}
+
+	err = joinNotaryPool(node)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,13 +191,6 @@ func TestLeaveNotaryPool(t *testing.T) {
 
 	err = leaveNotaryPool(node)
 	backend.Commit()
-
-	filterOps := &bind.FilterOpts{0, nil, nil}
-	events, err := node.SMCFilterer().FilterNotaryDeregistered(filterOps)
-	yes := events.Next()
-	if err == nil {
-		t.Errorf("Unable to filter events: %v\n%v\n %v", yes, err, events.Event)
-	}
 
 	if err != nil {
 

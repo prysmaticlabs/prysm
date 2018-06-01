@@ -95,10 +95,19 @@ func isAccountInNotaryPool(n node.Node) (bool, error) {
 	account := n.Account()
 	// Checks if our deposit has gone through according to the SMC.
 	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
-	if !nreg.Deposited && err != nil {
+
+	if !nreg.Deposited {
 		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
 	}
 	return nreg.Deposited, err
+}
+
+func hasAccountBeenDeregistered(n node.Node) (bool, error) {
+	account := n.Account()
+	// Checks if our deposit has gone through according to the SMC.
+	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+
+	return nreg.DeregisteredPeriod != big.NewInt(0), err
 }
 
 // submitCollation interacts with the SMC directly to add a collation header.
@@ -189,14 +198,18 @@ func leaveNotaryPool(n node.Node) error {
 		return fmt.Errorf("Unable to deregister Notary: %v", err)
 	}
 
+	if dreg, err := hasAccountBeenDeregistered(n); dreg || err != nil {
+		if !dreg {
+
+			return errors.New("Notary unable to be Deregistered Succesfully from Pool")
+		}
+
+		return err
+	}
+
 	log.Info(fmt.Sprintf("Notary Deregistered from the pool with hash: %s", tx.Hash().String()))
 
-	filterOps := &bind.FilterOpts{0, nil, nil}
-	events, err := n.SMCFilterer().FilterNotaryDeregistered(filterOps)
-	if err != nil {
-		return fmt.Errorf("Unable to filter events: %v", err)
-	}
-	return fmt.Errorf("%v", events)
+	return nil
 
 }
 
