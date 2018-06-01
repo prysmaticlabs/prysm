@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math"
+
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -47,7 +48,6 @@ func ConvertFromRawBlob(blob *RawBlob, i interface{}) error {
 	return nil
 }
 
-
 func getNumChunks(dataSize int) int {
 	numChunks := math.Ceil(float64(dataSize) / float64(chunkDataSize))
 	return int(numChunks)
@@ -87,7 +87,7 @@ func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
 
 				// append indicating byte with just the length bits
 				returnData = append(returnData, byte(0))
-			 } else {
+			} else {
 				terminalLength = getTerminalLength(len(rawBlob.data))
 
 				indicatorByte := byte(terminalLength)
@@ -107,7 +107,7 @@ func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
 
 			// append filler bytes, if necessary
 			if terminalLength != int(chunkDataSize) {
-				numFillerBytes := numChunks * int(chunkDataSize) - len(rawBlob.data)
+				numFillerBytes := numChunks*int(chunkDataSize) - len(rawBlob.data)
 				fillerBytes := make([]byte, numFillerBytes)
 				returnData = append(returnData, fillerBytes...)
 			}
@@ -118,7 +118,7 @@ func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
 }
 
 func isSkipEvm(indicator byte) bool {
-	return indicator & skipEvmBits >> 7 == 1
+	return indicator&skipEvmBits>>7 == 1
 }
 func getDatabyteLength(indicator byte) int {
 	return int(indicator & dataLengthBits)
@@ -163,11 +163,11 @@ func Deserialize(data []byte) ([]RawBlob, error) {
 		terminalLength := serializedBlobs[i].terminalLength
 
 		blob := RawBlob{}
-		blob.data = make([]byte, 0, numNonTerminalChunks * 31 + terminalLength)
+		blob.data = make([]byte, 0, numNonTerminalChunks*31+terminalLength)
 
 		// append data from non-terminal chunks
 		for chunk := 0; chunk < numNonTerminalChunks; chunk++ {
-			dataBytes := data[currentByte+1:currentByte+32]
+			dataBytes := data[currentByte+1 : currentByte+32]
 			blob.data = append(blob.data, dataBytes...)
 			currentByte += 32
 		}
@@ -177,7 +177,7 @@ func Deserialize(data []byte) ([]RawBlob, error) {
 		}
 
 		// append data from terminal chunk
-		dataBytes := data[currentByte+1:currentByte+terminalLength+1]
+		dataBytes := data[currentByte+1 : currentByte+terminalLength+1]
 		blob.data = append(blob.data, dataBytes...)
 		currentByte += 32
 
