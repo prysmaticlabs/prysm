@@ -106,7 +106,7 @@ func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
 			returnData = append(returnData, blobSlice...)
 
 			// append filler bytes, if necessary
-			if terminalLength != int(chunkDataSize ) {
+			if terminalLength != int(chunkDataSize) {
 				numFillerBytes := numChunks * int(chunkDataSize) - len(rawBlob.data)
 				fillerBytes := make([]byte, numFillerBytes)
 				returnData = append(returnData, fillerBytes...)

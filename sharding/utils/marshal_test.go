@@ -85,7 +85,7 @@ func TestSerializeAndDeserializeblob(t *testing.T) {
 	}
 }
 
-func TestSkipEvm(t *testing.T) {
+func TestDeserializeSkipEvm(t *testing.T) {
 	data := make([]byte, 64)
 
 	// Set the indicator byte of the second chunk so that the first flag bit (SKIP_EVM) is true and the length bits equal 1
@@ -108,7 +108,7 @@ func TestSkipEvm(t *testing.T) {
 	}
 }
 
-func TestNotSkipEvm(t *testing.T) {
+func TestDeserializeSkipEvmFalse(t *testing.T) {
 	// create 64 byte array with the isSkipEVM flag turned on
 	data := make([]byte, 64)
 
@@ -132,7 +132,7 @@ func TestNotSkipEvm(t *testing.T) {
 	}
 }
 
-func TestSimpleSerialize(t *testing.T) {
+func TestSerializeSkipEvm(t *testing.T) {
 	rawBlobs := make([]*RawBlob, 1)
 	rawBlobs[0] = &RawBlob{data: make([]byte, 32)}
 	rawBlobs[0].data[31] = byte(1)
@@ -154,10 +154,9 @@ func TestSimpleSerialize(t *testing.T) {
 	if data[32] != 0x81 {
 		t.Errorf("Indicating byte for second chunk should be %v but is %v", 0x81, data[32])
 	}
-	t.Logf("data: %v", data)
 }
 
-func TestSimpleSerialize2(t *testing.T) {
+func TestSerializeSkipEvmFalse(t *testing.T) {
 	rawBlobs := make([]*RawBlob, 1)
 	rawBlobs[0] = &RawBlob{data: make([]byte, 31)}
 
@@ -171,6 +170,40 @@ func TestSimpleSerialize2(t *testing.T) {
 	}
 
 	if data[0] != 31 {
-		t.Errorf("Indicating byte for second should be %v but is %v", 31, data[0])
+		t.Errorf("Indicating byte for first chunk should be %v but is %v", 31, data[0])
+	}
+}
+
+func TestSerializeTestData(t *testing.T) {
+	rawBlobs := make([]*RawBlob, 1)
+	rawBlobs[0] = &RawBlob{data: make([]byte, 60)}
+	blobData := rawBlobs[0].data
+	for i := 0; i < len(blobData); i++ {
+		blobData[i] = byte(i)
+	}
+
+	data, err := Serialize(rawBlobs)
+	if err != nil {
+		t.Errorf("Serialize failed: %v", err)
+	}
+
+	if len(data) != 64 {
+		t.Errorf("Length of serialized data incorrect. Should be %v but is %v", 32, len(data))
+	}
+
+	if data[32] != 29 {
+		t.Errorf("Indicating byte for second chunk should be %v but is %v", 29, data[0])
+	}
+
+	for i := 1; i < 32; i++ {
+		if int(data[i]) != i-1 {
+			t.Errorf("Data byte incorrect. Should be %v but is %v", i-1, data[i])
+		}
+	}
+
+	for i := 33; i < 62; i++ {
+		if int(data[i]) != i-2 {
+			t.Errorf("Data byte incorrect. Should be %v but is %v", i-2, data[i])
+		}
 	}
 }
