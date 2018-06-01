@@ -87,14 +87,31 @@ func checkSMCForNotary(n node.Node, head *types.Header) error {
 	return nil
 }
 
+func getNotaryRegistry(n node.Node) (struct {
+	DeregisteredPeriod *big.Int
+	PoolIndex          *big.Int
+	Balance            *big.Int
+	Deposited          bool
+}, error) {
+	account := n.Account()
+
+	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	if err != nil {
+		return nreg, fmt.Errorf("Unable to retrieve notary registry: %v", err)
+	}
+
+	return nreg, nil
+
+}
+
 // isAccountInNotaryPool checks if the user is in the notary pool because
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsNotaryDeposited from the SMC and returns true if
 // the user is in the notary pool.
 func isAccountInNotaryPool(n node.Node) (bool, error) {
-	account := n.Account()
-	// Checks if our deposit has gone through according to the SMC.
-	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	if nreg, err := getNotaryRegistry(n); err != nil {
+		return false, err
+	}
 
 	if !nreg.Deposited {
 		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
@@ -104,10 +121,37 @@ func isAccountInNotaryPool(n node.Node) (bool, error) {
 
 func hasAccountBeenDeregistered(n node.Node) (bool, error) {
 	account := n.Account()
-	// Checks if our deposit has gone through according to the SMC.
+	// Checks if we have been deregistered through the SMC
 	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
 
 	return nreg.DeregisteredPeriod != big.NewInt(0), err
+}
+
+func isLockUpOver(n node.Node) (bool, error) {
+	block, err := n.ChainReader().BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return false, fmt.Errorf("Unable to retrieve last block: %v", err)
+	}
+	account := n.Account()
+
+	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+
+	if err != nil {
+		return false, fmt.Errorf("Unable to retrieve notary registry: %v", err)
+	}
+
+	if !nreg.Deposited {
+		return false, errors.New("Account has not deposited in Notary Pool")
+	}
+
+	if nreg.DeregisteredPeriod == big.NewInt(0) {
+
+		return false, errors.New("Lock Up Period has not started")
+
+	}
+
+	return (block.Number().Int64() / sharding.PeriodLength) > nreg.DeregisteredPeriod.Int64()+sharding.NotaryLockupLength, nil
+
 }
 
 // submitCollation interacts with the SMC directly to add a collation header.
@@ -208,8 +252,21 @@ func leaveNotaryPool(n node.Node) error {
 	}
 
 	log.Info(fmt.Sprintf("Notary Deregistered from the pool with hash: %s", tx.Hash().String()))
-
 	return nil
+
+}
+
+func releaseNotary(n node.Node) error {
+	account := n.Account()
+
+	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+
+	if err != nil {
+		return fmt.Errorf("Account %s not in notary pool", account.Address.String())
+	}
+	if !nreg.Deposited {
+		return errors.New("Account has not deposited in the Notary Pool")
+	}
 
 }
 

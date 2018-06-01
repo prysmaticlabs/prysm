@@ -184,9 +184,8 @@ func TestLeaveNotaryPool(t *testing.T) {
 
 	err = joinNotaryPool(node)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
-
 	backend.Commit()
 
 	err = leaveNotaryPool(node)
