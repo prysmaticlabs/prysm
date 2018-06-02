@@ -48,15 +48,18 @@ func ConvertFromRawBlob(blob *RawBlob, i interface{}) error {
 	return nil
 }
 
+// getNumChunks calculates the number of chunks that will be produced by a byte array of given length
 func getNumChunks(dataSize int) int {
 	numChunks := math.Ceil(float64(dataSize) / float64(chunkDataSize))
 	return int(numChunks)
 }
 
+// getSerializedDatasize determines the number of bytes that will be produced by a byte array of given length
 func getSerializedDatasize(dataSize int) int {
 	return getNumChunks(dataSize) * int(chunkSize)
 }
 
+// getTerminalLength determines the length of the final chunk for a byte array of given length
 func getTerminalLength(dataSize int) int {
 	numChunks := getNumChunks(dataSize)
 	return dataSize - ((numChunks - 1) * int(chunkDataSize))
@@ -117,17 +120,18 @@ func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
 	return returnData, nil
 }
 
-// SKIP_EVM is true if the first bit is 1
+// isSkipEvm is true if the first bit is 1
 func isSkipEvm(indicator byte) bool {
 	return indicator&skipEvmBits >> 7 == 1
 }
 
-// Length of data is calculated by the last 5 bits
-// therefore mask the first 3 bits to 0
+// getDatabyteLength is calculated by looking at the last 5 bits.
+// Therefore, mask the first 3 bits to 0
 func getDatabyteLength(indicator byte) int {
 	return int(indicator & dataLengthBits)
 }
 
+// SerializedBlob is a helper struct used by Deserialize to determine the total size of the data byte array
 type SerializedBlob struct {
 	numNonTerminalChunks int
 	terminalLength       int

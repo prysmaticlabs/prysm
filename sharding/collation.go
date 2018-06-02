@@ -111,7 +111,7 @@ func (c *Collation) CalculateChunkRoot() {
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
-// Serializes transactions into RawBlobs. This step encodes transactions uses RLP encoding
+// convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding
 func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 	blobs := make([]*utils.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
@@ -124,7 +124,7 @@ func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 	return blobs, nil
 }
 
-// Serializes transactions using two steps. First performs RLP encoding, and then blob encoding.
+// SerializeTxToBlob converts transactions using two steps. First performs RLP encoding, and then blob encoding.
 func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 	blobs, err := convertTxToRawBlob(txs)
 	if err != nil {
@@ -143,7 +143,7 @@ func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 	return serializedTx, nil
 }
 
-// ConvertBackToTx converts raw blobs back to their original transactions.
+// convertRawBlobToTx converts raw blobs back to their original transactions.
 func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
 	blobs := make([]*types.Transaction, len(rawBlobs))
 
