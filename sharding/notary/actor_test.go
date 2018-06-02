@@ -45,10 +45,6 @@ func (m *mockNode) Context() *cli.Context {
 	return nil
 }
 
-func (m *mockNode) Register(s sharding.ServiceConstructor) error {
-	return nil
-}
-
 func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
@@ -73,8 +69,9 @@ func (m *mockNode) Start() error {
 	return nil
 }
 
-func (m *mockNode) Close() {
+func (m *mockNode) Close() error {
 	m.t.Fatal("Close called")
+	return nil
 }
 
 // Helper/setup methods.
