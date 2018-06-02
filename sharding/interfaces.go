@@ -1,20 +1,32 @@
 package sharding
 
-// Service defines items that can be registered into a sharding node's serviceFuncs.
-//
-// life-cycle management is delegated to the sharding node. The service is allowed to
-// initialize itself upon creation, but no goroutines should be spun up outside of the
-// Start method.
-type Service interface {
-	// Start is called after all services have been constructed and the networking
-	// layer was also initialized to spawn any goroutines required by the service.
-	Start() error
+import (
+	"math/big"
 
-	// Stop terminates all goroutines belonging to the service, blocking until they
-	// are all terminated.
-	Stop() error
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
+	cli "gopkg.in/urfave/cli.v1"
+)
+
+// ShardingClient defines a service that provides full control and shared access of
+// necessary components for a sharded Ethereum blockchain.
+type ShardingClient interface {
+	Start() error
+	Close() error
+	Context() *cli.Context
+	CreateTXOpts(*big.Int) (*bind.TransactOpts, error)
+	ChainReader() ethereum.ChainReader
+	Account() *accounts.Account
+	SMCCaller() *contracts.SMCCaller
+	SMCTransactor() *contracts.SMCTransactor
+	DepositFlagSet() bool
+	DataDirFlag() string
 }
 
-// ServiceConstructor defines the callback passed in when registering a service
-// to a sharding node.
-type ServiceConstructor func() (Service, error)
+// ShardingActor refers to either a notary, proposer, or observer.
+type ShardingActor interface {
+	Start() error
+	Stop() error
+}
