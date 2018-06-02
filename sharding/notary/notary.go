@@ -109,20 +109,24 @@ func getNotaryRegistry(n node.Node) (struct {
 // The function calls IsNotaryDeposited from the SMC and returns true if
 // the user is in the notary pool.
 func isAccountInNotaryPool(n node.Node) (bool, error) {
-	if nreg, err := getNotaryRegistry(n); err != nil {
+
+	nreg, err := getNotaryRegistry(n)
+	if err != nil {
 		return false, err
 	}
 
 	if !nreg.Deposited {
-		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
+		log.Warn(fmt.Sprintf("Account %s not in notary pool.", n.Account().Address.String()))
 	}
 	return nreg.Deposited, err
 }
 
 func hasAccountBeenDeregistered(n node.Node) (bool, error) {
-	account := n.Account()
-	// Checks if we have been deregistered through the SMC
-	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	nreg, err := getNotaryRegistry(n)
+
+	if err != nil {
+		return false, err
+	}
 
 	return nreg.DeregisteredPeriod != big.NewInt(0), err
 }
@@ -132,22 +136,9 @@ func isLockUpOver(n node.Node) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("Unable to retrieve last block: %v", err)
 	}
-	account := n.Account()
-
-	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
-
+	nreg, err := getNotaryRegistry(n)
 	if err != nil {
-		return false, fmt.Errorf("Unable to retrieve notary registry: %v", err)
-	}
-
-	if !nreg.Deposited {
-		return false, errors.New("Account has not deposited in Notary Pool")
-	}
-
-	if nreg.DeregisteredPeriod == big.NewInt(0) {
-
-		return false, errors.New("Lock Up Period has not started")
-
+		return false, err
 	}
 
 	return (block.Number().Int64() / sharding.PeriodLength) > nreg.DeregisteredPeriod.Int64()+sharding.NotaryLockupLength, nil
@@ -211,6 +202,16 @@ func joinNotaryPool(n node.Node) error {
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
+	receipt, err := n.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+	if receipt.Status == uint(0) {
+
+		return errors.New("Transaction was not successful, unable to deposit ETH and become a notary")
+
+	}
+
 	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
 
 	return nil
@@ -221,13 +222,11 @@ func joinNotaryPool(n node.Node) error {
 // itself from the pool and the lockup period counts down.
 func leaveNotaryPool(n node.Node) error {
 
-	account := n.Account()
-
-	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
-
+	nreg, err := getNotaryRegistry(n)
 	if err != nil {
-		return fmt.Errorf("Account %s not in notary pool", account.Address.String())
+		return err
 	}
+
 	if !nreg.Deposited {
 		return errors.New("Account has not deposited in the Notary Pool")
 	}
@@ -257,16 +256,38 @@ func leaveNotaryPool(n node.Node) error {
 }
 
 func releaseNotary(n node.Node) error {
-	account := n.Account()
-
-	nreg, err := n.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
-
+	nreg, err := getNotaryRegistry(n)
 	if err != nil {
-		return fmt.Errorf("Account %s not in notary pool", account.Address.String())
+		return err
 	}
 	if !nreg.Deposited {
 		return errors.New("Account has not deposited in the Notary Pool")
 	}
+
+	if nreg.DeregisteredPeriod == big.NewInt(0) {
+
+		return errors.New("Lock Up Period has not started")
+
+	}
+
+	if lockup, err := isLockUpOver(n); !lockup || err != nil {
+		if !lockup {
+			return errors.New("Lockup is not over")
+		}
+		return err
+	}
+
+	txOps, err := n.CreateTXOpts(nil)
+	if err != nil {
+		return fmt.Errorf("unable to create txOpts: %v", err)
+	}
+	tx, err := n.SMCTransactor().ReleaseNotary(txOps)
+
+	if err != nil || tx == nil {
+		return fmt.Errorf("Unable to Release Notary: %v", err)
+	}
+
+	return nil
 
 }
 

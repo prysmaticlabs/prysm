@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -44,6 +46,7 @@ type Node interface {
 	SMCCaller() *contracts.SMCCaller
 	SMCFilterer() *contracts.SMCFilterer
 	SMCTransactor() *contracts.SMCTransactor
+	TransactionReceipt(common.Hash) (*types.Receipt, error)
 	DepositFlagSet() bool
 }
 
@@ -222,6 +225,24 @@ func (n *shardingNode) DepositFlagSet() bool {
 // Client to interact with a geth node via JSON-RPC.
 func (n *shardingNode) ethereumClient() *ethclient.Client {
 	return n.client
+}
+
+func (n *shardingNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	for pending, err := true, error(nil); pending; _, pending, err = n.client.TransactionByHash(context.Background(), hash) {
+		if err != nil {
+			return nil, errors.New("Unable to retrieve transaction")
+		}
+		time.Sleep(1 * time.Second)
+	}
+	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
+
+	receipt, err := n.client.TransactionReceipt(context.Background(), hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return receipt, err
+
 }
 
 // unlockAccount will unlock the specified account using utils.PasswordFileFlag

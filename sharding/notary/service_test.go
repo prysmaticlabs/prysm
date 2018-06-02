@@ -1,6 +1,7 @@
 package notary
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -8,7 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
@@ -26,6 +29,7 @@ type mockNode struct {
 	smc         *contracts.SMC
 	t           *testing.T
 	DepositFlag bool
+	backend     *backends.SimulatedBackend
 }
 
 func (m *mockNode) Account() *accounts.Account {
@@ -61,6 +65,11 @@ func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
+}
+
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	m.backend.Commit()
+	return m.backend.TransactionReceipt(context.TODO(), hash)
 }
 
 func (m *mockNode) DepositFlagSet() bool {
@@ -122,7 +131,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &mockNode{smc: smc, t: t, DepositFlag: false}
+	node := &mockNode{smc: smc, t: t, DepositFlag: false, backend: backend}
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
