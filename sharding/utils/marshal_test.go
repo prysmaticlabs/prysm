@@ -96,15 +96,16 @@ func TestDeserializeSkipEvm(t *testing.T) {
 	}
 
 	if len(rawBlobs) != 1 {
-		t.Errorf("Length of blobs incorrect: %v", err)
+		t.Errorf("Length of blobs incorrect: %d", len(rawBlobs))
 	}
 
 	if !rawBlobs[0].flags.skipEvmExecution {
 		t.Errorf("SKIP_EVM flag is not true")
 	}
 
-	if len(rawBlobs[0].data) != 32 {
-		t.Errorf("blob size is not 32: %v", len(rawBlobs[0].data))
+	blobSize := 32
+	if len(rawBlobs[0].data) != blobSize {
+		t.Errorf("blob size should be %d but is %d", blobSize, len(rawBlobs[0].data))
 	}
 }
 
@@ -120,15 +121,16 @@ func TestDeserializeSkipEvmFalse(t *testing.T) {
 	}
 
 	if len(rawBlobs) != 1 {
-		t.Errorf("Length of blobs incorrect: %v", err)
+		t.Errorf("Length of blobs incorrect: %d", len(rawBlobs))
 	}
 
 	if rawBlobs[0].flags.skipEvmExecution {
 		t.Errorf("SKIP_EVM flag is true")
 	}
 
-	if len(rawBlobs[0].data) != 33 {
-		t.Errorf("blob size is not 33: %v", len(rawBlobs[0].data))
+	blobSize := 33
+	if len(rawBlobs[0].data) != blobSize {
+		t.Errorf("blob size should be %d but is %d", blobSize, len(rawBlobs[0].data))
 	}
 }
 
@@ -143,16 +145,18 @@ func TestSerializeSkipEvm(t *testing.T) {
 		t.Errorf("Serialize failed: %v", err)
 	}
 
-	if len(data) != 64 {
-		t.Errorf("Length of serialized data incorrect. Should be %v but is %v", 64, len(data))
+	dataSize := 64
+	if len(data) != dataSize {
+		t.Errorf("Length of serialized data incorrect. Should be %d but is %d", dataSize, len(data))
 	}
 
 	if data[0] != 0 {
-		t.Errorf("Indicating byte for first chunk should be %v but is %v", 0, data[0])
+		t.Errorf("Indicating byte for first chunk should be %x but is %x", 0, data[0])
 	}
 
-	if data[32] != 0x81 {
-		t.Errorf("Indicating byte for second chunk should be %v but is %v", 0x81, data[32])
+	indicatingByte := byte(0x81)
+	if data[32] != indicatingByte {
+		t.Errorf("Indicating byte for second chunk should be %x but is %x", indicatingByte, data[32])
 	}
 }
 
@@ -165,12 +169,14 @@ func TestSerializeSkipEvmFalse(t *testing.T) {
 		t.Errorf("Serialize failed: %v", err)
 	}
 
-	if len(data) != 32 {
-		t.Errorf("Length of serialized data incorrect. Should be %v but is %v", 32, len(data))
+	blobSize := 32
+	if len(data) != blobSize {
+		t.Errorf("Length of serialized data incorrect. Should be %d but is %d", blobSize, len(data))
 	}
 
-	if data[0] != 31 {
-		t.Errorf("Indicating byte for first chunk should be %v but is %v", 31, data[0])
+	indicatingByte := byte(0x1f)
+	if data[0] != indicatingByte {
+		t.Errorf("Indicating byte for first chunk should be %x but is %x", indicatingByte, data[0])
 	}
 }
 
@@ -187,23 +193,25 @@ func TestSerializeTestData(t *testing.T) {
 		t.Errorf("Serialize failed: %v", err)
 	}
 
-	if len(data) != 64 {
-		t.Errorf("Length of serialized data incorrect. Should be %v but is %v", 32, len(data))
+	blobSize := 64
+	if len(data) != blobSize {
+		t.Errorf("Length of serialized data incorrect. Should be %d but is %d", blobSize, len(data))
 	}
 
-	if data[32] != 29 {
-		t.Errorf("Indicating byte for second chunk should be %v but is %v", 29, data[0])
+	indicatingByte := byte(0x1D)
+	if data[32] != indicatingByte {
+		t.Errorf("Indicating byte for second chunk should be %x but is %x", indicatingByte, data[32])
 	}
 
 	for i := 1; i < 32; i++ {
-		if int(data[i]) != i-1 {
-			t.Errorf("Data byte incorrect. Should be %v but is %v", i-1, data[i])
+		if data[i] != byte(i-1) {
+			t.Errorf("Data byte incorrect. Should be %x but is %x", byte(i-1), data[i])
 		}
 	}
 
 	for i := 33; i < 62; i++ {
-		if int(data[i]) != i-2 {
-			t.Errorf("Data byte incorrect. Should be %v but is %v", i-2, data[i])
+		if data[i] != byte(i-2) {
+			t.Errorf("Data byte incorrect. Should be %x but is %x", byte(i-2), data[i])
 		}
 	}
 }

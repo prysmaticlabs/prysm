@@ -135,7 +135,7 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 func makeRandomTransactions(numTransactions int) []*types.Transaction {
 	var txs []*types.Transaction
 	for i := 0; i < numTransactions; i++ {
-		data := make([]byte, 650)
+		data := make([]byte, 150)
 		rand.Read(data)
 		txs = append(txs, types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
 	}
@@ -143,6 +143,7 @@ func makeRandomTransactions(numTransactions int) []*types.Transaction {
 	return txs
 }
 
+// Benchmarks serialization and deserialization of a set of transactions
 func runSerializeRoundtrip(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
 	b.ResetTimer()
@@ -160,6 +161,7 @@ func runSerializeRoundtrip(b *testing.B, numTransactions int) {
 	}
 }
 
+// Benchmarks serialization of a set of transactions. Does both RLP encoding and serialization of blob
 func runSerializeBenchmark(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
 	b.ResetTimer()
@@ -172,9 +174,10 @@ func runSerializeBenchmark(b *testing.B, numTransactions int) {
 	}
 }
 
+// Benchmarks just the process of converting an RLP encoded set of transactions into serialized data
 func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
-	blobs, err := SerializeTxToRawBlob(txs)
+	blobs, err := convertTxToRawBlob(txs)
 	if err != nil {
 		b.Errorf("SerializeTxToRawBlock failed: %v", err)
 	}
@@ -189,6 +192,7 @@ func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	}
 }
 
+// Benchmarks deserialization of a set of transactions. Does both deserialization of blob and RLP decoding.
 func runDeserializeBenchmark(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
 	blob, err := SerializeTxToBlob(txs)
@@ -206,6 +210,7 @@ func runDeserializeBenchmark(b *testing.B, numTransactions int) {
 	}
 }
 
+// Benchmarks just the process of converting serialized data into a blob that's ready for RLP decoding
 func runDeserializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	txs := makeRandomTransactions(numTransactions)
 	blob, err := SerializeTxToBlob(txs)

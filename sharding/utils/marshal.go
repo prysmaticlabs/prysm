@@ -117,9 +117,13 @@ func Serialize(rawBlobs []*RawBlob) ([]byte, error) {
 	return returnData, nil
 }
 
+// SKIP_EVM is true if the first bit is 1
 func isSkipEvm(indicator byte) bool {
-	return indicator&skipEvmBits>>7 == 1
+	return indicator&skipEvmBits >> 7 == 1
 }
+
+// Length of data is calculated by the last 5 bits
+// therefore mask the first 3 bits to 0
 func getDatabyteLength(indicator byte) int {
 	return int(indicator & dataLengthBits)
 }
@@ -141,11 +145,11 @@ func Deserialize(data []byte) ([]RawBlob, error) {
 		indicatorIndex := i * int(chunkSize)
 		databyteLength := getDatabyteLength(data[indicatorIndex])
 
-		// if indicator is non-terminal, increase blobSize by 31
+		// if indicator is non-terminal, increase partitions counter
 		if databyteLength == 0 {
 			numPartitions += 1
 		} else {
-			// if indicator is terminal, increase blobSize by that number and reset
+			// if indicator is terminal, append blob info and reset partitions counter
 			serializedBlob := SerializedBlob{
 				numNonTerminalChunks: numPartitions,
 				terminalLength:       databyteLength,

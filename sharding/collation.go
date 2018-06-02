@@ -111,23 +111,8 @@ func (c *Collation) CalculateChunkRoot() {
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
-// ConvertBackToTx converts raw blobs back to their original transactions.
-func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
-	blobs := make([]*types.Transaction, len(rawBlobs))
-
-	for i := 0; i < len(rawBlobs); i++ {
-		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
-
-		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
-		if err != nil {
-			return nil, fmt.Errorf("Creation of transactions from raw blobs failed: %v", err)
-		}
-	}
-	return blobs, nil
-
-}
-
-func SerializeTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
+// Serializes transactions into RawBlobs. This step encodes transactions uses RLP encoding
+func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 	blobs := make([]*utils.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
 		err := error(nil)
@@ -139,10 +124,9 @@ func SerializeTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 	return blobs, nil
 }
 
-// SerializeTxToBlob method serializes the input tx
-// and returns the blobs in byte array.
+// Serializes transactions using two steps. First performs RLP encoding, and then blob encoding.
 func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
-	blobs, err := SerializeTxToRawBlob(txs)
+	blobs, err := convertTxToRawBlob(txs)
 	if err != nil {
 		return nil, fmt.Errorf("%v", err)
 	}
@@ -153,10 +137,25 @@ func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 	}
 
 	if int64(len(serializedTx)) > collationSizelimit {
-		return nil, fmt.Errorf("The serialized body size %v exceeded the collation size limit %v", len(serializedTx), collationSizelimit)
+		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), collationSizelimit)
 	}
 
 	return serializedTx, nil
+}
+
+// ConvertBackToTx converts raw blobs back to their original transactions.
+func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
+	blobs := make([]*types.Transaction, len(rawBlobs))
+
+	for i := 0; i < len(rawBlobs); i++ {
+		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+
+		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("creation of transactions from raw blobs failed: %v", err)
+		}
+	}
+	return blobs, nil
 }
 
 // DeserializeBlobToTx takes byte array blob and converts it back
@@ -167,7 +166,7 @@ func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
 		return nil, fmt.Errorf("%v", err)
 	}
 
-	txs, err := ConvertBackToTx(deserializedBlobs)
+	txs, err := convertRawBlobToTx(deserializedBlobs)
 
 	if err != nil {
 		return nil, fmt.Errorf("%v", err)
