@@ -65,7 +65,7 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 		return nil, fmt.Errorf("cannot fetch header by hash: %v", err)
 	}
 
-	body, err := s.BodyByChunkRoot(header.ChunkRoot())
+	body, err := s.BodyByChunkRoot(header.ChunkRoot()) // GIVES ERROR
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch body by chunk root: %v", err)
 	}
