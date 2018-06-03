@@ -135,6 +135,8 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 func makeRandomTransactions(numTransactions int) []*types.Transaction {
 	var txs []*types.Transaction
 	for i := 0; i < numTransactions; i++ {
+		// 150 is the current average tx size, based on recent blocks (i.e. tx size = block size / # txs)
+		// for example: https://etherscan.io/block/5722271
 		data := make([]byte, 150)
 		rand.Read(data)
 		txs = append(txs, types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))

@@ -118,7 +118,7 @@ func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 		err := error(nil)
 		blobs[i], err = utils.NewRawBlob(txs[i], false)
 		if err != nil {
-			return nil, fmt.Errorf("%v", err)
+			return nil, err
 		}
 	}
 	return blobs, nil
@@ -128,12 +128,12 @@ func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 	blobs, err := convertTxToRawBlob(txs)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	serializedTx, err := utils.Serialize(blobs)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	if int64(len(serializedTx)) > collationSizelimit {
@@ -163,13 +163,13 @@ func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) 
 func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
 	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	txs, err := convertRawBlobToTx(deserializedBlobs)
 
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	return &txs, nil
