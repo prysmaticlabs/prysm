@@ -22,7 +22,7 @@ func createCollation(n node.Node, shardId *big.Int, period *big.Int, txs []*type
 	}
 
 	// check with SMC to see if we can add the header.
-	if a, _ := checkHeaderAvailability(n, shardId, period); !a {
+	if a, _ := checkHeaderSubmitted(n, shardId, period); !a {
 		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
 	}
 
@@ -65,18 +65,26 @@ func addHeader(n node.Node, collation sharding.Collation) error {
 	var chunkRoot [32]byte
 	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
 
-	_, err = n.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
+	tx, err := n.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
+	}
+
+	receipt, err := n.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return fmt.Errorf("addHeader transaction failed")
 	}
 	return nil
 }
 
-// checkHeaderAvailability checks if a collation header has already
-// added to the main chain. There can only be one header per shard
-// per period, proposer should check if anyone else has added the header.
-// checkHeaderAvailability returns true if it's available, false if it's unavailable.
-func checkHeaderAvailability(n node.Node, shardId *big.Int, period *big.Int) (bool, error) {
+// checkHeaderSubmitted checks if a collation header has already
+// submitted to the main chain. There can only be one header per shard
+// per period, proposer should check if a header's already submitted,
+// checkHeaderSubmitted returns true if it's available, false if it's unavailable.
+func checkHeaderSubmitted(n node.Node, shardId *big.Int, period *big.Int) (bool, error) {
 	log.Info("Checking header in shard: %d, period: %d", shardId, period)
 
 	// Get the period of the last header.

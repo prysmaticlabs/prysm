@@ -21,11 +21,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"gopkg.in/urfave/cli.v1"
+	"time"
 )
 
 const (
@@ -43,6 +45,7 @@ type Node interface {
 	Account() *accounts.Account
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
+	TransactionReceipt(common.Hash) (*types.Receipt, error)
 	DepositFlagSet() bool
 	Sign(hash common.Hash) ([]byte, error)
 	DataDirFlag() string
@@ -225,6 +228,24 @@ func (n *shardingNode) DepositFlagSet() bool {
 // DataDirFlag returns the datadir flag as a string.
 func (n *shardingNode) DataDirFlag() string {
 	return n.ctx.GlobalString(utils.DataDirFlag.Name)
+}
+
+// TransactionReceipt returns the receipt of a transaction.
+func (n *shardingNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	for pending, err := true, error(nil); pending; _, pending, err = n.client.TransactionByHash(context.Background(), hash) {
+		if err != nil {
+			return nil, fmt.Errorf("Unable to retrieve transaction %v", hash.Hex())
+		}
+		time.Sleep(1 * time.Second)
+	}
+	log.Info("Transaction %s has been mined", hash.Hex())
+
+	receipt, err := n.client.TransactionReceipt(context.Background(), hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return receipt, err
 }
 
 // Client to interact with a geth node via JSON-RPC.
