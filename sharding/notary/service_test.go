@@ -184,12 +184,16 @@ func TestLeaveNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	node := &mockNode{smc: smc, t: t, DepositFlag: true, backend: backend}
 
+	// Test Leaving Notary Pool Before Joining it
+
 	err := leaveNotaryPool(node)
 	backend.Commit()
 
 	if err == nil {
-		t.Fatal("Able to leave Notary pool despite having not joined it")
+		t.Error("Able to leave Notary pool despite having not joined it")
 	}
+
+	// Roundtrip Test , Join and leave pool
 
 	err = joinNotaryPool(node)
 	if err != nil {
@@ -204,5 +208,80 @@ func TestLeaveNotaryPool(t *testing.T) {
 
 		t.Fatal(err)
 	}
+	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(0).Cmp(numNotaries) != 0 {
+		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
+	}
+
+}
+
+func TestReleaseNotary(t *testing.T) {
+	backend, smc := setup()
+	node := &mockNode{smc: smc, t: t, DepositFlag: true, backend: backend}
+
+	// Test Release Notary Before Joining it
+
+	err := releaseNotary(node)
+	backend.Commit()
+
+	if err == nil {
+		t.Error("Released From Notary despite Never Joining Pool")
+	}
+
+	// Roundtrip Test , Join and leave pool and release Notary
+
+	err = joinNotaryPool(node)
+	if err != nil {
+		t.Error(err)
+	}
+	backend.Commit()
+
+	err = leaveNotaryPool(node)
+	backend.Commit()
+
+	if err != nil {
+
+		t.Fatal(err)
+	}
+
+	// The remaining part of the test is dependant on access to chainreader
+	// Unable to access block number for releaseNotary
+
+	/*
+
+		balance, err := backend.BalanceAt(context.Background(), addr, nil)
+		if err != nil {
+			t.Error("unable to retrieve balance")
+		}
+
+			err = releaseNotary(node)
+			backend.Commit()
+
+			if err != nil {
+
+				t.Fatal(err)
+			}
+
+
+		nreg, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if nreg.Deposited {
+			t.Error("Unable to release Notary and deposit money back")
+		}
+
+		newbalance, err := backend.BalanceAt(context.Background(), addr, nil)
+		if err != nil {
+			t.Error("unable to retrieve balance")
+		}
+
+		if balance.Cmp(newbalance) != 1 {
+			t.Errorf("Deposit was not returned, balance is currently:", newbalance)
+		}
+	*/
 
 }

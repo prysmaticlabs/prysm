@@ -332,7 +332,7 @@ func releaseNotary(n node.Node) error {
 
 	}
 
-	log.Info(fmt.Sprintf("Notary with address: %s released from pool",  n.Account().Address.String())
+	log.Info(fmt.Sprintf("Notary with address: %s released from pool", n.Account().Address.String()))
 
 	return nil
 
