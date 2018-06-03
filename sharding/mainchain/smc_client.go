@@ -24,16 +24,17 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
-var clientIdentifier = "geth"
+// ClientIdentifier tells us what client the node we interact with over RPC is running.
+var ClientIdentifier = "geth"
 
-// SMCClient defines a service that interacts with a
+// SMCClient defines a struct that interacts with a
 // mainchain node via RPC. Specifically, it aids in SMC bindings that are useful
 // to other sharding services.
 type SMCClient struct {
 	endpoint     string             // Endpoint to JSON RPC.
 	dataDirPath  string             // Path to the data directory.
 	depositFlag  bool               // Keeps track of the deposit option passed in as via CLI flags.
-	passwordFile *string            // Path to the account password file.
+	passwordFile string             // Path to the account password file.
 	client       *ethclient.Client  // Ethereum RPC client.
 	keystore     *keystore.KeyStore // Keystore containing the single signer.
 	smc          *contracts.SMC     // The deployed sharding management contract.
@@ -42,7 +43,7 @@ type SMCClient struct {
 }
 
 // NewSMCClient constructs a new instance of an SMCClient.
-func NewSMCClient(endpoint string, dataDirPath string, depositFlag bool, passwordFile *string) (*SMCClient, error) {
+func NewSMCClient(endpoint string, dataDirPath string, depositFlag bool, passwordFile string) (*SMCClient, error) {
 	config := &node.Config{
 		DataDir: dataDirPath,
 	}
@@ -120,10 +121,10 @@ func (s *SMCClient) ethereumClient() *ethclient.Client {
 func (s *SMCClient) unlockAccount(account accounts.Account) error {
 	pass := ""
 
-	if s.passwordFile != nil {
-		file, err := os.Open(*s.passwordFile)
+	if s.passwordFile != "" {
+		file, err := os.Open(s.passwordFile)
 		if err != nil {
-			return fmt.Errorf("unable to open file containing account password %s. %v", *s.passwordFile, err)
+			return fmt.Errorf("unable to open file containing account password %s. %v", s.passwordFile, err)
 		}
 		scanner := bufio.NewScanner(file)
 		scanner.Split(bufio.ScanWords)
