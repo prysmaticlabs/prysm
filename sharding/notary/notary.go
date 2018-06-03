@@ -212,6 +212,15 @@ func joinNotaryPool(n node.Node) error {
 
 	}
 
+	if inPool, err := isAccountInNotaryPool(n); !inPool || err != nil {
+		if !inPool {
+
+			return errors.New("Account has not been able to be deposited in Notary Pool")
+		}
+
+		return err
+	}
+
 	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
 
 	return nil
@@ -241,6 +250,17 @@ func leaveNotaryPool(n node.Node) error {
 		return fmt.Errorf("Unable to deregister Notary: %v", err)
 	}
 
+	receipt, err := n.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+
+	if receipt.Status == uint(0) {
+
+		return errors.New("Transaction was not successful, unable to deregister Notary")
+
+	}
+
 	if dreg, err := hasAccountBeenDeregistered(n); dreg || err != nil {
 		if !dreg {
 
@@ -266,13 +286,13 @@ func releaseNotary(n node.Node) error {
 
 	if nreg.DeregisteredPeriod == big.NewInt(0) {
 
-		return errors.New("Lock Up Period has not started")
+		return errors.New("Notary is still registered to the pool")
 
 	}
 
 	if lockup, err := isLockUpOver(n); !lockup || err != nil {
 		if !lockup {
-			return errors.New("Lockup is not over")
+			return errors.New("Lockup period is not over")
 		}
 		return err
 	}
@@ -283,9 +303,36 @@ func releaseNotary(n node.Node) error {
 	}
 	tx, err := n.SMCTransactor().ReleaseNotary(txOps)
 
-	if err != nil || tx == nil {
+	if err != nil {
 		return fmt.Errorf("Unable to Release Notary: %v", err)
 	}
+
+	receipt, err := n.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+
+	if receipt.Status == uint(0) {
+
+		return errors.New("Transaction was not successful, unable to release Notary")
+
+	}
+
+	nreg, err = getNotaryRegistry(n)
+
+	if err != nil {
+
+		return err
+
+	}
+
+	if nreg.Deposited || nreg.Balance != big.NewInt(0) || nreg.DeregisteredPeriod != big.NewInt(0) || nreg.PoolIndex != big.NewInt(0) {
+
+		return errors.New("Notary unable to be released from the pool")
+
+	}
+
+	log.Info(fmt.Sprintf("Notary with address: %s released from pool",  n.Account().Address.String())
 
 	return nil
 

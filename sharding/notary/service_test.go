@@ -182,7 +182,7 @@ func TestJoinNotaryPool(t *testing.T) {
 
 func TestLeaveNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &mockNode{smc: smc, t: t, DepositFlag: true}
+	node := &mockNode{smc: smc, t: t, DepositFlag: true, backend: backend}
 
 	err := leaveNotaryPool(node)
 	backend.Commit()
