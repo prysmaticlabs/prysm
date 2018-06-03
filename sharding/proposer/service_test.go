@@ -97,18 +97,18 @@ func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
 
-func setup() (*backends.SimulatedBackend, *contracts.SMC, error) {
+func setup(t *testing.T) (*backends.SimulatedBackend, *contracts.SMC) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance}})
 	_, _, smc, err := contracts.DeploySMC(transactOpts(), backend)
 	if err != nil {
-		return nil, nil, err
+		t.Fatalf("Failed to deploy SMC contract: %v", err)
 	}
 	backend.Commit()
-	return backend, smc, nil
+	return backend, smc
 }
 
 func TestCreateCollation(t *testing.T) {
-	backend, smc, _ := setup()
+	backend, smc := setup(t)
 	node := &mockNode{smc: smc, t: t, backend: backend}
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
@@ -152,7 +152,7 @@ func TestCreateCollation(t *testing.T) {
 		t.Errorf("Create collation failed: %v", err)
 	}
 	if collation.Header().Period().Cmp(big.NewInt(5)) != 0 {
-		t.Errorf("Incorrect collationd period, want 5, got %v ", collation.Header().Period())
+		t.Errorf("Incorrect collation period, want 5, got %v ", collation.Header().Period())
 	}
 	if collation.Header().ShardID().Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Incorrect shard id, want 5, got %v ", collation.Header().ShardID())
@@ -166,10 +166,7 @@ func TestCreateCollation(t *testing.T) {
 }
 
 func TestAddCollation(t *testing.T) {
-	backend, smc, err := setup()
-	if err != nil {
-		t.Fatalf("Failed to deploy SMC contract: %v", err)
-	}
+	backend, smc := setup(t)
 	node := &mockNode{smc: smc, t: t, backend: backend}
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
@@ -217,10 +214,7 @@ func TestAddCollation(t *testing.T) {
 }
 
 func TestCheckCollation(t *testing.T) {
-	backend, smc, err := setup()
-	if err != nil {
-		t.Fatalf("Failed to deploy SMC contract: %v", err)
-	}
+	backend, smc := setup(t)
 	node := &mockNode{smc: smc, t: t, backend: backend}
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
@@ -246,16 +240,16 @@ func TestCheckCollation(t *testing.T) {
 	backend.Commit()
 
 	// normal test case 1: check if we can still add header for period 1, should return false.
-	a, err := checkHeaderAvailability(node, big.NewInt(0), big.NewInt(1))
+	a, err := checkHeaderSubmitted(node, big.NewInt(0), big.NewInt(1))
 	if err != nil {
-		t.Errorf("Can not check header availability: %v", err)
+		t.Errorf("Can not check header submitted: %v", err)
 	}
 	if a {
-		t.Errorf("Check header avability should return: %v", !a)
+		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
 	// normal test case 2: check if we can add header for period 2, should return true.
-	a, err = checkHeaderAvailability(node, big.NewInt(0), big.NewInt(2))
+	a, err = checkHeaderSubmitted(node, big.NewInt(0), big.NewInt(2))
 	if !a {
-		t.Errorf("Check header avability should return: %v", !a)
+		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
 }
