@@ -1,12 +1,12 @@
 package node
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/notary"
-	"github.com/ethereum/go-ethereum/sharding/observer"
-	"github.com/ethereum/go-ethereum/sharding/proposer"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -25,64 +25,43 @@ type ShardEthereum struct {
 	actor        sharding.ShardingActor // Either notary, proposer, or observer.
 	shardChainDb ethdb.Database         // Access to the persistent db to store shard data.
 	eventFeed    *event.Feed            // Used to enable P2P related interactions via different sharding actors.
+	smcClient    *mainchain.SMCClient   // Provides bindings to the SMC deployed on the Ethereum mainchain.
 }
 
-// New creates a new sharding-enabled Ethereum service. This is called in the main
+// New creates a new sharding-enabled Ethereum instance. This is called in the main
 // geth sharding entrypoint.
 func New(ctx *cli.Context) (*ShardEthereum, error) {
 
-	seth := &ShardEthereum{}
+	shardEthereum := &ShardEthereum{}
 
-	// path := node.DefaultDataDir()
-	// if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-	// 	path = ctx.GlobalString(utils.DataDirFlag.Name)
-	// }
-
-	// endpoint := ctx.Args().First()
-	// if endpoint == "" {
-	// 	endpoint = fmt.Sprintf("%s/%s.ipc", path, clientIdentifier)
-	// }
-	// if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
-	// 	endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
-	// }
-
-	// config := &node.Config{
-	// 	DataDir: path,
-	// }
-
-	// scryptN, scryptP, keydir, err := config.AccountConfig()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
-
-	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
-
-	var actor sharding.ShardingActor
-
-	if actorFlag == "notary" {
-		not, err := notary.NewNotary(seth)
-		if err != nil {
-			return nil, err
-		}
-		actor = not
-	} else if actorFlag == "proposer" {
-		prop, err := proposer.NewProposer(seth)
-		if err != nil {
-			return nil, err
-		}
-		actor = prop
-	} else {
-		obs, err := observer.NewObserver(seth)
-		if err != nil {
-			return nil, err
-		}
-		actor = obs
+	path := node.DefaultDataDir()
+	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
+		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
 
-	seth.actor = actor
-	return nil, nil
+	endpoint := ctx.Args().First()
+	if endpoint == "" {
+		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
+	}
+	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
+		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
+	}
+
+	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
+	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
+
+	smcClient, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
+	if err != nil {
+		return nil, err
+	}
+
+	shardEthereum.smcClient = smcClient
+
+	if err := shardEthereum.registerShardingServices(); err != nil {
+		return nil, err
+	}
+
+	return shardEthereum, nil
 }
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
@@ -99,9 +78,9 @@ func (s *ShardEthereum) Start() error {
 
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() error {
-	// rpcClient could be nil if the connection failed.
-	if s.rpcClient != nil {
-		s.rpcClient.Close()
-	}
+	return nil
+}
+
+func (s *ShardEthereum) registerShardingServices() error {
 	return nil
 }

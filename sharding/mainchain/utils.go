@@ -16,7 +16,7 @@ import (
 // dialRPC endpoint to node.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
+		endpoint = node.DefaultIPCEndpoint(ClientIdentifier)
 	}
 	return rpc.Dial(endpoint)
 }
