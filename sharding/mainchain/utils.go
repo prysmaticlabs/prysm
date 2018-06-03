@@ -1,4 +1,4 @@
-package node
+package mainchain
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 
 // initSMC initializes the sharding manager contract bindings.
 // If the SMC does not exist, it will be deployed.
-func initSMC(s *ShardEthereum) (*contracts.SMC, error) {
+func initSMC(s *SMCClient) (*contracts.SMC, error) {
 	b, err := s.client.CodeAt(context.Background(), sharding.ShardingManagerAddress, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get contract code at %s: %v", sharding.ShardingManagerAddress.Hex(), err)
