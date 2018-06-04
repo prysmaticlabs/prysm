@@ -80,7 +80,43 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
 func (s *ShardEthereum) Start() error {
-	log.Println("Starting sharding service")
+	log.Println("Starting sharding node...")
+
+	services := make(map[reflect.Type]sharding.Service)
+	for _, constructor := range s.serviceFuncs {
+		// Create a new context for the particular service.
+		ctx := &sharding.ServiceContext{
+			Services: make(map[reflect.Type]sharding.Service),
+		}
+		// Copy needed for threaded access.
+		for kind, s := range services {
+			ctx.Services[kind] = s
+		}
+		// Construct and save the service.
+		service, err := constructor(ctx)
+		if err != nil {
+			return err
+		}
+		kind := reflect.TypeOf(service)
+		if _, exists := services[kind]; exists {
+			return fmt.Errorf("service already exists: %v", kind)
+		}
+		services[kind] = service
+	}
+
+	// Start each of the services.
+	started := []reflect.Type{}
+	for kind, service := range services {
+		// Start the next service, stopping all previous upon failure.
+		if err := service.Start(); err != nil {
+			for _, kind := range started {
+				services[kind].Stop()
+			}
+			return err
+		}
+		// Mark the service started for potential cleanup.
+		started = append(started, kind)
+	}
 	return nil
 }
 

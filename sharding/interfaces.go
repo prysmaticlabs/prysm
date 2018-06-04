@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
@@ -33,14 +32,13 @@ type SMCClient interface {
 	DepositFlag() bool
 	SetDepositFlag(deposit bool)
 	DataDirFlag() string
-	Context() *cli.Context
 }
 
-// ShardP2P defines an interface for a peer-to-peer system in a
+// ShardP2P defines an interface for a peer-to-peer service in a
 // sharded Ethereum blockchain.
 type ShardP2P interface{}
 
-// TXPool defines an interface for a transaction pool that handles
+// TXPool defines an interface for a transaction pool service that handles
 // incoming shard transactions in the network.
 type TXPool interface{}
 
@@ -54,7 +52,7 @@ type Actor interface {
 // the protocol stack, that is passed to all constructors to be optionally used;
 // as well as utility methods to operate on the service environment.
 type ServiceContext struct {
-	services map[reflect.Type]Service // Index of the already constructed services
+	Services map[reflect.Type]Service // Index of the already constructed services
 }
 
 // ServiceConstructor is the function signature of the constructors needed to be
@@ -74,7 +72,7 @@ type Service interface {
 // Service retrieves a currently running service registered of a specific type.
 func (ctx *ServiceContext) Service(service interface{}) error {
 	element := reflect.ValueOf(service).Elem()
-	if running, ok := ctx.services[element.Type()]; ok {
+	if running, ok := ctx.Services[element.Type()]; ok {
 		element.Set(reflect.ValueOf(running))
 		return nil
 	}

@@ -9,6 +9,7 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
+	client   sharding.SMCClient
 	shardp2p sharding.ShardP2P
 	txpool   sharding.TXPool
 }
@@ -16,9 +17,9 @@ type Proposer struct {
 // NewProposer creates a struct instance. It is initialized and
 // registered as a service upon start of a sharding node.
 // Has access to the public methods of this node.
-func NewProposer(shardp2p sharding.ShardP2P, txpool sharding.TXPool) (*Proposer, error) {
+func NewProposer(client sharding.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool) (*Proposer, error) {
 	// Initializes a  directory persistent db.
-	return &Proposer{shardp2p, txpool}, nil
+	return &Proposer{client, shardp2p, txpool}, nil
 }
 
 // Start the main loop for proposing collations.
