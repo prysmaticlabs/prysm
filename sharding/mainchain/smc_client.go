@@ -101,9 +101,15 @@ func (s *SMCClient) SMCTransactor() *contracts.SMCTransactor {
 	return &s.smc.SMCTransactor
 }
 
-// DepositFlagSet returns true for cli flag --deposit.
-func (s *SMCClient) DepositFlagSet() bool {
+// DepositFlag returns true for cli flag --deposit.
+func (s *SMCClient) DepositFlag() bool {
 	return s.depositFlag
+}
+
+// DepositFlag returns true for cli flag --deposit.
+func (s *SMCClient) SetDepositFlag(deposit bool) {
+	s.depositFlag = deposit
+	return
 }
 
 // DataDirPath returns the datadir flag as a string.
