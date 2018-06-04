@@ -1,6 +1,7 @@
 package sharding
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 
@@ -17,6 +18,7 @@ import (
 type Node interface {
 	Start() error
 	Close() error
+	Register(constructor ServiceConstructor) error
 	SMCClient() SMCClient
 }
 
@@ -59,4 +61,14 @@ type Service interface {
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop() error
+}
+
+// Service retrieves a currently running service registered of a specific type.
+func (ctx *ServiceContext) Service(service interface{}) error {
+	element := reflect.ValueOf(service).Elem()
+	if running, ok := ctx.services[element.Type()]; ok {
+		element.Set(reflect.ValueOf(running))
+		return nil
+	}
+	return fmt.Errorf("unknown service")
 }
