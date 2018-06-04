@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
@@ -80,6 +81,10 @@ func (m *mockNode) Start() error {
 
 func (m *mockNode) Close() {
 	m.t.Fatal("Close called")
+}
+
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
 }
 
 // Helper/setup methods.
