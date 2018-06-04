@@ -93,6 +93,14 @@ func (s *ShardEthereum) SMCClient() *mainchain.SMCClient {
 	return s.smcClient
 }
 
+func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error {
+	return nil
+}
+
 func (s *ShardEthereum) registerShardingServices() error {
+	// TODO: Register the different services to the node.
+	s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		return nil, nil
+	})
 	return nil
 }
