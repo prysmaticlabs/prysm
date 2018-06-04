@@ -21,15 +21,11 @@ var (
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
 
-type mockNode struct {
-	smcClient *smcClient
-	t         *testing.T
-}
-
 // Mock client for testing notary. Should this go into sharding/client/testing?
 type smcClient struct {
 	smc         *contracts.SMC
 	depositFlag bool
+	t           *testing.T
 }
 
 func (m *smcClient) Account() *accounts.Account {
@@ -71,21 +67,6 @@ func (m *smcClient) DataDirFlag() string {
 	return "/tmp/datadir"
 }
 
-// Unused mockClient methods.
-func (m *mockNode) Start() error {
-	m.t.Fatal("Start called")
-	return nil
-}
-
-func (m *mockNode) Close() error {
-	m.t.Fatal("Close called")
-	return nil
-}
-
-func (m *mockNode) SMCClient() sharding.SMCClient {
-	return m.smcClient
-}
-
 // Helper/setup methods.
 // TODO: consider moving these to common sharding testing package as the notary and smc tests
 // use them.
@@ -102,11 +83,10 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	smcClient := &smcClient{smc: smc}
-	node := &mockNode{smcClient: smcClient, t: t}
+	client := &smcClient{smc: smc, t: t}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(node)
+	b, err := isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +101,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
-	b, err = isAccountInNotaryPool(node)
+	b, err = isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,8 +112,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	smcClient := &smcClient{smc: smc, depositFlag: false}
-	node := &mockNode{smcClient: smcClient, t: t}
+	client := &smcClient{smc: smc, depositFlag: false, t: t}
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -143,14 +122,14 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	node.SMCClient().SetDepositFlag(false)
-	err = joinNotaryPool(node)
+	client.SetDepositFlag(false)
+	err = joinNotaryPool(client)
 	if err == nil {
 		t.Error("Joined notary pool while --deposit was not present")
 	}
 
-	node.SMCClient().SetDepositFlag(true)
-	err = joinNotaryPool(node)
+	client.SetDepositFlag(true)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +145,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(node)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Error(err)
 	}

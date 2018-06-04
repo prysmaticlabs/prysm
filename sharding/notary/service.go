@@ -9,12 +9,12 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	node sharding.Node
+	smcClient sharding.SMCClient
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(node sharding.Node) (*Notary, error) {
-	return &Notary{node}, nil
+func NewNotary(smcClient sharding.SMCClient) (*Notary, error) {
+	return &Notary{smcClient}, nil
 }
 
 // Start the main routine for a notary.
@@ -24,13 +24,13 @@ func (n *Notary) Start() error {
 	// TODO: handle this better through goroutines. Right now, these methods
 	// have their own nested channels and goroutines within them. We need
 	// to make this as flat as possible at the Notary layer.
-	if n.node.SMCClient().DepositFlag() {
-		if err := joinNotaryPool(n.node); err != nil {
+	if n.smcClient.DepositFlag() {
+		if err := joinNotaryPool(n.smcClient); err != nil {
 			return err
 		}
 	}
 
-	return subscribeBlockHeaders(n.node)
+	return subscribeBlockHeaders(n.smcClient)
 }
 
 // Stop the main loop for notarizing collations.

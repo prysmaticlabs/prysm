@@ -65,7 +65,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
-	if err := shardEthereum.registerShardingServices(); err != nil {
+	if err := shardEthereum.registerActorService(); err != nil {
 		return nil, err
 	}
 
@@ -104,10 +104,9 @@ func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error 
 	return nil
 }
 
-func (s *ShardEthereum) registerShardingServices() error {
-	// TODO: Register the different services to the node.
-	s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+// Registers the actor according to CLI flags. Either notary/proposer/observer.
+func (s *ShardEthereum) registerActorService() error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		return nil, nil
 	})
-	return nil
 }
