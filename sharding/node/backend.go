@@ -71,6 +71,15 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
+	// TODO: Find a better way to do this???
+	if err := shardEthereum.registerP2P(); err != nil {
+		return nil, err
+	}
+
+	if err := shardEthereum.registerTXPool(); err != nil {
+		return nil, err
+	}
+
 	if err := shardEthereum.registerActorService(actorFlag); err != nil {
 		return nil, err
 	}
@@ -138,6 +147,20 @@ func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error 
 	defer s.lock.Unlock()
 	s.serviceFuncs = append(s.serviceFuncs, constructor)
 	return nil
+}
+
+func (s *ShardEthereum) registerP2P() error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		return shardp2p.NewServer()
+	})
+}
+
+func (s *ShardEthereum) registerTXPool() error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		var p2p *shardp2p.Server
+		ctx.Service(&p2p)
+		return txpool.NewShardTXPool(p2p)
+	})
 }
 
 // Registers the actor according to CLI flags. Either notary/proposer/observer.
