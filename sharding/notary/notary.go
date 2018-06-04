@@ -18,10 +18,10 @@ import (
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation.
-func subscribeBlockHeaders(n sharding.Node) error {
+func subscribeBlockHeaders(client sharding.SMCClient) error {
 	headerChan := make(chan *types.Header, 16)
 
-	_, err := n.SMCClient().ChainReader().SubscribeNewHead(context.Background(), headerChan)
+	_, err := client.ChainReader().SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
 		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
 	}
@@ -35,13 +35,13 @@ func subscribeBlockHeaders(n sharding.Node) error {
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 
 		// Check if we are in the notary pool before checking if we are an eligible notary.
-		v, err := isAccountInNotaryPool(n)
+		v, err := isAccountInNotaryPool(client)
 		if err != nil {
 			return fmt.Errorf("unable to verify client in notary pool. %v", err)
 		}
 
 		if v {
-			if err := checkSMCForNotary(n, head); err != nil {
+			if err := checkSMCForNotary(client, head); err != nil {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		}
@@ -52,18 +52,18 @@ func subscribeBlockHeaders(n sharding.Node) error {
 // collation for the available shards in the SMC. The function calls
 // getEligibleNotary from the SMC and notary a collation if
 // conditions are met.
-func checkSMCForNotary(n sharding.Node, head *types.Header) error {
+func checkSMCForNotary(client sharding.SMCClient, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
 	for s := int64(0); s < sharding.ShardCount; s++ {
 		// Checks if we are an eligible notary according to the SMC.
-		addr, err := n.SMCClient().SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s))
+		addr, err := client.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s))
 
 		if err != nil {
 			return err
 		}
 
 		// If output is non-empty and the addr == coinbase.
-		if addr == n.SMCClient().Account().Address {
+		if addr == client.Account().Address {
 			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 			err := submitCollation(s)
 			if err != nil {
@@ -71,7 +71,7 @@ func checkSMCForNotary(n sharding.Node, head *types.Header) error {
 			}
 
 			// If the account is selected as notary, submit collation.
-			if addr == n.SMCClient().Account().Address {
+			if addr == client.Account().Address {
 				log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 				err := submitCollation(s)
 				if err != nil {
@@ -88,10 +88,10 @@ func checkSMCForNotary(n sharding.Node, head *types.Header) error {
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsNotaryDeposited from the SMC and returns true if
 // the user is in the notary pool.
-func isAccountInNotaryPool(n sharding.Node) (bool, error) {
-	account := n.SMCClient().Account()
+func isAccountInNotaryPool(client sharding.SMCClient) (bool, error) {
+	account := client.Account()
 	// Checks if our deposit has gone through according to the SMC.
-	nreg, err := n.SMCClient().SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	nreg, err := client.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
 	if !nreg.Deposited && err != nil {
 		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.String()))
 	}
@@ -131,22 +131,22 @@ func submitCollation(shardID int64) error {
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(n sharding.Node) error {
-	if !n.SMCClient().DepositFlag() {
+func joinNotaryPool(client sharding.SMCClient) error {
+	if !client.DepositFlag() {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
 
-	if b, err := isAccountInNotaryPool(n); b || err != nil {
+	if b, err := isAccountInNotaryPool(client); b || err != nil {
 		return err
 	}
 
 	log.Info("Joining notary pool")
-	txOps, err := n.SMCClient().CreateTXOpts(sharding.NotaryDeposit)
+	txOps, err := client.CreateTXOpts(sharding.NotaryDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
 	}
 
-	tx, err := n.SMCClient().SMCTransactor().RegisterNotary(txOps)
+	tx, err := client.SMCTransactor().RegisterNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
