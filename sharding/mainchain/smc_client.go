@@ -109,7 +109,6 @@ func (s *SMCClient) DepositFlag() bool {
 // DepositFlag returns true for cli flag --deposit.
 func (s *SMCClient) SetDepositFlag(deposit bool) {
 	s.depositFlag = deposit
-	return
 }
 
 // DataDirPath returns the datadir flag as a string.

@@ -31,7 +31,7 @@ type SMCClient interface {
 	ChainReader() ethereum.ChainReader
 	DepositFlag() bool
 	SetDepositFlag(deposit bool)
-	DataDirFlag() string
+	DataDirPath() string
 }
 
 // ShardP2P defines an interface for a peer-to-peer service in a
