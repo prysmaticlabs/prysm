@@ -36,6 +36,14 @@ type SMCClient interface {
 	Context() *cli.Context
 }
 
+// ShardP2P defines an interface for a peer-to-peer system in a
+// sharded Ethereum blockchain.
+type ShardP2P interface{}
+
+// TXPool defines an interface for a transaction pool that handles
+// incoming shard transactions in the network.
+type TXPool interface{}
+
 // Actor refers to either a notary, proposer, or observer.
 type Actor interface {
 	Start() error

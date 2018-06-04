@@ -4,16 +4,19 @@ package observer
 
 import (
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding"
 )
 
 // Observer holds functionality required to run an observer service
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
-type Observer struct{}
+type Observer struct {
+	shardp2p sharding.ShardP2P
+}
 
 // NewObserver creates a new observer instance.
-func NewObserver() (*Observer, error) {
-	return &Observer{}, nil
+func NewObserver(shardp2p sharding.ShardP2P) (*Observer, error) {
+	return &Observer{shardp2p}, nil
 }
 
 // Start the main routine for an observer.

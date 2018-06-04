@@ -10,11 +10,12 @@ import (
 // sharding/service.go.
 type Notary struct {
 	smcClient sharding.SMCClient
+	shardp2p  sharding.ShardP2P
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(smcClient sharding.SMCClient) (*Notary, error) {
-	return &Notary{smcClient}, nil
+func NewNotary(smcClient sharding.SMCClient, shardp2p sharding.ShardP2P) (*Notary, error) {
+	return &Notary{smcClient, shardp2p}, nil
 }
 
 // Start the main routine for a notary.

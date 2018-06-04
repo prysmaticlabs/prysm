@@ -6,6 +6,11 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/sharding/notary"
+	"github.com/ethereum/go-ethereum/sharding/observer"
+	shardp2p "github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/proposer"
+
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
@@ -23,7 +28,7 @@ import (
 // Ethereum network.
 type ShardEthereum struct {
 	shardConfig  *params.ShardConfig  // Holds necessary information to configure shards.
-	txPool       *txpool.ShardTxPool  // Defines the sharding-specific txpool. To be designed.
+	txPool       *txpool.ShardTXPool  // Defines the sharding-specific txpool. To be designed.
 	actor        sharding.Actor       // Either notary, proposer, or observer.
 	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
 	eventFeed    *event.Feed          // Used to enable P2P related interactions via different sharding actors.
@@ -56,6 +61,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
 	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
+	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
 
 	smcClient, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
 	if err != nil {
@@ -65,7 +71,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
-	if err := shardEthereum.registerActorService(); err != nil {
+	if err := shardEthereum.registerActorService(actorFlag); err != nil {
 		return nil, err
 	}
 
@@ -75,12 +81,6 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
 func (s *ShardEthereum) Start() error {
 	log.Println("Starting sharding service")
-	if err := s.actor.Start(); err != nil {
-		return err
-	}
-	defer s.actor.Stop()
-
-	// TODO: start p2p and other relevant services.
 	return nil
 }
 
@@ -105,8 +105,20 @@ func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error 
 }
 
 // Registers the actor according to CLI flags. Either notary/proposer/observer.
-func (s *ShardEthereum) registerActorService() error {
+func (s *ShardEthereum) registerActorService(actor string) error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
-		return nil, nil
+
+		var p2p *shardp2p.Server
+		ctx.Service(&p2p)
+
+		if actor == "notary" {
+			return notary.NewNotary(s.smcClient, p2p)
+		} else if actor == "proposer" {
+			var txPool *txpool.ShardTXPool
+			ctx.Service(&txPool)
+			return proposer.NewProposer(s.smcClient, p2p, txPool)
+		}
+
+		return observer.NewObserver(p2p)
 	})
 }
