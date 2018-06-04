@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"gopkg.in/urfave/cli.v1"
-	"time"
 )
 
 const (

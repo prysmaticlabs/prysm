@@ -93,6 +93,10 @@ func (m *mockNode) Close() {
 	m.t.Fatal("Close called")
 }
 
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
+}
+
 func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
