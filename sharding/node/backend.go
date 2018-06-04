@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -31,6 +32,7 @@ type ShardEthereum struct {
 	// Lifecycle and service stores.
 	serviceFuncs []sharding.ServiceConstructor     // Service constructors (in dependency order).
 	services     map[reflect.Type]sharding.Service // Currently running services.
+	lock         sync.RWMutex
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
@@ -93,7 +95,12 @@ func (s *ShardEthereum) SMCClient() *mainchain.SMCClient {
 	return s.smcClient
 }
 
+// Register appends a service constructor function to the service registry of the
+// sharding node.
 func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.serviceFuncs = append(s.serviceFuncs, constructor)
 	return nil
 }
 
