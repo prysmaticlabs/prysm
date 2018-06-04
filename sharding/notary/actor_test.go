@@ -21,45 +21,53 @@ var (
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
 
-// Mock client for testing notary. Should this go into sharding/client/testing?
 type mockNode struct {
-	smc         *contracts.SMC
-	t           *testing.T
-	DepositFlag bool
+	smcClient *smcClient
+	t         *testing.T
 }
 
-func (m *mockNode) Account() *accounts.Account {
+// Mock client for testing notary. Should this go into sharding/client/testing?
+type smcClient struct {
+	smc         *contracts.SMC
+	depositFlag bool
+}
+
+func (m *smcClient) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (m *mockNode) SMCCaller() *contracts.SMCCaller {
+func (m *smcClient) SMCCaller() *contracts.SMCCaller {
 	return &m.smc.SMCCaller
 }
 
-func (m *mockNode) ChainReader() ethereum.ChainReader {
-	m.t.Fatal("ChainReader not implemented")
+func (m *smcClient) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (m *mockNode) Context() *cli.Context {
+func (m *smcClient) Context() *cli.Context {
 	return nil
 }
 
-func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
+func (m *smcClient) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
 
-func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (m *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (m *mockNode) DepositFlagSet() bool {
-	return m.DepositFlag
+func (m *smcClient) DepositFlag() bool {
+	return m.depositFlag
 }
 
-func (m *mockNode) DataDirFlag() string {
+func (m *smcClient) SetDepositFlag(deposit bool) {
+	m.depositFlag = deposit
+	return
+}
+
+func (m *smcClient) DataDirFlag() string {
 	return "/tmp/datadir"
 }
 
@@ -72,6 +80,10 @@ func (m *mockNode) Start() error {
 func (m *mockNode) Close() error {
 	m.t.Fatal("Close called")
 	return nil
+}
+
+func (m *mockNode) SMCClient() sharding.SMCClient {
+	return m.smcClient
 }
 
 // Helper/setup methods.
@@ -90,7 +102,8 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &mockNode{smc: smc, t: t}
+	smcClient := &smcClient{smc: smc}
+	node := &mockNode{smcClient: smcClient, t: t}
 
 	// address should not be in pool initially.
 	b, err := isAccountInNotaryPool(node)
@@ -119,7 +132,8 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &mockNode{smc: smc, t: t, DepositFlag: false}
+	smcClient := &smcClient{smc: smc, depositFlag: false}
+	node := &mockNode{smcClient: smcClient, t: t}
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -129,13 +143,13 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	node.DepositFlag = false
+	node.SMCClient().SetDepositFlag(false)
 	err = joinNotaryPool(node)
 	if err == nil {
 		t.Error("Joined notary pool while --deposit was not present")
 	}
 
-	node.DepositFlag = true
+	node.SMCClient().SetDepositFlag(true)
 	err = joinNotaryPool(node)
 	if err != nil {
 		t.Fatal(err)

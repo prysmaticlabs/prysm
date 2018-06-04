@@ -11,11 +11,11 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Observer struct {
-	node sharding.ShardingClient
+	node sharding.Node
 }
 
 // NewObserver creates a new observer instance.
-func NewObserver(node sharding.ShardingClient) (*Observer, error) {
+func NewObserver(node sharding.Node) (*Observer, error) {
 	return &Observer{node}, nil
 }
 

@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -20,12 +21,16 @@ import (
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.ShardConfig    // Holds necessary information to configure shards.
-	txPool       *txpool.ShardTxPool    // Defines the sharding-specific txpool. To be designed.
-	actor        sharding.ShardingActor // Either notary, proposer, or observer.
-	shardChainDb ethdb.Database         // Access to the persistent db to store shard data.
-	eventFeed    *event.Feed            // Used to enable P2P related interactions via different sharding actors.
-	smcClient    *mainchain.SMCClient   // Provides bindings to the SMC deployed on the Ethereum mainchain.
+	shardConfig  *params.ShardConfig  // Holds necessary information to configure shards.
+	txPool       *txpool.ShardTxPool  // Defines the sharding-specific txpool. To be designed.
+	actor        sharding.Actor       // Either notary, proposer, or observer.
+	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
+	eventFeed    *event.Feed          // Used to enable P2P related interactions via different sharding actors.
+	smcClient    *mainchain.SMCClient // Provides bindings to the SMC deployed on the Ethereum mainchain.
+
+	// Lifecycle and service stores.
+	serviceFuncs []sharding.ServiceConstructor     // Service constructors (in dependency order).
+	services     map[reflect.Type]sharding.Service // Currently running services.
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
@@ -55,6 +60,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
+	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
 	if err := shardEthereum.registerShardingServices(); err != nil {
@@ -79,6 +85,12 @@ func (s *ShardEthereum) Start() error {
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() error {
 	return nil
+}
+
+// SMCClient returns an instance of a client that communicates to a mainchain node via
+// RPC and provides helpful bindings to the Sharding Manager Contract.
+func (s *ShardEthereum) SMCClient() *mainchain.SMCClient {
+	return s.smcClient
 }
 
 func (s *ShardEthereum) registerShardingServices() error {
