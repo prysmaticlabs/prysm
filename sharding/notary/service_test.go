@@ -60,10 +60,9 @@ func (m *smcClient) DepositFlag() bool {
 
 func (m *smcClient) SetDepositFlag(deposit bool) {
 	m.depositFlag = deposit
-	return
 }
 
-func (m *smcClient) DataDirFlag() string {
+func (m *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
 }
 
