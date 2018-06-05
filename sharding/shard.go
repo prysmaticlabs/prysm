@@ -65,12 +65,11 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 		return nil, fmt.Errorf("cannot fetch header by hash: %v", err)
 	}
 
-	body, err := s.BodyByChunkRoot(header.ChunkRoot()) // GIVES ERROR
+	body, err := s.BodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch body by chunk root: %v", err)
 	}
 
-	// deserialize the body into a txs slice.
 	txs, err := DeserializeBlobToTx(body)
 	if err != nil {
 		return nil, fmt.Errorf("cannot deserialize body: %v", err)
@@ -171,11 +170,9 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 
 // SaveBody adds the collation body to the shardDB and sets availability.
 func (s *Shard) SaveBody(body []byte) error {
-	// check if body is empty and throw error.
 	if len(body) == 0 {
 		return fmt.Errorf("body is empty")
 	}
-
 	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	s.SetAvailability(&chunkRoot, true)
