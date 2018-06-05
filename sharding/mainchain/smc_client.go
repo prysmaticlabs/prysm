@@ -27,6 +27,19 @@ import (
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
 var ClientIdentifier = "geth"
 
+// Client contains useful methods for a sharding node to interact with
+// an Ethereum client running on the mainchain.
+type Client interface {
+	Account() *accounts.Account
+	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
+	SMCCaller() *contracts.SMCCaller
+	SMCTransactor() *contracts.SMCTransactor
+	ChainReader() ethereum.ChainReader
+	DepositFlag() bool
+	SetDepositFlag(deposit bool)
+	DataDirPath() string
+}
+
 // SMCClient defines a struct that interacts with a
 // mainchain node via RPC. Specifically, it aids in SMC bindings that are useful
 // to other sharding services.

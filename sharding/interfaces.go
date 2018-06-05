@@ -2,13 +2,7 @@ package sharding
 
 import (
 	"fmt"
-	"math/big"
 	"reflect"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
@@ -18,20 +12,6 @@ type Node interface {
 	Start() error
 	Close() error
 	Register(constructor ServiceConstructor) error
-	SMCClient() SMCClient
-}
-
-// SMCClient contains useful methods for a sharding node to interact with
-// an Ethereum client running on the mainchain.
-type SMCClient interface {
-	Account() *accounts.Account
-	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
-	SMCCaller() *contracts.SMCCaller
-	SMCTransactor() *contracts.SMCTransactor
-	ChainReader() ethereum.ChainReader
-	DepositFlag() bool
-	SetDepositFlag(deposit bool)
-	DataDirPath() string
 }
 
 // ShardP2P defines an interface for a peer-to-peer service in a
