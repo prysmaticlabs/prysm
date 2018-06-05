@@ -1,3 +1,7 @@
+// Package node defines a backend for a sharding-enabled, Ethereum blockchain.
+// It defines a struct which handles the lifecycle of services in the
+// sharding system, providing a bridge to the main Ethereum blockchain,
+// as well as instantiating peer-to-peer networking for shards.
 package node
 
 import (

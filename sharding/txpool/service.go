@@ -3,14 +3,17 @@ package txpool
 
 import (
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding"
 )
 
 // ShardTXPool handles a transaction pool for a sharded system.
-type ShardTXPool struct{}
+type ShardTXPool struct {
+	p2p sharding.ShardP2P
+}
 
 // NewShardTXPool creates a new observer instance.
-func NewShardTXPool() (*ShardTXPool, error) {
-	return &ShardTXPool{}, nil
+func NewShardTXPool(p2p sharding.ShardP2P) (*ShardTXPool, error) {
+	return &ShardTXPool{p2p}, nil
 }
 
 // Start the main routine for a shard transaction pool.

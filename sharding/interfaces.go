@@ -42,7 +42,7 @@ type ShardP2P interface{}
 // incoming shard transactions in the network.
 type TXPool interface{}
 
-// Actor refers to either a notary, proposer, or observer.
+// Actor refers to either a notary, proposer, or observer in the sharding spec.
 type Actor interface {
 	Start() error
 	Stop() error
@@ -59,7 +59,9 @@ type ServiceContext struct {
 // registered for service instantiation.
 type ServiceConstructor func(ctx *ServiceContext) (Service, error)
 
-// Service is an individual protocol that can be registered into a node.
+// Service is an individual protocol that can be registered into a node. Having a sharding
+// node maintain a service registry allows for easy, shared-dependencies. For example,
+// a proposer service might depend on a p2p server, a txpool, an smc client, etc.
 type Service interface {
 	// Start is called after all services have been constructed to
 	// spawn any goroutines required by the service.
