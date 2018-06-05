@@ -5,18 +5,19 @@ package notary
 import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 )
 
 // Notary holds functionality required to run a collation notary
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	smcClient sharding.SMCClient
+	smcClient *mainchain.SMCClient
 	shardp2p  sharding.ShardP2P
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(smcClient sharding.SMCClient, shardp2p sharding.ShardP2P) (*Notary, error) {
+func NewNotary(smcClient *mainchain.SMCClient, shardp2p sharding.ShardP2P) (*Notary, error) {
 	return &Notary{smcClient, shardp2p}, nil
 }
 
