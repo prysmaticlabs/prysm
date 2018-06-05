@@ -141,7 +141,10 @@ func Test_CalculatePOC(t *testing.T) {
 
 	salt := []byte{1, 0x9f}
 	c.CalculateChunkRoot()
-	t.Errorf("Salt: %x\nPoC: %x\nChunkroot: %x\n", salt, c.CalculatePOC(salt), c.header.data.ChunkRoot)
+	poc := c.CalculatePOC(salt)
+	if poc == *c.header.data.ChunkRoot {
+		t.Errorf("Salt: %x\nPoC: %x\nChunkroot: %x\n", salt, poc, c.header.data.ChunkRoot)
+	}
 }
 
 // BENCHMARK TESTS
