@@ -1,3 +1,5 @@
+// Package notary defines all relevant functionality for a Notary actor
+// within the minimal sharding protocol.
 package notary
 
 import (

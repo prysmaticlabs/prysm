@@ -1,3 +1,5 @@
+// Package notary defines all relevant functionality for a Proposer actor
+// within the minimal sharding protocol.
 package proposer
 
 import (
