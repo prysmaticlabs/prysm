@@ -111,14 +111,17 @@ func (c *Collation) CalculateChunkRoot() {
 
 // CalculatePOC calculates the Proof of Custody given the collation body and
 // some salt value.
-func (c *Collation) CalculatePOC(salt []byte) {
+func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 	body := make([]byte, len(c.body))
 	for _, chunk := range c.body {
 		body = append(body, append(salt, chunk)...) // add salt to each chunk.
 	}
-	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
-	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
-	c.header.data.ChunkRoot = &chunkRoot
+	if len(c.body) == 0 {
+		body = salt
+	}
+	chunks := Chunks(body)         // wrapper allowing us to merklizing the chunks.
+	poc := types.DeriveSha(chunks) // merklize the serialized blobs.
+	return poc
 }
 
 // ConvertBackToTx converts raw blobs back to their original transactions.
