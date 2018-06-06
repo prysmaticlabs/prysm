@@ -171,7 +171,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	}
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		var p2p *shardp2p.Server
-		ctx.Service(&p2p)
+		ctx.RetriveService(&p2p)
 		return txpool.NewShardTXPool(p2p)
 	})
 }
@@ -181,13 +181,13 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 
 		var p2p *shardp2p.Server
-		ctx.Service(&p2p)
+		ctx.RetriveService(&p2p)
 
 		if actor == "notary" {
 			return notary.NewNotary(s.smcClient, p2p)
 		} else if actor == "proposer" {
 			var txPool *txpool.ShardTXPool
-			ctx.Service(&txPool)
+			ctx.RetriveService(&txPool)
 			return proposer.NewProposer(s.smcClient, p2p, txPool)
 		}
 

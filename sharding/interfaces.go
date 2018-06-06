@@ -51,8 +51,9 @@ type Service interface {
 	Stop() error
 }
 
-// Service retrieves a currently running service registered of a specific type.
-func (ctx *ServiceContext) Service(service interface{}) error {
+// RetrieveService sets the `service` argument to a currently running service
+// registered of a specific type.
+func (ctx *ServiceContext) RetriveService(service interface{}) error {
 	element := reflect.ValueOf(service).Elem()
 	if running, ok := ctx.Services[element.Type()]; ok {
 		element.Set(reflect.ValueOf(running))
