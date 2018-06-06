@@ -76,7 +76,6 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
-	// TODO: Find a better way to do this???
 	if err := shardEthereum.registerP2P(); err != nil {
 		return nil, err
 	}
