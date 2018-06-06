@@ -33,5 +33,6 @@ func shardingCmd(ctx *cli.Context) error {
 	}
 	defer shardingNode.Close()
 	// starts a connection to a geth node and kicks off every registered service.
-	return shardingNode.Start()
+	shardingNode.Start()
+	return nil
 }

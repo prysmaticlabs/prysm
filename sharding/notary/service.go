@@ -26,8 +26,7 @@ func (n *Notary) Start() error {
 	log.Info("Starting notary service")
 
 	// TODO: handle this better through goroutines. Right now, these methods
-	// have their own nested channels and goroutines within them. We need
-	// to make this as flat as possible at the Notary layer.
+	// are blocking.
 	if n.smcClient.DepositFlag() {
 		if err := joinNotaryPool(n.smcClient); err != nil {
 			return err

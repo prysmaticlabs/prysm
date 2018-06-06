@@ -8,7 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
@@ -49,6 +51,14 @@ func (s *smcClient) Context() *cli.Context {
 
 func (s *smcClient) SMCTransactor() *contracts.SMCTransactor {
 	return &s.smc.SMCTransactor
+}
+
+func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
+	return &s.smc.SMCFilterer
+}
+
+func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
 }
 
 func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {

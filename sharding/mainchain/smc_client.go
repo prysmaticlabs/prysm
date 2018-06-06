@@ -147,6 +147,11 @@ func (s *SMCClient) SMCTransactor() *contracts.SMCTransactor {
 	return &s.smc.SMCTransactor
 }
 
+// SMCFilterer allows for easy filtering of events from the Sharding Manager Contract.
+func (s *SMCClient) SMCFilterer() *contracts.SMCFilterer {
+	return &s.smc.SMCFilterer
+}
+
 // TransactionReceipt allows an SMCClient to retrieve transaction receipts on
 // the mainchain by hash.
 func (s *SMCClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
