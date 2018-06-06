@@ -28,41 +28,41 @@ type smcClient struct {
 	t           *testing.T
 }
 
-func (m *smcClient) Account() *accounts.Account {
+func (s *smcClient) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (m *smcClient) SMCCaller() *contracts.SMCCaller {
-	return &m.smc.SMCCaller
+func (s *smcClient) SMCCaller() *contracts.SMCCaller {
+	return &s.smc.SMCCaller
 }
 
-func (m *smcClient) ChainReader() ethereum.ChainReader {
+func (s *smcClient) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (m *smcClient) Context() *cli.Context {
+func (s *smcClient) Context() *cli.Context {
 	return nil
 }
 
-func (m *smcClient) SMCTransactor() *contracts.SMCTransactor {
-	return &m.smc.SMCTransactor
+func (s *smcClient) SMCTransactor() *contracts.SMCTransactor {
+	return &s.smc.SMCTransactor
 }
 
-func (m *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (m *smcClient) DepositFlag() bool {
-	return m.depositFlag
+func (s *smcClient) DepositFlag() bool {
+	return s.depositFlag
 }
 
-func (m *smcClient) SetDepositFlag(deposit bool) {
-	m.depositFlag = deposit
+func (s *smcClient) SetDepositFlag(deposit bool) {
+	s.depositFlag = deposit
 }
 
-func (m *smcClient) DataDirPath() string {
+func (s *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
 }
 

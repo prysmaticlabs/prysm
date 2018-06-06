@@ -6,7 +6,6 @@ package node
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 	cli "gopkg.in/urfave/cli.v1"
@@ -80,7 +80,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerTXPool(); err != nil {
+	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
@@ -93,7 +93,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
 func (s *ShardEthereum) Start() error {
-	log.Println("Starting sharding node...")
+	log.Info("Starting sharding node")
 
 	services := make(map[reflect.Type]sharding.Service)
 	for _, constructor := range s.serviceFuncs {
@@ -153,13 +153,24 @@ func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error 
 	return nil
 }
 
+// registerP2P attaches a shardp2p server to the ShardEthereum instance.
+// TODO: Design this shardp2p service and the methods it should expose as well as
+// its event loop.
 func (s *ShardEthereum) registerP2P() error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		return shardp2p.NewServer()
 	})
 }
 
-func (s *ShardEthereum) registerTXPool() error {
+// registerTXPool is only relevant to proposers in the sharded system. It will
+// spin up a transaction pool that will relay incoming transactions via an
+// event feed. For our first releases, this can just relay test/fake transaction data
+// the proposer can serialize into collation blobs.
+// TODO: design this txpool system for our first release.
+func (s *ShardEthereum) registerTXPool(actor string) error {
+	if actor != "proposer" {
+		return nil
+	}
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		var p2p *shardp2p.Server
 		ctx.Service(&p2p)
