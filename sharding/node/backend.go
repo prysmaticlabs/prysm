@@ -110,7 +110,7 @@ func (s *ShardEthereum) Close() {
 			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
 		}
 	}
-	log.Crit("Stopping sharding node")
+	log.Info("Stopping sharding node")
 }
 
 // SMCClient returns an instance of a client that communicates to a mainchain node via
