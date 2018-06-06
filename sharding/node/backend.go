@@ -99,10 +99,8 @@ func (s *ShardEthereum) Start() {
 		// Start the next service.
 		if err := service.Start(); err != nil {
 			log.Error(fmt.Sprintf("Could not start service: %v, %v", kind, err))
-			return
 		}
 	}
-	return
 }
 
 // Close handles graceful shutdown of the system.
