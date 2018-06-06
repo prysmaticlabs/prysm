@@ -93,22 +93,30 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 }
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
-func (s *ShardEthereum) Start() {
+func (s *ShardEthereum) Start() error {
 	log.Info("Starting sharding node")
 	for kind, service := range s.services {
 		// Start the next service.
 		if err := service.Start(); err != nil {
 			log.Error(fmt.Sprintf("Could not start service: %v, %v", kind, err))
+			if err := s.Close(); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() error {
+	erroredServices := make(map[reflect.Type]sharding.Service)
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			return fmt.Errorf(fmt.Sprintf("Could not stop service: %v", kind))
+			erroredServices[kind] = service
 		}
+	}
+	if len(erroredServices) > 0 {
+		return fmt.Errorf("Could not stop the following services: %v", erroredServices)
 	}
 	log.Info("Stopping sharding node")
 	return nil
@@ -169,7 +177,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	}
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		var p2p *shardp2p.Server
-		ctx.RetriveService(&p2p)
+		ctx.RetrieveService(&p2p)
 		return txpool.NewShardTXPool(p2p)
 	})
 }
@@ -179,13 +187,13 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 
 		var p2p *shardp2p.Server
-		ctx.RetriveService(&p2p)
+		ctx.RetrieveService(&p2p)
 
 		if actor == "notary" {
 			return notary.NewNotary(s.smcClient, p2p)
 		} else if actor == "proposer" {
 			var txPool *txpool.ShardTXPool
-			ctx.RetriveService(&txPool)
+			ctx.RetrieveService(&txPool)
 			return proposer.NewProposer(s.smcClient, p2p, txPool)
 		}
 

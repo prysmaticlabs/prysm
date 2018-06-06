@@ -9,7 +9,7 @@ import (
 // full control and shared access of necessary components and services
 // for a sharded Ethereum blockchain.
 type Node interface {
-	Start()
+	Start() error
 	Close() error
 	Register(constructor ServiceConstructor) error
 }
@@ -53,7 +53,7 @@ type Service interface {
 
 // RetrieveService sets the `service` argument to a currently running service
 // registered of a specific type.
-func (ctx *ServiceContext) RetriveService(service interface{}) error {
+func (ctx *ServiceContext) RetrieveService(service interface{}) error {
 	element := reflect.ValueOf(service).Elem()
 	if running, ok := ctx.Services[element.Type()]; ok {
 		element.Set(reflect.ValueOf(running))
