@@ -107,12 +107,12 @@ func (s *ShardEthereum) Start() {
 
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() error {
-	log.Info("Stopping sharding node")
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
 			return fmt.Errorf(fmt.Sprintf("Could not stop service: %v", kind))
 		}
 	}
+	log.Info("Stopping sharding node")
 	return nil
 }
 
