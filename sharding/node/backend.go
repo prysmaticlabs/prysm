@@ -92,7 +92,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 }
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
-func (s *ShardEthereum) Start() error {
+func (s *ShardEthereum) Start() {
 	log.Info("Starting sharding node")
 	for kind, service := range s.services {
 		// Start the next service.
@@ -101,17 +101,16 @@ func (s *ShardEthereum) Start() error {
 			s.Close()
 		}
 	}
-	return nil
 }
 
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() {
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			log.Info(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
+			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
 		}
 	}
-	log.Info("Stopping sharding node")
+	log.Crit("Stopping sharding node")
 }
 
 // SMCClient returns an instance of a client that communicates to a mainchain node via

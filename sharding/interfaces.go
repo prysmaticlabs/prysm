@@ -9,7 +9,7 @@ import (
 // full control and shared access of necessary components and services
 // for a sharded Ethereum blockchain.
 type Node interface {
-	Start() error
+	Start()
 	Close()
 	Register(constructor ServiceConstructor) error
 }
