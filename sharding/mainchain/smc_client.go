@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -19,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
@@ -34,6 +36,8 @@ type Client interface {
 	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
+	SMCFilterer() *contracts.SMCFilterer
+	TransactionReceipt(common.Hash) (*types.Receipt, error)
 	ChainReader() ethereum.ChainReader
 	DepositFlag() bool
 	SetDepositFlag(deposit bool)
@@ -141,6 +145,26 @@ func (s *SMCClient) SMCCaller() *contracts.SMCCaller {
 // SMCTransactor allows us to send tx's to the SMC programmatically.
 func (s *SMCClient) SMCTransactor() *contracts.SMCTransactor {
 	return &s.smc.SMCTransactor
+}
+
+// TransactionReceipt allows an SMCClient to retrieve transaction receipts on
+// the mainchain by hash.
+func (s *SMCClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+
+	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(context.Background(), hash) {
+		if err != nil {
+			return nil, fmt.Errorf("Unable to retrieve transaction: %v", err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
+
+	receipt, err := s.client.TransactionReceipt(context.Background(), hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return receipt, err
 }
 
 // DepositFlag returns true for cli flag --deposit.
