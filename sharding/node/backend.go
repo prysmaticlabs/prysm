@@ -39,16 +39,17 @@ type ShardEthereum struct {
 	smcClient    *mainchain.SMCClient // Provides bindings to the SMC deployed on the Ethereum mainchain.
 
 	// Lifecycle and service stores.
-	serviceFuncs []sharding.ServiceConstructor     // Service constructors (in dependency order).
-	services     map[reflect.Type]sharding.Service // Currently running services.
-	lock         sync.RWMutex
+	services map[reflect.Type]sharding.Service // Service registry.
+	lock     sync.RWMutex
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
 // geth sharding entrypoint.
 func New(ctx *cli.Context) (*ShardEthereum, error) {
 
-	shardEthereum := &ShardEthereum{}
+	shardEthereum := &ShardEthereum{
+		services: make(map[reflect.Type]sharding.Service),
+	}
 
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
@@ -92,49 +93,26 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 }
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
-func (s *ShardEthereum) Start() error {
+func (s *ShardEthereum) Start() {
 	log.Info("Starting sharding node")
-
-	services := make(map[reflect.Type]sharding.Service)
-	for _, constructor := range s.serviceFuncs {
-		// Create a new context for the particular service.
-		ctx := &sharding.ServiceContext{
-			Services: make(map[reflect.Type]sharding.Service),
-		}
-		// Copy needed for threaded access.
-		for kind, s := range services {
-			ctx.Services[kind] = s
-		}
-		// Construct and save the service.
-		service, err := constructor(ctx)
-		if err != nil {
-			return err
-		}
-		kind := reflect.TypeOf(service)
-		if _, exists := services[kind]; exists {
-			return fmt.Errorf("service already exists: %v", kind)
-		}
-		services[kind] = service
-	}
-
-	// Start each of the services.
-	started := []reflect.Type{}
-	for kind, service := range services {
-		// Start the next service, stopping all previous upon failure.
+	for kind, service := range s.services {
+		// Start the next service.
 		if err := service.Start(); err != nil {
-			for _, kind := range started {
-				services[kind].Stop()
-			}
-			return err
+			log.Error(fmt.Sprintf("Could not start service: %v, %v", kind, err))
+			return
 		}
-		// Mark the service started for potential cleanup.
-		started = append(started, kind)
 	}
-	return nil
+	return
 }
 
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() error {
+	log.Info("Stopping sharding node")
+	for kind, service := range s.services {
+		if err := service.Stop(); err != nil {
+			return fmt.Errorf(fmt.Sprintf("Could not stop service: %v", kind))
+		}
+	}
 	return nil
 }
 
@@ -149,7 +127,27 @@ func (s *ShardEthereum) SMCClient() *mainchain.SMCClient {
 func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.serviceFuncs = append(s.serviceFuncs, constructor)
+
+	ctx := &sharding.ServiceContext{
+		Services: make(map[reflect.Type]sharding.Service),
+	}
+
+	// Copy needed for threaded access.
+	for kind, s := range s.services {
+		ctx.Services[kind] = s
+	}
+
+	service, err := constructor(ctx)
+	if err != nil {
+		return err
+	}
+
+	kind := reflect.TypeOf(service)
+	if _, exists := s.services[kind]; exists {
+		return fmt.Errorf("service already exists: %v", kind)
+	}
+	s.services[kind] = service
+
 	return nil
 }
 
