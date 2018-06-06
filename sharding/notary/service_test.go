@@ -21,6 +21,9 @@ var (
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
 
+// Verifies that Notary implements the Actor interface.
+var _ = sharding.Actor(&Notary{})
+
 // Mock client for testing notary. Should this go into sharding/client/testing?
 type smcClient struct {
 	smc         *contracts.SMC
