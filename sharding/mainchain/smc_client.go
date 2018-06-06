@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net/rpc"
 	"os"
 	"sync"
 
@@ -21,11 +20,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 )
 
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
-var ClientIdentifier = "geth"
+const ClientIdentifier = "geth"
 
 // Client contains useful methods for a sharding node to interact with
 // an Ethereum client running on the mainchain.
@@ -67,13 +67,42 @@ func NewSMCClient(endpoint string, dataDirPath string, depositFlag bool, passwor
 	}
 
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
-	return &SMCClient{
+
+	// Sets up a connection to a Geth node via RPC.
+	rpcClient, err := dialRPC(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start rpc client: %v", err)
+	}
+	client := ethclient.NewClient(rpcClient)
+
+	// Check account existence and unlock account before starting.
+	accounts := ks.Accounts()
+	if len(accounts) == 0 {
+		return nil, fmt.Errorf("no accounts found")
+	}
+
+	smcClient := &SMCClient{
 		keystore:     ks,
 		endpoint:     endpoint,
 		depositFlag:  depositFlag,
 		dataDirPath:  dataDirPath,
 		passwordFile: passwordFile,
-	}, nil
+		rpcClient:    rpcClient,
+		client:       client,
+	}
+
+	if err := smcClient.unlockAccount(accounts[0]); err != nil {
+		return nil, fmt.Errorf("cannot unlock account: %v", err)
+	}
+
+	// Initializes bindings to SMC.
+	smc, err := initSMC(smcClient)
+	if err != nil {
+		return nil, err
+	}
+	smcClient.smc = smc
+
+	return smcClient, nil
 }
 
 // CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
@@ -119,7 +148,7 @@ func (s *SMCClient) DepositFlag() bool {
 	return s.depositFlag
 }
 
-// DepositFlag returns true for cli flag --deposit.
+// SetDepositFlag updates the deposit flag property of SMCClient.
 func (s *SMCClient) SetDepositFlag(deposit bool) {
 	s.depositFlag = deposit
 }
