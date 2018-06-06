@@ -1,4 +1,4 @@
-package node
+package mainchain
 
 import (
 	"context"
@@ -16,15 +16,15 @@ import (
 // dialRPC endpoint to node.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
+		endpoint = node.DefaultIPCEndpoint(ClientIdentifier)
 	}
 	return rpc.Dial(endpoint)
 }
 
 // initSMC initializes the sharding manager contract bindings.
 // If the SMC does not exist, it will be deployed.
-func initSMC(n *shardingNode) (*contracts.SMC, error) {
-	b, err := n.client.CodeAt(context.Background(), sharding.ShardingManagerAddress, nil)
+func initSMC(s *SMCClient) (*contracts.SMC, error) {
+	b, err := s.client.CodeAt(context.Background(), sharding.ShardingManagerAddress, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get contract code at %s: %v", sharding.ShardingManagerAddress.Hex(), err)
 	}
@@ -35,17 +35,17 @@ func initSMC(n *shardingNode) (*contracts.SMC, error) {
 	if len(b) == 0 {
 		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", sharding.ShardingManagerAddress.Hex()))
 
-		txOps, err := n.CreateTXOpts(big.NewInt(0))
+		txOps, err := s.CreateTXOpts(big.NewInt(0))
 		if err != nil {
 			return nil, fmt.Errorf("unable to initiate the transaction: %v", err)
 		}
 
-		addr, tx, contract, err := contracts.DeploySMC(txOps, n.client)
+		addr, tx, contract, err := contracts.DeploySMC(txOps, s.client)
 		if err != nil {
 			return nil, fmt.Errorf("unable to deploy sharding manager contract: %v", err)
 		}
 
-		for pending := true; pending; _, pending, err = n.client.TransactionByHash(context.Background(), tx.Hash()) {
+		for pending := true; pending; _, pending, err = s.client.TransactionByHash(context.Background(), tx.Hash()) {
 			if err != nil {
 				return nil, fmt.Errorf("unable to get transaction by hash: %v", err)
 			}
@@ -56,5 +56,5 @@ func initSMC(n *shardingNode) (*contracts.SMC, error) {
 		return contract, nil
 	}
 
-	return contracts.NewSMC(sharding.ShardingManagerAddress, n.client)
+	return contracts.NewSMC(sharding.ShardingManagerAddress, s.client)
 }

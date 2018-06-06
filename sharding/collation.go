@@ -12,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/utils"
 )
 
-// Collation base struct.
+// Collation defines a base struct that serves as a primitive equivalent of a "block"
+// in a sharded Ethereum blockchain.
 type Collation struct {
 	header *CollationHeader
 	// body represents the serialized blob of a collation's transactions.
