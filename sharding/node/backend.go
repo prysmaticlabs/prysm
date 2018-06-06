@@ -99,27 +99,21 @@ func (s *ShardEthereum) Start() error {
 		// Start the next service.
 		if err := service.Start(); err != nil {
 			log.Error(fmt.Sprintf("Could not start service: %v, %v", kind, err))
-			if err := s.Close(); err != nil {
-				return err
-			}
+			s.Close()
 		}
 	}
 	return nil
 }
 
 // Close handles graceful shutdown of the system.
-func (s *ShardEthereum) Close() error {
+func (s *ShardEthereum) Close() {
 	erroredServices := make(map[reflect.Type]sharding.Service)
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			erroredServices[kind] = service
+			log.Info(fmt.Sprintf("Could not stop the following service: %v, %v", erroredServices, err)
 		}
 	}
-	if len(erroredServices) > 0 {
-		return fmt.Errorf("Could not stop the following services: %v", erroredServices)
-	}
 	log.Info("Stopping sharding node")
-	return nil
 }
 
 // SMCClient returns an instance of a client that communicates to a mainchain node via

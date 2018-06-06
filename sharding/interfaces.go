@@ -10,7 +10,7 @@ import (
 // for a sharded Ethereum blockchain.
 type Node interface {
 	Start() error
-	Close() error
+	Close()
 	Register(constructor ServiceConstructor) error
 }
 
