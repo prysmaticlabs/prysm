@@ -3,6 +3,7 @@ package notary
 import (
 	"context"
 	"math/big"
+	"reflect"
 	"testing"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -32,6 +33,44 @@ type mockNode struct {
 	backend     *backends.SimulatedBackend
 }
 
+func (m *mockNode) GetChain() reflect.Value {
+	//typ := reflect.TypeOf(m.backend)
+	val := reflect.ValueOf(*m.backend)
+	return val.Field(1).MethodByName("GetBlockByHash")
+}
+
+func (m *mockNode) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	return m.GetChain().Interface().(*core.BlockChain).GetBlockByHash(hash), nil
+
+}
+
+func (m *mockNode) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	return m.GetChain().Interface().(*core.BlockChain).GetBlockByNumber(number.Uint64()), nil
+}
+
+func (m *mockNode) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return m.GetChain().Interface().(*core.BlockChain).GetHeaderByHash(hash), nil
+}
+
+func (m *mockNode) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return m.GetChain().Interface().(*core.BlockChain).GetHeaderByNumber(number.Uint64()), nil
+}
+
+func (m *mockNode) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
+
+	tx := m.GetChain().Interface().(*core.BlockChain).GetBlockByHash(blockHash).Transactions()
+	return uint(len(tx)), nil
+}
+
+func (m *mockNode) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
+	tx := m.GetChain().Interface().(*core.BlockChain).GetBlockByHash(blockHash).Transactions()
+	return tx[index], nil
+}
+
+func (m *mockNode) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
 func (m *mockNode) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
@@ -41,8 +80,7 @@ func (m *mockNode) SMCCaller() *contracts.SMCCaller {
 }
 
 func (m *mockNode) ChainReader() ethereum.ChainReader {
-	m.t.Fatal("ChainReader not implemented")
-	return nil
+	return m
 }
 
 func (m *mockNode) Context() *cli.Context {
@@ -250,38 +288,34 @@ func TestReleaseNotary(t *testing.T) {
 	// The remaining part of the test is dependant on access to chainreader
 	// Unable to access block number for releaseNotary
 
-	/*
+	balance, err := backend.BalanceAt(context.Background(), addr, nil)
+	if err != nil {
+		t.Error("unable to retrieve balance")
+	}
 
-		balance, err := backend.BalanceAt(context.Background(), addr, nil)
-		if err != nil {
-			t.Error("unable to retrieve balance")
-		}
+	err = releaseNotary(node)
+	backend.Commit()
 
-			err = releaseNotary(node)
-			backend.Commit()
+	if err != nil {
 
-			if err != nil {
+		t.Fatal(err)
+	}
 
-				t.Fatal(err)
-			}
+	nreg, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nreg.Deposited {
+		t.Error("Unable to release Notary and deposit money back")
+	}
 
+	newbalance, err := backend.BalanceAt(context.Background(), addr, nil)
+	if err != nil {
+		t.Error("unable to retrieve balance")
+	}
 
-		nreg, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if nreg.Deposited {
-			t.Error("Unable to release Notary and deposit money back")
-		}
-
-		newbalance, err := backend.BalanceAt(context.Background(), addr, nil)
-		if err != nil {
-			t.Error("unable to retrieve balance")
-		}
-
-		if balance.Cmp(newbalance) != 1 {
-			t.Errorf("Deposit was not returned, balance is currently:", newbalance)
-		}
-	*/
+	if balance.Cmp(newbalance) != 1 {
+		t.Errorf("Deposit was not returned, balance is currently:", newbalance)
+	}
 
 }
