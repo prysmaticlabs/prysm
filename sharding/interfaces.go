@@ -24,8 +24,8 @@ type TXPool interface{}
 
 // Actor refers to either a notary, proposer, or observer in the sharding spec.
 type Actor interface {
-	Start() error
-	Stop() error
+	Service
+	// TODO: will actors have actor-specific methods? To be decided.
 }
 
 // ServiceContext is a collection of service independent options inherited from
@@ -58,5 +58,5 @@ func (ctx *ServiceContext) Service(service interface{}) error {
 		element.Set(reflect.ValueOf(running))
 		return nil
 	}
-	return fmt.Errorf("unknown service")
+	return fmt.Errorf("unknown service: %T", service)
 }
