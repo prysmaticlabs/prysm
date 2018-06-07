@@ -74,8 +74,7 @@ func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot deserialize body: %v", err)
 	}
-	col := NewCollation(header, body, *txs)
-	return col, nil
+	return NewCollation(header, body, *txs), nil
 }
 
 // CanonicalHeaderHash gets a collation header hash that has been set as
