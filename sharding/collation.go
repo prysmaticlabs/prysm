@@ -12,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/utils"
 )
 
-// Collation base struct.
+// Collation defines a base struct that serves as a primitive equivalent of a "block"
+// in a sharded Ethereum blockchain.
 type Collation struct {
 	header *CollationHeader
 	// body represents the serialized blob of a collation's transactions.
@@ -119,61 +120,65 @@ func (c *Collation) CalculateChunkRoot() {
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
-// ConvertBackToTx converts raw blobs back to their original transactions.
-func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
-
-	blobs := make([]*types.Transaction, len(rawBlobs))
-
-	for i := 0; i < len(rawBlobs); i++ {
-
-		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
-
-		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
-		if err != nil {
-			return nil, fmt.Errorf("Creation of transactions from raw blobs failed: %v", err)
-		}
-	}
-	return blobs, nil
-
-}
-
-// SerializeTxToBlob method serializes the input tx
-// and returns the blobs in byte array.
-func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
-
+// convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding
+func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 	blobs := make([]*utils.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
 		err := error(nil)
 		blobs[i], err = utils.NewRawBlob(txs[i], false)
 		if err != nil {
-			return nil, fmt.Errorf("%v", err)
+			return nil, err
 		}
 	}
+	return blobs, nil
+}
+
+// SerializeTxToBlob converts transactions using two steps. First performs RLP encoding, and then blob encoding.
+func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
+	blobs, err := convertTxToRawBlob(txs)
+	if err != nil {
+		return nil, err
+	}
+
 	serializedTx, err := utils.Serialize(blobs)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	if int64(len(serializedTx)) > collationSizelimit {
-		return nil, fmt.Errorf("The serialized body exceeded the collation size limit: %v", serializedTx)
+		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), collationSizelimit)
 	}
 
 	return serializedTx, nil
 }
 
+// convertRawBlobToTx converts raw blobs back to their original transactions.
+func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
+	blobs := make([]*types.Transaction, len(rawBlobs))
+
+	for i := 0; i < len(rawBlobs); i++ {
+		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+
+		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("creation of transactions from raw blobs failed: %v", err)
+		}
+	}
+	return blobs, nil
+}
+
 // DeserializeBlobToTx takes byte array blob and converts it back
 // to original txs and returns the txs in tx array.
 func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
-
 	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
-	txs, err := ConvertBackToTx(deserializedBlobs)
+	txs, err := convertRawBlobToTx(deserializedBlobs)
 
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	return &txs, nil

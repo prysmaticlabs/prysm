@@ -20,6 +20,9 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
+// Verifies that Proposer implements the Actor interface.
+var _ = sharding.Actor(&Proposer{})
+
 var (
 	key, _            = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr              = crypto.PubkeyToAddress(key.PublicKey)
@@ -257,3 +260,4 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
 }
+
