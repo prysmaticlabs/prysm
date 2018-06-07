@@ -6,6 +6,8 @@ import (
 	"context"
 	"crypto/rand"
 	"math/big"
+	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -36,6 +38,8 @@ func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() error {
 	log.Info("Starting proposer service")
+
+	go p.subscribeTransactions()
 
 	// TODO: Receive TXs from shard TX generator or TXpool (Github Issues 153 and 161)
 	var txs []*types.Transaction
@@ -78,4 +82,30 @@ func (p *Proposer) Start() error {
 func (p *Proposer) Stop() error {
 	log.Info("Stopping proposer service")
 	return nil
+}
+
+func (p *Proposer) subscribeTransactions() {
+	// Subscribes to incoming transactions from the txpool via the shardp2p network.
+	for {
+		subchan := make(chan int)
+		sub := p.txpool.TransactionsFeed().Subscribe(subchan)
+		// 10 second time out for the subscription.
+		timeout := time.NewTimer(10 * time.Second)
+		select {
+		case v := <-subchan:
+			log.Info(fmt.Sprintf("Received transaction with id: %d", v))
+		case <-timeout.C:
+			log.Error("Receive timeout")
+		}
+
+		sub.Unsubscribe()
+		select {
+		case _, ok := <-sub.Err():
+			if ok {
+				log.Error("Channel not closed after unsubscribe")
+			}
+		case <-timeout.C:
+			log.Error("Unsubscribe timeout")
+		}
+	}
 }

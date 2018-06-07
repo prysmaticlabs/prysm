@@ -112,6 +112,8 @@ func (s *ShardEthereum) Start() {
 			s.Close()
 		}
 	}
+	// hang forever...
+	select {}
 }
 
 // Close handles graceful shutdown of the system.
