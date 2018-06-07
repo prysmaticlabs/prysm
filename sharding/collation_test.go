@@ -149,7 +149,6 @@ func Test_CalculatePOC(t *testing.T) {
 	fmt.Printf("%x\n", c.header.data.ChunkRoot)
 	fmt.Printf("%x\n", poc)
 
-
 	if poc == *c.header.data.ChunkRoot {
 		t.Errorf("Proof of Custody with Salt: %x does not differ from ChunkRoot without salt.", salt)
 	}
