@@ -104,7 +104,7 @@ func (c *Collation) ProposerAddress() *common.Address {
 
 // CalculateChunkRoot updates the collation header's chunk root based on the body.
 func (c *Collation) CalculateChunkRoot() {
-	chunks := c.BytesToChunks()          // wrapper allowing us to merklizing the chunks.
+	chunks := BytesToChunks(c.body)          // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
 }
@@ -120,14 +120,14 @@ func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 	if len(c.body) == 0 {
 		body = salt
 	}
-	chunks := c.BytesToChunks()    // wrapper allowing us to merklizing the chunks.
+	chunks := BytesToChunks(body)    // wrapper allowing us to merklizing the chunks.
 	return types.DeriveSha(chunks) // merklize the serialized blobs.
 }
 
 // BytesToChunks takes the collation body bytes and wraps it into type Chunks,
 // which can be merklized.
-func (c *Collation) BytesToChunks() Chunks {
-	return Chunks(c.body)
+func BytesToChunks(body []byte) Chunks {
+	return Chunks(body)
 }
 
 // ConvertBackToTx converts raw blobs back to their original transactions.
@@ -222,7 +222,7 @@ func (ch Chunks) Len() int { return len(ch) }
 func (ch Chunks) GetRlp(i int) []byte {
 	bytes, err := rlp.EncodeToBytes(ch[i])
 	if err != nil {
-		return bytes, err
+		panic(err)
 	}
 	return bytes
 }

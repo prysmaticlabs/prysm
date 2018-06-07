@@ -1,6 +1,8 @@
 package sharding
 
 import (
+	"fmt"
+
 	"bytes"
 	"crypto/rand"
 	"math/big"
@@ -140,9 +142,14 @@ func Test_CalculatePOC(t *testing.T) {
 	}
 	c := NewCollation(header, body, transactions)
 
-	salt := []byte{1, 0x9f}
 	c.CalculateChunkRoot()
+	salt := []byte{1, 0x9f}
+	fmt.Printf("%x\n", c.header.data.ChunkRoot)
 	poc := c.CalculatePOC(salt)
+	fmt.Printf("%x\n", c.header.data.ChunkRoot)
+	fmt.Printf("%x\n", poc)
+
+
 	if poc == *c.header.data.ChunkRoot {
 		t.Errorf("Proof of Custody with Salt: %x does not differ from ChunkRoot without salt.", salt)
 	}
