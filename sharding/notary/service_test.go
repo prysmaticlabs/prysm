@@ -93,10 +93,6 @@ func (s *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
 }
 
-func (m *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return nil, nil
-}
-
 // Helper/setup methods.
 // TODO: consider moving these to common sharding testing package as the notary and smc tests
 // use them.
