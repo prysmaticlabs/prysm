@@ -22,7 +22,7 @@ func createCollation(client mainchain.Client, shardId *big.Int, period *big.Int,
 	}
 
 	// check with SMC to see if we can add the header.
-	if a, _ := checkHeaderSubmitted(client, shardId, period); !a {
+	if a, _ := checkHeaderAdded(client, shardId, period); !a {
 		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
 	}
 
@@ -46,7 +46,7 @@ func createCollation(client mainchain.Client, shardId *big.Int, period *big.Int,
 
 	// add proposer signature to collation header.
 	collation.Header().AddSig(sig)
-
+	log.Info(fmt.Sprintf("Collation %v created for shardID %v period %v", collation.Header().Hash().Hex(), collation.Header().ShardID(), collation.Header().Period()))
 	return collation, nil
 }
 
@@ -54,7 +54,7 @@ func createCollation(client mainchain.Client, shardId *big.Int, period *big.Int,
 // an addHeader transaction to the sharding manager contract.
 // There can only exist one header per period per shard, it's proposer's
 // responsibility to check if a header has been added.
-func addHeader(client mainchain.Client, collation sharding.Collation) error {
+func addHeader(client mainchain.Client, collation *sharding.Collation) error {
 	log.Info("Adding header to SMC")
 
 	txOps, err := client.CreateTXOpts(big.NewInt(0))
@@ -62,6 +62,7 @@ func addHeader(client mainchain.Client, collation sharding.Collation) error {
 		return fmt.Errorf("unable to initiate add header transaction: %v", err)
 	}
 
+	// TODO: Copy is inefficient here. Let's research how to best convert hash to [32]byte.
 	var chunkRoot [32]byte
 	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
 
@@ -69,23 +70,20 @@ func addHeader(client mainchain.Client, collation sharding.Collation) error {
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}
-	log.Info("Proposer add header transaction hash: %v", tx.Hash().Hex())
+	log.Info(fmt.Sprintf("Add header transaction hash: %v", tx.Hash().Hex()))
 	return nil
 }
 
-// checkHeaderSubmitted checks if a collation header has already
+// checkHeaderAdded checks if a collation header has already
 // submitted to the main chain. There can only be one header per shard
 // per period, proposer should check if a header's already submitted,
-// checkHeaderSubmitted returns true if it's available, false if it's unavailable.
-func checkHeaderSubmitted(client mainchain.Client, shardId *big.Int, period *big.Int) (bool, error) {
-	log.Info("Checking header in shard: %d, period: %d", shardId, period)
-
+// checkHeaderAdded returns true if it's available, false if it's unavailable.
+func checkHeaderAdded(client mainchain.Client, shardId *big.Int, period *big.Int) (bool, error) {
 	// Get the period of the last header.
 	lastPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardId)
 	if err != nil {
 		return false, fmt.Errorf("unable to get the period of last submitted collation: %v", err)
 	}
-
 	// True if current period is greater than last added period.
 	return period.Cmp(lastPeriod) > 0, nil
 }

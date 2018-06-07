@@ -187,7 +187,7 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// normal test case #1 create collation with normal parameters.
-	err = addHeader(node, *collation)
+	err = addHeader(node, collation)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -233,14 +233,14 @@ func TestCheckCollation(t *testing.T) {
 		backend.Commit()
 	}
 
-	err = addHeader(node, *collation)
+	err = addHeader(node, collation)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
 	backend.Commit()
 
 	// normal test case 1: check if we can still add header for period 1, should return false.
-	a, err := checkHeaderSubmitted(node, big.NewInt(0), big.NewInt(1))
+	a, err := checkHeaderAdded(node, big.NewInt(0), big.NewInt(1))
 	if err != nil {
 		t.Errorf("Can not check header submitted: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
 	// normal test case 2: check if we can add header for period 2, should return true.
-	a, err = checkHeaderSubmitted(node, big.NewInt(0), big.NewInt(2))
+	a, err = checkHeaderAdded(node, big.NewInt(0), big.NewInt(2))
 	if !a {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
