@@ -104,7 +104,7 @@ func (c *Collation) ProposerAddress() *common.Address {
 
 // CalculateChunkRoot updates the collation header's chunk root based on the body.
 func (c *Collation) CalculateChunkRoot() {
-	chunks := BytesToChunks(c.body)          // wrapper allowing us to merklizing the chunks.
+	chunks := BytesToChunks(c.body)      // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
 }
@@ -120,7 +120,7 @@ func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 	if len(c.body) == 0 {
 		body = salt
 	}
-	chunks := BytesToChunks(body)    // wrapper allowing us to merklizing the chunks.
+	chunks := BytesToChunks(body)  // wrapper allowing us to merklizing the chunks.
 	return types.DeriveSha(chunks) // merklize the serialized blobs.
 }
 
