@@ -11,7 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/database"
 )
 
-// Shard base struct.
+// Shard defines a way for services attached to a sharding-enabled node to
+// instantiate shards with a given ID and backend. This struct serves as
+// an abstraction that contains useful methods to fetch collations corresponding to
+// a shard from the DB, methods to check for data availability, and more.
 type Shard struct {
 	shardDB database.ShardBackend
 	shardID *big.Int
@@ -25,7 +28,7 @@ func NewShard(shardID *big.Int, shardDB database.ShardBackend) *Shard {
 	}
 }
 
-// ShardID gets the shard's identifier.
+// ShardID gets the shard's unique identifier.
 func (s *Shard) ShardID() *big.Int {
 	return s.shardID
 }
@@ -58,8 +61,8 @@ func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 	return &header, nil
 }
 
-// CollationByHash fetches full collation.
-func (s *Shard) CollationByHash(headerHash *common.Hash) (*Collation, error) {
+// CollationByHeaderHash fetches a collation by its header's hash from the DB.
+func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, error) {
 	header, err := s.HeaderByHash(headerHash)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch header by hash: %v", err)
@@ -110,10 +113,10 @@ func (s *Shard) CanonicalCollation(shardID *big.Int, period *big.Int) (*Collatio
 		return nil, fmt.Errorf("error while getting canonical header hash: %v", err)
 	}
 
-	return s.CollationByHash(h)
+	return s.CollationByHeaderHash(h)
 }
 
-// BodyByChunkRoot fetches a collation body.
+// BodyByChunkRoot fetches a collation body given its chunk root.
 func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 	body, err := s.shardDB.Get(chunkRoot.Bytes())
 	if err != nil {

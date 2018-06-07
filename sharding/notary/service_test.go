@@ -8,7 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
@@ -21,60 +23,60 @@ var (
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
 
+// Verifies that Notary implements the Actor interface.
+var _ = sharding.Actor(&Notary{})
+
 // Mock client for testing notary. Should this go into sharding/client/testing?
-type mockNode struct {
+type smcClient struct {
 	smc         *contracts.SMC
+	depositFlag bool
 	t           *testing.T
-	DepositFlag bool
 }
 
-func (m *mockNode) Account() *accounts.Account {
+func (s *smcClient) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (m *mockNode) SMCCaller() *contracts.SMCCaller {
-	return &m.smc.SMCCaller
+func (s *smcClient) SMCCaller() *contracts.SMCCaller {
+	return &s.smc.SMCCaller
 }
 
-func (m *mockNode) ChainReader() ethereum.ChainReader {
-	m.t.Fatal("ChainReader not implemented")
+func (s *smcClient) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (m *mockNode) Context() *cli.Context {
+func (s *smcClient) Context() *cli.Context {
 	return nil
 }
 
-func (m *mockNode) Register(s sharding.ServiceConstructor) error {
-	return nil
+func (s *smcClient) SMCTransactor() *contracts.SMCTransactor {
+	return &s.smc.SMCTransactor
 }
 
-func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &m.smc.SMCTransactor
+func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
+	return &s.smc.SMCFilterer
 }
 
-func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
+}
+
+func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (m *mockNode) DepositFlagSet() bool {
-	return m.DepositFlag
+func (s *smcClient) DepositFlag() bool {
+	return s.depositFlag
 }
 
-func (m *mockNode) DataDirFlag() string {
+func (s *smcClient) SetDepositFlag(deposit bool) {
+	s.depositFlag = deposit
+}
+
+func (s *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
-}
-
-// Unused mockClient methods.
-func (m *mockNode) Start() error {
-	m.t.Fatal("Start called")
-	return nil
-}
-
-func (m *mockNode) Close() {
-	m.t.Fatal("Close called")
 }
 
 // Helper/setup methods.
@@ -93,10 +95,10 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &mockNode{smc: smc, t: t}
+	client := &smcClient{smc: smc, t: t}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(node)
+	b, err := isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +113,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
-	b, err = isAccountInNotaryPool(node)
+	b, err = isAccountInNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +124,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 func TestJoinNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &mockNode{smc: smc, t: t, DepositFlag: false}
+	client := &smcClient{smc: smc, depositFlag: false, t: t}
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -132,14 +134,14 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	node.DepositFlag = false
-	err = joinNotaryPool(node)
+	client.SetDepositFlag(false)
+	err = joinNotaryPool(client)
 	if err == nil {
 		t.Error("Joined notary pool while --deposit was not present")
 	}
 
-	node.DepositFlag = true
-	err = joinNotaryPool(node)
+	client.SetDepositFlag(true)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +157,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(node)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Error(err)
 	}
