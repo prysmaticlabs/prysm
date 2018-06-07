@@ -1,3 +1,5 @@
+// Package utils defines independent utilities helpful for a sharding-enabled,
+// Ethereum blockchain such as blob serialization as more.
 package utils
 
 import (
