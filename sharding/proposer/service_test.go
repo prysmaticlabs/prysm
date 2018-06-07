@@ -1,7 +1,6 @@
 package proposer
 
 import (
-	"context"
 	"math/big"
 	"testing"
 
@@ -20,9 +19,6 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-// Verifies that Proposer implements the Actor interface.
-var _ = sharding.Actor(&Proposer{})
-
 var (
 	key, _            = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr              = crypto.PubkeyToAddress(key.PublicKey)
@@ -33,54 +29,50 @@ var (
 type mockNode struct {
 	smc         *contracts.SMC
 	t           *testing.T
-	DepositFlag bool
+	depositFlag bool
 	backend     *backends.SimulatedBackend
 }
 
-type ChainReader interface {
-	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
-}
-
-func (m *mockNode) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return nil, nil
-}
-
-func (m *mockNode) Account() *accounts.Account {
+func (s *mockNode) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (m *mockNode) SMCCaller() *contracts.SMCCaller {
-	return &m.smc.SMCCaller
+func (s *mockNode) SMCCaller() *contracts.SMCCaller {
+	return &s.smc.SMCCaller
 }
 
-func (m *mockNode) ChainReader() ethereum.ChainReader {
+func (s *mockNode) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (m *mockNode) Context() *cli.Context {
+func (s *mockNode) Context() *cli.Context {
 	return nil
 }
 
-func (m *mockNode) Register(s sharding.ServiceConstructor) error {
-	return nil
+func (s *mockNode) SMCTransactor() *contracts.SMCTransactor {
+	return &s.smc.SMCTransactor
 }
 
-func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &m.smc.SMCTransactor
+func (s *mockNode) SMCFilterer() *contracts.SMCFilterer {
+	return &s.smc.SMCFilterer
 }
 
-func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
+}
+
+func (s *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (m *mockNode) DepositFlagSet() bool {
-	return m.DepositFlag
+func (s *mockNode) DepositFlag() bool {
+	return false
 }
 
-func (m *mockNode) DataDirFlag() string {
-	return "/tmp/datadir"
+func (s *mockNode) SetDepositFlag(deposit bool) {
+	s.depositFlag = deposit
 }
 
 func (m *mockNode) Sign(hash common.Hash) ([]byte, error) {
@@ -89,6 +81,7 @@ func (m *mockNode) Sign(hash common.Hash) ([]byte, error) {
 
 // Unused mockClient methods.
 func (m *mockNode) Start() error {
+	m.t.Fatal("Start called")
 	return nil
 }
 
@@ -96,8 +89,8 @@ func (m *mockNode) Close() {
 	m.t.Fatal("Close called")
 }
 
-func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return nil, nil
+func (s *mockNode) DataDirPath() string {
+	return "/tmp/datadir"
 }
 
 func transactOpts() *bind.TransactOpts {
@@ -260,4 +253,3 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
 }
-
