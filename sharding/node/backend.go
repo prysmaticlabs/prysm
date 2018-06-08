@@ -19,14 +19,13 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
-
 
 const shardChainDbName = "shardchaindata"
 
@@ -34,12 +33,12 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.ShardConfig  // Holds necessary information to configure shards.
-	txPool       *txpool.ShardTXPool  // Defines the sharding-specific txpool. To be designed.
-	actor        sharding.Actor       // Either notary, proposer, or observer.
-	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
-	eventFeed    *event.Feed          // Used to enable P2P related interactions via different sharding actors.
-	smcClient    *mainchain.SMCClient // Provides bindings to the SMC deployed on the Ethereum mainchain.
+	shardConfig  *params.ShardConfig   // Holds necessary information to configure shards.
+	txPool       *txpool.ShardTXPool   // Defines the sharding-specific txpool. To be designed.
+	actor        sharding.Actor        // Either notary, proposer, or observer.
+	shardChainDb database.ShardBackend // Access to the persistent db to store shard data.
+	eventFeed    *event.Feed           // Used to enable P2P related interactions via different sharding actors.
+	smcClient    *mainchain.SMCClient  // Provides bindings to the SMC deployed on the Ethereum mainchain.
 
 	// Lifecycle and service stores.
 	services map[reflect.Type]sharding.Service // Service registry.
@@ -76,8 +75,16 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
+	shardChainDb, err := database.NewShardDB(path, shardChainDbName)
+	if err != nil {
+		return nil, err
+	}
+
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
+
+	// Adds the initialized shardChainDb to the ShardEthereum instance.
+	shardEthereum.shardChainDb = shardChainDb
 
 	if err := shardEthereum.registerP2P(); err != nil {
 		return nil, err
@@ -184,20 +191,13 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 		ctx.RetrieveService(&p2p)
 
 		if actor == "notary" {
-			return notary.NewNotary(s.smcClient, p2p)
+			return notary.NewNotary(s.smcClient, p2p, s.shardChainDb)
 		} else if actor == "proposer" {
 			var txPool *txpool.ShardTXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(s.smcClient, p2p, txPool)
+			return proposer.NewProposer(s.smcClient, p2p, txPool, s.shardChainDb)
 		}
 
-		return observer.NewObserver(p2p)
+		return observer.NewObserver(p2p, s.shardChainDb)
 	})
-}
-
-// registerShardChainDb is relevant to all actors in the sharded system. To register
-// shardChainDb grants actor access to a persistent db (either leveldb, badger, or others)
-// the detail of which db to use is still yet to be figured out.
-func (s *ShardEthereum) registerShardChainDb(dataDir string) error {
-	return nil
 }
