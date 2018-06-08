@@ -3,9 +3,9 @@
 package proposer
 
 import (
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 )
 
@@ -16,13 +16,13 @@ type Proposer struct {
 	client       mainchain.Client
 	shardp2p     sharding.ShardP2P
 	txpool       sharding.TXPool
-	shardChainDb database.ShardBackend
+	shardChainDb ethdb.Database
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
-func NewProposer(client mainchain.Client, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb database.ShardBackend) (*Proposer, error) {
+func NewProposer(client mainchain.Client, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database) (*Proposer, error) {
 	// Initializes a  directory persistent db.
 	return &Proposer{client, shardp2p, txpool, shardChainDb}, nil
 }

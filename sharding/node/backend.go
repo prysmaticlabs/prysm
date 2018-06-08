@@ -19,12 +19,13 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 const shardChainDbName = "shardchaindata"
@@ -33,12 +34,12 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.ShardConfig   // Holds necessary information to configure shards.
-	txPool       *txpool.ShardTXPool   // Defines the sharding-specific txpool. To be designed.
-	actor        sharding.Actor        // Either notary, proposer, or observer.
-	shardChainDb database.ShardBackend // Access to the persistent db to store shard data.
-	eventFeed    *event.Feed           // Used to enable P2P related interactions via different sharding actors.
-	smcClient    *mainchain.SMCClient  // Provides bindings to the SMC deployed on the Ethereum mainchain.
+	shardConfig  *params.ShardConfig  // Holds necessary information to configure shards.
+	txPool       *txpool.ShardTXPool  // Defines the sharding-specific txpool. To be designed.
+	actor        sharding.Actor       // Either notary, proposer, or observer.
+	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
+	eventFeed    *event.Feed          // Used to enable P2P related interactions via different sharding actors.
+	smcClient    *mainchain.SMCClient // Provides bindings to the SMC deployed on the Ethereum mainchain.
 
 	// Lifecycle and service stores.
 	services map[reflect.Type]sharding.Service // Service registry.
