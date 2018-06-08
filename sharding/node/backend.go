@@ -27,6 +27,9 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
+
+const shardChainDbName = "shardchaindata"
+
 // ShardEthereum is a service that is registered and started when geth is launched.
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
@@ -190,4 +193,11 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 
 		return observer.NewObserver(p2p)
 	})
+}
+
+// registerShardChainDb is relevant to all actors in the sharded system. To register
+// shardChainDb grants actor access to a persistent db (either leveldb, badger, or others)
+// the detail of which db to use is still yet to be figured out.
+func (s *ShardEthereum) registerShardChainDb(dataDir string) error {
+	return nil
 }
