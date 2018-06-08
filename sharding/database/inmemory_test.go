@@ -2,10 +2,12 @@ package database
 
 import (
 	"testing"
+
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-// Verifies that ShardKV implements the ShardBackend interface.
-var _ = ShardBackend(&ShardKV{})
+// Verifies that ShardKV implements the ethdb interface.
+var _ = ethdb.Database(&ShardKV{})
 
 func Test_ShardKVPut(t *testing.T) {
 	kv := NewShardKV()
