@@ -8,28 +8,36 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/sharding/database"
 )
 
 type mockShardDB struct {
-	kv map[common.Hash]*[]byte
+	kv map[common.Hash][]byte
 }
 
-func (m *mockShardDB) Get(k common.Hash) (*[]byte, error) {
-	return nil, nil
+func (m *mockShardDB) Get(k []byte) ([]byte, error) {
+	return []byte{}, nil
 }
 
-func (m *mockShardDB) Has(k common.Hash) bool {
-	return false
+func (m *mockShardDB) Has(k []byte) (bool, error) {
+	return false, nil
 }
 
-func (m *mockShardDB) Put(k common.Hash, v []byte) error {
+func (m *mockShardDB) Put(k []byte, v []byte) error {
 	return fmt.Errorf("error updating db")
 }
 
-func (m *mockShardDB) Delete(k common.Hash) error {
+func (m *mockShardDB) Delete(k []byte) error {
 	return fmt.Errorf("error deleting value in db")
+}
+
+func (m *mockShardDB) Close() {
+}
+
+func (m *mockShardDB) NewBatch() ethdb.Batch {
+	return nil
 }
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.
@@ -64,7 +72,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 
 	// creates a well-functioning shardDB.
 	shardDB := database.NewShardKV()
@@ -95,7 +103,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	}
 }
 
-func TestShard_CollationByHash(t *testing.T) {
+func TestShard_CollationByHeaderHash(t *testing.T) {
 	emptyAddr := common.BytesToAddress([]byte{})
 
 	// Empty chunk root.
@@ -124,7 +132,7 @@ func TestShard_CollationByHash(t *testing.T) {
 	newHash := collation.Header().Hash()
 
 	// should not be able to fetch collation without saving first.
-	if _, err := shard.CollationByHash(&newHash); err == nil {
+	if _, err := shard.CollationByHeaderHash(&newHash); err == nil {
 		t.Errorf("should not be able to fetch collation before saving first")
 	}
 
@@ -133,7 +141,7 @@ func TestShard_CollationByHash(t *testing.T) {
 		t.Fatalf("could not save header: %v", err)
 	}
 
-	if _, err := shard.CollationByHash(&hash); err == nil {
+	if _, err := shard.CollationByHeaderHash(&hash); err == nil {
 		t.Errorf("should not be able to fetch collation if body has not been saved")
 	}
 
@@ -142,7 +150,7 @@ func TestShard_CollationByHash(t *testing.T) {
 		t.Fatalf("cannot save collation: %v", err)
 	}
 
-	dbCollation, err := shard.CollationByHash(&hash)
+	dbCollation, err := shard.CollationByHeaderHash(&hash)
 	if err != nil {
 		t.Fatalf("could not fetch collation by hash: %v", err)
 	}
@@ -295,10 +303,10 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 	}
 
 	// setting the val of the key to nil.
-	if err := shard.shardDB.Put(emptyHash, nil); err != nil {
+	if err := shard.shardDB.Put([]byte{}, nil); err != nil {
 		t.Fatalf("could not update shardDB: %v", err)
 	}
-	if _, err := shard.BodyByChunkRoot(&emptyHash); err != nil {
+	if _, err := shard.BodyByChunkRoot(&emptyHash); err == nil {
 		t.Errorf("value set as nil in shardDB should return error from BodyByChunkRoot")
 	}
 
@@ -346,7 +354,7 @@ func TestShard_SetAvailability(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 
 	// creates a well-functioning shardDB.
 	shardDB := database.NewShardKV()
@@ -401,7 +409,7 @@ func TestShard_SaveCollation(t *testing.T) {
 
 func TestShard_SaveHeader(t *testing.T) {
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 	emptyHash := common.BytesToHash([]byte{})
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
@@ -413,7 +421,7 @@ func TestShard_SaveHeader(t *testing.T) {
 
 func TestShard_SaveBody(t *testing.T) {
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
-	mockDB := &mockShardDB{kv: make(map[common.Hash]*[]byte)}
+	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
 	if err := errorShard.SaveBody([]byte{1, 2, 3}); err == nil {

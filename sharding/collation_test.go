@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/sharding/utils"
 )
 
 // fieldAccess is to access unexported fields in structs in another package
@@ -131,34 +132,160 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 // BENCHMARK TESTS
 
 // Helper function to generate test that completes round trip serialization tests for a specific number of transactions.
-func runBenchTest(b *testing.B, numTransactions int) {
+func makeRandomTransactions(numTransactions int) []*types.Transaction {
 	var txs []*types.Transaction
 	for i := 0; i < numTransactions; i++ {
-		data := make([]byte, 650)
+		// 150 is the current average tx size, based on recent blocks (i.e. tx size = block size / # txs)
+		// for example: https://etherscan.io/block/5722271
+		data := make([]byte, 150)
 		rand.Read(data)
 		txs = append(txs, types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
 	}
+
+	return txs
+}
+
+// Benchmarks serialization and deserialization of a set of transactions
+func runSerializeRoundtrip(b *testing.B, numTransactions int) {
+	txs := makeRandomTransactions(numTransactions)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		results, _ := SerializeTxToBlob(txs)
-		_, _ = DeserializeBlobToTx(results)
+		blob, err := SerializeTxToBlob(txs)
+		if err != nil {
+			b.Errorf("SerializeTxToBlob failed: %v", err)
+		}
+
+		_, err = DeserializeBlobToTx(blob)
+		if err != nil {
+			b.Errorf("DeserializeBlobToTx failed: %v", err)
+		}
+	}
+}
+
+// Benchmarks serialization of a set of transactions. Does both RLP encoding and serialization of blob
+func runSerializeBenchmark(b *testing.B, numTransactions int) {
+	txs := makeRandomTransactions(numTransactions)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := SerializeTxToBlob(txs)
+		if err != nil {
+			b.Errorf("SerializeTxToBlob failed: %v", err)
+		}
+	}
+}
+
+// Benchmarks just the process of converting an RLP encoded set of transactions into serialized data
+func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
+	txs := makeRandomTransactions(numTransactions)
+	blobs, err := convertTxToRawBlob(txs)
+	if err != nil {
+		b.Errorf("SerializeTxToRawBlock failed: %v", err)
 	}
 
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := utils.Serialize(blobs)
+		if err != nil {
+			b.Errorf("utils.Serialize failed: %v", err)
+		}
+	}
 }
 
-func BenchmarkSerialization10(b *testing.B) {
-	runBenchTest(b, 10)
+// Benchmarks deserialization of a set of transactions. Does both deserialization of blob and RLP decoding.
+func runDeserializeBenchmark(b *testing.B, numTransactions int) {
+	txs := makeRandomTransactions(numTransactions)
+	blob, err := SerializeTxToBlob(txs)
+	if err != nil {
+		b.Errorf("SerializeTxToRawBlock failed: %v", err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := DeserializeBlobToTx(blob)
+		if err != nil {
+			b.Errorf("DeserializeBlobToTx failed: %v", err)
+		}
+	}
 }
 
-func BenchmarkSerialization100(b *testing.B) {
-	runBenchTest(b, 100)
+// Benchmarks just the process of converting serialized data into a blob that's ready for RLP decoding
+func runDeserializeNoRLPBenchmark(b *testing.B, numTransactions int) {
+	txs := makeRandomTransactions(numTransactions)
+	blob, err := SerializeTxToBlob(txs)
+	if err != nil {
+		b.Errorf("SerializeTxToBlob failed: %v", err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := utils.Deserialize(blob)
+		if err != nil {
+			b.Errorf("utils.Deserialize failed: %v", err)
+		}
+	}
 }
 
-func BenchmarkSerialization1000(b *testing.B) {
-	runBenchTest(b, 1000)
+func BenchmarkSerializeNoRLP10(b *testing.B) {
+	runSerializeNoRLPBenchmark(b, 10)
 }
 
-func BenchmarkSerialization10000(b *testing.B) {
-	runBenchTest(b, 10000)
+func BenchmarkSerializeNoRLP100(b *testing.B) {
+	runSerializeNoRLPBenchmark(b, 100)
+}
+
+func BenchmarkSerializeNoRLP1000(b *testing.B) {
+	runSerializeNoRLPBenchmark(b, 1000)
+}
+
+func BenchmarkSerialize10(b *testing.B) {
+	runSerializeBenchmark(b, 10)
+}
+
+func BenchmarkSerialize100(b *testing.B) {
+	runSerializeBenchmark(b, 100)
+}
+
+func BenchmarkSerialize1000(b *testing.B) {
+	runSerializeBenchmark(b, 1000)
+}
+
+func BenchmarkDeserialize10(b *testing.B) {
+	runDeserializeBenchmark(b, 10)
+}
+
+func BenchmarkDeserialize100(b *testing.B) {
+	runDeserializeBenchmark(b, 100)
+}
+
+func BenchmarkDeserialize1000(b *testing.B) {
+	runDeserializeBenchmark(b, 1000)
+}
+
+func BenchmarkDeserializeNoRLP10(b *testing.B) {
+	runDeserializeNoRLPBenchmark(b, 10)
+}
+
+func BenchmarkDeserializeNoRLP100(b *testing.B) {
+	runDeserializeNoRLPBenchmark(b, 100)
+}
+
+func BenchmarkDeserializeNoRLP1000(b *testing.B) {
+	runDeserializeNoRLPBenchmark(b, 1000)
+}
+
+func BenchmarkSerializeRoundtrip10(b *testing.B) {
+	runSerializeRoundtrip(b, 10)
+}
+
+func BenchmarkSerializeRoundtrip100(b *testing.B) {
+	runSerializeRoundtrip(b, 100)
+}
+
+func BenchmarkSerializeRoundtrip1000(b *testing.B) {
+	runSerializeRoundtrip(b, 1000)
 }

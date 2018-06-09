@@ -1,20 +1,26 @@
+// Package notary defines all relevant functionality for a Notary actor
+// within a sharded Ethereum blockchain.
 package notary
 
 import (
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/node"
+	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 )
 
 // Notary holds functionality required to run a collation notary
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	node node.Node
+	smcClient    *mainchain.SMCClient
+	shardp2p     sharding.ShardP2P
+	shardChainDb ethdb.Database
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(node node.Node) (*Notary, error) {
-	return &Notary{node}, nil
+func NewNotary(smcClient *mainchain.SMCClient, shardp2p sharding.ShardP2P, shardChainDb ethdb.Database) (*Notary, error) {
+	return &Notary{smcClient, shardp2p, shardChainDb}, nil
 }
 
 // Start the main routine for a notary.
@@ -22,15 +28,14 @@ func (n *Notary) Start() error {
 	log.Info("Starting notary service")
 
 	// TODO: handle this better through goroutines. Right now, these methods
-	// have their own nested channels and goroutines within them. We need
-	// to make this as flat as possible at the Notary layer.
-	if n.node.DepositFlagSet() {
-		if err := joinNotaryPool(n.node); err != nil {
+	// are blocking.
+	if n.smcClient.DepositFlag() {
+		if err := joinNotaryPool(n.smcClient); err != nil {
 			return err
 		}
 	}
 
-	return subscribeBlockHeaders(n.node)
+	return subscribeBlockHeaders(n.smcClient)
 }
 
 // Stop the main loop for notarizing collations.

@@ -338,6 +338,7 @@ func doLint(cmdline []string) {
 		"--enable=misspell",
 		"--enable=goconst",
 		"--min-occurrences=6", // for goconst
+		"--deadline=10m",
 	}
 	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
 
