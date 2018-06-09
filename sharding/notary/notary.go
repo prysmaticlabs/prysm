@@ -5,10 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -267,7 +267,7 @@ func leaveNotaryPool(client mainchain.Client) error {
 	if dreg, err := hasAccountBeenDeregistered(client); dreg || err != nil {
 		if !dreg {
 
-			return errors.New("Notary unable to be Deregistered Succesfully from Pool")
+			return errors.New("Notary unable to be Deregistered Successfully from Pool")
 		}
 
 		return err
@@ -382,7 +382,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 
 	// Checking if the pool index is valid
 	if nreg.PoolIndex.Int64() >= sharding.NotaryCommitSize {
-		return fmt.Errorf("Invalid Pool Index %d as it is more than the commitee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
+		return fmt.Errorf("Invalid Pool Index %d as it is more than the committee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
 	}
 
 	collationRecords, err := client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -416,7 +416,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 	inCommitee, err := client.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, shardID)
 
 	if err != nil {
-		return fmt.Errorf("Unable to know if notary is in commitee: %v", err)
+		return fmt.Errorf("Unable to know if notary is in committee: %v", err)
 	}
 
 	if inCommitee != client.Account().Address {
