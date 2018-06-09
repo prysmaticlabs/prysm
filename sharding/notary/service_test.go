@@ -3,7 +3,6 @@ package notary
 import (
 	"context"
 	"math/big"
-	"reflect"
 	"testing"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -34,40 +33,6 @@ type smcClient struct {
 	depositFlag bool
 	t           *testing.T
 	backend     *backends.SimulatedBackend
-}
-
-func (s *smcClient) GetChain() reflect.Value {
-	//typ := reflect.TypeOf(m.backend)
-	val := reflect.ValueOf(*s.backend)
-	return val.Field(1).Elem()
-}
-
-func (s *smcClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	return s.GetChain().Interface().(*core.BlockChain).GetBlockByHash(hash), nil
-
-}
-
-func (s *smcClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return s.GetChain().Interface().(*core.BlockChain).GetBlockByNumber(number.Uint64()), nil
-}
-
-func (s *smcClient) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	return s.GetChain().Interface().(*core.BlockChain).GetHeaderByHash(hash), nil
-}
-
-func (s *smcClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return s.GetChain().Interface().(*core.BlockChain).GetHeaderByNumber(number.Uint64()), nil
-}
-
-func (s *smcClient) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
-
-	tx := s.GetChain().Interface().(*core.BlockChain).GetBlockByHash(blockHash).Transactions()
-	return uint(len(tx)), nil
-}
-
-func (s *smcClient) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
-	tx := s.GetChain().Interface().(*core.BlockChain).GetBlockByHash(blockHash).Transactions()
-	return tx[index], nil
 }
 
 func (s *smcClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
@@ -318,4 +283,19 @@ func TestReleaseNotary(t *testing.T) {
 		}
 	*/
 
+}
+
+func TestSubmitVote(t *testing.T) {
+	backend, smc := setup()
+	node := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
+
+	err := joinNotaryPool(node)
+	if err != nil {
+		t.Error(err)
+	}
+	backend.Commit()
+
+	// TODO: vote Test is unable to continue until chainreader is implemented as
+	// finding the current period requires knowing the latest blocknumber on the
+	// chain
 }

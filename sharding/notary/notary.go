@@ -1,9 +1,11 @@
 package notary
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -85,6 +87,7 @@ func checkSMCForNotary(client mainchain.Client, head *types.Header) error {
 	return nil
 }
 
+// Get the Notary Registry of the registered account
 func getNotaryRegistry(client mainchain.Client) (struct {
 	DeregisteredPeriod *big.Int
 	PoolIndex          *big.Int
@@ -338,10 +341,12 @@ func releaseNotary(client mainchain.Client) error {
 
 }
 
-func submitVote(shardId *big.Int, client mainchain.Client) error {
+func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash) error {
 
-	if shardId == big.NewInt(0) || shardId.Int64() > sharding.ShardCount {
-		return fmt.Errorf("ShardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardId)
+	shardID := shard.ShardID()
+
+	if shardID == big.NewInt(0) || shardID.Int64() > sharding.ShardCount {
+		return fmt.Errorf("ShardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardID)
 	}
 
 	currentblock, err := client.ChainReader().BlockByNumber(context.Background(), nil)
@@ -351,10 +356,10 @@ func submitVote(shardId *big.Int, client mainchain.Client) error {
 
 	period := big.NewInt(0).Div(currentblock.Number(), big.NewInt(sharding.PeriodLength))
 
-	collPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardId)
+	collPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
 
 	if err != nil {
-		return fmt.Errorf("Unable to period from last submitted collation: %v", err)
+		return fmt.Errorf("Unable to get period from last submitted collation: %v", err)
 	}
 
 	if period != collPeriod {
@@ -367,8 +372,98 @@ func submitVote(shardId *big.Int, client mainchain.Client) error {
 		return err
 	}
 
+	if !nreg.Deposited {
+		return fmt.Errorf("Notary has not deposited to the SMC")
+	}
+
 	if nreg.PoolIndex.Int64() >= sharding.NotaryCommitSize {
 		return fmt.Errorf("Invalid Pool Index %d as it is more than the commitee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
+	}
+
+	collationRecords, err := client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+
+	if err != nil {
+		return fmt.Errorf("Unable to get collation record: %v", err)
+	}
+
+	chunkroot, err := shard.ChunkRootfromHeaderHash(headerHash)
+
+	if err != nil {
+		return fmt.Errorf("Unable to get chunk root: %v", err)
+	}
+
+	if bytes.Compare(collationRecords.ChunkRoot[:], chunkroot.Bytes()) != 0 {
+		return fmt.Errorf("Submmitted collation header has a different chunkroot to the one saved in the SMC")
+
+	}
+
+	hasVoted, err := client.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
+
+	if err != nil {
+		return fmt.Errorf("Unable to know if notary voted: %v", err)
+	}
+
+	if hasVoted {
+		return errors.New("Notary has already voted")
+	}
+
+	inCommitee, err := client.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, shardID)
+
+	if err != nil {
+		return fmt.Errorf("Unable to know if notary is in commitee: %v", err)
+	}
+
+	if inCommitee != client.Account().Address {
+		return errors.New("Notary is not eligible to vote in this shard at the current period")
+	}
+
+	txOps, err := client.CreateTXOpts(nil)
+	if err != nil {
+		return fmt.Errorf("unable to create txOpts: %v", err)
+	}
+
+	tx, err := client.SMCTransactor().SubmitVote(txOps, shardID, period, nreg.PoolIndex, collationRecords.ChunkRoot)
+
+	if err != nil {
+
+		return fmt.Errorf("Unable to submit Vote: %v", err)
+	}
+
+	receipt, err := client.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+
+	if receipt.Status == uint(0) {
+
+		return errors.New("Transaction was not successful, unable to vote for collation")
+
+	}
+
+	hasVoted, err = client.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
+
+	if err != nil {
+		return fmt.Errorf("Unable to know if notary voted: %v", err)
+	}
+
+	if !hasVoted {
+		return errors.New("Notary has not voted")
+	}
+
+	log.Info(fmt.Sprintf("Notary has voted for shard: %v in the %v period", shardID, period))
+
+	collationRecords, err = client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+
+	if err != nil {
+		return fmt.Errorf("Unable to get collation record: %v", err)
+	}
+
+	if collationRecords.IsElected {
+
+		log.Info(fmt.Sprintf(
+			"Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
+			shardID, period, headerHash))
+
 	}
 
 	return nil
