@@ -77,6 +77,15 @@ func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, erro
 	return col, nil
 }
 
+// ChunkRootfromHeaderHash gets the chunk root of a collation body from the hash of its header
+func (s *Shard) ChunkRootfromHeaderHash(headerHash *common.Hash) (*common.Hash, error) {
+	collation, err := s.CollationByHeaderHash(headerHash)
+	if err != nil {
+		return nil, err
+	}
+	return collation.header.ChunkRoot(), nil
+}
+
 // CanonicalHeaderHash gets a collation header hash that has been set as
 // canonical for shardID/period pair.
 func (s *Shard) CanonicalHeaderHash(shardID *big.Int, period *big.Int) (*common.Hash, error) {
