@@ -3,6 +3,7 @@
 package observer
 
 import (
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 )
@@ -11,12 +12,13 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Observer struct {
-	shardp2p sharding.ShardP2P
+	shardp2p     sharding.ShardP2P
+	shardChainDb ethdb.Database
 }
 
 // NewObserver creates a new observer instance.
-func NewObserver(shardp2p sharding.ShardP2P) (*Observer, error) {
-	return &Observer{shardp2p}, nil
+func NewObserver(shardp2p sharding.ShardP2P, shardChainDb ethdb.Database) (*Observer, error) {
+	return &Observer{shardp2p, shardChainDb}, nil
 }
 
 // Start the main routine for an observer.
