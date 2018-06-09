@@ -185,8 +185,11 @@ func joinNotaryPool(client mainchain.Client) error {
 	if b, err := isAccountInNotaryPool(client); b || err != nil {
 		if b {
 
-			return errors.New("Account has already deposited into the Notary Pool")
+			log.Info(fmt.Sprint("Already Joined Notary Pool"))
+			return nil
+
 		}
+		return err
 	}
 
 	log.Info("Joining notary pool")
