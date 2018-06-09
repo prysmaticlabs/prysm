@@ -338,6 +338,39 @@ func releaseNotary(client mainchain.Client) error {
 
 }
 
-func VoteforCollation() error {
+func submitVote(shardId *big.Int, client mainchain.Client) error {
+
+	if shardId == big.NewInt(0) || shardId.Int64() > sharding.ShardCount {
+		return fmt.Errorf("ShardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardId)
+	}
+
+	currentblock, err := client.ChainReader().BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve last block: %v", err)
+	}
+
+	period := big.NewInt(0).Div(currentblock.Number(), big.NewInt(sharding.PeriodLength))
+
+	collPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardId)
+
+	if err != nil {
+		return fmt.Errorf("Unable to period from last submitted collation: %v", err)
+	}
+
+	if period != collPeriod {
+		return fmt.Errorf("Period in collation is not equal to current period : %d , %d", collPeriod, period)
+	}
+
+	nreg, err := getNotaryRegistry(client)
+
+	if err != nil {
+		return err
+	}
+
+	if nreg.PoolIndex.Int64() >= sharding.NotaryCommitSize {
+		return fmt.Errorf("Invalid Pool Index %d as it is more than the commitee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
+	}
+
 	return nil
+
 }
