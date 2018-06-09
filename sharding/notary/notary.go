@@ -278,6 +278,8 @@ func leaveNotaryPool(client mainchain.Client) error {
 
 }
 
+// releaseNotary releases the Notary from the pool by deleting the notary from
+// the registry and transferring back the despoit
 func releaseNotary(client mainchain.Client) error {
 	nreg, err := getNotaryRegistry(client)
 	if err != nil {
@@ -341,10 +343,11 @@ func releaseNotary(client mainchain.Client) error {
 
 }
 
+// submitVote votes for a collation on the shard
 func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash) error {
 
 	shardID := shard.ShardID()
-
+	// checks if the shardID is valid
 	if shardID == big.NewInt(0) || shardID.Int64() > sharding.ShardCount {
 		return fmt.Errorf("ShardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardID)
 	}
@@ -362,7 +365,8 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("Unable to get period from last submitted collation: %v", err)
 	}
 
-	if period != collPeriod {
+	// Checks if the current period is valid in order to vote for the collation on the shard
+	if period.Int64() != collPeriod.Int64() {
 		return fmt.Errorf("Period in collation is not equal to current period : %d , %d", collPeriod, period)
 	}
 
@@ -376,6 +380,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("Notary has not deposited to the SMC")
 	}
 
+	// Checking if the pool index is valid
 	if nreg.PoolIndex.Int64() >= sharding.NotaryCommitSize {
 		return fmt.Errorf("Invalid Pool Index %d as it is more than the commitee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
 	}
@@ -392,6 +397,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("Unable to get chunk root: %v", err)
 	}
 
+	// Checking if the chunkroot is valid
 	if bytes.Compare(collationRecords.ChunkRoot[:], chunkroot.Bytes()) != 0 {
 		return fmt.Errorf("Submmitted collation header has a different chunkroot to the one saved in the SMC")
 
@@ -458,11 +464,25 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("Unable to get collation record: %v", err)
 	}
 
+	// Logs if quorum has been reached and collation is added to the canonical shard chain
 	if collationRecords.IsElected {
 
 		log.Info(fmt.Sprintf(
 			"Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
 			shardID, period, headerHash))
+
+		// Setting collation header as canonical in the shard chain
+		header, err := shard.HeaderByHash(headerHash)
+
+		if err != nil {
+			return fmt.Errorf("Unable to set Header from hash: %v", err)
+		}
+
+		err = shard.SetCanonical(header)
+
+		if err != nil {
+			return fmt.Errorf("Unable to add collation to canonical shard chain: %v", err)
+		}
 
 	}
 
