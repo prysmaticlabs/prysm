@@ -398,7 +398,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 	}
 
 	// Checking if the chunkroot is valid
-	if bytes.Compare(collationRecords.ChunkRoot[:], chunkroot.Bytes()) != 0 {
+	if !bytes.Equal(collationRecords.ChunkRoot[:], chunkroot.Bytes()) {
 		return fmt.Errorf("Submmitted collation header has a different chunkroot to the one saved in the SMC")
 
 	}

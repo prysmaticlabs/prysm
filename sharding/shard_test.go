@@ -190,7 +190,7 @@ func TestShard_ChunkRootfromHeaderHash(t *testing.T) {
 		t.Errorf("Unable to retrieve chunk root from collation header hash: %v", err)
 	}
 
-	if bytes.Compare(newchunkroot.Bytes(), chunkroot.Bytes()) != 0 {
+	if !bytes.Equal(newchunkroot.Bytes(), chunkroot.Bytes()) {
 		t.Errorf("Calculated chunkroot , %v, and chunkroot ,%v , retrieved from headerHash is different", chunkroot, newchunkroot)
 	}
 
