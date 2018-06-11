@@ -20,7 +20,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
-func NewProposer(client mainchain.Client, shardp2p sharding.ShardP2P, txpool sharding.TXPool) (*Proposer, error) {
+func NewProposer(client mainchain.Client, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardID int) (*Proposer, error) {
 	// Initializes a  directory persistent db.
 	return &Proposer{client, shardp2p, txpool}, nil
 }
