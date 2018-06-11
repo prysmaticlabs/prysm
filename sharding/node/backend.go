@@ -6,8 +6,11 @@ package node
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"reflect"
 	"sync"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/sharding/notary"
 	"github.com/ethereum/go-ethereum/sharding/observer"
@@ -104,7 +107,9 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
 func (s *ShardEthereum) Start() {
+
 	log.Info("Starting sharding node")
+
 	for kind, service := range s.services {
 		// Start the next service.
 		if err := service.Start(); err != nil {
@@ -112,6 +117,24 @@ func (s *ShardEthereum) Start() {
 			s.Close()
 		}
 	}
+
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
+		<-sigc
+		log.Info("Got interrupt, shutting down...")
+		go s.Close()
+		for i := 10; i > 0; i-- {
+			<-sigc
+			if i > 1 {
+				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+			}
+		}
+	}()
+
+	// hang forever...
+	select {}
 }
 
 // Close handles graceful shutdown of the system.
@@ -122,6 +145,7 @@ func (s *ShardEthereum) Close() {
 		}
 	}
 	log.Info("Stopping sharding node")
+	os.Exit(1)
 }
 
 // SMCClient returns an instance of a client that communicates to a mainchain node via
