@@ -51,6 +51,9 @@ contract SMC {
     uint sampleSizeLastUpdatedPeriod;
 
     // Constant values
+    // Length of challenge period for notary's proof of custody
+    uint public constant CHALLENGE_PERIOD = 25;
+    // Number of blocks per period
     uint constant PERIOD_LENGTH = 5;
     // Number of shards
     uint constant SHARD_COUNT = 100;
