@@ -4,17 +4,15 @@ package proposer
 
 import (
 	"context"
-	"crypto/rand"
 	"math/big"
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -24,6 +22,7 @@ type Proposer struct {
 	client       *mainchain.SMCClient
 	shardp2p     sharding.ShardP2P
 	txpool       sharding.TXPool
+	txpoolSub	 event.Subscription
 	shardChainDb ethdb.Database
 }
 
@@ -32,7 +31,7 @@ type Proposer struct {
 // and a shard transaction pool.
 func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database) (*Proposer, error) {
 	// Initializes a  directory persistent db.
-	return &Proposer{client, shardp2p, txpool, shardChainDb}, nil
+	return &Proposer{client, shardp2p, txpool, nil, shardChainDb}, nil
 }
 
 // Start the main loop for proposing collations.
@@ -40,15 +39,6 @@ func (p *Proposer) Start() error {
 	log.Info("Starting proposer service")
 
 	go p.subscribeTransactions()
-
-	// TODO: Receive TXs from shard TX generator or TXpool (Github Issues 153 and 161)
-	var txs []*types.Transaction
-	for i := 0; i < 10; i++ {
-		data := make([]byte, 1024)
-		rand.Read(data)
-		txs = append(txs, types.NewTransaction(0, common.HexToAddress("0x0"),
-			nil, 0, nil, data))
-	}
 
 	// TODO: Create and use CLI flag for shardID
 	shardID := big.NewInt(0)
@@ -81,31 +71,22 @@ func (p *Proposer) Start() error {
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
 	log.Info("Stopping proposer service")
+	p.txpoolSub.Unsubscribe()
 	return nil
 }
 
 func (p *Proposer) subscribeTransactions() {
-	// Subscribes to incoming transactions from the txpool via the shardp2p network.
+	requests := make(chan int)
+	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
+
 	for {
-		subchan := make(chan int)
-		sub := p.txpool.TransactionsFeed().Subscribe(subchan)
-		// 10 second time out for the subscription.
 		timeout := time.NewTimer(10 * time.Second)
 		select {
-		case v := <-subchan:
-			log.Info(fmt.Sprintf("Received transaction with id: %d", v))
+		case v := <-requests:
+			log.Info(fmt.Sprintf("Received transaction id: %d", v))
 		case <-timeout.C:
-			log.Error("Receive timeout")
+			log.Error("Subscriber timed out")
 		}
-
-		sub.Unsubscribe()
-		select {
-		case _, ok := <-sub.Err():
-			if ok {
-				log.Error("Channel not closed after unsubscribe")
-			}
-		case <-timeout.C:
-			log.Error("Unsubscribe timeout")
-		}
+		timeout.Stop()
 	}
 }

@@ -14,6 +14,7 @@ import (
 type ShardTXPool struct {
 	p2p              sharding.ShardP2P
 	transactionsFeed *event.Feed
+	ticker           *time.Ticker
 }
 
 // NewShardTXPool creates a new observer instance.
@@ -31,6 +32,7 @@ func (pool *ShardTXPool) Start() error {
 // Stop the main loop for a transaction pool in the shard network.
 func (pool *ShardTXPool) Stop() error {
 	log.Info("Stopping shard txpool service")
+	pool.ticker.Stop()
 	return nil
 }
 
@@ -39,9 +41,12 @@ func (pool *ShardTXPool) TransactionsFeed() *event.Feed {
 }
 
 func (pool *ShardTXPool) generateTestTransactions() {
-	for {
-		nsent := pool.transactionsFeed.Send(1)
-		log.Info(fmt.Sprintf("Sent transaction to %d subscribers", nsent))
-		time.Sleep(time.Second)
+	pool.ticker = time.NewTicker(5 * time.Second)
+	count := 0
+
+	for range pool.ticker.C {
+		nsent := pool.transactionsFeed.Send(count)
+		count++
+		log.Info(fmt.Sprintf("Sent transaction %d to %d subscribers", count, nsent))
 	}
 }
