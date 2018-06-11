@@ -6,8 +6,11 @@ package node
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"reflect"
 	"sync"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/sharding/notary"
 	"github.com/ethereum/go-ethereum/sharding/observer"
@@ -22,10 +25,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 	cli "gopkg.in/urfave/cli.v1"
 )
+
+const shardChainDbName = "shardchaindata"
 
 // ShardEthereum is a service that is registered and started when geth is launched.
 // it contains APIs and fields that handle the different components of the sharded
@@ -73,8 +79,16 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
+	shardChainDb, err := database.NewShardDB(path, shardChainDbName)
+	if err != nil {
+		return nil, err
+	}
+
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
+
+	// Adds the initialized shardChainDb to the ShardEthereum instance.
+	shardEthereum.shardChainDb = shardChainDb
 
 	if err := shardEthereum.registerP2P(); err != nil {
 		return nil, err
@@ -93,7 +107,9 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
 func (s *ShardEthereum) Start() {
+
 	log.Info("Starting sharding node")
+
 	for kind, service := range s.services {
 		// Start the next service.
 		if err := service.Start(); err != nil {
@@ -101,6 +117,24 @@ func (s *ShardEthereum) Start() {
 			s.Close()
 		}
 	}
+
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
+		<-sigc
+		log.Info("Got interrupt, shutting down...")
+		go s.Close()
+		for i := 10; i > 0; i-- {
+			<-sigc
+			if i > 1 {
+				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+			}
+		}
+	}()
+
+	// hang forever...
+	select {}
 }
 
 // Close handles graceful shutdown of the system.
@@ -111,6 +145,7 @@ func (s *ShardEthereum) Close() {
 		}
 	}
 	log.Info("Stopping sharding node")
+	os.Exit(1)
 }
 
 // SMCClient returns an instance of a client that communicates to a mainchain node via
@@ -181,13 +216,13 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 		ctx.RetrieveService(&p2p)
 
 		if actor == "notary" {
-			return notary.NewNotary(s.smcClient, p2p)
+			return notary.NewNotary(s.smcClient, p2p, s.shardChainDb)
 		} else if actor == "proposer" {
 			var txPool *txpool.ShardTXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(s.smcClient, p2p, txPool)
+			return proposer.NewProposer(s.smcClient, p2p, txPool, s.shardChainDb)
 		}
 
-		return observer.NewObserver(p2p)
+		return observer.NewObserver(p2p, s.shardChainDb)
 	})
 }

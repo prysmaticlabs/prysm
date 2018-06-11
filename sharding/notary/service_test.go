@@ -75,6 +75,20 @@ func (s *smcClient) SetDepositFlag(deposit bool) {
 	s.depositFlag = deposit
 }
 
+func (m *smcClient) Sign(hash common.Hash) ([]byte, error) {
+	return nil, nil
+}
+
+// Unused mockClient methods.
+func (m *smcClient) Start() error {
+	m.t.Fatal("Start called")
+	return nil
+}
+
+func (m *smcClient) Close() {
+	m.t.Fatal("Close called")
+}
+
 func (s *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
 }
