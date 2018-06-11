@@ -86,6 +86,10 @@ func (p *Proposer) subscribeTransactions() {
 			log.Info(fmt.Sprintf("Received transaction id: %d", v))
 		case <-timeout.C:
 			log.Error("Subscriber timed out")
+		case err := <-p.txpoolSub.Err():
+			log.Error("Subscriber failed: %v", err)
+			timeout.Stop()
+			return
 		}
 		timeout.Stop()
 	}
