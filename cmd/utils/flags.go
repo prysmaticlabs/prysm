@@ -55,7 +55,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/p2p/netutil"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/sharding"
+	sparams "github.com/ethereum/go-ethereum/sharding/params"
 	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -536,11 +536,15 @@ var (
 	// Sharding Settings
 	DepositFlag = cli.BoolFlag{
 		Name:  "deposit",
-		Usage: "To become a notary in a sharding node, " + new(big.Int).Div(sharding.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
+		Usage: "To become a notary in a sharding node, " + new(big.Int).Div(sparams.DefaultShardConfig.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
 	}
 	ActorFlag = cli.StringFlag{
 		Name:  "actor",
 		Usage: `use the --actor notary or --actor proposer to start a notary or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
+	}
+	ShardIDFlag = cli.IntFlag{
+		Name:  "shardid",
+		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
 	}
 )
 

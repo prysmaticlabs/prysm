@@ -42,6 +42,8 @@ type Client interface {
 	DepositFlag() bool
 	SetDepositFlag(deposit bool)
 	DataDirPath() string
+	Sign(hash common.Hash) ([]byte, error)
+	GetShardCount() (int64, error)
 }
 
 // SMCClient defines a struct that interacts with a
@@ -216,4 +218,21 @@ func (s *SMCClient) unlockAccount(account accounts.Account) error {
 	}
 
 	return s.keystore.Unlock(account, pass)
+}
+
+// Sign signs the hash of collationHeader contents by
+// using default account on keystore and returns signed signature.
+func (s *SMCClient) Sign(hash common.Hash) ([]byte, error) {
+	account := s.Account()
+	return s.keystore.SignHash(*account, hash.Bytes())
+}
+
+// GetShardCount gets the count of the total shards
+// currently operating in the sharded universe.
+func (s *SMCClient) GetShardCount() (int64, error) {
+	shardCount, err := s.SMCCaller().SHARDCOUNT(&bind.CallOpts{})
+	if err != nil {
+		return 0, err
+	}
+	return shardCount.Int64(), nil
 }
