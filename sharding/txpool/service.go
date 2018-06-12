@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"crypto/rand"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -25,7 +28,7 @@ func NewShardTXPool(p2p sharding.ShardP2P) (*ShardTXPool, error) {
 // Start the main routine for a shard transaction pool.
 func (pool *ShardTXPool) Start() error {
 	log.Info("Starting shard txpool service")
-	go pool.generateTestTransactions()
+	go pool.sendTestTransaction()
 	return nil
 }
 
@@ -40,13 +43,18 @@ func (pool *ShardTXPool) TransactionsFeed() *event.Feed {
 	return pool.transactionsFeed
 }
 
-func (pool *ShardTXPool) generateTestTransactions() {
+func (pool *ShardTXPool) sendTestTransaction() {
 	pool.ticker = time.NewTicker(5 * time.Second)
-	count := 0
 
 	for range pool.ticker.C {
-		nsent := pool.transactionsFeed.Send(count)
-		count++
-		log.Info(fmt.Sprintf("Sent transaction %d to %d subscribers", count, nsent))
+		tx := createTestTransaction()
+		nsent := pool.transactionsFeed.Send(tx)
+		log.Info(fmt.Sprintf("Sent transaction %v to %d subscribers", tx, nsent))
 	}
+}
+
+func createTestTransaction() *types.Transaction {
+	data := make([]byte, 1024)
+	rand.Read(data)
+	return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
 }

@@ -4,15 +4,16 @@ package proposer
 
 import (
 	"context"
-	"math/big"
 	"fmt"
+	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/event"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -22,7 +23,7 @@ type Proposer struct {
 	client       *mainchain.SMCClient
 	shardp2p     sharding.ShardP2P
 	txpool       sharding.TXPool
-	txpoolSub	 event.Subscription
+	txpoolSub    event.Subscription
 	shardChainDb ethdb.Database
 }
 
@@ -40,6 +41,17 @@ func (p *Proposer) Start() error {
 
 	go p.subscribeTransactions()
 
+	return nil
+}
+
+// Stop the main loop for proposing collations.
+func (p *Proposer) Stop() error {
+	log.Info("Stopping proposer service")
+	p.txpoolSub.Unsubscribe()
+	return nil
+}
+
+func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	// TODO: Create and use CLI flag for shardID
 	shardID := big.NewInt(0)
 
@@ -68,22 +80,18 @@ func (p *Proposer) Start() error {
 	return nil
 }
 
-// Stop the main loop for proposing collations.
-func (p *Proposer) Stop() error {
-	log.Info("Stopping proposer service")
-	p.txpoolSub.Unsubscribe()
-	return nil
-}
-
 func (p *Proposer) subscribeTransactions() {
-	requests := make(chan int)
+	requests := make(chan *types.Transaction)
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
 
 	for {
 		timeout := time.NewTimer(10 * time.Second)
 		select {
-		case v := <-requests:
-			log.Info(fmt.Sprintf("Received transaction id: %d", v))
+		case tx := <-requests:
+			if err := p.createCollation([]*types.Transaction{tx}); err == nil {
+				log.Error("Create collation failed: %v", tx)
+			}
+			log.Info(fmt.Sprintf("Received transaction id: %v", tx))
 		case <-timeout.C:
 			log.Error("Subscriber timed out")
 		case err := <-p.txpoolSub.Err():
