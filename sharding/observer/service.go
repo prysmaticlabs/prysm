@@ -3,6 +3,8 @@
 package observer
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -14,21 +16,22 @@ import (
 type Observer struct {
 	shardp2p     sharding.ShardP2P
 	shardChainDb ethdb.Database
+	shardID      int
 }
 
 // NewObserver creates a new observer instance.
-func NewObserver(shardp2p sharding.ShardP2P, shardChainDb ethdb.Database) (*Observer, error) {
-	return &Observer{shardp2p, shardChainDb}, nil
+func NewObserver(shardp2p sharding.ShardP2P, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
+	return &Observer{shardp2p, shardChainDb, shardID}, nil
 }
 
 // Start the main routine for an observer.
 func (o *Observer) Start() error {
-	log.Info("Starting shard observer service")
+	log.Info(fmt.Sprintf("Starting observer service in shard %d", o.shardID))
 	return nil
 }
 
 // Stop the main loop for observing the shard network.
 func (o *Observer) Stop() error {
-	log.Info("Stopping shard observer service")
+	log.Info(fmt.Sprintf("Starting observer service in shard %d", o.shardID))
 	return nil
 }
