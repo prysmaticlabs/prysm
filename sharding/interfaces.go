@@ -2,8 +2,8 @@ package sharding
 
 import (
 	"fmt"
-	"reflect"
 	"github.com/ethereum/go-ethereum/event"
+	"reflect"
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
