@@ -70,6 +70,14 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 	return hash
 }
 
+// AddSig adds the signature of proposer after collationHeader gets signed.
+func (h *CollationHeader) AddSig(sig []byte) {
+	h.data.ProposerSignature = sig
+}
+
+// Signature of the collation corresponds to.
+func (h *CollationHeader) Sig() []byte { return h.data.ProposerSignature }
+
 // ShardID the collation corresponds to.
 func (h *CollationHeader) ShardID() *big.Int { return h.data.ShardID }
 

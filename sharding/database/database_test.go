@@ -3,9 +3,11 @@ package database
 import (
 	"strconv"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-var db ShardBackend
+var db ethdb.Database
 
 func init() {
 	shardDB, err := NewShardDB("/tmp/datadir", "shardchaindata")

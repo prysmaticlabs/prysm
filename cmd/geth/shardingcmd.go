@@ -14,7 +14,7 @@ var (
 		Name:      "sharding",
 		Usage:     "Start a sharding-enabled node",
 		ArgsUsage: "[endpoint]",
-		Flags:     []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag},
+		Flags:     []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag},
 		Category:  "SHARDING COMMANDS",
 		Description: `
 Launches a sharding node that manages services related to submitting collations to a Sharding Manager Contract, notary and proposer services, and shardp2p connections. This feature is a work in progress.
