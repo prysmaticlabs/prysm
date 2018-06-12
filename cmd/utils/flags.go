@@ -542,6 +542,10 @@ var (
 		Name:  "actor",
 		Usage: `use the --actor notary or --actor proposer to start a notary or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
 	}
+	ShardIDFlag = cli.IntFlag{
+		Name:  "shardid",
+		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating

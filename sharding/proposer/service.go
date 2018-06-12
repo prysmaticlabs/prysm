@@ -24,24 +24,25 @@ type Proposer struct {
 	shardp2p     sharding.ShardP2P
 	txpool       sharding.TXPool
 	shardChainDb ethdb.Database
+	shardID      int
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
-func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database) (*Proposer, error) {
-	return &Proposer{client, shardp2p, txpool, shardChainDb}, nil
+func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+	return &Proposer{client, shardp2p, txpool, shardChainDb, shardID}, nil
 }
 
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
-	log.Info("Starting proposer service")
+	log.Info(fmt.Sprintf("Starting proposer service in shard %d", p.shardID))
 	go p.proposeCollations()
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
-	log.Info("Stopping proposer service")
+	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shardID))
 	return nil
 }
 
@@ -56,9 +57,6 @@ func (p *Proposer) proposeCollations() {
 			nil, 0, nil, data))
 	}
 
-	// TODO: Create and use CLI flag for shardID
-	shardID := big.NewInt(0)
-
 	// Get current block number.
 	blockNumber, err := p.client.ChainReader().BlockByNumber(context.Background(), nil)
 	if err != nil {
@@ -68,14 +66,14 @@ func (p *Proposer) proposeCollations() {
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
 
 	// Create collation.
-	collation, err := createCollation(p.client, shardID, period, txs)
+	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not create collation: %v", err))
 		return
 	}
 
 	// Check SMC if we can submit header before addHeader
-	canAdd, err := checkHeaderAdded(p.client, shardID, period)
+	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not check if we can submit header: %v", err))
 		return
