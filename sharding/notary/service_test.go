@@ -194,10 +194,10 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	backend.Commit()
 	b, err = isAccountInNotaryPool(client)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if !b {
-		t.Fatal("account not in notary pool when expected to be")
+		t.Error("account not in notary pool when expected to be")
 	}
 }
 
@@ -207,10 +207,10 @@ func TestJoinNotaryPool(t *testing.T) {
 	// There should be no notary initially.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 0.", numNotaries)
+		t.Errorf("unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
 	client.SetDepositFlag(false)
@@ -222,32 +222,32 @@ func TestJoinNotaryPool(t *testing.T) {
 	client.SetDepositFlag(true)
 	err = joinNotaryPool(client)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	backend.Commit()
 
 	// Now there should be one notary.
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
 	}
 
 	// Trying to join while deposited should do nothing
 	err = joinNotaryPool(client)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	backend.Commit()
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
 	}
 
 }
@@ -274,10 +274,10 @@ func TestLeaveNotaryPool(t *testing.T) {
 	// Now there should be one notary.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
 	}
 
 	err = leaveNotaryPool(client)
@@ -288,10 +288,10 @@ func TestLeaveNotaryPool(t *testing.T) {
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 0", numNotaries)
+		t.Errorf("unexpected number of notaries. Got %d, wanted 0", numNotaries)
 	}
 
 }
@@ -320,7 +320,7 @@ func TestReleaseNotary(t *testing.T) {
 
 	if err != nil {
 
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	// The remaining part of the test is dependant on access to chainreader #164
