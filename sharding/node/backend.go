@@ -70,6 +70,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
 	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
 	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
+	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
 
 	smcClient, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
 	if err != nil {
@@ -95,7 +96,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerActorService(actorFlag); err != nil {
+	if err := shardEthereum.registerActorService(actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -187,7 +188,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 }
 
 // Registers the actor according to CLI flags. Either notary/proposer/observer.
-func (s *ShardEthereum) registerActorService(actor string) error {
+func (s *ShardEthereum) registerActorService(actor string, shardID int) error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 
 		var p2p *shardp2p.Server
@@ -198,9 +199,8 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 		} else if actor == "proposer" {
 			var txPool *txpool.ShardTXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(s.smcClient, p2p, txPool, s.shardChainDb)
+			return proposer.NewProposer(s.smcClient, p2p, txPool, s.shardChainDb, shardID)
 		}
-
-		return observer.NewObserver(p2p, s.shardChainDb)
+		return observer.NewObserver(p2p, s.shardChainDb, shardID)
 	})
 }
