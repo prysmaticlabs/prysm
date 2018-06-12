@@ -22,9 +22,8 @@ func NewObserver(shardp2p sharding.ShardP2P, shardChainDb ethdb.Database) (*Obse
 }
 
 // Start the main routine for an observer.
-func (o *Observer) Start() error {
+func (o *Observer) Start() {
 	log.Info("Starting shard observer service")
-	return nil
 }
 
 // Stop the main loop for observing the shard network.

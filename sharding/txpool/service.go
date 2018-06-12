@@ -17,9 +17,8 @@ func NewShardTXPool(p2p sharding.ShardP2P) (*ShardTXPool, error) {
 }
 
 // Start the main routine for a shard transaction pool.
-func (p *ShardTXPool) Start() error {
+func (p *ShardTXPool) Start() {
 	log.Info("Starting shard txpool service")
-	return nil
 }
 
 // Stop the main loop for a transaction pool in the shard network.
