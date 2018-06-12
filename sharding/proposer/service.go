@@ -41,7 +41,7 @@ func (p *Proposer) Start() error {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
 	go p.handleCollationBodyRequests()
-	go simulateNotaryRequests(p.shard.ShardID(), p.shardp2p)
+	go simulateNotaryRequests(p.client, p.shardp2p, p.shard.ShardID())
 	return nil
 }
 
@@ -56,13 +56,18 @@ func (p *Proposer) handleCollationBodyRequests() {
 	}
 	ch := make(chan p2p.Message, 100)
 	sub := feed.Subscribe(ch)
-	// TODO: close chan and unsubscribe in Stop()
+	// TODO: close chan and unsubscribe in Stop().
+
+	// Set up a context with deadline or timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	for {
-		timeout := time.NewTimer(10 * time.Second)
 		select {
 		case req := <-ch:
 			log.Info("Received p2p request from notary")
+
+			// Type assertion helps us catch incorrect data requests.
 			msg, ok := req.Data.(sharding.CollationBodyRequest)
 			if !ok {
 				log.Error(fmt.Sprintf("Received incorrect data request type: %v", msg))
@@ -77,14 +82,12 @@ func (p *Proposer) handleCollationBodyRequests() {
 			res := &sharding.CollationBodyResponse{HeaderHash: msg.HeaderHash, Body: collation.Body()}
 			p.shardp2p.Send(res, req.Peer)
 
-		case <-timeout.C:
+		case <-ctx.Done():
 			log.Error("Subscriber timed out")
 		case err := <-sub.Err():
 			log.Error("Subscriber failed: %v", err)
-			timeout.Stop()
 			return
 		}
-		timeout.Stop()
 	}
 }
 
