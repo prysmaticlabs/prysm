@@ -33,13 +33,22 @@ type Proposer struct {
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
 func NewProposer(config *params.ShardConfig, client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
-	// Initializes a  directory persistent db.
 	return &Proposer{config, client, shardp2p, txpool, shardChainDb, shardID}, nil
 }
 
 // Start the main loop for proposing collations.
-func (p *Proposer) Start() error {
+func (p *Proposer) Start() {
 	log.Info(fmt.Sprintf("Starting proposer service in shard %d", p.shardID))
+	go p.proposeCollations()
+}
+
+// Stop the main loop for proposing collations.
+func (p *Proposer) Stop() error {
+	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shardID))
+	return nil
+}
+
+func (p *Proposer) proposeCollations() {
 
 	// TODO: Receive TXs from shard TX generator or TXpool (Github Issues 153 and 161)
 	var txs []*types.Transaction
@@ -53,30 +62,25 @@ func (p *Proposer) Start() error {
 	// Get current block number.
 	blockNumber, err := p.client.ChainReader().BlockByNumber(context.Background(), nil)
 	if err != nil {
-		return err
+		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+		return
 	}
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
 	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
 	if err != nil {
-		return err
+		log.Error(fmt.Sprintf("Could not create collation: %v", err))
+		return
 	}
 
 	// Check SMC if we can submit header before addHeader
 	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
 	if err != nil {
-		return err
+		log.Error(fmt.Sprintf("Could not check if we can submit header: %v", err))
+		return
 	}
 	if canAdd {
 		addHeader(p.client, collation)
 	}
-
-	return nil
-}
-
-// Stop the main loop for proposing collations.
-func (p *Proposer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shardID))
-	return nil
 }
