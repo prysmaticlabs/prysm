@@ -263,8 +263,6 @@ func TestLeaveNotaryPool(t *testing.T) {
 		t.Error("able to leave notary pool despite having not joined it")
 	}
 
-	backend.Rollback()
-
 	// Roundtrip Test , Join and leave pool
 
 	err = joinNotaryPool(client)
@@ -308,7 +306,6 @@ func TestReleaseNotary(t *testing.T) {
 	if err == nil {
 		t.Error("released From notary despite never joining pool")
 	}
-	backend.Rollback()
 
 	// Roundtrip Test , Join and leave pool and release Notary
 
