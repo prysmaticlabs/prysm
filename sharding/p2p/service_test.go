@@ -11,13 +11,20 @@ var _ = sharding.ShardP2P(&Server{})
 
 func TestFeed_ReturnsSameFeed(t *testing.T) {
 	tests := []struct {
-		a interface{}
-		b interface{}
+		a    interface{}
+		b    interface{}
+		want bool
 	}{
-		{a: 1, b: 2},
-		{a: 'a', b: 'b'},
-		{a: struct{ c int }{c: 1}, b: struct{ c int }{c: 2}},
-		{a: struct{ c string }{c: "a"}, b: struct{ c string }{c: "b"}},
+		// Equalality tests
+		{a: 1, b: 2, want: true},
+		{a: 'a', b: 'b', want: true},
+		{a: struct{ c int }{c: 1}, b: struct{ c int }{c: 2}, want: true},
+		{a: struct{ c string }{c: "a"}, b: struct{ c string }{c: "b"}, want: true},
+		// Inequality tests
+		{a: 1, b: '2', want: false},
+		{a: 'a', b: 1, want: false},
+		{a: struct{ c int }{c: 1}, b: struct{ c int64 }{c: 2}, want: false},
+		{a: struct{ c string }{c: "a"}, b: struct{ c float64 }{c: 3.4}, want: false},
 	}
 
 	s, _ := NewServer()
@@ -26,8 +33,8 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 		feed1, _ := s.Feed(tt.a)
 		feed2, _ := s.Feed(tt.b)
 
-		if feed1 != feed2 {
-			t.Errorf("Expected %v to be equal to %v", feed1, feed2)
+		if (feed1 == feed2) != tt.want {
+			t.Errorf("Expected %v == %v to be %t", feed1, feed2, tt.want)
 		}
 	}
 }
