@@ -191,7 +191,7 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
 	}
 
 	// Trying to join while deposited should do nothing
@@ -206,7 +206,7 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
 	}
 
 }
@@ -243,7 +243,7 @@ func TestLeaveNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Fatalf("unexpected number of notaries. Got %d, wanted 0.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 0", numNotaries)
 	}
 
 }
@@ -258,7 +258,7 @@ func TestReleaseNotary(t *testing.T) {
 	backend.Commit()
 
 	if err == nil {
-		t.Error("released From Notary despite Never Joining Pool")
+		t.Error("released From notary despite never joining pool")
 	}
 
 	// Roundtrip Test , Join and leave pool and release Notary
