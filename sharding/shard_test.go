@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/sharding/database"
 )
@@ -31,6 +32,13 @@ func (m *mockShardDB) Put(k []byte, v []byte) error {
 
 func (m *mockShardDB) Delete(k []byte) error {
 	return fmt.Errorf("error deleting value in db")
+}
+
+func (m *mockShardDB) Close() {
+}
+
+func (m *mockShardDB) NewBatch() ethdb.Batch {
+	return nil
 }
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.

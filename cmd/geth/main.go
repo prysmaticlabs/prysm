@@ -120,6 +120,7 @@ var (
 		utils.ExtraDataFlag,
 		utils.DepositFlag,
 		utils.ActorFlag,
+		utils.ShardIDFlag,
 		configFileFlag,
 	}
 
