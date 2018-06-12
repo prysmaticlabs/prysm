@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -60,6 +59,5 @@ func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, s
 		}
 		feed.Send(msg)
 		log.Info("Notary Simulator: sent request for collation body via a shardp2p feed")
-		time.Sleep(5 * time.Second)
 	}
 }
