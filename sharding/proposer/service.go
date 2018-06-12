@@ -39,6 +39,7 @@ func (p *Proposer) Start() error {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
 	go p.handleCollationBodyRequests()
+	go simulateNotaryRequests()
 	return nil
 }
 
