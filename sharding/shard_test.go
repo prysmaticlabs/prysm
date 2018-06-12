@@ -96,7 +96,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	}
 }
 
-func TestShard_CollationByHash(t *testing.T) {
+func TestShard_CollationByHeaderHash(t *testing.T) {
 	emptyAddr := common.BytesToAddress([]byte{})
 
 	// Empty chunk root.
@@ -125,7 +125,7 @@ func TestShard_CollationByHash(t *testing.T) {
 	newHash := collation.Header().Hash()
 
 	// should not be able to fetch collation without saving first.
-	if _, err := shard.CollationByHash(&newHash); err == nil {
+	if _, err := shard.CollationByHeaderHash(&newHash); err == nil {
 		t.Errorf("should not be able to fetch collation before saving first")
 	}
 
@@ -134,7 +134,7 @@ func TestShard_CollationByHash(t *testing.T) {
 		t.Fatalf("could not save header: %v", err)
 	}
 
-	if _, err := shard.CollationByHash(&hash); err == nil {
+	if _, err := shard.CollationByHeaderHash(&hash); err == nil {
 		t.Errorf("should not be able to fetch collation if body has not been saved")
 	}
 
@@ -143,7 +143,7 @@ func TestShard_CollationByHash(t *testing.T) {
 		t.Fatalf("cannot save collation: %v", err)
 	}
 
-	dbCollation, err := shard.CollationByHash(&hash)
+	dbCollation, err := shard.CollationByHeaderHash(&hash)
 	if err != nil {
 		t.Fatalf("could not fetch collation by hash: %v", err)
 	}

@@ -1,3 +1,6 @@
+// Package database provides several constructs including a simple in-memory database.
+// This should not be used for production, but would be a helpful interim
+// solution for development.
 package database
 
 import (
