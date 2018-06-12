@@ -84,6 +84,7 @@ func (p *Proposer) handleCollationBodyRequests() {
 				log.Error(fmt.Sprintf("Could not fetch collation: %v", err))
 				continue
 			}
+			log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", headerHash.Hex()))
 
 			// Reply to that specific peer only.
 			res := &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}

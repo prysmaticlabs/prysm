@@ -12,7 +12,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/sharding/notary"
 	"github.com/ethereum/go-ethereum/sharding/observer"
 	shardp2p "github.com/ethereum/go-ethereum/sharding/p2p"
@@ -131,8 +130,7 @@ func (s *ShardEthereum) Start() {
 			}
 		}
 		// ensure trace and CPU profile data is flushed.
-		debug.Exit()
-		debug.LoudPanic("boom")
+		panic("Forceful shutdown of sharding node")
 	}()
 
 	// hang forever...
