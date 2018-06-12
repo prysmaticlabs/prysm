@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 // ShardKV is an in-memory mapping of hashes to RLP encoded values.
@@ -53,4 +54,14 @@ func (sb *ShardKV) Delete(k []byte) error {
 	// There is no return value for deleting a simple key in a go map.
 	delete(sb.kv, common.BytesToHash(k))
 	return nil
+}
+
+func (sb *ShardKV) Close() {
+	//TODO: Implement Close for ShardKV
+	panic("ShardKV Close() isnt implemented yet")
+}
+
+func (sb *ShardKV) NewBatch() ethdb.Batch {
+	//TODO: Implement NewBatch for ShardKV
+	panic("ShardKV NewBatch() isnt implemented yet")
 }
