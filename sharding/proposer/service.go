@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -21,19 +22,18 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
-	client       *mainchain.SMCClient
-	shardp2p     sharding.ShardP2P
-	txpool       sharding.TXPool
-	shardChainDb ethdb.Database
-	shardID      int
+	client   *mainchain.SMCClient
+	shardp2p sharding.ShardP2P
+	txpool   sharding.TXPool
+	shard    *sharding.Shard
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
 func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
-	// Initializes a  directory persistent db.
-	return &Proposer{client, shardp2p, txpool, shardChainDb, shardID}, nil
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
+	return &Proposer{client, shardp2p, txpool, shard}, nil
 }
 
 // Start the main loop for proposing collations.
@@ -41,13 +41,7 @@ func (p *Proposer) Start() error {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
 	go p.handleCollationBodyRequests()
-	go simulateNotaryRequests()
-	return nil
-}
-
-// Stop the main loop for proposing collations.
-func (p *Proposer) Stop() error {
-	log.Info("Stopping proposer service")
+	go simulateNotaryRequests(p.shard.ShardID(), p.shardp2p)
 	return nil
 }
 
@@ -55,23 +49,48 @@ func (p *Proposer) Stop() error {
 // network and responds to a specific peer that requested the body using
 // the feed exposed by the p2p server's API.
 func (p *Proposer) handleCollationBodyRequests() {
-	feed := p.shardp2p.Feed(sharding.CollationBodyRequest{})
+	feed, err := p.shardp2p.Feed(sharding.CollationBodyRequest{})
+	if err != nil {
+		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
+		return
+	}
 	ch := make(chan p2p.Message, 100)
 	sub := feed.Subscribe(ch)
 	// TODO: close chan and unsubscribe in Stop()
+
 	for {
-		req := <-ch
-		// TODO: fetch data from db
-		// res := buildResponse(req.Data)
-		// Reply to that specific peer only.
-		p2pserver.Send(nil, req.Peer)
+		timeout := time.NewTimer(10 * time.Second)
+		select {
+		case req := <-ch:
+			log.Info("Received p2p request from notary")
+			msg, ok := req.Data.(sharding.CollationBodyRequest)
+			if !ok {
+				log.Error(fmt.Sprintf("Received incorrect data request type: %v", msg))
+			}
+
+			// Reply to that specific peer only.
+			collation, err := p.shard.CollationByHeaderHash(msg.HeaderHash)
+			if err != nil {
+				log.Error(fmt.Sprintf("Could not fetch collation: %v", err))
+			}
+
+			res := &sharding.CollationBodyResponse{HeaderHash: msg.HeaderHash, Body: collation.Body()}
+			p.shardp2p.Send(res, req.Peer)
+
+		case <-timeout.C:
+			log.Error("Subscriber timed out")
+		case err := <-sub.Err():
+			log.Error("Subscriber failed: %v", err)
+			timeout.Stop()
+			return
+		}
+		timeout.Stop()
 	}
 }
 
 // proposeCollations is the main event loop of a proposer service that listens for
 // incoming transactions and adds them to the SMC.
 func (p *Proposer) proposeCollations() {
-
 	// TODO: Receive TXs from shard TX generator or TXpool (Github Issues 153 and 161)
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
@@ -90,14 +109,22 @@ func (p *Proposer) proposeCollations() {
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
 
 	// Create collation.
-	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
+	collation, err := createCollation(p.client, p.shard.ShardID(), period, txs)
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not create collation: %v", err))
 		return
 	}
 
-	// Check SMC if we can submit header before addHeader
-	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
+	// Saves the collation to persistent storage in the shardDB.
+	if err := p.shard.SaveCollation(collation); err != nil {
+		log.Error(fmt.Sprintf("Could not save collation to persistent storage: %v", err))
+		return
+	}
+
+	log.Info("Saved collation with header hash %v to shardChainDb", collation.Header().Hash().Hex())
+
+	// Check SMC if we can submit header before addHeader.
+	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not check if we can submit header: %v", err))
 		return
@@ -106,11 +133,11 @@ func (p *Proposer) proposeCollations() {
 		addHeader(p.client, collation)
 	}
 
-	return nil
+	return
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shardID))
+	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shard.ShardID()))
 	return nil
 }
