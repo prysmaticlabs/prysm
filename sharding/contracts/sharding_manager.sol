@@ -50,21 +50,23 @@ contract SMC {
     uint nextPeriodNotarySampleSize;
     uint sampleSizeLastUpdatedPeriod;
 
+    // Number of shards
+    // TODO: Setting default as 100. This will be a dynamic when we introduce random beacon
+    uint public shardCount = 100;
+
     // Constant values
     // Length of challenge period for notary's proof of custody
     uint public constant CHALLENGE_PERIOD = 25;
     // Number of blocks per period
-    uint public constant PERIOD_LENGTH = 5;
-    // Number of shards
-    uint public constant SHARD_COUNT = 100;
+    uint constant PERIOD_LENGTH = 5;
     // The minimum deposit size for a notary
-    uint public constant NOTARY_DEPOSIT = 1000 ether;
+    uint constant NOTARY_DEPOSIT = 1000 ether;
     // Time the ether is locked by notaries
-    uint public constant NOTARY_LOCKUP_LENGTH = 16128;
+    uint constant NOTARY_LOCKUP_LENGTH = 16128;
     // Number of notaries to select from notary pool for each shard in each period
-    uint public constant COMMITTEE_SIZE = 135;
+    uint constant COMMITTEE_SIZE = 135;
     // Threshold(number of notaries in committee) for a proposal to be accepted
-    uint public constant QUORUM_SIZE = 90;
+    uint constant QUORUM_SIZE = 90;
     // Number of periods ahead of current period, which the contract
     // is able to return the notary of that period
     uint constant LOOKAHEAD_LENGTH = 4;
@@ -170,7 +172,7 @@ contract SMC {
         uint _period,
         bytes32 _chunkRoot
         ) public {
-        require((_shardId >= 0) && (_shardId < SHARD_COUNT));
+        require((_shardId >= 0) && (_shardId < shardCount));
         require(_period == block.number / PERIOD_LENGTH);
         require(_period > lastSubmittedCollation[_shardId]);
 
@@ -196,7 +198,7 @@ contract SMC {
         uint _index,
         bytes32 _chunkRoot        
     ) public {
-        require((_shardId >= 0) && (_shardId < SHARD_COUNT));
+        require((_shardId >= 0) && (_shardId < shardCount));
         require(_period == block.number / PERIOD_LENGTH);
         require(_period == lastSubmittedCollation[_shardId]);
         require(_index < COMMITTEE_SIZE);

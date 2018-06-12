@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// DefaultShardConfig contains default settings for node to use in the sharded universe
+// DefaultShardConfig contains default configs for node to use in the sharded universe
 var DefaultShardConfig = ShardConfig{
 	SMCAddress:            common.HexToAddress("0x0"),
 	PeriodLength:          5,
@@ -21,7 +21,7 @@ var DefaultShardConfig = ShardConfig{
 	NotaryChallengePeriod: 25,
 }
 
-// DefaultShardChainConfig contains default chain settings of individual shard.
+// DefaultShardChainConfig contains default chain configs of an individual shard.
 var DefaultShardChainConfig = ShardChainConfig{}
 
 // ShardConfig contains configs for node to participate in the sharded universe.
@@ -36,5 +36,5 @@ type ShardConfig struct {
 	NotaryChallengePeriod int64          // NotaryChallengePeriod is the duration a notary has to store collations for.
 }
 
-// ShardChainConfig contains chain config of individual shard. Still to be designed.
-type ShardChainConfig struct {}
+// ShardChainConfig contains chain config of an individual shard. Still to be designed.
+type ShardChainConfig struct{}

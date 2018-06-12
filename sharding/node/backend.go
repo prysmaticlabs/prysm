@@ -89,11 +89,8 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
-	// Configure shardConfig, load from default.
+	// Configure shardConfig by loading from default.
 	shardEthereum.shardConfig = &params.DefaultShardConfig
-	if err != nil {
-		log.Error(fmt.Sprintf("Unable to update shard count in config: %v", err))
-	}
 
 	// Adds the initialized shardChainDb to the ShardEthereum instance.
 	shardEthereum.shardChainDb = shardChainDb
