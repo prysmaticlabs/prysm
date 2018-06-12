@@ -26,29 +26,29 @@ func NewShardTXPool(p2p sharding.ShardP2P) (*ShardTXPool, error) {
 }
 
 // Start the main routine for a shard transaction pool.
-func (pool *ShardTXPool) Start() error {
+func (p *ShardTXPool) Start() error {
 	log.Info("Starting shard txpool service")
-	go pool.sendTestTransaction()
+	go p.sendTestTransaction()
 	return nil
 }
 
 // Stop the main loop for a transaction pool in the shard network.
-func (pool *ShardTXPool) Stop() error {
+func (p *ShardTXPool) Stop() error {
 	log.Info("Stopping shard txpool service")
-	pool.ticker.Stop()
+	p.ticker.Stop()
 	return nil
 }
 
-func (pool *ShardTXPool) TransactionsFeed() *event.Feed {
-	return pool.transactionsFeed
+func (p *ShardTXPool) TransactionsFeed() *event.Feed {
+	return p.transactionsFeed
 }
 
-func (pool *ShardTXPool) sendTestTransaction() {
-	pool.ticker = time.NewTicker(5 * time.Second)
+func (p *ShardTXPool) sendTestTransaction() {
+	p.ticker = time.NewTicker(5 * time.Second)
 
-	for range pool.ticker.C {
+	for range p.ticker.C {
 		tx := createTestTransaction()
-		nsent := pool.transactionsFeed.Send(tx)
+		nsent := p.transactionsFeed.Send(tx)
 		log.Info(fmt.Sprintf("Sent transaction %v to %d subscribers", tx, nsent))
 	}
 }
