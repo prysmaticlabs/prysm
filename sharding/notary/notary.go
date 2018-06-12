@@ -144,7 +144,7 @@ func joinNotaryPool(client mainchain.Client) error {
 	log.Info("Joining notary pool")
 	txOps, err := client.CreateTXOpts(sharding.NotaryDeposit)
 	if err != nil {
-		return fmt.Errorf("unable to intiate the deposit transaction: %v", err)
+		return fmt.Errorf("unable to initiate the deposit transaction: %v", err)
 	}
 
 	tx, err := client.SMCTransactor().RegisterNotary(txOps)

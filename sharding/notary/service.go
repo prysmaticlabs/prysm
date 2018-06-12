@@ -3,6 +3,7 @@
 package notary
 
 import (
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
@@ -12,13 +13,14 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	smcClient *mainchain.SMCClient
-	shardp2p  sharding.ShardP2P
+	smcClient    *mainchain.SMCClient
+	shardp2p     sharding.ShardP2P
+	shardChainDb ethdb.Database
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(smcClient *mainchain.SMCClient, shardp2p sharding.ShardP2P) (*Notary, error) {
-	return &Notary{smcClient, shardp2p}, nil
+func NewNotary(smcClient *mainchain.SMCClient, shardp2p sharding.ShardP2P, shardChainDb ethdb.Database) (*Notary, error) {
+	return &Notary{smcClient, shardp2p, shardChainDb}, nil
 }
 
 // Start the main routine for a notary.

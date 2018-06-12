@@ -16,12 +16,12 @@ import (
 // an abstraction that contains useful methods to fetch collations corresponding to
 // a shard from the DB, methods to check for data availability, and more.
 type Shard struct {
-	shardDB database.ShardBackend
+	shardDB ethdb.Database
 	shardID *big.Int
 }
 
 // NewShard creates an instance of a Shard struct given a shardID.
-func NewShard(shardID *big.Int, shardDB database.ShardBackend) *Shard {
+func NewShard(shardID *big.Int, shardDB ethdb.Database) *Shard {
 	return &Shard{
 		shardID: shardID,
 		shardDB: shardDB,
