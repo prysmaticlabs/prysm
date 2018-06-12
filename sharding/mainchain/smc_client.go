@@ -158,7 +158,7 @@ func (s *SMCClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error)
 
 	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(context.Background(), hash) {
 		if err != nil {
-			return nil, fmt.Errorf("Unable to retrieve transaction: %v", err)
+			return nil, fmt.Errorf("unable to retrieve transaction: %v", err)
 		}
 		time.Sleep(1 * time.Second)
 	}

@@ -83,7 +83,7 @@ func (s *Shard) ChunkRootfromHeaderHash(headerHash *common.Hash) (*common.Hash, 
 	if err != nil {
 		return nil, err
 	}
-	return collation.header.ChunkRoot(), nil
+	return collation.Header().ChunkRoot(), nil
 }
 
 // CanonicalHeaderHash gets a collation header hash that has been set as
@@ -215,7 +215,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	// checks if the header has a corresponding body in the DB.
 	body, err := s.BodyByChunkRoot(dbHeader.ChunkRoot())
 	if err != nil {
-		return fmt.Errorf("no coresponding collation body saved in shardDB: %v", body)
+		return fmt.Errorf("no corresponding collation body saved in shardDB: %v", body)
 	}
 
 	key := canonicalCollationLookupKey(dbHeader.ShardID(), dbHeader.Period())

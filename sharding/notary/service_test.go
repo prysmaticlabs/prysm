@@ -131,6 +131,47 @@ func TestHasAccountBeenDeregistered(t *testing.T) {
 
 }
 
+func TestIsLockupOver(t *testing.T) {
+	backend, smc := setup()
+	client := &smcClient{smc: smc, t: t, backend: backend}
+
+	client.SetDepositFlag(true)
+	err := joinNotaryPool(client)
+	if err != nil {
+		t.Error(err)
+	}
+	backend.Commit()
+
+	err = leaveNotaryPool(client)
+	backend.Commit()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	// The test is dependent on implementing chainreader interface #164
+
+	/*
+		err = releaseNotary(client)
+
+		if err != nil {
+			t.Error(err)
+		}
+
+		lockup, err := isLockUpOver(client)
+
+		if err != nil {
+			t.Error(err)
+		}
+
+		if !lockup {
+			t.Error("lockup period is not over despite account being relased from registry")
+
+		}
+	*/
+
+}
+
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &smcClient{smc: smc, t: t}
@@ -147,7 +188,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	txOpts := transactOpts()
 	// deposit in notary pool, then it should return true.
 	txOpts.Value = sharding.NotaryDeposit
-	if _, err := smc.RegisterNotary(txOpts); err != nil {
+	if _, err = smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("failed to deposit: %v", err)
 	}
 	backend.Commit()
@@ -232,13 +273,22 @@ func TestLeaveNotaryPool(t *testing.T) {
 	}
 	backend.Commit()
 
+	// Now there should be one notary.
+	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(1).Cmp(numNotaries) != 0 {
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+	}
+
 	err = leaveNotaryPool(client)
 	backend.Commit()
 
 	if err != nil {
 		t.Error(err)
 	}
-	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +327,7 @@ func TestReleaseNotary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The remaining part of the test is dependant on access to chainreader
+	// The remaining part of the test is dependant on access to chainreader #164
 	// Unable to access block number for releaseNotary
 
 	/*
@@ -327,5 +377,5 @@ func TestSubmitVote(t *testing.T) {
 
 	// TODO: vote Test is unable to continue until chainreader is implemented as
 	// finding the current period requires knowing the latest blocknumber on the
-	// chain
+	// chain #164
 }

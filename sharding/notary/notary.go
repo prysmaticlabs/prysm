@@ -66,7 +66,6 @@ func checkSMCForNotary(client mainchain.Client, head *types.Header) error {
 			return err
 		}
 
-		// If the account is selected as notary, submit collation.
 		if addr == client.Account().Address {
 			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 		}
@@ -121,6 +120,9 @@ func hasAccountBeenDeregistered(client mainchain.Client) (bool, error) {
 	return nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0, err
 }
 
+// isLockUpOver checks if the lock up period is over
+// which will allow the notary to call the releaseNotary function
+// in the SMC and get their deposit back.
 func isLockUpOver(client mainchain.Client) (bool, error) {
 	block, err := client.ChainReader().BlockByNumber(context.Background(), nil)
 	if err != nil {
@@ -146,7 +148,7 @@ func joinNotaryPool(client mainchain.Client) error {
 	if b, err := isAccountInNotaryPool(client); b || err != nil {
 		if b {
 
-			log.Info(fmt.Sprint("Already Joined Notary Pool"))
+			log.Info(fmt.Sprint("Already joined notary pool"))
 			return nil
 
 		}
@@ -167,19 +169,17 @@ func joinNotaryPool(client mainchain.Client) error {
 	if err != nil {
 		return err
 	}
-	if receipt.Status == uint(0) {
+	if receipt.Status == types.ReceiptStatusFailed {
 
 		return errors.New("transaction was not successful, unable to deposit ETH and become a notary")
 
 	}
 
 	if inPool, err := isAccountInNotaryPool(client); !inPool || err != nil {
-		if !inPool {
-
-			return errors.New("account has not been able to be deposited in notary pool")
+		if err != nil {
+			return err
 		}
-
-		return err
+		return errors.New("account has not been able to be deposited in notary pool")
 	}
 
 	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
@@ -187,18 +187,15 @@ func joinNotaryPool(client mainchain.Client) error {
 	return nil
 }
 
-// leaveNotaryPool checks if the account is a Notary in  the SMC.
-// if it is then it checks if it has deposited , if it has it deregisters
-// itself from the pool and the lockup period counts down.
+// leaveNotaryPool causes the notary to deregister and leave the notary pool
+// by calling the DeregisterNotary function in the SMC.
 func leaveNotaryPool(client mainchain.Client) error {
 
-	nreg, err := getNotaryRegistry(client)
-	if err != nil {
-		return err
-	}
-
-	if !nreg.Deposited {
-		return errors.New("account has not deposited in the notary pool")
+	if inPool, err := isAccountInNotaryPool(client); !inPool || err != nil {
+		if err != nil {
+			return err
+		}
+		return errors.New("account has not been able to be deposited in notary pool")
 	}
 
 	txOps, err := client.CreateTXOpts(nil)
@@ -216,28 +213,24 @@ func leaveNotaryPool(client mainchain.Client) error {
 		return err
 	}
 
-	if receipt.Status == uint(0) {
-
+	if receipt.Status == types.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to deregister notary")
-
 	}
 
 	if dreg, err := hasAccountBeenDeregistered(client); dreg || err != nil {
-		if !dreg {
-
-			return errors.New("notary unable to be deregistered successfully from pool")
+		if err != nil {
+			return err
 		}
-
-		return err
+		return errors.New("notary unable to be deregistered successfully from pool")
 	}
 
-	log.Info(fmt.Sprintf("notary Deregistered from the pool with hash: %s", tx.Hash().Hex()))
+	log.Info(fmt.Sprintf("Notary deregistered from the pool with hash: %s", tx.Hash().Hex()))
 	return nil
 
 }
 
 // releaseNotary releases the Notary from the pool by deleting the notary from
-// the registry and transferring back the despoit
+// the registry and transferring back the deposit
 func releaseNotary(client mainchain.Client) error {
 	nreg, err := getNotaryRegistry(client)
 	if err != nil {
@@ -247,17 +240,17 @@ func releaseNotary(client mainchain.Client) error {
 		return errors.New("account has not deposited in the Notary Pool")
 	}
 
-	if nreg.DeregisteredPeriod == big.NewInt(0) {
+	if nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
 
 		return errors.New("notary is still registered to the pool")
 
 	}
 
 	if lockup, err := isLockUpOver(client); !lockup || err != nil {
-		if !lockup {
-			return errors.New("lockup period is not over")
+		if err != nil {
+			return err
 		}
-		return err
+		return errors.New("lockup period is not over")
 	}
 
 	txOps, err := client.CreateTXOpts(nil)
@@ -275,7 +268,7 @@ func releaseNotary(client mainchain.Client) error {
 		return err
 	}
 
-	if receipt.Status == uint(0) {
+	if receipt.Status == types.ReceiptStatusFailed {
 
 		return errors.New("transaction was not successful, unable to release Notary")
 
@@ -289,7 +282,7 @@ func releaseNotary(client mainchain.Client) error {
 
 	}
 
-	if nreg.Deposited || nreg.Balance != big.NewInt(0) || nreg.DeregisteredPeriod != big.NewInt(0) || nreg.PoolIndex != big.NewInt(0) {
+	if nreg.Deposited || nreg.Balance.Cmp(big.NewInt(0)) != 0 || nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) != 0 || nreg.PoolIndex.Cmp(big.NewInt(0)) != 0 {
 
 		return errors.New("notary unable to be released from the pool")
 
@@ -302,11 +295,12 @@ func releaseNotary(client mainchain.Client) error {
 }
 
 // submitVote votes for a collation on the shard
+// by taking in the shard and the hash of the collation header
 func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash) error {
 
 	shardID := shard.ShardID()
 	// checks if the shardID is valid
-	if shardID == big.NewInt(0) || shardID.Int64() > sharding.ShardCount {
+	if shardID.Int64() <= int64(0) || shardID.Int64() > sharding.ShardCount {
 		return fmt.Errorf("shardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardID)
 	}
 
@@ -340,7 +334,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 
 	// Checking if the pool index is valid
 	if nreg.PoolIndex.Int64() >= sharding.NotaryCommitSize {
-		return fmt.Errorf("invalid Pool Index %d as it is more than the committee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
+		return fmt.Errorf("invalid pool index %d as it is more than the committee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
 	}
 
 	collationRecords, err := client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -398,7 +392,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return err
 	}
 
-	if receipt.Status == uint(0) {
+	if receipt.Status == types.ReceiptStatusFailed {
 
 		return errors.New("transaction was not successful, unable to vote for collation")
 
