@@ -3,7 +3,6 @@ package sharding
 import (
 	"fmt"
 	"reflect"
-
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
@@ -21,7 +20,7 @@ type ShardP2P interface{}
 
 // TXPool defines an interface for a transaction pool service that handles
 // incoming shard transactions in the network.
-type TXPool interface {}
+type TXPool interface{}
 
 // Actor refers to either a notary, proposer, or observer in the sharding spec.
 type Actor interface {
