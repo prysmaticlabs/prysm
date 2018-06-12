@@ -33,46 +33,46 @@ type mockNode struct {
 	backend     *backends.SimulatedBackend
 }
 
-func (s *mockNode) Account() *accounts.Account {
+func (m *mockNode) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (s *mockNode) SMCCaller() *contracts.SMCCaller {
-	return &s.smc.SMCCaller
+func (m *mockNode) SMCCaller() *contracts.SMCCaller {
+	return &m.smc.SMCCaller
 }
 
-func (s *mockNode) ChainReader() ethereum.ChainReader {
+func (m *mockNode) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (s *mockNode) Context() *cli.Context {
+func (m *mockNode) Context() *cli.Context {
 	return nil
 }
 
-func (s *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &s.smc.SMCTransactor
+func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
+	return &m.smc.SMCTransactor
 }
 
-func (s *mockNode) SMCFilterer() *contracts.SMCFilterer {
-	return &s.smc.SMCFilterer
+func (m *mockNode) SMCFilterer() *contracts.SMCFilterer {
+	return &m.smc.SMCFilterer
 }
 
-func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
 	return nil, nil
 }
 
-func (s *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (s *mockNode) DepositFlag() bool {
+func (m *mockNode) DepositFlag() bool {
 	return false
 }
 
-func (s *mockNode) SetDepositFlag(deposit bool) {
-	s.depositFlag = deposit
+func (m *mockNode) SetDepositFlag(deposit bool) {
+	m.depositFlag = deposit
 }
 
 func (m *mockNode) Sign(hash common.Hash) ([]byte, error) {

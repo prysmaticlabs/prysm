@@ -23,7 +23,7 @@ import (
 // sharding/service.go.
 type Proposer struct {
 	client   *mainchain.SMCClient
-	shardp2p sharding.ShardP2P
+	shardp2p *p2p.Server
 	txpool   sharding.TXPool
 	shard    *sharding.Shard
 }
@@ -31,7 +31,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
-func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+func NewProposer(client *mainchain.SMCClient, shardp2p *p2p.Server, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
 	return &Proposer{client, shardp2p, txpool, shard}, nil
 }

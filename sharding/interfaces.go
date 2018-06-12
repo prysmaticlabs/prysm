@@ -3,8 +3,6 @@ package sharding
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/ethereum/go-ethereum/event"
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
@@ -15,18 +13,6 @@ type Node interface {
 	Close()
 	Register(constructor ServiceConstructor) error
 }
-
-// ShardP2P defines an interface for a peer-to-peer service in a
-// sharded Ethereum blockchain.
-type ShardP2P interface {
-	Feed(messageType interface{}) (*event.Feed, error)
-	Broadcast(message interface{}) error
-	Send(message interface{}, peer PeerInfo) error
-}
-
-// PeerInfo defines an interface to extract important information about a shardp2p
-// peer.
-type PeerInfo interface{}
 
 // TXPool defines an interface for a transaction pool service that handles
 // incoming shard transactions in the network.

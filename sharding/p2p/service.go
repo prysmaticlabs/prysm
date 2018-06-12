@@ -6,12 +6,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
 )
+
+// PeerInfo defines an interface to extract important information about a shardp2p
+// peer.
+type PeerInfo interface{}
 
 // Message defines a shardp2p message received via a subscription.
 type Message struct {
-	Peer sharding.PeerInfo
+	Peer PeerInfo
 	Data interface{} // Of the message type requested from p2p.Server.Feed(...)
 }
 
@@ -51,6 +54,6 @@ func (s *Server) Broadcast(message interface{}) error {
 	return nil
 }
 
-func (s *Server) Send(message interface{}, peer sharding.PeerInfo) error {
+func (s *Server) Send(message interface{}, peer PeerInfo) error {
 	return nil
 }
