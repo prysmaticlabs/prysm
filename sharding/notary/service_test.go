@@ -100,6 +100,37 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 	return backend, smc
 }
 
+func TestHasAccountBeenDeregistered(t *testing.T) {
+	backend, smc := setup()
+	client := &smcClient{smc: smc, t: t, backend: backend}
+
+	client.SetDepositFlag(true)
+	err := joinNotaryPool(client)
+	if err != nil {
+		t.Error(err)
+	}
+	backend.Commit()
+
+	err = leaveNotaryPool(client)
+	backend.Commit()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	dreg, err := hasAccountBeenDeregistered(client)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !dreg {
+		t.Error("account unable to be deregistered from notary pool")
+
+	}
+
+}
+
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
 	client := &smcClient{smc: smc, t: t}
@@ -110,14 +141,14 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if b {
-		t.Fatal("Account unexpectedly in notary pool")
+		t.Fatal("account unexpectedly in notary pool")
 	}
 
 	txOpts := transactOpts()
 	// deposit in notary pool, then it should return true.
 	txOpts.Value = sharding.NotaryDeposit
 	if _, err := smc.RegisterNotary(txOpts); err != nil {
-		t.Fatalf("Failed to deposit: %v", err)
+		t.Fatalf("failed to deposit: %v", err)
 	}
 	backend.Commit()
 	b, err = isAccountInNotaryPool(client)
@@ -125,7 +156,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !b {
-		t.Fatal("Account not in notary pool when expected to be")
+		t.Fatal("account not in notary pool when expected to be")
 	}
 }
 
@@ -138,13 +169,13 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
 	client.SetDepositFlag(false)
 	err = joinNotaryPool(client)
 	if err == nil {
-		t.Error("Joined notary pool while --deposit was not present")
+		t.Error("joined notary pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
@@ -160,7 +191,7 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
 
 	// Trying to join while deposited should do nothing
@@ -175,71 +206,70 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Fatalf("Unexpected number of notaries. Got %d, wanted 1.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 1.", numNotaries)
 	}
 
 }
 
 func TestLeaveNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	node := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
+	client := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
 
 	// Test Leaving Notary Pool Before Joining it
 
-	err := leaveNotaryPool(node)
+	err := leaveNotaryPool(client)
 	backend.Commit()
 
 	if err == nil {
-		t.Error("Able to leave Notary pool despite having not joined it")
+		t.Error("able to leave Notary pool despite having not joined it")
 	}
 
 	// Roundtrip Test , Join and leave pool
 
-	err = joinNotaryPool(node)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Error(err)
 	}
 	backend.Commit()
 
-	err = leaveNotaryPool(node)
+	err = leaveNotaryPool(client)
 	backend.Commit()
 
 	if err != nil {
-
-		t.Fatal(err)
+		t.Error(err)
 	}
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
+		t.Fatalf("unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
 }
 
 func TestReleaseNotary(t *testing.T) {
 	backend, smc := setup()
-	node := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
+	client := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
 
 	// Test Release Notary Before Joining it
 
-	err := releaseNotary(node)
+	err := releaseNotary(client)
 	backend.Commit()
 
 	if err == nil {
-		t.Error("Released From Notary despite Never Joining Pool")
+		t.Error("released From Notary despite Never Joining Pool")
 	}
 
 	// Roundtrip Test , Join and leave pool and release Notary
 
-	err = joinNotaryPool(node)
+	err = joinNotaryPool(client)
 	if err != nil {
 		t.Error(err)
 	}
 	backend.Commit()
 
-	err = leaveNotaryPool(node)
+	err = leaveNotaryPool(client)
 	backend.Commit()
 
 	if err != nil {
@@ -257,7 +287,7 @@ func TestReleaseNotary(t *testing.T) {
 			t.Error("unable to retrieve balance")
 		}
 
-		err = releaseNotary(node)
+		err = releaseNotary(client)
 		backend.Commit()
 
 		if err != nil {
@@ -287,9 +317,9 @@ func TestReleaseNotary(t *testing.T) {
 
 func TestSubmitVote(t *testing.T) {
 	backend, smc := setup()
-	node := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
+	client := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
 
-	err := joinNotaryPool(node)
+	err := joinNotaryPool(client)
 	if err != nil {
 		t.Error(err)
 	}

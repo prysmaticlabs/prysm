@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 )
 
@@ -65,43 +66,29 @@ func checkSMCForNotary(client mainchain.Client, head *types.Header) error {
 			return err
 		}
 
-		// If output is non-empty and the addr == coinbase.
+		// If the account is selected as notary, submit collation.
 		if addr == client.Account().Address {
 			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
-			err := submitCollation(s)
-			if err != nil {
-				return err
-			}
-
-			// If the account is selected as notary, submit collation.
-			if addr == client.Account().Address {
-				log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
-				err := submitCollation(s)
-				if err != nil {
-					return fmt.Errorf("could not add collation. %v", err)
-				}
-			}
 		}
+
 	}
 
 	return nil
 }
 
-// Get the Notary Registry of the registered account
-func getNotaryRegistry(client mainchain.Client) (struct {
-	DeregisteredPeriod *big.Int
-	PoolIndex          *big.Int
-	Balance            *big.Int
-	Deposited          bool
-}, error) {
+// getNotaryRegistry retrieves the registry of the registered account.
+func getNotaryRegistry(client mainchain.Client) (*contracts.Registry, error) {
+
+	var nreg contracts.Registry
+
 	account := client.Account()
 
 	nreg, err := client.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
 	if err != nil {
-		return nreg, fmt.Errorf("Unable to retrieve notary registry: %v", err)
+		return nil, fmt.Errorf("unable to retrieve notary registry: %v", err)
 	}
 
-	return nreg, nil
+	return &nreg, nil
 
 }
 
@@ -117,12 +104,13 @@ func isAccountInNotaryPool(client mainchain.Client) (bool, error) {
 	}
 
 	if !nreg.Deposited {
-		log.Warn(fmt.Sprintf("Account %s not in notary pool.", client.Account().Address.String()))
-		return false, nil
+		log.Warn(fmt.Sprintf("Account %s not in notary pool.", client.Account().Address.Hex()))
 	}
-	return true, nil
+
+	return nreg.Deposited, nil
 }
 
+// hasAccountBeenDeregistered checks if the account has been deregistered from the notary pool.
 func hasAccountBeenDeregistered(client mainchain.Client) (bool, error) {
 	nreg, err := getNotaryRegistry(client)
 
@@ -130,7 +118,7 @@ func hasAccountBeenDeregistered(client mainchain.Client) (bool, error) {
 		return false, err
 	}
 
-	return nreg.DeregisteredPeriod != big.NewInt(0), err
+	return nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0, err
 }
 
 func isLockUpOver(client mainchain.Client) (bool, error) {
@@ -145,36 +133,6 @@ func isLockUpOver(client mainchain.Client) (bool, error) {
 
 	return (block.Number().Int64() / sharding.PeriodLength) > nreg.DeregisteredPeriod.Int64()+sharding.NotaryLockupLength, nil
 
-}
-
-// submitCollation interacts with the SMC directly to add a collation header.
-func submitCollation(shardID int64) error {
-	// TODO: Adds a collation header to the SMC with the following fields:
-	// [
-	//  shard_id: uint256,
-	//  expected_period_number: uint256,
-	//  period_start_prevhash: bytes32,
-	//  parent_hash: bytes32,
-	//  transactions_root: bytes32,
-	//  coinbase: address,
-	//  state_root: bytes32,
-	//  receipts_root: bytes32,
-	//  number: uint256,
-	//  sig: bytes
-	// ]
-	//
-	// Before calling this, we would need to have access to the state of
-	// the period_start_prevhash. Refer to the comments in:
-	// https://github.com/ethereum/py-evm/issues/258#issuecomment-359879350
-	//
-	// This function will call FetchCandidateHead() of the SMC to obtain
-	// more necessary information.
-	//
-	// This functions will fetch the transactions in the proposer tx pool and and apply
-	// them to finish up the collation. It will then need to broadcast the
-	// collation to the main chain using JSON-RPC.
-	log.Info("Submit collation function called")
-	return nil
 }
 
 // joinNotaryPool checks if the deposit flag is true and the account is a
@@ -224,7 +182,7 @@ func joinNotaryPool(client mainchain.Client) error {
 		return err
 	}
 
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
+	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
 
 	return nil
 }
@@ -273,7 +231,7 @@ func leaveNotaryPool(client mainchain.Client) error {
 		return err
 	}
 
-	log.Info(fmt.Sprintf("Notary Deregistered from the pool with hash: %s", tx.Hash().String()))
+	log.Info(fmt.Sprintf("Notary Deregistered from the pool with hash: %s", tx.Hash().Hex()))
 	return nil
 
 }
@@ -337,7 +295,7 @@ func releaseNotary(client mainchain.Client) error {
 
 	}
 
-	log.Info(fmt.Sprintf("Notary with address: %s released from pool", client.Account().Address.String()))
+	log.Info(fmt.Sprintf("Notary with address: %s released from pool", client.Account().Address.Hex()))
 
 	return nil
 
