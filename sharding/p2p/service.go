@@ -36,7 +36,7 @@ func (s *Server) Stop() error {
 // TODO(prestonvanloon): Add more to this GoDoc before merging.
 func (s *Server) Feed(msg interface{}) (*event.Feed, error) {
 	t := reflect.TypeOf(msg)
-	if s.feeds[t] != nil {
+	if s.feeds[t] == nil {
 		s.feeds[t] = new(event.Feed)
 	}
 	return s.feeds[t], nil
