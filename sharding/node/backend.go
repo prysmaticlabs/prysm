@@ -124,7 +124,7 @@ func (s *ShardEthereum) Start() {
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
 		go s.Close()
-		for i := 10; i > 0; i-- {
+		for i := 5; i > 0; i-- {
 			<-sigc
 			if i > 1 {
 				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)

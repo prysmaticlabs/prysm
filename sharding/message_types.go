@@ -1,9 +1,16 @@
 package sharding
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+)
 
 type CollationBodyRequest struct {
-	HeaderHash *common.Hash
+	ChunkRoot *common.Hash
+	ShardID   *big.Int
+	Period    *big.Int
+	Proposer  *common.Address
 }
 
 type CollationBodyResponse struct {

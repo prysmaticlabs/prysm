@@ -30,11 +30,28 @@ func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, s
 			continue
 		}
 
+		// Checks if we got an empty collation record. If the SMCCaller does not find
+		// a collation header, it returns an array of [32]byte filled with 0's.
+		sum := 0
+		for _, val := range record.ChunkRoot {
+			sum += int(val)
+		}
+		if sum == 0 {
+			continue
+		}
+
 		// Converts from fixed size [32]byte to []byte slice.
 		chunkRoot := common.BytesToHash(record.ChunkRoot[:])
-		header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &record.Proposer, []byte{})
-		msg := &p2p.Message{
-			Data: header.Hash(),
+
+		request := sharding.CollationBodyRequest{
+			ChunkRoot: &chunkRoot,
+			ShardID:   shardID,
+			Period:    period,
+			Proposer:  &record.Proposer,
+		}
+		msg := p2p.Message{
+			Peer: nil,
+			Data: request,
 		}
 		feed, err := shardp2p.Feed(sharding.CollationBodyRequest{})
 		if err != nil {
@@ -42,6 +59,7 @@ func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, s
 			continue
 		}
 		feed.Send(msg)
-		time.Sleep(time.Second)
+		log.Info("Notary Simulator: sent request for collation body via a shardp2p feed")
+		time.Sleep(5 * time.Second)
 	}
 }

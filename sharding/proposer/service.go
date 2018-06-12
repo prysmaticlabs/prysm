@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -37,12 +36,11 @@ func NewProposer(client *mainchain.SMCClient, shardp2p *p2p.Server, txpool shard
 }
 
 // Start the main loop for proposing collations.
-func (p *Proposer) Start() error {
+func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
 	go p.handleCollationBodyRequests()
 	go simulateNotaryRequests(p.client, p.shardp2p, p.shard.ShardID())
-	return nil
 }
 
 // handleCollationBodyRequests subscribes to messages from the shardp2p
@@ -56,34 +54,41 @@ func (p *Proposer) handleCollationBodyRequests() {
 	}
 	ch := make(chan p2p.Message, 100)
 	sub := feed.Subscribe(ch)
-	// TODO: close chan and unsubscribe in Stop().
-
-	// Set up a context with deadline or timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
 	for {
 		select {
 		case req := <-ch:
-			log.Info("Received p2p request from notary")
+			log.Info(fmt.Sprintf("Received p2p request from notary: %v", req))
 
 			// Type assertion helps us catch incorrect data requests.
 			msg, ok := req.Data.(sharding.CollationBodyRequest)
 			if !ok {
 				log.Error(fmt.Sprintf("Received incorrect data request type: %v", msg))
+				continue
+			}
+
+			header := sharding.NewCollationHeader(msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, nil)
+			sig, err := p.client.Sign(header.Hash())
+			if err != nil {
+				log.Error(fmt.Sprintf("Could not sign received header: %v", err))
+				continue
+			}
+
+			// Adds the signature to the header before calculating the hash used for db lookups.
+			header.AddSig(sig)
+
+			// Fetch the collation by its header hash from the shardChainDB.
+			headerHash := header.Hash()
+			collation, err := p.shard.CollationByHeaderHash(&headerHash)
+			if err != nil {
+				log.Error(fmt.Sprintf("Could not fetch collation: %v", err))
+				continue
 			}
 
 			// Reply to that specific peer only.
-			collation, err := p.shard.CollationByHeaderHash(msg.HeaderHash)
-			if err != nil {
-				log.Error(fmt.Sprintf("Could not fetch collation: %v", err))
-			}
-
-			res := &sharding.CollationBodyResponse{HeaderHash: msg.HeaderHash, Body: collation.Body()}
+			res := &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}
 			p.shardp2p.Send(res, req.Peer)
 
-		case <-ctx.Done():
-			log.Error("Subscriber timed out")
 		case err := <-sub.Err():
 			log.Error("Subscriber failed: %v", err)
 			return
@@ -124,7 +129,7 @@ func (p *Proposer) proposeCollations() {
 		return
 	}
 
-	log.Info("Saved collation with header hash %v to shardChainDb", collation.Header().Hash().Hex())
+	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDb", collation.Header().Hash().Hex()))
 
 	// Check SMC if we can submit header before addHeader.
 	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)
