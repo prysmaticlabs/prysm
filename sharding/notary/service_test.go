@@ -65,7 +65,7 @@ func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
 
 func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
 	s.backend.Commit()
-	return s.backend.TransactionReceipt(context.TODO(), hash)
+	return s.backend.TransactionReceipt(context.Background(), hash)
 }
 
 func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
@@ -259,11 +259,11 @@ func TestLeaveNotaryPool(t *testing.T) {
 	// Test Leaving Notary Pool Before Joining it
 
 	err := leaveNotaryPool(client)
-	backend.Commit()
-
 	if err == nil {
-		t.Error("able to leave Notary pool despite having not joined it")
+		t.Error("able to leave notary pool despite having not joined it")
 	}
+
+	backend.Rollback()
 
 	// Roundtrip Test , Join and leave pool
 
@@ -283,11 +283,11 @@ func TestLeaveNotaryPool(t *testing.T) {
 	}
 
 	err = leaveNotaryPool(client)
-	backend.Commit()
-
 	if err != nil {
 		t.Error(err)
 	}
+	backend.Commit()
+
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
@@ -305,11 +305,10 @@ func TestReleaseNotary(t *testing.T) {
 	// Test Release Notary Before Joining it
 
 	err := releaseNotary(client)
-	backend.Commit()
-
 	if err == nil {
 		t.Error("released From notary despite never joining pool")
 	}
+	backend.Rollback()
 
 	// Roundtrip Test , Join and leave pool and release Notary
 

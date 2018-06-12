@@ -217,7 +217,7 @@ func leaveNotaryPool(client mainchain.Client) error {
 		return errors.New("transaction was not successful, unable to deregister notary")
 	}
 
-	if dreg, err := hasAccountBeenDeregistered(client); dreg || err != nil {
+	if dreg, err := hasAccountBeenDeregistered(client); !dreg || err != nil {
 		if err != nil {
 			return err
 		}
