@@ -15,6 +15,7 @@ import (
 // and body. Header consists of shardID, ChunkRoot, period,
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
+
 func createCollation(client mainchain.Client, shardId *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
 	// shardId has to be within range
 	if shardId.Cmp(big.NewInt(0)) < 0 || shardId.Cmp(big.NewInt(sharding.ShardCount)) > 0 {

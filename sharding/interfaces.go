@@ -48,7 +48,7 @@ type ServiceConstructor func(ctx *ServiceContext) (Service, error)
 type Service interface {
 	// Start is called after all services have been constructed to
 	// spawn any goroutines required by the service.
-	Start() error
+	Start()
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop() error

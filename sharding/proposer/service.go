@@ -37,12 +37,9 @@ func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool
 }
 
 // Start the main loop for proposing collations.
-func (p *Proposer) Start() error {
+func (p *Proposer) Start() {
 	log.Info(fmt.Sprintf("Starting proposer service in shard %d", p.shardID))
-
-	go p.subscribeTransactions()
-
-	return nil
+	go p.proposeCollations()
 }
 
 // Stop the main loop for proposing collations.
@@ -52,10 +49,15 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
+func (p *Proposer) proposeCollations() {
+	go p.subscribeTransactions()
+}
+
 func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	// Get current block number.
 	blockNumber, err := p.client.ChainReader().BlockByNumber(context.Background(), nil)
 	if err != nil {
+		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return err
 	}
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
@@ -63,12 +65,14 @@ func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	// Create collation.
 	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
 	if err != nil {
+		log.Error(fmt.Sprintf("Could not create collation: %v", err))
 		return err
 	}
 
 	// Check SMC if we can submit header before addHeader
 	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
 	if err != nil {
+		log.Error(fmt.Sprintf("Could not check if we can submit header: %v", err))
 		return err
 	}
 	if canAdd {
