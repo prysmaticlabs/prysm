@@ -146,8 +146,6 @@ func (p *Proposer) proposeCollations() {
 	if canAdd {
 		addHeader(p.client, collation)
 	}
-
-	return
 }
 
 // Stop the main loop for proposing collations.
