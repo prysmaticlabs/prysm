@@ -2,7 +2,7 @@ package p2p
 
 import "fmt"
 
-// Feeds can tbe use to subscribe to any type of message.
+// Feeds can be use to subscribe to any type of message.
 func ExampleServer_Feed() {
 	s, err := NewServer()
 	if err != nil {
