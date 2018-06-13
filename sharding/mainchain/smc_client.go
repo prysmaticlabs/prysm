@@ -225,4 +225,3 @@ func (s *SMCClient) Sign(hash common.Hash) ([]byte, error) {
 	account := s.Account()
 	return s.keystore.SignHash(*account, hash.Bytes())
 }
-

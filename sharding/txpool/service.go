@@ -42,6 +42,8 @@ func (p *ShardTXPool) TransactionsFeed() *event.Feed {
 	return p.transactionsFeed
 }
 
+// sendTestTransaction sends a transaction with random bytes over a 5 second interval
+// this method is for testing purposes only, and will be replaced by a more functional CLI tool
 func (p *ShardTXPool) sendTestTransaction() {
 	p.ticker = time.NewTicker(5 * time.Second)
 

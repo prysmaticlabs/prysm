@@ -32,7 +32,6 @@ type Proposer struct {
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
 func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
-	// Initializes a  directory persistent db.
 	return &Proposer{client, shardp2p, txpool, nil, shardChainDb, shardID}, nil
 }
 
@@ -47,6 +46,30 @@ func (p *Proposer) Stop() error {
 	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shardID))
 	p.txpoolSub.Unsubscribe()
 	return nil
+}
+
+// proposeCollations listens to the transaction feed submits a collation when one is found
+func (p *Proposer) proposeCollations() {
+	requests := make(chan *types.Transaction)
+	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
+
+	for {
+		timeout := time.NewTimer(10 * time.Second)
+		select {
+		case tx := <-requests:
+			if err := p.createCollation([]*types.Transaction{tx}); err != nil {
+				log.Error(fmt.Sprintf("Create collation failed: %v", err))
+			}
+			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
+		case <-timeout.C:
+			log.Error("Subscriber timed out")
+		case err := <-p.txpoolSub.Err():
+			log.Error("Subscriber failed: %v", err)
+			timeout.Stop()
+			return
+		}
+		timeout.Stop()
+	}
 }
 
 func (p *Proposer) createCollation(txs []*types.Transaction) error {
@@ -73,27 +96,4 @@ func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	}
 
 	return nil
-}
-
-func (p *Proposer) proposeCollations() {
-	requests := make(chan *types.Transaction)
-	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
-
-	for {
-		timeout := time.NewTimer(10 * time.Second)
-		select {
-		case tx := <-requests:
-			if err := p.createCollation([]*types.Transaction{tx}); err != nil {
-				log.Error(fmt.Sprintf("Create collation failed: %v", err))
-			}
-			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
-		case <-timeout.C:
-			log.Error("Subscriber timed out")
-		case err := <-p.txpoolSub.Err():
-			log.Error("Subscriber failed: %v", err)
-			timeout.Stop()
-			return
-		}
-		timeout.Stop()
-	}
 }
