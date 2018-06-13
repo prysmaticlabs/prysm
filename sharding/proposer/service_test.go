@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
+	"github.com/ethereum/go-ethereum/sharding/params"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -89,8 +89,12 @@ func (m *mockNode) Close() {
 	m.t.Fatal("Close called")
 }
 
-func (s *mockNode) DataDirPath() string {
+func (m *mockNode) DataDirPath() string {
 	return "/tmp/datadir"
+}
+
+func (m *mockNode) GetShardCount() (int64, error) {
+	return 100, nil
 }
 
 func transactOpts() *bind.TransactOpts {
@@ -124,7 +128,7 @@ func TestCreateCollation(t *testing.T) {
 	}
 
 	// fast forward to 2nd period.
-	for i := 0; i < 2*int(sharding.PeriodLength); i++ {
+	for i := 0; i < 2*int(params.DefaultShardConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -182,7 +186,7 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// fast forward to next period.
-	for i := 0; i < int(sharding.PeriodLength); i++ {
+	for i := 0; i < int(params.DefaultShardConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -229,7 +233,7 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Create collation failed: %v", err)
 	}
 
-	for i := 0; i < int(sharding.PeriodLength); i++ {
+	for i := 0; i < int(params.DefaultShardConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
