@@ -17,9 +17,9 @@ import (
 // contains information about the sender, aka the peer, and the message payload
 // itself.
 //
-//   feed := ps.Feed(MyMessage{})
+//   feed, err := ps.Feed(MyMessage{})
 //   ch := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
-//   feed.Subscribe(ch)
+//   sub := feed.Subscribe(ch)
 //
 //   // Wait until my message comes from a peer.
 //   msg := <- ch
