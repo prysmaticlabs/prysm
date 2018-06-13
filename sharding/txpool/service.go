@@ -48,7 +48,7 @@ func (p *ShardTXPool) sendTestTransaction() {
 	for range p.ticker.C {
 		tx := createTestTransaction()
 		nsent := p.transactionsFeed.Send(tx)
-		log.Info(fmt.Sprintf("Sent transaction %v to %d subscribers", tx, nsent))
+		log.Info(fmt.Sprintf("Sent transaction %x to %d subscribers", tx.Hash(), nsent))
 	}
 }
 

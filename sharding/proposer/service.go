@@ -49,15 +49,10 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
-func (p *Proposer) proposeCollations() {
-	go p.subscribeTransactions()
-}
-
 func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	// Get current block number.
 	blockNumber, err := p.client.ChainReader().BlockByNumber(context.Background(), nil)
 	if err != nil {
-		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return err
 	}
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
@@ -65,14 +60,12 @@ func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	// Create collation.
 	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
 	if err != nil {
-		log.Error(fmt.Sprintf("Could not create collation: %v", err))
 		return err
 	}
 
 	// Check SMC if we can submit header before addHeader
 	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
 	if err != nil {
-		log.Error(fmt.Sprintf("Could not check if we can submit header: %v", err))
 		return err
 	}
 	if canAdd {
@@ -82,7 +75,7 @@ func (p *Proposer) createCollation(txs []*types.Transaction) error {
 	return nil
 }
 
-func (p *Proposer) subscribeTransactions() {
+func (p *Proposer) proposeCollations() {
 	requests := make(chan *types.Transaction)
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
 
@@ -90,10 +83,10 @@ func (p *Proposer) subscribeTransactions() {
 		timeout := time.NewTimer(10 * time.Second)
 		select {
 		case tx := <-requests:
-			if err := p.createCollation([]*types.Transaction{tx}); err == nil {
-				log.Error("Create collation failed: %v", tx)
+			if err := p.createCollation([]*types.Transaction{tx}); err != nil {
+				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
-			log.Info(fmt.Sprintf("Received transaction id: %v", tx))
+			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
 		case <-timeout.C:
 			log.Error("Subscriber timed out")
 		case err := <-p.txpoolSub.Err():
