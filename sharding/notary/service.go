@@ -3,6 +3,8 @@
 package notary
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -24,22 +26,29 @@ func NewNotary(smcClient *mainchain.SMCClient, shardp2p sharding.ShardP2P, shard
 }
 
 // Start the main routine for a notary.
-func (n *Notary) Start() error {
+func (n *Notary) Start() {
 	log.Info("Starting notary service")
-
-	// TODO: handle this better through goroutines. Right now, these methods
-	// are blocking.
-	if n.smcClient.DepositFlag() {
-		if err := joinNotaryPool(n.smcClient); err != nil {
-			return err
-		}
-	}
-
-	return subscribeBlockHeaders(n.smcClient)
+	go n.notarizeCollations()
 }
 
 // Stop the main loop for notarizing collations.
 func (n *Notary) Stop() error {
 	log.Info("Stopping notary service")
 	return nil
+}
+
+func (n *Notary) notarizeCollations() {
+	// TODO: handle this better through goroutines. Right now, these methods
+	// are blocking.
+	if n.smcClient.DepositFlag() {
+		if err := joinNotaryPool(n.smcClient); err != nil {
+			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+			return
+		}
+	}
+
+	if err := subscribeBlockHeaders(n.smcClient); err != nil {
+		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+		return
+	}
 }

@@ -21,9 +21,8 @@ func NewServer() (*Server, error) {
 }
 
 // Start the main routine for an p2p server.
-func (s *Server) Start() error {
+func (s *Server) Start() {
 	log.Info("Starting shardp2p server")
-	return nil
 }
 
 // Stop the main p2p loop.
