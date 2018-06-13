@@ -9,20 +9,22 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/params"
 )
 
 // Notary holds functionality required to run a collation notary
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
+	config       *params.Config
 	smcClient    *mainchain.SMCClient
 	p2p          *p2p.Server
 	shardChainDb ethdb.Database
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database) (*Notary, error) {
-	return &Notary{smcClient, p2p, shardChainDb}, nil
+func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database) (*Notary, error) {
+	return &Notary{config, smcClient, p2p, shardChainDb}, nil
 }
 
 // Start the main routine for a notary.
@@ -41,7 +43,7 @@ func (n *Notary) notarizeCollations() {
 	// TODO: handle this better through goroutines. Right now, these methods
 	// are blocking.
 	if n.smcClient.DepositFlag() {
-		if err := joinNotaryPool(n.smcClient); err != nil {
+		if err := joinNotaryPool(n.config, n.smcClient); err != nil {
 			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 			return
 		}
