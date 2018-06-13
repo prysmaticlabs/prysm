@@ -32,7 +32,7 @@ func (s *Server) Stop() error {
 }
 
 // Send a message to a specific peer.
-func (s *Server) Send(msg interface{}, Peer peer) {
+func (s *Server) Send(msg interface{}, peer Peer) {
 	// TODO
 }
 
