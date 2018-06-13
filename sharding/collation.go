@@ -75,7 +75,7 @@ func (h *CollationHeader) AddSig(sig []byte) {
 	h.data.ProposerSignature = sig
 }
 
-// Signature of the collation corresponds to.
+// Sig is the signature the collation corresponds to.
 func (h *CollationHeader) Sig() []byte { return h.data.ProposerSignature }
 
 // ShardID the collation corresponds to.

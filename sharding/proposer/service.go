@@ -55,6 +55,9 @@ func (p *Proposer) handleCollationBodyRequests() {
 	ch := make(chan p2p.Message, 100)
 	sub := feed.Subscribe(ch)
 
+	defer sub.Unsubscribe()
+	defer close(ch)
+
 	for {
 		select {
 		case req := <-ch:
@@ -88,6 +91,8 @@ func (p *Proposer) handleCollationBodyRequests() {
 
 			// Reply to that specific peer only.
 			res := &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}
+
+			// TODO: Implement this and see the response from the other end.
 			p.shardp2p.Send(res, req.Peer)
 
 		case err := <-sub.Err():

@@ -31,6 +31,7 @@ func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, s
 
 		// Checks if we got an empty collation record. If the SMCCaller does not find
 		// a collation header, it returns an array of [32]byte filled with 0's.
+		// Better way to do this?
 		sum := 0
 		for _, val := range record.ChunkRoot {
 			sum += int(val)
@@ -58,6 +59,6 @@ func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, s
 			continue
 		}
 		feed.Send(msg)
-		log.Info("Notary Simulator: sent request for collation body via a shardp2p feed")
+		log.Info("Notary Simulator: Sent request for collation body via a shardp2p feed")
 	}
 }
