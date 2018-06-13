@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const shardChainDbName = "shardchaindata"
@@ -38,7 +38,7 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.ShardConfig  // Holds necessary information to configure shards.
+	shardConfig  *params.ShardConfig  // Holds necessary information to configure shard node.
 	txPool       *txpool.ShardTXPool  // Defines the sharding-specific txpool. To be designed.
 	actor        sharding.Actor       // Either notary, proposer, or observer.
 	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
@@ -89,6 +89,9 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Adds the initialized SMCClient to the ShardEthereum instance.
 	shardEthereum.smcClient = smcClient
 
+	// Configure shardConfig by loading the default.
+	shardEthereum.shardConfig = params.DefaultShardConfig
+
 	// Adds the initialized shardChainDb to the ShardEthereum instance.
 	shardEthereum.shardChainDb = shardChainDb
 
@@ -100,7 +103,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerActorService(actorFlag, shardIDFlag); err != nil {
+	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -210,18 +213,18 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 }
 
 // Registers the actor according to CLI flags. Either notary/proposer/observer.
-func (s *ShardEthereum) registerActorService(actor string, shardID int) error {
+func (s *ShardEthereum) registerActorService(config *params.ShardConfig, actor string, shardID int) error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 
 		var p2p *shardp2p.Server
 		ctx.RetrieveService(&p2p)
 
 		if actor == "notary" {
-			return notary.NewNotary(s.smcClient, p2p, s.shardChainDb)
+			return notary.NewNotary(config, s.smcClient, p2p, s.shardChainDb)
 		} else if actor == "proposer" {
 			var txPool *txpool.ShardTXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(s.smcClient, p2p, txPool, s.shardChainDb, shardID)
+			return proposer.NewProposer(config, s.smcClient, p2p, txPool, s.shardChainDb, shardID)
 		}
 		return observer.NewObserver(p2p, s.shardChainDb, shardID)
 	})
