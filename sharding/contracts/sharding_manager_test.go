@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/params"
 )
 
 type smcTestHelper struct {
@@ -68,7 +68,7 @@ func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey
 
 // fastForward is a helper function to skip through n period.
 func (s *smcTestHelper) fastForward(p int) {
-	for i := 0; i < p*int(sharding.PeriodLength); i++ {
+	for i := 0; i < p*int(params.DefaultConfig.PeriodLength); i++ {
 		s.backend.Commit()
 	}
 }
@@ -168,7 +168,7 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 
 	// Filter SMC logs by headerAdded.
 	shardIndex := []*big.Int{shard}
-	logPeriod := uint64(period.Int64() * sharding.PeriodLength)
+	logPeriod := uint64(period.Int64() * params.DefaultConfig.PeriodLength)
 	log, err := s.smc.FilterHeaderAdded(&bind.FilterOpts{Start: logPeriod}, shardIndex)
 	if err != nil {
 		return err
@@ -200,7 +200,7 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 	}
 	// Filter SMC logs by submitVote.
 	shardIndex := []*big.Int{shard}
-	logPeriod := uint64(period.Int64() * sharding.PeriodLength)
+	logPeriod := uint64(period.Int64() * params.DefaultConfig.PeriodLength)
 	log, err := s.smc.FilterVoteSubmitted(&bind.FilterOpts{Start: logPeriod}, shardIndex)
 	if err != nil {
 		return err
@@ -377,7 +377,7 @@ func TestNotaryRelease(t *testing.T) {
 	}
 
 	// Fast forward until lockup ends.
-	s.fastForward(int(sharding.NotaryLockupLength + 1))
+	s.fastForward(int(params.DefaultConfig.NotaryLockupLength + 1))
 
 	// Notary 0 releases.
 	_, err = s.smc.ReleaseNotary(s.testAccounts[0].txOpts)

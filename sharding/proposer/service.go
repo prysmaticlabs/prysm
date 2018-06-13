@@ -12,16 +12,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
+	"github.com/ethereum/go-ethereum/sharding/params"
 )
 
 // Proposer holds functionality required to run a collation proposer
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
+	config       *params.Config
 	client       *mainchain.SMCClient
 	p2p          *p2p.Server
 	txpool       *txpool.TXPool
@@ -32,8 +33,8 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
-	return &Proposer{client, p2p, txpool, shardChainDb, shardID}, nil
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+	return &Proposer{config, client, p2p, txpool, shardChainDb, shardID}, nil
 }
 
 // Start the main loop for proposing collations.
@@ -65,7 +66,7 @@ func (p *Proposer) proposeCollations() {
 		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return
 	}
-	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
+	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
 	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
