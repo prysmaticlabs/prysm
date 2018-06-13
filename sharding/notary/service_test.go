@@ -63,6 +63,8 @@ func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error)
 
 func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
+	txOpts.Value = value
+	return txOpts, nil
 }
 
 func (s *smcClient) DepositFlag() bool {
