@@ -64,7 +64,7 @@ func (p *Proposer) proposeCollations() {
 		case <-timeout.C:
 			log.Error("Subscriber timed out")
 		case err := <-p.txpoolSub.Err():
-			log.Error("Subscriber failed: %v", err)
+			log.Error(fmt.Sprintf("Subscriber failed: %v", err))
 			timeout.Stop()
 			return
 		}
