@@ -13,31 +13,21 @@ type Server struct {
 	feeds map[reflect.Type]*event.Feed
 }
 
-// NewServer creates a new shardp2p service instance.
+// NewServer creates a new p2p server instance.
 func NewServer() (*Server, error) {
 	return &Server{
 		feeds: make(map[reflect.Type]*event.Feed),
 	}, nil
 }
 
-// Start the main routine for an shardp2p server.
+// Start the main routine for an p2p server.
 func (s *Server) Start() error {
 	log.Info("Starting shardp2p server")
 	return nil
 }
 
-// Stop the main shardp2p loop..
+// Stop the main p2p loop.
 func (s *Server) Stop() error {
 	log.Info("Stopping shardp2p server")
 	return nil
-}
-
-// Feed returns a event feed for the given message type.
-// TODO(prestonvanloon): Add more to this GoDoc before merging.
-func (s *Server) Feed(msg interface{}) (*event.Feed, error) {
-	t := reflect.TypeOf(msg)
-	if s.feeds[t] == nil {
-		s.feeds[t] = new(event.Feed)
-	}
-	return s.feeds[t], nil
 }
