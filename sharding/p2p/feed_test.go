@@ -8,7 +8,7 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 		b    interface{}
 		want bool
 	}{
-		// Equalality tests
+		// Equality tests
 		{a: 1, b: 2, want: true},
 		{a: 'a', b: 'b', want: true},
 		{a: struct{ c int }{c: 1}, b: struct{ c int }{c: 2}, want: true},

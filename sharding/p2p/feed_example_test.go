@@ -30,7 +30,11 @@ func ExampleServer_Feed() {
 
 	// Wait until we have a puzzle to solve.
 	msg := <-ch
-	puzzle := msg.Data.(Puzzle)
+	puzzle, ok := msg.Data.(Puzzle)
+
+	if !ok {
+		panic("Received a message that wasn't a puzzle!")
+	}
 
 	fmt.Printf("Received puzzle %s from peer %v\n", puzzle, msg.Peer)
 
