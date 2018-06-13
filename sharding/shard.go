@@ -2,6 +2,7 @@ package sharding
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -173,7 +174,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 // SaveBody adds the collation body to the shardDB and sets availability.
 func (s *Shard) SaveBody(body []byte) error {
 	if len(body) == 0 {
-		return fmt.Errorf("body is empty")
+		return errors.New("body is empty")
 	}
 	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
 	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
