@@ -36,7 +36,7 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.Config  // Holds necessary information to configure shards.
+	shardConfig  *params.Config       // Holds necessary information to configure shards.
 	txPool       *txpool.TXPool       // Defines the sharding-specific txpool. To be designed.
 	actor        sharding.Actor       // Either notary, proposer, or observer.
 	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
