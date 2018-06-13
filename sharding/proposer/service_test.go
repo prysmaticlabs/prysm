@@ -128,7 +128,7 @@ func TestCreateCollation(t *testing.T) {
 	}
 
 	// fast forward to 2nd period.
-	for i := 0; i < 2*int(params.DefaultShardConfig.PeriodLength); i++ {
+	for i := 0; i < 2*int(params.DefaultConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -186,7 +186,7 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// fast forward to next period.
-	for i := 0; i < int(params.DefaultShardConfig.PeriodLength); i++ {
+	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -233,7 +233,7 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Create collation failed: %v", err)
 	}
 
-	for i := 0; i < int(params.DefaultShardConfig.PeriodLength); i++ {
+	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
