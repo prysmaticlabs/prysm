@@ -31,3 +31,13 @@ func (s *Server) Stop() error {
 	log.Info("Stopping shardp2p server")
 	return nil
 }
+
+// Send a message to a specific peer.
+func (s *Server) Send(msg interface{}, Peer peer) {
+	// TODO
+}
+
+// Broadcast a message to the world.
+func (s *Server) Broadcast(msg interface{}) {
+	// TODO
+}
