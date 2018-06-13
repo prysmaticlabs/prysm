@@ -10,7 +10,7 @@ import (
 )
 
 // DefaultShardConfig contains default configs for node to use in the sharded universe
-var DefaultShardConfig = ShardConfig{
+var DefaultShardConfig = &ShardConfig{
 	SMCAddress:            common.HexToAddress("0x0"),
 	PeriodLength:          5,
 	NotaryDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
@@ -22,7 +22,7 @@ var DefaultShardConfig = ShardConfig{
 }
 
 // DefaultShardChainConfig contains default chain configs of an individual shard.
-var DefaultShardChainConfig = ShardChainConfig{}
+var DefaultShardChainConfig = &ShardChainConfig{}
 
 // ShardConfig contains configs for node to participate in the sharded universe.
 type ShardConfig struct {

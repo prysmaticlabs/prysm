@@ -154,13 +154,13 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	client.SetDepositFlag(false)
-	err = joinNotaryPool(&params.DefaultShardConfig, client)
+	err = joinNotaryPool(params.DefaultShardConfig, client)
 	if err == nil {
 		t.Error("Joined notary pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
-	err = joinNotaryPool(&params.DefaultShardConfig, client)
+	err = joinNotaryPool(params.DefaultShardConfig, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(&params.DefaultShardConfig, client)
+	err = joinNotaryPool(params.DefaultShardConfig, client)
 	if err != nil {
 		t.Error(err)
 	}
