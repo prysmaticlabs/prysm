@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/txpool"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -21,17 +23,17 @@ import (
 // sharding/service.go.
 type Proposer struct {
 	client       *mainchain.SMCClient
-	shardp2p     sharding.ShardP2P
-	txpool       sharding.TXPool
+	p2p          *p2p.Server
+	txpool       *txpool.TXPool
 	shardChainDb ethdb.Database
 	shardID      int
 }
 
 // NewProposer creates a struct instance of a proposer service.
-// It will have access to a mainchain client, a shardp2p network,
+// It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
-	return &Proposer{client, shardp2p, txpool, shardChainDb, shardID}, nil
+func NewProposer(client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+	return &Proposer{client, p2p, txpool, shardChainDb, shardID}, nil
 }
 
 // Start the main loop for proposing collations.
