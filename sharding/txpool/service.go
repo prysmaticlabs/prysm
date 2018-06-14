@@ -15,14 +15,14 @@ import (
 
 // TXPool handles a transaction pool for a sharded system.
 type TXPool struct {
-	p2p *p2p.Server
+	p2p              *p2p.Server
 	transactionsFeed *event.Feed
 	ticker           *time.Ticker
 }
 
 // NewTXPool creates a new observer instance.
 func NewTXPool(p2p *p2p.Server) (*TXPool, error) {
-	return &TXPool{p2p: p2p, transactionsFeed: new (event.Feed)}, nil
+	return &TXPool{p2p: p2p, transactionsFeed: new(event.Feed)}, nil
 }
 
 // Start the main routine for a shard transaction pool.
