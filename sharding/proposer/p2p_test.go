@@ -1,11 +1,13 @@
 package proposer
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 )
@@ -26,7 +28,13 @@ func (f *faultySigner) Sign(hash common.Hash) ([]byte, error) {
 }
 
 func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
-	return nil, nil
+	shardID := big.NewInt(1)
+	chunkRoot := common.BytesToHash([]byte{})
+	period := big.NewInt(1)
+	proposerAddress := common.BytesToAddress([]byte{})
+
+	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, []byte{})
+	return sharding.NewCollation(header, []byte{}, []*types.Transaction{}), nil
 }
 
 func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
@@ -34,32 +42,35 @@ func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) 
 }
 
 func TestCollationBodyResponse(t *testing.T) {
-	incorrectRequest := faultyRequest{}
+
+	proposerAddress := common.BytesToAddress([]byte{})
+	chunkRoot := common.BytesToHash([]byte{})
+
+	goodReq := sharding.CollationBodyRequest{
+		ChunkRoot: &chunkRoot,
+		ShardID:   big.NewInt(1),
+		Period:    big.NewInt(1),
+		Proposer:  &proposerAddress,
+	}
+	incorrectReq := faultyRequest{}
+
 	signer := &mockSigner{}
 	faultySigner := &faultySigner{}
 	fetcher := &mockCollationFetcher{}
 	faultyFetcher := &faultyCollationFetcher{}
 
-	proposerAddress := common.BytesToAddress([]byte{})
-	chunkRoot := common.BytesToHash([]byte{})
-
 	badMsg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: incorrectRequest,
+		Data: incorrectReq,
 	}
 
 	goodMsg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: &sharding.CollationBodyRequest{
-			ChunkRoot: &chunkRoot,
-			ShardID:   big.NewInt(1),
-			Period:    big.NewInt(1),
-			Proposer:  &proposerAddress,
-		},
+		Data: goodReq,
 	}
 
 	if _, err := collationBodyResponse(badMsg, signer, fetcher); err == nil {
-		t.Errorf("Incorrect request should throw error. Expecting sharding.CollationBodyRequest{}, received: %v", incorrectRequest)
+		t.Errorf("Incorrect request should throw error. Expecting sharding.CollationBodyRequest{}, received: %v", incorrectReq)
 	}
 
 	if _, err := collationBodyResponse(goodMsg, faultySigner, fetcher); err == nil {
@@ -70,4 +81,19 @@ func TestCollationBodyResponse(t *testing.T) {
 		t.Error("Faulty collatiom fetcher should cause function to throw error. no error thrown.")
 	}
 
+	header := sharding.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, []byte{})
+	body := []byte{}
+
+	response, err := collationBodyResponse(goodMsg, signer, fetcher)
+	if err != nil {
+		t.Fatalf("Could not construct collation body response: %v", err)
+	}
+
+	if response.HeaderHash.Hex() != header.Hash().Hex() {
+		t.Errorf("Incorrect header hash received. want: %v, received: %v", header.Hash().Hex(), response.HeaderHash.Hex())
+	}
+
+	if !bytes.Equal(response.Body, body) {
+		t.Errorf("Incorrect collation body received. want: %v, received: %v", response.Body, body)
+	}
 }
