@@ -3,7 +3,6 @@ package sharding
 import (
 	"fmt"
 	"reflect"
-
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
