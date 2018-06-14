@@ -10,18 +10,18 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/p2p"
 )
 
 // ShardTXPool handles a transaction pool for a sharded system.
 type ShardTXPool struct {
-	p2p              sharding.ShardP2P
+	p2p              *p2p.Server
 	transactionsFeed *event.Feed
 	ticker           *time.Ticker
 }
 
-// NewShardTXPool creates a new observer instance.
-func NewShardTXPool(p2p sharding.ShardP2P) (*ShardTXPool, error) {
+// NewShardTXPool creates a new ShardTxPool instance.
+func NewShardTXPool(p2p *p2p.Server) (*ShardTXPool, error) {
 	return &ShardTXPool{p2p: p2p, transactionsFeed: new(event.Feed)}, nil
 }
 
@@ -42,8 +42,8 @@ func (p *ShardTXPool) TransactionsFeed() *event.Feed {
 	return p.transactionsFeed
 }
 
-// sendTestTransaction sends a transaction with random bytes over a 5 second interval
-// this method is for testing purposes only, and will be replaced by a more functional CLI tool
+// sendTestTransaction sends a transaction with random bytes over a 5 second interval.
+// This method is for testing purposes only, and will be replaced by a more functional CLI tool.
 func (p *ShardTXPool) sendTestTransaction() {
 	p.ticker = time.NewTicker(5 * time.Second)
 

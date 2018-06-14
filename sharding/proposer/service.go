@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/txpool"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -21,8 +23,8 @@ import (
 // sharding/service.go.
 type Proposer struct {
 	client       *mainchain.SMCClient
-	shardp2p     sharding.ShardP2P
-	txpool       sharding.TXPool
+	shardp2p     *p2p.Server
+	txpool       *txpool.ShardTXPool
 	txpoolSub    event.Subscription
 	shardChainDb ethdb.Database
 	shardID      int
@@ -31,7 +33,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a shardp2p network,
 // and a shard transaction pool.
-func NewProposer(client *mainchain.SMCClient, shardp2p sharding.ShardP2P, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+func NewProposer(client *mainchain.SMCClient, shardp2p *p2p.Server, txpool *txpool.ShardTXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
 	return &Proposer{client, shardp2p, txpool, nil, shardChainDb, shardID}, nil
 }
 
@@ -48,7 +50,7 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
-// proposeCollations listens to the transaction feed submits a collation when one is found
+// proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
 	requests := make(chan *types.Transaction)
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
@@ -57,10 +59,10 @@ func (p *Proposer) proposeCollations() {
 		timeout := time.NewTimer(10 * time.Second)
 		select {
 		case tx := <-requests:
+			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
 			if err := p.createCollation([]*types.Transaction{tx}); err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
-			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
 		case <-timeout.C:
 			log.Error("Subscriber timed out")
 		case err := <-p.txpoolSub.Err():
