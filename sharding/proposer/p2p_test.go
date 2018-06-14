@@ -2,6 +2,7 @@ package proposer
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"math/big"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/params"
 )
 
 type faultyRequest struct{}
@@ -18,6 +20,7 @@ type faultyCollationFetcher struct{}
 
 type mockSigner struct{}
 type mockCollationFetcher struct{}
+type mockChainReader struct{}
 
 func (m *mockSigner) Sign(hash common.Hash) ([]byte, error) {
 	return []byte{}, nil
@@ -39,6 +42,12 @@ func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*
 
 func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
 	return nil, errors.New("could not fetch collation")
+}
+
+func (m *mockChainReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	return types.NewBlock(&types.Header{
+		Number: big.NewInt(params.DefaultConfig.PeriodLength),
+	}, nil, nil, nil), nil
 }
 
 func TestCollationBodyResponse(t *testing.T) {
@@ -95,5 +104,34 @@ func TestCollationBodyResponse(t *testing.T) {
 
 	if !bytes.Equal(response.Body, body) {
 		t.Errorf("Incorrect collation body received. want: %v, received: %v", response.Body, body)
+	}
+}
+
+func TestConstructNotaryRequest(t *testing.T) {
+
+	backend, smc := setup(t)
+	node := &mockNode{smc: smc, t: t, backend: backend}
+	mockReader := &mockChainReader{}
+
+	// Fast forward to next period.
+	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
+		backend.Commit()
+	}
+
+	proposerAddress := common.BytesToAddress([]byte{})
+	chunkRoot := common.BytesToHash([]byte{})
+	header := sharding.NewCollationHeader(big.NewInt(0), &chunkRoot, big.NewInt(0), &proposerAddress, []byte{})
+	collation := sharding.NewCollation(header, []byte{}, []*types.Transaction{})
+
+	// Adds the header to the SMC.
+	if err := addHeader(node, collation); err != nil {
+		t.Fatalf("Failed to add header to SMC: %v", err)
+	}
+
+	backend.Commit()
+
+	_, err := constructNotaryRequest(mockReader, node, big.NewInt(0), params.DefaultConfig.PeriodLength)
+	if err != nil {
+		t.Fatalf("Could not construct request: %v", err)
 	}
 }

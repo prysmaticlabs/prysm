@@ -42,7 +42,7 @@ func collationBodyResponse(req p2p.Message, signer mainchain.Signer, collationFe
 // notaries once the system is in production.
 func constructNotaryRequest(reader mainchain.Reader, caller mainchain.Caller, shardID *big.Int, periodLength int64) (*sharding.CollationBodyRequest, error) {
 
-	blockNumber, err := reader.ChainReader().BlockByNumber(context.Background(), nil)
+	blockNumber, err := reader.BlockByNumber(context.Background(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("Could not fetch current block number: %v", err)
 	}

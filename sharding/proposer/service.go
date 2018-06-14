@@ -152,7 +152,7 @@ func (p *Proposer) simulateNotaryRequests(feed *event.Feed) {
 		case <-p.ctx.Done():
 			return
 		default:
-			req, err := constructNotaryRequest(p.client, p.client, p.shard.ShardID(), p.config.PeriodLength)
+			req, err := constructNotaryRequest(p.client.ChainReader(), p.client, p.shard.ShardID(), p.config.PeriodLength)
 			if err != nil {
 				log.Error(fmt.Sprintf("Error constructing collation body request: %v, trying again...", err))
 				continue

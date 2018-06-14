@@ -40,7 +40,7 @@ type Caller interface {
 }
 
 type Reader interface {
-	ChainReader() ethereum.ChainReader
+	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
 }
 
 // Client contains useful methods for a sharding node to interact with
