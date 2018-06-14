@@ -1,7 +1,6 @@
 package proposer
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 
@@ -12,6 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 )
 
+// collationBodyResponse is called by a proposer responding to a notary's request
+// for a collation body given a (shardID, chunkRoot, period, proposerAddress) tuple.
+// The proposer will fetch the corresponding data from persistent storage (shardDB) by
+// constructing a collation header from the input and calculating its hash.
 func collationBodyResponse(req p2p.Message, signer mainchain.Signer, collationFetcher sharding.CollationFetcher) (*sharding.CollationBodyResponse, error) {
 	// Type assertion helps us catch incorrect data requests.
 	msg, ok := req.Data.(sharding.CollationBodyRequest)
@@ -38,16 +41,12 @@ func collationBodyResponse(req p2p.Message, signer mainchain.Signer, collationFe
 	return &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}, nil
 }
 
-// simulateNotaryRequests simulates incoming p2p messages that will come from
-// notaries once the system is in production.
-func constructNotaryRequest(reader mainchain.Reader, caller mainchain.Caller, shardID *big.Int, periodLength int64) (*sharding.CollationBodyRequest, error) {
+// constructNotaryRequest fetches a collation header record submitted to the SMC for
+// a shardID, period pair and constructs a p2p collationBodyRequest that will
+// then be relayed to the appropriate proposer that submitted the collation header.
+// In production, this will be done within a notary service.
+func constructNotaryRequest(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (*sharding.CollationBodyRequest, error) {
 
-	blockNumber, err := reader.BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("Could not fetch current block number: %v", err)
-	}
-
-	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(periodLength))
 	record, err := caller.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {
 		return nil, fmt.Errorf("Could not fetch collation record from SMC: %v", err)
@@ -60,6 +59,7 @@ func constructNotaryRequest(reader mainchain.Reader, caller mainchain.Caller, sh
 	for _, val := range record.ChunkRoot {
 		sum += int(val)
 	}
+
 	if sum == 0 {
 		return nil, nil
 	}

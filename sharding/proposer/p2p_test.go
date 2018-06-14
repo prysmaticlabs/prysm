@@ -2,7 +2,6 @@ package proposer
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"math/big"
 	"testing"
@@ -20,7 +19,6 @@ type faultyCollationFetcher struct{}
 
 type mockSigner struct{}
 type mockCollationFetcher struct{}
-type mockChainReader struct{}
 
 func (m *mockSigner) Sign(hash common.Hash) ([]byte, error) {
 	return []byte{}, nil
@@ -42,12 +40,6 @@ func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*
 
 func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
 	return nil, errors.New("could not fetch collation")
-}
-
-func (m *mockChainReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return types.NewBlock(&types.Header{
-		Number: big.NewInt(params.DefaultConfig.PeriodLength),
-	}, nil, nil, nil), nil
 }
 
 func TestCollationBodyResponse(t *testing.T) {
@@ -111,16 +103,19 @@ func TestConstructNotaryRequest(t *testing.T) {
 
 	backend, smc := setup(t)
 	node := &mockNode{smc: smc, t: t, backend: backend}
-	mockReader := &mockChainReader{}
 
 	// Fast forward to next period.
 	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
-	proposerAddress := common.BytesToAddress([]byte{})
-	chunkRoot := common.BytesToHash([]byte{})
-	header := sharding.NewCollationHeader(big.NewInt(0), &chunkRoot, big.NewInt(0), &proposerAddress, []byte{})
+	shardID := big.NewInt(0)
+	period := big.NewInt(1)
+
+	// We set the proposer address to the address used to setup the backend.
+	proposerAddress := addr
+	chunkRoot := common.BytesToHash([]byte("chunkroottest"))
+	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &addr, []byte{})
 	collation := sharding.NewCollation(header, []byte{}, []*types.Transaction{})
 
 	// Adds the header to the SMC.
@@ -130,8 +125,35 @@ func TestConstructNotaryRequest(t *testing.T) {
 
 	backend.Commit()
 
-	_, err := constructNotaryRequest(mockReader, node, big.NewInt(0), params.DefaultConfig.PeriodLength)
+	// constructNotaryRequest reads from the deployed SMC and fetches a
+	// collation record for the shardID, period pair. Then, it constructs a request
+	// that will be broadcast over p2p and handled by a proposer that submitted the collation
+	// header to the SMC in the first place.
+	request, err := constructNotaryRequest(node, shardID, period)
 	if err != nil {
 		t.Fatalf("Could not construct request: %v", err)
+	}
+
+	// fetching an inexistent shardID, period pair from the SMC will return a nil request from a notary.
+	nilRequest, err := constructNotaryRequest(node, big.NewInt(20), big.NewInt(20))
+	if err != nil {
+		t.Fatalf("Could not construct request: %v", err)
+	}
+
+	if nilRequest != nil {
+		t.Errorf("constructNotaryRequest should return nil for an inexistent collation header. got: %v", err)
+	}
+
+	if request.ChunkRoot.Hex() != chunkRoot.Hex() {
+		t.Errorf("Chunk root from notary request incorrect. want: %v, got: %v", chunkRoot.Hex(), request.ChunkRoot.Hex())
+	}
+	if request.Proposer.Hex() != proposerAddress.Hex() {
+		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), request.Proposer.Hex())
+	}
+	if request.ShardID.Cmp(shardID) != 0 {
+		t.Errorf("ShardID from notary request incorrect. want: %s, got: %s", shardID, request.ShardID)
+	}
+	if request.Period.Cmp(period) != 0 {
+		t.Errorf("Proposer address from notary request incorrect. want: %s, got: %s", period, request.Period)
 	}
 }

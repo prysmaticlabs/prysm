@@ -22,6 +22,8 @@ type Actor interface {
 	// TODO: will actors have actor-specific methods? To be decided.
 }
 
+// CollationFetcher defines functionality for a struct that is able to extract
+// respond with collation information to the caller. Shard implements this interface.
 type CollationFetcher interface {
 	CollationByHeaderHash(headerHash *common.Hash) (*Collation, error)
 }
@@ -46,7 +48,7 @@ type Service interface {
 	Start()
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
-	Stop()
+	Stop() error
 }
 
 // RetrieveService sets the `service` argument to a currently running service

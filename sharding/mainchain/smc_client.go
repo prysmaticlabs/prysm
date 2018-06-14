@@ -29,22 +29,35 @@ import (
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
 const ClientIdentifier = "geth"
 
-// ReaderCaller defines an interface that can read from the Ethereum mainchain as well call
+// Signer defines an interface that can read from the Ethereum mainchain as well call
 // read-only methods and functions from the Sharding Manager Contract.
 type Signer interface {
 	Sign(hash common.Hash) ([]byte, error)
 }
 
-type Caller interface {
+// ContractCaller defines an interface that can read from a contract on the
+// Ethereum mainchain mainchain as well as call its read-only methods and functions.
+type ContractCaller interface {
 	SMCCaller() *contracts.SMCCaller
 }
 
+// ContractTransactor defines an interface that can transact with a contract on the
+// Ethereum mainchain mainchain as well as call its methods and functions.
+type ContractTransactor interface {
+	SMCTransactor() *contracts.SMCTransactor
+	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
+}
+
+// Reader defines an interface for a struct that can read mainchain information
+// such as blocks, transactions, receipts, and more. Useful for testing.
 type Reader interface {
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
 }
 
 // Client contains useful methods for a sharding node to interact with
 // an Ethereum client running on the mainchain.
+// TODO: Eliminate this in a separate PR and abstract all of these methods into smaller
+// interfaces.
 type Client interface {
 	Account() *accounts.Account
 	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
