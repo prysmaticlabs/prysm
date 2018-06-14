@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -283,8 +282,10 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 		t.Fatalf("cannot save body: %v", err)
 	}
 
-	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
-	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
+	// Right now this just hashes the body. We will instead need to
+	// blob serialize.
+	// TODO: blob serialization.
+	chunkRoot := common.BytesToHash(body)
 
 	dbBody, err := shard.BodyByChunkRoot(&chunkRoot)
 	if err != nil {
