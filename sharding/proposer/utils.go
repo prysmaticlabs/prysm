@@ -15,14 +15,14 @@ import (
 
 // simulateNotaryRequests simulates incoming p2p messages that will come from
 // notaries once the system is in production.
-func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, shardID *big.Int) {
+func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, shardID *big.Int, periodLength int64) {
 	for {
 		blockNumber, err := client.ChainReader().BlockByNumber(context.Background(), nil)
 		if err != nil {
 			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 			continue
 		}
-		period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
+		period := new(big.Int).Div(blockNumber.Number(), big.NewInt(periodLength))
 		record, err := client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
 		if err != nil {
 			log.Error(fmt.Sprintf("Could not fetch collation record from SMC: %v", err))
@@ -50,7 +50,7 @@ func simulateNotaryRequests(client *mainchain.SMCClient, shardp2p *p2p.Server, s
 			Proposer:  &record.Proposer,
 		}
 		msg := p2p.Message{
-			Peer: nil,
+			Peer: p2p.Peer{},
 			Data: request,
 		}
 		feed, err := shardp2p.Feed(sharding.CollationBodyRequest{})

@@ -16,9 +16,13 @@ import (
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
 func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
-	// shardID has to be within range
-	if shardID.Cmp(big.NewInt(0)) < 0 || shardID.Cmp(big.NewInt(sharding.ShardCount)) > 0 {
-		return nil, fmt.Errorf("can't create collation for shard %v. Must be between 0 and %v", shardID, sharding.ShardCount)
+	// shardId has to be within range
+	shardCount, err := client.GetShardCount()
+	if err != nil {
+		return nil, fmt.Errorf("can't get shard count from smc: %v", err)
+	}
+	if shardID.Cmp(big.NewInt(0)) < 0 || shardID.Cmp(big.NewInt(shardCount)) > 0 {
+		return nil, fmt.Errorf("can't create collation for shard %v. Must be between 0 and %v", shardID, shardCount)
 	}
 
 	// check with SMC to see if we can add the header.

@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
@@ -55,7 +55,11 @@ func subscribeBlockHeaders(client mainchain.Client) error {
 // conditions are met.
 func checkSMCForNotary(client mainchain.Client, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
-	for s := int64(0); s < sharding.ShardCount; s++ {
+	shardCount, err := client.GetShardCount()
+	if err != nil {
+		return fmt.Errorf("can't get shard count from smc: %v", err)
+	}
+	for s := int64(0); s < shardCount; s++ {
 		// Checks if we are an eligible notary according to the SMC.
 		addr, err := client.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s))
 
@@ -132,7 +136,7 @@ func submitCollation(shardID int64) error {
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(client mainchain.Client) error {
+func joinNotaryPool(config *shardparams.Config, client mainchain.Client) error {
 	if !client.DepositFlag() {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
@@ -142,7 +146,7 @@ func joinNotaryPool(client mainchain.Client) error {
 	}
 
 	log.Info("Joining notary pool")
-	txOps, err := client.CreateTXOpts(sharding.NotaryDeposit)
+	txOps, err := client.CreateTXOpts(shardparams.DefaultConfig.NotaryDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to initiate the deposit transaction: %v", err)
 	}
@@ -151,7 +155,7 @@ func joinNotaryPool(client mainchain.Client) error {
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
+	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(config.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
 
 	return nil
 }

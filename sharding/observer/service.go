@@ -14,14 +14,14 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Observer struct {
-	shardp2p     *p2p.Server
+	p2p          *p2p.Server
 	shardChainDb ethdb.Database
 	shardID      int
 }
 
 // NewObserver creates a new observer instance.
-func NewObserver(shardp2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
-	return &Observer{shardp2p, shardChainDb, shardID}, nil
+func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
+	return &Observer{p2p, shardChainDb, shardID}, nil
 }
 
 // Start the main routine for an observer.

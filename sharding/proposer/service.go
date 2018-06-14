@@ -15,24 +15,28 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/ethereum/go-ethereum/sharding/txpool"
 )
 
 // Proposer holds functionality required to run a collation proposer
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
-	client   *mainchain.SMCClient
-	shardp2p *p2p.Server
-	txpool   sharding.TXPool
-	shard    *sharding.Shard
+	config       *params.Config
+	client       *mainchain.SMCClient
+	p2p          *p2p.Server
+	txpool       *txpool.TXPool
+	shardChainDb ethdb.Database
+	shard        *sharding.Shard
 }
 
 // NewProposer creates a struct instance of a proposer service.
-// It will have access to a mainchain client, a shardp2p network,
+// It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(client *mainchain.SMCClient, shardp2p *p2p.Server, txpool sharding.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
-	return &Proposer{client, shardp2p, txpool, shard}, nil
+	return &Proposer{config, client, p2p, txpool, shardChainDb, shard}, nil
 }
 
 // Start the main loop for proposing collations.
@@ -40,14 +44,14 @@ func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
 	go p.handleCollationBodyRequests()
-	go simulateNotaryRequests(p.client, p.shardp2p, p.shard.ShardID())
+	go simulateNotaryRequests(p.client, p.p2p, p.shard.ShardID(), p.config.PeriodLength)
 }
 
 // handleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the feed exposed by the p2p server's API.
 func (p *Proposer) handleCollationBodyRequests() {
-	feed, err := p.shardp2p.Feed(sharding.CollationBodyRequest{})
+	feed, err := p.p2p.Feed(sharding.CollationBodyRequest{})
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
 		return
@@ -93,7 +97,7 @@ func (p *Proposer) handleCollationBodyRequests() {
 			res := &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}
 
 			// TODO: Implement this and see the response from the other end.
-			p.shardp2p.Send(res, req.Peer)
+			p.p2p.Send(res, req.Peer)
 
 		case err := <-sub.Err():
 			log.Error("Subscriber failed: %v", err)
@@ -120,7 +124,7 @@ func (p *Proposer) proposeCollations() {
 		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return
 	}
-	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(sharding.PeriodLength))
+	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
 	collation, err := createCollation(p.client, p.shard.ShardID(), period, txs)

@@ -14,10 +14,6 @@ type Node interface {
 	Register(constructor ServiceConstructor) error
 }
 
-// TXPool defines an interface for a transaction pool service that handles
-// incoming shard transactions in the network.
-type TXPool interface{}
-
 // Actor refers to either a notary, proposer, or observer in the sharding spec.
 type Actor interface {
 	Service
