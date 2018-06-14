@@ -308,3 +308,17 @@ func BenchmarkSerializeRoundtrip100(b *testing.B) {
 func BenchmarkSerializeRoundtrip1000(b *testing.B) {
 	runSerializeRoundtrip(b, 1000)
 }
+
+func BenchmarkCalculatePOC(b *testing.B) {
+	body := make([]byte, 300)
+	rand.Read(body)
+
+	collation := NewCollation(&CollationHeader{}, body, nil)
+
+	salt := make([]byte, 20)
+	rand.Read(salt)
+
+	for i := 0; i < b.N; i++ {
+		collation.CalculatePOC(salt)
+	}
+}
