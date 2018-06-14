@@ -1,6 +1,6 @@
 // Package params defines important configuration options to be used when instantiating
 // objects within the sharding package. For example, it defines objects such as a
-// ShardConfig that will be useful when creating new shard instances.
+// Config that will be useful when creating new shard instances.
 package params
 
 import (
@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// DefaultShardConfig contains default configs for node to use in the sharded universe
-var DefaultShardConfig = &ShardConfig{
+// DefaultConfig contains default configs for node to use in the sharded universe.
+var DefaultConfig = &Config{
 	SMCAddress:            common.HexToAddress("0x0"),
 	PeriodLength:          5,
 	NotaryDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
@@ -21,11 +21,11 @@ var DefaultShardConfig = &ShardConfig{
 	NotaryChallengePeriod: 25,
 }
 
-// DefaultShardChainConfig contains default chain configs of an individual shard.
-var DefaultShardChainConfig = &ShardChainConfig{}
+// DefaultChainConfig contains default chain configs of an individual shard.
+var DefaultChainConfig = &ChainConfig{}
 
-// ShardConfig contains configs for node to participate in the sharded universe.
-type ShardConfig struct {
+// Config contains configs for node to participate in the sharded universe.
+type Config struct {
 	SMCAddress            common.Address // SMCAddress is the address of SMC in mainchain.
 	PeriodLength          int64          // PeriodLength is num of blocks in period.
 	NotaryDeposit         *big.Int       // NotaryDeposit is a required deposit size in wei.
@@ -36,5 +36,5 @@ type ShardConfig struct {
 	NotaryChallengePeriod int64          // NotaryChallengePeriod is the duration a notary has to store collations for.
 }
 
-// ShardChainConfig contains chain config of an individual shard. Still to be designed.
-type ShardChainConfig struct{}
+// ChainConfig contains chain config of an individual shard. Still to be designed.
+type ChainConfig struct{}

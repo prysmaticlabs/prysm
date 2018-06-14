@@ -127,7 +127,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 	txOpts := transactOpts()
 	// deposit in notary pool, then it should return true.
-	txOpts.Value = params.DefaultShardConfig.NotaryDeposit
+	txOpts.Value = params.DefaultConfig.NotaryDeposit
 	if _, err := smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
@@ -154,13 +154,13 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	client.SetDepositFlag(false)
-	err = joinNotaryPool(params.DefaultShardConfig, client)
+	err = joinNotaryPool(params.DefaultConfig, client)
 	if err == nil {
 		t.Error("Joined notary pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
-	err = joinNotaryPool(params.DefaultShardConfig, client)
+	err = joinNotaryPool(params.DefaultConfig, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(params.DefaultShardConfig, client)
+	err = joinNotaryPool(params.DefaultConfig, client)
 	if err != nil {
 		t.Error(err)
 	}

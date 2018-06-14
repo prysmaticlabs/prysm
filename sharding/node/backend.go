@@ -12,22 +12,20 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/sharding/notary"
-	"github.com/ethereum/go-ethereum/sharding/observer"
-	shardp2p "github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/proposer"
-
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/database"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/ethereum/go-ethereum/sharding/notary"
+	"github.com/ethereum/go-ethereum/sharding/observer"
+	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/ethereum/go-ethereum/sharding/proposer"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -38,8 +36,8 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.ShardConfig  // Holds necessary information to configure shard node.
-	txPool       *txpool.ShardTXPool  // Defines the sharding-specific txpool. To be designed.
+	shardConfig  *params.Config       // Holds necessary information to configure shards.
+	txPool       *txpool.TXPool       // Defines the sharding-specific txpool. To be designed.
 	actor        sharding.Actor       // Either notary, proposer, or observer.
 	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
 	eventFeed    *event.Feed          // Used to enable P2P related interactions via different sharding actors.
@@ -90,7 +88,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	shardEthereum.smcClient = smcClient
 
 	// Configure shardConfig by loading the default.
-	shardEthereum.shardConfig = params.DefaultShardConfig
+	shardEthereum.shardConfig = params.DefaultConfig
 
 	// Adds the initialized shardChainDb to the ShardEthereum instance.
 	shardEthereum.shardChainDb = shardChainDb
@@ -187,12 +185,12 @@ func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error 
 	return nil
 }
 
-// registerP2P attaches a shardp2p server to the ShardEthereum instance.
-// TODO: Design this shardp2p service and the methods it should expose as well as
+// registerP2P attaches a p2p server to the ShardEthereum instance.
+// TODO: Design this p2p service and the methods it should expose as well as
 // its event loop.
 func (s *ShardEthereum) registerP2P() error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
-		return shardp2p.NewServer()
+		return p2p.NewServer()
 	})
 }
 
@@ -206,23 +204,23 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 		return nil
 	}
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
-		var p2p *shardp2p.Server
+		var p2p *p2p.Server
 		ctx.RetrieveService(&p2p)
-		return txpool.NewShardTXPool(p2p)
+		return txpool.NewTXPool(p2p)
 	})
 }
 
 // Registers the actor according to CLI flags. Either notary/proposer/observer.
-func (s *ShardEthereum) registerActorService(config *params.ShardConfig, actor string, shardID int) error {
+func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 
-		var p2p *shardp2p.Server
+		var p2p *p2p.Server
 		ctx.RetrieveService(&p2p)
 
 		if actor == "notary" {
 			return notary.NewNotary(config, s.smcClient, p2p, s.shardChainDb)
 		} else if actor == "proposer" {
-			var txPool *txpool.ShardTXPool
+			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
 			return proposer.NewProposer(config, s.smcClient, p2p, txPool, s.shardChainDb, shardID)
 		}

@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	sparams "github.com/ethereum/go-ethereum/sharding/params"
+	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
 // SubscribeBlockHeaders checks incoming block headers and determines if
@@ -136,7 +136,7 @@ func submitCollation(shardID int64) error {
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(config *sparams.ShardConfig, client mainchain.Client) error {
+func joinNotaryPool(config *shardparams.Config, client mainchain.Client) error {
 	if !client.DepositFlag() {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
@@ -146,7 +146,7 @@ func joinNotaryPool(config *sparams.ShardConfig, client mainchain.Client) error 
 	}
 
 	log.Info("Joining notary pool")
-	txOps, err := client.CreateTXOpts(config.NotaryDeposit)
+	txOps, err := client.CreateTXOpts(shardparams.DefaultConfig.NotaryDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to initiate the deposit transaction: %v", err)
 	}
