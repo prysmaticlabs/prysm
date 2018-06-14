@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
@@ -29,81 +30,40 @@ type Proposer struct {
 	txpool       *txpool.TXPool
 	shardChainDb ethdb.Database
 	shard        *sharding.Shard
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
 func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
-	return &Proposer{config, client, p2p, txpool, shardChainDb, shard}, nil
+	return &Proposer{config, client, p2p, txpool, shardChainDb, shard, ctx, cancel}, nil
 }
 
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
-	go p.handleCollationBodyRequests()
-	go simulateNotaryRequests(p.client, p.p2p, p.shard.ShardID(), p.config.PeriodLength)
-}
 
-// handleCollationBodyRequests subscribes to messages from the shardp2p
-// network and responds to a specific peer that requested the body using
-// the feed exposed by the p2p server's API.
-func (p *Proposer) handleCollationBodyRequests() {
 	feed, err := p.p2p.Feed(sharding.CollationBodyRequest{})
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
 		return
 	}
-	ch := make(chan p2p.Message, 100)
-	sub := feed.Subscribe(ch)
 
-	defer sub.Unsubscribe()
-	defer close(ch)
+	go p.handleCollationBodyRequests(feed)
+	go p.simulateNotaryRequests(feed)
+}
 
-	for {
-		select {
-		case req := <-ch:
-			log.Info(fmt.Sprintf("Received p2p request from notary: %v", req))
-
-			// Type assertion helps us catch incorrect data requests.
-			msg, ok := req.Data.(sharding.CollationBodyRequest)
-			if !ok {
-				log.Error(fmt.Sprintf("Received incorrect data request type: %v", msg))
-				continue
-			}
-
-			header := sharding.NewCollationHeader(msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, nil)
-			sig, err := p.client.Sign(header.Hash())
-			if err != nil {
-				log.Error(fmt.Sprintf("Could not sign received header: %v", err))
-				continue
-			}
-
-			// Adds the signature to the header before calculating the hash used for db lookups.
-			header.AddSig(sig)
-
-			// Fetch the collation by its header hash from the shardChainDB.
-			headerHash := header.Hash()
-			collation, err := p.shard.CollationByHeaderHash(&headerHash)
-			if err != nil {
-				log.Error(fmt.Sprintf("Could not fetch collation: %v", err))
-				continue
-			}
-			log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", headerHash.Hex()))
-
-			// Reply to that specific peer only.
-			res := &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}
-
-			// TODO: Implement this and see the response from the other end.
-			p.p2p.Send(res, req.Peer)
-
-		case err := <-sub.Err():
-			log.Error("Subscriber failed: %v", err)
-			return
-		}
-	}
+// Stop the main loop for proposing collations.
+func (p *Proposer) Stop() {
+	// Triggers a cancel call in the actor's context which shuts down every goroutine
+	// in this service.
+	defer p.cancel()
+	log.Warn(fmt.Sprintf("Stopping proposer service in shard %d", p.shard.ShardID()))
 }
 
 // proposeCollations is the main event loop of a proposer service that listens for
@@ -152,8 +112,57 @@ func (p *Proposer) proposeCollations() {
 	}
 }
 
-// Stop the main loop for proposing collations.
-func (p *Proposer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shard.ShardID()))
-	return nil
+// handleCollationBodyRequests subscribes to messages from the shardp2p
+// network and responds to a specific peer that requested the body using
+// the feed exposed by the p2p server's API.
+func (p *Proposer) handleCollationBodyRequests(feed *event.Feed) {
+
+	ch := make(chan p2p.Message, 100)
+	sub := feed.Subscribe(ch)
+
+	defer sub.Unsubscribe()
+	defer close(ch)
+
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case req := <-ch:
+			log.Info(fmt.Sprintf("Received p2p request from notary: %v", req))
+			res, err := collationBodyResponse(req, p.client, p.shard)
+			if err != nil {
+				log.Error("Could not construct response: %v", err)
+				continue
+			}
+			log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+			// Reply to that specific peer only.
+			// TODO: Implement this and see the response from the other end.
+			p.p2p.Send(res, req.Peer)
+
+		case err := <-sub.Err():
+			log.Error("Subscriber failed: %v", err)
+			return
+		}
+	}
+}
+
+func (p *Proposer) simulateNotaryRequests(feed *event.Feed) {
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		default:
+			req, err := constructNotaryRequest(p.client, p.client, p.shard.ShardID(), p.config.PeriodLength)
+			if err != nil {
+				log.Error(fmt.Sprintf("Error constructing collation body request: %v, trying again...", err))
+				continue
+			}
+			msg := p2p.Message{
+				Peer: p2p.Peer{},
+				Data: req,
+			}
+			feed.Send(msg)
+			log.Info("Sent request for collation body via a shardp2p feed")
+		}
+	}
 }

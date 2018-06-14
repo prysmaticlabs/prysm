@@ -29,6 +29,20 @@ import (
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
 const ClientIdentifier = "geth"
 
+// ReaderCaller defines an interface that can read from the Ethereum mainchain as well call
+// read-only methods and functions from the Sharding Manager Contract.
+type Signer interface {
+	Sign(hash common.Hash) ([]byte, error)
+}
+
+type Caller interface {
+	SMCCaller() *contracts.SMCCaller
+}
+
+type Reader interface {
+	ChainReader() ethereum.ChainReader
+}
+
 // Client contains useful methods for a sharding node to interact with
 // an Ethereum client running on the mainchain.
 type Client interface {

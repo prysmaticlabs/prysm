@@ -3,6 +3,8 @@ package sharding
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
@@ -18,6 +20,10 @@ type Node interface {
 type Actor interface {
 	Service
 	// TODO: will actors have actor-specific methods? To be decided.
+}
+
+type CollationFetcher interface {
+	CollationByHeaderHash(headerHash *common.Hash) (*Collation, error)
 }
 
 // ServiceContext is a collection of service independent options inherited from
@@ -40,7 +46,7 @@ type Service interface {
 	Start()
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
-	Stop() error
+	Stop()
 }
 
 // RetrieveService sets the `service` argument to a currently running service
