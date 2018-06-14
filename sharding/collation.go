@@ -122,7 +122,7 @@ func (c *Collation) CalculateChunkRoot() {
 // some salt, which is appended to each chunk in the collation body before it
 // is hashed.
 func (c *Collation) CalculatePOC(salt []byte) common.Hash {
-	body := make([]byte, 0, len(c.body) * (1 + len(salt)))
+	body := make([]byte, 0, len(c.body)*(1+len(salt)))
 
 	for _, chunk := range c.body {
 		body = append(append(body, salt...), chunk)
