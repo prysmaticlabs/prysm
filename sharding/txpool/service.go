@@ -10,41 +10,41 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p"
 )
 
-// ShardTXPool handles a transaction pool for a sharded system.
-type ShardTXPool struct {
-	p2p              *p2p.Server
+// TXPool handles a transaction pool for a sharded system.
+type TXPool struct {
+	p2p *p2p.Server
 	transactionsFeed *event.Feed
 	ticker           *time.Ticker
 }
 
-// NewShardTXPool creates a new ShardTxPool instance.
-func NewShardTXPool(p2p *p2p.Server) (*ShardTXPool, error) {
-	return &ShardTXPool{p2p: p2p, transactionsFeed: new(event.Feed)}, nil
+// NewTXPool creates a new observer instance.
+func NewTXPool(p2p *p2p.Server) (*TXPool, error) {
+	return &TXPool{p2p: p2p, transactionsFeed: new (event.Feed)}, nil
 }
 
 // Start the main routine for a shard transaction pool.
-func (p *ShardTXPool) Start() {
+func (p *TXPool) Start() {
 	log.Info("Starting shard txpool service")
 	go p.sendTestTransaction()
 }
 
 // Stop the main loop for a transaction pool in the shard network.
-func (p *ShardTXPool) Stop() error {
+func (p *TXPool) Stop() error {
 	log.Info("Stopping shard txpool service")
 	p.ticker.Stop()
 	return nil
 }
 
-func (p *ShardTXPool) TransactionsFeed() *event.Feed {
+func (p *TXPool) TransactionsFeed() *event.Feed {
 	return p.transactionsFeed
 }
 
 // sendTestTransaction sends a transaction with random bytes over a 5 second interval.
 // This method is for testing purposes only, and will be replaced by a more functional CLI tool.
-func (p *ShardTXPool) sendTestTransaction() {
+func (p *TXPool) sendTestTransaction() {
 	p.ticker = time.NewTicker(5 * time.Second)
 
 	for range p.ticker.C {
