@@ -129,6 +129,25 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 	return types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, gl, nil /*gasPrice*/, nil /*data*/)
 }
 
+func Test_CalculatePOC(t *testing.T) {
+	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, []byte{})
+	body := []byte{0x56, 0xff}
+	transactions := []*types.Transaction{
+		makeTxWithGasLimit(0),
+		makeTxWithGasLimit(5),
+		makeTxWithGasLimit(20),
+		makeTxWithGasLimit(100),
+	}
+	c := NewCollation(header, body, transactions)
+	c.CalculateChunkRoot()
+	salt := []byte{1, 0x9f}
+	poc := c.CalculatePOC(salt)
+
+	if poc == *c.header.data.ChunkRoot {
+		t.Errorf("Proof of Custody with Salt: %x does not differ from ChunkRoot without salt.", salt)
+	}
+}
+
 // BENCHMARK TESTS
 
 // Helper function to generate test that completes round trip serialization tests for a specific number of transactions.

@@ -113,11 +113,47 @@ func (c *Collation) ProposerAddress() *common.Address {
 
 // CalculateChunkRoot updates the collation header's chunk root based on the body.
 func (c *Collation) CalculateChunkRoot() {
-	// TODO: this needs to be based on blob serialization.
-	// For proof of custody we need to split chunks (body) into chunk + salt and
-	// take the merkle root of that.
-	chunkRoot := common.BytesToHash(c.body)
+	chunks := BytesToChunks(c.body)      // wrapper allowing us to merklizing the chunks.
+	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
+}
+
+// CalculatePOC calculates the Proof of Custody given the collation body and
+// some salt, which is appended to each chunk in the collation body before it
+// is hashed.
+func (c *Collation) CalculatePOC(salt []byte) common.Hash {
+	body := make([]byte, len(c.body))
+	for _, chunk := range c.body {
+		body = append(body, append(salt, chunk)...) // add salt to each chunk.
+	}
+	if len(c.body) == 0 {
+		body = salt
+	}
+	chunks := BytesToChunks(body)  // wrapper allowing us to merklizing the chunks.
+	return types.DeriveSha(chunks) // merklize the serialized blobs.
+}
+
+// BytesToChunks takes the collation body bytes and wraps it into type Chunks,
+// which can be merklized.
+func BytesToChunks(body []byte) Chunks {
+	return Chunks(body)
+}
+
+// ConvertBackToTx converts raw blobs back to their original transactions.
+func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
+
+	blobs := make([]*types.Transaction, len(rawBlobs))
+
+	for i := 0; i < len(rawBlobs); i++ {
+
+		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+
+		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("Creation of transactions from raw blobs failed: %v", err)
+		}
+	}
+	return blobs, nil
 }
 
 // convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding
@@ -182,4 +218,17 @@ func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
 	}
 
 	return &txs, nil
+}
+
+// Chunks is a wrapper around a chunk array to implement DerivableList,
+// which allows us to Merklize the chunks into the chunkRoot.
+type Chunks []byte
+
+// Len returns the number of chunks in this list.
+func (ch Chunks) Len() int { return len(ch) }
+
+// GetRlp returns the RLP encoding of one chunk from the list.
+func (ch Chunks) GetRlp(i int) []byte {
+	bytes, _ := rlp.EncodeToBytes(ch[i])
+	return bytes
 }
