@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/params"
-	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -33,64 +32,30 @@ type mockNode struct {
 	backend     *backends.SimulatedBackend
 }
 
-func (s *mockNode) Account() *accounts.Account {
+func (m *mockNode) Account() *accounts.Account {
 	return &accounts.Account{Address: addr}
 }
 
-func (s *mockNode) SMCCaller() *contracts.SMCCaller {
-	return &s.smc.SMCCaller
+func (m *mockNode) SMCCaller() *contracts.SMCCaller {
+	return &m.smc.SMCCaller
 }
 
-func (s *mockNode) ChainReader() ethereum.ChainReader {
+func (m *mockNode) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (s *mockNode) Context() *cli.Context {
-	return nil
+func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
+	return &m.smc.SMCTransactor
 }
 
-func (s *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &s.smc.SMCTransactor
-}
-
-func (s *mockNode) SMCFilterer() *contracts.SMCFilterer {
-	return &s.smc.SMCFilterer
-}
-
-func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return nil, nil
-}
-
-func (s *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
 }
 
-func (s *mockNode) DepositFlag() bool {
-	return false
-}
-
-func (s *mockNode) SetDepositFlag(deposit bool) {
-	s.depositFlag = deposit
-}
-
 func (m *mockNode) Sign(hash common.Hash) ([]byte, error) {
 	return nil, nil
-}
-
-// Unused mockClient methods.
-func (m *mockNode) Start() error {
-	m.t.Fatal("Start called")
-	return nil
-}
-
-func (m *mockNode) Close() {
-	m.t.Fatal("Close called")
-}
-
-func (m *mockNode) DataDirPath() string {
-	return "/tmp/datadir"
 }
 
 func (m *mockNode) GetShardCount() (int64, error) {
@@ -122,7 +87,7 @@ func TestCreateCollation(t *testing.T) {
 			nil, 0, nil, data))
 	}
 
-	collation, err := createCollation(node, big.NewInt(0), big.NewInt(1), txs)
+	collation, err := createCollation(node, node, big.NewInt(0), big.NewInt(1), txs)
 	if err != nil {
 		t.Fatalf("Create collation failed: %v", err)
 	}
@@ -133,7 +98,7 @@ func TestCreateCollation(t *testing.T) {
 	}
 
 	// negative test case #1: create collation with shard > shardCount.
-	collation, err = createCollation(node, big.NewInt(101), big.NewInt(2), txs)
+	collation, err = createCollation(node, node, big.NewInt(101), big.NewInt(2), txs)
 	if err == nil {
 		t.Errorf("Create collation should have failed with invalid shard number")
 	}
@@ -145,13 +110,13 @@ func TestCreateCollation(t *testing.T) {
 		badTxs = append(badTxs, types.NewTransaction(0, common.HexToAddress("0x0"),
 			nil, 0, nil, data))
 	}
-	collation, err = createCollation(node, big.NewInt(0), big.NewInt(2), badTxs)
+	collation, err = createCollation(node, node, big.NewInt(0), big.NewInt(2), badTxs)
 	if err == nil {
 		t.Errorf("Create collation should have failed with Txs longer than collation body limit")
 	}
 
 	// normal test case #1 create collation with correct parameters.
-	collation, err = createCollation(node, big.NewInt(5), big.NewInt(5), txs)
+	collation, err = createCollation(node, node, big.NewInt(5), big.NewInt(5), txs)
 	if err != nil {
 		t.Errorf("Create collation failed: %v", err)
 	}
@@ -180,7 +145,7 @@ func TestAddCollation(t *testing.T) {
 			nil, 0, nil, data))
 	}
 
-	collation, err := createCollation(node, big.NewInt(0), big.NewInt(1), txs)
+	collation, err := createCollation(node, node, big.NewInt(0), big.NewInt(1), txs)
 	if err != nil {
 		t.Errorf("Create collation failed: %v", err)
 	}
@@ -210,7 +175,7 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// negative test case #1 create the same collation that just got added to SMC.
-	collation, err = createCollation(node, big.NewInt(0), big.NewInt(1), txs)
+	collation, err = createCollation(node, node, big.NewInt(0), big.NewInt(1), txs)
 	if err == nil {
 		t.Errorf("Create collation should fail due to same collation in SMC")
 	}
@@ -228,7 +193,7 @@ func TestCheckCollation(t *testing.T) {
 			nil, 0, nil, data))
 	}
 
-	collation, err := createCollation(node, big.NewInt(0), big.NewInt(1), txs)
+	collation, err := createCollation(node, node, big.NewInt(0), big.NewInt(1), txs)
 	if err != nil {
 		t.Errorf("Create collation failed: %v", err)
 	}
