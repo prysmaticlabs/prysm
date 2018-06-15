@@ -1,4 +1,4 @@
-package proposer
+package syncer
 
 import (
 	"fmt"
@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 )
 
-// collationBodyResponse is called by a proposer responding to a notary's request
+// RespondCollationBody is called by a node responding to another node's request
 // for a collation body given a (shardID, chunkRoot, period, proposerAddress) tuple.
 // The proposer will fetch the corresponding data from persistent storage (shardDB) by
 // constructing a collation header from the input and calculating its hash.
-func collationBodyResponse(req p2p.Message, signer mainchain.Signer, collationFetcher sharding.CollationFetcher) (*sharding.CollationBodyResponse, error) {
+func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFetcher sharding.CollationFetcher) (*sharding.CollationBodyResponse, error) {
 	// Type assertion helps us catch incorrect data requests.
 	msg, ok := req.Data.(sharding.CollationBodyRequest)
 	if !ok {
@@ -41,11 +41,11 @@ func collationBodyResponse(req p2p.Message, signer mainchain.Signer, collationFe
 	return &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}, nil
 }
 
-// constructNotaryRequest fetches a collation header record submitted to the SMC for
+// RequestCollationBody fetches a collation header record submitted to the SMC for
 // a shardID, period pair and constructs a p2p collationBodyRequest that will
 // then be relayed to the appropriate proposer that submitted the collation header.
 // In production, this will be done within a notary service.
-func constructNotaryRequest(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (*sharding.CollationBodyRequest, error) {
+func RequestCollationBody(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (*sharding.CollationBodyRequest, error) {
 
 	record, err := caller.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {

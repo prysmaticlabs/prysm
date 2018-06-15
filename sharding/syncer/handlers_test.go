@@ -1,4 +1,4 @@
-package proposer
+package syncer
 
 import (
 	"bytes"
@@ -6,12 +6,46 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/ethereum/go-ethereum/sharding/proposer"
 )
+
+var (
+	key, _            = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	addr              = crypto.PubkeyToAddress(key.PublicKey)
+	accountBalance, _ = new(big.Int).SetString("1001000000000000000000", 10)
+)
+
+// Mock client for testing proposer.
+type mockNode struct {
+	smc         *contracts.SMC
+	t           *testing.T
+	depositFlag bool
+	backend     *backends.SimulatedBackend
+}
+
+func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+	txOpts := transactOpts()
+	txOpts.Value = value
+	return txOpts, nil
+}
+
+func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
+	return &m.smc.SMCTransactor
+}
+
+func (m *mockNode) SMCCaller() *contracts.SMCCaller {
+	return &m.smc.SMCCaller
+}
 
 type faultyRequest struct{}
 type faultySigner struct{}
@@ -42,6 +76,20 @@ func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) 
 	return nil, errors.New("could not fetch collation")
 }
 
+func transactOpts() *bind.TransactOpts {
+	return bind.NewKeyedTransactor(key)
+}
+
+func setup(t *testing.T) (*backends.SimulatedBackend, *contracts.SMC) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance}})
+	_, _, smc, err := contracts.DeploySMC(transactOpts(), backend)
+	if err != nil {
+		t.Fatalf("Failed to deploy SMC contract: %v", err)
+	}
+	backend.Commit()
+	return backend, smc
+}
+
 func TestCollationBodyResponse(t *testing.T) {
 
 	proposerAddress := common.BytesToAddress([]byte{})
@@ -70,22 +118,22 @@ func TestCollationBodyResponse(t *testing.T) {
 		Data: goodReq,
 	}
 
-	if _, err := collationBodyResponse(badMsg, signer, fetcher); err == nil {
+	if _, err := RespondCollationBody(badMsg, signer, fetcher); err == nil {
 		t.Errorf("Incorrect request should throw error. Expecting sharding.CollationBodyRequest{}, received: %v", incorrectReq)
 	}
 
-	if _, err := collationBodyResponse(goodMsg, faultySigner, fetcher); err == nil {
+	if _, err := RespondCollationBody(goodMsg, faultySigner, fetcher); err == nil {
 		t.Error("Faulty signer should cause function to throw error. no error thrown.")
 	}
 
-	if _, err := collationBodyResponse(goodMsg, signer, faultyFetcher); err == nil {
+	if _, err := RespondCollationBody(goodMsg, signer, faultyFetcher); err == nil {
 		t.Error("Faulty collatiom fetcher should cause function to throw error. no error thrown.")
 	}
 
 	header := sharding.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, []byte{})
 	body := []byte{}
 
-	response, err := collationBodyResponse(goodMsg, signer, fetcher)
+	response, err := RespondCollationBody(goodMsg, signer, fetcher)
 	if err != nil {
 		t.Fatalf("Could not construct collation body response: %v", err)
 	}
@@ -119,23 +167,23 @@ func TestConstructNotaryRequest(t *testing.T) {
 	collation := sharding.NewCollation(header, []byte{}, []*types.Transaction{})
 
 	// Adds the header to the SMC.
-	if err := addHeader(node, collation); err != nil {
+	if err := proposer.AddHeader(node, collation); err != nil {
 		t.Fatalf("Failed to add header to SMC: %v", err)
 	}
 
 	backend.Commit()
 
-	// constructNotaryRequest reads from the deployed SMC and fetches a
+	// collationBodyRequest reads from the deployed SMC and fetches a
 	// collation record for the shardID, period pair. Then, it constructs a request
-	// that will be broadcast over p2p and handled by a proposer that submitted the collation
+	// that will be broadcast over p2p and handled by a node that submitted the collation
 	// header to the SMC in the first place.
-	request, err := constructNotaryRequest(node, shardID, period)
+	request, err := RequestCollationBody(node, shardID, period)
 	if err != nil {
 		t.Fatalf("Could not construct request: %v", err)
 	}
 
-	// fetching an inexistent shardID, period pair from the SMC will return a nil request from a notary.
-	nilRequest, err := constructNotaryRequest(node, big.NewInt(20), big.NewInt(20))
+	// fetching an inexistent shardID, period pair from the SMC will return a nil request.
+	nilRequest, err := RequestCollationBody(node, big.NewInt(20), big.NewInt(20))
 	if err != nil {
 		t.Fatalf("Could not construct request: %v", err)
 	}

@@ -25,6 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/proposer"
+	"github.com/ethereum/go-ethereum/sharding/simulator"
+	"github.com/ethereum/go-ethereum/sharding/syncer"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -101,6 +103,14 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	}
 
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+		return nil, err
+	}
+
+	if err := shardEthereum.registerSimulatorService(shardEthereum.shardConfig, shardIDFlag); err != nil {
+		return nil, err
+	}
+
+	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -223,5 +233,21 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return proposer.NewProposer(config, s.smcClient, p2p, txPool, s.shardChainDb, shardID)
 		}
 		return observer.NewObserver(p2p, s.shardChainDb, shardID)
+	})
+}
+
+func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID int) error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		var p2p *p2p.Server
+		ctx.RetrieveService(&p2p)
+		return simulator.NewSimulator(config, s.smcClient, p2p, shardID)
+	})
+}
+
+func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int) error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		var p2p *p2p.Server
+		ctx.RetrieveService(&p2p)
+		return syncer.NewSyncer(config, s.smcClient, p2p, s.shardChainDb, shardID)
 	})
 }

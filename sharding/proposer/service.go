@@ -7,12 +7,10 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
@@ -36,8 +34,8 @@ type Proposer struct {
 }
 
 // NewProposer creates a struct instance of a proposer service.
-// It will have access to a mainchain client, a p2p network,
-// and a shard transaction pool.
+// It will have access to a config, a mainchain client, a p2p server,
+// a shardChainDb, and a shard transaction pool.
 func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
@@ -48,15 +46,6 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
 	go p.proposeCollations()
-
-	feed, err := p.p2p.Feed(sharding.CollationBodyRequest{})
-	if err != nil {
-		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
-		return
-	}
-
-	go p.handleCollationBodyRequests(feed)
-	go p.simulateNotaryRequests(feed)
 }
 
 // Stop the main loop for proposing collations.
@@ -120,80 +109,6 @@ func (p *Proposer) proposeCollations() {
 		return
 	}
 	if canAdd {
-		addHeader(p.client, collation)
-	}
-}
-
-// handleCollationBodyRequests subscribes to messages from the shardp2p
-// network and responds to a specific peer that requested the body using
-// the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (p *Proposer) handleCollationBodyRequests(feed *event.Feed) {
-
-	ch := make(chan p2p.Message, 100)
-	sub := feed.Subscribe(ch)
-
-	defer sub.Unsubscribe()
-	defer close(ch)
-
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		case req := <-ch:
-			if req.Data == nil {
-				continue
-			}
-			log.Info(fmt.Sprintf("Received p2p request from notary: %v", reflect.TypeOf(req)))
-			res, err := collationBodyResponse(req, p.client, p.shard)
-			if err != nil {
-				log.Error(fmt.Sprintf("Could not construct response: %v", err))
-				continue
-			}
-			log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
-			// Reply to that specific peer only.
-			// TODO: Implement this and see the response from the other end.
-			p.p2p.Send(*res, req.Peer)
-
-		case err := <-sub.Err():
-			log.Error("Subscriber failed: %v", err)
-			return
-		}
-	}
-}
-
-// simulateNotaryRequests simulates p2p messages to the proposer that will come from
-// notaries once the system is in production. Notaries will be performing
-// this action within their own service when they are selected on a shard, period
-// pair to perform their responsibilities. This function in particular simulates
-// requests for collation bodies that will be relayed to the appropriate proposer
-// by the p2p feed layer.
-func (p *Proposer) simulateNotaryRequests(feed *event.Feed) {
-	for {
-		select {
-		case <-p.ctx.Done():
-			return
-		default:
-			blockNumber, err := p.client.ChainReader().BlockByNumber(context.Background(), nil)
-			if err != nil {
-				log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
-				continue
-			}
-
-			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
-			req, err := constructNotaryRequest(p.client, p.shard.ShardID(), period)
-			if err != nil {
-				log.Error(fmt.Sprintf("Error constructing collation body request: %v, trying again...", err))
-				continue
-			}
-			if req == nil {
-				continue
-			}
-			msg := p2p.Message{
-				Peer: p2p.Peer{},
-				Data: *req,
-			}
-			feed.Send(msg)
-			log.Info("Sent request for collation body via a shardp2p feed")
-		}
+		AddHeader(p.client, collation)
 	}
 }
