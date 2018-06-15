@@ -36,13 +36,13 @@ type Signer interface {
 }
 
 // ContractCaller defines an interface that can read from a contract on the
-// Ethereum mainchain mainchain as well as call its read-only methods and functions.
+// Ethereum mainchain as well as call its read-only methods and functions.
 type ContractCaller interface {
 	SMCCaller() *contracts.SMCCaller
 }
 
 // ContractTransactor defines an interface that can transact with a contract on the
-// Ethereum mainchain mainchain as well as call its methods and functions.
+// Ethereum mainchain as well as call its methods and functions.
 type ContractTransactor interface {
 	SMCTransactor() *contracts.SMCTransactor
 	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
