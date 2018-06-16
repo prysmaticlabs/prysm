@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
@@ -41,7 +40,7 @@ func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.S
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
-	feed, err := s.p2p.Feed(sharding.CollationBodyRequest{})
+	feed, err := s.p2p.Feed(messages.CollationBodyRequest{})
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
 		return

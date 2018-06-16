@@ -1,4 +1,4 @@
-package sharding
+package messages
 
 import (
 	"math/big"

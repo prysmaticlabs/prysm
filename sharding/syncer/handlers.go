@@ -9,15 +9,16 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 )
 
 // RespondCollationBody is called by a node responding to another node's request
 // for a collation body given a (shardID, chunkRoot, period, proposerAddress) tuple.
 // The proposer will fetch the corresponding data from persistent storage (shardDB) by
 // constructing a collation header from the input and calculating its hash.
-func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFetcher sharding.CollationFetcher) (*sharding.CollationBodyResponse, error) {
+func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFetcher sharding.CollationFetcher) (*messages.CollationBodyResponse, error) {
 	// Type assertion helps us catch incorrect data requests.
-	msg, ok := req.Data.(sharding.CollationBodyRequest)
+	msg, ok := req.Data.(messages.CollationBodyRequest)
 	if !ok {
 		return nil, fmt.Errorf("received incorrect data request type: %v", msg)
 	}
@@ -38,14 +39,14 @@ func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFet
 		return nil, fmt.Errorf("could not fetch collation: %v", err)
 	}
 
-	return &sharding.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}, nil
+	return &messages.CollationBodyResponse{HeaderHash: &headerHash, Body: collation.Body()}, nil
 }
 
 // RequestCollationBody fetches a collation header record submitted to the SMC for
 // a shardID, period pair and constructs a p2p collationBodyRequest that will
 // then be relayed to the appropriate proposer that submitted the collation header.
 // In production, this will be done within a notary service.
-func RequestCollationBody(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (*sharding.CollationBodyRequest, error) {
+func RequestCollationBody(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (*messages.CollationBodyRequest, error) {
 
 	record, err := caller.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {
@@ -67,7 +68,7 @@ func RequestCollationBody(caller mainchain.ContractCaller, shardID *big.Int, per
 	// Converts from fixed size [32]byte to []byte slice.
 	chunkRoot := common.BytesToHash(record.ChunkRoot[:])
 
-	return &sharding.CollationBodyRequest{
+	return &messages.CollationBodyRequest{
 		ChunkRoot: &chunkRoot,
 		ShardID:   shardID,
 		Period:    period,

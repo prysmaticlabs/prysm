@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -134,14 +135,15 @@ func (s *ShardEthereum) Start() {
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
 		go s.Close()
-		for i := 5; i > 0; i-- {
+		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
 				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
 		// ensure trace and CPU profile data is flushed.
-		panic("Forceful shutdown of sharding node")
+		debug.Exit()
+		debug.LoudPanic("boom")
 	}()
 
 	// hang forever...

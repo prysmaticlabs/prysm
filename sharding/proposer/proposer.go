@@ -13,7 +13,7 @@ import (
 
 // AddHeader adds the collation header to the main chain by sending
 // an addHeader transaction to the sharding manager contract.
-// There can only exist one header per period per shard, it's proposer's
+// There can only exist one header per period per shard, it is the proposer's
 // responsibility to check if a header has been added.
 func AddHeader(transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
 	log.Info("Adding header to SMC")
@@ -81,7 +81,7 @@ func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int,
 // checkHeaderAdded checks if a collation header has already
 // submitted to the main chain. There can only be one header per shard
 // per period, proposer should check if a header's already submitted,
-// checkHeaderAdded returns true if it's available, false if it's unavailable.
+// checkHeaderAdded returns true if it is available, false if it is unavailable.
 func checkHeaderAdded(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (bool, error) {
 	// Get the period of the last header.
 	lastPeriod, err := caller.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
