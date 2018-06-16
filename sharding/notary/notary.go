@@ -120,17 +120,16 @@ func hasAccountBeenDeregistered(client mainchain.Client) (bool, error) {
 // isLockUpOver checks if the lock up period is over
 // which will allow the notary to call the releaseNotary function
 // in the SMC and get their deposit back.
-func isLockUpOver(client mainchain.Client) (bool, error) {
-	block, err := client.ChainReader().BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return false, fmt.Errorf("unable to retrieve last block: %v", err)
-	}
+func isLockUpOver(client mainchain.Client, blockNumber *big.Int) (bool, error) {
+
+	//TODO: When chainreader for tests is implemented, get block using the method
+	//get BlockByNumber instead of passing as an argument to this function.
 	nreg, err := getNotaryRegistry(client)
 	if err != nil {
 		return false, err
 	}
 
-	return (block.Number().Int64() / sharding.PeriodLength) > nreg.DeregisteredPeriod.Int64()+sharding.NotaryLockupLength, nil
+	return (blockNumber.Int64() / sharding.PeriodLength) > nreg.DeregisteredPeriod.Int64()+sharding.NotaryLockupLength, nil
 
 }
 
@@ -224,7 +223,9 @@ func leaveNotaryPool(client mainchain.Client) error {
 
 // releaseNotary releases the Notary from the pool by deleting the notary from
 // the registry and transferring back the deposit
-func releaseNotary(client mainchain.Client) error {
+func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
+	//TODO: Once chainreader is implemented remove blocknumber as argument
+	//to the function
 	nreg, err := getNotaryRegistry(client)
 
 	if err != nil {
@@ -239,7 +240,7 @@ func releaseNotary(client mainchain.Client) error {
 		return errors.New("notary is still registered to the pool")
 	}
 
-	if lockup, err := isLockUpOver(client); !lockup || err != nil {
+	if lockup, err := isLockUpOver(client, blockNumber); !lockup || err != nil {
 		if err != nil {
 			return err
 		}
@@ -282,7 +283,7 @@ func releaseNotary(client mainchain.Client) error {
 
 // submitVote votes for a collation on the shard
 // by taking in the shard and the hash of the collation header
-func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash) error {
+func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash, blockNumber *big.Int) error {
 
 	shardID := shard.ShardID()
 	// checks if the shardID is valid
@@ -290,13 +291,10 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("shardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardID)
 	}
 
-	currentblock, err := client.ChainReader().BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return fmt.Errorf("unable to retrieve last block: %v", err)
-	}
+	//TODO: Once chainreader in tests are implemented remove the blockNumber argument to the function
+	// and use chainreader to retrieve the block
 
-	period := big.NewInt(0).Div(currentblock.Number(), big.NewInt(sharding.PeriodLength))
-
+	period := big.NewInt(0).Div(blockNumber, big.NewInt(sharding.PeriodLength))
 	collPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
 
 	if err != nil {
