@@ -27,12 +27,17 @@ var (
 // Verifies that Notary implements the Actor interface.
 var _ = sharding.Actor(&Notary{})
 
+type newBackend struct {
+	backend     *backends.SimulatedBackend
+	blocknumber int64
+}
+
 // Mock client for testing notary. Should this go into sharding/client/testing?
 type smcClient struct {
 	smc         *contracts.SMC
 	depositFlag bool
 	t           *testing.T
-	backend     *backends.SimulatedBackend
+	backend     *newBackend
 }
 
 func (s *smcClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
@@ -63,9 +68,13 @@ func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
 	return &s.smc.SMCFilterer
 }
 
+func (s *smcClient) WaitForTransaction(hash common.Hash, duration int64) error {
+	s.backend.CommitWithBlock()
+	return nil
+}
+
 func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	s.backend.Commit()
-	return s.backend.TransactionReceipt(context.Background(), hash)
+	return s.backend.backend.TransactionReceipt(context.Background(), hash)
 }
 
 func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
@@ -86,6 +95,12 @@ func (s *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
 }
 
+func (b *newBackend) CommitWithBlock() {
+	b.backend.Commit()
+	b.blocknumber++
+
+}
+
 // Helper/setup methods.
 // TODO: consider moving these to common sharding testing package as the notary and smc tests
 // use them.
@@ -93,11 +108,11 @@ func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
 
-func setup() (*backends.SimulatedBackend, *contracts.SMC) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
-	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend)
-	backend.Commit()
-	return backend, smc
+func setup() (*newBackend, *contracts.SMC) {
+	backend := newBackend{backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}}), 0}
+	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend.backend)
+	backend.CommitWithBlock()
+	return &backend, smc
 }
 
 func TestHasAccountBeenDeregistered(t *testing.T) {
@@ -109,10 +124,10 @@ func TestHasAccountBeenDeregistered(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	err = leaveNotaryPool(client)
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	if err != nil {
 		t.Error(err)
@@ -140,35 +155,30 @@ func TestIsLockupOver(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	err = leaveNotaryPool(client)
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	// The test is dependent on implementing chainreader interface #164
+	err = releaseNotary(client, big.NewInt(backend.blocknumber))
 
-	/*
-		err = releaseNotary(client)
+	if err != nil {
+		t.Error(err)
+	}
 
-		if err != nil {
-			t.Error(err)
-		}
+	lockup, err := isLockUpOver(client, big.NewInt(backend.blocknumber))
 
-		lockup, err := isLockUpOver(client)
+	if err != nil {
+		t.Error(err)
+	}
 
-		if err != nil {
-			t.Error(err)
-		}
-
-		if !lockup {
-			t.Error("lockup period is not over despite account being relased from registry")
-
-		}
-	*/
+	if !lockup {
+		t.Error("lockup period is not over despite account being relased from registry")
+	}
 
 }
 
@@ -191,7 +201,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	if _, err = smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("failed to deposit: %v", err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 	b, err = isAccountInNotaryPool(client)
 	if err != nil {
 		t.Error(err)
@@ -224,7 +234,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	// Now there should be one notary.
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
@@ -240,7 +250,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -269,7 +279,7 @@ func TestLeaveNotaryPool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	// Now there should be one notary.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
@@ -284,7 +294,7 @@ func TestLeaveNotaryPool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -302,7 +312,7 @@ func TestReleaseNotary(t *testing.T) {
 
 	// Test Release Notary Before Joining it
 
-	err := releaseNotary(client)
+	err := releaseNotary(client, big.NewInt(0))
 	if err == nil {
 		t.Error("released From notary despite never joining pool")
 	}
@@ -313,51 +323,45 @@ func TestReleaseNotary(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	err = leaveNotaryPool(client)
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	if err != nil {
 
 		t.Error(err)
 	}
 
-	// The remaining part of the test is dependant on access to chainreader #164
-	// Unable to access block number for releaseNotary
+	balance, err := backend.backend.BalanceAt(context.Background(), addr, nil)
+	if err != nil {
+		t.Error("unable to retrieve balance")
+	}
 
-	/*
+	err = releaseNotary(client, big.NewInt(backend.blocknumber))
+	backend.CommitWithBlock()
 
-		balance, err := backend.BalanceAt(context.Background(), addr, nil)
-		if err != nil {
-			t.Error("unable to retrieve balance")
-		}
+	if err != nil {
 
-		err = releaseNotary(client)
-		backend.Commit()
+		t.Fatal(err)
+	}
 
-		if err != nil {
+	nreg, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nreg.Deposited {
+		t.Error("Unable to release Notary and deposit money back")
+	}
 
-			t.Fatal(err)
-		}
+	newbalance, err := backend.backend.BalanceAt(context.Background(), addr, nil)
+	if err != nil {
+		t.Error("unable to retrieve balance")
+	}
 
-		nreg, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if nreg.Deposited {
-			t.Error("Unable to release Notary and deposit money back")
-		}
-
-		newbalance, err := backend.BalanceAt(context.Background(), addr, nil)
-		if err != nil {
-			t.Error("unable to retrieve balance")
-		}
-
-		if balance.Cmp(newbalance) != 1 {
-			t.Errorf("Deposit was not returned, balance is currently:", newbalance)
-		}
-	*/
+	if balance.Cmp(newbalance) != 1 {
+		t.Errorf("Deposit was not returned, balance is currently:", newbalance)
+	}
 
 }
 
@@ -369,7 +373,7 @@ func TestSubmitVote(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	backend.Commit()
+	backend.CommitWithBlock()
 
 	// TODO: vote Test is unable to continue until chainreader is implemented as
 	// finding the current period requires knowing the latest blocknumber on the

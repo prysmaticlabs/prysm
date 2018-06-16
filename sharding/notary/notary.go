@@ -159,6 +159,12 @@ func joinNotaryPool(client mainchain.Client) error {
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
+
+	err = client.WaitForTransaction(tx.Hash(), 400)
+	if err != nil {
+		return err
+	}
+
 	receipt, err := client.TransactionReceipt(tx.Hash())
 	if err != nil {
 		return err
@@ -198,6 +204,11 @@ func leaveNotaryPool(client mainchain.Client) error {
 
 	if err != nil {
 		return fmt.Errorf("unable to deregister notary: %v", err)
+	}
+
+	err = client.WaitForTransaction(tx.Hash(), 400)
+	if err != nil {
+		return err
 	}
 
 	receipt, err := client.TransactionReceipt(tx.Hash())
@@ -255,6 +266,11 @@ func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
 	tx, err := client.SMCTransactor().ReleaseNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to Release Notary: %v", err)
+	}
+
+	err = client.WaitForTransaction(tx.Hash(), 400)
+	if err != nil {
+		return err
 	}
 
 	receipt, err := client.TransactionReceipt(tx.Hash())
