@@ -58,6 +58,10 @@ func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
 	return &s.smc.SMCFilterer
 }
 
+func (s *smcClient) WaitForTransaction(hash common.Hash, durationInSeconds int64) error {
+	return nil
+}
+
 func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
 	return nil, nil
 }

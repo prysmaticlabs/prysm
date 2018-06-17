@@ -57,6 +57,10 @@ func (s *mockNode) SMCFilterer() *contracts.SMCFilterer {
 	return &s.smc.SMCFilterer
 }
 
+func (s *smcClient) WaitForTransaction(hash common.Hash, durationInSeconds int64) error {
+	return nil
+}
+
 func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
 	return nil, nil
 }

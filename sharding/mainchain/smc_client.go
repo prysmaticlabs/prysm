@@ -180,6 +180,7 @@ func (s *SMCClient) WaitForTransaction(hash common.Hash, durationInSeconds int64
 			return fmt.Errorf("unable to retrieve transaction: %v", err)
 		}
 		if ctx.Err() != nil {
+			cancel()
 			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", err)
 		}
 	}
