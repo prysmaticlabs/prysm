@@ -85,6 +85,7 @@ func NewSMCClient(endpoint string, dataDirPath string, depositFlag bool, passwor
 	return smcClient, nil
 }
 
+// Start the SMC Client and connect to running geth node.
 func (s *SMCClient) Start() {
 	// Sets up a connection to a Geth node via RPC.
 	rpcClient, err := dialRPC(s.endpoint)
@@ -118,6 +119,7 @@ func (s *SMCClient) Start() {
 	s.smc = smc
 }
 
+// Stop SMCClient immediately. This cancels any pending RPC connections.
 func (s *SMCClient) Stop() error {
 	s.rpcClient.Close()
 	return nil
