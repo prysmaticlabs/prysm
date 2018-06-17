@@ -69,7 +69,7 @@ func (p *Proposer) proposeCollations() {
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
-	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
+	collation, err := createCollation(p.client, p.client.Account(), p.client, big.NewInt(int64(p.shardID)), period, txs)
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not create collation: %v", err))
 		return
