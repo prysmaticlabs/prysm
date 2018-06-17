@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"time"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -69,25 +71,27 @@ func (p *Proposer) proposeCollations() {
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
 
 	for {
+		ctx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
 		select {
 		case tx := <-requests:
 			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
-			if err := p.createCollation([]*types.Transaction{tx}); err != nil {
+			if err := p.createCollation(ctx, []*types.Transaction{tx}); err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
-		case <-p.ctx.Done():
+		case <-ctx.Done():
 			log.Info("Context canceled")
-			return
 		case err := <-p.txpoolSub.Err():
 			log.Error(fmt.Sprintf("Subscriber failed: %v", err))
-			return
 		}
+
+		cancel()
+		return
 	}
 }
 
-func (p *Proposer) createCollation(txs []*types.Transaction) error {
+func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction) error {
 	// Get current block number.
-	blockNumber, err := p.client.ChainReader().BlockByNumber(context.Background(), nil)
+	blockNumber, err := p.client.ChainReader().BlockByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
