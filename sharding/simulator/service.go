@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/syncer"
 )

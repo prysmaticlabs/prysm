@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/proposer"
 )
@@ -95,7 +96,7 @@ func TestCollationBodyResponse(t *testing.T) {
 	proposerAddress := common.BytesToAddress([]byte{})
 	chunkRoot := common.BytesToHash([]byte{})
 
-	goodReq := sharding.CollationBodyRequest{
+	goodReq := messages.CollationBodyRequest{
 		ChunkRoot: &chunkRoot,
 		ShardID:   big.NewInt(1),
 		Period:    big.NewInt(1),
@@ -119,7 +120,7 @@ func TestCollationBodyResponse(t *testing.T) {
 	}
 
 	if _, err := RespondCollationBody(badMsg, signer, fetcher); err == nil {
-		t.Errorf("Incorrect request should throw error. Expecting sharding.CollationBodyRequest{}, received: %v", incorrectReq)
+		t.Errorf("Incorrect request should throw error. Expecting messages.CollationBodyRequest{}, received: %v", incorrectReq)
 	}
 
 	if _, err := RespondCollationBody(goodMsg, faultySigner, fetcher); err == nil {
