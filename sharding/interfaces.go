@@ -14,14 +14,6 @@ type Node interface {
 	Register(constructor ServiceConstructor) error
 }
 
-// ShardP2P defines an interface for a peer-to-peer service in a
-// sharded Ethereum blockchain.
-type ShardP2P interface{}
-
-// TXPool defines an interface for a transaction pool service that handles
-// incoming shard transactions in the network.
-type TXPool interface{}
-
 // Actor refers to either a notary, proposer, or observer in the sharding spec.
 type Actor interface {
 	Service
@@ -45,7 +37,7 @@ type ServiceConstructor func(ctx *ServiceContext) (Service, error)
 type Service interface {
 	// Start is called after all services have been constructed to
 	// spawn any goroutines required by the service.
-	Start() error
+	Start()
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop() error

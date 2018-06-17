@@ -126,6 +126,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 ## Necessary Go Knowledge & Readings
 
 -   [The Go Programming Language (Only Recommended Book)](https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440)
+-   [Ethereum Development with Go] (https://goethereumbook.org)
 -   [How to Write Go Code](http://golang.org/doc/code.html)
 -   [The Go Programming Language Tour](http://tour.golang.org/)
 -   [Getting Started With Go](http://www.youtube.com/watch?v=2KmHtgtEZ1s)

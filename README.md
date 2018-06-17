@@ -119,16 +119,16 @@ Concurrently, you will need to run another service that is tasked with processin
 ## Running a Collation Proposal Node
 
 ```
-geth sharding --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
 ```
 
-This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
+This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals on shard 0 (collation headers) to the SMC via the `addHeader` function.
 
 ## Running an Observer Node
 
-    geth sharding --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+    geth sharding --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
 
-Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network.
+Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network on shard 0.
 
 # Making Changes
 

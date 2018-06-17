@@ -2,10 +2,12 @@ package sharding
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -71,10 +73,12 @@ func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, erro
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch body by chunk root: %v", err)
 	}
-	// TODO: deserializes the body into a txs slice instead of using
-	// nil as the third arg to MakeCollation.
-	col := NewCollation(header, body, nil)
-	return col, nil
+
+	txs, err := DeserializeBlobToTx(body)
+	if err != nil {
+		return nil, fmt.Errorf("cannot deserialize body: %v", err)
+	}
+	return NewCollation(header, body, *txs), nil
 }
 
 // ChunkRootfromHeaderHash gets the chunk root of a collation body from the hash of its header
@@ -178,11 +182,11 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 
 // SaveBody adds the collation body to the shardDB and sets availability.
 func (s *Shard) SaveBody(body []byte) error {
-	// TODO: check if body is empty and throw error.
-	// TODO: dependent on blob serialization.
-	// chunkRoot := getChunkRoot(body) using the blob algorithm utils.
-	// right now we will just take the raw keccak256 of the body until #92 is merged.
-	chunkRoot := common.BytesToHash(body)
+	if len(body) == 0 {
+		return errors.New("body is empty")
+	}
+	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
+	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
 	s.SetAvailability(&chunkRoot, true)
 	return s.shardDB.Put(chunkRoot.Bytes(), body)
 }

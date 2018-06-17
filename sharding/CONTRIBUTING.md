@@ -23,6 +23,9 @@ Now you should have a remote pointing to the `origin` repo (geth-sharding) and t
 -   Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `go-ethereum:collations-pool` (your fork on your profile).
 -   Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
 
+Pull requests must be cleanly rebased ontop of master. If master advances while your PR is in review, please keep rebasing it.
+Before the pull request is merged, make sure that you squash your commits into one commit using `git rebase -i` and `git push -f`. After every commit the test suite must be passing.
+
 ## Contributor Responsibilities
 
 We consider two types of contributions to our repo and categorize them as follows:
