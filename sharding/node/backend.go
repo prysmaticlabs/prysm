@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/log"
@@ -36,10 +35,10 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.Config // Holds necessary information to configure shards.
-	txPool       *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
-	actor        sharding.Actor // Either notary, proposer, or observer.
-	eventFeed    *event.Feed    // Used to enable P2P related interactions via different sharding actors.
+	shardConfig *params.Config // Holds necessary information to configure shards.
+	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
+	actor       sharding.Actor // Either notary, proposer, or observer.
+	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
 	services map[reflect.Type]sharding.Service // Service registry.
@@ -53,11 +52,6 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	shardEthereum := &ShardEthereum{
 		services: make(map[reflect.Type]sharding.Service),
 		stop:     make(chan struct{}),
-	}
-
-	path := node.DefaultDataDir()
-	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
 
 	// Configure shardConfig by loading the default.
