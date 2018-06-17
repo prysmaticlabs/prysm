@@ -1,6 +1,7 @@
 package proposer
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -55,6 +56,10 @@ func (s *mockNode) SMCTransactor() *contracts.SMCTransactor {
 
 func (s *mockNode) SMCFilterer() *contracts.SMCFilterer {
 	return &s.smc.SMCFilterer
+}
+
+func (s *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+	return nil
 }
 
 func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
