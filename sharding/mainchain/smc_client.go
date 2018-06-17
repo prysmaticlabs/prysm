@@ -101,41 +101,55 @@ func NewSMCClient(endpoint string, dataDirPath string, depositFlag bool, passwor
 
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	// Sets up a connection to a Geth node via RPC.
-	rpcClient, err := dialRPC(endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("cannot start rpc client: %v", err)
-	}
-	client := ethclient.NewClient(rpcClient)
-
-	// Check account existence and unlock account before starting.
-	accounts := ks.Accounts()
-	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no accounts found")
-	}
-
 	smcClient := &SMCClient{
 		keystore:     ks,
 		endpoint:     endpoint,
 		depositFlag:  depositFlag,
 		dataDirPath:  dataDirPath,
 		passwordFile: passwordFile,
-		rpcClient:    rpcClient,
-		client:       client,
 	}
 
-	if err := smcClient.unlockAccount(accounts[0]); err != nil {
-		return nil, fmt.Errorf("cannot unlock account: %v", err)
+	return smcClient, nil
+}
+
+// Start the SMC Client and connect to running geth node.
+func (s *SMCClient) Start() {
+	// Sets up a connection to a Geth node via RPC.
+	rpcClient, err := dialRPC(s.endpoint)
+	if err != nil {
+		log.Crit(fmt.Sprintf("Cannot start rpc client: %v", err))
+		return
+	}
+
+	s.rpcClient = rpcClient
+	s.client = ethclient.NewClient(rpcClient)
+
+	// Check account existence and unlock account before starting.
+	accounts := s.keystore.Accounts()
+	if len(accounts) == 0 {
+		log.Crit("No accounts found")
+		return
+	}
+
+	if err := s.unlockAccount(accounts[0]); err != nil {
+		log.Crit(fmt.Sprintf("Cannot unlock account: %v", err))
+		return
 	}
 
 	// Initializes bindings to SMC.
-	smc, err := initSMC(smcClient)
+	smc, err := initSMC(s)
 	if err != nil {
-		return nil, err
+		log.Crit(fmt.Sprintf("Failed to initialize SMC: %v", err))
+		return
 	}
-	smcClient.smc = smc
 
-	return smcClient, nil
+	s.smc = smc
+}
+
+// Stop SMCClient immediately. This cancels any pending RPC connections.
+func (s *SMCClient) Stop() error {
+	s.rpcClient.Close()
+	return nil
 }
 
 // CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
