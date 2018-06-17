@@ -37,6 +37,7 @@ type Client interface {
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
 	SMCFilterer() *contracts.SMCFilterer
+	WaitForTransaction(common.Hash, int64) error
 	TransactionReceipt(common.Hash) (*types.Receipt, error)
 	ChainReader() ethereum.ChainReader
 	DepositFlag() bool
