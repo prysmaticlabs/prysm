@@ -31,7 +31,6 @@ func shardingCmd(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not initialize sharding node instance: %v", err)
 	}
-	defer shardingNode.Close()
 	// starts a connection to a geth node and kicks off every registered service.
 	shardingNode.Start()
 	return nil
