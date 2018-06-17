@@ -4,24 +4,28 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/sharding"
 )
 
-var db ethdb.Database
+// Verifies that ShardDB implements the sharding Service inteface.
+var _ = sharding.Service(&ShardDB{})
+
+var testdb ShardDB
 
 func init() {
 	shardDB, err := NewShardDB("/tmp/datadir", "shardchaindata")
 	if err != nil {
 		panic(err)
 	}
-	db = shardDB
+
+	testdb = *shardDB
 }
 
 // Testing the concurrency of the shardDB with multiple processes attempting to write.
 func Test_DBConcurrent(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		go func(val string) {
-			if err := db.Put([]byte("ralph merkle"), []byte(val)); err != nil {
+			if err := testdb.db.Put([]byte("ralph merkle"), []byte(val)); err != nil {
 				t.Errorf("could not save value in db: %v", err)
 			}
 		}(strconv.Itoa(i))
@@ -29,7 +33,7 @@ func Test_DBConcurrent(t *testing.T) {
 }
 
 func Test_DBPut(t *testing.T) {
-	if err := db.Put([]byte("ralph merkle"), []byte{1, 2, 3}); err != nil {
+	if err := testdb.db.Put([]byte("ralph merkle"), []byte{1, 2, 3}); err != nil {
 		t.Errorf("could not save value in db: %v", err)
 	}
 }
@@ -37,11 +41,11 @@ func Test_DBPut(t *testing.T) {
 func Test_DBHas(t *testing.T) {
 	key := []byte("ralph merkle")
 
-	if err := db.Put(key, []byte{1, 2, 3}); err != nil {
+	if err := testdb.db.Put(key, []byte{1, 2, 3}); err != nil {
 		t.Fatalf("could not save value in db: %v", err)
 	}
 
-	has, err := db.Has(key)
+	has, err := testdb.db.Has(key)
 	if err != nil {
 		t.Errorf("could not check if db has key: %v", err)
 	}
@@ -50,7 +54,7 @@ func Test_DBHas(t *testing.T) {
 	}
 
 	key2 := []byte{}
-	has2, err := db.Has(key2)
+	has2, err := testdb.db.Has(key2)
 	if err != nil {
 		t.Errorf("could not check if db has key: %v", err)
 	}
@@ -62,11 +66,11 @@ func Test_DBHas(t *testing.T) {
 func Test_DBGet(t *testing.T) {
 	key := []byte("ralph merkle")
 
-	if err := db.Put(key, []byte{1, 2, 3}); err != nil {
+	if err := testdb.db.Put(key, []byte{1, 2, 3}); err != nil {
 		t.Fatalf("could not save value in db: %v", err)
 	}
 
-	val, err := db.Get(key)
+	val, err := testdb.db.Get(key)
 	if err != nil {
 		t.Errorf("get failed: %v", err)
 	}
@@ -75,7 +79,7 @@ func Test_DBGet(t *testing.T) {
 	}
 
 	key2 := []byte{}
-	val2, err := db.Get(key2)
+	val2, err := testdb.db.Get(key2)
 	if len(val2) != 0 {
 		t.Errorf("non-existent key should not have a value. key=%v, value=%v", key2, val2)
 	}
@@ -84,11 +88,11 @@ func Test_DBGet(t *testing.T) {
 func Test_DBDelete(t *testing.T) {
 	key := []byte("ralph merkle")
 
-	if err := db.Put(key, []byte{1, 2, 3}); err != nil {
+	if err := testdb.db.Put(key, []byte{1, 2, 3}); err != nil {
 		t.Fatalf("could not save value in db: %v", err)
 	}
 
-	if err := db.Delete(key); err != nil {
+	if err := testdb.db.Delete(key); err != nil {
 		t.Errorf("could not delete key: %v", key)
 	}
 }
