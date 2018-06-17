@@ -256,7 +256,9 @@ func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID 
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		var p2p *p2p.Server
 		ctx.RetrieveService(&p2p)
-		return simulator.NewSimulator(config, s.smcClient, p2p, shardID)
+		var smcClient *mainchain.SMCClient
+		ctx.RetrieveService(&smcClient)
+		return simulator.NewSimulator(config, smcClient, p2p, shardID)
 	})
 }
 
@@ -264,6 +266,8 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		var p2p *p2p.Server
 		ctx.RetrieveService(&p2p)
-		return syncer.NewSyncer(config, s.smcClient, p2p, s.shardChainDb, shardID)
+		var smcClient *mainchain.SMCClient
+		ctx.RetrieveService(&smcClient)
+		return syncer.NewSyncer(config, smcClient, p2p, s.shardChainDb, shardID)
 	})
 }
