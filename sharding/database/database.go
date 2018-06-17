@@ -4,6 +4,7 @@
 package database
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -11,27 +12,35 @@ import (
 )
 
 type ShardDB struct {
-	db *ethdb.LDBDatabase
+	dataDir string
+	name    string
+	cache   int
+	handles int
+	db      *ethdb.LDBDatabase
 }
 
-// NewShardDB initializes a shardDB that writes to local disk.
+// NewShardDB initializes a shardDB.
 func NewShardDB(dataDir string, name string) (*ShardDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
-
-	db, err := ethdb.NewLDBDatabase(filepath.Join(dataDir, name), 16, 16)
-	if err != nil {
-		return nil, err
-	}
-
 	return &ShardDB{
-		db: db,
+		dataDir: dataDir,
+		name:    name,
+		cache:   16,
+		handles: 16,
+		db:      nil,
 	}, nil
 }
 
 // Start the shard DB service.
 func (s *ShardDB) Start() {
 	log.Info("Starting shardDB service")
+	db, err := ethdb.NewLDBDatabase(filepath.Join(s.dataDir, s.name), s.cache, s.handles)
+	if err != nil {
+		log.Error(fmt.Sprintf("Could not start shard DB: %v", err))
+		return
+	}
+	s.db = db
 }
 
 // Stop the shard DB service gracefully.
