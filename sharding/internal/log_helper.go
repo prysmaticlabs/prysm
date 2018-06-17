@@ -14,6 +14,10 @@ type LogHandler struct {
 	t       *testing.T
 }
 
+func NewLogHandler(t *testing.T) *LogHandler {
+	return &LogHandler{t: t}
+}
+
 // Log adds records to the record slice.
 func (t *LogHandler) Log(r *log.Record) error {
 	t.records = append(t.records, r)
