@@ -4,8 +4,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
-	"log"
+	internal "github.com/ethereum/go-ethereum/sharding/internal"
 )
 
 // Verifies that ShardDB implements the sharding Service inteface.
@@ -14,12 +15,34 @@ var _ = sharding.Service(&ShardDB{})
 var testDB *ShardDB
 
 func init() {
-	shardDB, err := NewShardDB("/tmp/datadir", "shardchaindata")
-	if err != nil {
-		log.Fatalf("Can not set up shard db: %v", err)
-	}
+	shardDB, _ := NewShardDB("/tmp/datadir", "shardchaindata")
 	testDB = shardDB
 	testDB.Start()
+}
+
+func TestLifecycle(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	s, err := NewShardDB("/tmp/datadir", "shardchaindb")
+	if err != nil {
+		t.Fatalf("Could not initialize a new sb: %v", err)
+	}
+
+	s.Start()
+	h.VerifyLogMsg("Starting shardDB service")
+	// ethdb.NewLDBDatabase logs the following
+	h.VerifyLogMsg("Allocated cache and file handles")
+
+	s.Stop()
+	h.VerifyLogMsg("Stopping shardDB service")
+
+	// Access DB after it's stopped, this should fail
+	_, err = s.db.Get([]byte("ralph merkle"))
+
+	if err.Error() != "leveldb: closed" {
+		t.Fatalf("shardDB close function did not work")
+	}
 }
 
 // Testing the concurrency of the shardDB with multiple processes attempting to write.
