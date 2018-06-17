@@ -1,9 +1,9 @@
 package node
 
 import (
+	"flag"
 	"testing"
 
-	"flag"
 	"github.com/ethereum/go-ethereum/sharding"
 
 	cli "gopkg.in/urfave/cli.v1"
