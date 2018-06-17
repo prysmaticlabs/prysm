@@ -134,7 +134,7 @@ func isLockUpOver(client mainchain.Client, blockNumber *big.Int) (bool, error) {
 		return false, err
 	}
 
-	return (blockNumber.Int64() / sharding.PeriodLength) > nreg.DeregisteredPeriod.Int64()+sharding.NotaryLockupLength, nil
+	return (blockNumber.Int64() / shardparams.DefaultConfig.PeriodLength) > nreg.DeregisteredPeriod.Int64()+shardparams.DefaultConfig.NotaryLockupLength, nil
 
 }
 
@@ -185,7 +185,7 @@ func joinNotaryPool(config *shardparams.Config, client mainchain.Client) error {
 		return errors.New("account has not been able to be deposited in notary pool")
 	}
 
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(sharding.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
+	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
 
 	return nil
 }
@@ -306,16 +306,21 @@ func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
 // by taking in the shard and the hash of the collation header
 func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash, blockNumber *big.Int) error {
 
+	shardcount, err := client.GetShardCount()
+	if err != nil {
+		return fmt.Errorf("could not get shard count: %v", err)
+	}
+
 	shardID := shard.ShardID()
 	// checks if the shardID is valid
-	if shardID.Int64() <= int64(0) || shardID.Int64() > sharding.ShardCount {
-		return fmt.Errorf("shardId is invalid, it has to be between %d and %d, instead it is %v", 0, sharding.ShardCount, shardID)
+	if shardID.Int64() <= int64(0) || shardID.Int64() > shardcount {
+		return fmt.Errorf("shardId is invalid, it has to be between %d and %d, instead it is %v", 0, shardcount, shardID)
 	}
 
 	//TODO: Once chainreader in tests are implemented remove the blockNumber argument to the function
 	// and use chainreader to retrieve the block
 
-	period := big.NewInt(0).Div(blockNumber, big.NewInt(sharding.PeriodLength))
+	period := big.NewInt(0).Div(blockNumber, big.NewInt(shardparams.DefaultConfig.PeriodLength))
 	collPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
 
 	if err != nil {
@@ -338,8 +343,8 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 	}
 
 	// Checking if the pool index is valid
-	if nreg.PoolIndex.Int64() >= sharding.NotaryCommitSize {
-		return fmt.Errorf("invalid pool index %d as it is more than the committee size of %d", nreg.PoolIndex, sharding.NotaryCommitSize)
+	if nreg.PoolIndex.Int64() >= shardparams.DefaultConfig.NotaryCommitteeSize {
+		return fmt.Errorf("invalid pool index %d as it is more than the committee size of %d", nreg.PoolIndex, shardparams.DefaultConfig.NotaryCommitteeSize)
 	}
 
 	collationRecords, err := client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -431,7 +436,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 			return fmt.Errorf("unable to add collation to canonical shard chain: %v", err)
 		}
 	}
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(config.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().String()))
+	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
 
 	return nil
 }
