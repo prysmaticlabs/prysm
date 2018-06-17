@@ -36,7 +36,6 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	ctx          *cli.Context
 	shardConfig  *params.Config // Holds necessary information to configure shards.
 	txPool       *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
 	actor        sharding.Actor // Either notary, proposer, or observer.
@@ -54,7 +53,6 @@ type ShardEthereum struct {
 func New(ctx *cli.Context) (*ShardEthereum, error) {
 	shardEthereum := &ShardEthereum{
 		services: make(map[reflect.Type]sharding.Service),
-		ctx:      ctx,
 		stop:     make(chan struct{}),
 	}
 
@@ -79,7 +77,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerMainchainClient(); err != nil {
+	if err := shardEthereum.registerMainchainClient(ctx); err != nil {
 		return nil, err
 	}
 
@@ -188,21 +186,21 @@ func (s *ShardEthereum) registerP2P() error {
 }
 
 // registerMainchainClient
-func (s *ShardEthereum) registerMainchainClient() error {
+func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
-	if s.ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-		path = s.ctx.GlobalString(utils.DataDirFlag.Name)
+	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
+		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
 
-	endpoint := s.ctx.Args().First()
+	endpoint := ctx.Args().First()
 	if endpoint == "" {
 		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
 	}
-	if s.ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
-		endpoint = s.ctx.GlobalString(utils.IPCPathFlag.Name)
+	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
+		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
 	}
-	passwordFile := s.ctx.GlobalString(utils.PasswordFileFlag.Name)
-	depositFlag := s.ctx.GlobalBool(utils.DepositFlag.Name)
+	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
+	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
 
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
 		return mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
