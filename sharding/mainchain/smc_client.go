@@ -154,17 +154,28 @@ func (s *SMCClient) SMCFilterer() *contracts.SMCFilterer {
 	return &s.smc.SMCFilterer
 }
 
-// TransactionReceipt allows an SMCClient to retrieve transaction receipts on
-// the mainchain by hash.
-func (s *SMCClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+// WaitForTransaction waits for transaction to be mined and returns an error if it takes
+// too long
+func (s *SMCClient) WaitForTransaction(hash common.Hash, durationInSeconds int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(durationInSeconds)*time.Second)
 
 	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(context.Background(), hash) {
 		if err != nil {
-			return nil, fmt.Errorf("Unable to retrieve transaction: %v", err)
+			cancel()
+			return fmt.Errorf("unable to retrieve transaction: %v", err)
 		}
-		time.Sleep(1 * time.Second)
+		if ctx.Err() != nil {
+			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", err)
+		}
 	}
+	cancel()
 	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
+	return nil
+}
+
+// TransactionReceipt allows an SMCClient to retrieve transaction receipts on
+// the mainchain by hash.
+func (s *SMCClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
 
 	receipt, err := s.client.TransactionReceipt(context.Background(), hash)
 	if err != nil {
