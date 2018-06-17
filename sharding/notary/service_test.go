@@ -8,14 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/params"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -46,52 +43,14 @@ func (s *smcClient) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (s *smcClient) Context() *cli.Context {
-	return nil
-}
-
 func (s *smcClient) SMCTransactor() *contracts.SMCTransactor {
 	return &s.smc.SMCTransactor
-}
-
-func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
-	return &s.smc.SMCFilterer
-}
-
-func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return nil, nil
 }
 
 func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
 	return txOpts, nil
-}
-
-func (s *smcClient) DepositFlag() bool {
-	return s.depositFlag
-}
-
-func (s *smcClient) SetDepositFlag(deposit bool) {
-	s.depositFlag = deposit
-}
-
-func (s *smcClient) Sign(hash common.Hash) ([]byte, error) {
-	return nil, nil
-}
-
-// Unused mockClient methods.
-func (s *smcClient) Start() error {
-	s.t.Fatal("Start called")
-	return nil
-}
-
-func (s *smcClient) Close() {
-	s.t.Fatal("Close called")
-}
-
-func (s *smcClient) DataDirPath() string {
-	return "/tmp/datadir"
 }
 
 func (s *smcClient) GetShardCount() (int64, error) {
@@ -117,7 +76,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	client := &smcClient{smc: smc, t: t}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(client)
+	b, err := isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +91,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
-	b, err = isAccountInNotaryPool(client)
+	b, err = isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,14 +112,7 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	client.SetDepositFlag(false)
-	err = joinNotaryPool(params.DefaultConfig, client)
-	if err == nil {
-		t.Error("Joined notary pool while --deposit was not present")
-	}
-
-	client.SetDepositFlag(true)
-	err = joinNotaryPool(params.DefaultConfig, client)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +128,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(params.DefaultConfig, client)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}

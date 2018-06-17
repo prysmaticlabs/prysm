@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -39,9 +40,9 @@ func AddHeader(transactor mainchain.ContractTransactor, collation *sharding.Coll
 // and body. Header consists of shardID, ChunkRoot, period,
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
-func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
-	// shardId has to be within range.
-	shardCount, err := client.GetShardCount()
+func createCollation(caller mainchain.ContractCaller, account *accounts.Account, signer mainchain.Signer, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
+	// shardId has to be within range
+	shardCount, err := caller.GetShardCount()
 	if err != nil {
 		return nil, fmt.Errorf("can't get shard count from smc: %v", err)
 	}
@@ -50,7 +51,7 @@ func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int,
 	}
 
 	// check with SMC to see if we can add the header.
-	if a, _ := checkHeaderAdded(client, shardID, period); !a {
+	if a, _ := checkHeaderAdded(caller, shardID, period); !a {
 		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
 	}
 
@@ -61,13 +62,13 @@ func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int,
 	}
 
 	// construct the header, leave chunkRoot and signature fields empty, to be filled later.
-	addr := client.Account().Address
+	addr := account.Address
 	header := sharding.NewCollationHeader(shardID, nil, period, &addr, nil)
 
 	// construct the body with header, blobs(serialized txs) and txs.
 	collation := sharding.NewCollation(header, blobs, txs)
 	collation.CalculateChunkRoot()
-	sig, err := client.Sign(collation.Header().Hash())
+	sig, err := signer.Sign(collation.Header().Hash())
 	if err != nil {
 		return nil, fmt.Errorf("can't create collation, sign collationHeader failed: %v", err)
 	}

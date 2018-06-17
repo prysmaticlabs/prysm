@@ -48,6 +48,14 @@ func (m *mockNode) SMCCaller() *contracts.SMCCaller {
 	return &m.smc.SMCCaller
 }
 
+func (m *mockNode) GetShardCount() (int64, error) {
+	shardCount, err := m.SMCCaller().ShardCount(&bind.CallOpts{})
+	if err != nil {
+		return 0, err
+	}
+	return shardCount.Int64(), nil
+}
+
 type faultyRequest struct{}
 type faultySigner struct{}
 type faultyCollationFetcher struct{}

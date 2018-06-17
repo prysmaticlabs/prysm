@@ -39,17 +39,20 @@ func (n *Notary) Stop() error {
 	return nil
 }
 
+// notarizeCollations checks incoming block headers and determines if
+// we are an eligible notary for collations.
 func (n *Notary) notarizeCollations() {
+
 	// TODO: handle this better through goroutines. Right now, these methods
 	// are blocking.
 	if n.smcClient.DepositFlag() {
-		if err := joinNotaryPool(n.config, n.smcClient); err != nil {
+		if err := joinNotaryPool(n.smcClient, n.smcClient.Account(), n.config); err != nil {
 			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 			return
 		}
 	}
 
-	if err := subscribeBlockHeaders(n.smcClient); err != nil {
+	if err := subscribeBlockHeaders(n.smcClient.ChainReader(), n.smcClient, n.smcClient.Account()); err != nil {
 		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return
 	}
