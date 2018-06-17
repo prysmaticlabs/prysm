@@ -36,24 +36,24 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.Config       // Holds necessary information to configure shards.
-	txPool       *txpool.TXPool       // Defines the sharding-specific txpool. To be designed.
-	actor        sharding.Actor       // Either notary, proposer, or observer.
-	shardChainDb ethdb.Database       // Access to the persistent db to store shard data.
-	eventFeed    *event.Feed          // Used to enable P2P related interactions via different sharding actors.
-	smcClient    *mainchain.SMCClient // Provides bindings to the SMC deployed on the Ethereum mainchain.
+	shardConfig  *params.Config // Holds necessary information to configure shards.
+	txPool       *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
+	actor        sharding.Actor // Either notary, proposer, or observer.
+	shardChainDb ethdb.Database // Access to the persistent db to store shard data.
+	eventFeed    *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
 	services map[reflect.Type]sharding.Service // Service registry.
 	lock     sync.RWMutex
+	stop     chan struct{} // Channel to wait for termination notifications
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
 // geth sharding entrypoint.
 func New(ctx *cli.Context) (*ShardEthereum, error) {
-
 	shardEthereum := &ShardEthereum{
 		services: make(map[reflect.Type]sharding.Service),
+		stop:     make(chan struct{}),
 	}
 
 	path := node.DefaultDataDir()
@@ -61,46 +61,32 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
 
-	endpoint := ctx.Args().First()
-	if endpoint == "" {
-		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
-	}
-	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
-		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
-	}
-
-	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
-	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
-	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
-
-	smcClient, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
-	if err != nil {
-		return nil, err
-	}
-
 	shardChainDb, err := database.NewShardDB(path, shardChainDbName)
 	if err != nil {
 		return nil, err
 	}
 
-	// Adds the initialized SMCClient to the ShardEthereum instance.
-	shardEthereum.smcClient = smcClient
-
 	// Configure shardConfig by loading the default.
 	shardEthereum.shardConfig = params.DefaultConfig
 
 	// Adds the initialized shardChainDb to the ShardEthereum instance.
+	// TODO: Move out of here!
 	shardEthereum.shardChainDb = shardChainDb
 
 	if err := shardEthereum.registerP2P(); err != nil {
 		return nil, err
 	}
 
+	if err := shardEthereum.registerMainchainClient(ctx); err != nil {
+		return nil, err
+	}
+
+	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
+	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
@@ -110,6 +96,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 // Start the ShardEthereum service and kicks off the p2p and actor's main loop.
 func (s *ShardEthereum) Start() {
+	s.lock.Lock()
 
 	log.Info("Starting sharding node")
 
@@ -117,6 +104,9 @@ func (s *ShardEthereum) Start() {
 		// Start the next service.
 		service.Start()
 	}
+
+	stop := s.stop
+	s.lock.Unlock()
 
 	go func() {
 		sigc := make(chan os.Signal, 1)
@@ -136,24 +126,24 @@ func (s *ShardEthereum) Start() {
 		debug.LoudPanic("boom")
 	}()
 
-	// hang forever...
-	select {}
+	// Wait for stop channel to be closed
+	<-stop
 }
 
 // Close handles graceful shutdown of the system.
 func (s *ShardEthereum) Close() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
 			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
 		}
 	}
 	log.Info("Stopping sharding node")
-}
 
-// SMCClient returns an instance of a client that communicates to a mainchain node via
-// RPC and provides helpful bindings to the Sharding Manager Contract.
-func (s *ShardEthereum) SMCClient() *mainchain.SMCClient {
-	return s.smcClient
+	// unblock n.Wait
+	close(s.stop)
 }
 
 // Register appends a service constructor function to the service registry of the
@@ -194,6 +184,28 @@ func (s *ShardEthereum) registerP2P() error {
 	})
 }
 
+// registerMainchainClient
+func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
+	path := node.DefaultDataDir()
+	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
+		path = ctx.GlobalString(utils.DataDirFlag.Name)
+	}
+
+	endpoint := ctx.Args().First()
+	if endpoint == "" {
+		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
+	}
+	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
+		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
+	}
+	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
+	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
+
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		return mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
+	})
+}
+
 // registerTXPool is only relevant to proposers in the sharded system. It will
 // spin up a transaction pool that will relay incoming transactions via an
 // event feed. For our first releases, this can just relay test/fake transaction data
@@ -216,13 +228,15 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 
 		var p2p *p2p.Server
 		ctx.RetrieveService(&p2p)
+		var smcClient *mainchain.SMCClient
+		ctx.RetrieveService(&smcClient)
 
 		if actor == "notary" {
-			return notary.NewNotary(config, s.smcClient, p2p, s.shardChainDb)
+			return notary.NewNotary(config, smcClient, p2p, s.shardChainDb)
 		} else if actor == "proposer" {
 			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(config, s.smcClient, p2p, txPool, s.shardChainDb, shardID)
+			return proposer.NewProposer(config, smcClient, p2p, txPool, s.shardChainDb, shardID)
 		}
 		return observer.NewObserver(p2p, s.shardChainDb, shardID)
 	})
