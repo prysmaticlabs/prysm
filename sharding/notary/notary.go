@@ -1,9 +1,11 @@
 package notary
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -12,11 +14,45 @@ import (
 	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
+// we are an eligible notary for collations. Then, it finds the pending tx's
+// from the running geth node and sorts them by descending order of gas price,
+// eliminates those that ask for too much gas, and routes them over
+// to the SMC to create a collation.
+func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCaller, account *accounts.Account) error {
+	headerChan := make(chan *types.Header, 16)
+
+	_, err := reader.SubscribeNewHead(context.Background(), headerChan)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
+	}
+
+	log.Info("Listening for new headers...")
+
+	for {
+		// TODO: Error handling for getting disconnected from the client.
+		head := <-headerChan
+		// Query the current state to see if we are an eligible notary.
+		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
+
+		// Check if we are in the notary pool before checking if we are an eligible notary.
+		v, err := isAccountInNotaryPool(caller, account)
+		if err != nil {
+			return fmt.Errorf("unable to verify client in notary pool. %v", err)
+		}
+
+		if v {
+			if err := checkSMCForNotary(caller, account, head); err != nil {
+				return fmt.Errorf("unable to watch shards. %v", err)
+			}
+		}
+	}
+}
+
 // checkSMCForNotary checks if we are an eligible notary for
 // collation for the available shards in the SMC. The function calls
 // getEligibleNotary from the SMC and notary a collation if
 // conditions are met.
-func checkSMCForNotary(caller mainchain.ContractCaller, head *types.Header) error {
+func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
 	shardCount, err := caller.GetShardCount()
 	if err != nil {
@@ -31,7 +67,7 @@ func checkSMCForNotary(caller mainchain.ContractCaller, head *types.Header) erro
 		}
 
 		// If output is non-empty and the addr == coinbase.
-		if addr == caller.Account().Address {
+		if addr == account.Address {
 			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 			err := submitCollation(s)
 			if err != nil {
@@ -39,7 +75,7 @@ func checkSMCForNotary(caller mainchain.ContractCaller, head *types.Header) erro
 			}
 
 			// If the account is selected as notary, submit collation.
-			if addr == caller.Account().Address {
+			if addr == account.Address {
 				log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 				err := submitCollation(s)
 				if err != nil {
@@ -56,8 +92,7 @@ func checkSMCForNotary(caller mainchain.ContractCaller, head *types.Header) erro
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsNotaryDeposited from the SMC and returns true if
 // the user is in the notary pool.
-func isAccountInNotaryPool(caller mainchain.ContractCaller) (bool, error) {
-	account := caller.Account()
+func isAccountInNotaryPool(caller mainchain.ContractCaller, account *accounts.Account) (bool, error) {
 	// Checks if our deposit has gone through according to the SMC.
 	nreg, err := caller.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
 	if !nreg.Deposited && err != nil {
@@ -99,8 +134,8 @@ func submitCollation(shardID int64) error {
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(manager mainchain.ContractManager, config *shardparams.Config) error {
-	if b, err := isAccountInNotaryPool(manager); b || err != nil {
+func joinNotaryPool(manager mainchain.ContractManager, account *accounts.Account, config *shardparams.Config) error {
+	if b, err := isAccountInNotaryPool(manager, account); b || err != nil {
 		return err
 	}
 

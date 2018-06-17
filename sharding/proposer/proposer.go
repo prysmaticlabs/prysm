@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -15,7 +16,7 @@ import (
 // and body. Header consists of shardID, ChunkRoot, period,
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
-func createCollation(caller mainchain.ContractCaller, signer mainchain.Signer, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
+func createCollation(caller mainchain.ContractCaller, account *accounts.Account, signer mainchain.Signer, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
 	// shardId has to be within range
 	shardCount, err := caller.GetShardCount()
 	if err != nil {
@@ -37,7 +38,7 @@ func createCollation(caller mainchain.ContractCaller, signer mainchain.Signer, s
 	}
 
 	// construct the header, leave chunkRoot and signature fields empty, to be filled later.
-	addr := caller.Account().Address
+	addr := account.Address
 	header := sharding.NewCollationHeader(shardID, nil, period, &addr, nil)
 
 	// construct the body with header, blobs(serialized txs) and txs.

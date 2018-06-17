@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +29,6 @@ type ContractManager interface {
 type ContractCaller interface {
 	SMCCaller() *contracts.SMCCaller
 	GetShardCount() (int64, error)
-	Account() *accounts.Account
 }
 
 // ContractTransactor defines an interface that can transact with a contract on the

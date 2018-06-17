@@ -76,7 +76,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	client := &smcClient{smc: smc, t: t}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(client)
+	b, err := isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.Commit()
-	b, err = isAccountInNotaryPool(client)
+	b, err = isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestJoinNotaryPool(t *testing.T) {
 		t.Fatalf("Unexpected number of notaries. Got %d, wanted 0.", numNotaries)
 	}
 
-	err = joinNotaryPool(client, params.DefaultConfig)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(client, params.DefaultConfig)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
