@@ -37,7 +37,7 @@ type Client interface {
 	SMCCaller() *contracts.SMCCaller
 	SMCTransactor() *contracts.SMCTransactor
 	SMCFilterer() *contracts.SMCFilterer
-	WaitForTransaction(common.Hash, int64) error
+	WaitForTransaction(context.Context, common.Hash, int64) error
 	TransactionReceipt(common.Hash) (*types.Receipt, error)
 	ChainReader() ethereum.ChainReader
 	DepositFlag() bool
@@ -171,20 +171,21 @@ func (s *SMCClient) SMCFilterer() *contracts.SMCFilterer {
 
 // WaitForTransaction waits for transaction to be mined and returns an error if it takes
 // too long
-func (s *SMCClient) WaitForTransaction(hash common.Hash, durationInSeconds int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(durationInSeconds)*time.Second)
+func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(durationInSeconds)*time.Second)
 
 	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(context.Background(), hash) {
 		if err != nil {
 			cancel()
 			return fmt.Errorf("unable to retrieve transaction: %v", err)
 		}
-		if ctx.Err() != nil {
+		if ctxTimeout.Err() != nil {
 			cancel()
-			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", ctx.Err())
+			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", ctxTimeout.Err())
 		}
 	}
-	cancel()
+	ctxTimeout.Done()
 	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
 	return nil
 }

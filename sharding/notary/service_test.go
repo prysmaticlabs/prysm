@@ -1,6 +1,7 @@
 package notary
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -58,7 +59,7 @@ func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
 	return &s.smc.SMCFilterer
 }
 
-func (s *smcClient) WaitForTransaction(hash common.Hash, durationInSeconds int64) error {
+func (s *smcClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
 	return nil
 }
 
