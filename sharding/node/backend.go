@@ -127,7 +127,6 @@ func (s *ShardEthereum) Start() {
 	}()
 
 	// Wait for stop channel to be closed
-
 	<-stop
 }
 
