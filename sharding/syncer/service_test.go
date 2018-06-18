@@ -94,14 +94,11 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 
 	select {
 	case err := <-syncer.errChan:
-
 		expectedErr := "Could not construct response"
 		if !strings.Contains(err.Error(), expectedErr) {
 			t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, err)
 		}
-
 		syncer.cancel()
-
 		// The context should have been canceled.
 		if syncer.ctx.Err() == nil {
 			t.Fatal("Context was not canceled")
@@ -205,7 +202,7 @@ func TestHandleServiceErrors(t *testing.T) {
 	go syncer.handleServiceErrors()
 
 	expectedErr := "testing the error channel"
-	complete := make(chan int)
+	complete := make(chan int, 1)
 
 	go func() {
 		for {
@@ -215,14 +212,11 @@ func TestHandleServiceErrors(t *testing.T) {
 			default:
 				syncer.errChan <- errors.New(expectedErr)
 				h.VerifyLogMsg(expectedErr)
-
 				syncer.cancel()
-
 				// The context should have been canceled.
 				if syncer.ctx.Err() == nil {
 					t.Fatal("Context was not canceled")
 				}
-
 				complete <- 1
 			}
 		}

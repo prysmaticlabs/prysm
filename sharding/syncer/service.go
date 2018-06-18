@@ -44,8 +44,8 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
-	feed := s.p2p.Feed(messages.CollationBodyRequest{})
-	go s.handleCollationBodyRequests(s.client, feed)
+
+	go s.handleCollationBodyRequests(s.client, s.p2p.Feed(messages.CollationBodyRequest{}))
 	go s.handleServiceErrors()
 }
 
@@ -81,7 +81,6 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 	sub := feed.Subscribe(ch)
 
 	defer sub.Unsubscribe()
-	defer close(ch)
 
 	for {
 		select {
@@ -105,10 +104,6 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 				// TODO: Implement this and see the response from the other end.
 				s.p2p.Send(*res, req.Peer)
 			}
-
-		case err := <-sub.Err():
-			s.errChan <- fmt.Errorf("Subscriber failed: %v", err)
-			return
 		}
 	}
 }
