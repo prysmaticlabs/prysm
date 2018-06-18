@@ -34,6 +34,21 @@ type mockNode struct {
 	backend     *backends.SimulatedBackend
 }
 
+type faultySMCCaller struct{}
+
+func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
+}, error) {
+	res := new(struct {
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
+	})
+	return *res, errors.New("error fetching collation record")
+}
+
 func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
@@ -182,17 +197,17 @@ func TestConstructNotaryRequest(t *testing.T) {
 
 	backend.Commit()
 
-	// collationBodyRequest reads from the deployed SMC and fetches a
-	// collation record for the shardID, period pair. Then, it constructs a request
-	// that will be broadcast over p2p and handled by a node that submitted the collation
-	// header to the SMC in the first place.
-	request, err := RequestCollationBody(node, shardID, period)
+	if _, err := RequestCollationBody(&faultySMCCaller{}, shardID, period); err == nil {
+		t.Errorf("Expected error from RequestCollationBody when using faulty SMCCaller, got nil")
+	}
+
+	request, err := RequestCollationBody(node.SMCCaller(), shardID, period)
 	if err != nil {
 		t.Fatalf("Could not construct request: %v", err)
 	}
 
 	// fetching an inexistent shardID, period pair from the SMC will return a nil request.
-	nilRequest, err := RequestCollationBody(node, big.NewInt(20), big.NewInt(20))
+	nilRequest, err := RequestCollationBody(node.SMCCaller(), big.NewInt(20), big.NewInt(20))
 	if err != nil {
 		t.Fatalf("Could not construct request: %v", err)
 	}
@@ -204,12 +219,15 @@ func TestConstructNotaryRequest(t *testing.T) {
 	if request.ChunkRoot.Hex() != chunkRoot.Hex() {
 		t.Errorf("Chunk root from notary request incorrect. want: %v, got: %v", chunkRoot.Hex(), request.ChunkRoot.Hex())
 	}
+
 	if request.Proposer.Hex() != proposerAddress.Hex() {
 		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), request.Proposer.Hex())
 	}
+
 	if request.ShardID.Cmp(shardID) != 0 {
 		t.Errorf("ShardID from notary request incorrect. want: %s, got: %s", shardID, request.ShardID)
 	}
+
 	if request.Period.Cmp(period) != 0 {
 		t.Errorf("Proposer address from notary request incorrect. want: %s, got: %s", period, request.Period)
 	}

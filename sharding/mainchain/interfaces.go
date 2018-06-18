@@ -44,3 +44,12 @@ type Reader interface {
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
 	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
 }
+
+// RecordFetcher does stuff
+type RecordFetcher interface {
+	CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
+	}, error)
+}

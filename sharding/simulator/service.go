@@ -90,7 +90,7 @@ func (s *Simulator) simulateNotaryRequests(caller mainchain.ContractCaller, read
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
-			req, err := syncer.RequestCollationBody(caller, big.NewInt(int64(s.shardID)), period)
+			req, err := syncer.RequestCollationBody(caller.SMCCaller(), big.NewInt(int64(s.shardID)), period)
 			if err != nil {
 				s.errChan <- fmt.Errorf("Error constructing collation body request: %v", err)
 				continue

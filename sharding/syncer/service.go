@@ -20,12 +20,14 @@ import (
 // performing windback sync across nodes, handling reorgs, and synchronizing
 // items such as transactions and in future sharding iterations: state.
 type Syncer struct {
-	config *params.Config
-	client *mainchain.SMCClient
-	shard  *sharding.Shard
-	p2p    *p2p.Server
-	ctx    context.Context
-	cancel context.CancelFunc
+	config       *params.Config
+	client       *mainchain.SMCClient
+	shard        *sharding.Shard
+	p2p          *p2p.Server
+	ctx          context.Context
+	cancel       context.CancelFunc
+	errChan      chan error       // Useful channel for handling errors at the service layer.
+	responseSent chan interface{} // Useful channel for processing logic upon a response being sent via p2p.
 }
 
 // NewSyncer creates a struct instance of a syncer service.
@@ -34,14 +36,17 @@ type Syncer struct {
 func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
-	return &Syncer{config, client, shard, p2p, ctx, cancel}, nil
+	errChan := make(chan error)
+	responseSent := make(chan interface{})
+	return &Syncer{config, client, shard, p2p, ctx, cancel, errChan, responseSent}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
 	feed := s.p2p.Feed(messages.CollationBodyRequest{})
-	go s.handleCollationBodyRequests(feed)
+	go s.handleCollationBodyRequests(s.client, feed)
+	go s.handleServiceErrors()
 }
 
 // Stop the main loop.
@@ -53,10 +58,24 @@ func (s *Syncer) Stop() error {
 	return nil
 }
 
+// handleServiceErrors manages a goroutine that listens for errors broadcast to
+// this service's error channel. This serves as a final step for error logging
+// and is stopped upon the service shutting down.
+func (s *Syncer) handleServiceErrors() {
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case err := <-s.errChan:
+			log.Error(fmt.Sprint(err))
+		}
+	}
+}
+
 // handleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (s *Syncer) handleCollationBodyRequests(feed *event.Feed) {
+func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *event.Feed) {
 
 	ch := make(chan p2p.Message, 100)
 	sub := feed.Subscribe(ch)
@@ -69,22 +88,26 @@ func (s *Syncer) handleCollationBodyRequests(feed *event.Feed) {
 		case <-s.ctx.Done():
 			return
 		case req := <-ch:
-			if req.Data == nil {
-				continue
+			if req.Data != nil {
+				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
+				res, err := RespondCollationBody(req, signer, s.shard)
+				if err != nil {
+					s.errChan <- fmt.Errorf("Could not construct response: %v", err)
+					continue
+				}
+				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+
+				// Notifies the response sent channel for any other handlers that could run upon
+				// this event occurring (also useful for tests.)
+				s.responseSent <- res
+
+				// Reply to that specific peer only.
+				// TODO: Implement this and see the response from the other end.
+				s.p2p.Send(*res, req.Peer)
 			}
-			log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
-			res, err := RespondCollationBody(req, s.client, s.shard)
-			if err != nil {
-				log.Error(fmt.Sprintf("Could not construct response: %v", err))
-				continue
-			}
-			log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
-			// Reply to that specific peer only.
-			// TODO: Implement this and see the response from the other end.
-			s.p2p.Send(*res, req.Peer)
 
 		case err := <-sub.Err():
-			log.Error("Subscriber failed: %v", err)
+			s.errChan <- fmt.Errorf("Subscriber failed: %v", err)
 			return
 		}
 	}

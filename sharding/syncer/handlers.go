@@ -46,9 +46,9 @@ func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFet
 // a shardID, period pair and constructs a p2p collationBodyRequest that will
 // then be relayed to the appropriate proposer that submitted the collation header.
 // In production, this will be done within a notary service.
-func RequestCollationBody(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (*messages.CollationBodyRequest, error) {
+func RequestCollationBody(fetcher mainchain.RecordFetcher, shardID *big.Int, period *big.Int) (*messages.CollationBodyRequest, error) {
 
-	record, err := caller.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+	record, err := fetcher.CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {
 		return nil, fmt.Errorf("Could not fetch collation record from SMC: %v", err)
 	}

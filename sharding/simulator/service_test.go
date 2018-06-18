@@ -22,6 +22,7 @@ import (
 var _ = sharding.Service(&Simulator{})
 
 type faultyReader struct{}
+type goodReader struct{}
 
 func (f *faultyReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return nil, fmt.Errorf("cannot fetch block by number")
@@ -31,7 +32,15 @@ func (f *faultyReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.He
 	return nil, nil
 }
 
-func TestSimulateNotaryRequests(t *testing.T) {
+func (g *goodReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	return types.NewBlock(&types.Header{Number: big.NewInt(0)}, nil, nil, nil), nil
+}
+
+func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
+func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
 
@@ -47,9 +56,9 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	}
 
 	feed := server.Feed(messages.CollationBodyRequest{})
-	reader := &faultyReader{}
+	faultyReader := &faultyReader{}
 
-	go syncer.simulateNotaryRequests(&mainchain.SMCClient{}, reader, feed)
+	go syncer.simulateNotaryRequests(&mainchain.SMCClient{}, faultyReader, feed)
 
 	select {
 	case err := <-syncer.errChan:
