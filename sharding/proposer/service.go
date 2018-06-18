@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"time"
-
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -71,21 +69,19 @@ func (p *Proposer) proposeCollations() {
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
 
 	for {
-		ctx, cancel := context.WithTimeout(p.ctx, 10*time.Second)
 		select {
 		case tx := <-requests:
 			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
-			if err := p.createCollation(ctx, []*types.Transaction{tx}); err != nil {
+			if err := p.createCollation(p.ctx, []*types.Transaction{tx}); err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
-		case <-ctx.Done():
-			log.Info("Context canceled")
+		case <-p.ctx.Done():
+			log.Error("Proposer context closed, exiting goroutine")
+			return
 		case err := <-p.txpoolSub.Err():
-			log.Error(fmt.Sprintf("Subscriber failed: %v", err))
+			log.Error(fmt.Sprintf("Subscriber closed: %v", err))
+			return
 		}
-
-		cancel()
-		return
 	}
 }
 
