@@ -94,7 +94,7 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
-	collation, err := createCollation(p.client, big.NewInt(int64(p.shardID)), period, txs)
+	collation, err := createCollation(p.client, p.client.Account(), p.client, big.NewInt(int64(p.shardID)), period, txs)
 	if err != nil {
 		return err
 	}

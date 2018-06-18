@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -15,9 +16,9 @@ import (
 // and body. Header consists of shardID, ChunkRoot, period,
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
-func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
+func createCollation(caller mainchain.ContractCaller, account *accounts.Account, signer mainchain.Signer, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
 	// shardId has to be within range
-	shardCount, err := client.GetShardCount()
+	shardCount, err := caller.GetShardCount()
 	if err != nil {
 		return nil, fmt.Errorf("can't get shard count from smc: %v", err)
 	}
@@ -26,7 +27,7 @@ func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int,
 	}
 
 	// check with SMC to see if we can add the header.
-	if a, _ := checkHeaderAdded(client, shardID, period); !a {
+	if a, _ := checkHeaderAdded(caller, shardID, period); !a {
 		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
 	}
 
@@ -37,13 +38,13 @@ func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int,
 	}
 
 	// construct the header, leave chunkRoot and signature fields empty, to be filled later.
-	addr := client.Account().Address
+	addr := account.Address
 	header := sharding.NewCollationHeader(shardID, nil, period, &addr, nil)
 
 	// construct the body with header, blobs(serialized txs) and txs.
 	collation := sharding.NewCollation(header, blobs, txs)
 	collation.CalculateChunkRoot()
-	sig, err := client.Sign(collation.Header().Hash())
+	sig, err := signer.Sign(collation.Header().Hash())
 	if err != nil {
 		return nil, fmt.Errorf("can't create collation, sign collationHeader failed: %v", err)
 	}
@@ -58,10 +59,10 @@ func createCollation(client mainchain.Client, shardID *big.Int, period *big.Int,
 // an addHeader transaction to the sharding manager contract.
 // There can only exist one header per period per shard, it's proposer's
 // responsibility to check if a header has been added.
-func addHeader(client mainchain.Client, collation *sharding.Collation) error {
+func addHeader(transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
 	log.Info("Adding header to SMC")
 
-	txOps, err := client.CreateTXOpts(big.NewInt(0))
+	txOps, err := transactor.CreateTXOpts(big.NewInt(0))
 	if err != nil {
 		return fmt.Errorf("unable to initiate add header transaction: %v", err)
 	}
@@ -70,7 +71,7 @@ func addHeader(client mainchain.Client, collation *sharding.Collation) error {
 	var chunkRoot [32]byte
 	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
 
-	tx, err := client.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
+	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}
@@ -82,9 +83,9 @@ func addHeader(client mainchain.Client, collation *sharding.Collation) error {
 // submitted to the main chain. There can only be one header per shard
 // per period, proposer should check if a header's already submitted,
 // checkHeaderAdded returns true if it's available, false if it's unavailable.
-func checkHeaderAdded(client mainchain.Client, shardID *big.Int, period *big.Int) (bool, error) {
+func checkHeaderAdded(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (bool, error) {
 	// Get the period of the last header.
-	lastPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
+	lastPeriod, err := caller.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
 	if err != nil {
 		return false, fmt.Errorf("unable to get the period of last submitted collation: %v", err)
 	}
