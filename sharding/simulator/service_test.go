@@ -131,21 +131,19 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	faultyReader := &faultyReader{}
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
 
-	select {
-	case err := <-simulator.errChan:
-		expectedErr := "Could not fetch current block number"
-		if !strings.Contains(err.Error(), expectedErr) {
-			t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, err)
-		}
-		if err := simulator.Stop(); err != nil {
-			t.Fatalf("Unable to stop simulator service: %v", err)
-		}
-		h.VerifyLogMsg("Stopping simulator service")
+	receivedErr := <-simulator.errChan
+	expectedErr := "Could not fetch current block number"
+	if !strings.Contains(receivedErr.Error(), expectedErr) {
+		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
+	}
+	if err := simulator.Stop(); err != nil {
+		t.Fatalf("Unable to stop simulator service: %v", err)
+	}
+	h.VerifyLogMsg("Stopping simulator service")
 
-		// The context should have been canceled.
-		if simulator.ctx.Err() == nil {
-			t.Error("Context was not canceled")
-		}
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Error("Context was not canceled")
 	}
 }
 
@@ -172,21 +170,19 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 
 	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
 
-	select {
-	case err := <-simulator.errChan:
-		expectedErr := "Error constructing collation body request"
-		if !strings.Contains(err.Error(), expectedErr) {
-			t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, err)
-		}
-		if err := simulator.Stop(); err != nil {
-			t.Fatalf("Unable to stop simulator service: %v", err)
-		}
-		h.VerifyLogMsg("Stopping simulator service")
+	receivedErr := <-simulator.errChan
+	expectedErr := "Error constructing collation body request"
+	if !strings.Contains(receivedErr.Error(), expectedErr) {
+		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
+	}
+	if err := simulator.Stop(); err != nil {
+		t.Fatalf("Unable to stop simulator service: %v", err)
+	}
+	h.VerifyLogMsg("Stopping simulator service")
 
-		// The context should have been canceled.
-		if simulator.ctx.Err() == nil {
-			t.Error("Context was not canceled")
-		}
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Error("Context was not canceled")
 	}
 }
 

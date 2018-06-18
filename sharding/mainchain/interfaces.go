@@ -45,7 +45,8 @@ type Reader interface {
 	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
 }
 
-// RecordFetcher does stuff
+// RecordFetcher serves as an interface for a struct that can fetch collation information
+// from a sharding manager contract on the Ethereum mainchain.
 type RecordFetcher interface {
 	CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
 		ChunkRoot [32]byte

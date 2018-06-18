@@ -95,17 +95,15 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 		}
 	}()
 
-	select {
-	case err := <-syncer.errChan:
-		expectedErr := "Could not construct response"
-		if !strings.Contains(err.Error(), expectedErr) {
-			t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, err)
-		}
-		syncer.cancel()
-		// The context should have been canceled.
-		if syncer.ctx.Err() == nil {
-			t.Fatal("Context was not canceled")
-		}
+	receivedErr := <-syncer.errChan
+	expectedErr := "Could not construct response"
+	if !strings.Contains(receivedErr.Error(), expectedErr) {
+		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
+	}
+	syncer.cancel()
+	// The context should have been canceled.
+	if syncer.ctx.Err() == nil {
+		t.Fatal("Context was not canceled")
 	}
 }
 
