@@ -10,6 +10,6 @@ import (
 var _ = sharding.Service(&SMCClient{})
 
 func TestWaitForTransaction(t *testing.T) {
-	client := &SMCClient{}
+	_ = &SMCClient{}
 
 }
