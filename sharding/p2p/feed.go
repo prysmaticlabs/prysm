@@ -24,10 +24,10 @@ import (
 //   // Wait until my message comes from a peer.
 //   msg := <- ch
 //   fmt.Printf("Message received: %v", msg.Data)
-func (s *Server) Feed(msg interface{}) (*event.Feed, error) {
+func (s *Server) Feed(msg interface{}) *event.Feed {
 	t := reflect.TypeOf(msg)
 	if s.feeds[t] == nil {
 		s.feeds[t] = new(event.Feed)
 	}
-	return s.feeds[t], nil
+	return s.feeds[t]
 }

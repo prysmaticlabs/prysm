@@ -28,6 +28,7 @@ type Simulator struct {
 	shardID int
 	ctx     context.Context
 	cancel  context.CancelFunc
+	errChan chan error
 }
 
 // NewSimulator creates a struct instance of a simulator service.
@@ -35,18 +36,16 @@ type Simulator struct {
 // and a shardID.
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Simulator{config, client, p2p, shardID, ctx, cancel}, nil
+	errChan := make(chan error)
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan}, nil
 }
 
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
-	feed, err := s.p2p.Feed(messages.CollationBodyRequest{})
-	if err != nil {
-		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
-		return
-	}
-	go s.simulateNotaryRequests(feed)
+	feed := s.p2p.Feed(messages.CollationBodyRequest{})
+	go s.simulateNotaryRequests(s.client, s.client.ChainReader(), feed)
+	go s.handleServiceErrors()
 }
 
 // Stop the main loop for simulator requests.
@@ -58,28 +57,42 @@ func (s *Simulator) Stop() error {
 	return nil
 }
 
+// handleServiceErrors manages a goroutine that listens for errors broadcast to
+// this service's error channel. This serves as a final step for error logging
+// and is stopped upon the service shutting down.
+func (s *Simulator) handleServiceErrors() {
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case err := <-s.errChan:
+			log.Error(fmt.Sprint(err))
+		}
+	}
+}
+
 // simulateNotaryRequests simulates p2p message sent out by notaries
 // once the system is in production. Notaries will be performing
 // this action within their own service when they are selected on a shard, period
 // pair to perform their responsibilities. This function in particular simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
-func (s *Simulator) simulateNotaryRequests(feed *event.Feed) {
+func (s *Simulator) simulateNotaryRequests(caller mainchain.ContractCaller, reader mainchain.Reader, feed *event.Feed) {
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 		default:
-			blockNumber, err := s.client.ChainReader().BlockByNumber(s.ctx, nil)
+			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
-				log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+				s.errChan <- fmt.Errorf("Could not fetch current block number: %v", err)
 				continue
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
-			req, err := syncer.RequestCollationBody(s.client, big.NewInt(int64(s.shardID)), period)
+			req, err := syncer.RequestCollationBody(caller, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
-				log.Error(fmt.Sprintf("Error constructing collation body request: %v, trying again...", err))
+				s.errChan <- fmt.Errorf("Error constructing collation body request: %v", err)
 				continue
 			}
 			if req == nil {
@@ -87,7 +100,7 @@ func (s *Simulator) simulateNotaryRequests(feed *event.Feed) {
 			}
 			msg := p2p.Message{
 				Peer: p2p.Peer{},
-				Data: *req,
+				Data: nil,
 			}
 			feed.Send(msg)
 			log.Info("Sent request for collation body via a shardp2p feed")

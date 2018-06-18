@@ -40,11 +40,7 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
-	feed, err := s.p2p.Feed(messages.CollationBodyRequest{})
-	if err != nil {
-		log.Error(fmt.Sprintf("Could not initialize p2p feed: %v", err))
-		return
-	}
+	feed := s.p2p.Feed(messages.CollationBodyRequest{})
 	go s.handleCollationBodyRequests(feed)
 }
 
