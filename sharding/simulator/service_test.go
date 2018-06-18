@@ -2,12 +2,16 @@ package simulator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 
@@ -23,6 +27,39 @@ var _ = sharding.Service(&Simulator{})
 
 type faultyReader struct{}
 type goodReader struct{}
+
+type faultySMCCaller struct{}
+type goodSMCCaller struct{}
+
+func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
+}, error) {
+	res := new(struct {
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
+	})
+	return *res, errors.New("error fetching collation record")
+}
+
+func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
+}, error) {
+	res := new(struct {
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
+	})
+	body := []byte{1, 2, 3, 4, 5}
+	res.ChunkRoot = [32]byte(types.DeriveSha(sharding.Chunks(body)))
+	res.Proposer = common.BytesToAddress([]byte{})
+	res.IsElected = false
+	return *res, nil
+}
 
 func (f *faultyReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return nil, fmt.Errorf("cannot fetch block by number")
@@ -40,6 +77,40 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Head
 	return nil, nil
 }
 
+func TestStartStop(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	simulator.Start()
+
+	h.VerifyLogMsg("Starting simulator service")
+
+	if err := simulator.Stop(); err != nil {
+		t.Fatalf("Unable to stop simulator service: %v", err)
+	}
+
+	h.VerifyLogMsg("Stopping simulator service")
+
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Error("Context was not canceled")
+	}
+}
+
+// This test uses a faulty chain reader in order to trigger an error
+// in the simulateNotaryRequests goroutine when reading the block number from
+// the mainchain via RPC.
 func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
@@ -50,30 +121,151 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	syncer, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
 	feed := server.Feed(messages.CollationBodyRequest{})
-	faultyReader := &faultyReader{}
 
-	go syncer.simulateNotaryRequests(&mainchain.SMCClient{}, faultyReader, feed)
+	faultyReader := &faultyReader{}
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
 
 	select {
-	case err := <-syncer.errChan:
+	case err := <-simulator.errChan:
 		expectedErr := "Could not fetch current block number"
 		if !strings.Contains(err.Error(), expectedErr) {
 			t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, err)
 		}
-		if err := syncer.Stop(); err != nil {
+		if err := simulator.Stop(); err != nil {
 			t.Fatalf("Unable to stop simulator service: %v", err)
 		}
 		h.VerifyLogMsg("Stopping simulator service")
 
 		// The context should have been canceled.
-		if syncer.ctx.Err() == nil {
+		if simulator.ctx.Err() == nil {
 			t.Error("Context was not canceled")
 		}
 	}
+}
+
+// This test uses a faulty SMCCaller in order to trigger an error
+// in the simulateNotaryRequests goroutine when reading the collation records
+// from the SMC.
+func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	feed := server.Feed(messages.CollationBodyRequest{})
+	reader := &goodReader{}
+
+	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
+
+	select {
+	case err := <-simulator.errChan:
+		expectedErr := "Error constructing collation body request"
+		if !strings.Contains(err.Error(), expectedErr) {
+			t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, err)
+		}
+		if err := simulator.Stop(); err != nil {
+			t.Fatalf("Unable to stop simulator service: %v", err)
+		}
+		h.VerifyLogMsg("Stopping simulator service")
+
+		// The context should have been canceled.
+		if simulator.ctx.Err() == nil {
+			t.Error("Context was not canceled")
+		}
+	}
+}
+
+// This test checks the proper functioning of the simulateNotaryRequests goroutine
+// by listening to the requestSent channel which occurs after successful
+// construction and sending of a request via p2p.
+func TestSimulateNotaryRequests(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	feed := server.Feed(messages.CollationBodyRequest{})
+	reader := &goodReader{}
+
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed)
+
+	<-simulator.requestSent
+	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
+	simulator.cancel()
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Fatal("Context was not canceled")
+	}
+}
+
+// TODO: Move this to the utils package along with the handleServiceErrors
+// function.
+func TestHandleServiceErrors(t *testing.T) {
+
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	go simulator.handleServiceErrors()
+
+	expectedErr := "testing the error channel"
+	complete := make(chan int)
+
+	go func() {
+		for {
+			select {
+			case <-simulator.ctx.Done():
+				return
+			default:
+				simulator.errChan <- errors.New(expectedErr)
+				complete <- 1
+			}
+		}
+	}()
+
+	<-complete
+	simulator.cancel()
+
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Fatal("Context was not canceled")
+	}
+	// Right now we need to wait a little bit before the log is called.
+	// TODO: better way to do this? I know this is bad practice.
+	time.Sleep(time.Millisecond * 500)
+	h.VerifyLogMsg(expectedErr)
 }

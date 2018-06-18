@@ -44,7 +44,6 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
-
 	go s.handleCollationBodyRequests(s.client, s.p2p.Feed(messages.CollationBodyRequest{}))
 	go s.handleServiceErrors()
 }
@@ -84,6 +83,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 
 	for {
 		select {
+		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
 		case req := <-ch:

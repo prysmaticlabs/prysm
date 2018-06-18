@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -54,9 +55,11 @@ func TestStartStop(t *testing.T) {
 	if syncer.ctx.Err() == nil {
 		t.Error("Context was not canceled")
 	}
-
 }
 
+// This test uses a faulty Signer interface in order to trigger an error
+// in the simulateNotaryRequests goroutine when attempting to sign
+// a collation header within the goroutine's internals.
 func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
@@ -106,6 +109,9 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	}
 }
 
+// This test checks the proper functioning of the handleCollationBodyRequests goroutine
+// by listening to the responseSent channel which occurs after successful
+// construction and sending of a response via p2p.
 func TestHandleCollationBodyRequests(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
@@ -202,7 +208,7 @@ func TestHandleServiceErrors(t *testing.T) {
 	go syncer.handleServiceErrors()
 
 	expectedErr := "testing the error channel"
-	complete := make(chan int, 1)
+	complete := make(chan int)
 
 	go func() {
 		for {
@@ -211,16 +217,20 @@ func TestHandleServiceErrors(t *testing.T) {
 				return
 			default:
 				syncer.errChan <- errors.New(expectedErr)
-				h.VerifyLogMsg(expectedErr)
-				syncer.cancel()
-				// The context should have been canceled.
-				if syncer.ctx.Err() == nil {
-					t.Fatal("Context was not canceled")
-				}
 				complete <- 1
 			}
 		}
 	}()
 
 	<-complete
+	syncer.cancel()
+
+	// The context should have been canceled.
+	if syncer.ctx.Err() == nil {
+		t.Fatal("Context was not canceled")
+	}
+	// Right now we need to wait a little bit before the log is called.
+	// TODO: better way to do this? I know this is bad practice.
+	time.Sleep(time.Millisecond * 500)
+	h.VerifyLogMsg(expectedErr)
 }
