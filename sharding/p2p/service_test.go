@@ -30,3 +30,12 @@ func TestLifecycle(t *testing.T) {
 		t.Error("Context was not cancelled")
 	}
 }
+
+func TestBroadcast(t *testing.T) {
+	s, err := NewServer()
+	if err != nil {
+		t.Fatalf("Could not start a new server: %v", err)
+	}
+
+	s.Broadcast(nil)
+}
