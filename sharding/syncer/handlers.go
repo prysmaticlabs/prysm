@@ -26,7 +26,7 @@ func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFet
 	header := sharding.NewCollationHeader(msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, nil)
 	sig, err := signer.Sign(header.Hash())
 	if err != nil {
-		return nil, fmt.Errorf("Could not sign received header: %v", err)
+		return nil, fmt.Errorf("could not sign received header: %v", err)
 	}
 
 	// Adds the signature to the header before calculating the hash used for db lookups.
@@ -50,7 +50,7 @@ func RequestCollationBody(fetcher mainchain.RecordFetcher, shardID *big.Int, per
 
 	record, err := fetcher.CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {
-		return nil, fmt.Errorf("Could not fetch collation record from SMC: %v", err)
+		return nil, fmt.Errorf("could not fetch collation record from SMC: %v", err)
 	}
 
 	// Checks if we got an empty collation record. If the SMCCaller does not find

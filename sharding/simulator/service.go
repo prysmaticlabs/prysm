@@ -68,7 +68,7 @@ func (s *Simulator) handleServiceErrors() {
 		case <-s.ctx.Done():
 			return
 		case err := <-s.errChan:
-			log.Error(fmt.Sprint(err))
+			log.Error(fmt.Sprint(f"Simulator service error: %v", err))
 		}
 	}
 }
@@ -88,14 +88,14 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		default:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
-				s.errChan <- fmt.Errorf("Could not fetch current block number: %v", err)
+				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
 				continue
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
-				s.errChan <- fmt.Errorf("Error constructing collation body request: %v", err)
+				s.errChan <- fmt.Errorf("error constructing collation body request: %v", err)
 				continue
 			}
 			if req != nil {

@@ -66,7 +66,7 @@ func (s *Syncer) handleServiceErrors() {
 		case <-s.ctx.Done():
 			return
 		case err := <-s.errChan:
-			log.Error(fmt.Sprint(err))
+			log.Error(fmt.Sprintf("Sync service error: %v", err))
 		}
 	}
 }
@@ -91,7 +91,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
 				res, err := RespondCollationBody(req, signer, s.shard)
 				if err != nil {
-					s.errChan <- fmt.Errorf("Could not construct response: %v", err)
+					s.errChan <- fmt.Errorf("could not construct response: %v", err)
 					continue
 				}
 				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
@@ -101,7 +101,6 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 				s.responseSent <- res
 
 				// Reply to that specific peer only.
-				// TODO: Implement this and see the response from the other end.
 				s.p2p.Send(*res, req.Peer)
 			}
 		}
