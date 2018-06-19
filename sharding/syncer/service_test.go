@@ -96,7 +96,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	}()
 
 	receivedErr := <-syncer.errChan
-	expectedErr := "Could not construct response"
+	expectedErr := "could not construct response"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
@@ -230,5 +230,5 @@ func TestHandleServiceErrors(t *testing.T) {
 	// Right now we need to wait a little bit before the log is called.
 	// TODO: better way to do this? I know this is bad practice.
 	time.Sleep(time.Millisecond * 500)
-	h.VerifyLogMsg(expectedErr)
+	h.VerifyLogMsg(fmt.Sprintf("Sync service error: %v", expectedErr))
 }

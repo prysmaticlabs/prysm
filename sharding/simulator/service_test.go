@@ -132,7 +132,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
 
 	receivedErr := <-simulator.errChan
-	expectedErr := "Could not fetch current block number"
+	expectedErr := "could not fetch current block number"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
@@ -171,7 +171,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
 
 	receivedErr := <-simulator.errChan
-	expectedErr := "Error constructing collation body request"
+	expectedErr := "error constructing collation body request"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
@@ -263,5 +263,5 @@ func TestHandleServiceErrors(t *testing.T) {
 	// Right now we need to wait a little bit before the log is called.
 	// TODO: better way to do this? I know this is bad practice.
 	time.Sleep(time.Millisecond * 500)
-	h.VerifyLogMsg(expectedErr)
+	h.VerifyLogMsg(fmt.Sprintf("Simulator service error: %v", expectedErr))
 }
