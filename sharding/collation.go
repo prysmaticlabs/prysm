@@ -122,9 +122,11 @@ func (c *Collation) CalculateChunkRoot() {
 // some salt, which is appended to each chunk in the collation body before it
 // is hashed.
 func (c *Collation) CalculatePOC(salt []byte) common.Hash {
-	body := make([]byte, len(c.body))
+	body := make([]byte, 0, len(c.body)*(1+len(salt)))
+
+	// TODO: Use 32 byte chunks instead of a single byte
 	for _, chunk := range c.body {
-		body = append(body, append(salt, chunk)...) // add salt to each chunk.
+		body = append(append(body, salt...), chunk)
 	}
 	if len(c.body) == 0 {
 		body = salt
@@ -137,23 +139,6 @@ func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 // which can be merklized.
 func BytesToChunks(body []byte) Chunks {
 	return Chunks(body)
-}
-
-// ConvertBackToTx converts raw blobs back to their original transactions.
-func ConvertBackToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
-
-	blobs := make([]*types.Transaction, len(rawBlobs))
-
-	for i := 0; i < len(rawBlobs); i++ {
-
-		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
-
-		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
-		if err != nil {
-			return nil, fmt.Errorf("Creation of transactions from raw blobs failed: %v", err)
-		}
-	}
-	return blobs, nil
 }
 
 // convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding

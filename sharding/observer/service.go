@@ -5,8 +5,8 @@ package observer
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 )
 
@@ -15,12 +15,12 @@ import (
 // sharding/service.go.
 type Observer struct {
 	p2p          *p2p.Server
-	shardChainDb ethdb.Database
+	shardChainDb *database.ShardDB
 	shardID      int
 }
 
 // NewObserver creates a new observer instance.
-func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
+func NewObserver(p2p *p2p.Server, shardChainDb *database.ShardDB, shardID int) (*Observer, error) {
 	return &Observer{p2p, shardChainDb, shardID}, nil
 }
 
