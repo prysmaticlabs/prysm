@@ -23,14 +23,13 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
-	config       *params.Config
-	client       *mainchain.SMCClient
-	p2p          *p2p.Server
-	txpool       *txpool.TXPool
-	shardChainDb ethdb.Database
-	shard        *sharding.Shard
-	ctx          context.Context
-	cancel       context.CancelFunc
+	config *params.Config
+	client *mainchain.SMCClient
+	p2p    *p2p.Server
+	txpool *txpool.TXPool
+	shard  *sharding.Shard
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewProposer creates a struct instance of a proposer service.
@@ -39,7 +38,7 @@ type Proposer struct {
 func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
-	return &Proposer{config, client, p2p, txpool, shardChainDb, shard, ctx, cancel}, nil
+	return &Proposer{config, client, p2p, txpool, shard, ctx, cancel}, nil
 }
 
 // Start the main loop for proposing collations.

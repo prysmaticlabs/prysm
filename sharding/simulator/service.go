@@ -68,7 +68,7 @@ func (s *Simulator) handleServiceErrors() {
 		case <-s.ctx.Done():
 			return
 		case err := <-s.errChan:
-			log.Error(fmt.Sprint(f"Simulator service error: %v", err))
+			log.Error(fmt.Sprint("Simulator service error: %v", err))
 		}
 	}
 }
