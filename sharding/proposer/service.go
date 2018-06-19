@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -25,6 +26,7 @@ type Proposer struct {
 	client       *mainchain.SMCClient
 	p2p          *p2p.Server
 	txpool       *txpool.TXPool
+	requests     chan *types.Transaction
 	txpoolSub    event.Subscription
 	shardChainDb ethdb.Database
 	shardID      int
@@ -42,6 +44,7 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 		client,
 		p2p,
 		txpool,
+		make(chan *types.Transaction),
 		nil,
 		shardChainDb,
 		shardID,
@@ -52,7 +55,8 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info(fmt.Sprintf("Starting proposer service in shard %d", p.shardID))
-	go p.proposeCollations()
+	p.subscribeFeed()
+	go p.proposeCollations(p.ctx.Done(), p.txpoolSub.Err(), p.requests, p.client.Account(), p.client.ChainReader(), p.client, p.client, p.client)
 }
 
 // Stop the main loop for proposing collations.
@@ -63,49 +67,41 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
-// proposeCollations listens to the transaction feed and submits collations over an interval.
-func (p *Proposer) proposeCollations() {
-	requests := make(chan *types.Transaction)
-	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
+func (p *Proposer) subscribeFeed() {
+	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(p.requests)
+}
 
+// proposeCollations listens to the transaction feed and submits collations over an interval.
+func (p *Proposer) proposeCollations(done <-chan struct{}, subErr <-chan error, requests <-chan *types.Transaction, account *accounts.Account,
+	reader mainchain.Reader, caller mainchain.ContractCaller, signer mainchain.Signer, transactor mainchain.ContractTransactor) {
 	for {
 		select {
 		case tx := <-requests:
 			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
-			if err := p.createCollation(p.ctx, []*types.Transaction{tx}); err != nil {
+			err := p.submitCollationHeader([]*types.Transaction{tx}, big.NewInt(p.config.PeriodLength),
+				big.NewInt(int64(p.shardID)), account, reader, caller, signer, transactor)
+			if err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
-		case <-p.ctx.Done():
+		case <-done:
 			log.Error("Proposer context closed, exiting goroutine")
 			return
-		case err := <-p.txpoolSub.Err():
-			log.Error(fmt.Sprintf("Subscriber closed: %v", err))
+		case <-subErr:
+			log.Error(fmt.Sprintf("Transaction feed subscriber closed"))
 			return
 		}
 	}
 }
 
-func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction) error {
-	// Get current block number.
-	blockNumber, err := p.client.ChainReader().BlockByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
-
-	// Create collation.
-	collation, err := createCollation(p.client, p.client.Account(), p.client, big.NewInt(int64(p.shardID)), period, txs)
+func (p *Proposer) submitCollationHeader(txs []*types.Transaction, periodLength *big.Int, shardID *big.Int, account *accounts.Account,
+	reader mainchain.Reader, caller mainchain.ContractCaller, signer mainchain.Signer, transactor mainchain.ContractTransactor) error {
+	period, err := getPeriod(reader, periodLength)
 	if err != nil {
 		return err
 	}
 
-	// Check SMC if we can submit header before addHeader
-	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
-	if err != nil {
+	if err := submitCollationHeader(txs, period, shardID, account, caller, signer, transactor); err != nil {
 		return err
-	}
-	if canAdd {
-		addHeader(p.client, collation)
 	}
 
 	return nil

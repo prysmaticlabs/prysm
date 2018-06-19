@@ -1,6 +1,7 @@
 package proposer
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
@@ -9,8 +10,44 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/pkg/errors"
 )
+
+func getPeriod(reader mainchain.Reader, periodLength *big.Int) (*big.Int, error) {
+	// Get current block number.
+	blockNumber, err := reader.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(big.Int).Div(blockNumber.Number(), periodLength), nil
+}
+
+func submitCollationHeader(txs []*types.Transaction, period *big.Int, shardID *big.Int, account *accounts.Account,
+	caller mainchain.ContractCaller, signer mainchain.Signer, transactor mainchain.ContractTransactor) error {
+	// Create collation.
+	collation, err := createCollation(caller, account, signer, shardID, period, txs)
+	if err != nil {
+		return err
+	}
+
+	// Check SMC if we can submit header before addHeader
+	canAdd, err := checkHeaderAdded(caller.SMCCaller(), shardID, period)
+	if err != nil {
+		return err
+	}
+	if !canAdd {
+		return errors.New(fmt.Sprintf("cannot add duplicate header for shard %d period %d", shardID, period))
+	}
+
+	if err := addHeader(transactor, collation); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // createCollation creates collation base struct with header
 // and body. Header consists of shardID, ChunkRoot, period,
@@ -27,7 +64,7 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	}
 
 	// check with SMC to see if we can add the header.
-	if a, _ := checkHeaderAdded(caller, shardID, period); !a {
+	if a, _ := checkHeaderAdded(caller.SMCCaller(), shardID, period); !a {
 		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
 	}
 
@@ -83,9 +120,9 @@ func addHeader(transactor mainchain.ContractTransactor, collation *sharding.Coll
 // submitted to the main chain. There can only be one header per shard
 // per period, proposer should check if a header's already submitted,
 // checkHeaderAdded returns true if it's available, false if it's unavailable.
-func checkHeaderAdded(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (bool, error) {
+func checkHeaderAdded(smcCaller *contracts.SMCCaller, shardID *big.Int, period *big.Int) (bool, error) {
 	// Get the period of the last header.
-	lastPeriod, err := caller.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
+	lastPeriod, err := smcCaller.LastSubmittedCollation(&bind.CallOpts{}, shardID)
 	if err != nil {
 		return false, fmt.Errorf("unable to get the period of last submitted collation: %v", err)
 	}

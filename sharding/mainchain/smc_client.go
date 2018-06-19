@@ -128,6 +128,10 @@ func (s *SMCClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 // Account to use for sharding transactions.
 func (s *SMCClient) Account() *accounts.Account {
 	accounts := s.keystore.Accounts()
+	if len(accounts) == 0 {
+		return nil
+	}
+
 	return &accounts[0]
 }
 

@@ -1,9 +1,12 @@
 package proposer
 
 import (
+	"context"
 	"crypto/rand"
 	"math/big"
 	"testing"
+
+	"fmt"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -13,8 +16,12 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
+	internal "github.com/ethereum/go-ethereum/sharding/internal"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/ethereum/go-ethereum/sharding/txpool"
 )
 
 var (
@@ -61,6 +68,50 @@ func (m *mockNode) GetShardCount() (int64, error) {
 	return 100, nil
 }
 
+type mockReader struct{}
+
+func (mockReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	header := types.Header{Number: big.NewInt(1)}
+	return types.NewBlockWithHeader(&header), nil
+}
+
+func (mockReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
+type mockContractCaller struct {
+	smcCaller *contracts.SMCCaller
+}
+
+func (m mockContractCaller) SMCCaller() *contracts.SMCCaller {
+	return m.smcCaller
+}
+
+func (mockContractCaller) GetShardCount() (int64, error) {
+	return 1, nil
+}
+
+type mockSigner struct{}
+
+func (mockSigner) Sign(hash common.Hash) ([]byte, error) {
+	return make([]byte, 0), nil
+}
+
+type mockTransactor struct {
+	transactor *contracts.SMCTransactor
+}
+
+func (m mockTransactor) SMCTransactor() *contracts.SMCTransactor {
+	return m.transactor
+}
+
+func (mockTransactor) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
+	txOpts := transactOpts()
+	txOpts.Value = value
+	txOpts.GasPrice = big.NewInt(100000)
+	return txOpts, nil
+}
+
 func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
@@ -73,6 +124,121 @@ func setup(t *testing.T) (*backends.SimulatedBackend, *contracts.SMC) {
 	}
 	backend.Commit()
 	return backend, smc
+}
+
+func TestProposerServiceStartStop(t *testing.T) {
+	txpool, err := txpool.NewTXPool(nil)
+	if err != nil {
+		t.Fatalf("Failed to initialize txfeed: %v", err)
+	}
+
+	shardID := 1
+	//client := &mainchain.SMCClient{}
+	client, err := mainchain.NewSMCClient("", "", true, "")
+	if err != nil {
+		t.Fatalf("Failed to instantiate client: %v", err)
+	}
+
+	proposer, err := NewProposer(&params.Config{}, client, nil, txpool, nil, shardID)
+	if err != nil {
+		t.Fatalf("Failed to initialize proposer: %v", err)
+	}
+
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	proposer.Start()
+
+	if proposer.Stop() != nil {
+		t.Fatalf("Failed to stop proposer: %v", err)
+	}
+
+	if proposer.ctx.Err() == nil {
+		t.Fatal("Failed to close context")
+	}
+
+	h.VerifyLogMsg(fmt.Sprintf("Starting proposer service in shard %d", shardID))
+	h.VerifyLogMsg(fmt.Sprintf("Stopping proposer service in shard %d", shardID))
+}
+
+func TestProposeCollationsDone(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	pool, err := txpool.NewTXPool(nil)
+	if err != nil {
+		t.Fatalf("Failed to initialize txfeed: %v", err)
+	}
+
+	shardID := 1
+	client := &mainchain.SMCClient{}
+	p, err := NewProposer(&params.Config{}, client, nil, pool, nil, shardID)
+
+	done := make(chan struct{})
+	subErr := make(chan error)
+	requests := make(chan *types.Transaction)
+
+	go p.proposeCollations(done, subErr, requests, &accounts.Account{}, mockReader{}, mockContractCaller{}, mockSigner{}, mockTransactor{})
+
+	done <- struct{}{}
+
+	h.VerifyLogMsg("Proposer context closed, exiting goroutine")
+}
+
+func TestProposeCollationsSubErr(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	pool, err := txpool.NewTXPool(nil)
+	if err != nil {
+		t.Fatalf("Failed to initialize txfeed: %v", err)
+	}
+
+	shardID := 1
+	client := &mainchain.SMCClient{}
+	p, err := NewProposer(&params.Config{}, client, nil, pool, nil, shardID)
+
+	done := make(chan struct{})
+	subErr := make(chan error)
+	requests := make(chan *types.Transaction)
+
+	go p.proposeCollations(done, subErr, requests, &accounts.Account{}, mockReader{}, mockContractCaller{}, mockSigner{}, mockTransactor{})
+
+	subErr <- nil
+
+	h.VerifyLogMsg("Transaction feed subscriber closed")
+}
+
+func TestProposeCollationsRequests(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	backend, smc := setup(t)
+	node := &mockNode{smc: smc, t: t, backend: backend}
+
+	pool, err := txpool.NewTXPool(nil)
+	if err != nil {
+		t.Fatalf("Failed to initialize txfeed: %v", err)
+	}
+
+	shardID := 1
+	client := &mainchain.SMCClient{}
+	p, err := NewProposer(&params.Config{PeriodLength: 1}, client, nil, pool, nil, shardID)
+
+	done := make(chan struct{})
+	subErr := make(chan error)
+	requests := make(chan *types.Transaction)
+
+	go p.proposeCollations(done, subErr, requests, &accounts.Account{}, mockReader{}, mockContractCaller{smcCaller: &smc.SMCCaller}, mockSigner{}, node)
+
+	data := make([]byte, 1024)
+	rand.Read(data)
+	tx := types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
+
+	requests <- tx
+	done <- struct{}{}
+
+	// TODO: Verify that header was added
 }
 
 func TestCreateCollation(t *testing.T) {
@@ -208,7 +374,7 @@ func TestCheckCollation(t *testing.T) {
 	backend.Commit()
 
 	// normal test case 1: check if we can still add header for period 1, should return false.
-	a, err := checkHeaderAdded(node, big.NewInt(0), big.NewInt(1))
+	a, err := checkHeaderAdded(node.SMCCaller(), big.NewInt(0), big.NewInt(1))
 	if err != nil {
 		t.Errorf("Can not check header submitted: %v", err)
 	}
@@ -216,7 +382,7 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
 	// normal test case 2: check if we can add header for period 2, should return true.
-	a, err = checkHeaderAdded(node, big.NewInt(0), big.NewInt(2))
+	a, err = checkHeaderAdded(node.SMCCaller(), big.NewInt(0), big.NewInt(2))
 	if !a {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}
