@@ -157,7 +157,7 @@ func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, du
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(durationInSeconds)*time.Second)
 
-	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(context.Background(), hash) {
+	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(ctxTimeout, hash) {
 		if err != nil {
 			cancel()
 			return fmt.Errorf("unable to retrieve transaction: %v", err)
