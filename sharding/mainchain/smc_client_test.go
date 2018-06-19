@@ -154,5 +154,4 @@ func TestWaitForTransaction(t *testing.T) {
 	}()
 	cancel()
 	newCtx.Done()
-	//time.Sleep(time.Duration(timeout) * time.Second)
 }
