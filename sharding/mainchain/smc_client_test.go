@@ -2,8 +2,10 @@ package mainchain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,23 +29,24 @@ var (
 // Verifies that SMCCLient implements the sharding Service inteface.
 var _ = sharding.Service(&SMCClient{})
 
-// fakeClient is struct to implement the smcClient methods for testing.
-type fakeClient struct {
+// mockClient is struct to implement the smcClient methods for testing.
+type mockClient struct {
 	smc         *contracts.SMC
 	depositFlag bool
 	t           *testing.T
 	backend     *backends.SimulatedBackend
+	blockNumber *big.Int
 }
 
 // Mirrors the function in the main file, but instead of having a client to perform rpc calls
 // it is replaced by the simulated backend.
-func (f *fakeClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
 
 	var receipt *types.Receipt
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(durationInSeconds)*time.Second)
 
-	for err := error(nil); receipt == nil; receipt, err = f.backend.TransactionReceipt(ctxTimeout, hash) {
+	for err := error(nil); receipt == nil; receipt, err = m.backend.TransactionReceipt(ctxTimeout, hash) {
 
 		if err != nil {
 			cancel()
@@ -62,17 +65,22 @@ func (f *fakeClient) WaitForTransaction(ctx context.Context, hash common.Hash, d
 
 // Creates and send Fake Transactions to the backend to be mined, takes in the context and
 // the current blocknumber as an argument and returns the signed transaction after it has been sent.
-func (f *fakeClient) CreateAndSendFakeTx(ctx context.Context, blocknumber int64) (*types.Transaction, error) {
-	tx := types.NewTransaction(uint64(blocknumber), common.HexToAddress("0x"), nil, 50000, nil, nil)
-	signedtx, err := types.SignTx(tx, types.MakeSigner(&params.ChainConfig{}, big.NewInt(blocknumber)), key)
+func (m *mockClient) CreateAndSendFakeTx(ctx context.Context) (*types.Transaction, error) {
+	tx := types.NewTransaction(m.blockNumber.Uint64(), common.HexToAddress("0x"), nil, 50000, nil, nil)
+	signedtx, err := types.SignTx(tx, types.MakeSigner(&params.ChainConfig{}, m.blockNumber), key)
 	if err != nil {
 		return nil, err
 	}
-	err = f.backend.SendTransaction(ctx, signedtx)
+	err = m.backend.SendTransaction(ctx, signedtx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to send transaction: %v", err)
 	}
 	return signedtx, nil
+}
+
+func (m *mockClient) Commit() {
+	m.backend.Commit()
+	m.blockNumber = big.NewInt(m.blockNumber.Int64() + 1)
 }
 
 func setup() *backends.SimulatedBackend {
@@ -87,11 +95,17 @@ func setup() *backends.SimulatedBackend {
 // implemented.
 func TestWaitForTransaction(t *testing.T) {
 	backend := setup()
-	client := &fakeClient{backend: backend}
+	client := &mockClient{backend: backend, blockNumber: big.NewInt(0)}
 	ctx := context.Background()
 	timeout := int64(5)
 
-	tx, err := client.CreateAndSendFakeTx(ctx, 0)
+	errorChan := make(chan error)
+	defer close(errorChan)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	tx, err := client.CreateAndSendFakeTx(ctx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,18 +124,18 @@ func TestWaitForTransaction(t *testing.T) {
 	go func() {
 		newErr := client.WaitForTransaction(ctx, tx.Hash(), timeout)
 		if newErr != nil {
-			t.Errorf("transaction timing out despite backend being commited: %v", newErr)
+			errorChan <- fmt.Errorf("transaction timing out despite backend being commited: %v", newErr)
 		}
+		receipt, err = client.backend.TransactionReceipt(ctx, tx.Hash())
+		if receipt == nil {
+			errorChan <- errors.New("receipt not found despite transaction being mined")
+		}
+		wg.Done()
+		return
 	}()
-	backend.Commit()
-	time.Sleep(time.Duration(timeout) * time.Second)
+	client.Commit()
 
-	receipt, err = client.backend.TransactionReceipt(ctx, tx.Hash())
-	if receipt == nil {
-		t.Error("receipt not found despite transaction being mined")
-	}
-
-	tx, err = client.CreateAndSendFakeTx(ctx, 1)
+	tx, err = client.CreateAndSendFakeTx(ctx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -132,13 +146,17 @@ func TestWaitForTransaction(t *testing.T) {
 	go func() {
 		newErr := client.WaitForTransaction(ctx, tx.Hash(), timeout)
 		if newErr == nil {
-			t.Error("transaction not timing out despite backend being committed too late")
+			errorChan <- errors.New("transaction not timing out despite backend being committed too late")
 		}
-	}()
-	time.Sleep(time.Duration(timeout) * time.Second)
-	backend.Commit()
+		client.Commit()
+		wg.Done()
+		return
 
-	tx, err = client.CreateAndSendFakeTx(ctx, 2)
+	}()
+	wg.Wait()
+	wg.Add(1)
+
+	tx, err = client.CreateAndSendFakeTx(ctx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -149,9 +167,26 @@ func TestWaitForTransaction(t *testing.T) {
 	go func() {
 		newErr := client.WaitForTransaction(newCtx, tx.Hash(), timeout)
 		if newErr == nil {
-			t.Error("no error despite parent context being canceled")
+			errorChan <- errors.New("no error despite parent context being canceled")
 		}
+		wg.Done()
+		return
 	}()
 	cancel()
 	newCtx.Done()
+
+	wg.Wait()
+
+	for {
+		select {
+		case err, ok := <-errorChan:
+			if ok {
+				t.Error(err)
+			} else {
+				return
+			}
+		default:
+			return
+		}
+	}
 }
