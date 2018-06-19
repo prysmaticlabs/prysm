@@ -74,8 +74,6 @@ func NewServer() (*Server, error) {
 func (s *Server) Start() {
 	logger.Info("Starting shardp2p server")
 
-	logger.Info(fmt.Sprintf("Host is %v", s.host.ID()))
-
 	go func() {
 		sub, err := s.gsub.Subscribe(topics.Ping)
 		if err != nil {
@@ -92,7 +90,8 @@ func (s *Server) Start() {
 				log.Error(fmt.Sprintf("Failed to get next message: %v", err))
 				return
 			} else {
-				log.Info(fmt.Sprintf("Received message: %s", msg))
+				log.Info(fmt.Sprintf("Received raw message: %s", msg.Data))
+
 			}
 		}
 	}()
