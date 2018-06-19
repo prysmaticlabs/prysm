@@ -87,7 +87,7 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestHandleServiceErrors(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}

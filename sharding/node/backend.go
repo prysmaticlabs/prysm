@@ -93,8 +93,12 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerSimulatorService(shardEthereum.shardConfig, shardIDFlag); err != nil {
-		return nil, err
+	// Should not trigger simulation requests if actor is a notary, as this
+	// is supposed to "simulate" notaries sending requests via p2p.
+	if actorFlag != "notary" {
+		if err := shardEthereum.registerSimulatorService(shardEthereum.shardConfig, shardIDFlag); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
@@ -258,7 +262,7 @@ func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID 
 		ctx.RetrieveService(&p2p)
 		var smcClient *mainchain.SMCClient
 		ctx.RetrieveService(&smcClient)
-		return simulator.NewSimulator(config, smcClient, p2p, shardID)
+		return simulator.NewSimulator(config, smcClient, p2p, shardID, 15) // 15 second delay between simulator requests.
 	})
 }
 

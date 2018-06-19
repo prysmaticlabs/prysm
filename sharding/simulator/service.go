@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -30,16 +31,17 @@ type Simulator struct {
 	cancel      context.CancelFunc
 	errChan     chan error       // Useful channel for handling errors at the service layer.
 	requestSent chan interface{} // Useful channel for processing logic upon a request being sent via p2p.
+	delay       time.Duration    // The delay (in seconds) between simulator requests sent via p2p.
 }
 
 // NewSimulator creates a struct instance of a simulator service.
 // It will have access to config, a mainchain client, a p2p server,
 // and a shardID.
-func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int) (*Simulator, error) {
+func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
 	requestSent := make(chan interface{})
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, requestSent}, nil
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, requestSent, delay}, nil
 }
 
 // Start the main loop for simulating p2p requests.
@@ -68,7 +70,7 @@ func (s *Simulator) handleServiceErrors() {
 		case <-s.ctx.Done():
 			return
 		case err := <-s.errChan:
-			log.Error(fmt.Sprint("Simulator service error: %v", err))
+			log.Error(fmt.Sprintf("Simulator service error: %v", err))
 		}
 	}
 }
@@ -85,7 +87,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
-		default:
+		case <-time.After(time.Second * s.delay):
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
 				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)

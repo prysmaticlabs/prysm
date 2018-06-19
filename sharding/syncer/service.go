@@ -94,14 +94,15 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
 					continue
 				}
-				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
-
-				// Notifies the response sent channel for any other handlers that could run upon
-				// this event occurring (also useful for tests.)
-				s.responseSent <- res
 
 				// Reply to that specific peer only.
 				s.p2p.Send(*res, req.Peer)
+
+				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+
+				// Notifies the response sent channel for any other handlers that could run upon
+				// this event occurring (also useful for tests).
+				s.responseSent <- res
 			}
 		}
 	}
