@@ -5,7 +5,6 @@ package observer
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
@@ -34,19 +33,19 @@ func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Ob
 func (o *Observer) Start() {
 	log.Info(fmt.Sprintf("Starting observer service in shard %d", o.shardID))
 
-	go func() {
-		ticker := time.NewTicker(6 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				o.p2p.Broadcast(nil)
-			case <-o.ctx.Done():
-				return
-			}
-		}
-	}()
+	//	go func() {
+	//		ticker := time.NewTicker(6 * time.Second)
+	//		defer ticker.Stop()
+	//
+	//		for {
+	//			select {
+	//			case <-ticker.C:
+	//				o.p2p.Broadcast(nil)
+	//			case <-o.ctx.Done():
+	//				return
+	//			}
+	//		}
+	//	}()
 }
 
 // Stop the main loop for observing the shard network.

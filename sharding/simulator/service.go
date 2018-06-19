@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -85,7 +86,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
-		default:
+		case <-time.After(time.Second * 5):
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
 				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
@@ -103,11 +104,13 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 					Peer: p2p.Peer{},
 					Data: *req,
 				}
-				feed.Send(msg)
+				// feed.Send(msg)
+				s.p2p.Broadcast(req)
 
 				// Notifies the requestSent channel for any other handlers that could run upon
 				// this event occurring (also useful for tests.)
-				s.requestSent <- msg
+				//s.requestSent <- msg
+				_ = msg
 
 				log.Info("Sent request for collation body via a shardp2p feed")
 			}

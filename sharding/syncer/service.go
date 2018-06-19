@@ -98,7 +98,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 
 				// Notifies the response sent channel for any other handlers that could run upon
 				// this event occurring (also useful for tests.)
-				s.responseSent <- res
+				//s.responseSent <- res
 
 				// Reply to that specific peer only.
 				s.p2p.Send(*res, req.Peer)

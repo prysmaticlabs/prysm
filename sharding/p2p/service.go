@@ -2,13 +2,16 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/p2p/protocol"
 	"github.com/ethereum/go-ethereum/sharding/p2p/topics"
 
@@ -51,7 +54,7 @@ func NewServer() (*Server, error) {
 	}
 
 	// TODO: Is this the best place for this?
-	mdnsService, err := mdns.NewMdnsService(ctx, host, 15*time.Second, "")
+	mdnsService, err := mdns.NewMdnsService(ctx, host, 60*time.Second, "")
 	if err != nil {
 		cancel()
 		return nil, err
@@ -74,6 +77,8 @@ func NewServer() (*Server, error) {
 func (s *Server) Start() {
 	logger.Info("Starting shardp2p server")
 
+	dummyFeed := s.Feed(messages.CollationBodyRequest{})
+
 	go func() {
 		sub, err := s.gsub.Subscribe(topics.Ping)
 		if err != nil {
@@ -91,7 +96,16 @@ func (s *Server) Start() {
 				return
 			} else {
 				log.Info(fmt.Sprintf("Received raw message: %s", msg.Data))
-
+				var data messages.CollationBodyRequest
+				buf := bytes.NewBuffer(msg.Data)
+				dec := gob.NewDecoder(buf)
+				err := dec.Decode(&data)
+				if err != nil {
+					log.Error(fmt.Sprintf("Failed to decode data: %v", err))
+					continue
+				}
+				i := dummyFeed.Send(Message{Data: data})
+				log.Info(fmt.Sprintf("Send a request to %d subs", i))
 			}
 		}
 	}()
@@ -109,6 +123,9 @@ func (s *Server) Stop() error {
 func (s *Server) Send(msg interface{}, peer Peer) {
 	// TODO
 	// https://github.com/prysmaticlabs/geth-sharding/issues/175
+
+	// DEBUG
+	logger.Info(fmt.Sprintf("Send called"))
 }
 
 // Broadcast a message to the world.
@@ -117,8 +134,15 @@ func (s *Server) Broadcast(msg interface{}) {
 	// https://github.com/prysmaticlabs/geth-sharding/issues/176
 
 	// DEBUG: Ping everyone constantly
-	logger.Info("broadcasting a ping")
-	s.gsub.Publish(topics.Ping, []byte("Ping!"))
+	logger.Info("broadcasting msg")
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(msg)
+	if err != nil {
+		log.Error(fmt.Sprintf("Error encoding error: %v", err))
+		return
+	}
+	s.gsub.Publish(topics.Ping, buf.Bytes())
 	// 	p := s.protocols[0].(*protocol.PingProtocol)
 	// 	if p == nil {
 	// 		logger.Info("p is nil")
