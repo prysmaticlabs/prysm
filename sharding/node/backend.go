@@ -251,9 +251,9 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		} else if actor == "proposer" {
 			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB, shardID)
+			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB.DB(), shardID)
 		}
-		return observer.NewObserver(p2p, shardChainDB, shardID)
+		return observer.NewObserver(p2p, shardChainDB.DB(), shardID)
 	})
 }
 
@@ -273,6 +273,8 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 		ctx.RetrieveService(&p2p)
 		var smcClient *mainchain.SMCClient
 		ctx.RetrieveService(&smcClient)
-		return syncer.NewSyncer(config, smcClient, p2p, s.shardChainDb, shardID)
+		var shardChainDB *database.ShardDB
+		ctx.RetrieveService(&shardChainDB)
+		return syncer.NewSyncer(config, smcClient, p2p, shardChainDB.DB(), shardID)
 	})
 }

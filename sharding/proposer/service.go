@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
@@ -34,9 +35,9 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a config, a mainchain client, a p2p server,
 // a shardChainDb, and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDB ethdb.Database, shardID int) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	return &Proposer{config, client, p2p, txpool, shard, ctx, cancel}, nil
 }
 

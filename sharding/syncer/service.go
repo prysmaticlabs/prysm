@@ -33,9 +33,9 @@ type Syncer struct {
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a mainchain client, a p2p server,
 // a shardChainDb, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	errChan := make(chan error)
 	responseSent := make(chan interface{})
 	return &Syncer{config, client, shard, p2p, ctx, cancel, errChan, responseSent}, nil

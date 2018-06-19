@@ -49,3 +49,8 @@ func (s *ShardDB) Stop() error {
 	s.db.Close()
 	return nil
 }
+
+// DB returns the attached ethdb instance.
+func (s *ShardDB) DB() ethdb.Database {
+	return s.db
+}
