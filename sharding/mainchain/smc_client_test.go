@@ -99,7 +99,7 @@ func TestWaitForTransaction(t *testing.T) {
 	ctx := context.Background()
 	timeout := int64(5)
 
-	errorChan := make(chan error)
+	errorChan := make(chan error, 10)
 	defer close(errorChan)
 
 	var wg sync.WaitGroup
