@@ -156,7 +156,7 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// normal test case #1 create collation with normal parameters.
-	err = addHeader(node, collation)
+	err = AddHeader(node, collation)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -202,7 +202,7 @@ func TestCheckCollation(t *testing.T) {
 		backend.Commit()
 	}
 
-	err = addHeader(node, collation)
+	err = AddHeader(node, collation)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
