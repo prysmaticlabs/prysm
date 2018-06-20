@@ -192,7 +192,7 @@ func TestShard_ChunkRootfromHeaderHash(t *testing.T) {
 	}
 
 	if !bytes.Equal(newchunkroot.Bytes(), chunkroot.Bytes()) {
-		t.Errorf("Calculated chunkroot , %v, and chunkroot ,%v , retrieved from headerHash is different", chunkroot, newchunkroot)
+		t.Errorf("Calculated chunk root, %v, and chunk root, %v, retrieved from headerHash is different", chunkroot, newchunkroot)
 	}
 
 }

@@ -384,9 +384,5 @@ func TestSubmitVote(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	client.CommitWithBlock()
 
-	// TODO: vote Test is unable to continue until chainreader is implemented as
-	// finding the current period requires knowing the latest blocknumber on the
-	// chain #164
 }

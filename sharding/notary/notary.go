@@ -142,6 +142,124 @@ func isLockUpOver(caller mainchain.ContractCaller, reader mainchain.Reader, acco
 
 }
 
+func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, duration int64) error {
+
+	err := client.WaitForTransaction(context.Background(), tx.Hash(), duration)
+	if err != nil {
+		return err
+	}
+
+	receipt, err := client.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+
+	if receipt.Status == types.ReceiptStatusFailed {
+		return errors.New("transaction was not successful, unable to release Notary")
+	}
+	return nil
+
+}
+
+func settingCanonicalShardChain(shard sharding.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
+
+	shardID := shard.ShardID()
+	collationRecords, err := manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+
+	if err != nil {
+		return fmt.Errorf("unable to get collation record: %v", err)
+	}
+
+	// Logs if quorum has been reached and collation is added to the canonical shard chain
+	if collationRecords.IsElected {
+		log.Info(fmt.Sprintf(
+			"Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
+			shardID, period, headerHash))
+
+		// Setting collation header as canonical in the shard chain
+		header, err := shard.HeaderByHash(headerHash)
+		if err != nil {
+			return fmt.Errorf("unable to set Header from hash: %v", err)
+		}
+
+		err = shard.SetCanonical(header)
+		if err != nil {
+			return fmt.Errorf("unable to add collation to canonical shard chain: %v", err)
+		}
+	}
+
+	return nil
+
+}
+
+func getCurrentNetworkState(manager mainchain.ContractManager, shard sharding.Shard, reader mainchain.Reader) (int64, *big.Int, *types.Block, error) {
+
+	shardcount, err := manager.GetShardCount()
+	if err != nil {
+		return 0, nil, nil, fmt.Errorf("could not get shard count: %v", err)
+	}
+
+	shardID := shard.ShardID()
+	// checks if the shardID is valid
+	if shardID.Int64() <= int64(0) || shardID.Int64() > shardcount {
+		return 0, nil, nil, fmt.Errorf("shardId is invalid, it has to be between %d and %d, instead it is %v", 0, shardcount, shardID)
+	}
+
+	block, err := reader.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return 0, nil, nil, fmt.Errorf("unable to retrieve block: %v", err)
+	}
+
+	return shardcount, shardID, block, nil
+
+}
+
+func checkCollationPeriod(manager mainchain.ContractManager, block *types.Block, shardID *big.Int) (*big.Int, *big.Int, error) {
+
+	period := big.NewInt(0).Div(block.Number(), big.NewInt(shardparams.DefaultConfig.PeriodLength))
+	collPeriod, err := manager.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to get period from last submitted collation: %v", err)
+	}
+
+	// Checks if the current period is valid in order to vote for the collation on the shard
+	if period.Int64() != collPeriod.Int64() {
+		return nil, nil, fmt.Errorf("period in collation is not equal to current period : %d , %d", collPeriod, period)
+	}
+	return period, collPeriod, nil
+
+}
+
+func hasNotaryVoted(manager mainchain.ContractManager, shardID *big.Int, poolIndex *big.Int) (bool, error) {
+	hasVoted, err := manager.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, poolIndex)
+
+	if err != nil {
+		return false, fmt.Errorf("unable to know if notary voted: %v", err)
+	}
+
+	return hasVoted, nil
+}
+
+func verifyNotary(manager mainchain.ContractManager, client mainchain.EthClient) (*contracts.Registry, error) {
+	nreg, err := getNotaryRegistry(manager, client.Account())
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !nreg.Deposited {
+		return nil, fmt.Errorf("notary has not deposited to the SMC")
+	}
+
+	// Checking if the pool index is valid
+	if nreg.PoolIndex.Int64() >= shardparams.DefaultConfig.NotaryCommitteeSize {
+		return nil, fmt.Errorf("invalid pool index %d as it is more than the committee size of %d", nreg.PoolIndex, shardparams.DefaultConfig.NotaryCommitteeSize)
+	}
+
+	return nreg, nil
+}
+
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
@@ -245,18 +363,11 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 // the registry and transferring back the deposit
 func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader) error {
 
-	nreg, err := getNotaryRegistry(manager, client.Account())
-
-	if err != nil {
-		return err
-	}
-
-	if !nreg.Deposited {
-		return errors.New("account has not deposited in the Notary Pool")
-	}
-
-	if nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
-		return errors.New("notary is still registered to the pool")
+	if dreg, err := hasAccountBeenDeregistered(manager, client.Account()); !dreg || err != nil {
+		if err != nil {
+			return err
+		}
+		return errors.New("notary has not been deregistered from the pool")
 	}
 
 	if lockup, err := isLockUpOver(manager, reader, client.Account()); !lockup || err != nil {
@@ -276,21 +387,12 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 		return fmt.Errorf("unable to Release Notary: %v", err)
 	}
 
-	err = client.WaitForTransaction(context.Background(), tx.Hash(), 400)
+	err = transactionWaiting(client, tx, 400)
 	if err != nil {
 		return err
 	}
 
-	receipt, err := client.TransactionReceipt(tx.Hash())
-	if err != nil {
-		return err
-	}
-
-	if receipt.Status == types.ReceiptStatusFailed {
-		return errors.New("transaction was not successful, unable to release Notary")
-	}
-
-	nreg, err = getNotaryRegistry(manager, client.Account())
+	nreg, err := getNotaryRegistry(manager, client.Account())
 	if err != nil {
 		return err
 	}
@@ -309,49 +411,20 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 // by taking in the shard and the hash of the collation header
 func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
 
-	shardcount, err := manager.GetShardCount()
-	if err != nil {
-		return fmt.Errorf("could not get shard count: %v", err)
-	}
-
-	shardID := shard.ShardID()
-	// checks if the shardID is valid
-	if shardID.Int64() <= int64(0) || shardID.Int64() > shardcount {
-		return fmt.Errorf("shardId is invalid, it has to be between %d and %d, instead it is %v", 0, shardcount, shardID)
-	}
-
-	//TODO: Once chainreader in tests are implemented remove the blockNumber argument to the function
-	// and use chainreader to retrieve the block
-	block, err := reader.BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return fmt.Errorf("unable to retrieve block: %v", err)
-	}
-
-	period := big.NewInt(0).Div(block.Number(), big.NewInt(shardparams.DefaultConfig.PeriodLength))
-	collPeriod, err := manager.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
-
-	if err != nil {
-		return fmt.Errorf("unable to get period from last submitted collation: %v", err)
-	}
-
-	// Checks if the current period is valid in order to vote for the collation on the shard
-	if period.Int64() != collPeriod.Int64() {
-		return fmt.Errorf("period in collation is not equal to current period : %d , %d", collPeriod, period)
-	}
-
-	nreg, err := getNotaryRegistry(manager, client.Account())
-
+	_, shardID, block, err := getCurrentNetworkState(manager, shard, reader)
 	if err != nil {
 		return err
 	}
 
-	if !nreg.Deposited {
-		return fmt.Errorf("notary has not deposited to the SMC")
+	period, _, err := checkCollationPeriod(manager, block, shardID)
+	if err != nil {
+		return err
 	}
 
-	// Checking if the pool index is valid
-	if nreg.PoolIndex.Int64() >= shardparams.DefaultConfig.NotaryCommitteeSize {
-		return fmt.Errorf("invalid pool index %d as it is more than the committee size of %d", nreg.PoolIndex, shardparams.DefaultConfig.NotaryCommitteeSize)
+	nreg, err := verifyNotary(manager, client)
+
+	if err != nil {
+		return err
 	}
 
 	collationRecords, err := manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -370,11 +443,10 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 
 	}
 
-	hasVoted, err := manager.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
+	hasVoted, err := hasNotaryVoted(manager, shardID, nreg.PoolIndex)
 	if err != nil {
-		return fmt.Errorf("unable to know if notary voted: %v", err)
+		return err
 	}
-
 	if hasVoted {
 		return errors.New("notary has already voted")
 	}
@@ -399,16 +471,13 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 		return fmt.Errorf("unable to submit Vote: %v", err)
 	}
 
-	receipt, err := client.TransactionReceipt(tx.Hash())
+	err = transactionWaiting(client, tx, 400)
+
 	if err != nil {
 		return err
 	}
 
-	if receipt.Status == types.ReceiptStatusFailed {
-		return errors.New("transaction was not successful, unable to vote for collation")
-	}
-
-	hasVoted, err = manager.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
+	hasVoted, err = hasNotaryVoted(manager, shardID, nreg.PoolIndex)
 
 	if err != nil {
 		return fmt.Errorf("unable to know if notary voted: %v", err)
@@ -420,30 +489,11 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 
 	log.Info(fmt.Sprintf("Notary has voted for shard: %v in the %v period", shardID, period))
 
-	collationRecords, err = manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+	err = settingCanonicalShardChain(shard, manager, period, headerHash)
 
 	if err != nil {
-		return fmt.Errorf("unable to get collation record: %v", err)
+		return err
 	}
-
-	// Logs if quorum has been reached and collation is added to the canonical shard chain
-	if collationRecords.IsElected {
-		log.Info(fmt.Sprintf(
-			"Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
-			shardID, period, headerHash))
-
-		// Setting collation header as canonical in the shard chain
-		header, err := shard.HeaderByHash(headerHash)
-		if err != nil {
-			return fmt.Errorf("unable to set Header from hash: %v", err)
-		}
-
-		err = shard.SetCanonical(header)
-		if err != nil {
-			return fmt.Errorf("unable to add collation to canonical shard chain: %v", err)
-		}
-	}
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
 
 	return nil
 }

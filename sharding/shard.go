@@ -81,7 +81,7 @@ func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, erro
 	return NewCollation(header, body, *txs), nil
 }
 
-// ChunkRootfromHeaderHash gets the chunk root of a collation body from the hash of its header
+// ChunkRootfromHeaderHash gets the chunk root of a collation body from the hash of its header.
 func (s *Shard) ChunkRootfromHeaderHash(headerHash *common.Hash) (*common.Hash, error) {
 	collation, err := s.CollationByHeaderHash(headerHash)
 	if err != nil {
