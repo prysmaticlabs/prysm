@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/log"
@@ -36,11 +35,10 @@ const shardChainDbName = "shardchaindata"
 // it contains APIs and fields that handle the different components of the sharded
 // Ethereum network.
 type ShardEthereum struct {
-	shardConfig  *params.Config // Holds necessary information to configure shards.
-	txPool       *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
-	actor        sharding.Actor // Either notary, proposer, or observer.
-	shardChainDb ethdb.Database // Access to the persistent db to store shard data.
-	eventFeed    *event.Feed    // Used to enable P2P related interactions via different sharding actors.
+	shardConfig *params.Config // Holds necessary information to configure shards.
+	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
+	actor       sharding.Actor // Either notary, proposer, or observer.
+	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
 	services map[reflect.Type]sharding.Service // Service registry.
@@ -56,22 +54,12 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		stop:     make(chan struct{}),
 	}
 
-	path := node.DefaultDataDir()
-	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-		path = ctx.GlobalString(utils.DataDirFlag.Name)
-	}
-
-	shardChainDb, err := database.NewShardDB(path, shardChainDbName)
-	if err != nil {
-		return nil, err
-	}
-
 	// Configure shardConfig by loading the default.
 	shardEthereum.shardConfig = params.DefaultConfig
 
-	// Adds the initialized shardChainDb to the ShardEthereum instance.
-	// TODO: Move out of here!
-	shardEthereum.shardChainDb = shardChainDb
+	if err := shardEthereum.registerShardChainDB(ctx); err != nil {
+		return nil, err
+	}
 
 	if err := shardEthereum.registerP2P(); err != nil {
 		return nil, err
@@ -175,6 +163,17 @@ func (s *ShardEthereum) Register(constructor sharding.ServiceConstructor) error 
 	return nil
 }
 
+// registerShardChainDB attaches a LevelDB wrapped object to the shardEthereum instance.
+func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
+	path := node.DefaultDataDir()
+	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
+		path = ctx.GlobalString(utils.DataDirFlag.Name)
+	}
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		return database.NewShardDB(path, shardChainDbName)
+	})
+}
+
 // registerP2P attaches a p2p server to the ShardEthereum instance.
 // TODO: Design this p2p service and the methods it should expose as well as
 // its event loop.
@@ -230,14 +229,16 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		ctx.RetrieveService(&p2p)
 		var smcClient *mainchain.SMCClient
 		ctx.RetrieveService(&smcClient)
+		var shardChainDB *database.ShardDB
+		ctx.RetrieveService(&shardChainDB)
 
 		if actor == "notary" {
-			return notary.NewNotary(config, smcClient, p2p, s.shardChainDb)
+			return notary.NewNotary(config, smcClient, p2p, shardChainDB)
 		} else if actor == "proposer" {
 			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(config, smcClient, p2p, txPool, s.shardChainDb, shardID)
+			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB, shardID)
 		}
-		return observer.NewObserver(p2p, s.shardChainDb, shardID)
+		return observer.NewObserver(p2p, shardChainDB, shardID)
 	})
 }

@@ -8,9 +8,9 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
@@ -26,7 +26,7 @@ type Proposer struct {
 	p2p          *p2p.Server
 	txpool       *txpool.TXPool
 	txpoolSub    event.Subscription
-	shardChainDb ethdb.Database
+	shardChainDb *database.ShardDB
 	shardID      int
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -35,7 +35,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb ethdb.Database, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb *database.ShardDB, shardID int) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config,
