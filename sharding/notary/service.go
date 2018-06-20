@@ -5,8 +5,8 @@ package notary
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
@@ -19,11 +19,11 @@ type Notary struct {
 	config       *params.Config
 	smcClient    *mainchain.SMCClient
 	p2p          *p2p.Server
-	shardChainDb ethdb.Database
+	shardChainDb *database.ShardDB
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database) (*Notary, error) {
+func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb *database.ShardDB) (*Notary, error) {
 	return &Notary{config, smcClient, p2p, shardChainDb}, nil
 }
 
