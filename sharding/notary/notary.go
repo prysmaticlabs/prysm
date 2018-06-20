@@ -209,8 +209,8 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 	if err != nil {
 		return fmt.Errorf("unable to create txOpts: %v", err)
 	}
-	tx, err := manager.SMCTransactor().DeregisterNotary(txOps)
 
+	tx, err := manager.SMCTransactor().DeregisterNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deregister notary: %v", err)
 	}

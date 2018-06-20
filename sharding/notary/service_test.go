@@ -62,6 +62,7 @@ func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
 
 func (s *smcClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
 	s.CommitWithBlock()
+	s.fastForward(1)
 	return nil
 }
 
@@ -122,6 +123,14 @@ func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
 
+// fastForward is a helper function to skip through n period.
+func (s *smcClient) fastForward(p int) {
+
+	for i := 0; i < p*int(shardparams.DefaultConfig.PeriodLength); i++ {
+		s.CommitWithBlock()
+	}
+}
+
 func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
 	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend)
@@ -153,7 +162,6 @@ func TestHasAccountBeenDeregistered(t *testing.T) {
 
 	if !dreg {
 		t.Error("account unable to be deregistered from notary pool")
-
 	}
 
 }
@@ -173,6 +181,8 @@ func TestIsLockupOver(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	client.fastForward(int(shardparams.DefaultConfig.NotaryLockupLength + 100))
 
 	err = releaseNotary(client, client, client)
 	if err != nil {
@@ -243,7 +253,6 @@ func TestJoinNotaryPool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	client.CommitWithBlock()
 
 	// Now there should be one notary.
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
@@ -259,7 +268,6 @@ func TestJoinNotaryPool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	client.CommitWithBlock()
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -332,13 +340,9 @@ func TestReleaseNotary(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	client.CommitWithBlock()
 
 	err = leaveNotaryPool(client, client)
-	client.CommitWithBlock()
-
 	if err != nil {
-
 		t.Error(err)
 	}
 
@@ -346,12 +350,10 @@ func TestReleaseNotary(t *testing.T) {
 	if err != nil {
 		t.Error("unable to retrieve balance")
 	}
+	client.fastForward(int(shardparams.DefaultConfig.NotaryLockupLength + 10))
 
 	err = releaseNotary(client, client, client)
-	client.CommitWithBlock()
-
 	if err != nil {
-
 		t.Fatal(err)
 	}
 
@@ -368,8 +370,8 @@ func TestReleaseNotary(t *testing.T) {
 		t.Error("unable to retrieve balance")
 	}
 
-	if balance.Cmp(newbalance) != 1 {
-		t.Errorf("Deposit was not returned, balance is currently:", newbalance)
+	if balance.Cmp(newbalance) != -1 {
+		t.Errorf("Deposit was not returned, balance is currently: %v", newbalance)
 	}
 
 }
