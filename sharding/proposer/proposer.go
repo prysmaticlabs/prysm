@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
@@ -67,11 +68,9 @@ func addHeader(transactor mainchain.ContractTransactor, collation *sharding.Coll
 		return fmt.Errorf("unable to initiate add header transaction: %v", err)
 	}
 
-	// TODO: Copy is inefficient here. Let's research how to best convert hash to [32]byte.
-	var chunkRoot [32]byte
-	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
+	chunkRoot := [common.HashLength]byte(*collation.Header().ChunkRoot())
 
-	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
+	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot, collation.Header().Sig())
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}
