@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -48,7 +49,11 @@ func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
 }
 
-func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+func (m *mockNode) SMCFilterer() *contracts.SMCFilterer {
+	return &m.smc.SMCFilterer
+}
+
+func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
 	return nil
 }
 

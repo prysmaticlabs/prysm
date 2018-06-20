@@ -145,7 +145,7 @@ contract SMC {
         uint deregisteredPeriod = block.number / PERIOD_LENGTH;
         notaryRegistry[notaryAddress].deregisteredPeriod = deregisteredPeriod;
 
-        stackPush(index);
+        stackPush(index); 
         delete notaryPool[index];
         --notaryPoolLength;
         emit NotaryDeregistered(notaryAddress, index, deregisteredPeriod);
