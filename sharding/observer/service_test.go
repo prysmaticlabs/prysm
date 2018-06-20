@@ -5,9 +5,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	internal "github.com/ethereum/go-ethereum/sharding/internal"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/database"
 )
 
 // Verifies that Observer implements the Actor interface.

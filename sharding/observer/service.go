@@ -3,14 +3,14 @@
 package observer
 
 import (
-	"fmt"
-
 	"context"
+	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"math/big"
 )
 
 // Observer holds functionality required to run an observer service
