@@ -5,8 +5,8 @@ package notary
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
@@ -19,11 +19,11 @@ type Notary struct {
 	config       *params.Config
 	smcClient    *mainchain.SMCClient
 	p2p          *p2p.Server
-	shardChainDb ethdb.Database
+	shardChainDb *database.ShardDB
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database) (*Notary, error) {
+func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb *database.ShardDB) (*Notary, error) {
 	return &Notary{config, smcClient, p2p, shardChainDb}, nil
 }
 
@@ -39,17 +39,20 @@ func (n *Notary) Stop() error {
 	return nil
 }
 
+// notarizeCollations checks incoming block headers and determines if
+// we are an eligible notary for collations.
 func (n *Notary) notarizeCollations() {
+
 	// TODO: handle this better through goroutines. Right now, these methods
 	// are blocking.
 	if n.smcClient.DepositFlag() {
-		if err := joinNotaryPool(n.config, n.smcClient); err != nil {
+		if err := joinNotaryPool(n.smcClient, n.smcClient.Account(), n.config); err != nil {
 			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 			return
 		}
 	}
 
-	if err := subscribeBlockHeaders(n.smcClient); err != nil {
+	if err := subscribeBlockHeaders(n.smcClient.ChainReader(), n.smcClient, n.smcClient.Account()); err != nil {
 		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return
 	}

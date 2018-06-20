@@ -9,14 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/params"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -54,10 +51,6 @@ func (s *smcClient) SMCCaller() *contracts.SMCCaller {
 }
 
 func (s *smcClient) ChainReader() ethereum.ChainReader {
-	return nil
-}
-
-func (s *smcClient) Context() *cli.Context {
 	return nil
 }
 
@@ -204,7 +197,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 	client := &smcClient{smc: smc, t: t}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(client)
+	b, err := isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +212,7 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	backend.CommitWithBlock()
-	b, err = isAccountInNotaryPool(client)
+	b, err = isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Error(err)
 	}
@@ -241,13 +234,13 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	client.SetDepositFlag(false)
-	err = joinNotaryPool(params.DefaultConfig, client)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err == nil {
 		t.Error("joined notary pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
-	err = joinNotaryPool(params.DefaultConfig, client)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
@@ -263,7 +256,7 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(params.DefaultConfig, client)
+	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}

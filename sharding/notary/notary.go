@@ -3,10 +3,10 @@ package notary
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -18,15 +18,15 @@ import (
 	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
-// SubscribeBlockHeaders checks incoming block headers and determines if
+// subscribeBlockHeaders checks incoming block headers and determines if
 // we are an eligible notary for collations. Then, it finds the pending tx's
 // from the running geth node and sorts them by descending order of gas price,
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation.
-func subscribeBlockHeaders(client mainchain.Client) error {
+func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCaller, account *accounts.Account) error {
 	headerChan := make(chan *types.Header, 16)
 
-	_, err := client.ChainReader().SubscribeNewHead(context.Background(), headerChan)
+	_, err := reader.SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
 		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
 	}
@@ -40,13 +40,13 @@ func subscribeBlockHeaders(client mainchain.Client) error {
 		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
 
 		// Check if we are in the notary pool before checking if we are an eligible notary.
-		v, err := isAccountInNotaryPool(client)
+		v, err := isAccountInNotaryPool(caller, account)
 		if err != nil {
 			return fmt.Errorf("unable to verify client in notary pool. %v", err)
 		}
 
 		if v {
-			if err := checkSMCForNotary(client, head); err != nil {
+			if err := checkSMCForNotary(caller, account, head); err != nil {
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		}
@@ -57,15 +57,15 @@ func subscribeBlockHeaders(client mainchain.Client) error {
 // collation for the available shards in the SMC. The function calls
 // getEligibleNotary from the SMC and notary a collation if
 // conditions are met.
-func checkSMCForNotary(client mainchain.Client, head *types.Header) error {
+func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account, head *types.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
-	shardCount, err := client.GetShardCount()
+	shardCount, err := caller.GetShardCount()
 	if err != nil {
 		return fmt.Errorf("can't get shard count from smc: %v", err)
 	}
 	for s := int64(0); s < shardCount; s++ {
 		// Checks if we are an eligible notary according to the SMC.
-		addr, err := client.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s))
+		addr, err := caller.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(s))
 
 		if err != nil {
 			return err
@@ -81,7 +81,7 @@ func checkSMCForNotary(client mainchain.Client, head *types.Header) error {
 }
 
 // getNotaryRegistry retrieves the registry of the registered account.
-func getNotaryRegistry(client mainchain.Client) (*contracts.Registry, error) {
+func getNotaryRegistry(caller mainchain.ContractCaller, client mainchain.SMCClient) (*contracts.Registry, error) {
 
 	var nreg contracts.Registry
 	account := client.Account()
@@ -97,7 +97,7 @@ func getNotaryRegistry(client mainchain.Client) (*contracts.Registry, error) {
 // we can't guarantee our tx for deposit will be in the next block header we receive.
 // The function calls IsNotaryDeposited from the SMC and returns true if
 // the user is in the notary pool.
-func isAccountInNotaryPool(client mainchain.Client) (bool, error) {
+func isAccountInNotaryPool(caller mainchain.ContractCaller, account *accounts.Account) (bool, error) {
 
 	nreg, err := getNotaryRegistry(client)
 	if err != nil {
@@ -141,7 +141,7 @@ func isLockUpOver(client mainchain.Client, blockNumber *big.Int) (bool, error) {
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(config *shardparams.Config, client mainchain.Client) error {
+func joinNotaryPool(manager mainchain.ContractManager, account *accounts.Account, config *shardparams.Config) error {
 	if !client.DepositFlag() {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
@@ -155,12 +155,12 @@ func joinNotaryPool(config *shardparams.Config, client mainchain.Client) error {
 	}
 
 	log.Info("Joining notary pool")
-	txOps, err := client.CreateTXOpts(shardparams.DefaultConfig.NotaryDeposit)
+	txOps, err := manager.CreateTXOpts(shardparams.DefaultConfig.NotaryDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to initiate the deposit transaction: %v", err)
 	}
 
-	tx, err := client.SMCTransactor().RegisterNotary(txOps)
+	tx, err := manager.SMCTransactor().RegisterNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
