@@ -3,6 +3,7 @@ package mainchain
 import (
 	"context"
 	"math/big"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -43,7 +44,7 @@ type ContractTransactor interface {
 // to the main geth node, and be responsible for other user-specific data
 type EthClient interface {
 	Account() *accounts.Account
-	WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error
+	WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error
 	TransactionReceipt(hash common.Hash) (*types.Receipt, error)
 	DepositFlag() bool
 }

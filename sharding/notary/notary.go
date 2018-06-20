@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -142,7 +143,7 @@ func isLockUpOver(caller mainchain.ContractCaller, reader mainchain.Reader, acco
 
 }
 
-func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, duration int64) error {
+func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, duration time.Duration) error {
 
 	err := client.WaitForTransaction(context.Background(), tx.Hash(), duration)
 	if err != nil {
@@ -491,9 +492,5 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 
 	err = settingCanonicalShardChain(shard, manager, period, headerHash)
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
