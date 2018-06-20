@@ -23,8 +23,8 @@ type Observer struct {
 	cancel context.CancelFunc
 }
 
-// NewObserver creates a struct instance of a observer service.
-// It will have access to a p2p server and a shardChainDb.
+// NewObserver creates a struct instance of a observer service,
+// it will have access to a p2p server and a shardChainDb.
 func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
@@ -33,11 +33,14 @@ func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Ob
 
 // Start the main loop for observer service.
 func (o *Observer) Start() {
-	log.Info(fmt.Sprintf("Starting observer service."))
+	log.Info(fmt.Sprintf("Starting observer service"))
 }
 
 // Stop the main loop for observer service.
 func (o *Observer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping observer service."))
+	// Triggers a cancel call in the service's context which shuts down every goroutine
+	// in this service.
+	defer o.cancel()
+	log.Info(fmt.Sprintf("Stopping observer service"))
 	return nil
 }
