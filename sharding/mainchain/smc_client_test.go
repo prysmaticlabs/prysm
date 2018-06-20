@@ -142,7 +142,6 @@ func TestWaitForTransaction_IsMinedImmediately(t *testing.T) {
 			t.Error("receipt not found despite transaction being mined")
 		}
 		wg.Done()
-		return
 	}()
 	client.Commit()
 	wg.Wait()
@@ -168,8 +167,6 @@ func TestWaitForTransaction_TimesOut(t *testing.T) {
 		}
 		client.Commit()
 		wg.Done()
-		return
-
 	}()
 	wg.Wait()
 
@@ -194,7 +191,6 @@ func TestWaitForTransaction_IsCancelledWhenParentCtxCancelled(t *testing.T) {
 			t.Error("no error despite parent context being canceled")
 		}
 		wg.Done()
-		return
 	}()
 	cancel()
 	newCtx.Done()
