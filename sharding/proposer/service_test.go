@@ -1,10 +1,10 @@
 package proposer
 
 import (
+	"context"
+	"crypto/rand"
 	"math/big"
 	"testing"
-
-	"crypto/rand"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -46,6 +46,14 @@ func (m *mockNode) ChainReader() ethereum.ChainReader {
 
 func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
 	return &m.smc.SMCTransactor
+}
+
+func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+	return nil
+}
+
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
 }
 
 func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
