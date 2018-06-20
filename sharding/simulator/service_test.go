@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"strings"
 	"testing"
-	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -209,7 +208,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed)
 
-	<-simulator.requestSent
+	h.WaitForLog()
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 	simulator.cancel()
 	// The context should have been canceled.
@@ -260,8 +259,6 @@ func TestHandleServiceErrors(t *testing.T) {
 	if simulator.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
-	// Right now we need to wait a little bit before the log is called.
-	// TODO: better way to do this? I know this is bad practice.
-	time.Sleep(time.Millisecond * 500)
+	h.WaitForLog()
 	h.VerifyLogMsg(fmt.Sprintf("Simulator service error: %v", expectedErr))
 }

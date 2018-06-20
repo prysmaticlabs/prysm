@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -174,7 +173,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		}
 	}()
 
-	<-syncer.responseSent
+	h.WaitForLog()
 	h.VerifyLogMsg(fmt.Sprintf("Received p2p request of type: %T", p2p.Message{}))
 	h.VerifyLogMsg(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex()))
 	syncer.cancel()
@@ -227,8 +226,6 @@ func TestHandleServiceErrors(t *testing.T) {
 	if syncer.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
-	// Right now we need to wait a little bit before the log is called.
-	// TODO: better way to do this? I know this is bad practice.
-	time.Sleep(time.Millisecond * 500)
+	h.WaitForLog()
 	h.VerifyLogMsg(fmt.Sprintf("Sync service error: %v", expectedErr))
 }

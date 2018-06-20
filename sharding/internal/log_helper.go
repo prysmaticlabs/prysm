@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/log"
@@ -10,8 +11,11 @@ var _ = log.Handler(&LogHandler{})
 
 // LogHandler provides methods for testing ethereum logs.
 type LogHandler struct {
-	records []*log.Record
-	t       *testing.T
+	records     []*log.Record
+	t           *testing.T
+	mutex       sync.Mutex
+	logChanOpen bool
+	logWritten  chan bool
 }
 
 func NewLogHandler(t *testing.T) *LogHandler {
@@ -20,8 +24,23 @@ func NewLogHandler(t *testing.T) *LogHandler {
 
 // Log adds records to the record slice.
 func (t *LogHandler) Log(r *log.Record) error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	t.records = append(t.records, r)
+	if t.logChanOpen {
+		t.logWritten <- true
+	}
 	return nil
+}
+
+func (t *LogHandler) WaitForLog() {
+	t.mutex.Lock()
+	t.logWritten = make(chan bool)
+	t.logChanOpen = true
+	defer close(t.logWritten)
+	t.mutex.Unlock()
+	<-t.logWritten
+	t.logChanOpen = false
 }
 
 // Pop the record at index 0.
