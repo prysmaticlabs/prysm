@@ -2,7 +2,6 @@ package mainchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -40,11 +39,11 @@ type mockClient struct {
 
 // Mirrors the function in the main file, but instead of having a client to perform rpc calls
 // it is replaced by the simulated backend.
-func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
 
 	var receipt *types.Receipt
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(durationInSeconds)*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, durationInSeconds*time.Second)
 
 	for err := error(nil); receipt == nil; receipt, err = m.backend.TransactionReceipt(ctxTimeout, hash) {
 
@@ -93,17 +92,11 @@ func setup() *backends.SimulatedBackend {
 // in `smc_client.go`.
 // TODO: Test the function in the main file instead of defining it here if a rpc server for testing can be
 // implemented.
-func TestWaitForTransaction(t *testing.T) {
+func TestWaitForTransaction_TransactionNotMined(t *testing.T) {
 	backend := setup()
 	client := &mockClient{backend: backend, blockNumber: big.NewInt(0)}
 	ctx := context.Background()
-	timeout := int64(5)
-
-	errorChan := make(chan error, 10)
-	defer close(errorChan)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
+	timeout := time.Duration(1)
 
 	tx, err := client.CreateAndSendFakeTx(ctx)
 	if err != nil {
@@ -119,34 +112,59 @@ func TestWaitForTransaction(t *testing.T) {
 		t.Error("transaction is supposed to timeout and return a error")
 	}
 
+}
+
+func TestWaitForTransaction_IsMinedImmediately(t *testing.T) {
+	backend := setup()
+	client := &mockClient{backend: backend, blockNumber: big.NewInt(0)}
+	ctx := context.Background()
+	timeout := time.Duration(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	tx, err := client.CreateAndSendFakeTx(ctx)
+	if err != nil {
+		t.Error(err)
+	}
+
 	// Tests transaction timing out when the block is mined immediately
 	// in the timeout period
 	go func() {
 		newErr := client.WaitForTransaction(ctx, tx.Hash(), timeout)
 		if newErr != nil {
-			errorChan <- fmt.Errorf("transaction timing out despite backend being commited: %v", newErr)
+			t.Errorf("transaction timing out despite backend being commited: %v", newErr)
 		}
-		receipt, err = client.backend.TransactionReceipt(ctx, tx.Hash())
+		receipt, err := client.backend.TransactionReceipt(ctx, tx.Hash())
+		if err != nil {
+			t.Errorf("receipt could not be retrieved:%v", err)
+		}
 		if receipt == nil {
-			errorChan <- errors.New("receipt not found despite transaction being mined")
+			t.Error("receipt not found despite transaction being mined")
 		}
 		wg.Done()
 		return
 	}()
 	client.Commit()
+	wg.Wait()
 
-	tx, err = client.CreateAndSendFakeTx(ctx)
+}
+func TestWaitForTransaction_TimesOut(t *testing.T) {
+	backend := setup()
+	client := &mockClient{backend: backend, blockNumber: big.NewInt(0)}
+	ctx := context.Background()
+	timeout := time.Duration(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	tx, err := client.CreateAndSendFakeTx(ctx)
 	if err != nil {
 		t.Error(err)
 	}
 
-	// Tests transaction timing out when the block is mined beyond
-	// the timeout period
-
 	go func() {
 		newErr := client.WaitForTransaction(ctx, tx.Hash(), timeout)
 		if newErr == nil {
-			errorChan <- errors.New("transaction not timing out despite backend being committed too late")
+			t.Error("transaction not timing out despite backend being committed too late")
 		}
 		client.Commit()
 		wg.Done()
@@ -154,20 +172,26 @@ func TestWaitForTransaction(t *testing.T) {
 
 	}()
 	wg.Wait()
+
+}
+func TestWaitForTransaction_IsCancelledWhenParentCtxCancelled(t *testing.T) {
+	backend := setup()
+	client := &mockClient{backend: backend, blockNumber: big.NewInt(0)}
+	ctx := context.Background()
+	timeout := time.Duration(1)
+	var wg sync.WaitGroup
 	wg.Add(1)
 
-	tx, err = client.CreateAndSendFakeTx(ctx)
+	tx, err := client.CreateAndSendFakeTx(ctx)
 	if err != nil {
 		t.Error(err)
 	}
-	// Tests function returning an error when parent context
-	// is canceled
 
 	newCtx, cancel := context.WithCancel(ctx)
 	go func() {
 		newErr := client.WaitForTransaction(newCtx, tx.Hash(), timeout)
 		if newErr == nil {
-			errorChan <- errors.New("no error despite parent context being canceled")
+			t.Error("no error despite parent context being canceled")
 		}
 		wg.Done()
 		return
@@ -177,16 +201,4 @@ func TestWaitForTransaction(t *testing.T) {
 
 	wg.Wait()
 
-	for {
-		select {
-		case err, ok := <-errorChan:
-			if ok {
-				t.Error(err)
-			} else {
-				return
-			}
-		default:
-			return
-		}
-	}
 }

@@ -153,9 +153,9 @@ func (s *SMCClient) SMCFilterer() *contracts.SMCFilterer {
 
 // WaitForTransaction waits for transaction to be mined and returns an error if it takes
 // too long.
-func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(durationInSeconds)*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, durationInSeconds*time.Second)
 
 	for pending, err := true, error(nil); pending; _, pending, err = s.client.TransactionByHash(ctxTimeout, hash) {
 		if err != nil {
