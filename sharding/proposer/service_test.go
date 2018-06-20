@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -44,23 +45,15 @@ func (m *mockNode) ChainReader() ethereum.ChainReader {
 	return nil
 }
 
-func (s *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &s.smc.SMCTransactor
+func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
+	return &m.smc.SMCTransactor
 }
 
-func (s *mockNode) SMCFilterer() *contracts.SMCFilterer {
-	return &s.smc.SMCFilterer
+func (m *mockNode) SMCFilterer() *contracts.SMCFilterer {
+	return &m.smc.SMCFilterer
 }
 
-func (s *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
-	return nil
-}
-
-func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return nil, nil
-}
-
-func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
 	return nil
 }
 
