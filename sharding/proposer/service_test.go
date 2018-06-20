@@ -60,6 +60,14 @@ func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) 
 	return nil, nil
 }
 
+func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+	return nil
+}
+
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return nil, nil
+}
+
 func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := transactOpts()
 	txOpts.Value = value
