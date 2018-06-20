@@ -46,7 +46,7 @@ func (n *Notary) notarizeCollations() {
 	// TODO: handle this better through goroutines. Right now, these methods
 	// are blocking.
 	if n.smcClient.DepositFlag() {
-		if err := joinNotaryPool(n.smcClient, n.smcClient.Account(), n.config); err != nil {
+		if err := joinNotaryPool(n.smcClient, n.smcClient, n.config); err != nil {
 			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 			return
 		}
