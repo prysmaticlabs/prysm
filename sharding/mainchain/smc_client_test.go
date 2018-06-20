@@ -105,7 +105,7 @@ func TestWaitForTransaction_TransactionNotMined(t *testing.T) {
 
 	receipt, err := client.backend.TransactionReceipt(ctx, tx.Hash())
 	if receipt != nil {
-		t.Errorf("transaction mined despite backend not being commited: %v", receipt)
+		t.Errorf("transaction mined despite backend not being committed: %v", receipt)
 	}
 	err = client.WaitForTransaction(ctx, tx.Hash(), timeout)
 	if err == nil {
@@ -132,7 +132,7 @@ func TestWaitForTransaction_IsMinedImmediately(t *testing.T) {
 	go func() {
 		newErr := client.WaitForTransaction(ctx, tx.Hash(), timeout)
 		if newErr != nil {
-			t.Errorf("transaction timing out despite backend being commited: %v", newErr)
+			t.Errorf("transaction timing out despite backend being committed: %v", newErr)
 		}
 		receipt, err := client.backend.TransactionReceipt(ctx, tx.Hash())
 		if err != nil {
