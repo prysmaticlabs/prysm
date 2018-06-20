@@ -58,8 +58,6 @@ func (s *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, dur
 
 func (s *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
 	return nil, nil
-func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &m.smc.SMCTransactor
 }
 
 func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {

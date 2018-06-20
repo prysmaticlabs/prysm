@@ -9,11 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
 var (
@@ -25,17 +27,13 @@ var (
 // Verifies that Notary implements the Actor interface.
 var _ = sharding.Actor(&Notary{})
 
-type newBackend struct {
-	backend     *backends.SimulatedBackend
-	blocknumber int64
-}
-
 // Mock client for testing notary. Should this go into sharding/client/testing?
 type smcClient struct {
 	smc         *contracts.SMC
 	depositFlag bool
 	t           *testing.T
-	backend     *newBackend
+	backend     *backends.SimulatedBackend
+	blocknumber *big.Int
 }
 
 func (s *smcClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
@@ -63,11 +61,12 @@ func (s *smcClient) SMCFilterer() *contracts.SMCFilterer {
 }
 
 func (s *smcClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds int64) error {
+	s.CommitWithBlock()
 	return nil
 }
 
 func (s *smcClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return s.backend.backend.TransactionReceipt(context.Background(), hash)
+	return s.backend.TransactionReceipt(context.Background(), hash)
 }
 
 func (s *smcClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
@@ -84,31 +83,35 @@ func (s *smcClient) SetDepositFlag(deposit bool) {
 	s.depositFlag = deposit
 }
 
-func (m *smcClient) Sign(hash common.Hash) ([]byte, error) {
+func (s *smcClient) Sign(hash common.Hash) ([]byte, error) {
 	return nil, nil
 }
 
 // Unused mockClient methods.
-func (m *smcClient) Start() error {
-	m.t.Fatal("Start called")
+func (s *smcClient) Start() error {
+	s.t.Fatal("Start called")
 	return nil
 }
 
-func (m *smcClient) Close() {
-	m.t.Fatal("Close called")
+func (s *smcClient) Close() {
+	s.t.Fatal("Close called")
 }
 
 func (s *smcClient) DataDirPath() string {
 	return "/tmp/datadir"
 }
 
-func (b *newBackend) CommitWithBlock() {
-	b.backend.Commit()
-	b.blocknumber++
+func (s *smcClient) CommitWithBlock() {
+	s.backend.Commit()
+	s.blocknumber = big.NewInt(s.blocknumber.Int64() + 1)
 }
 
 func (s *smcClient) GetShardCount() (int64, error) {
 	return 100, nil
+}
+
+func (s *smcClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	return types.NewBlockWithHeader(&types.Header{Number: s.blocknumber}), nil
 }
 
 // Helper/setup methods.
@@ -118,32 +121,32 @@ func transactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
 
-func setup() (*newBackend, *contracts.SMC) {
-	backend := newBackend{backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}}), 0}
-	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend.backend)
-	backend.CommitWithBlock()
-	return &backend, smc
+func setup() (*backends.SimulatedBackend, *contracts.SMC) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance1001Eth}})
+	_, _, smc, _ := contracts.DeploySMC(transactOpts(), backend)
+	backend.Commit()
+	return backend, smc
 }
 
 func TestHasAccountBeenDeregistered(t *testing.T) {
 	backend, smc := setup()
-	client := &smcClient{smc: smc, t: t, backend: backend}
+	client := &smcClient{smc: smc, t: t, backend: backend, blocknumber: big.NewInt(1)}
 
 	client.SetDepositFlag(true)
-	err := joinNotaryPool(client)
+	err := joinNotaryPool(client, client, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
-	err = leaveNotaryPool(client)
-	backend.CommitWithBlock()
+	err = leaveNotaryPool(client, client)
+	client.CommitWithBlock()
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	dreg, err := hasAccountBeenDeregistered(client)
+	dreg, err := hasAccountBeenDeregistered(client, client.Account())
 
 	if err != nil {
 		t.Error(err)
@@ -161,26 +164,26 @@ func TestIsLockupOver(t *testing.T) {
 	client := &smcClient{smc: smc, t: t, backend: backend}
 
 	client.SetDepositFlag(true)
-	err := joinNotaryPool(client)
+	err := joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
-	err = leaveNotaryPool(client)
-	backend.CommitWithBlock()
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = releaseNotary(client, big.NewInt(backend.blocknumber))
+	err = leaveNotaryPool(client, client)
+	client.CommitWithBlock()
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	lockup, err := isLockUpOver(client, big.NewInt(backend.blocknumber))
+	err = releaseNotary(client, client, client)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	lockup, err := isLockUpOver(client, client, client.Account())
 
 	if err != nil {
 		t.Error(err)
@@ -194,7 +197,7 @@ func TestIsLockupOver(t *testing.T) {
 
 func TestIsAccountInNotaryPool(t *testing.T) {
 	backend, smc := setup()
-	client := &smcClient{smc: smc, t: t}
+	client := &smcClient{smc: smc, t: t, backend: backend}
 
 	// address should not be in pool initially.
 	b, err := isAccountInNotaryPool(client, client.Account())
@@ -207,11 +210,11 @@ func TestIsAccountInNotaryPool(t *testing.T) {
 
 	txOpts := transactOpts()
 	// deposit in notary pool, then it should return true.
-	txOpts.Value = params.DefaultConfig.NotaryDeposit
+	txOpts.Value = shardparams.DefaultConfig.NotaryDeposit
 	if _, err := smc.RegisterNotary(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 	b, err = isAccountInNotaryPool(client, client.Account())
 	if err != nil {
 		t.Error(err)
@@ -234,17 +237,17 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	client.SetDepositFlag(false)
-	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
+	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err == nil {
 		t.Error("joined notary pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
-	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
+	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
 	// Now there should be one notary.
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
@@ -256,11 +259,11 @@ func TestJoinNotaryPool(t *testing.T) {
 	}
 
 	// Trying to join while deposited should do nothing
-	err = joinNotaryPool(client, client.Account(), params.DefaultConfig)
+	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -278,18 +281,18 @@ func TestLeaveNotaryPool(t *testing.T) {
 
 	// Test Leaving Notary Pool Before Joining it
 
-	err := leaveNotaryPool(client)
+	err := leaveNotaryPool(client, client)
 	if err == nil {
 		t.Error("able to leave notary pool despite having not joined it")
 	}
 
 	// Roundtrip Test , Join and leave pool
 
-	err = joinNotaryPool(client)
+	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
 	// Now there should be one notary.
 	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
@@ -300,11 +303,11 @@ func TestLeaveNotaryPool(t *testing.T) {
 		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
 	}
 
-	err = leaveNotaryPool(client)
+	err = leaveNotaryPool(client, client)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
 	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
 	if err != nil {
@@ -322,34 +325,34 @@ func TestReleaseNotary(t *testing.T) {
 
 	// Test Release Notary Before Joining it
 
-	err := releaseNotary(client, big.NewInt(0))
+	err := releaseNotary(client, client, client)
 	if err == nil {
 		t.Error("released From notary despite never joining pool")
 	}
 
 	// Roundtrip Test , Join and leave pool and release Notary
 
-	err = joinNotaryPool(client)
+	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
-	err = leaveNotaryPool(client)
-	backend.CommitWithBlock()
+	err = leaveNotaryPool(client, client)
+	client.CommitWithBlock()
 
 	if err != nil {
 
 		t.Error(err)
 	}
 
-	balance, err := backend.backend.BalanceAt(context.Background(), addr, nil)
+	balance, err := backend.BalanceAt(context.Background(), addr, nil)
 	if err != nil {
 		t.Error("unable to retrieve balance")
 	}
 
-	err = releaseNotary(client, big.NewInt(backend.blocknumber))
-	backend.CommitWithBlock()
+	err = releaseNotary(client, client, client)
+	client.CommitWithBlock()
 
 	if err != nil {
 
@@ -364,7 +367,7 @@ func TestReleaseNotary(t *testing.T) {
 		t.Error("Unable to release Notary and deposit money back")
 	}
 
-	newbalance, err := backend.backend.BalanceAt(context.Background(), addr, nil)
+	newbalance, err := client.backend.BalanceAt(context.Background(), addr, nil)
 	if err != nil {
 		t.Error("unable to retrieve balance")
 	}
@@ -379,11 +382,11 @@ func TestSubmitVote(t *testing.T) {
 	backend, smc := setup()
 	client := &smcClient{smc: smc, t: t, depositFlag: true, backend: backend}
 
-	err := joinNotaryPool(client)
+	err := joinNotaryPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
-	backend.CommitWithBlock()
+	client.CommitWithBlock()
 
 	// TODO: vote Test is unable to continue until chainreader is implemented as
 	// finding the current period requires knowing the latest blocknumber on the

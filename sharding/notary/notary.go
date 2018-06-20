@@ -3,6 +3,7 @@ package notary
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -71,7 +72,7 @@ func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Accoun
 			return err
 		}
 
-		if addr == client.Account().Address {
+		if addr == account.Address {
 			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
 		}
 
@@ -81,11 +82,10 @@ func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Accoun
 }
 
 // getNotaryRegistry retrieves the registry of the registered account.
-func getNotaryRegistry(caller mainchain.ContractCaller, client mainchain.SMCClient) (*contracts.Registry, error) {
+func getNotaryRegistry(caller mainchain.ContractCaller, account *accounts.Account) (*contracts.Registry, error) {
 
 	var nreg contracts.Registry
-	account := client.Account()
-	nreg, err := client.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
+	nreg, err := caller.SMCCaller().NotaryRegistry(&bind.CallOpts{}, account.Address)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve notary registry: %v", err)
 	}
@@ -99,21 +99,21 @@ func getNotaryRegistry(caller mainchain.ContractCaller, client mainchain.SMCClie
 // the user is in the notary pool.
 func isAccountInNotaryPool(caller mainchain.ContractCaller, account *accounts.Account) (bool, error) {
 
-	nreg, err := getNotaryRegistry(client)
+	nreg, err := getNotaryRegistry(caller, account)
 	if err != nil {
 		return false, err
 	}
 
 	if !nreg.Deposited {
-		log.Warn(fmt.Sprintf("Account %s not in notary pool.", client.Account().Address.Hex()))
+		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.Hex()))
 	}
 
 	return nreg.Deposited, nil
 }
 
 // hasAccountBeenDeregistered checks if the account has been deregistered from the notary pool.
-func hasAccountBeenDeregistered(client mainchain.Client) (bool, error) {
-	nreg, err := getNotaryRegistry(client)
+func hasAccountBeenDeregistered(caller mainchain.ContractCaller, account *accounts.Account) (bool, error) {
+	nreg, err := getNotaryRegistry(caller, account)
 
 	if err != nil {
 		return false, err
@@ -125,28 +125,32 @@ func hasAccountBeenDeregistered(client mainchain.Client) (bool, error) {
 // isLockUpOver checks if the lock up period is over
 // which will allow the notary to call the releaseNotary function
 // in the SMC and get their deposit back.
-func isLockUpOver(client mainchain.Client, blockNumber *big.Int) (bool, error) {
+func isLockUpOver(caller mainchain.ContractCaller, reader mainchain.Reader, account *accounts.Account) (bool, error) {
 
 	//TODO: When chainreader for tests is implemented, get block using the method
 	//get BlockByNumber instead of passing as an argument to this function.
-	nreg, err := getNotaryRegistry(client)
+	nreg, err := getNotaryRegistry(caller, account)
+	if err != nil {
+		return false, err
+	}
+	block, err := reader.BlockByNumber(context.Background(), nil)
 	if err != nil {
 		return false, err
 	}
 
-	return (blockNumber.Int64() / shardparams.DefaultConfig.PeriodLength) > nreg.DeregisteredPeriod.Int64()+shardparams.DefaultConfig.NotaryLockupLength, nil
+	return (block.Number().Int64() / shardparams.DefaultConfig.PeriodLength) > nreg.DeregisteredPeriod.Int64()+shardparams.DefaultConfig.NotaryLockupLength, nil
 
 }
 
 // joinNotaryPool checks if the deposit flag is true and the account is a
 // notary in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
-func joinNotaryPool(manager mainchain.ContractManager, account *accounts.Account, config *shardparams.Config) error {
+func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClient, config *shardparams.Config) error {
 	if !client.DepositFlag() {
 		return errors.New("joinNotaryPool called when deposit flag was not set")
 	}
 
-	if b, err := isAccountInNotaryPool(client); b || err != nil {
+	if b, err := isAccountInNotaryPool(manager, client.Account()); b || err != nil {
 		if b {
 			log.Info(fmt.Sprint("Already joined notary pool"))
 			return nil
@@ -165,7 +169,7 @@ func joinNotaryPool(manager mainchain.ContractManager, account *accounts.Account
 		return fmt.Errorf("unable to deposit eth and become a notary: %v", err)
 	}
 
-	err = client.WaitForTransaction(tx.Hash(), 400)
+	err = client.WaitForTransaction(context.Background(), tx.Hash(), 400)
 	if err != nil {
 		return err
 	}
@@ -178,7 +182,7 @@ func joinNotaryPool(manager mainchain.ContractManager, account *accounts.Account
 		return errors.New("transaction was not successful, unable to deposit ETH and become a notary")
 	}
 
-	if inPool, err := isAccountInNotaryPool(client); !inPool || err != nil {
+	if inPool, err := isAccountInNotaryPool(manager, client.Account()); !inPool || err != nil {
 		if err != nil {
 			return err
 		}
@@ -192,26 +196,26 @@ func joinNotaryPool(manager mainchain.ContractManager, account *accounts.Account
 
 // leaveNotaryPool causes the notary to deregister and leave the notary pool
 // by calling the DeregisterNotary function in the SMC.
-func leaveNotaryPool(client mainchain.Client) error {
+func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClient) error {
 
-	if inPool, err := isAccountInNotaryPool(client); !inPool || err != nil {
+	if inPool, err := isAccountInNotaryPool(manager, client.Account()); !inPool || err != nil {
 		if err != nil {
 			return err
 		}
 		return errors.New("account has not been able to be deposited in notary pool")
 	}
 
-	txOps, err := client.CreateTXOpts(nil)
+	txOps, err := manager.CreateTXOpts(nil)
 	if err != nil {
 		return fmt.Errorf("unable to create txOpts: %v", err)
 	}
-	tx, err := client.SMCTransactor().DeregisterNotary(txOps)
+	tx, err := manager.SMCTransactor().DeregisterNotary(txOps)
 
 	if err != nil {
 		return fmt.Errorf("unable to deregister notary: %v", err)
 	}
 
-	err = client.WaitForTransaction(tx.Hash(), 400)
+	err = client.WaitForTransaction(context.Background(), tx.Hash(), 400)
 	if err != nil {
 		return err
 	}
@@ -225,7 +229,7 @@ func leaveNotaryPool(client mainchain.Client) error {
 		return errors.New("transaction was not successful, unable to deregister notary")
 	}
 
-	if dreg, err := hasAccountBeenDeregistered(client); !dreg || err != nil {
+	if dreg, err := hasAccountBeenDeregistered(manager, client.Account()); !dreg || err != nil {
 		if err != nil {
 			return err
 		}
@@ -239,10 +243,10 @@ func leaveNotaryPool(client mainchain.Client) error {
 
 // releaseNotary releases the Notary from the pool by deleting the notary from
 // the registry and transferring back the deposit
-func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
+func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader) error {
 	//TODO: Once chainreader is implemented remove blocknumber as argument
 	//to the function
-	nreg, err := getNotaryRegistry(client)
+	nreg, err := getNotaryRegistry(manager, client.Account())
 
 	if err != nil {
 		return err
@@ -256,24 +260,24 @@ func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
 		return errors.New("notary is still registered to the pool")
 	}
 
-	if lockup, err := isLockUpOver(client, blockNumber); !lockup || err != nil {
+	if lockup, err := isLockUpOver(manager, reader, client.Account()); !lockup || err != nil {
 		if err != nil {
 			return err
 		}
 		return errors.New("lockup period is not over")
 	}
 
-	txOps, err := client.CreateTXOpts(nil)
+	txOps, err := manager.CreateTXOpts(nil)
 	if err != nil {
 		return fmt.Errorf("unable to create txOpts: %v", err)
 	}
 
-	tx, err := client.SMCTransactor().ReleaseNotary(txOps)
+	tx, err := manager.SMCTransactor().ReleaseNotary(txOps)
 	if err != nil {
 		return fmt.Errorf("unable to Release Notary: %v", err)
 	}
 
-	err = client.WaitForTransaction(tx.Hash(), 400)
+	err = client.WaitForTransaction(context.Background(), tx.Hash(), 400)
 	if err != nil {
 		return err
 	}
@@ -287,7 +291,7 @@ func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
 		return errors.New("transaction was not successful, unable to release Notary")
 	}
 
-	nreg, err = getNotaryRegistry(client)
+	nreg, err = getNotaryRegistry(manager, client.Account())
 	if err != nil {
 		return err
 	}
@@ -304,9 +308,9 @@ func releaseNotary(client mainchain.Client, blockNumber *big.Int) error {
 
 // submitVote votes for a collation on the shard
 // by taking in the shard and the hash of the collation header
-func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *common.Hash, blockNumber *big.Int) error {
+func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
 
-	shardcount, err := client.GetShardCount()
+	shardcount, err := manager.GetShardCount()
 	if err != nil {
 		return fmt.Errorf("could not get shard count: %v", err)
 	}
@@ -319,9 +323,13 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 
 	//TODO: Once chainreader in tests are implemented remove the blockNumber argument to the function
 	// and use chainreader to retrieve the block
+	block, err := reader.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve block: %v", err)
+	}
 
-	period := big.NewInt(0).Div(blockNumber, big.NewInt(shardparams.DefaultConfig.PeriodLength))
-	collPeriod, err := client.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
+	period := big.NewInt(0).Div(block.Number(), big.NewInt(shardparams.DefaultConfig.PeriodLength))
+	collPeriod, err := manager.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
 
 	if err != nil {
 		return fmt.Errorf("unable to get period from last submitted collation: %v", err)
@@ -332,7 +340,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("period in collation is not equal to current period : %d , %d", collPeriod, period)
 	}
 
-	nreg, err := getNotaryRegistry(client)
+	nreg, err := getNotaryRegistry(manager, client.Account())
 
 	if err != nil {
 		return err
@@ -347,7 +355,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return fmt.Errorf("invalid pool index %d as it is more than the committee size of %d", nreg.PoolIndex, shardparams.DefaultConfig.NotaryCommitteeSize)
 	}
 
-	collationRecords, err := client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+	collationRecords, err := manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {
 		return fmt.Errorf("unable to get collation record: %v", err)
 	}
@@ -363,7 +371,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 
 	}
 
-	hasVoted, err := client.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
+	hasVoted, err := manager.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
 	if err != nil {
 		return fmt.Errorf("unable to know if notary voted: %v", err)
 	}
@@ -372,7 +380,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return errors.New("notary has already voted")
 	}
 
-	inCommitee, err := client.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, shardID)
+	inCommitee, err := manager.SMCCaller().GetNotaryInCommittee(&bind.CallOpts{}, shardID)
 	if err != nil {
 		return fmt.Errorf("unable to know if notary is in committee: %v", err)
 	}
@@ -381,12 +389,12 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return errors.New("notary is not eligible to vote in this shard at the current period")
 	}
 
-	txOps, err := client.CreateTXOpts(nil)
+	txOps, err := manager.CreateTXOpts(nil)
 	if err != nil {
 		return fmt.Errorf("unable to create txOpts: %v", err)
 	}
 
-	tx, err := client.SMCTransactor().SubmitVote(txOps, shardID, period, nreg.PoolIndex, collationRecords.ChunkRoot)
+	tx, err := manager.SMCTransactor().SubmitVote(txOps, shardID, period, nreg.PoolIndex, collationRecords.ChunkRoot)
 	if err != nil {
 
 		return fmt.Errorf("unable to submit Vote: %v", err)
@@ -401,7 +409,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 		return errors.New("transaction was not successful, unable to vote for collation")
 	}
 
-	hasVoted, err = client.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
+	hasVoted, err = manager.SMCCaller().HasVoted(&bind.CallOpts{}, shardID, nreg.PoolIndex)
 
 	if err != nil {
 		return fmt.Errorf("unable to know if notary voted: %v", err)
@@ -413,7 +421,7 @@ func submitVote(shard sharding.Shard, client mainchain.Client, headerHash *commo
 
 	log.Info(fmt.Sprintf("Notary has voted for shard: %v in the %v period", shardID, period))
 
-	collationRecords, err = client.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
+	collationRecords, err = manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
 
 	if err != nil {
 		return fmt.Errorf("unable to get collation record: %v", err)
