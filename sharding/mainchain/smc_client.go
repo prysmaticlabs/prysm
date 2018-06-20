@@ -167,6 +167,7 @@ func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, du
 			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", ctxTimeout.Err())
 		}
 	}
+	cancel()
 	ctxTimeout.Done()
 	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
 	return nil
