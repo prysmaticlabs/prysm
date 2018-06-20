@@ -33,7 +33,7 @@ type smcClient struct {
 	depositFlag bool
 	t           *testing.T
 	backend     *backends.SimulatedBackend
-	blocknumber *big.Int
+	blocknumber int64
 }
 
 func (s *smcClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
@@ -103,7 +103,8 @@ func (s *smcClient) DataDirPath() string {
 
 func (s *smcClient) CommitWithBlock() {
 	s.backend.Commit()
-	s.blocknumber = big.NewInt(s.blocknumber.Int64() + 1)
+	s.blocknumber = s.blocknumber + 1
+
 }
 
 func (s *smcClient) GetShardCount() (int64, error) {
@@ -111,7 +112,7 @@ func (s *smcClient) GetShardCount() (int64, error) {
 }
 
 func (s *smcClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return types.NewBlockWithHeader(&types.Header{Number: s.blocknumber}), nil
+	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(s.blocknumber)}), nil
 }
 
 // Helper/setup methods.
@@ -130,17 +131,15 @@ func setup() (*backends.SimulatedBackend, *contracts.SMC) {
 
 func TestHasAccountBeenDeregistered(t *testing.T) {
 	backend, smc := setup()
-	client := &smcClient{smc: smc, t: t, backend: backend, blocknumber: big.NewInt(1)}
+	client := &smcClient{smc: smc, t: t, backend: backend, blocknumber: 1}
 
 	client.SetDepositFlag(true)
 	err := joinNotaryPool(client, client, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	client.CommitWithBlock()
 
 	err = leaveNotaryPool(client, client)
-	client.CommitWithBlock()
 
 	if err != nil {
 		t.Error(err)
@@ -168,17 +167,14 @@ func TestIsLockupOver(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	client.CommitWithBlock()
 
 	err = leaveNotaryPool(client, client)
-	client.CommitWithBlock()
 
 	if err != nil {
 		t.Error(err)
 	}
 
 	err = releaseNotary(client, client, client)
-
 	if err != nil {
 		t.Error(err)
 	}

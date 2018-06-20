@@ -119,7 +119,7 @@ func hasAccountBeenDeregistered(caller mainchain.ContractCaller, account *accoun
 		return false, err
 	}
 
-	return nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0, err
+	return nreg.DeregisteredPeriod.Cmp(big.NewInt(0)) == 1, err
 }
 
 // isLockUpOver checks if the lock up period is over
@@ -244,8 +244,7 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 // releaseNotary releases the Notary from the pool by deleting the notary from
 // the registry and transferring back the deposit
 func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader) error {
-	//TODO: Once chainreader is implemented remove blocknumber as argument
-	//to the function
+
 	nreg, err := getNotaryRegistry(manager, client.Account())
 
 	if err != nil {
