@@ -1,10 +1,9 @@
 package proposer
 
 import (
+	"crypto/rand"
 	"math/big"
 	"testing"
-
-	"crypto/rand"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
