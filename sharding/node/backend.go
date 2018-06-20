@@ -239,6 +239,6 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			ctx.RetrieveService(&txPool)
 			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB, shardID)
 		}
-		return observer.NewObserver(p2p, shardChainDB, shardID)
+		return observer.NewObserver(p2p, shardChainDB.DB(), shardID)
 	})
 }
