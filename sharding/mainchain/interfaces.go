@@ -63,5 +63,6 @@ type RecordFetcher interface {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
+		Signature []byte
 	}, error)
 }
