@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
+	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
 var (
@@ -27,8 +28,9 @@ var (
 type MockClient struct {
 	SMC         *contracts.SMC
 	T           *testing.T
-	DepositFlag bool
+	depositFlag bool
 	Backend     *backends.SimulatedBackend
+	BlockNumber int64
 }
 
 func (m *MockClient) Account() *accounts.Account {
@@ -52,17 +54,27 @@ func (m *MockClient) SMCFilterer() *contracts.SMCFilterer {
 }
 
 func (m *MockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
+	m.CommitWithBlock()
+	m.FastForward(1)
 	return nil
 }
 
 func (m *MockClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
-	return nil, nil
+	return m.Backend.TransactionReceipt(context.Background(), hash)
 }
 
 func (m *MockClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	txOpts := TransactOpts()
 	txOpts.Value = value
 	return txOpts, nil
+}
+
+func (m *MockClient) SetDepositFlag(value bool) {
+	m.depositFlag = value
+}
+
+func (m *MockClient) DepositFlag() bool {
+	return m.depositFlag
 }
 
 func (m *MockClient) Sign(hash common.Hash) ([]byte, error) {
@@ -73,11 +85,22 @@ func (m *MockClient) GetShardCount() (int64, error) {
 	return 100, nil
 }
 
+func (m *MockClient) CommitWithBlock() {
+	m.Backend.Commit()
+	m.BlockNumber = m.BlockNumber + 1
+}
+
+func (m *MockClient) FastForward(p int) {
+	for i := 0; i < p*int(shardparams.DefaultConfig.PeriodLength); i++ {
+		m.CommitWithBlock()
+	}
+}
+
 func TransactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
 
-func SetupMockNode(t *testing.T) (*backends.SimulatedBackend, *contracts.SMC) {
+func SetupMockClient(t *testing.T) (*backends.SimulatedBackend, *contracts.SMC) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance}})
 	_, _, SMC, err := contracts.DeploySMC(TransactOpts(), backend)
 	if err != nil {
