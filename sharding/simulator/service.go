@@ -2,10 +2,13 @@ package simulator
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
@@ -23,15 +26,17 @@ import (
 // p2p internals and end-to-end testing across remote nodes have been
 // implemented.
 type Simulator struct {
-	config      *params.Config
-	client      *mainchain.SMCClient
-	p2p         *p2p.Server
-	shardID     int
-	ctx         context.Context
-	cancel      context.CancelFunc
-	errChan     chan error    // Useful channel for handling errors at the service layer.
-	delay       time.Duration // The delay (in seconds) between simulator requests sent via p2p.
-	requestSent chan int      // Useful channel for handling outgoing requests from the service.
+	config           *params.Config
+	client           *mainchain.SMCClient
+	p2p              *p2p.Server
+	shardID          int
+	ticker           *time.Ticker
+	transactionsFeed *event.Feed
+	ctx              context.Context
+	cancel           context.CancelFunc
+	errChan          chan error    // Useful channel for handling errors at the service layer.
+	delay            time.Duration // The delay (in seconds) between simulator requests sent via p2p.
+	requestSent      chan int      // Useful channel for handling outgoing requests from the service.
 }
 
 // NewSimulator creates a struct instance of a simulator service.
@@ -41,7 +46,8 @@ func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.S
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
 	requestSent := make(chan int)
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, requestSent}, nil
+	txFeed := new(event.Feed)
+	return &Simulator{config, client, p2p, shardID, nil, txFeed, ctx, cancel, errChan, delay, requestSent}, nil
 }
 
 // Start the main loop for simulating p2p requests.
@@ -49,6 +55,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	feed := s.p2p.Feed(messages.CollationBodyRequest{})
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), feed)
+	go s.sendTestTransaction()
 	go s.handleServiceErrors()
 }
 
@@ -111,4 +118,22 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 		}
 	}
+}
+
+// sendTestTransaction sends a transaction with random bytes over a 5 second interval.
+// This method is for testing purposes only, and will be replaced by a more functional CLI tool.
+func (s *Simulator) sendTestTransaction() {
+	s.ticker = time.NewTicker(5 * time.Second)
+
+	for range s.ticker.C {
+		tx := createTestTransaction()
+		nsent := s.transactionsFeed.Send(tx)
+		log.Info(fmt.Sprintf("Sent transaction %x to %d subscribers", tx.Hash(), nsent))
+	}
+}
+
+func createTestTransaction() *types.Transaction {
+	data := make([]byte, 1024)
+	rand.Read(data)
+	return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
 }

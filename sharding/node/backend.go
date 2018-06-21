@@ -81,14 +81,6 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	// Should not trigger simulation requests if actor is a notary, as this
-	// is supposed to "simulate" notaries sending requests via p2p.
-	if actorFlag != "notary" {
-		if err := shardEthereum.registerSimulatorService(shardEthereum.shardConfig, shardIDFlag); err != nil {
-			return nil, err
-		}
-	}
-
 	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
@@ -252,18 +244,10 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
 			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB.DB(), shardID)
+		} else if actor == "simulator" {
+			return simulator.NewSimulator(config, smcClient, p2p, shardID, 15) // 15 second delay between simulator requests.
 		}
 		return observer.NewObserver(p2p, shardChainDB.DB(), shardID)
-	})
-}
-
-func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID int) error {
-	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
-		var p2p *p2p.Server
-		ctx.RetrieveService(&p2p)
-		var smcClient *mainchain.SMCClient
-		ctx.RetrieveService(&smcClient)
-		return simulator.NewSimulator(config, smcClient, p2p, shardID, 15) // 15 second delay between simulator requests.
 	})
 }
 
