@@ -15,11 +15,7 @@ func ExampleServer_Feed() {
 		Answer    string
 	}
 
-	feed, err := s.Feed(Puzzle{})
-	if err != nil {
-		// This shouldn't happen, but we should handle it anyway.
-		panic(err)
-	}
+	feed := s.Feed(Puzzle{})
 
 	ch := make(chan Message, 5) // Small buffer size. I don't expect many puzzles.
 	sub := feed.Subscribe(ch)
