@@ -25,6 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/proposer"
+	"github.com/ethereum/go-ethereum/sharding/simulator"
+	"github.com/ethereum/go-ethereum/sharding/syncer"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -76,6 +78,18 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 
 	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+		return nil, err
+	}
+
+	// Should not trigger simulation requests if actor is a notary, as this
+	// is supposed to "simulate" notaries sending requests via p2p.
+	if actorFlag != "notary" {
+		if err := shardEthereum.registerSimulatorService(shardEthereum.shardConfig, shardIDFlag); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -237,8 +251,30 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		} else if actor == "proposer" {
 			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
-			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB, shardID)
+			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB.DB(), shardID)
 		}
 		return observer.NewObserver(p2p, shardChainDB.DB(), shardID)
+	})
+}
+
+func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID int) error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		var p2p *p2p.Server
+		ctx.RetrieveService(&p2p)
+		var smcClient *mainchain.SMCClient
+		ctx.RetrieveService(&smcClient)
+		return simulator.NewSimulator(config, smcClient, p2p, shardID, 15) // 15 second delay between simulator requests.
+	})
+}
+
+func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int) error {
+	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
+		var p2p *p2p.Server
+		ctx.RetrieveService(&p2p)
+		var smcClient *mainchain.SMCClient
+		ctx.RetrieveService(&smcClient)
+		var shardChainDB *database.ShardDB
+		ctx.RetrieveService(&shardChainDB)
+		return syncer.NewSyncer(config, smcClient, p2p, shardChainDB.DB(), shardID)
 	})
 }

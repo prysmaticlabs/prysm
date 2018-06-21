@@ -3,6 +3,8 @@ package sharding
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Node defines a a sharding-enabled Ethereum instance that provides
@@ -18,6 +20,12 @@ type Node interface {
 type Actor interface {
 	Service
 	// TODO: will actors have actor-specific methods? To be decided.
+}
+
+// CollationFetcher defines functionality for a struct that is able to extract
+// respond with collation information to the caller. Shard implements this interface.
+type CollationFetcher interface {
+	CollationByHeaderHash(headerHash *common.Hash) (*Collation, error)
 }
 
 // ServiceContext is a collection of service independent options inherited from

@@ -25,9 +25,9 @@ type Observer struct {
 
 // NewObserver creates a struct instance of a observer service,
 // it will have access to a p2p server and a shardChainDb.
-func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
+func NewObserver(p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Observer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	return &Observer{p2p, shard, ctx, cancel}, nil
 }
 
