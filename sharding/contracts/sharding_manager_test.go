@@ -147,7 +147,8 @@ func (s *smcTestHelper) deregisterNotaries(params ...int) error {
 
 // addHeader is a helper function to add header to smc.
 func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.Int, chunkRoot uint8) error {
-	_, err := s.smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot})
+	sig := []byte{'S', 'I', 'G', 'N', 'A', 'T', 'U', 'R', 'E'}
+	_, err := s.smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot}, sig)
 	if err != nil {
 		return err
 	}
