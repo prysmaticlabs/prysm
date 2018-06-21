@@ -6,12 +6,35 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 )
+
+// AddHeader adds the collation header to the main chain by sending
+// an addHeader transaction to the sharding manager contract.
+// There can only exist one header per period per shard, it is the proposer's
+// responsibility to check if a header has been added.
+func AddHeader(transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
+	log.Info("Adding header to SMC")
+
+	txOps, err := transactor.CreateTXOpts(big.NewInt(0))
+	if err != nil {
+		return fmt.Errorf("unable to initiate add header transaction: %v", err)
+	}
+
+	// TODO: Copy is inefficient here. Let's research how to best convert hash to [32]byte.
+	var chunkRoot [32]byte
+	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
+
+	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot, collation.Header().Sig())
+	if err != nil {
+		return fmt.Errorf("unable to add header to SMC: %v", err)
+	}
+	log.Info(fmt.Sprintf("Add header transaction hash: %v", tx.Hash().Hex()))
+	return nil
+}
 
 // createCollation creates collation base struct with header
 // and body. Header consists of shardID, ChunkRoot, period,
@@ -56,32 +79,10 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	return collation, nil
 }
 
-// addHeader adds the collation header to the main chain by sending
-// an addHeader transaction to the sharding manager contract.
-// There can only exist one header per period per shard, it's proposer's
-// responsibility to check if a header has been added.
-func addHeader(transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
-	log.Info("Adding header to SMC")
-
-	txOps, err := transactor.CreateTXOpts(big.NewInt(0))
-	if err != nil {
-		return fmt.Errorf("unable to initiate add header transaction: %v", err)
-	}
-
-	chunkRoot := [common.HashLength]byte(*collation.Header().ChunkRoot())
-
-	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot, collation.Header().Sig())
-	if err != nil {
-		return fmt.Errorf("unable to add header to SMC: %v", err)
-	}
-	log.Info(fmt.Sprintf("Add header transaction hash: %v", tx.Hash().Hex()))
-	return nil
-}
-
 // checkHeaderAdded checks if a collation header has already
 // submitted to the main chain. There can only be one header per shard
 // per period, proposer should check if a header's already submitted,
-// checkHeaderAdded returns true if it's available, false if it's unavailable.
+// checkHeaderAdded returns true if it is available, false if it is unavailable.
 func checkHeaderAdded(caller mainchain.ContractCaller, shardID *big.Int, period *big.Int) (bool, error) {
 	// Get the period of the last header.
 	lastPeriod, err := caller.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)

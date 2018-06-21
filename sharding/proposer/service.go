@@ -8,9 +8,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/database"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
@@ -26,8 +27,8 @@ type Proposer struct {
 	p2p          *p2p.Server
 	txpool       *txpool.TXPool
 	txpoolSub    event.Subscription
-	shardChainDb *database.ShardDB
-	shardID      int
+	shardChainDb ethdb.Database
+	shard        *sharding.Shard
 	ctx          context.Context
 	cancel       context.CancelFunc
 }
@@ -35,29 +36,30 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDb *database.ShardDB, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDB ethdb.Database, shardID int) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	return &Proposer{
 		config,
 		client,
 		p2p,
 		txpool,
 		nil,
-		shardChainDb,
-		shardID,
+		shardChainDB,
+		shard,
 		ctx,
 		cancel}, nil
 }
 
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
-	log.Info(fmt.Sprintf("Starting proposer service in shard %d", p.shardID))
+	log.Info("Starting proposer service")
 	go p.proposeCollations()
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shardID))
+	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shard.ShardID()))
 	defer p.cancel()
 	p.txpoolSub.Unsubscribe()
 	return nil
@@ -67,7 +69,7 @@ func (p *Proposer) Stop() error {
 func (p *Proposer) proposeCollations() {
 	requests := make(chan *types.Transaction)
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
-
+	defer close(requests)
 	for {
 		select {
 		case tx := <-requests:
@@ -94,18 +96,26 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
-	collation, err := createCollation(p.client, p.client.Account(), p.client, big.NewInt(int64(p.shardID)), period, txs)
+	collation, err := createCollation(p.client, p.client.Account(), p.client, p.shard.ShardID(), period, txs)
 	if err != nil {
 		return err
 	}
 
-	// Check SMC if we can submit header before addHeader
-	canAdd, err := checkHeaderAdded(p.client, big.NewInt(int64(p.shardID)), period)
+	// Saves the collation to persistent storage in the shardDB.
+	if err := p.shard.SaveCollation(collation); err != nil {
+		log.Error(fmt.Sprintf("Could not save collation to persistent storage: %v", err))
+		return nil
+	}
+
+	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDb", collation.Header().Hash().Hex()))
+
+	// Check SMC if we can submit header before addHeader.
+	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)
 	if err != nil {
 		return err
 	}
 	if canAdd {
-		addHeader(p.client, collation)
+		AddHeader(p.client, collation)
 	}
 
 	return nil

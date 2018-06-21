@@ -138,16 +138,25 @@ func (s *SMCClient) ChainReader() ethereum.ChainReader {
 
 // SMCCaller to interact with the sharding manager contract.
 func (s *SMCClient) SMCCaller() *contracts.SMCCaller {
+	if s.smc == nil {
+		return nil
+	}
 	return &s.smc.SMCCaller
 }
 
 // SMCTransactor allows us to send tx's to the SMC programmatically.
 func (s *SMCClient) SMCTransactor() *contracts.SMCTransactor {
+	if s.smc == nil {
+		return nil
+	}
 	return &s.smc.SMCTransactor
 }
 
 // SMCFilterer allows for easy filtering of events from the Sharding Manager Contract.
 func (s *SMCClient) SMCFilterer() *contracts.SMCFilterer {
+	if s.smc == nil {
+		return nil
+	}
 	return &s.smc.SMCFilterer
 }
 

@@ -23,8 +23,8 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 	s, _ := NewServer()
 
 	for _, tt := range tests {
-		feed1, _ := s.Feed(tt.a)
-		feed2, _ := s.Feed(tt.b)
+		feed1 := s.Feed(tt.a)
+		feed2 := s.Feed(tt.b)
 
 		if (feed1 == feed2) != tt.want {
 			t.Errorf("Expected %v == %v to be %t", feed1, feed2, tt.want)
