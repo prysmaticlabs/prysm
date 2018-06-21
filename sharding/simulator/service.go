@@ -65,6 +65,7 @@ func (s *Simulator) Stop() error {
 	// in this service.
 	defer s.cancel()
 	log.Warn("Stopping simulator service")
+	s.ticker.Stop()
 	return nil
 }
 
