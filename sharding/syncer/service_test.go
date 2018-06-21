@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -173,7 +174,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		}
 	}()
 
-	h.WaitForLog()
+	<-syncer.responseSent
 	h.VerifyLogMsg(fmt.Sprintf("Received p2p request of type: %T", p2p.Message{}))
 	h.VerifyLogMsg(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex()))
 	syncer.cancel()
@@ -226,6 +227,6 @@ func TestHandleServiceErrors(t *testing.T) {
 	if syncer.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
-	h.WaitForLog()
+	time.Sleep(time.Millisecond * 500)
 	h.VerifyLogMsg(fmt.Sprintf("Sync service error: %v", expectedErr))
 }

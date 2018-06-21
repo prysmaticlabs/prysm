@@ -20,13 +20,14 @@ import (
 // performing windback sync across nodes, handling reorgs, and synchronizing
 // items such as transactions and in future sharding iterations: state.
 type Syncer struct {
-	config  *params.Config
-	client  *mainchain.SMCClient
-	shard   *sharding.Shard
-	p2p     *p2p.Server
-	ctx     context.Context
-	cancel  context.CancelFunc
-	errChan chan error // Useful channel for handling errors at the service layer.
+	config       *params.Config
+	client       *mainchain.SMCClient
+	shard        *sharding.Shard
+	p2p          *p2p.Server
+	ctx          context.Context
+	cancel       context.CancelFunc
+	errChan      chan error // Useful channel for handling errors at the service layer.
+	responseSent chan int   // Useful channel for handling outgoing responses from the service.
 }
 
 // NewSyncer creates a struct instance of a syncer service.
@@ -36,7 +37,8 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	errChan := make(chan error)
-	return &Syncer{config, client, shard, p2p, ctx, cancel, errChan}, nil
+	responseSent := make(chan int)
+	return &Syncer{config, client, shard, p2p, ctx, cancel, errChan, responseSent}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
@@ -96,6 +98,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 				// Reply to that specific peer only.
 				s.p2p.Send(*res, req.Peer)
 				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+				s.responseSent <- 1
 			}
 		}
 	}

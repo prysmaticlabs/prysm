@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -208,7 +209,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed)
 
-	h.WaitForLog()
+	<-simulator.requestSent
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 	simulator.cancel()
 	// The context should have been canceled.
@@ -259,6 +260,6 @@ func TestHandleServiceErrors(t *testing.T) {
 	if simulator.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
-	h.WaitForLog()
+	time.Sleep(time.Millisecond * 500)
 	h.VerifyLogMsg(fmt.Sprintf("Simulator service error: %v", expectedErr))
 }

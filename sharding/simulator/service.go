@@ -23,14 +23,15 @@ import (
 // p2p internals and end-to-end testing across remote nodes have been
 // implemented.
 type Simulator struct {
-	config  *params.Config
-	client  *mainchain.SMCClient
-	p2p     *p2p.Server
-	shardID int
-	ctx     context.Context
-	cancel  context.CancelFunc
-	errChan chan error    // Useful channel for handling errors at the service layer.
-	delay   time.Duration // The delay (in seconds) between simulator requests sent via p2p.
+	config      *params.Config
+	client      *mainchain.SMCClient
+	p2p         *p2p.Server
+	shardID     int
+	ctx         context.Context
+	cancel      context.CancelFunc
+	errChan     chan error    // Useful channel for handling errors at the service layer.
+	delay       time.Duration // The delay (in seconds) between simulator requests sent via p2p.
+	requestSent chan int      // Useful channel for handling outgoing requests from the service.
 }
 
 // NewSimulator creates a struct instance of a simulator service.
@@ -39,7 +40,8 @@ type Simulator struct {
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay}, nil
+	requestSent := make(chan int)
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, requestSent}, nil
 }
 
 // Start the main loop for simulating p2p requests.
@@ -105,6 +107,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 				}
 				feed.Send(msg)
 				log.Info("Sent request for collation body via a shardp2p feed")
+				s.requestSent <- 1
 			}
 		}
 	}
