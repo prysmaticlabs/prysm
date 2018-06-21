@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 )
@@ -67,14 +68,21 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	requests := make(chan *types.Transaction)
-	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
-	defer close(requests)
+	feed := p.p2p.Feed(messages.TransactionResponse{})
+	ch := make(chan p2p.Message, 20) // Is this buffer size too small?
+	sub := feed.Subscribe(ch)
+	defer sub.Unsubscribe()
+	defer close(ch)
 	for {
 		select {
-		case tx := <-requests:
-			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
-			if err := p.createCollation(p.ctx, []*types.Transaction{tx}); err != nil {
+		case msg := <-ch:
+			tx, ok := msg.Data.(messages.TransactionResponse)
+			if !ok {
+				log.Error("Received a message that's not transactions")
+				break
+			}
+			log.Info(fmt.Sprintf("Received transaction: %x", tx.Transaction.Hash()))
+			if err := p.createCollation(p.ctx, []*types.Transaction{tx.Transaction}); err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
 		case <-p.ctx.Done():
