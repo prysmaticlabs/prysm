@@ -96,6 +96,14 @@ func (m *MockClient) FastForward(p int) {
 	}
 }
 
+func (m *MockClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
+func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(m.BlockNumber)}), nil
+}
+
 func TransactOpts() *bind.TransactOpts {
 	return bind.NewKeyedTransactor(key)
 }
