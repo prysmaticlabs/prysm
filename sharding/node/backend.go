@@ -238,16 +238,18 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		var shardChainDB *database.ShardDB
 		ctx.RetrieveService(&shardChainDB)
 
-		if actor == "notary" {
+		switch actor {
+		case "notary":
 			return notary.NewNotary(config, smcClient, p2p, shardChainDB)
-		} else if actor == "proposer" {
+		case "proposer":
 			var txPool *txpool.TXPool
 			ctx.RetrieveService(&txPool)
 			return proposer.NewProposer(config, smcClient, p2p, txPool, shardChainDB.DB(), shardID)
-		} else if actor == "simulator" {
+		case "simulator":
 			return simulator.NewSimulator(config, smcClient, p2p, shardID, 15) // 15 second delay between simulator requests.
+		default:
+			return observer.NewObserver(p2p, shardChainDB.DB(), shardID)
 		}
-		return observer.NewObserver(p2p, shardChainDB.DB(), shardID)
 	})
 }
 
