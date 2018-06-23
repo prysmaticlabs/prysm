@@ -162,6 +162,41 @@ func TestShard_CollationByHeaderHash(t *testing.T) {
 	}
 }
 
+func TestShard_ChunkRootfromHeaderHash(t *testing.T) {
+	shardID := big.NewInt(1)
+	period := big.NewInt(1)
+	proposerAddress := common.BytesToAddress([]byte{})
+	proposerSignature := []byte{}
+	header := NewCollationHeader(shardID, nil, period, &proposerAddress, proposerSignature)
+
+	collation := NewCollation(header, []byte{1, 2, 3}, nil)
+	collation.CalculateChunkRoot()
+	shardDB := database.NewShardKV()
+	shard := NewShard(shardID, shardDB)
+
+	if err := shard.SaveCollation(collation); err != nil {
+		t.Fatalf("failed to save collation to shardDB: %v", err)
+	}
+
+	if err := shard.SetCanonical(header); err != nil {
+		t.Fatalf("failed to set header as canonical: %v", err)
+	}
+
+	chunkroot := collation.header.ChunkRoot()
+	headerHash := collation.header.Hash()
+
+	newchunkroot, err := shard.ChunkRootfromHeaderHash(&headerHash)
+
+	if err != nil {
+		t.Errorf("Unable to retrieve chunk root from collation header hash: %v", err)
+	}
+
+	if !bytes.Equal(newchunkroot.Bytes(), chunkroot.Bytes()) {
+		t.Errorf("Calculated chunk root, %v, and chunk root, %v, retrieved from headerHash is different", chunkroot, newchunkroot)
+	}
+
+}
+
 func TestShard_CanonicalHeaderHash(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)

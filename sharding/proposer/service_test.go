@@ -1,84 +1,26 @@
 package proposer
 
 import (
+	"crypto/rand"
 	"math/big"
 	"testing"
 
-	"crypto/rand"
-
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
+	"github.com/ethereum/go-ethereum/sharding/internal"
 	"github.com/ethereum/go-ethereum/sharding/params"
 )
 
 var (
-	key, _            = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	addr              = crypto.PubkeyToAddress(key.PublicKey)
-	accountBalance, _ = new(big.Int).SetString("1001000000000000000000", 10)
+	key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	addr   = crypto.PubkeyToAddress(key.PublicKey)
 )
 
-// Mock client for testing proposer.
-type mockNode struct {
-	smc         *contracts.SMC
-	t           *testing.T
-	depositFlag bool
-	backend     *backends.SimulatedBackend
-}
-
-func (m *mockNode) Account() *accounts.Account {
-	return &accounts.Account{Address: addr}
-}
-
-func (m *mockNode) SMCCaller() *contracts.SMCCaller {
-	return &m.smc.SMCCaller
-}
-
-func (m *mockNode) ChainReader() ethereum.ChainReader {
-	return nil
-}
-
-func (m *mockNode) SMCTransactor() *contracts.SMCTransactor {
-	return &m.smc.SMCTransactor
-}
-
-func (m *mockNode) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
-	txOpts := transactOpts()
-	txOpts.Value = value
-	return txOpts, nil
-}
-
-func (m *mockNode) Sign(hash common.Hash) ([]byte, error) {
-	return nil, nil
-}
-
-func (m *mockNode) GetShardCount() (int64, error) {
-	return 100, nil
-}
-
-func transactOpts() *bind.TransactOpts {
-	return bind.NewKeyedTransactor(key)
-}
-
-func setup(t *testing.T) (*backends.SimulatedBackend, *contracts.SMC) {
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: accountBalance}})
-	_, _, smc, err := contracts.DeploySMC(transactOpts(), backend)
-	if err != nil {
-		t.Fatalf("Failed to deploy SMC contract: %v", err)
-	}
-	backend.Commit()
-	return backend, smc
-}
-
 func TestCreateCollation(t *testing.T) {
-	backend, smc := setup(t)
-	node := &mockNode{smc: smc, t: t, backend: backend}
+	backend, smc := internal.SetupMockClient(t)
+	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
 		data := make([]byte, 1024)
@@ -135,8 +77,8 @@ func TestCreateCollation(t *testing.T) {
 }
 
 func TestAddCollation(t *testing.T) {
-	backend, smc := setup(t)
-	node := &mockNode{smc: smc, t: t, backend: backend}
+	backend, smc := internal.SetupMockClient(t)
+	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
 		data := make([]byte, 1024)
@@ -183,8 +125,8 @@ func TestAddCollation(t *testing.T) {
 }
 
 func TestCheckCollation(t *testing.T) {
-	backend, smc := setup(t)
-	node := &mockNode{smc: smc, t: t, backend: backend}
+	backend, smc := internal.SetupMockClient(t)
+	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 	var txs []*types.Transaction
 	for i := 0; i < 10; i++ {
 		data := make([]byte, 1024)

@@ -1,4 +1,4 @@
-package utils
+package internal
 
 import (
 	"testing"
@@ -43,6 +43,6 @@ func (h *LogHandler) VerifyLogMsg(str string) {
 		h.t.Error("Expected a log, but there were none!")
 	}
 	if l := h.Pop(); l.Msg != str {
-		h.t.Errorf("Unexpected log: %v. Wanted: %s", l, str)
+		h.t.Errorf("Unexpected log: %v. Wanted: %s", l.Msg, str)
 	}
 }

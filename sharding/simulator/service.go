@@ -29,18 +29,19 @@ type Simulator struct {
 	shardID     int
 	ctx         context.Context
 	cancel      context.CancelFunc
-	errChan     chan error       // Useful channel for handling errors at the service layer.
-	requestSent chan interface{} // Useful channel for processing logic upon a request being sent via p2p.
+	errChan     chan error    // Useful channel for handling errors at the service layer.
+	delay       time.Duration // The delay (in seconds) between simulator requests sent via p2p.
+	requestSent chan int      // Useful channel for handling outgoing requests from the service.
 }
 
 // NewSimulator creates a struct instance of a simulator service.
 // It will have access to config, a mainchain client, a p2p server,
 // and a shardID.
-func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int) (*Simulator, error) {
+func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
-	requestSent := make(chan interface{})
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, requestSent}, nil
+	requestSent := make(chan int)
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, requestSent}, nil
 }
 
 // Start the main loop for simulating p2p requests.
@@ -86,7 +87,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
-		case <-time.After(time.Second * 5):
+		case <-time.After(time.Second * s.delay):
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
 				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
@@ -104,15 +105,9 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 					Peer: p2p.Peer{},
 					Data: *req,
 				}
-				// feed.Send(msg)
-				s.p2p.Broadcast(req)
-
-				// Notifies the requestSent channel for any other handlers that could run upon
-				// this event occurring (also useful for tests.)
-				//s.requestSent <- msg
-				_ = msg
-
+				feed.Send(msg)
 				log.Info("Sent request for collation body via a shardp2p feed")
+				s.requestSent <- 1
 			}
 		}
 	}

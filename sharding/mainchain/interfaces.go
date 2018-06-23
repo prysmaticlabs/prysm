@@ -3,8 +3,10 @@ package mainchain
 import (
 	"context"
 	"math/big"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -38,6 +40,15 @@ type ContractTransactor interface {
 	CreateTXOpts(value *big.Int) (*bind.TransactOpts, error)
 }
 
+// EthClient defines the methods that will be used to perform rpc calls
+// to the main geth node, and be responsible for other user-specific data
+type EthClient interface {
+	Account() *accounts.Account
+	WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error
+	TransactionReceipt(hash common.Hash) (*types.Receipt, error)
+	DepositFlag() bool
+}
+
 // Reader defines an interface for a struct that can read mainchain information
 // such as blocks, transactions, receipts, and more. Useful for testing.
 type Reader interface {
@@ -52,5 +63,6 @@ type RecordFetcher interface {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
+		Signature []byte
 	}, error)
 }

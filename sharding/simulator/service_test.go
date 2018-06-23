@@ -35,11 +35,13 @@ func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, a
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
+	Signature []byte
 }, error) {
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
+		Signature []byte
 	})
 	return *res, errors.New("error fetching collation record")
 }
@@ -48,11 +50,13 @@ func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
+	Signature []byte
 }, error) {
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
+		Signature []byte
 	})
 	body := []byte{1, 2, 3, 4, 5}
 	res.ChunkRoot = [32]byte(types.DeriveSha(sharding.Chunks(body)))
@@ -87,7 +91,7 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -121,7 +125,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -132,7 +136,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
 
 	receivedErr := <-simulator.errChan
-	expectedErr := "Could not fetch current block number"
+	expectedErr := "could not fetch current block number"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
@@ -160,7 +164,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -171,7 +175,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
 
 	receivedErr := <-simulator.errChan
-	expectedErr := "Error constructing collation body request"
+	expectedErr := "error constructing collation body request"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
@@ -199,7 +203,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -231,7 +235,7 @@ func TestHandleServiceErrors(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -260,8 +264,6 @@ func TestHandleServiceErrors(t *testing.T) {
 	if simulator.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
-	// Right now we need to wait a little bit before the log is called.
-	// TODO: better way to do this? I know this is bad practice.
 	time.Sleep(time.Millisecond * 500)
-	h.VerifyLogMsg(expectedErr)
+	h.VerifyLogMsg(fmt.Sprintf("Simulator service error: %v", expectedErr))
 }

@@ -26,18 +26,18 @@ type Syncer struct {
 	p2p          *p2p.Server
 	ctx          context.Context
 	cancel       context.CancelFunc
-	errChan      chan error       // Useful channel for handling errors at the service layer.
-	responseSent chan interface{} // Useful channel for processing logic upon a response being sent via p2p.
+	errChan      chan error // Useful channel for handling errors at the service layer.
+	responseSent chan int   // Useful channel for handling outgoing responses from the service.
 }
 
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a mainchain client, a p2p server,
 // a shardChainDb, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDb)
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	errChan := make(chan error)
-	responseSent := make(chan interface{})
+	responseSent := make(chan int)
 	return &Syncer{config, client, shard, p2p, ctx, cancel, errChan, responseSent}, nil
 }
 
@@ -94,14 +94,11 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
 					continue
 				}
-				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
-
-				// Notifies the response sent channel for any other handlers that could run upon
-				// this event occurring (also useful for tests.)
-				//s.responseSent <- res
 
 				// Reply to that specific peer only.
 				s.p2p.Send(*res, req.Peer)
+				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+				s.responseSent <- 1
 			}
 		}
 	}

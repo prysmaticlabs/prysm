@@ -53,9 +53,6 @@ func RequestCollationBody(fetcher mainchain.RecordFetcher, shardID *big.Int, per
 		return nil, fmt.Errorf("could not fetch collation record from SMC: %v", err)
 	}
 
-	// Checks if we got an empty collation record. If the SMCCaller does not find
-	// a collation header, it returns an array of [32]byte filled with 0's.
-	// Better way to do this?
 	sum := 0
 	for _, val := range record.ChunkRoot {
 		sum += int(val)

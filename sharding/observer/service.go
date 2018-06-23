@@ -5,9 +5,11 @@ package observer
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 )
 
@@ -15,42 +17,30 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Observer struct {
-	p2p          *p2p.Server
-	shardChainDb ethdb.Database
-	shardID      int
-	ctx          context.Context
-	cancel       context.CancelFunc
+	p2p    *p2p.Server
+	shard  *sharding.Shard
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-// NewObserver creates a new observer instance.
-func NewObserver(p2p *p2p.Server, shardChainDb ethdb.Database, shardID int) (*Observer, error) {
+// NewObserver creates a struct instance of a observer service,
+// it will have access to a p2p server and a shardChainDb.
+func NewObserver(p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Observer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-
-	return &Observer{p2p, shardChainDb, shardID, ctx, cancel}, nil
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
+	return &Observer{p2p, shard, ctx, cancel}, nil
 }
 
-// Start the main routine for an observer.
+// Start the main loop for observer service.
 func (o *Observer) Start() {
-	log.Info(fmt.Sprintf("Starting observer service in shard %d", o.shardID))
-
-	//	go func() {
-	//		ticker := time.NewTicker(6 * time.Second)
-	//		defer ticker.Stop()
-	//
-	//		for {
-	//			select {
-	//			case <-ticker.C:
-	//				o.p2p.Broadcast(nil)
-	//			case <-o.ctx.Done():
-	//				return
-	//			}
-	//		}
-	//	}()
+	log.Info(fmt.Sprintf("Starting observer service"))
 }
 
-// Stop the main loop for observing the shard network.
+// Stop the main loop for observer service.
 func (o *Observer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping observer service in shard %d", o.shardID))
-	o.cancel()
+	// Triggers a cancel call in the service's context which shuts down every goroutine
+	// in this service.
+	defer o.cancel()
+	log.Info(fmt.Sprintf("Stopping observer service"))
 	return nil
 }
