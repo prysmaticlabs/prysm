@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package messages;
+
+message CollationBodyRequest {
+  uint64 shard_id = 1;
+  uint64 period = 2;
+  bytes chunk_root = 3;
+  bytes proposer_address = 4;
+}
+
+message CollationBodyResponse {
+  bytes header_hash = 1;
+  bytes body = 2;
+}
+
+
+message PingRequest {
+  string msg = 1; 
+}
+
+message PingResponse {
+  string msg = 1;
+}

@@ -9,18 +9,18 @@ import (
 	"testing"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
-
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
+
+	ethereum "github.com/ethereum/go-ethereum"
+	internal "github.com/ethereum/go-ethereum/sharding/internal"
+	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 )
 
 var _ = sharding.Service(&Simulator{})
@@ -130,7 +130,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 
 	faultyReader := &faultyReader{}
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
@@ -169,7 +169,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 	reader := &goodReader{}
 
 	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
@@ -208,7 +208,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 	reader := &goodReader{}
 
 	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed)

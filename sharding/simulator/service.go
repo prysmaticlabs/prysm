@@ -10,9 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/syncer"
+
+	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 )
 
 // Simulator is a service in a shard node
@@ -47,7 +48,7 @@ func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.S
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
-	feed := s.p2p.Feed(messages.CollationBodyRequest{})
+	feed := s.p2p.Feed(pb.CollationBodyRequest{})
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), feed)
 	go s.handleServiceErrors()
 }

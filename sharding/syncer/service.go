@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
+
+	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 )
 
 // Syncer represents a service that provides handlers for shard chain
@@ -44,7 +46,7 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
-	go s.handleCollationBodyRequests(s.client, s.p2p.Feed(messages.CollationBodyRequest{}))
+	go s.handleCollationBodyRequests(s.client, s.p2p.Feed(pb.CollationBodyRequest{}))
 	go s.handleServiceErrors()
 }
 
@@ -97,7 +99,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, feed *even
 
 				// Reply to that specific peer only.
 				s.p2p.Send(*res, req.Peer)
-				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", common.BytesToHash(res.HeaderHash).Hex()))
 				s.responseSent <- 1
 			}
 		}

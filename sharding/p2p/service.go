@@ -11,10 +11,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/p2p/protocol"
 	"github.com/ethereum/go-ethereum/sharding/p2p/topics"
 
+	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
@@ -77,7 +77,7 @@ func NewServer() (*Server, error) {
 func (s *Server) Start() {
 	logger.Info("Starting shardp2p server")
 
-	dummyFeed := s.Feed(messages.CollationBodyRequest{})
+	dummyFeed := s.Feed(pb.CollationBodyRequest{})
 
 	go func() {
 		sub, err := s.gsub.Subscribe(topics.Ping)
@@ -96,7 +96,7 @@ func (s *Server) Start() {
 				return
 			} else {
 				log.Info(fmt.Sprintf("Received raw message: %s", msg.Data))
-				var data messages.CollationBodyRequest
+				var data pb.CollationBodyRequest
 				buf := bytes.NewBuffer(msg.Data)
 				dec := gob.NewDecoder(buf)
 				err := dec.Decode(&data)

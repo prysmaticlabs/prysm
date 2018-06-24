@@ -10,17 +10,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
-
 	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/database"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
+
+	internal "github.com/ethereum/go-ethereum/sharding/internal"
+	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 )
 
 var _ = sharding.Service(&Syncer{})
@@ -76,7 +74,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 
 	go syncer.handleCollationBodyRequests(&faultySigner{}, feed)
 
@@ -88,7 +86,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 			default:
 				msg := p2p.Message{
 					Peer: p2p.Peer{},
-					Data: messages.CollationBodyRequest{},
+					Data: pb.CollationBodyRequest{},
 				}
 				feed.Send(msg)
 			}
@@ -150,7 +148,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 
 	go syncer.handleCollationBodyRequests(&mockSigner{}, feed)
 
@@ -162,11 +160,11 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 			default:
 				msg := p2p.Message{
 					Peer: p2p.Peer{},
-					Data: messages.CollationBodyRequest{
-						ChunkRoot: &chunkRoot,
-						ShardID:   shardID,
-						Period:    period,
-						Proposer:  &proposerAddress,
+					Data: pb.CollationBodyRequest{
+						ChunkRoot:       chunkRoot.Bytes(),
+						ShardId:         shardID.Uint64(),
+						Period:          period.Uint64(),
+						ProposerAddress: proposerAddress.Bytes(),
 					},
 				}
 				feed.Send(msg)
