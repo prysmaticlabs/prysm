@@ -133,7 +133,9 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	feed := server.Feed(messages.CollationBodyRequest{})
 
 	faultyReader := &faultyReader{}
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
+	delay := time.After(time.Second * 0)
+
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed, simulator.ctx.Done(), delay)
 
 	receivedErr := <-simulator.errChan
 	expectedErr := "could not fetch current block number"
@@ -171,8 +173,8 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 
 	feed := server.Feed(messages.CollationBodyRequest{})
 	reader := &goodReader{}
-
-	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
+	delay := time.After(time.Second * 0)
+	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed, simulator.ctx.Done(), delay)
 
 	receivedErr := <-simulator.errChan
 	expectedErr := "error constructing collation body request"
@@ -210,16 +212,17 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	feed := server.Feed(messages.CollationBodyRequest{})
 	reader := &goodReader{}
+	delay := make(chan time.Time)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed)
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed, simulator.ctx.Done(), delay)
 
-	<-simulator.requestSent
-	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
+	delay <- time.Now()
 	simulator.cancel()
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
+	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 }
 
 // TODO: Move this to the utils package along with the handleServiceErrors
@@ -240,30 +243,17 @@ func TestHandleServiceErrors(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	go simulator.handleServiceErrors()
+	errChan := make(chan error)
+	go simulator.handleServiceErrors(simulator.ctx.Done(), errChan)
 
 	expectedErr := "testing the error channel"
-	complete := make(chan int)
 
-	go func() {
-		for {
-			select {
-			case <-simulator.ctx.Done():
-				return
-			default:
-				simulator.errChan <- errors.New(expectedErr)
-				complete <- 1
-			}
-		}
-	}()
-
-	<-complete
+	errChan <- errors.New(expectedErr)
 	simulator.cancel()
 
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
 		t.Fatal("Context was not canceled")
 	}
-	time.Sleep(time.Millisecond * 500)
 	h.VerifyLogMsg(fmt.Sprintf("Simulator service error: %v", expectedErr))
 }
