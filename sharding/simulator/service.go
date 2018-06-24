@@ -24,7 +24,8 @@ import (
 // implemented.
 type Simulator struct {
 	config      *params.Config
-	client      *mainchain.SMCClient
+	reader      mainchain.Reader
+	fetcher     mainchain.RecordFetcher
 	p2p         *p2p.Server
 	shardID     int
 	ctx         context.Context
@@ -37,18 +38,18 @@ type Simulator struct {
 // NewSimulator creates a struct instance of a simulator service.
 // It will have access to config, a mainchain client, a p2p server,
 // and a shardID.
-func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
+func NewSimulator(config *params.Config, reader mainchain.Reader, fetcher mainchain.RecordFetcher, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
 	requestSent := make(chan int)
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, requestSent}, nil
+	return &Simulator{config, reader, fetcher, p2p, shardID, ctx, cancel, errChan, delay, requestSent}, nil
 }
 
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	feed := s.p2p.Feed(messages.CollationBodyRequest{})
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), feed)
+	go s.simulateNotaryRequests(s.fetcher, s.reader, feed)
 	go s.handleServiceErrors()
 }
 
