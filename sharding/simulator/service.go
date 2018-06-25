@@ -88,12 +88,15 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
-		case <-time.After(time.Second * s.delay):
+		case <-time.After(s.delay):
+			log.Info("Doing a simulation")
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
 				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
 				continue
 			}
+
+			log.Info("here i am")
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
@@ -101,11 +104,17 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 				s.errChan <- fmt.Errorf("error constructing collation body request: %v", err)
 				continue
 			}
+
+			log.Info("rock you like a hurricane")
+			if req == nil {
+				log.Info("req is nil!")
+			}
 			if req != nil {
 				msg := p2p.Message{
 					Peer: p2p.Peer{},
 					Data: *req,
 				}
+				log.Info("About to send to feed")
 				feed.Send(msg)
 				log.Info("Sent request for collation body via a shardp2p feed")
 				s.requestSent <- 1

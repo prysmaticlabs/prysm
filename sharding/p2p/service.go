@@ -1,4 +1,12 @@
 // Package p2p handles peer-to-peer networking for the sharding package.
+//
+// Notes:
+// Gossip sub topics can be identified by their proto message types.
+//
+// 		topic := proto.MessageName(myMsg)
+//
+// Then we can assume that only these message types are broadcast in that
+// gossip subscription.
 package p2p
 
 import (
@@ -14,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p/protocol"
 	"github.com/ethereum/go-ethereum/sharding/p2p/topics"
 
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
@@ -77,38 +84,41 @@ func NewServer() (*Server, error) {
 func (s *Server) Start() {
 	logger.Info("Starting shardp2p server")
 
-	dummyFeed := s.Feed(pb.CollationBodyRequest{})
-
-	go func() {
-		sub, err := s.gsub.Subscribe(topics.Ping)
-		if err != nil {
-			logger.Crit(fmt.Sprintf("Failed to sub to ping: %v", err))
-		}
-		defer sub.Cancel()
-
-		for {
-			msg, err := sub.Next(s.ctx)
+	// Subscribe to all topics.
+	for topic, msgType := range topicTypeMapping {
+		logger.Info(fmt.Sprintf("Registering topic: %s", topic))
+		go func() {
+			sub, err := s.gsub.Subscribe(topic.String())
 			if err != nil {
+				logger.Error(fmt.Sprintf("Failed to subscribe to topic: %v", err))
+				return
+			}
+			defer sub.Cancel()
+			feed := s.Feed(msgType)
+
+			for {
+				msg, err := sub.Next(s.ctx)
 				if s.ctx.Err() != nil {
+					return // Context closed or something.
+				}
+				if err != nil {
+					logger.Error(fmt.Sprintf("Failed to get next message: %v", err))
 					return
 				}
-				log.Error(fmt.Sprintf("Failed to get next message: %v", err))
-				return
-			} else {
-				log.Info(fmt.Sprintf("Received raw message: %s", msg.Data))
-				var data pb.CollationBodyRequest
+				data := reflect.New(msgType)
 				buf := bytes.NewBuffer(msg.Data)
 				dec := gob.NewDecoder(buf)
-				err := dec.Decode(&data)
+				err = dec.Decode(&data)
 				if err != nil {
-					log.Error(fmt.Sprintf("Failed to decode data: %v", err))
+					logger.Error(fmt.Sprintf("Failed to decode data: %v", err))
 					continue
 				}
-				i := dummyFeed.Send(Message{Data: data})
-				log.Info(fmt.Sprintf("Send a request to %d subs", i))
+
+				i := feed.Send(Message{Data: data})
+				logger.Info(fmt.Sprintf("Send a request to %d subs", i))
 			}
-		}
-	}()
+		}()
+	}
 }
 
 // Stop the main p2p loop.
@@ -125,7 +135,8 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 	// https://github.com/prysmaticlabs/geth-sharding/issues/175
 
 	// DEBUG
-	logger.Info(fmt.Sprintf("Send called"))
+	logger.Warn("Debug: Broadcasting to everyone rather than sending a single peer")
+	s.Broadcast(msg)
 }
 
 // Broadcast a message to the world.
@@ -133,8 +144,8 @@ func (s *Server) Broadcast(msg interface{}) {
 	// TODO
 	// https://github.com/prysmaticlabs/geth-sharding/issues/176
 
-	// DEBUG: Ping everyone constantly
 	logger.Info("broadcasting msg")
+	topic := typeTopicMapping[reflect.TypeOf(msg)]
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(msg)
@@ -142,12 +153,7 @@ func (s *Server) Broadcast(msg interface{}) {
 		log.Error(fmt.Sprintf("Error encoding error: %v", err))
 		return
 	}
-	s.gsub.Publish(topics.Ping, buf.Bytes())
-	// 	p := s.protocols[0].(*protocol.PingProtocol)
-	// 	if p == nil {
-	// 		logger.Info("p is nil")
-	// 	}
-	// 	p.Ping(s.ctx)
+	s.gsub.Publish(topic.String(), buf.Bytes())
 }
 
 type thing struct {
@@ -157,8 +163,6 @@ type thing struct {
 }
 
 func (t *thing) HandlePeerFound(pi ps.PeerInfo) {
-	logger.Info(fmt.Sprintf("Peer found. What do we do with it? %s", pi))
-
 	t.host.Peerstore().AddAddrs(pi.ID, pi.Addrs, ps.PermanentAddrTTL)
 	if err := t.host.Connect(t.ctx, pi); err != nil {
 		logger.Info(fmt.Sprintf("Failed to connect to peer: %v", err))
