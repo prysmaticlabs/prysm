@@ -115,6 +115,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	}
 	msgChan <- msg
 	done <- struct{}{}
+	// TODO: get this to work without timeout.
 	time.Sleep(time.Second * 5)
 	h.VerifyLogMsg(fmt.Sprintf("Received p2p request of type: %T", p2p.Message{}))
 	h.VerifyLogMsg(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex()))
