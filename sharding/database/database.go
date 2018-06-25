@@ -51,6 +51,6 @@ func (s *ShardDB) Stop() error {
 }
 
 // DB returns the attached ethdb instance.
-func (s *ShardDB) DB() ethdb.Database {
+func (s *ShardDB) DB() *ethdb.LDBDatabase {
 	return s.db
 }

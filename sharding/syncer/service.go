@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
@@ -22,6 +22,8 @@ import (
 type Syncer struct {
 	config       *params.Config
 	client       *mainchain.SMCClient
+	dbService    *database.ShardDB
+	shardID      int
 	shard        *sharding.Shard
 	p2p          *p2p.Server
 	ctx          context.Context
@@ -33,17 +35,19 @@ type Syncer struct {
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a mainchain client, a p2p server,
 // a shardChainDb, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, dbService *database.ShardDB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	errChan := make(chan error)
 	responseSent := make(chan int)
-	return &Syncer{config, client, shard, p2p, ctx, cancel, errChan, responseSent}, nil
+	return &Syncer{config, client, dbService, shardID, nil, p2p, ctx, cancel, errChan, responseSent}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
+	shard := sharding.NewShard(big.NewInt(int64(s.shardID)), s.dbService.DB())
+	s.shard = shard
+
 	go s.handleCollationBodyRequests(s.client, s.p2p.Feed(messages.CollationBodyRequest{}))
 	go s.handleServiceErrors()
 }
