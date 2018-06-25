@@ -36,7 +36,7 @@ type Simulator struct {
 // NewSimulator creates a struct instance of a simulator service.
 // It will have access to config, a mainchain client, a p2p server,
 // and a shardID.
-func NewSimulator(config *params.Config, reader mainchain.Reader, fetcher mainchain.RecordFetcher, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
+func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
 	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay}, nil

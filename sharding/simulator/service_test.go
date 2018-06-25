@@ -117,15 +117,6 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
-<<<<<<< HEAD
-=======
-
-	simulator, err := NewSimulator(params.DefaultConfig, &faultyReader{}, &goodSMCCaller{}, server, shardID, 0)
-	if err != nil {
-		t.Fatalf("Unable to setup simulator service: %v", err)
-	}
-
->>>>>>> master
 	feed := server.Feed(messages.CollationBodyRequest{})
 
 	faultyReader := &faultyReader{}
