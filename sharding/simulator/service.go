@@ -57,6 +57,7 @@ func (s *Simulator) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
+	defer close(s.errChan)
 	log.Warn("Stopping simulator service")
 	return nil
 }

@@ -8,6 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+type Sender interface {
+	Send(msg interface{}, peer Peer)
+}
+
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
 	feeds map[reflect.Type]*event.Feed
