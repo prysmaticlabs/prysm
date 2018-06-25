@@ -8,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+// Sender represents a struct that is able to relay information via shardp2p.
+// Server implements this interface.
 type Sender interface {
 	Send(msg interface{}, peer Peer)
 }
