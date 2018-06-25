@@ -23,7 +23,7 @@ import (
 // items such as transactions and in future sharding iterations: state.
 type Syncer struct {
 	config       *params.Config
-	client       *mainchain.SMCClient
+	signer       mainchain.Signer
 	shard        *sharding.Shard
 	p2p          *p2p.Server
 	ctx          context.Context
@@ -34,13 +34,13 @@ type Syncer struct {
 }
 
 // NewSyncer creates a struct instance of a syncer service.
-// It will have access to config, a mainchain client, a p2p server,
+// It will have access to config, a signer, a p2p server,
 // a shardChainDb, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, signer mainchain.Signer, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	errChan := make(chan error)
-	return &Syncer{config, client, shard, p2p, ctx, cancel, nil, nil, errChan}, nil
+	return &Syncer{config, signer, shard, p2p, ctx, cancel, nil, nil, errChan}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
@@ -50,7 +50,7 @@ func (s *Syncer) Start() {
 
 	bodyRequestsFeed := s.p2p.Feed(messages.CollationBodyRequest{})
 	s.bodyRequests = bodyRequestsFeed.Subscribe(s.msgChan)
-	go handleCollationBodyRequests(s.client, s.shard, s.p2p, s.msgChan, s.ctx.Done(), s.bodyRequests, s.errChan)
+	go handleCollationBodyRequests(s.signer, s.shard, s.p2p, s.msgChan, s.ctx.Done(), s.bodyRequests, s.errChan)
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 }
 

@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	internal "github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
 )
@@ -91,7 +90,7 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &goodReader{}, &goodSMCCaller{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -118,6 +117,15 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
+<<<<<<< HEAD
+=======
+
+	simulator, err := NewSimulator(params.DefaultConfig, &faultyReader{}, &goodSMCCaller{}, server, shardID, 0)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+>>>>>>> master
 	feed := server.Feed(messages.CollationBodyRequest{})
 
 	faultyReader := &faultyReader{}
