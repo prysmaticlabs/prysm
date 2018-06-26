@@ -108,6 +108,37 @@ func TestStartStop(t *testing.T) {
 	}
 }
 
+// This test verifies actor simulator can successfully broadcast
+// transactions to rest of the peers.
+func TestBroadcastTransactions(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 5)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	go simulator.sendTestTransactions()
+
+
+	if err := simulator.Stop(); err != nil {
+		t.Fatalf("Unable to stop simulator service: %v", err)
+	}
+	h.VerifyLogMsg("Stopping simulator service")
+
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Error("Context was not canceled")
+	}
+}
+
 // This test uses a faulty chain reader in order to trigger an error
 // in the simulateNotaryRequests goroutine when reading the block number from
 // the mainchain via RPC.

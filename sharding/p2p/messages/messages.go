@@ -23,8 +23,8 @@ type CollationBodyResponse struct {
 	Body       []byte
 }
 
-// TransactionsResponse defines the p2p message broadcasts from stimulator
-// and observer to proposer for transactions to be included in collation
+// TransactionsResponse defines the p2p message broadcasts from simulators
+// and observers to proposers for transactions to be included in collation.
 type TransactionResponse struct {
 	Transaction *types.Transaction
 }
