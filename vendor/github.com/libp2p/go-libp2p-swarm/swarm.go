@@ -22,9 +22,15 @@ import (
 )
 
 // DialTimeout is the maximum duration a Dial is allowed to take.
+// This includes the time spent waiting in dial limiter, between dialing the raw
+// network connection, protocol selection as well the handshake, if applicable.
+var DialTimeout = 60 * time.Second
+
+// DialTimeoutLocal is the maximum duration a Dial to local network address
+// is allowed to take.
 // This includes the time between dialing the raw network connection,
 // protocol selection as well the handshake, if applicable.
-var DialTimeout = 60 * time.Second
+var DialTimeoutLocal = 5 * time.Second
 
 var log = logging.Logger("swarm2")
 

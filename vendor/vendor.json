@@ -420,16 +420,16 @@
 		{
 			"checksumSHA1": "qt/hE5+w1agVKxpmeloI2nT5+Zs=",
 			"path": "github.com/libp2p/go-floodsub",
-			"revision": "1b4fbb865d4944a602b27e24e8123a57095e9987",
-			"revisionTime": "2018-05-05T06:48:28Z",
+			"revision": "db6cd39b55f91343450b58ef5e6e6ce2c7719009",
+			"revisionTime": "2018-06-17T22:27:34Z",
 			"version": "feat/gossipsub",
 			"versionExact": "feat/gossipsub"
 		},
 		{
 			"checksumSHA1": "fRtepGSwarrV8tWaoaq1lhL3wwM=",
 			"path": "github.com/libp2p/go-floodsub/pb",
-			"revision": "1b4fbb865d4944a602b27e24e8123a57095e9987",
-			"revisionTime": "2018-05-05T06:48:28Z",
+			"revision": "db6cd39b55f91343450b58ef5e6e6ce2c7719009",
+			"revisionTime": "2018-06-17T22:27:34Z",
 			"version": "feat/gossipsub",
 			"versionExact": "feat/gossipsub"
 		},
@@ -512,10 +512,10 @@
 			"revisionTime": "2018-06-09T05:28:51Z"
 		},
 		{
-			"checksumSHA1": "vSP7Jk9Vx2iqjKuPrVZxQotHI4Y=",
+			"checksumSHA1": "TfMFdg2351T7RYkUQQoAL1IhvZg=",
 			"path": "github.com/libp2p/go-libp2p-peer",
-			"revision": "e8858116ad7f0a54dfc2bb6af554f2024221d19c",
-			"revisionTime": "2018-06-09T05:28:42Z"
+			"revision": "a26c4b782bfe3b2570c539f69dc7777a45117a90",
+			"revisionTime": "2018-06-26T00:15:40Z"
 		},
 		{
 			"checksumSHA1": "5rpU6Lr+iIdORZFOMHByMfo7JHI=",
@@ -548,10 +548,10 @@
 			"revisionTime": "2018-06-09T05:28:56Z"
 		},
 		{
-			"checksumSHA1": "XyzE897pJNfXoqH0LnbgRI6xa7k=",
+			"checksumSHA1": "iAzVLTCLXA6nFbFkYnlFEqUKnJE=",
 			"path": "github.com/libp2p/go-libp2p-swarm",
-			"revision": "fd490032843cfdfc244afee7db5614232d5da42c",
-			"revisionTime": "2018-06-11T22:52:39Z"
+			"revision": "f144edfca052079ba9a7e2b056a7d5077683911e",
+			"revisionTime": "2018-06-17T15:37:38Z"
 		},
 		{
 			"checksumSHA1": "WVICVAh0f1M0NyYdaW7vvulJ4sM=",
