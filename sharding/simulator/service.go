@@ -55,7 +55,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	feed := s.p2p.Feed(messages.CollationBodyRequest{})
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), feed)
-	go s.sendTestTransactions()
+	go s.broadcastTransactions()
 	go s.handleServiceErrors()
 }
 
@@ -121,9 +121,9 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 	}
 }
 
-// sendTestTransaction sends a transaction with random bytes over a 5 second interval.
+// broadcastTransactions sends a transaction with random bytes over a 5 second interval.
 // This method is for testing purposes only, and will be replaced by a more functional CLI tool.
-func (s *Simulator) sendTestTransactions() {
+func (s *Simulator) broadcastTransactions() {
 	s.ticker = time.NewTicker(5 * time.Second)
 
 	for range s.ticker.C {

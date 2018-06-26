@@ -125,8 +125,12 @@ func TestBroadcastTransactions(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	go simulator.sendTestTransactions()
-
+	go simulator.broadcastTransactions()
+	// Wait 6 seconds. BroadcastTransactions sends a transaction with random bytes over a 5 second interval.
+	time.Sleep(6*time.Second)
+	if !strings.Contains(h.Pop().Msg, "Sent transaction") {
+		t.Errorf("Failed to broadcast transaction, incorrect log: %v", h.Pop().Msg)
+	}
 
 	if err := simulator.Stop(); err != nil {
 		t.Fatalf("Unable to stop simulator service: %v", err)
