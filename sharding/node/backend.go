@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/event"
@@ -264,7 +263,7 @@ func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID 
 		ctx.RetrieveService(&p2p)
 		var smcClient *mainchain.SMCClient
 		ctx.RetrieveService(&smcClient)
-		return simulator.NewSimulator(config, smcClient, p2p, shardID, 15*time.Second)
+		return simulator.NewSimulator(config, smcClient.ChainReader(), smcClient.SMCCaller(), p2p, shardID, 15) // 15 second delay between simulator requests.
 	})
 }
 

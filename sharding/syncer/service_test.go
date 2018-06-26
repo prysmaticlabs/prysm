@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
 
@@ -34,7 +33,7 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	syncer, err := NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, shardChainDB, shardID)
+	syncer, err := NewSyncer(params.DefaultConfig, &mockSigner{}, server, shardChainDB, shardID)
 	if err != nil {
 		t.Fatalf("Unable to setup sync service: %v", err)
 	}
@@ -69,7 +68,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	syncer, err := NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, shardChainDB, shardID)
+	syncer, err := NewSyncer(params.DefaultConfig, &mockSigner{}, server, shardChainDB, shardID)
 	if err != nil {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
@@ -143,7 +142,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		t.Fatalf("Could not store collation in shardChainDB: %v", err)
 	}
 
-	syncer, err := NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, shardChainDB, 0)
+	syncer, err := NewSyncer(params.DefaultConfig, &mockSigner{}, server, shardChainDB, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
@@ -196,7 +195,7 @@ func TestHandleServiceErrors(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	syncer, err := NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, shardChainDB, shardID)
+	syncer, err := NewSyncer(params.DefaultConfig, &mockSigner{}, server, shardChainDB, shardID)
 	if err != nil {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
