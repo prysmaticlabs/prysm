@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 
@@ -81,7 +82,7 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Head
 	return nil, nil
 }
 
-func TestStop(t *testing.T) {
+func TestStartStop(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
 
@@ -126,7 +127,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
 	simulator.errChan = make(chan error)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{})
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, time.After(time.Second*0))
 
 	receivedErr := <-simulator.errChan
 	expectedErr := "could not fetch current block number"
@@ -160,7 +161,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
 	simulator.errChan = make(chan error)
 
-	go simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{})
+	go simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, time.After(time.Second*0))
 
 	receivedErr := <-simulator.errChan
 	expectedErr := "error constructing collation body request"
@@ -196,16 +197,18 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
 	simulator.errChan = make(chan error)
+	delayChan := make(chan time.Time)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{})
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan)
 
-	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed2")
+	delayChan <- time.Time{}
+	delayChan <- time.Time{}
+
+	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 
 	simulator.cancel()
-
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
 		t.Error("Context was not canceled")
 	}
-	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed2")
 }

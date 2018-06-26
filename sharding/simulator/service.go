@@ -29,8 +29,8 @@ type Simulator struct {
 	shardID     int
 	ctx         context.Context
 	cancel      context.CancelFunc
-	errChan     chan error       // Useful channel for handling errors at the service layer.
-	delayChan   <-chan time.Time // The delay (in seconds) between simulator requests sent via p2p.
+	errChan     chan error // Useful channel for handling errors at the service layer.
+	delay       time.Duration
 	requestFeed *event.Feed
 }
 
@@ -40,8 +40,7 @@ type Simulator struct {
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
-	delayChan := time.After(time.Second * delay)
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delayChan, nil}, nil
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, nil}, nil
 }
 
 // Start the main loop for simulating p2p requests.
@@ -49,7 +48,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader())
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.After(time.Second*s.delay))
 }
 
 // Stop the main loop for simulator requests.
@@ -68,13 +67,13 @@ func (s *Simulator) Stop() error {
 // pair to perform their responsibilities. This function in particular simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
-func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader) {
+func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
-		case <-s.delayChan:
+		case <-delayChan:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
 				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
