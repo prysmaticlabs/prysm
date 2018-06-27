@@ -23,8 +23,9 @@ import (
 // items such as transactions and in future sharding iterations: state.
 type Syncer struct {
 	config       *params.Config
-	signer       mainchain.Signer
-	shard        *sharding.Shard
+	client       *mainchain.SMCClient
+	shardID      int
+	shardChainDB ethdb.Database
 	p2p          *p2p.Server
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -36,21 +37,21 @@ type Syncer struct {
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a signer, a p2p server,
 // a shardChainDb, and a shardID.
-func NewSyncer(config *params.Config, signer mainchain.Signer, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	errChan := make(chan error)
-	return &Syncer{config, signer, shard, p2p, ctx, cancel, nil, nil, errChan}, nil
+	return &Syncer{config, client, shardID, shardChainDB, p2p, ctx, cancel, nil, nil, errChan}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
-	s.msgChan = make(chan p2p.Message, 100)
 
-	bodyRequestsFeed := s.p2p.Feed(messages.CollationBodyRequest{})
-	s.bodyRequests = bodyRequestsFeed.Subscribe(s.msgChan)
-	go handleCollationBodyRequests(s.signer, s.shard, s.p2p, s.msgChan, s.ctx.Done(), s.bodyRequests, s.errChan)
+	shard := sharding.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB)
+
+	s.msgChan = make(chan p2p.Message, 100)
+	s.bodyRequests = s.p2p.Feed(messages.CollationBodyRequest{}).Subscribe(s.msgChan)
+	go s.handleCollationBodyRequests(s.client, shard)
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 }
 
@@ -69,27 +70,27 @@ func (s *Syncer) Stop() error {
 // handleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func handleCollationBodyRequests(signer mainchain.Signer, collationFetcher sharding.CollationFetcher, sender p2p.Sender, msgChan <-chan p2p.Message, done <-chan struct{}, sub event.Subscription, errChan chan<- error) {
+func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, collationFetcher sharding.CollationFetcher) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
-		case <-done:
+		case <-s.ctx.Done():
 			return
-		case req := <-msgChan:
+		case req := <-s.msgChan:
 			if req.Data != nil {
 				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
 				res, err := RespondCollationBody(req, signer, collationFetcher)
 				if err != nil {
-					errChan <- fmt.Errorf("could not construct response: %v", err)
+					s.errChan <- fmt.Errorf("could not construct response: %v", err)
 					continue
 				}
 
 				// Reply to that specific peer only.
-				sender.Send(*res, req.Peer)
+				s.p2p.Send(*res, req.Peer)
 				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
 			}
-		case <-sub.Err():
-			errChan <- errors.New("subscriber failed")
+		case <-s.bodyRequests.Err():
+			s.errChan <- errors.New("subscriber failed")
 			return
 		}
 	}
