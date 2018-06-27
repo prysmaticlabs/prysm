@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
+
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -90,14 +92,10 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &goodReader{}, &goodSMCCaller{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
-
-	simulator.Start()
-
-	h.VerifyLogMsg("Starting simulator service")
 
 	if err := simulator.Stop(); err != nil {
 		t.Fatalf("Unable to stop simulator service: %v", err)
@@ -115,34 +113,29 @@ func TestStartStop(t *testing.T) {
 // in the simulateNotaryRequests goroutine when reading the block number from
 // the mainchain via RPC.
 func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
-
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &faultyReader{}, &goodSMCCaller{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
+	simulator.errChan = make(chan error)
 
-	faultyReader := &faultyReader{}
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, faultyReader, feed)
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, time.After(time.Second*0))
 
 	receivedErr := <-simulator.errChan
 	expectedErr := "could not fetch current block number"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
-	if err := simulator.Stop(); err != nil {
-		t.Fatalf("Unable to stop simulator service: %v", err)
-	}
-	h.VerifyLogMsg("Stopping simulator service")
+
+	simulator.cancel()
 
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
@@ -154,34 +147,29 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 // in the simulateNotaryRequests goroutine when reading the collation records
 // from the SMC.
 func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
-
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &goodReader{}, &faultySMCCaller{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
-	reader := &goodReader{}
+	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
+	simulator.errChan = make(chan error)
 
-	go simulator.simulateNotaryRequests(&faultySMCCaller{}, reader, feed)
+	go simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, time.After(time.Second*0))
 
 	receivedErr := <-simulator.errChan
 	expectedErr := "error constructing collation body request"
 	if !strings.Contains(receivedErr.Error(), expectedErr) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
-	if err := simulator.Stop(); err != nil {
-		t.Fatalf("Unable to stop simulator service: %v", err)
-	}
-	h.VerifyLogMsg("Stopping simulator service")
+
+	simulator.cancel()
 
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
@@ -202,66 +190,25 @@ func TestSimulateNotaryRequests(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &goodReader{}, &goodSMCCaller{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
-	reader := &goodReader{}
+	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
+	simulator.errChan = make(chan error)
+	delayChan := make(chan time.Time)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, reader, feed)
+	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan)
 
-	<-simulator.requestSent
+	delayChan <- time.Time{}
+	delayChan <- time.Time{}
+
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
+
 	simulator.cancel()
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
-		t.Fatal("Context was not canceled")
+		t.Error("Context was not canceled")
 	}
-}
-
-// TODO: Move this to the utils package along with the handleServiceErrors
-// function.
-func TestHandleServiceErrors(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
-
-	shardID := 0
-	server, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("Unable to setup p2p server: %v", err)
-	}
-
-	simulator, err := NewSimulator(params.DefaultConfig, &goodReader{}, &goodSMCCaller{}, server, shardID, 0)
-	if err != nil {
-		t.Fatalf("Unable to setup simulator service: %v", err)
-	}
-
-	go simulator.handleServiceErrors()
-
-	expectedErr := "testing the error channel"
-	complete := make(chan int)
-
-	go func() {
-		for {
-			select {
-			case <-simulator.ctx.Done():
-				return
-			default:
-				simulator.errChan <- errors.New(expectedErr)
-				complete <- 1
-			}
-		}
-	}()
-
-	<-complete
-	simulator.cancel()
-
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Fatal("Context was not canceled")
-	}
-	time.Sleep(time.Millisecond * 500)
-	h.VerifyLogMsg(fmt.Sprintf("Simulator service error: %v", expectedErr))
 }
