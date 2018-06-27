@@ -110,7 +110,7 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDb", collation.Header().Hash().Hex()))
+	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDB", collation.Header().Hash().Hex()))
 
 	// Check SMC if we can submit header before addHeader.
 	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)

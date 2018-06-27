@@ -23,7 +23,7 @@ type Observer struct {
 }
 
 // NewObserver creates a struct instance of a observer service,
-// it will have access to a p2p server and a shardChainDb.
+// it will have access to a p2p server and a shardChainDB.
 func NewObserver(p2p *p2p.Server, dbService *database.ShardDB, shardID int) (*Observer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Observer{p2p, dbService, shardID, ctx, cancel}, nil
