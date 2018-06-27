@@ -183,7 +183,7 @@ func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
-	shardDB, err := database.NewShardDB(path, shardChainDBName)
+	shardDB, err := database.NewShardDB(path, shardChainDBName, false)
 	if err != nil {
 		return fmt.Errorf("could not register shardDB service: %v", err)
 	}
