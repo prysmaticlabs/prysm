@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/event"
@@ -297,7 +298,7 @@ func (s *ShardEthereum) registerSimulatorService(actorFlag string, config *param
 	}
 
 	// 15 second delay between simulator requests.
-	sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15)
+	sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
 	if err != nil {
 		return fmt.Errorf("could not register simulator service: %v", err)
 	}

@@ -86,6 +86,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		select {
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
+			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-time.After(time.Second * s.delay):
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
