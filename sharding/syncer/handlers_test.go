@@ -40,11 +40,13 @@ func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, a
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
+	Signature []byte
 }, error) {
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
+		Signature []byte
 	})
 	return *res, errors.New("error fetching collation record")
 }

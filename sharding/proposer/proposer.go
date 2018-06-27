@@ -28,7 +28,7 @@ func AddHeader(transactor mainchain.ContractTransactor, collation *sharding.Coll
 	var chunkRoot [32]byte
 	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
 
-	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot)
+	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot, collation.Header().Sig())
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}

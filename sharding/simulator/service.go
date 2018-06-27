@@ -16,27 +16,25 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/syncer"
+	"github.com/ethereum/go-ethereum/sharding/utils"
 )
 
-// Simulator is a service in a shard node
-// that simulates requests from remote notes coming over
-// the shardp2p network. For example, if we are running a
-// proposer service, we would want to simulate notary requests
-// coming to us via a p2p feed. This service will be removed once
-// p2p internals and end-to-end testing across remote nodes have been
-// implemented.
+// Simulator is a service in a shard node that simulates requests from
+// remote notes coming over the shardp2p network. For example, if
+// we are running a proposer service, we would want to simulate notary requests
+// requests coming to us via a p2p feed. This service will be removed
+// once p2p internals and end-to-end testing across remote
+// nodes have been implemented.
 type Simulator struct {
-	config           *params.Config
-	client           *mainchain.SMCClient
-	p2p              *p2p.Server
-	shardID          int
-	ticker           *time.Ticker
-	transactionsFeed *event.Feed
-	ctx              context.Context
-	cancel           context.CancelFunc
-	errChan          chan error    // Useful channel for handling errors at the service layer.
-	delay            time.Duration // The delay (in seconds) between simulator requests sent via p2p.
-	requestSent      chan int      // Useful channel for handling outgoing requests from the service.
+	config      *params.Config
+	client      *mainchain.SMCClient
+	p2p         *p2p.Server
+	shardID     int
+	ctx         context.Context
+	cancel      context.CancelFunc
+	errChan     chan error // Useful channel for handling errors at the service layer.
+	delay       time.Duration
+	requestFeed *event.Feed
 }
 
 // NewSimulator creates a struct instance of a simulator service.
@@ -45,18 +43,17 @@ type Simulator struct {
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
-	requestSent := make(chan int)
-	txFeed := new(event.Feed)
-	return &Simulator{config, client, p2p, shardID, nil, txFeed, ctx, cancel, errChan, delay, requestSent}, nil
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, nil}, nil
 }
 
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
-	feed := s.p2p.Feed(messages.CollationBodyRequest{})
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), feed)
-	go s.broadcastTransactions()
-	go s.handleServiceErrors()
+	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
+	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay))
+	// Simulator to broadcast tx every 5 seconds.
+	go s.broadcastTransactions(time.Tick(5 * time.Second*s.delay))
 }
 
 // Stop the main loop for simulator requests.
@@ -64,23 +61,9 @@ func (s *Simulator) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
+	defer close(s.errChan)
 	log.Warn("Stopping simulator service")
-	s.ticker.Stop()
 	return nil
-}
-
-// handleServiceErrors manages a goroutine that listens for errors broadcast to
-// this service's error channel. This serves as a final step for error logging
-// and is stopped upon the service shutting down.
-func (s *Simulator) handleServiceErrors() {
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case err := <-s.errChan:
-			log.Error(fmt.Sprintf("Simulator service error: %v", err))
-		}
-	}
 }
 
 // simulateNotaryRequests simulates p2p message sent out by notaries
@@ -89,13 +72,13 @@ func (s *Simulator) handleServiceErrors() {
 // pair to perform their responsibilities. This function in particular simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
-func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, feed *event.Feed) {
+func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
 		case <-s.ctx.Done():
 			return
-		case <-time.After(time.Second * s.delay):
+		case <-delayChan:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
 				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
@@ -113,26 +96,30 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 					Peer: p2p.Peer{},
 					Data: *req,
 				}
-				feed.Send(msg)
+				s.requestFeed.Send(msg)
 				log.Info("Sent request for collation body via a shardp2p feed")
-				s.requestSent <- 1
 			}
 		}
 	}
 }
 
-// broadcastTransactions sends a transaction with random bytes over a 5 second interval.
-// This method is for testing purposes only, and will be replaced by a more functional CLI tool.
-func (s *Simulator) broadcastTransactions() {
-	s.ticker = time.NewTicker(5 * time.Second)
-
-	for range s.ticker.C {
-		tx := createTestTransaction()
-		s.p2p.Broadcast(messages.TransactionResponse{Transaction: tx})
-		log.Info(fmt.Sprintf("Sent transaction %x", tx.Hash()))
+// broadcastTransactions sends a transaction with random bytes over by a delay period,
+// this method is for testing purposes only, and will be replaced by a more functional CLI tool.
+func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time) {
+	for {
+		select {
+		// Makes sure to close this goroutine when the service stops.
+		case <-s.ctx.Done():
+			return
+		case <-delayChan:
+			tx := createTestTransaction()
+			s.p2p.Broadcast(messages.TransactionResponse{Transaction: tx})
+			log.Info(fmt.Sprintf("Sent transaction %x", tx.Hash()))
+		}
 	}
 }
 
+// createTestTransaction is a helper method to generate a transaction with random data bytes.
 func createTestTransaction() *types.Transaction {
 	data := make([]byte, 1024)
 	rand.Read(data)

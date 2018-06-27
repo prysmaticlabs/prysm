@@ -15,7 +15,7 @@ var _ = sharding.Service(&ShardDB{})
 var testDB *ShardDB
 
 func init() {
-	shardDB, _ := NewShardDB("/tmp/datadir", "shardchaindata")
+	shardDB, _ := NewShardDB("/tmp/datadir", "shardchaindata", false)
 	testDB = shardDB
 	testDB.Start()
 }
@@ -24,7 +24,7 @@ func TestLifecycle(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
 
-	s, err := NewShardDB("/tmp/datadir", "shardchaindb")
+	s, err := NewShardDB("/tmp/datadir", "shardchaindb", false)
 	if err != nil {
 		t.Fatalf("Could not initialize a new sb: %v", err)
 	}
