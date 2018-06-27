@@ -12,17 +12,28 @@ import (
 )
 
 type ShardDB struct {
-	dataDir string
-	name    string
-	cache   int
-	handles int
-	db      *ethdb.LDBDatabase
+	inmemory bool
+	dataDir  string
+	name     string
+	cache    int
+	handles  int
+	db       ethdb.Database
 }
 
 // NewShardDB initializes a shardDB.
-func NewShardDB(dataDir string, name string) (*ShardDB, error) {
+func NewShardDB(dataDir string, name string, inmemory bool) (*ShardDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
+	if inmemory {
+		return &ShardDB{
+			inmemory: inmemory,
+			dataDir:  dataDir,
+			name:     name,
+			cache:    16,
+			handles:  16,
+			db:       NewShardKV(),
+		}, nil
+	}
 	return &ShardDB{
 		dataDir: dataDir,
 		name:    name,
@@ -35,12 +46,14 @@ func NewShardDB(dataDir string, name string) (*ShardDB, error) {
 // Start the shard DB service.
 func (s *ShardDB) Start() {
 	log.Info("Starting shardDB service")
-	db, err := ethdb.NewLDBDatabase(filepath.Join(s.dataDir, s.name), s.cache, s.handles)
-	if err != nil {
-		log.Error(fmt.Sprintf("Could not start shard DB: %v", err))
-		return
+	if !s.inmemory {
+		db, err := ethdb.NewLDBDatabase(filepath.Join(s.dataDir, s.name), s.cache, s.handles)
+		if err != nil {
+			log.Error(fmt.Sprintf("Could not start shard DB: %v", err))
+			return
+		}
+		s.db = db
 	}
-	s.db = db
 }
 
 // Stop the shard DB service gracefully.
