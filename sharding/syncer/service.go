@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
@@ -25,7 +25,7 @@ type Syncer struct {
 	config       *params.Config
 	client       *mainchain.SMCClient
 	shardID      int
-	shardChainDB ethdb.Database
+	shardChainDB *database.ShardDB
 	p2p          *p2p.Server
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -37,7 +37,7 @@ type Syncer struct {
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a signer, a p2p server,
 // a shardChainDb, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB ethdb.Database, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB *database.ShardDB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
 	return &Syncer{config, client, shardID, shardChainDB, p2p, ctx, cancel, nil, nil, errChan}, nil
@@ -47,7 +47,7 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
 
-	shard := sharding.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB)
+	shard := sharding.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
 
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Feed(messages.CollationBodyRequest{}).Subscribe(s.msgChan)

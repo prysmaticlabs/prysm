@@ -28,7 +28,10 @@ func TestStop(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
 
-	shardChainDB := database.NewShardKV()
+	shardChainDB, err := database.NewShardDB("", "", true)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -64,7 +67,10 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
 
-	shardChainDB := database.NewShardKV()
+	shardChainDB, err := database.NewShardDB("", "", true)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -77,7 +83,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	}
 
 	feed := server.Feed(messages.CollationBodyRequest{})
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
+	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB.DB())
 
 	syncer.msgChan = make(chan p2p.Message)
 	syncer.errChan = make(chan error)
@@ -111,7 +117,10 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)
 
-	shardChainDB := database.NewShardKV()
+	shardChainDB, err := database.NewShardDB("", "", true)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
 	server, err := p2p.NewServer()
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
@@ -136,7 +145,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	// Stores the collation into the inmemory kv store shardChainDB.
 	collation := sharding.NewCollation(header, body, nil)
 
-	shard := sharding.NewShard(shardID, shardChainDB)
+	shard := sharding.NewShard(shardID, shardChainDB.DB())
 
 	if err := shard.SaveCollation(collation); err != nil {
 		t.Fatalf("Could not store collation in shardChainDB: %v", err)
