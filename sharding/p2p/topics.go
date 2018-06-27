@@ -12,10 +12,10 @@ var topicTypeMapping = map[pb.Message_Topic]reflect.Type{
 	pb.Message_COLLATION_BODY_RESPONSE: reflect.TypeOf(pb.CollationBodyResponse{}),
 }
 
-// Mapping of message types to topics.
+// Mapping of message types to topic enums.
 var typeTopicMapping = reverseMapping(topicTypeMapping)
 
-// Reverse map from K,V to V,K
+// ReverseMapping from K,V to V,K
 func reverseMapping(m map[pb.Message_Topic]reflect.Type) map[reflect.Type]pb.Message_Topic {
 	n := make(map[reflect.Type]pb.Message_Topic)
 	for k, v := range m {
