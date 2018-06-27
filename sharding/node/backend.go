@@ -184,7 +184,7 @@ func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
 		path = ctx.GlobalString(utils.DataDirFlag.Name)
 	}
 	return s.Register(func(ctx *sharding.ServiceContext) (sharding.Service, error) {
-		return database.NewShardDB(path, shardChainDbName)
+		return database.NewShardDB(path, shardChainDbName, false)
 	})
 }
 
@@ -263,7 +263,7 @@ func (s *ShardEthereum) registerSimulatorService(config *params.Config, shardID 
 		ctx.RetrieveService(&p2p)
 		var smcClient *mainchain.SMCClient
 		ctx.RetrieveService(&smcClient)
-		return simulator.NewSimulator(config, smcClient.ChainReader(), smcClient.SMCCaller(), p2p, shardID, 15) // 15 second delay between simulator requests.
+		return simulator.NewSimulator(config, smcClient, p2p, shardID, 15) // 15 second delay between simulator requests.
 	})
 }
 
@@ -275,6 +275,6 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 		ctx.RetrieveService(&smcClient)
 		var shardChainDB *database.ShardDB
 		ctx.RetrieveService(&shardChainDB)
-		return syncer.NewSyncer(config, smcClient, p2p, shardChainDB.DB(), shardID)
+		return syncer.NewSyncer(config, smcClient, p2p, shardChainDB, shardID)
 	})
 }
