@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -15,7 +13,7 @@ func HandleServiceErrors(done <-chan struct{}, errChan <-chan error) {
 		case <-done:
 			return
 		case err := <-errChan:
-			log.Error(fmt.Sprint(err))
+			log.Error(err.Error())
 		}
 	}
 }

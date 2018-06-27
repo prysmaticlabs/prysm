@@ -48,7 +48,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.After(time.Second*s.delay))
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay))
 }
 
 // Stop the main loop for simulator requests.
