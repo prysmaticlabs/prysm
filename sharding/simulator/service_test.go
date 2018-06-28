@@ -213,8 +213,8 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	}
 }
 
-//// This test verifies actor simulator can successfully broadcast
-//// transactions to rest of the peers.
+// This test verifies actor simulator can successfully broadcast
+// transactions to rest of the peers.
 func TestBroadcastTransactions(t *testing.T) {
 	h := internal.NewLogHandler(t)
 	log.Root().SetHandler(h)

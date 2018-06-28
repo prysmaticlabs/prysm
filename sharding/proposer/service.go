@@ -78,10 +78,10 @@ func (p *Proposer) proposeCollations() {
 		case msg := <-ch:
 			tx, ok := msg.Data.(messages.TransactionBroadcast)
 			if !ok {
-				log.Error("Received a message that's not transactions")
+				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
-			log.Info(fmt.Sprintf("Received transaction: %x", tx.Transaction.Hash()))
+			log.Info(fmt.Sprintf("Received transaction with hash: %x", tx.Transaction.Hash()))
 			if err := p.createCollation(p.ctx, []*types.Transaction{tx.Transaction}); err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
