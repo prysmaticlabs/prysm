@@ -235,17 +235,11 @@ func TestBroadcastTransactions(t *testing.T) {
 	go simulator.broadcastTransactions(delayChan)
 
 	delayChan <- time.Time{}
-
-	// Wait for 1 ms for log to populate through log handler
-	time.Sleep(time.Millisecond)
+	delayChan <- time.Time{}
 
 	h.VerifyLogMsg("Transaction broadcasted")
 
-	if err := simulator.Stop(); err != nil {
-		t.Fatalf("Unable to stop simulator service: %v", err)
-	}
-	h.VerifyLogMsg("Stopping simulator service")
-
+	simulator.cancel()
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
 		t.Error("Context was not canceled")
