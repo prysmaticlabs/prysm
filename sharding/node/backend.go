@@ -136,11 +136,7 @@ func (s *ShardEthereum) Close() {
 	defer s.lock.Unlock()
 
 	for kind, service := range s.services {
-		fetched, ok := service.(sharding.Service)
-		if !ok {
-			return
-		}
-		if err := fetched.Stop(); err != nil {
+		if err := service.Stop(); err != nil {
 			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
 		}
 	}
@@ -261,11 +257,6 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
-	var pool *txpool.TXPool
-	if err := s.fetchService(&pool); err != nil {
-		return err
-	}
-
 	if actor == "notary" {
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
 		if err != nil {
@@ -273,6 +264,12 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		}
 		return s.registerService(not)
 	} else if actor == "proposer" {
+
+		var pool *txpool.TXPool
+		if err := s.fetchService(&pool); err != nil {
+			return err
+		}
+
 		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
