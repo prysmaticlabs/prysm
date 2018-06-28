@@ -115,7 +115,7 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction
 		return err
 	}
 	if canAdd {
-		AddHeader(p.client, collation)
+		AddHeader(p.client, p.client, collation)
 	}
 
 	return nil

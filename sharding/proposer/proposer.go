@@ -10,13 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"context"
 )
 
 // AddHeader adds the collation header to the main chain by sending
 // an addHeader transaction to the sharding manager contract.
 // There can only exist one header per period per shard, it is the proposer's
 // responsibility to check if a header has been added.
-func AddHeader(transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
+func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
 	log.Info("Adding header to SMC")
 
 	txOps, err := transactor.CreateTXOpts(big.NewInt(0))
@@ -24,14 +25,25 @@ func AddHeader(transactor mainchain.ContractTransactor, collation *sharding.Coll
 		return fmt.Errorf("unable to initiate add header transaction: %v", err)
 	}
 
-	// TODO: Copy is inefficient here. Let's research how to best convert hash to [32]byte.
-	var chunkRoot [32]byte
-	copy(chunkRoot[:], collation.Header().ChunkRoot().Bytes())
-
-	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), chunkRoot, collation.Header().Sig())
+	tx, err := transactor.SMCTransactor().AddHeader(txOps, collation.Header().ShardID(), collation.Header().Period(), [32]byte(*collation.Header().ChunkRoot()), collation.Header().Sig())
 	if err != nil {
 		return fmt.Errorf("unable to add header to SMC: %v", err)
 	}
+
+	// TODO: wait 5 mins for addHeader to be mined, hard coded duration for Ruby release, this will be changed with beacon chain.
+	err = client.WaitForTransaction(context.Background(), tx.Hash(), 300)
+	if err != nil {
+		return err
+	}
+
+	receipt, err := client.TransactionReceipt(tx.Hash())
+	if err != nil {
+		return err
+	}
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return fmt.Errorf("add header transaction failed with receipt status %v", receipt.Status)
+	}
+
 	log.Info(fmt.Sprintf("Add header transaction hash: %v", tx.Hash().Hex()))
 	return nil
 }
