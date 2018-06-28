@@ -52,8 +52,7 @@ func (s *Simulator) Start() {
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay))
-	// Simulator to broadcast tx every 5 seconds.
-	go s.broadcastTransactions(time.Tick(5 * time.Second*s.delay))
+	go s.broadcastTransactions(time.Tick(time.Second * s.delay))
 }
 
 // Stop the main loop for simulator requests.
@@ -112,15 +111,16 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time) {
 		case <-s.ctx.Done():
 			return
 		case <-delayChan:
-			tx := createTestTransaction()
-			s.p2p.Broadcast(messages.TransactionResponse{Transaction: tx})
-			log.Info(fmt.Sprintf("Sent transaction %x", tx.Hash()))
+			tx := createTestTx()
+			s.p2p.Broadcast(messages.TransactionBroadcast{Transaction: tx})
+			log.Info("Transaction broadcasted")
 		}
 	}
 }
 
-// createTestTransaction is a helper method to generate a transaction with random data bytes.
-func createTestTransaction() *types.Transaction {
+// createTestTx is a helper method to generate tx with random data bytes.
+// it is used for broadcastTransactions.
+func createTestTx() *types.Transaction {
 	data := make([]byte, 1024)
 	rand.Read(data)
 	return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)

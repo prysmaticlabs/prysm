@@ -68,7 +68,7 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	feed := p.p2p.Feed(messages.TransactionResponse{})
+	feed := p.p2p.Feed(messages.TransactionBroadcast{})
 	ch := make(chan p2p.Message, 20) // Is this buffer size too small?
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
@@ -76,7 +76,7 @@ func (p *Proposer) proposeCollations() {
 	for {
 		select {
 		case msg := <-ch:
-			tx, ok := msg.Data.(messages.TransactionResponse)
+			tx, ok := msg.Data.(messages.TransactionBroadcast)
 			if !ok {
 				log.Error("Received a message that's not transactions")
 				break

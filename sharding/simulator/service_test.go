@@ -109,41 +109,6 @@ func TestStartStop(t *testing.T) {
 	}
 }
 
-// This test verifies actor simulator can successfully broadcast
-// transactions to rest of the peers.
-func TestBroadcastTransactions(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
-
-	shardID := 0
-	server, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("Unable to setup p2p server: %v", err)
-	}
-
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 5)
-	if err != nil {
-		t.Fatalf("Unable to setup simulator service: %v", err)
-	}
-
-	go simulator.broadcastTransactions()
-	// Wait 6 seconds. BroadcastTransactions sends a transaction with random bytes over a 5 second interval.
-	time.Sleep(6*time.Second)
-	if !strings.Contains(h.Pop().Msg, "Sent transaction") {
-		t.Errorf("Failed to broadcast transaction, incorrect log: %v", h.Pop().Msg)
-	}
-
-	if err := simulator.Stop(); err != nil {
-		t.Fatalf("Unable to stop simulator service: %v", err)
-	}
-	h.VerifyLogMsg("Stopping simulator service")
-
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
-}
-
 // This test uses a faulty chain reader in order to trigger an error
 // in the simulateNotaryRequests goroutine when reading the block number from
 // the mainchain via RPC.
@@ -242,6 +207,45 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 
 	simulator.cancel()
+	// The context should have been canceled.
+	if simulator.ctx.Err() == nil {
+		t.Error("Context was not canceled")
+	}
+}
+
+//// This test verifies actor simulator can successfully broadcast
+//// transactions to rest of the peers.
+func TestBroadcastTransactions(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	delayChan := make(chan time.Time)
+	simulator.errChan = make(chan error)
+	go simulator.broadcastTransactions(delayChan)
+
+	delayChan <- time.Time{}
+
+	// Wait for 1 ms for log to populate through log handler
+	time.Sleep(time.Millisecond)
+
+	h.VerifyLogMsg("Transaction broadcasted")
+
+	if err := simulator.Stop(); err != nil {
+		t.Fatalf("Unable to stop simulator service: %v", err)
+	}
+	h.VerifyLogMsg("Stopping simulator service")
+
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
 		t.Error("Context was not canceled")
