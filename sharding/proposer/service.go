@@ -8,10 +8,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
@@ -23,31 +23,32 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
-	config       *params.Config
-	client       *mainchain.SMCClient
-	p2p          *p2p.Server
-	txpool       *txpool.TXPool
-	txpoolSub    event.Subscription
-	shardChainDb ethdb.Database
-	shard        *sharding.Shard
-	ctx          context.Context
-	cancel       context.CancelFunc
+	config    *params.Config
+	client    *mainchain.SMCClient
+	p2p       *p2p.Server
+	txpool    *txpool.TXPool
+	txpoolSub event.Subscription
+	dbService *database.ShardDB
+	shardID   int
+	shard     *sharding.Shard
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, shardChainDB ethdb.Database, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB)
 	return &Proposer{
 		config,
 		client,
 		p2p,
 		txpool,
 		nil,
-		shardChainDB,
-		shard,
+		dbService,
+		shardID,
+		nil,
 		ctx,
 		cancel}, nil
 }
@@ -55,6 +56,8 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
+	shard := sharding.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
+	p.shard = shard
 	go p.proposeCollations()
 }
 
@@ -86,10 +89,10 @@ func (p *Proposer) proposeCollations() {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
 		case <-p.ctx.Done():
-			log.Error("Proposer context closed, exiting goroutine")
+			log.Debug("Proposer context closed, exiting goroutine")
 			return
-		case err := <-p.txpoolSub.Err():
-			log.Error(fmt.Sprintf("Subscriber closed: %v", err))
+		case <-p.txpoolSub.Err():
+			log.Debug("Subscriber closed")
 			return
 		}
 	}
@@ -115,7 +118,7 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDb", collation.Header().Hash().Hex()))
+	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDB", collation.Header().Hash().Hex()))
 
 	// Check SMC if we can submit header before addHeader.
 	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)

@@ -36,7 +36,7 @@ type Syncer struct {
 
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a signer, a p2p server,
-// a shardChainDb, and a shardID.
+// a shardChainDB, and a shardID.
 func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB *database.ShardDB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	errChan := make(chan error)
