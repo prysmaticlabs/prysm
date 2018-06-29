@@ -21,7 +21,10 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
-	shardChainDB := database.NewShardKV()
+	shardChainDB, err := database.NewShardDB("", "", true)
+	if err != nil {
+		t.Fatalf("Unable to setup db: %v", err)
+	}
 	shardID := 0
 
 	observer, err := NewObserver(server, shardChainDB, shardID)
