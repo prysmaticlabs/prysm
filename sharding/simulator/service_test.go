@@ -204,6 +204,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	delayChan <- time.Time{}
 	delayChan <- time.Time{}
 
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 
 	simulator.cancel()
