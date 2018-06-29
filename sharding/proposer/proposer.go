@@ -1,6 +1,7 @@
 package proposer
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"context"
 )
 
 // AddHeader adds the collation header to the main chain by sending
