@@ -16,15 +16,15 @@ import (
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Notary struct {
-	config       *params.Config
-	smcClient    *mainchain.SMCClient
-	p2p          *p2p.Server
-	shardChainDb *database.ShardDB
+	config    *params.Config
+	smcClient *mainchain.SMCClient
+	p2p       *p2p.Server
+	dbService *database.ShardDB
 }
 
 // NewNotary creates a new notary instance.
-func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, shardChainDb *database.ShardDB) (*Notary, error) {
-	return &Notary{config, smcClient, p2p, shardChainDb}, nil
+func NewNotary(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, dbService *database.ShardDB) (*Notary, error) {
+	return &Notary{config, smcClient, p2p, dbService}, nil
 }
 
 // Start the main routine for a notary.
