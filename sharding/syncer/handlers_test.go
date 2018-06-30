@@ -2,10 +2,13 @@ package syncer
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"math/big"
 	"testing"
+	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
+	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 	"github.com/ethereum/go-ethereum/sharding/proposer"
 
 	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
@@ -32,7 +36,8 @@ type mockNode struct {
 	smc         *contracts.SMC
 	t           *testing.T
 	depositFlag bool
-	backend     *backends.SimulatedBackend
+	Backend     *backends.SimulatedBackend
+	BlockNumber int64
 }
 
 type faultySMCCaller struct{}
@@ -72,6 +77,39 @@ func (m *mockNode) GetShardCount() (int64, error) {
 		return 0, err
 	}
 	return shardCount.Int64(), nil
+}
+
+func (m *mockNode) Account() *accounts.Account {
+	return &accounts.Account{Address: addr}
+}
+
+func (m *mockNode) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
+	m.CommitWithBlock()
+	m.FastForward(1)
+	return nil
+}
+
+func (m *mockNode) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+	return m.Backend.TransactionReceipt(context.Background(), hash)
+}
+
+func (m *mockNode) DepositFlag() bool {
+	return m.depositFlag
+}
+
+func (m *mockNode) FastForward(p int) {
+	for i := 0; i < p*int(shardparams.DefaultConfig.PeriodLength); i++ {
+		m.CommitWithBlock()
+	}
+}
+
+func (m *mockNode) CommitWithBlock() {
+	m.Backend.Commit()
+	m.BlockNumber = m.BlockNumber + 1
+}
+
+func (m *mockNode) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(m.BlockNumber)}), nil
 }
 
 type faultyRequest struct{}
@@ -187,7 +225,7 @@ func TestCollationBodyResponse(t *testing.T) {
 func TestConstructNotaryRequest(t *testing.T) {
 
 	backend, smc := setup(t)
-	node := &mockNode{smc: smc, t: t, backend: backend}
+	node := &mockNode{smc: smc, t: t, Backend: backend}
 
 	// Fast forward to next period.
 	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
@@ -204,7 +242,7 @@ func TestConstructNotaryRequest(t *testing.T) {
 	collation := sharding.NewCollation(header, []byte{}, []*types.Transaction{})
 
 	// Adds the header to the SMC.
-	if err := proposer.AddHeader(node, collation); err != nil {
+	if err := proposer.AddHeader(node, node, collation); err != nil {
 		t.Fatalf("Failed to add header to SMC: %v", err)
 	}
 

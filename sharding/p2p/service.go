@@ -29,6 +29,11 @@ import (
 )
 
 var logger = log.New()
+// Sender represents a struct that is able to relay information via shardp2p.
+// Server implements this interface.
+type Sender interface {
+	Send(msg interface{}, peer Peer)
+}
 
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {

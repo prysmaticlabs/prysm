@@ -14,7 +14,7 @@ type ShardKV struct {
 	lock sync.RWMutex
 }
 
-// NewShardKV initializes a keyval store in memory.
+// NewShardKV creates an in-memory, key-value store.
 func NewShardKV() *ShardKV {
 	return &ShardKV{kv: make(map[common.Hash][]byte)}
 }
