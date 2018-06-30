@@ -90,11 +90,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 
 			if req != nil {
-				msg := p2p.Message{
-					Peer: p2p.Peer{},
-					Data: *req,
-				}
-				s.p2p.Broadcast(msg)
+				s.p2p.Broadcast(req)
 				log.Info("Sent request for collation body via a shardp2p broadcast")
 			}
 		}

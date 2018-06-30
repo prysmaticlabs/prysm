@@ -271,8 +271,8 @@ func TestConstructNotaryRequest(t *testing.T) {
 		t.Errorf("Chunk root from notary request incorrect. want: %v, got: %v", chunkRoot.Hex(), common.BytesToHash(request.ChunkRoot).Hex())
 	}
 
-	if common.BytesToHash(request.ProposerAddress).Hex() != proposerAddress.Hex() {
-		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), common.BytesToHash(request.ProposerAddress).Hex())
+	if common.BytesToAddress(request.ProposerAddress).Hex() != proposerAddress.Hex() {
+		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), common.BytesToAddress(request.ProposerAddress).Hex())
 	}
 
 	if shardID.Uint64() != request.ShardId {

@@ -19,6 +19,10 @@ func NewLogHandler(t *testing.T) *LogHandler {
 	return &LogHandler{t: t, inclDebug: false}
 }
 
+func (t *LogHandler) EnableDebugLogs(b bool) {
+	t.inclDebug = b
+}
+
 // Log adds records to the record slice.
 func (t *LogHandler) Log(r *log.Record) error {
 	if r.Lvl >= log.LvlDebug && !t.inclDebug {

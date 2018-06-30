@@ -94,30 +94,27 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 	// TODO
 	// https://github.com/prysmaticlabs/geth-sharding/issues/175
 
-	// TODO: Remove warn/DEBUG log after send is implemented.
+	// TODO: Support passing value and pointer type messages.
+
+	// TODO: Remove debug log after send is implemented.
 	logger.Debug("Broadcasting to everyone rather than sending a single peer.")
 	s.Broadcast(msg)
 }
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg interface{}) {
-	// TODO
-	// https://github.com/prysmaticlabs/geth-sharding/issues/176
+	// TODO https://github.com/prysmaticlabs/geth-sharding/issues/176	
+	topic := topic(msg)
+	logger.Debug(fmt.Sprintf("Broadcasting msg on topic %s for message type %T", topic, msg))
 
-	topic := typeTopicMapping[reflect.TypeOf(msg)]
-	logger.Debug(fmt.Sprintf("Broadcasting msg on topic %s:", topic))
+	if topic == pb.Topic_UNKNOWN {
+		logger.Warn(fmt.Sprintf("Topic is unknown for message type %T. %v", msg, msg))
+	}
 
-	// var buf bytes.Buffer
-	// enc := gob.NewEncoder(&buf)
-	// err := enc.Encode(msg)
-	// if err != nil {
-	// 	log.Error(fmt.Sprintf("Error encoding error: %v", err))
-	// 	return
-	// }
-
+	// TODO: Next assertion may fail if your msg is not a pointer to a msg.
 	m, ok := msg.(proto.Message)
 	if !ok {
-		logger.Error("Message to broadcast is not a protobuf message.")
+		logger.Error(fmt.Sprintf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg))
 		return
 	}
 

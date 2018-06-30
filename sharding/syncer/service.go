@@ -88,7 +88,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, collationF
 				}
 
 				// Reply to that specific peer only.
-				s.p2p.Send(*res, req.Peer)
+				s.p2p.Send(res, req.Peer)
 				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", common.BytesToHash(res.HeaderHash).Hex()))
 			}
 		case <-s.bodyRequests.Err():

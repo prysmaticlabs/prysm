@@ -47,13 +47,10 @@ func TestBroadcast(t *testing.T) {
 		t.Fatalf("Could not start a new server: %v", err)
 	}
 
-	s.Broadcast(nil)
-	// test that message was logged.
-
 	msg := &pb.CollationBodyRequest{}
 	s.Broadcast(msg)
 
-	// test that topic was published
+	// TODO: test that topic was published
 }
 
 func TestSubscribeToTopic(t *testing.T) {
