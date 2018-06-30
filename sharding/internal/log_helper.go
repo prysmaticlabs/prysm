@@ -10,16 +10,20 @@ var _ = log.Handler(&LogHandler{})
 
 // LogHandler provides methods for testing ethereum logs.
 type LogHandler struct {
-	records []*log.Record
-	t       *testing.T
+	records   []*log.Record
+	t         *testing.T
+	inclDebug bool
 }
 
 func NewLogHandler(t *testing.T) *LogHandler {
-	return &LogHandler{t: t}
+	return &LogHandler{t: t, inclDebug: false}
 }
 
 // Log adds records to the record slice.
 func (t *LogHandler) Log(r *log.Record) error {
+	if r.Lvl >= log.LvlDebug && !t.inclDebug {
+		return nil
+	}
 	t.records = append(t.records, r)
 	return nil
 }

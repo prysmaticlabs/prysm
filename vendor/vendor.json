@@ -518,6 +518,12 @@
 			"revisionTime": "2018-06-26T00:15:40Z"
 		},
 		{
+			"checksumSHA1": "7Nsu/AHWMDsH3tCSnfLI06KU+VI=",
+			"path": "github.com/libp2p/go-libp2p-peer/test",
+			"revision": "a26c4b782bfe3b2570c539f69dc7777a45117a90",
+			"revisionTime": "2018-06-26T00:15:40Z"
+		},
+		{
 			"checksumSHA1": "5rpU6Lr+iIdORZFOMHByMfo7JHI=",
 			"path": "github.com/libp2p/go-libp2p-peerstore",
 			"revision": "8363aa9ac6cb93e6164037198b2b6a8239c7d4fe",
@@ -550,6 +556,12 @@
 		{
 			"checksumSHA1": "iAzVLTCLXA6nFbFkYnlFEqUKnJE=",
 			"path": "github.com/libp2p/go-libp2p-swarm",
+			"revision": "f144edfca052079ba9a7e2b056a7d5077683911e",
+			"revisionTime": "2018-06-17T15:37:38Z"
+		},
+		{
+			"checksumSHA1": "AV1xc0QEu16d2yn8SiqcDyafFms=",
+			"path": "github.com/libp2p/go-libp2p-swarm/testing",
 			"revision": "f144edfca052079ba9a7e2b056a7d5077683911e",
 			"revisionTime": "2018-06-17T15:37:38Z"
 		},
@@ -654,6 +666,12 @@
 			"path": "github.com/libp2p/go-tcp-transport",
 			"revision": "d2b392af160de8f6a2c9ee9f0bfe1f2f724b54c6",
 			"revisionTime": "2018-06-13T01:05:02Z"
+		},
+		{
+			"checksumSHA1": "kKY7HNUwCzf8OiHW7jhCvU6Etrs=",
+			"path": "github.com/libp2p/go-testutil",
+			"revision": "78292a7246a99c85db1c34e9acc1b0b713e17316",
+			"revisionTime": "2018-06-09T05:29:38Z"
 		},
 		{
 			"checksumSHA1": "DSQdVe6Sq6flEwVHA2/HRUeMEhk=",

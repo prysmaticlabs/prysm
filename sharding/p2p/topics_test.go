@@ -11,15 +11,15 @@ type testStruct struct{}
 
 func TestReverseMapping(t *testing.T) {
 	tests := []struct {
-		input map[pb.Message_Topic]reflect.Type
-		want  map[reflect.Type]pb.Message_Topic
+		input map[pb.Topic]reflect.Type
+		want  map[reflect.Type]pb.Topic
 	}{
 		{
-			input: map[pb.Message_Topic]reflect.Type{
-				pb.Message_UNKNOWN: reflect.TypeOf(testStruct{}),
+			input: map[pb.Topic]reflect.Type{
+				pb.Topic_UNKNOWN: reflect.TypeOf(testStruct{}),
 			},
-			want: map[reflect.Type]pb.Message_Topic{
-				reflect.TypeOf(testStruct{}): pb.Message_UNKNOWN,
+			want: map[reflect.Type]pb.Topic{
+				reflect.TypeOf(testStruct{}): pb.Topic_UNKNOWN,
 			},
 		},
 	}

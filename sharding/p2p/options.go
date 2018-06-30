@@ -13,6 +13,10 @@ import (
 var port int32 = 9000
 var portRange int32 = 100
 
+// buildOptions for the libp2p host. 
+// TODO: Expand on these options and provide the option configuration via flags.
+// Currently, this is a random port and a (seemingly) consistent private key 
+// identity.
 func buildOptions() []libp2p.Option {
 	rand.Seed(int64(time.Now().Nanosecond()))
 	priv, _, _ := crypto.GenerateKeyPair(crypto.Secp256k1, 512)

@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/database"
+	"github.com/ethereum/go-ethereum/sharding/internal"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/internal"
 
 	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 )

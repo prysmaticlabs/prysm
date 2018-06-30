@@ -4,16 +4,16 @@ import "google/protobuf/any.proto";
 
 package messages;
 
-message Message {
- enum Topic {
-    UNKNOWN = 0;
-    COLLATION_BODY_REQUEST = 1;
-    COLLATION_BODY_RESPONSE = 2;
-  } 
-  
-  Topic topic = 1;
-  google.protobuf.Any payload = 2;
-}
+// message Message {
+//   Topic topic = 1;
+//   google.protobuf.Any payload = 2;
+// }
+
+enum Topic {
+  UNKNOWN = 0;
+  COLLATION_BODY_REQUEST = 1;
+  COLLATION_BODY_RESPONSE = 2;
+} 
 
 message CollationBodyRequest {
   uint64 shard_id = 1;
@@ -25,13 +25,4 @@ message CollationBodyRequest {
 message CollationBodyResponse {
   bytes header_hash = 1;
   bytes body = 2;
-}
-
-
-message PingRequest {
-  string msg = 1; 
-}
-
-message PingResponse {
-  string msg = 1;
 }

@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/internal"
+	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/params"
 
@@ -157,7 +157,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-simulator.requestFeed = server.Feed(pb.CollationBodyRequest{})
+	simulator.requestFeed = server.Feed(pb.CollationBodyRequest{})
 	simulator.errChan = make(chan error)
 
 	go simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, time.After(time.Second*0))
@@ -193,7 +193,6 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
-
 
 	simulator.requestFeed = server.Feed(pb.CollationBodyRequest{})
 	simulator.errChan = make(chan error)

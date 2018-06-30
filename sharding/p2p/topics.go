@@ -7,17 +7,17 @@ import (
 )
 
 // Mapping of message topic enums to protobuf types.
-var topicTypeMapping = map[pb.Message_Topic]reflect.Type{
-	pb.Message_COLLATION_BODY_REQUEST:  reflect.TypeOf(pb.CollationBodyRequest{}),
-	pb.Message_COLLATION_BODY_RESPONSE: reflect.TypeOf(pb.CollationBodyResponse{}),
+var topicTypeMapping = map[pb.Topic]reflect.Type{
+	pb.Topic_COLLATION_BODY_REQUEST:  reflect.TypeOf(pb.CollationBodyRequest{}),
+	pb.Topic_COLLATION_BODY_RESPONSE: reflect.TypeOf(pb.CollationBodyResponse{}),
 }
 
 // Mapping of message types to topic enums.
 var typeTopicMapping = reverseMapping(topicTypeMapping)
 
 // ReverseMapping from K,V to V,K
-func reverseMapping(m map[pb.Message_Topic]reflect.Type) map[reflect.Type]pb.Message_Topic {
-	n := make(map[reflect.Type]pb.Message_Topic)
+func reverseMapping(m map[pb.Topic]reflect.Type) map[reflect.Type]pb.Topic {
+	n := make(map[reflect.Type]pb.Topic)
 	for k, v := range m {
 		n[v] = k
 	}

@@ -10,14 +10,13 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/golang/protobuf/proto"
 
 	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 	floodsub "github.com/libp2p/go-floodsub"
@@ -26,6 +25,7 @@ import (
 )
 
 var logger = log.New()
+
 // Sender represents a struct that is able to relay information via shardp2p.
 // Server implements this interface.
 type Sender interface {
@@ -34,11 +34,11 @@ type Sender interface {
 
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	feeds       map[reflect.Type]*event.Feed
-	host        host.Host
-	gsub        *floodsub.PubSub
+	ctx    context.Context
+	cancel context.CancelFunc
+	feeds  map[reflect.Type]*event.Feed
+	host   host.Host
+	gsub   *floodsub.PubSub
 }
 
 // NewServer creates a new p2p server instance.
@@ -57,23 +57,22 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	if err := startDiscovery(ctx, host, gsub); err != nil {
-		cancel()
-		return nil, err
-	}
-
 	return &Server{
-		ctx:         ctx,
-		cancel:      cancel,
-		feeds:       make(map[reflect.Type]*event.Feed),
-		host:        host,
-		gsub:        gsub,
+		ctx:    ctx,
+		cancel: cancel,
+		feeds:  make(map[reflect.Type]*event.Feed),
+		host:   host,
+		gsub:   gsub,
 	}, nil
 }
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
 	logger.Info("Starting shardp2p server")
+	if err := startDiscovery(s.ctx, s.host, s.gsub); err != nil {
+		logger.Error(fmt.Sprintf("Could not start p2p discovery! %v", err))
+		return
+	}
 
 	// Subscribe to all topics.
 	for topic, msgType := range topicTypeMapping {
@@ -96,7 +95,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 	// https://github.com/prysmaticlabs/geth-sharding/issues/175
 
 	// TODO: Remove warn/DEBUG log after send is implemented.
-	logger.Warn("DEBUG: Broadcasting to everyone rather than sending a single peer.")
+	logger.Debug("Broadcasting to everyone rather than sending a single peer.")
 	s.Broadcast(msg)
 }
 
@@ -108,17 +107,29 @@ func (s *Server) Broadcast(msg interface{}) {
 	topic := typeTopicMapping[reflect.TypeOf(msg)]
 	logger.Debug(fmt.Sprintf("Broadcasting msg on topic %s:", topic))
 
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(msg)
-	if err != nil {
-		log.Error(fmt.Sprintf("Error encoding error: %v", err))
+	// var buf bytes.Buffer
+	// enc := gob.NewEncoder(&buf)
+	// err := enc.Encode(msg)
+	// if err != nil {
+	// 	log.Error(fmt.Sprintf("Error encoding error: %v", err))
+	// 	return
+	// }
+
+	m, ok := msg.(proto.Message)
+	if !ok {
+		logger.Error("Message to broadcast is not a protobuf message.")
 		return
 	}
-	s.gsub.Publish(topic.String(), buf.Bytes())
+
+	b, err := proto.Marshal(m)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to marshal data for broadcast: %v", err))
+		return
+	}
+	s.gsub.Publish(topic.String(), b)
 }
 
-func (s *Server) subscribeToTopic(topic pb.Message_Topic, msgType reflect.Type) {
+func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 	sub, err := s.gsub.Subscribe(topic.String())
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to subscribe to topic: %v", err))
@@ -138,16 +149,21 @@ func (s *Server) subscribeToTopic(topic pb.Message_Topic, msgType reflect.Type) 
 			return
 		}
 
-		data := reflect.New(msgType)
-		buf := bytes.NewBuffer(msg.Data)
-		dec := gob.NewDecoder(buf)
-		err = dec.Decode(&data)
+		// TODO: reflect.Value.Interface() can panic so we should capture that
+		// panic so the server doesn't crash.
+		d, ok := reflect.New(msgType).Interface().(proto.Message)
+		if !ok {
+			logger.Error("Received message is not a protobuf message")
+			continue
+		}
+		err = proto.Unmarshal(msg.Data, d)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Failed to decode data: %v", err))
 			continue
 		}
 
-		i := feed.Send(Message{Data: data})
+		i := feed.Send(Message{Data: d})
 		logger.Debug(fmt.Sprintf("Send a request to %d subs", i))
+		fmt.Printf("Send a request to %d subs", i)
 	}
 }
