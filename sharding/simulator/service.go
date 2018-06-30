@@ -94,8 +94,8 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 					Peer: p2p.Peer{},
 					Data: *req,
 				}
-				s.requestFeed.Send(msg)
-				log.Info("Sent request for collation body via a shardp2p feed")
+				s.p2p.Broadcast(msg)
+				log.Info("Sent request for collation body via a shardp2p broadcast")
 			}
 		}
 	}

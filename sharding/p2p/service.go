@@ -15,17 +15,14 @@ import (
 	"encoding/gob"
 	"fmt"
 	"reflect"
-	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/p2p/protocol"
 
 	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
 )
 
 var logger = log.New()
@@ -41,9 +38,7 @@ type Server struct {
 	cancel      context.CancelFunc
 	feeds       map[reflect.Type]*event.Feed
 	host        host.Host
-	protocols   []protocol.Protocol
 	gsub        *floodsub.PubSub
-	mdnsService mdns.Service
 }
 
 // NewServer creates a new p2p server instance.
@@ -56,31 +51,23 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	// TODO: Is this the best place for this?
-	gsub, err := floodsub.NewGossipSub(ctx, host) // TODO: Add opts
-
-	// TODO: handle protocol requests to feeds and from send/broadcast.
-	protocols := []protocol.Protocol{
-		protocol.NewPingProtocol(host),
-	}
-
-	// TODO: Is this the best place for this?
-	mdnsService, err := mdns.NewMdnsService(ctx, host, 60*time.Second, "")
+	gsub, err := floodsub.NewGossipSub(ctx, host)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
 
-	mdnsService.RegisterNotifee(&thing{host, gsub, ctx})
+	if err := startDiscovery(ctx, host, gsub); err != nil {
+		cancel()
+		return nil, err
+	}
 
 	return &Server{
 		ctx:         ctx,
 		cancel:      cancel,
 		feeds:       make(map[reflect.Type]*event.Feed),
 		host:        host,
-		protocols:   protocols,
 		gsub:        gsub,
-		mdnsService: mdnsService,
 	}, nil
 }
 
