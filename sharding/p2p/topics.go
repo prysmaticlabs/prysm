@@ -25,7 +25,7 @@ func reverseMapping(m map[pb.Topic]reflect.Type) map[reflect.Type]pb.Topic {
 }
 
 // Topic returns the given topic for a given interface. This is the preferred
-// way to resolve a topic from an value. The msg could be a pointer or value 
+// way to resolve a topic from an value. The msg could be a pointer or value
 // argument to resolve to the correct topic.
 func topic(msg interface{}) pb.Topic {
 	msgType := reflect.TypeOf(msg)

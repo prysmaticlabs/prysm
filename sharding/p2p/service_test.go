@@ -2,19 +2,19 @@ package p2p
 
 import (
 	"context"
-	"testing"
 	"reflect"
+	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
-	
-	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
+
+	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 	floodsub "github.com/libp2p/go-floodsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
+	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 )
 
 // Ensure that server implements service.
@@ -54,20 +54,20 @@ func TestBroadcast(t *testing.T) {
 }
 
 func TestSubscribeToTopic(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 1 * time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.New(swarmt.GenSwarm(t, ctx))
-	
+
 	gsub, err := floodsub.NewFloodSub(ctx, h)
 	if err != nil {
 		t.Errorf("Failed to create floodsub: %v", err)
 	}
 
 	s := Server{
-		ctx: ctx,
-		gsub: gsub,
-		host: h,
-		feeds:  make(map[reflect.Type]*event.Feed),
+		ctx:   ctx,
+		gsub:  gsub,
+		host:  h,
+		feeds: make(map[reflect.Type]*event.Feed),
 	}
 
 	feed := s.Feed(pb.CollationBodyRequest{})
@@ -78,9 +78,9 @@ func TestSubscribeToTopic(t *testing.T) {
 	topic := pb.Topic_COLLATION_BODY_REQUEST
 	msgType := topicTypeMapping[topic]
 	go s.subscribeToTopic(topic, msgType)
-	
+
 	// Short delay to let goroutine add subscription.
-	time.Sleep(time.Millisecond * 10) 
+	time.Sleep(time.Millisecond * 10)
 
 	// The topic should be subscribed with gsub.
 	topics := gsub.GetTopics()
@@ -89,11 +89,11 @@ func TestSubscribeToTopic(t *testing.T) {
 	}
 
 	pbMsg := &pb.CollationBodyRequest{ShardId: 5}
-	
+
 	done := make(chan bool)
 	go func() {
 		// The message should be received from the feed.
-		msg := <- ch
+		msg := <-ch
 		if !proto.Equal(msg.Data.(proto.Message), pbMsg) {
 			t.Errorf("Unexpected msg: %+v. Wanted %+v.", msg.Data, pbMsg)
 		}

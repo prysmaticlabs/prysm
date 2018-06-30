@@ -35,21 +35,21 @@ func TestReverseMapping(t *testing.T) {
 func TestTopic(t *testing.T) {
 	type CustomStruct struct{}
 
-	tests := []struct{
+	tests := []struct {
 		input interface{}
-		want pb.Topic
+		want  pb.Topic
 	}{
 		{
 			input: pb.CollationBodyRequest{},
-			want: pb.Topic_COLLATION_BODY_REQUEST,
+			want:  pb.Topic_COLLATION_BODY_REQUEST,
 		},
 		{
 			input: &pb.CollationBodyRequest{},
-			want: pb.Topic_COLLATION_BODY_REQUEST,
-		}, 
+			want:  pb.Topic_COLLATION_BODY_REQUEST,
+		},
 		{
 			input: CustomStruct{},
-			want: pb.Topic_UNKNOWN,
+			want:  pb.Topic_UNKNOWN,
 		},
 	}
 

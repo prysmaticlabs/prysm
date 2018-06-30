@@ -103,7 +103,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg interface{}) {
-	// TODO https://github.com/prysmaticlabs/geth-sharding/issues/176	
+	// TODO https://github.com/prysmaticlabs/geth-sharding/issues/176
 	topic := topic(msg)
 	logger.Debug(fmt.Sprintf("Broadcasting msg on topic %s for message type %T", topic, msg))
 
