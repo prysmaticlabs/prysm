@@ -24,7 +24,6 @@ func RespondCollationBody(req p2p.Message, collationFetcher sharding.CollationFe
 	}
 
 	header := sharding.NewCollationHeader(msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, msg.Signature)
-	//return nil, fmt.Errorf("test: %v, %v, %v, %v, %v", msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, msg.Signature[:])
 
 	// Fetch the collation by its header hash from the shardChainDB.
 	headerHash := header.Hash()
