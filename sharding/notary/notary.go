@@ -494,3 +494,19 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 
 	return err
 }
+
+func RequestCollation(shard sharding.Shard, Proposer *common.Address, Period *big.Int, ChunkRoot *common.Hash) (*sharding.Collation, error) {
+
+}
+
+func CalculatePOCAndVote(c *sharding.Collation, s *sharding.Shard) error {
+
+}
+
+func AddCanonicalCollation(s *sharding.Shard) error {
+
+}
+
+func CollationStore(c *sharding.Collation, s *sharding.Shard) error {
+
+}
