@@ -4,11 +4,13 @@ package notary
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/sharding"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/sharding/database"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
 	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
 )
 
@@ -56,4 +58,21 @@ func (n *Notary) notarizeCollations() {
 		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 		return
 	}
+}
+
+func (n *Notary) requestCollation() (*sharding.Collation, error) {
+
+	n.p2p.Start()
+
+	feed := n.p2p.Feed(messages.CollationBodyRequest{})
+	ch := make(chan p2p.Message, 10)
+	sub := feed.Subscribe(ch)
+	msg := <-ch
+
+	if _, ok := msg.Data.(messages.CollationBodyResponse); !ok {
+		return nil, fmt.Errorf("response is not the correct data type")
+	}
+
+	log.Info("Collation body received: %v", msg.Data)
+	return nil, nil
 }
