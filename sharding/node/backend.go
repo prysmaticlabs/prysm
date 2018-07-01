@@ -73,21 +73,21 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
+	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
+	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
+		return nil, err
+	}
+
 	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
 	if err := shardEthereum.registerSimulatorService(actorFlag, shardEthereum.shardConfig, shardIDFlag); err != nil {
-		return nil, err
-	}
-
-	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -257,6 +257,11 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
+	var sync *syncer.Syncer
+	//if err := s.fetchService(&sync); err != nil {
+	//	return err
+	//}
+
 	if actor == "notary" {
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
 		if err != nil {
@@ -270,13 +275,13 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID)
+		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.registerService(prop)
 	}
-	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID)
+	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
 	if err != nil {
 		return fmt.Errorf("could not register observer service: %v", err)
 	}
