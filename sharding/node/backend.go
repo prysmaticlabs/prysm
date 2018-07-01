@@ -258,9 +258,9 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 	}
 
 	var sync *syncer.Syncer
-	//if err := s.fetchService(&sync); err != nil {
-	//	return err
-	//}
+	if err := s.fetchService(&sync); err != nil {
+		return err
+	}
 
 	if actor == "notary" {
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
