@@ -543,7 +543,7 @@ var (
 	ShardIDFlag = cli.IntFlag{
 		Name:  "shardid",
 		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
-
+	}
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
