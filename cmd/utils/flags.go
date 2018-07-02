@@ -22,10 +22,6 @@ import (
 	"os"
 	"path/filepath"
 
-<<<<<<< HEAD
-=======
-	"github.com/ethereum/go-ethereum/eth"
->>>>>>> master
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	shardparams "github.com/ethereum/go-ethereum/sharding/params"
