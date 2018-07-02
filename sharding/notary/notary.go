@@ -17,6 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/sharding"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
 
@@ -495,8 +497,39 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 	return err
 }
 
-func RequestCollation(shard sharding.Shard, Proposer *common.Address, Period *big.Int, ChunkRoot *common.Hash) (*sharding.Collation, error) {
+func constructCollation(response messages.CollationBodyResponse, ShardID *big.Int, Proposer *common.Address, Period *big.Int, ChunkRoot *common.Hash) (*sharding.Collation, error) {
 
+	collationHeader := sharding.NewCollationHeader(ShardID, ChunkRoot, Period, Proposer, nil)
+	transactions, err := sharding.DeserializeBlobToTx(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("collation response body unable to be deserialized: %v", err)
+	}
+	collation := sharding.NewCollation(collationHeader, response.Body, *transactions)
+
+	return collation, nil
+
+}
+
+func RequestCollation(p2pServer *p2p.Server, ShardID *big.Int, Proposer *common.Address, Period *big.Int, ChunkRoot *common.Hash) (*sharding.Collation, error) {
+
+	collationRequest := messages.CollationBodyRequest{ChunkRoot, ShardID, Period, Proposer}
+	p2pServer.Start()
+
+	feed := p2pServer.Feed(collationRequest)
+	ch := make(chan p2p.Message, 1)
+	sub := feed.Subscribe(ch)
+	msg := <-ch
+
+	if _, ok := msg.Data.(messages.CollationBodyResponse); !ok {
+		return nil, fmt.Errorf("response is not the correct data type")
+	}
+
+	log.Info("Collation body received: %v", msg.Data)
+	collation, err := constructCollation(msg.Data.(messages.CollationBodyResponse), ShardID, Proposer, Period, ChunkRoot)
+	if err != nil {
+		return nil, err
+	}
+	return collation, nil
 }
 
 func CalculatePOCAndVote(c *sharding.Collation, s *sharding.Shard) error {
