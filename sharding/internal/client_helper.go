@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -14,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/sharding/contracts"
 	shardparams "github.com/ethereum/go-ethereum/sharding/params"
 )
@@ -54,8 +57,44 @@ func (m *MockClient) SMCFilterer() *contracts.SMCFilterer {
 }
 
 func (m *MockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
+	var receipt *types.Receipt
+	ctxTimeout, cancel := context.WithTimeout(ctx, durationInSeconds*time.Second)
 	m.CommitWithBlock()
 	m.FastForward(1)
+
+	for err := error(nil); receipt == nil; receipt, err = m.Backend.TransactionReceipt(ctxTimeout, hash) {
+		if err != nil {
+			cancel()
+			return fmt.Errorf("unable to retrieve transaction: %v", err)
+		}
+		if ctxTimeout.Err() != nil {
+			cancel()
+			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", ctxTimeout.Err())
+		}
+	}
+	cancel()
+	ctxTimeout.Done()
+	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
+	return nil
+}
+
+func (m *MockClient) WaitForTransactionTimedOut(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
+	var receipt *types.Receipt
+	ctxTimeout, cancel := context.WithTimeout(ctx, durationInSeconds*time.Second)
+
+	for err := error(nil); receipt == nil; receipt, err = m.Backend.TransactionReceipt(ctxTimeout, hash) {
+		if err != nil {
+			cancel()
+			return fmt.Errorf("unable to retrieve transaction: %v", err)
+		}
+		if ctxTimeout.Err() != nil {
+			cancel()
+			return fmt.Errorf("transaction timed out, transaction was not able to be mined in the duration: %v", ctxTimeout.Err())
+		}
+	}
+	cancel()
+	ctxTimeout.Done()
+	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
 	return nil
 }
 
@@ -102,6 +141,19 @@ func (m *MockClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Head
 
 func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(m.BlockNumber)}), nil
+}
+
+func (m *MockClient) CreateAndSendFakeTx(ctx context.Context) (*types.Transaction, error) {
+	tx := types.NewTransaction(uint64(m.BlockNumber), common.HexToAddress("0x"), nil, 50000, nil, nil)
+	signedtx, err := types.SignTx(tx, types.MakeSigner(&params.ChainConfig{}, big.NewInt(m.BlockNumber)), key)
+	if err != nil {
+		return nil, err
+	}
+	err = m.Backend.SendTransaction(ctx, signedtx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to send transaction: %v", err)
+	}
+	return signedtx, nil
 }
 
 func TransactOpts() *bind.TransactOpts {
