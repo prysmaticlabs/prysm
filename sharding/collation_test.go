@@ -22,7 +22,7 @@ func fieldAccess(i interface{}, fields []string) reflect.Value {
 
 }
 func TestCollation_Transactions(t *testing.T) {
-	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, []byte{})
+	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}
 	transactions := []*types.Transaction{
 		makeTxWithGasLimit(0),
@@ -45,7 +45,7 @@ func TestCollation_Transactions(t *testing.T) {
 //Tests that Transactions can be serialised
 func TestSerialize_Deserialize(t *testing.T) {
 
-	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, []byte{})
+	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}
 	transactions := []*types.Transaction{
 		makeTxWithGasLimit(0),
@@ -130,7 +130,7 @@ func makeTxWithGasLimit(gl uint64) *types.Transaction {
 }
 
 func Test_CalculatePOC(t *testing.T) {
-	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, []byte{})
+	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{0x56, 0xff}
 	transactions := []*types.Transaction{
 		makeTxWithGasLimit(0),

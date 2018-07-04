@@ -39,7 +39,7 @@ type collationHeaderData struct {
 	ChunkRoot         *common.Hash    // the root of the chunk tree which identifies collation body.
 	Period            *big.Int        // the period number in which collation to be included.
 	ProposerAddress   *common.Address // address of the collation proposer.
-	ProposerSignature []byte          // the proposer's signature for calculating collation hash.
+	ProposerSignature [32]byte        // the proposer's signature for calculating collation hash.
 }
 
 var collationSizelimit = int64(math.Pow(float64(2), float64(20)))
@@ -51,7 +51,7 @@ func NewCollation(header *CollationHeader, body []byte, transactions []*types.Tr
 }
 
 // NewCollationHeader initializes a collation header struct.
-func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.Int, proposerAddress *common.Address, proposerSignature []byte) *CollationHeader {
+func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.Int, proposerAddress *common.Address, proposerSignature [32]byte) *CollationHeader {
 	data := collationHeaderData{
 		ShardID:           shardID,
 		ChunkRoot:         chunkRoot,
@@ -71,12 +71,12 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 }
 
 // AddSig adds the signature of proposer after collationHeader gets signed.
-func (h *CollationHeader) AddSig(sig []byte) {
+func (h *CollationHeader) AddSig(sig [32]byte) {
 	h.data.ProposerSignature = sig
 }
 
 // Sig is the signature the collation corresponds to.
-func (h *CollationHeader) Sig() []byte { return h.data.ProposerSignature }
+func (h *CollationHeader) Sig() [32]byte { return h.data.ProposerSignature }
 
 // ShardID the collation corresponds to.
 func (h *CollationHeader) ShardID() *big.Int { return h.data.ShardID }

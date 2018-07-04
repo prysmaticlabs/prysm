@@ -19,7 +19,7 @@ contract SMC {
         bytes32 chunkRoot;        // Root hash of the collation body
         address proposer;         // Address of the proposer
         bool isElected;           // True if the collation has reached quorum size
-        bytes signature;          // Signature of the collation header after proposer signs
+        bytes32 signature;          // Signature of the collation header after proposer signs
     }
 
     // Notary state variables
@@ -172,7 +172,7 @@ contract SMC {
         uint _shardId,
         uint _period,
         bytes32 _chunkRoot,
-        bytes _signature
+        bytes32 _signature
         ) public {
         require((_shardId >= 0) && (_shardId < shardCount));
         require(_period == block.number / PERIOD_LENGTH);

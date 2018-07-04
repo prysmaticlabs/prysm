@@ -51,7 +51,7 @@ func (s *Syncer) Start() {
 
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Feed(messages.CollationBodyRequest{}).Subscribe(s.msgChan)
-	go s.handleCollationBodyRequests(s.client, shard)
+	go s.HandleCollationBodyRequests(shard)
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 }
 
@@ -67,10 +67,10 @@ func (s *Syncer) Stop() error {
 	return nil
 }
 
-// handleCollationBodyRequests subscribes to messages from the shardp2p
+// HandleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, collationFetcher sharding.CollationFetcher) {
+func (s *Syncer) HandleCollationBodyRequests(collationFetcher sharding.CollationFetcher) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
@@ -79,7 +79,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, collationF
 		case req := <-s.msgChan:
 			if req.Data != nil {
 				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
-				res, err := RespondCollationBody(req, signer, collationFetcher)
+				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
 					continue

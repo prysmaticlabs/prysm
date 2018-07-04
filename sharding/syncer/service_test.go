@@ -89,7 +89,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
-	go syncer.handleCollationBodyRequests(&faultySigner{}, shard)
+	go syncer.HandleCollationBodyRequests(shard)
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
@@ -131,16 +131,8 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	chunkRoot := types.DeriveSha(sharding.Chunks(body))
 	period := big.NewInt(0)
 	proposerAddress := common.BytesToAddress([]byte{})
-	signer := &mockSigner{}
 
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, nil)
-	sig, err := signer.Sign(header.Hash())
-	if err != nil {
-		t.Fatalf("Could not sign header: %v", err)
-	}
-
-	// Adds the signature to the header before calculating the hash used for db lookups.
-	header.AddSig(sig)
+	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
 
 	// Stores the collation into the inmemory kv store shardChainDB.
 	collation := sharding.NewCollation(header, body, nil)
@@ -162,7 +154,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
-	go syncer.handleCollationBodyRequests(&mockSigner{}, shard)
+	go syncer.HandleCollationBodyRequests(shard)
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},

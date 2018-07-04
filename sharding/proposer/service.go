@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/sharding/p2p"
 	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
 	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/ethereum/go-ethereum/sharding/syncer"
 	"github.com/ethereum/go-ethereum/sharding/txpool"
 )
 
@@ -33,12 +34,13 @@ type Proposer struct {
 	shard     *sharding.Shard
 	ctx       context.Context
 	cancel    context.CancelFunc
+	sync      *syncer.Syncer
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config,
@@ -50,7 +52,8 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 		shardID,
 		nil,
 		ctx,
-		cancel}, nil
+		cancel,
+		sync}, nil
 }
 
 // Start the main loop for proposing collations.
@@ -59,6 +62,7 @@ func (p *Proposer) Start() {
 	shard := sharding.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.shard = shard
 	go p.proposeCollations()
+	go p.sync.HandleCollationBodyRequests(p.shard)
 }
 
 // Stop the main loop for proposing collations.

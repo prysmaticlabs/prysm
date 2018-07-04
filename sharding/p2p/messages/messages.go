@@ -14,6 +14,7 @@ type CollationBodyRequest struct {
 	ShardID   *big.Int
 	Period    *big.Int
 	Proposer  *common.Address
+	Signature [32]byte
 }
 
 // CollationBodyResponse defines the p2p message response sent back

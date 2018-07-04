@@ -16,21 +16,14 @@ import (
 // for a collation body given a (shardID, chunkRoot, period, proposerAddress) tuple.
 // The proposer will fetch the corresponding data from persistent storage (shardDB) by
 // constructing a collation header from the input and calculating its hash.
-func RespondCollationBody(req p2p.Message, signer mainchain.Signer, collationFetcher sharding.CollationFetcher) (*messages.CollationBodyResponse, error) {
+func RespondCollationBody(req p2p.Message, collationFetcher sharding.CollationFetcher) (*messages.CollationBodyResponse, error) {
 	// Type assertion helps us catch incorrect data requests.
 	msg, ok := req.Data.(messages.CollationBodyRequest)
 	if !ok {
 		return nil, fmt.Errorf("received incorrect data request type: %v", msg)
 	}
 
-	header := sharding.NewCollationHeader(msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, nil)
-	sig, err := signer.Sign(header.Hash())
-	if err != nil {
-		return nil, fmt.Errorf("could not sign received header: %v", err)
-	}
-
-	// Adds the signature to the header before calculating the hash used for db lookups.
-	header.AddSig(sig)
+	header := sharding.NewCollationHeader(msg.ShardID, msg.ChunkRoot, msg.Period, msg.Proposer, msg.Signature)
 
 	// Fetch the collation by its header hash from the shardChainDB.
 	headerHash := header.Hash()
