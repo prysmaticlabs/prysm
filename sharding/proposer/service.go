@@ -10,13 +10,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -30,7 +30,7 @@ type Proposer struct {
 	txpoolSub event.Subscription
 	dbService *database.ShardDB
 	shardID   int
-	shard     *sharding.Shard
+	shard     *shardingTypes.Shard
 	ctx       context.Context
 	cancel    context.CancelFunc
 	sync      *syncer.Syncer
@@ -58,7 +58,7 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
-	shard := sharding.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
+	shard := shardingTypes.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.shard = shard
 	go p.proposeCollations()
 	go p.sync.HandleCollationBodyRequests(p.shard)

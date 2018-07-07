@@ -15,11 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 var (
@@ -119,17 +119,17 @@ func (m *mockSigner) Sign(hash common.Hash) ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
+func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*shardingTypes.Collation, error) {
 	shardID := big.NewInt(1)
 	chunkRoot := common.BytesToHash([]byte{})
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
 
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
-	return sharding.NewCollation(header, []byte{}, []*types.Transaction{}), nil
+	header := shardingTypes.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
+	return shardingTypes.NewCollation(header, []byte{}, []*types.Transaction{}), nil
 }
 
-func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
+func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*shardingTypes.Collation, error) {
 	return nil, errors.New("could not fetch collation")
 }
 
@@ -181,7 +181,7 @@ func TestCollationBodyResponse(t *testing.T) {
 		t.Error("Faulty collatiom fetcher should cause function to throw error. no error thrown.")
 	}
 
-	header := sharding.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, [32]byte{})
+	header := types.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, [32]byte{})
 	body := []byte{}
 	response, err := RespondCollationBody(goodMsg, fetcher)
 	if err != nil {

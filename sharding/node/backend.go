@@ -13,13 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/prysmaticlabs/geth-sharding/internal/debug"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
-	"github.com/prysmaticlabs/geth-sharding/cmd/utils"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/notary"
@@ -30,7 +26,9 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/simulator"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	"github.com/urfave/cli"
 )
 
 const shardChainDBName = "shardchaindata"
@@ -41,12 +39,12 @@ const shardChainDBName = "shardchaindata"
 type ShardEthereum struct {
 	shardConfig *params.Config // Holds necessary information to configure shards.
 	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
-	actor       sharding.Actor // Either notary, proposer, or observer.
+	actor       types.Actor    // Either notary, proposer, or observer.
 	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
-	services     map[reflect.Type]sharding.Service // Service registry.
-	serviceTypes []reflect.Type                    // Keeps an ordered slice of registered service types.
+	services     map[reflect.Type]types.Service // Service registry.
+	serviceTypes []reflect.Type                 // Keeps an ordered slice of registered service types.
 	lock         sync.RWMutex
 	stop         chan struct{} // Channel to wait for termination notifications
 }
@@ -55,7 +53,7 @@ type ShardEthereum struct {
 // geth sharding entrypoint.
 func New(ctx *cli.Context) (*ShardEthereum, error) {
 	shardEthereum := &ShardEthereum{
-		services: make(map[reflect.Type]sharding.Service),
+		services: make(map[reflect.Type]types.Service),
 		stop:     make(chan struct{}),
 	}
 
@@ -123,8 +121,7 @@ func (s *ShardEthereum) Start() {
 			}
 		}
 		// ensure trace and CPU profile data is flushed.
-		debug.Exit()
-		debug.LoudPanic("boom")
+		panic("Panic closing the sharding node")
 	}()
 
 	// Wait for stop channel to be closed
@@ -149,7 +146,7 @@ func (s *ShardEthereum) Close() {
 
 // registerService appends a service constructor function to the service registry of the
 // sharding node.
-func (s *ShardEthereum) registerService(service sharding.Service) error {
+func (s *ShardEthereum) registerService(service types.Service) error {
 	kind := reflect.TypeOf(service)
 	if _, exists := s.services[kind]; exists {
 		return fmt.Errorf("service already exists: %v", kind)

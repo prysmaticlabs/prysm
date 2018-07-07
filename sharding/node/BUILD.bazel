@@ -6,9 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/node",
     visibility = ["//visibility:public"],
     deps = [
-        "//cmd/utils:go_default_library",
-        "//internal/debug:go_default_library",
-        "//sharding:go_default_library",
         "//sharding/database:go_default_library",
         "//sharding/mainchain:go_default_library",
         "//sharding/notary:go_default_library",
@@ -19,10 +16,12 @@ go_library(
         "//sharding/simulator:go_default_library",
         "//sharding/syncer:go_default_library",
         "//sharding/txpool:go_default_library",
+        "//sharding/types:go_default_library",
+        "//sharding/utils:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
         "@com_github_ethereum_go_ethereum//node:go_default_library",
-        "@in_gopkg_urfave_cli_v1//:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )
 
@@ -31,7 +30,7 @@ go_test(
     srcs = ["backend_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//sharding:go_default_library",
-        "@in_gopkg_urfave_cli_v1//:go_default_library",
+        "//sharding/types:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )

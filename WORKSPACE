@@ -36,11 +36,10 @@ go_repository(
     commit = "eb95493d32b6e1eb1cad63518637e1a958632389",
 )
 
-# TODO: Update this to use github.com/urfave/cli.
 go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+    name = "com_github_urfave_cli",
+    importpath = "github.com/urfave/cli",
+    commit = "8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff",
 )
 
 go_repository(

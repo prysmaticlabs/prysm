@@ -9,15 +9,15 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 // AddHeader adds the collation header to the main chain by sending
 // an addHeader transaction to the sharding manager contract.
 // There can only exist one header per period per shard, it is the proposer's
 // responsibility to check if a header has been added.
-func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransactor, collation *sharding.Collation) error {
+func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransactor, collation *shardingTypes.Collation) error {
 	log.Info("Adding header to SMC")
 
 	txOps, err := transactor.CreateTXOpts(big.NewInt(0))
@@ -52,7 +52,7 @@ func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransact
 // and body. Header consists of shardID, ChunkRoot, period,
 // proposer addr and signatures. Body contains serialized blob
 // of a collations transactions.
-func createCollation(caller mainchain.ContractCaller, account *accounts.Account, signer mainchain.Signer, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*sharding.Collation, error) {
+func createCollation(caller mainchain.ContractCaller, account *accounts.Account, signer mainchain.Signer, shardID *big.Int, period *big.Int, txs []*types.Transaction) (*shardingTypes.Collation, error) {
 	// shardId has to be within range
 	shardCount, err := caller.GetShardCount()
 	if err != nil {
@@ -68,17 +68,17 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	}
 
 	// serialized tx to blob for collation body.
-	blobs, err := sharding.SerializeTxToBlob(txs)
+	blobs, err := shardingTypes.SerializeTxToBlob(txs)
 	if err != nil {
 		return nil, fmt.Errorf("can't create collation, serialization to blob failed: %v", err)
 	}
 
 	// construct the header, leave chunkRoot and signature fields empty, to be filled later.
 	addr := account.Address
-	header := sharding.NewCollationHeader(shardID, nil, period, &addr, [32]byte{})
+	header := shardingTypes.NewCollationHeader(shardID, nil, period, &addr, [32]byte{})
 
 	// construct the body with header, blobs(serialized txs) and txs.
-	collation := sharding.NewCollation(header, blobs, txs)
+	collation := shardingTypes.NewCollation(header, blobs, txs)
 	collation.CalculateChunkRoot()
 	sig, err := signer.Sign(collation.Header().Hash())
 	if err != nil {

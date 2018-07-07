@@ -1,4 +1,4 @@
-package sharding
+package types
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	coreTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
@@ -23,7 +23,7 @@ type Collation struct {
 	// collation's body. Every time this transactions slice is updated, the serialized
 	// body would need to be recalculated. This will be a useful property for proposers
 	// in our system.
-	transactions []*types.Transaction
+	transactions []*coreTypes.Transaction
 }
 
 // CollationHeader base struct.
@@ -46,7 +46,7 @@ var collationSizelimit = int64(math.Pow(float64(2), float64(20)))
 
 // NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
 // and provide the body and transactions upon creation.
-func NewCollation(header *CollationHeader, body []byte, transactions []*types.Transaction) *Collation {
+func NewCollation(header *CollationHeader, body []byte, transactions []*coreTypes.Transaction) *Collation {
 	return &Collation{header, body, transactions}
 }
 
@@ -104,7 +104,7 @@ func (c *Collation) Header() *CollationHeader { return c.header }
 func (c *Collation) Body() []byte { return c.body }
 
 // Transactions returns an array of tx's in the collation.
-func (c *Collation) Transactions() []*types.Transaction { return c.transactions }
+func (c *Collation) Transactions() []*coreTypes.Transaction { return c.transactions }
 
 // ProposerAddress is the coinbase addr of the creator for the collation.
 func (c *Collation) ProposerAddress() *common.Address {
@@ -113,8 +113,8 @@ func (c *Collation) ProposerAddress() *common.Address {
 
 // CalculateChunkRoot updates the collation header's chunk root based on the body.
 func (c *Collation) CalculateChunkRoot() {
-	chunks := BytesToChunks(c.body)      // wrapper allowing us to merklizing the chunks.
-	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
+	chunks := BytesToChunks(c.body)          // wrapper allowing us to merklizing the chunks.
+	chunkRoot := coreTypes.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
@@ -131,8 +131,8 @@ func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 	if len(c.body) == 0 {
 		body = salt
 	}
-	chunks := BytesToChunks(body)  // wrapper allowing us to merklizing the chunks.
-	return types.DeriveSha(chunks) // merklize the serialized blobs.
+	chunks := BytesToChunks(body)      // wrapper allowing us to merklizing the chunks.
+	return coreTypes.DeriveSha(chunks) // merklize the serialized blobs.
 }
 
 // BytesToChunks takes the collation body bytes and wraps it into type Chunks,
@@ -142,7 +142,7 @@ func BytesToChunks(body []byte) Chunks {
 }
 
 // convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding
-func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
+func convertTxToRawBlob(txs []*coreTypes.Transaction) ([]*utils.RawBlob, error) {
 	blobs := make([]*utils.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
 		err := error(nil)
@@ -155,7 +155,7 @@ func convertTxToRawBlob(txs []*types.Transaction) ([]*utils.RawBlob, error) {
 }
 
 // SerializeTxToBlob converts transactions using two steps. First performs RLP encoding, and then blob encoding.
-func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
+func SerializeTxToBlob(txs []*coreTypes.Transaction) ([]byte, error) {
 	blobs, err := convertTxToRawBlob(txs)
 	if err != nil {
 		return nil, err
@@ -174,11 +174,11 @@ func SerializeTxToBlob(txs []*types.Transaction) ([]byte, error) {
 }
 
 // convertRawBlobToTx converts raw blobs back to their original transactions.
-func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) {
-	blobs := make([]*types.Transaction, len(rawBlobs))
+func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*coreTypes.Transaction, error) {
+	blobs := make([]*coreTypes.Transaction, len(rawBlobs))
 
 	for i := 0; i < len(rawBlobs); i++ {
-		blobs[i] = types.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+		blobs[i] = coreTypes.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
 
 		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
 		if err != nil {
@@ -190,7 +190,7 @@ func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*types.Transaction, error) 
 
 // DeserializeBlobToTx takes byte array blob and converts it back
 // to original txs and returns the txs in tx array.
-func DeserializeBlobToTx(serialisedBlob []byte) (*[]*types.Transaction, error) {
+func DeserializeBlobToTx(serialisedBlob []byte) (*[]*coreTypes.Transaction, error) {
 	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
 	if err != nil {
 		return nil, err

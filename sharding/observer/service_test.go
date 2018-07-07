@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
@@ -14,7 +14,7 @@ import (
 )
 
 // Verifies that Observer implements the Actor interface.
-var _ = sharding.Actor(&Observer{})
+var _ = types.Actor(&Observer{})
 
 func TestStartStop(t *testing.T) {
 	h := internal.NewLogHandler(t)

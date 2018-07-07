@@ -1,4 +1,4 @@
-package sharding
+package types
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	coreTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 )
 
@@ -24,7 +24,7 @@ func fieldAccess(i interface{}, fields []string) reflect.Value {
 func TestCollation_Transactions(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}
-	transactions := []*types.Transaction{
+	transactions := []*coreTypes.Transaction{
 		makeTxWithGasLimit(0),
 		makeTxWithGasLimit(1),
 		makeTxWithGasLimit(2),
@@ -47,7 +47,7 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}
-	transactions := []*types.Transaction{
+	transactions := []*coreTypes.Transaction{
 		makeTxWithGasLimit(0),
 		makeTxWithGasLimit(5),
 		makeTxWithGasLimit(20),
@@ -125,14 +125,14 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 }
 
-func makeTxWithGasLimit(gl uint64) *types.Transaction {
-	return types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, gl, nil /*gasPrice*/, nil /*data*/)
+func makeTxWithGasLimit(gl uint64) *coreTypes.Transaction {
+	return coreTypes.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, gl, nil /*gasPrice*/, nil /*data*/)
 }
 
 func Test_CalculatePOC(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{0x56, 0xff}
-	transactions := []*types.Transaction{
+	transactions := []*coreTypes.Transaction{
 		makeTxWithGasLimit(0),
 		makeTxWithGasLimit(5),
 		makeTxWithGasLimit(20),
@@ -158,7 +158,7 @@ func makeRandomTransactions(numTransactions int) []*types.Transaction {
 		// for example: https://etherscan.io/block/5722271
 		data := make([]byte, 150)
 		rand.Read(data)
-		txs = append(txs, types.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
+		txs = append(txs, coreTypes.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
 	}
 
 	return txs

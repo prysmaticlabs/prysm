@@ -18,13 +18,13 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
-var _ = sharding.Service(&Simulator{})
+var _ = types.Service(&Simulator{})
 
 type faultyReader struct{}
 type goodReader struct{}
@@ -60,7 +60,7 @@ func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg
 		Signature [32]byte
 	})
 	body := []byte{1, 2, 3, 4, 5}
-	res.ChunkRoot = [32]byte(types.DeriveSha(sharding.Chunks(body)))
+	res.ChunkRoot = [32]byte(types.DeriveSha(shardingTypes.Chunks(body)))
 	res.Proposer = common.BytesToAddress([]byte{})
 	res.IsElected = false
 	return *res, nil

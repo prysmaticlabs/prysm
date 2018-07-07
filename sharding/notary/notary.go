@@ -14,10 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if
@@ -162,7 +162,7 @@ func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, durat
 
 }
 
-func settingCanonicalShardChain(shard sharding.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
+func settingCanonicalShardChain(shard shardingTypes.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
 
 	shardID := shard.ShardID()
 	collationRecords, err := manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -193,7 +193,7 @@ func settingCanonicalShardChain(shard sharding.Shard, manager mainchain.Contract
 
 }
 
-func getCurrentNetworkState(manager mainchain.ContractManager, shard sharding.Shard, reader mainchain.Reader) (int64, *big.Int, *types.Block, error) {
+func getCurrentNetworkState(manager mainchain.ContractManager, shard shardingTypes.Shard, reader mainchain.Reader) (int64, *big.Int, *types.Block, error) {
 
 	shardcount, err := manager.GetShardCount()
 	if err != nil {
@@ -410,7 +410,7 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 
 // submitVote votes for a collation on the shard
 // by taking in the shard and the hash of the collation header
-func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
+func submitVote(shard shardingTypes.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
 
 	_, shardID, block, err := getCurrentNetworkState(manager, shard, reader)
 	if err != nil {

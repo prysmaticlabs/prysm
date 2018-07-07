@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
@@ -18,7 +18,7 @@ var (
 )
 
 // Verifies that Notary implements the Actor interface.
-var _ = sharding.Actor(&Notary{})
+var _ = types.Actor(&Notary{})
 
 func TestHasAccountBeenDeregistered(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
