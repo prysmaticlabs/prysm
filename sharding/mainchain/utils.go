@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 // dialRPC endpoint to node.

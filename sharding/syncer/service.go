@@ -8,13 +8,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 )
 
 // Syncer represents a service that provides handlers for shard chain

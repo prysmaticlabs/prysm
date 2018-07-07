@@ -6,10 +6,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 )
 
 // RespondCollationBody is called by a node responding to another node's request

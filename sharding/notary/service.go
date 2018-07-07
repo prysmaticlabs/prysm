@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 // Notary holds functionality required to run a collation notary

@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client_helper.go",
+        "log_helper.go",
+    ],
+    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/internal",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//sharding/contracts:go_default_library",
+        "//sharding/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "@com_github_ethereum_go_ethereum//log:go_default_library",
+    ],
+)

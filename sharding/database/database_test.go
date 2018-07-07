@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 )
 
 // Verifies that ShardDB implements the sharding Service inteface.

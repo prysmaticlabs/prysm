@@ -6,20 +6,20 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 )
 
 var _ = sharding.Service(&Syncer{})

@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "collation.go",
+        "interfaces.go",
+        "shard.go",
+    ],
+    importpath = "github.com/prysmaticlabs/geth-sharding/sharding",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//sharding/utils:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto/sha3:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
+        "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "collation_test.go",
+        "shard_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//sharding/database:go_default_library",
+        "//sharding/utils:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto/sha3:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
+        "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+    ],
+)
