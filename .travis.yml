@@ -3,59 +3,59 @@ go_import_path: github.com/prysmaticlabs/geth-sharding
 sudo: false
 matrix:
   include:
-  - os: linux
-    go: 1.10.x
-    env:
-    - lint
-    script:
-    - go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter
-  - os: linux
-    env: V=0.15.0
-    before_install:
-    # Install Bazel
-    - |
-      if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-        OS=darwin
-      else
-        sysctl kernel.unprivileged_userns_clone=1
-        OS=linux
+    - os: linux
+      go: 1.10.x
+      env:
+      - lint
+      script:
+      - go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter
+    - os: linux
+      env: V=0.15.0
+      before_install:
+      # Install Bazel
+      - |
+        if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+          OS=darwin
+        else
+          sysctl kernel.unprivileged_userns_clone=1
+          OS=linux
+        fi
+        if [[ "${V}" == "HEAD" ]]; then
+          # Determine last successful build number. This may change while we are
+          # downloading, so it's important to determine ahead of time, in case
+          # we need to resume the download.
+          CI_BASE="http://ci.bazel.io/view/Bazel%20bootstrap%20and%20maintenance/job/Bazel/PLATFORM_NAME=${OS}-x86_64/"
+          CI_INDEX_URL="${CI_BASE}/lastSuccessfulBuild/"
+          wget -q -O build-index.html "${CI_INDEX_URL}"
+          CI_BUILD=$(grep '<title>' build-index.html | sed -e 's/^.*#\([0-9]*\).*$/\1/')
+          # Determine the artifact name. This is normally, bazel--installer.sh,
+          # but it may be, for example, bazel-0.5rc2-installer.sh before a release.
+          CI_ARTIFACT=$(grep -o 'bazel-[^\"-]*-installer.sh' build-index.html | head -n 1)
+          URL="${CI_BASE}/${CI_BUILD}/artifact/output/ci/${CI_ARTIFACT}"
+          rm build-index.html
+        else
+          URL="https://github.com/bazelbuild/bazel/releases/download/${V}/bazel-${V}-installer-${OS}-x86_64.sh"
+        fi
+        wget -O install.sh "${URL}"
+        chmod +x install.sh
+        ./install.sh --user
+        rm -f install.sh
+      # If the SDK is not already cached, download it and unpack it
+      - if [ ! -d ${HOME}/google-cloud-sdk ]; then
+        curl https://sdk.cloud.google.com | bash;
       fi
-      if [[ "${V}" == "HEAD" ]]; then
-        # Determine last successful build number. This may change while we are
-        # downloading, so it's important to determine ahead of time, in case
-        # we need to resume the download.
-        CI_BASE="http://ci.bazel.io/view/Bazel%20bootstrap%20and%20maintenance/job/Bazel/PLATFORM_NAME=${OS}-x86_64/"
-        CI_INDEX_URL="${CI_BASE}/lastSuccessfulBuild/"
-        wget -q -O build-index.html "${CI_INDEX_URL}"
-        CI_BUILD=$(grep '<title>' build-index.html | sed -e 's/^.*#\([0-9]*\).*$/\1/')
-        # Determine the artifact name. This is normally, bazel--installer.sh,
-        # but it may be, for example, bazel-0.5rc2-installer.sh before a release.
-        CI_ARTIFACT=$(grep -o 'bazel-[^\"-]*-installer.sh' build-index.html | head -n 1)
-        URL="${CI_BASE}/${CI_BUILD}/artifact/output/ci/${CI_ARTIFACT}"
-        rm build-index.html
-      else
-        URL="https://github.com/bazelbuild/bazel/releases/download/${V}/bazel-${V}-installer-${OS}-x86_64.sh"
-      fi
-      wget -O install.sh "${URL}"
-      chmod +x install.sh
-      ./install.sh --user
-      rm -f install.sh
-    # If the SDK is not already cached, download it and unpack it
-    - if [ ! -d ${HOME}/google-cloud-sdk ]; then
-      curl https://sdk.cloud.google.com | bash;
-    fi
-    # gcloud auth
-    - openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-      -in service-account.json.enc -out service-account.json -d
-    - gcloud auth activate-service-account --key-file service-account.json
-    install: true
-    script:
-    - |
-      bazel \
-        --bazelrc=.travis-bazelrc \
-        test \
-        //...
-    - "./check_gazelle.sh"
-    - bazel shutdown
-    notifications:
-      email: false
+      # gcloud auth
+      - openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+        -in service-account.json.enc -out service-account.json -d
+      - gcloud auth activate-service-account --key-file service-account.json
+      install: true
+      script:
+      - |
+        bazel \
+          --bazelrc=.travis-bazelrc \
+          test \
+          //...
+      - "./check_gazelle.sh"
+      - bazel shutdown
+      notifications:
+        email: false
