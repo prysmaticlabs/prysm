@@ -1,4 +1,4 @@
- # Prysmatic Labs Sharding Implementation
+# Prysmatic Labs Sharding Implementation
 
 ![Travis Build](https://travis-ci.org/prysmaticlabs/geth-sharding.svg?branch=master)
 
