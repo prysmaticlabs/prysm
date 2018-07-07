@@ -43,7 +43,7 @@ matrix:
           rm -f install.sh
         # Decrypt service account
         - openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-          -in service-account.json.enc -out service-account.json -d
+          -in service-account.json.enc -out $HOME/service-account.json -d
       
       install: true # Skip install go packages.
           
