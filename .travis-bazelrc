@@ -6,7 +6,7 @@ build --spawn_strategy=standalone --genrule_strategy=standalone
 
 # Remote caching over Google Cloud Storage
 build --remote_http_cache=https://storage.googleapis.com/prysmatic-bazel-cache 
-build --google_credentials=$HOME/service-account.json
+build --google_credentials=/tmp/service-account.json
 
 # Set some build options for travis container.
 build --local_resources=1536,1.5,0.5
