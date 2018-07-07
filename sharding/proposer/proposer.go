@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 )
 
 // AddHeader adds the collation header to the main chain by sending
@@ -75,7 +75,7 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 
 	// construct the header, leave chunkRoot and signature fields empty, to be filled later.
 	addr := account.Address
-	header := sharding.NewCollationHeader(shardID, nil, period, &addr, nil)
+	header := sharding.NewCollationHeader(shardID, nil, period, &addr, [32]byte{})
 
 	// construct the body with header, blobs(serialized txs) and txs.
 	collation := sharding.NewCollation(header, blobs, txs)
@@ -86,7 +86,9 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	}
 
 	// add proposer signature to collation header.
-	collation.Header().AddSig(sig)
+	var sig32 [32]byte
+	copy(sig32[:], sig)
+	collation.Header().AddSig(sig32)
 	log.Info(fmt.Sprintf("Collation %v created for shardID %v period %v", collation.Header().Hash().Hex(), collation.Header().ShardID(), collation.Header().Period()))
 	return collation, nil
 }

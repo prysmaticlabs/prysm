@@ -14,10 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	shardparams "github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if

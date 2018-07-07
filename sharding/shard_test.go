@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 )
 
 type mockShardDB struct {
@@ -51,7 +51,7 @@ func (c *Collation) Hash() (hash common.Hash) {
 func TestShard_ValidateShardID(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	emptyAddr := common.BytesToAddress([]byte{})
-	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
+	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, [32]byte{})
 	shardDB := database.NewShardKV()
 	shard := NewShard(big.NewInt(3), shardDB)
 
@@ -59,7 +59,7 @@ func TestShard_ValidateShardID(t *testing.T) {
 		t.Errorf("ShardID validation incorrect. Function should throw error when ShardID's do not match. want=%d. got=%d", header.ShardID().Int64(), shard.ShardID().Int64())
 	}
 
-	header2 := NewCollationHeader(big.NewInt(100), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
+	header2 := NewCollationHeader(big.NewInt(100), &emptyHash, big.NewInt(1), &emptyAddr, [32]byte{})
 	shard2 := NewShard(big.NewInt(100), shardDB)
 
 	if err := shard2.ValidateShardID(header2); err != nil {
@@ -70,7 +70,7 @@ func TestShard_ValidateShardID(t *testing.T) {
 func TestShard_HeaderByHash(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	emptyAddr := common.BytesToAddress([]byte{})
-	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, []byte{})
+	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, [32]byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
 	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
@@ -108,7 +108,7 @@ func TestShard_CollationByHeaderHash(t *testing.T) {
 	emptyAddr := common.BytesToAddress([]byte{})
 
 	// Empty chunk root.
-	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), &emptyAddr, []byte{})
+	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), &emptyAddr, [32]byte{})
 
 	collation := &Collation{
 		header: header,
@@ -166,7 +166,7 @@ func TestShard_ChunkRootfromHeaderHash(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
-	proposerSignature := []byte{}
+	proposerSignature := [32]byte{}
 	header := NewCollationHeader(shardID, nil, period, &proposerAddress, proposerSignature)
 
 	collation := NewCollation(header, []byte{1, 2, 3}, nil)
@@ -201,7 +201,7 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
-	proposerSignature := []byte{}
+	proposerSignature := [32]byte{}
 	header := NewCollationHeader(shardID, nil, period, &proposerAddress, proposerSignature)
 
 	collation := NewCollation(header, []byte{1, 2, 3}, nil)
@@ -244,7 +244,7 @@ func TestShard_CanonicalCollation(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
-	proposerSignature := []byte{}
+	proposerSignature := [32]byte{}
 	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
@@ -286,7 +286,7 @@ func TestShard_CanonicalCollation(t *testing.T) {
 
 func TestShard_SetCanonical(t *testing.T) {
 	chunkRoot := common.BytesToHash([]byte{})
-	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
+	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, [32]byte{})
 
 	shardDB := database.NewShardKV()
 	shard := NewShard(big.NewInt(1), shardDB)
@@ -350,7 +350,7 @@ func TestShard_CheckAvailability(t *testing.T) {
 	shardID := big.NewInt(1)
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
-	proposerSignature := []byte{}
+	proposerSignature := [32]byte{}
 	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
@@ -385,7 +385,7 @@ func TestShard_CheckAvailability(t *testing.T) {
 
 func TestShard_SetAvailability(t *testing.T) {
 	chunkRoot := common.BytesToHash([]byte{})
-	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, []byte{})
+	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, [32]byte{})
 
 	// creates a mockDB that always returns nil values from .Get and errors in every other method.
 	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
@@ -421,7 +421,7 @@ func TestShard_SaveCollation(t *testing.T) {
 	headerShardID := big.NewInt(1)
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
-	proposerSignature := []byte{}
+	proposerSignature := [32]byte{}
 	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(headerShardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
@@ -447,7 +447,7 @@ func TestShard_SaveHeader(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
-	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), nil, []byte{})
+	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), nil, [32]byte{})
 	if err := errorShard.SaveHeader(header); err == nil {
 		t.Errorf("should not be able to save header if a faulty shardDB is used")
 	}

@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 )
 
 // Verifies that Observer implements the Actor interface.
@@ -26,14 +29,22 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup db: %v", err)
 	}
 	shardID := 0
+	client := &mainchain.SMCClient{}
 
-	observer, err := NewObserver(server, shardChainDB, shardID)
+	syncer, err := syncer.NewSyncer(params.DefaultConfig, client, server, shardChainDB, shardID)
+	if err != nil {
+		t.Fatalf("Unable to setup sync service: %v", err)
+	}
+
+	observer, err := NewObserver(server, shardChainDB, shardID, syncer, client)
 	if err != nil {
 		t.Fatalf("Unable to set up observer service: %v", err)
 	}
 
-	observer.Start()
+	observer.sync.Start()
+	h.VerifyLogMsg("Starting sync service")
 
+	observer.Start()
 	h.VerifyLogMsg("Starting observer service")
 
 	err = observer.Stop()

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

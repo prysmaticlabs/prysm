@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	"github.com/ethereum/go-ethereum/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
 )
 
 // Ensure that server implements service.

@@ -24,8 +24,8 @@ import (
 
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/prysmaticlabs/geth-sharding/cmd/utils"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // AppHelpTemplate is the test template for the default, global app help topic.

@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	node "github.com/ethereum/go-ethereum/sharding/node"
+	"github.com/prysmaticlabs/geth-sharding/cmd/utils"
+	"github.com/prysmaticlabs/geth-sharding/internal/debug"
+
+	node "github.com/prysmaticlabs/geth-sharding/sharding/node"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
