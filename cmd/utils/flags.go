@@ -24,7 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
-	shardparams "github.com/ethereum/go-ethereum/sharding/params"
+	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

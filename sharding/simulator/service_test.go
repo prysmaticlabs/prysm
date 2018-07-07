@@ -9,19 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 var _ = sharding.Service(&Simulator{})

@@ -23,9 +23,10 @@ import (
 	"runtime"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/prysmaticlabs/geth-sharding/cmd/utils"
+	"github.com/prysmaticlabs/geth-sharding/internal/debug"
+
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (

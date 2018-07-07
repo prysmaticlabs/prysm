@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 )
 
 // fieldAccess is to access unexported fields in structs in another package

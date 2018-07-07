@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 )
 
 type mockShardDB struct {
