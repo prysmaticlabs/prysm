@@ -1,10 +1,6 @@
 language: go
 go_import_path: github.com/prysmaticlabs/geth-sharding
 sudo: false
-# Cache our Gcloud SDK between commands	
-cache:
-  directories:
-    - "$HOME/google-cloud-sdk/"
 matrix:
   include:
     - os: linux
@@ -15,7 +11,7 @@ matrix:
         - 
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter
     - os: linux
-      env: V=0.15.0 PATH=$PATH:${HOME}/google-cloud-sdk/bin
+      env: V=0.15.0
       before_install:
         # Install Bazel
         - |
@@ -45,14 +41,9 @@ matrix:
           chmod +x install.sh
           ./install.sh --user
           rm -f install.sh
-        # If the SDK is not already cached, download it and unpack it
-        - if [ ! -d ${HOME}/google-cloud-sdk ]; then
-            curl https://sdk.cloud.google.com | bash;
-          fi
-        # gcloud auth
+        # Decrypt service account
         - openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
           -in service-account.json.enc -out service-account.json -d
-        - gcloud auth activate-service-account --key-file service-account.json
       
       install: true # Skip install go packages.
           
