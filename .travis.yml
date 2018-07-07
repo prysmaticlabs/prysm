@@ -15,7 +15,7 @@ matrix:
         - 
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter
     - os: linux
-      env: V=0.15.0
+      env: V=0.15.0 PATH=$PATH:${HOME}/google-cloud-sdk/bin
       before_install:
         # Install Bazel
         - |
