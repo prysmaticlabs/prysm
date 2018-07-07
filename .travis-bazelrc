@@ -12,5 +12,4 @@ build --noshow_progress
 build --verbose_failures 
 build --sandbox_debug
 build --test_output=errors
-build --runs_per_test=3
-build --runs_per_test_detects_flakes
+build --flaky_test_attempts=5
