@@ -1,10 +1,6 @@
 language: go
 go_import_path: github.com/prysmaticlabs/geth-sharding
 sudo: false
-# Cache our Gcloud SDK between commands
-cache:
-  directories:
-  - "$HOME/google-cloud-sdk/"
 matrix:
   include:
   - os: linux
