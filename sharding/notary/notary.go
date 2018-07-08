@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
-	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if
@@ -26,7 +26,7 @@ import (
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation.
 func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCaller, account *accounts.Account) error {
-	headerChan := make(chan *types.Header, 16)
+	headerChan := make(chan *gethTypes.Header, 16)
 
 	_, err := reader.SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
@@ -59,7 +59,7 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 // collation for the available shards in the SMC. The function calls
 // getEligibleNotary from the SMC and notary a collation if
 // conditions are met.
-func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account, head *types.Header) error {
+func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account, head *gethTypes.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
 	shardCount, err := caller.GetShardCount()
 	if err != nil {
@@ -143,7 +143,7 @@ func isLockUpOver(caller mainchain.ContractCaller, reader mainchain.Reader, acco
 
 }
 
-func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, duration time.Duration) error {
+func transactionWaiting(client mainchain.EthClient, tx *gethTypes.Transaction, duration time.Duration) error {
 
 	err := client.WaitForTransaction(context.Background(), tx.Hash(), duration)
 	if err != nil {
@@ -155,14 +155,14 @@ func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, durat
 		return err
 	}
 
-	if receipt.Status == types.ReceiptStatusFailed {
+	if receipt.Status == gethTypes.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to release Notary")
 	}
 	return nil
 
 }
 
-func settingCanonicalShardChain(shard shardingTypes.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
+func settingCanonicalShardChain(shard types.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
 
 	shardID := shard.ShardID()
 	collationRecords, err := manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -193,7 +193,7 @@ func settingCanonicalShardChain(shard shardingTypes.Shard, manager mainchain.Con
 
 }
 
-func getCurrentNetworkState(manager mainchain.ContractManager, shard shardingTypes.Shard, reader mainchain.Reader) (int64, *big.Int, *types.Block, error) {
+func getCurrentNetworkState(manager mainchain.ContractManager, shard types.Shard, reader mainchain.Reader) (int64, *big.Int, *gethTypes.Block, error) {
 
 	shardcount, err := manager.GetShardCount()
 	if err != nil {
@@ -215,7 +215,7 @@ func getCurrentNetworkState(manager mainchain.ContractManager, shard shardingTyp
 
 }
 
-func checkCollationPeriod(manager mainchain.ContractManager, block *types.Block, shardID *big.Int) (*big.Int, *big.Int, error) {
+func checkCollationPeriod(manager mainchain.ContractManager, block *gethTypes.Block, shardID *big.Int) (*big.Int, *big.Int, error) {
 
 	period := big.NewInt(0).Div(block.Number(), big.NewInt(shardparams.DefaultConfig.PeriodLength))
 	collPeriod, err := manager.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
@@ -297,7 +297,7 @@ func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClien
 	if err != nil {
 		return err
 	}
-	if receipt.Status == types.ReceiptStatusFailed {
+	if receipt.Status == gethTypes.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to deposit ETH and become a notary")
 	}
 
@@ -344,7 +344,7 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 		return err
 	}
 
-	if receipt.Status == types.ReceiptStatusFailed {
+	if receipt.Status == gethTypes.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to deregister notary")
 	}
 
@@ -410,7 +410,7 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 
 // submitVote votes for a collation on the shard
 // by taking in the shard and the hash of the collation header
-func submitVote(shard shardingTypes.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
+func submitVote(shard types.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
 
 	_, shardID, block, err := getCurrentNetworkState(manager, shard, reader)
 	if err != nil {

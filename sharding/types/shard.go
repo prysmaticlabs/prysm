@@ -7,7 +7,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	coreTypes "github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -186,7 +186,7 @@ func (s *Shard) SaveBody(body []byte) error {
 		return errors.New("body is empty")
 	}
 	chunks := Chunks(body)                   // wrapper allowing us to merklizing the chunks.
-	chunkRoot := coreTypes.DeriveSha(chunks) // merklize the serialized blobs.
+	chunkRoot := gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
 	s.SetAvailability(&chunkRoot, true)
 	return s.shardDB.Put(chunkRoot.Bytes(), body)
 }

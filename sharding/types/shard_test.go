@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	coreTypes "github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -319,7 +319,7 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 	}
 
 	chunks := Chunks(body)                   // wrapper allowing us to merklizing the chunks.
-	chunkRoot := coreTypes.DeriveSha(chunks) // merklize the serialized blobs.
+	chunkRoot := gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
 
 	dbBody, err := shard.BodyByChunkRoot(&chunkRoot)
 	if err != nil {

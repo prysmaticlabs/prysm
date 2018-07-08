@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
-	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -30,7 +30,7 @@ type Proposer struct {
 	txpoolSub event.Subscription
 	dbService *database.ShardDB
 	shardID   int
-	shard     *shardingTypes.Shard
+	shard     *types.Shard
 	ctx       context.Context
 	cancel    context.CancelFunc
 	sync      *syncer.Syncer
@@ -58,7 +58,7 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
-	shard := shardingTypes.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
+	shard := types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.shard = shard
 	go p.proposeCollations()
 	go p.sync.HandleCollationBodyRequests(p.shard)
@@ -74,14 +74,14 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	requests := make(chan *types.Transaction)
+	requests := make(chan *gethTypes.Transaction)
 	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
 	defer close(requests)
 	for {
 		select {
 		case tx := <-requests:
 			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
-			if err := p.createCollation(p.ctx, []*types.Transaction{tx}); err != nil {
+			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{tx}); err != nil {
 				log.Error(fmt.Sprintf("Create collation failed: %v", err))
 			}
 		case <-p.ctx.Done():
@@ -94,7 +94,7 @@ func (p *Proposer) proposeCollations() {
 	}
 }
 
-func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction) error {
+func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
 	// Get current block number.
 	blockNumber, err := p.client.ChainReader().BlockByNumber(ctx, nil)
 	if err != nil {

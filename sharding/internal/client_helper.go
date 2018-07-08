@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
@@ -59,7 +59,7 @@ func (m *MockClient) WaitForTransaction(ctx context.Context, hash common.Hash, d
 	return nil
 }
 
-func (m *MockClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+func (m *MockClient) TransactionReceipt(hash common.Hash) (*gethTypes.Receipt, error) {
 	return m.Backend.TransactionReceipt(context.Background(), hash)
 }
 
@@ -96,12 +96,12 @@ func (m *MockClient) FastForward(p int) {
 	}
 }
 
-func (m *MockClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+func (m *MockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return nil, nil
 }
 
-func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(m.BlockNumber)}), nil
+func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return gethTypes.NewBlockWithHeader(&gethTypes.Header{Number: big.NewInt(m.BlockNumber)}), nil
 }
 
 func TransactOpts() *bind.TransactOpts {

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	coreTypes "github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 )
 
@@ -24,7 +24,7 @@ func fieldAccess(i interface{}, fields []string) reflect.Value {
 func TestCollation_Transactions(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}
-	transactions := []*coreTypes.Transaction{
+	transactions := []*gethTypes.Transaction{
 		makeTxWithGasLimit(0),
 		makeTxWithGasLimit(1),
 		makeTxWithGasLimit(2),
@@ -40,14 +40,14 @@ func TestCollation_Transactions(t *testing.T) {
 	}
 }
 
-//TODO: Add test for converting *types.Transaction into raw blobs
+//TODO: Add test for converting *gethTypes.Transaction into raw blobs
 
 //Tests that Transactions can be serialised
 func TestSerialize_Deserialize(t *testing.T) {
 
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}
-	transactions := []*coreTypes.Transaction{
+	transactions := []*gethTypes.Transaction{
 		makeTxWithGasLimit(0),
 		makeTxWithGasLimit(5),
 		makeTxWithGasLimit(20),
@@ -125,14 +125,14 @@ func TestSerialize_Deserialize(t *testing.T) {
 
 }
 
-func makeTxWithGasLimit(gl uint64) *coreTypes.Transaction {
-	return coreTypes.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, gl, nil /*gasPrice*/, nil /*data*/)
+func makeTxWithGasLimit(gl uint64) *gethTypes.Transaction {
+	return gethTypes.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, gl, nil /*gasPrice*/, nil /*data*/)
 }
 
 func Test_CalculatePOC(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{0x56, 0xff}
-	transactions := []*coreTypes.Transaction{
+	transactions := []*gethTypes.Transaction{
 		makeTxWithGasLimit(0),
 		makeTxWithGasLimit(5),
 		makeTxWithGasLimit(20),
@@ -151,14 +151,14 @@ func Test_CalculatePOC(t *testing.T) {
 // BENCHMARK TESTS
 
 // Helper function to generate test that completes round trip serialization tests for a specific number of transactions.
-func makeRandomTransactions(numTransactions int) []*coreTypes.Transaction {
-	var txs []*coreTypes.Transaction
+func makeRandomTransactions(numTransactions int) []*gethTypes.Transaction {
+	var txs []*gethTypes.Transaction
 	for i := 0; i < numTransactions; i++ {
 		// 150 is the current average tx size, based on recent blocks (i.e. tx size = block size / # txs)
 		// for example: https://etherscan.io/block/5722271
 		data := make([]byte, 150)
 		rand.Read(data)
-		txs = append(txs, coreTypes.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
+		txs = append(txs, gethTypes.NewTransaction(0 /*nonce*/, common.HexToAddress("0x0") /*to*/, nil /*amount*/, 0 /*gasLimit*/, nil /*gasPrice*/, data))
 	}
 
 	return txs
