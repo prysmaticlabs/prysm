@@ -24,7 +24,7 @@ func main() {
 	app.Name = "sharding"
 	app.Description = `
 Launches a sharding node that manages services related to submitting collations to a Sharding Manager Contract, notary and proposer services, and shardp2p connections. This feature is a work in progress.
-`,
+`
 	app.Action = startNode
 	app.Flags = []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag}
 	if err := app.Run(os.Args); err != nil {
