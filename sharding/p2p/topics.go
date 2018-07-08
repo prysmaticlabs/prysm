@@ -3,7 +3,7 @@ package p2p
 import (
 	"reflect"
 
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 )
 
 // Mapping of message topic enums to protobuf types.

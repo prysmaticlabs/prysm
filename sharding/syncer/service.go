@@ -9,14 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/utils"
-
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 )
 
 // Syncer represents a service that provides handlers for shard chain
@@ -53,7 +52,7 @@ func (s *Syncer) Start() {
 
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Feed(pb.CollationBodyRequest{}).Subscribe(s.msgChan)
-	go s.handleCollationBodyRequests(s.client, shard)
+	go s.HandleCollationBodyRequests(shard)
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 }
 
@@ -69,10 +68,10 @@ func (s *Syncer) Stop() error {
 	return nil
 }
 
-// handleCollationBodyRequests subscribes to messages from the shardp2p
+// HandleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, collationFetcher sharding.CollationFetcher) {
+func (s *Syncer) HandleCollationBodyRequests(collationFetcher sharding.CollationFetcher) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
@@ -81,7 +80,7 @@ func (s *Syncer) handleCollationBodyRequests(signer mainchain.Signer, collationF
 		case req := <-s.msgChan:
 			if req.Data != nil {
 				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
-				res, err := RespondCollationBody(req, signer, collationFetcher)
+				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
 					continue

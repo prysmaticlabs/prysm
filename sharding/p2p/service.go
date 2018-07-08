@@ -18,10 +18,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/golang/protobuf/proto"
 
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 )
 
 var logger = log.New()

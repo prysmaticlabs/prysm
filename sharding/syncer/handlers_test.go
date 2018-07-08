@@ -15,14 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	shardparams "github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/proposer"
-
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 var (
@@ -46,13 +43,13 @@ func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, a
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
-	Signature []byte
+	Signature [32]byte
 }, error) {
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
-		Signature []byte
+		Signature [32]byte
 	})
 	return *res, errors.New("error fetching collation record")
 }
@@ -113,7 +110,6 @@ func (m *mockNode) BlockByNumber(ctx context.Context, number *big.Int) (*types.B
 }
 
 type faultyRequest struct{}
-type faultySigner struct{}
 type faultyCollationFetcher struct{}
 
 type mockSigner struct{}
@@ -123,17 +119,13 @@ func (m *mockSigner) Sign(hash common.Hash) ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (f *faultySigner) Sign(hash common.Hash) ([]byte, error) {
-	return []byte{}, errors.New("could not sign hash")
-}
-
 func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
 	shardID := big.NewInt(1)
 	chunkRoot := common.BytesToHash([]byte{})
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
 
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, []byte{})
+	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
 	return sharding.NewCollation(header, []byte{}, []*types.Transaction{}), nil
 }
 
@@ -168,8 +160,6 @@ func TestCollationBodyResponse(t *testing.T) {
 	}
 	incorrectReq := faultyRequest{}
 
-	signer := &mockSigner{}
-	faultySigner := &faultySigner{}
 	fetcher := &mockCollationFetcher{}
 	faultyFetcher := &faultyCollationFetcher{}
 
@@ -183,15 +173,11 @@ func TestCollationBodyResponse(t *testing.T) {
 		Data: goodReq,
 	}
 
-	if _, err := RespondCollationBody(badMsg, signer, fetcher); err == nil {
+	if _, err := RespondCollationBody(badMsg, fetcher); err == nil {
 		t.Errorf("Incorrect request should throw error. Expecting pb.CollationBodyRequest{}, received: %v", incorrectReq)
 	}
 
-	if _, err := RespondCollationBody(goodMsg, faultySigner, fetcher); err == nil {
-		t.Error("Faulty signer should cause function to throw error. no error thrown.")
-	}
-
-	if _, err := RespondCollationBody(goodMsg, signer, faultyFetcher); err == nil {
+	if _, err := RespondCollationBody(goodMsg, faultyFetcher); err == nil {
 		t.Error("Faulty collatiom fetcher should cause function to throw error. no error thrown.")
 	}
 
@@ -205,10 +191,9 @@ func TestCollationBodyResponse(t *testing.T) {
 		&chunkRoot,
 		period,
 		&proposer,
-		[]byte{})
+		[32]byte{})
 	body := []byte{}
-
-	response, err := RespondCollationBody(goodMsg, signer, fetcher)
+	response, err := RespondCollationBody(goodMsg, fetcher)
 	if err != nil {
 		t.Fatalf("Could not construct collation body response: %v", err)
 	}
@@ -228,7 +213,7 @@ func TestConstructNotaryRequest(t *testing.T) {
 	node := &mockNode{smc: smc, t: t, Backend: backend}
 
 	// Fast forward to next period.
-	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
+	for i := 0; i < int(shardparams.DefaultConfig.PeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -238,13 +223,10 @@ func TestConstructNotaryRequest(t *testing.T) {
 	// We set the proposer address to the address used to setup the backend.
 	proposerAddress := addr
 	chunkRoot := common.BytesToHash([]byte("chunkroottest"))
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &addr, []byte{})
-	collation := sharding.NewCollation(header, []byte{}, []*types.Transaction{})
 
 	// Adds the header to the SMC.
-	if err := proposer.AddHeader(node, node, collation); err != nil {
-		t.Fatalf("Failed to add header to SMC: %v", err)
-	}
+	opt, err := node.CreateTXOpts(big.NewInt(0))
+	smc.AddHeader(opt, shardID, period, chunkRoot, [32]byte{})
 
 	backend.Commit()
 

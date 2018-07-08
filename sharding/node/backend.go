@@ -13,22 +13,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
+	
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/notary"
-	"github.com/ethereum/go-ethereum/sharding/observer"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/proposer"
-	"github.com/ethereum/go-ethereum/sharding/simulator"
-	"github.com/ethereum/go-ethereum/sharding/syncer"
-	"github.com/ethereum/go-ethereum/sharding/txpool"
+	"github.com/prysmaticlabs/geth-sharding/internal/debug"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/cmd/utils"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/notary"
+	"github.com/prysmaticlabs/geth-sharding/sharding/observer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/proposer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/simulator"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -73,21 +74,21 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
+	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
+	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
+		return nil, err
+	}
+
 	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
 	if err := shardEthereum.registerSimulatorService(actorFlag, shardEthereum.shardConfig, shardIDFlag); err != nil {
-		return nil, err
-	}
-
-	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -257,6 +258,11 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
+	var sync *syncer.Syncer
+	if err := s.fetchService(&sync); err != nil {
+		return err
+	}
+
 	if actor == "notary" {
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
 		if err != nil {
@@ -270,13 +276,13 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID)
+		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.registerService(prop)
 	}
-	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID)
+	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
 	if err != nil {
 		return fmt.Errorf("could not register observer service: %v", err)
 	}

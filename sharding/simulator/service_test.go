@@ -5,22 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"testing"
 	"time"
 
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
+	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 var _ = sharding.Service(&Simulator{})
@@ -35,13 +32,13 @@ func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, a
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
-	Signature []byte
+	Signature [32]byte
 }, error) {
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
-		Signature []byte
+		Signature [32]byte
 	})
 	return *res, errors.New("error fetching collation record")
 }
@@ -50,13 +47,13 @@ func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
-	Signature []byte
+	Signature [32]byte
 }, error) {
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
 		IsElected bool
-		Signature []byte
+		Signature [32]byte
 	})
 	body := []byte{1, 2, 3, 4, 5}
 	res.ChunkRoot = [32]byte(types.DeriveSha(sharding.Chunks(body)))
@@ -112,6 +109,9 @@ func TestStartStop(t *testing.T) {
 // in the simulateNotaryRequests goroutine when reading the block number from
 // the mainchain via RPC.
 func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -123,29 +123,29 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	simulator.requestFeed = server.Feed(pb.CollationBodyRequest{})
-	simulator.errChan = make(chan error)
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, time.After(time.Second*0))
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+	h.VerifyLogMsg("Could not fetch current block number: cannot fetch block by number")
 
-	receivedErr := <-simulator.errChan
-	expectedErr := "could not fetch current block number"
-	if !strings.Contains(receivedErr.Error(), expectedErr) {
-		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
-	}
-
-	simulator.cancel()
-
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	exitRoutine <- true
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 }
 
 // This test uses a faulty SMCCaller in order to trigger an error
 // in the simulateNotaryRequests goroutine when reading the collation records
 // from the SMC.
 func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -157,23 +157,20 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	simulator.requestFeed = server.Feed(pb.CollationBodyRequest{})
-	simulator.errChan = make(chan error)
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
 
-	go simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, time.After(time.Second*0))
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+	h.VerifyLogMsg("Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record")
 
-	receivedErr := <-simulator.errChan
-	expectedErr := "error constructing collation body request"
-	if !strings.Contains(receivedErr.Error(), expectedErr) {
-		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
-	}
-
-	simulator.cancel()
-
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	exitRoutine <- true
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 }
 
 // This test checks the proper functioning of the simulateNotaryRequests goroutine
@@ -194,21 +191,20 @@ func TestSimulateNotaryRequests(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	simulator.requestFeed = server.Feed(pb.CollationBodyRequest{})
-	simulator.errChan = make(chan error)
 	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan)
+	go func() {
+		simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
 
 	delayChan <- time.Time{}
-	delayChan <- time.Time{}
+	doneChan <- struct{}{}
 
-	// h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p broadcast")
 
-	simulator.cancel()
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	exitRoutine <- true
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 }

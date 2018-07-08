@@ -8,13 +8,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/syncer"
-	"github.com/ethereum/go-ethereum/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 
-	pb "github.com/ethereum/go-ethereum/sharding/p2p/proto"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 )
 
 // Simulator is a service in a shard node that simulates requests from
@@ -30,7 +29,6 @@ type Simulator struct {
 	shardID     int
 	ctx         context.Context
 	cancel      context.CancelFunc
-	errChan     chan error // Useful channel for handling errors at the service layer.
 	delay       time.Duration
 	requestFeed *event.Feed
 }
@@ -40,16 +38,14 @@ type Simulator struct {
 // and a shardID.
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	errChan := make(chan error)
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, errChan, delay, nil}, nil
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, delay, nil}, nil
 }
 
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
-	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay))
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
 }
 
 // Stop the main loop for simulator requests.
@@ -57,7 +53,6 @@ func (s *Simulator) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
-	defer close(s.errChan)
 	log.Warn("Stopping simulator service")
 	return nil
 }
@@ -68,24 +63,24 @@ func (s *Simulator) Stop() error {
 // pair to perform their responsibilities. This function in particular simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
-func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time) {
+func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
-		case <-s.ctx.Done():
+		case <-done:
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-delayChan:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
-				s.errChan <- fmt.Errorf("could not fetch current block number: %v", err)
+				log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
 				continue
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
-				s.errChan <- fmt.Errorf("error constructing collation body request: %v", err)
+				log.Error(fmt.Sprintf("Error constructing collation body request: %v", err))
 				continue
 			}
 

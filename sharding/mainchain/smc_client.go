@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 )
 
 // ClientIdentifier tells us what client the node we interact with over RPC is running.

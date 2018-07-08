@@ -20,6 +20,7 @@ message CollationBodyRequest {
   uint64 period = 2;
   bytes chunk_root = 3;
   bytes proposer_address = 4;
+  bytes signature = 5;
 }
 
 message CollationBodyResponse {
