@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"testing"
 	"time"
 
@@ -113,6 +112,9 @@ func TestStartStop(t *testing.T) {
 // in the simulateNotaryRequests goroutine when reading the block number from
 // the mainchain via RPC.
 func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -125,28 +127,30 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	}
 
 	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
-	simulator.errChan = make(chan error)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, time.After(time.Second*0))
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
 
-	receivedErr := <-simulator.errChan
-	expectedErr := "could not fetch current block number"
-	if !strings.Contains(receivedErr.Error(), expectedErr) {
-		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
-	}
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+	h.VerifyLogMsg("Could not fetch current block number: cannot fetch block by number")
 
-	simulator.cancel()
-
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	exitRoutine <- true
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 }
 
 // This test uses a faulty SMCCaller in order to trigger an error
 // in the simulateNotaryRequests goroutine when reading the collation records
 // from the SMC.
 func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
+	h := internal.NewLogHandler(t)
+	log.Root().SetHandler(h)
+
 	shardID := 0
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -159,22 +163,21 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	}
 
 	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
-	simulator.errChan = make(chan error)
 
-	go simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, time.After(time.Second*0))
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
 
-	receivedErr := <-simulator.errChan
-	expectedErr := "error constructing collation body request"
-	if !strings.Contains(receivedErr.Error(), expectedErr) {
-		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
-	}
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+	h.VerifyLogMsg("Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record")
 
-	simulator.cancel()
-
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	exitRoutine <- true
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 }
 
 // This test checks the proper functioning of the simulateNotaryRequests goroutine
@@ -196,20 +199,20 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	}
 
 	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
-	simulator.errChan = make(chan error)
 	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
 
-	go simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan)
+	go func() {
+		simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
 
 	delayChan <- time.Time{}
-	delayChan <- time.Time{}
+	doneChan <- struct{}{}
 
-	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
 
-	simulator.cancel()
-	// The context should have been canceled.
-	if simulator.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	exitRoutine <- true
+	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
 }
