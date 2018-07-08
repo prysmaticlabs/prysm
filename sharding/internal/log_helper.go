@@ -41,6 +41,7 @@ func (t *LogHandler) Len() int {
 func (h *LogHandler) VerifyLogMsg(str string) {
 	if h.Len() == 0 {
 		h.t.Error("Expected a log, but there were none!")
+		return
 	}
 	if l := h.Pop(); l.Msg != str {
 		h.t.Errorf("Unexpected log: %v. Wanted: %s", l.Msg, str)
