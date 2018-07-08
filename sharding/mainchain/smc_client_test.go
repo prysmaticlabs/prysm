@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 var (
@@ -25,7 +26,7 @@ var (
 )
 
 // Verifies that SMCCLient implements the sharding Service inteface.
-var _ = types.Service(&SMCClient{})
+var _ = shardingTypes.Service(&SMCClient{})
 
 // mockClient is struct to implement the smcClient methods for testing.
 type mockClient struct {

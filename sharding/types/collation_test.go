@@ -151,8 +151,8 @@ func Test_CalculatePOC(t *testing.T) {
 // BENCHMARK TESTS
 
 // Helper function to generate test that completes round trip serialization tests for a specific number of transactions.
-func makeRandomTransactions(numTransactions int) []*types.Transaction {
-	var txs []*types.Transaction
+func makeRandomTransactions(numTransactions int) []*coreTypes.Transaction {
+	var txs []*coreTypes.Transaction
 	for i := 0; i < numTransactions; i++ {
 		// 150 is the current average tx size, based on recent blocks (i.e. tx size = block size / # txs)
 		// for example: https://etherscan.io/block/5722271

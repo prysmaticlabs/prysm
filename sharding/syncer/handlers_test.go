@@ -181,7 +181,7 @@ func TestCollationBodyResponse(t *testing.T) {
 		t.Error("Faulty collatiom fetcher should cause function to throw error. no error thrown.")
 	}
 
-	header := types.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, [32]byte{})
+	header := shardingTypes.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, [32]byte{})
 	body := []byte{}
 	response, err := RespondCollationBody(goodMsg, fetcher)
 	if err != nil {

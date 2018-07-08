@@ -24,7 +24,7 @@ import (
 	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
-var _ = types.Service(&Simulator{})
+var _ = shardingTypes.Service(&Simulator{})
 
 type faultyReader struct{}
 type goodReader struct{}
