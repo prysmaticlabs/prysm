@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -112,7 +112,7 @@ func (s *ShardEthereum) Start() {
 		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 		defer signal.Stop(sigc)
 		<-sigc
-		log.Info("Got interrupt, shutting down...")
+		log.Warn("Got interrupt, shutting down...")
 		go s.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
@@ -135,10 +135,10 @@ func (s *ShardEthereum) Close() {
 
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
+			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}
-	log.Info("Stopping sharding node")
+	log.Warn("Stopping sharding node")
 
 	// unblock n.Wait
 	close(s.stop)

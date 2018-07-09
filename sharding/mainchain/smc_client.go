@@ -20,10 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	log "github.com/sirupsen/logrus"
 )
 
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
@@ -73,7 +73,7 @@ func (s *SMCClient) Start() {
 	// Sets up a connection to a Geth node via RPC.
 	rpcClient, err := dialRPC(s.endpoint)
 	if err != nil {
-		log.Crit(fmt.Sprintf("Cannot start rpc client: %v", err))
+		log.Panicf("Cannot start rpc client: %v", err)
 		return
 	}
 
@@ -83,19 +83,19 @@ func (s *SMCClient) Start() {
 	// Check account existence and unlock account before starting.
 	accounts := s.keystore.Accounts()
 	if len(accounts) == 0 {
-		log.Crit("No accounts found")
+		log.Panic("No accounts found")
 		return
 	}
 
 	if err := s.unlockAccount(accounts[0]); err != nil {
-		log.Crit(fmt.Sprintf("Cannot unlock account: %v", err))
+		log.Panic(fmt.Sprintf("Cannot unlock account: %v", err))
 		return
 	}
 
 	// Initializes bindings to SMC.
 	smc, err := initSMC(s)
 	if err != nil {
-		log.Crit(fmt.Sprintf("Failed to initialize SMC: %v", err))
+		log.Panic(fmt.Sprintf("Failed to initialize SMC: %v", err))
 		return
 	}
 

@@ -7,7 +7,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 // Syncer represents a service that provides handlers for shard chain
@@ -78,7 +78,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 			return
 		case req := <-s.msgChan:
 			if req.Data != nil {
-				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
+				log.Infof("Received p2p request of type: %T", req)
 				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
@@ -87,7 +87,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 
 				// Reply to that specific peer only.
 				s.p2p.Send(*res, req.Peer)
-				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex()))
+				log.Infof("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex())
 			}
 		case <-s.bodyRequests.Err():
 			s.errChan <- errors.New("subscriber failed")

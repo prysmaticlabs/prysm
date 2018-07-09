@@ -4,15 +4,14 @@ package observer
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // Observer holds functionality required to run an observer service
@@ -38,7 +37,7 @@ func NewObserver(p2p *p2p.Server, dbService *database.ShardDB, shardID int, sync
 
 // Start the main loop for observer service.
 func (o *Observer) Start() {
-	log.Info(fmt.Sprintf("Starting observer service"))
+	log.Info("Starting observer service")
 	o.shard = types.NewShard(big.NewInt(int64(o.shardID)), o.dbService.DB())
 	go o.sync.HandleCollationBodyRequests(o.shard)
 }
@@ -48,6 +47,6 @@ func (o *Observer) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer o.cancel()
-	log.Info(fmt.Sprintf("Stopping observer service"))
+	log.Warn("Stopping observer service")
 	return nil
 }

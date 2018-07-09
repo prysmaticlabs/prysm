@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
 )
 
 type ShardDB struct {
@@ -58,7 +58,7 @@ func (s *ShardDB) Start() {
 
 // Stop the shard DB service gracefully.
 func (s *ShardDB) Stop() error {
-	log.Info("Stopping shardDB service")
+	log.Warn("Stopping shardDB service")
 	s.db.Close()
 	return nil
 }
