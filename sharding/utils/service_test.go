@@ -19,6 +19,6 @@ func TestHandleServiceErrors(t *testing.T) {
 	msg := hook.LastEntry().Message
 	want := "something wrong"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 }

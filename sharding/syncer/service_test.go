@@ -53,7 +53,7 @@ func TestStop(t *testing.T) {
 	msg := hook.LastEntry().Message
 	want := "Stopping sync service"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	// The context should have been canceled.
@@ -168,13 +168,13 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	logMsg := hook.AllEntries()[0].Message
 	want := fmt.Sprintf("Received p2p request of type: %T", p2p.Message{})
 	if logMsg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, logMsg)
+		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
 
 	logMsg = hook.AllEntries()[1].Message
 	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
 	if logMsg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, logMsg)
+		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
 
 	syncer.cancel()

@@ -100,7 +100,7 @@ func TestStartStop(t *testing.T) {
 
 	msg := hook.LastEntry().Message
 	if msg != "Stopping simulator service" {
-		t.Errorf("incorrect log, expected %v, got %v", "Stopping simulator service", msg)
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping simulator service", msg)
 	}
 
 	// The context should have been canceled.
@@ -144,13 +144,13 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	msg := hook.AllEntries()[0].Message
 	want := "Could not fetch current block number: cannot fetch block by number"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	msg = hook.AllEntries()[1].Message
 	want = "Simulator context closed, exiting goroutine"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	hook.Reset()
 }
@@ -189,13 +189,13 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	msg := hook.AllEntries()[0].Message
 	want := "Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	msg = hook.AllEntries()[1].Message
 	want = "Simulator context closed, exiting goroutine"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	hook.Reset()
 }
@@ -234,13 +234,13 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	msg := hook.AllEntries()[0].Message
 	want := "Sent request for collation body via a shardp2p feed"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	msg = hook.AllEntries()[1].Message
 	want = "Simulator context closed, exiting goroutine"
 	if msg != want {
-		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	hook.Reset()
 }

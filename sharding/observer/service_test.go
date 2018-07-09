@@ -43,13 +43,13 @@ func TestStartStop(t *testing.T) {
 	observer.sync.Start()
 	msg := hook.LastEntry().Message
 	if msg != "Starting sync service" {
-		t.Errorf("incorrect log, expected %v, got %v", "Starting sync service", msg)
+		t.Errorf("incorrect log, expected %s, got %s", "Starting sync service", msg)
 	}
 
 	observer.Start()
 	msg = hook.LastEntry().Message
 	if msg != "Starting observer service" {
-		t.Errorf("incorrect log, expected %v, got %v", "Starting observer service", msg)
+		t.Errorf("incorrect log, expected %s, got %s", "Starting observer service", msg)
 	}
 
 	err = observer.Stop()
@@ -59,7 +59,7 @@ func TestStartStop(t *testing.T) {
 
 	msg = hook.LastEntry().Message
 	if msg != "Stopping observer service" {
-		t.Errorf("incorrect log, expected %v, got %v", "Stopping observer service", msg)
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping observer service", msg)
 	}
 
 	if observer.ctx.Err() == nil {

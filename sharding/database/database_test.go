@@ -30,13 +30,13 @@ func TestLifecycle(t *testing.T) {
 	s.Start()
 	msg := hook.LastEntry().Message
 	if msg != "Starting shardDB service" {
-		t.Errorf("incorrect log, expected %v, got %v", "Starting shardDB service", msg)
+		t.Errorf("incorrect log, expected %s, got %s", "Starting shardDB service", msg)
 	}
 
 	s.Stop()
 	msg = hook.LastEntry().Message
 	if msg != "Stopping shardDB service" {
-		t.Errorf("incorrect log, expected %v, got %v", "Stopping shardDB service", msg)
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping shardDB service", msg)
 	}
 
 	// Access DB after it's stopped, this should fail
