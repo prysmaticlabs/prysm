@@ -16,11 +16,10 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
-	"github.com/ethereum/go-ethereum/log"
-	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = types.Service(&Simulator{})
@@ -82,8 +81,7 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 }
 
 func TestStartStop(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardID := 0
 	server, err := p2p.NewServer()
@@ -100,7 +98,10 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to stop simulator service: %v", err)
 	}
 
-	h.VerifyLogMsg("Stopping simulator service")
+	msg := hook.LastEntry().Message
+	if msg != "Stopping simulator service" {
+		t.Errorf("incorrect log, expected %v, got %v", "Stopping simulator service", msg)
+	}
 
 	// The context should have been canceled.
 	if simulator.ctx.Err() == nil {
@@ -112,8 +113,7 @@ func TestStartStop(t *testing.T) {
 // in the simulateNotaryRequests goroutine when reading the block number from
 // the mainchain via RPC.
 func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardID := 0
 	server, err := p2p.NewServer()
@@ -138,18 +138,26 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
-	h.VerifyLogMsg("Could not fetch current block number: cannot fetch block by number")
+
+	msg := hook.LastEntry().Message
+	want := "Could not fetch current block number: cannot fetch block by number"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 
 	exitRoutine <- true
-	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
+	msg = hook.LastEntry().Message
+	want = "Simulator context closed, exiting goroutine"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 }
 
 // This test uses a faulty SMCCaller in order to trigger an error
 // in the simulateNotaryRequests goroutine when reading the collation records
 // from the SMC.
 func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardID := 0
 	server, err := p2p.NewServer()
@@ -174,18 +182,26 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
-	h.VerifyLogMsg("Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record")
+
+	msg := hook.LastEntry().Message
+	want := "Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 
 	exitRoutine <- true
-	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
+	msg = hook.LastEntry().Message
+	want = "Simulator context closed, exiting goroutine"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 }
 
 // This test checks the proper functioning of the simulateNotaryRequests goroutine
 // by listening to the requestSent channel which occurs after successful
 // construction and sending of a request via p2p.
 func TestSimulateNotaryRequests(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardID := 0
 	server, err := p2p.NewServer()
@@ -211,8 +227,16 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	h.VerifyLogMsg("Sent request for collation body via a shardp2p feed")
+	msg := hook.LastEntry().Message
+	want := "Sent request for collation body via a shardp2p feed"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 
 	exitRoutine <- true
-	h.VerifyLogMsg("Simulator context closed, exiting goroutine")
+	msg = hook.LastEntry().Message
+	want = "Simulator context closed, exiting goroutine"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 }

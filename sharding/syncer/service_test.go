@@ -14,10 +14,9 @@ import (
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
-	"github.com/ethereum/go-ethereum/log"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
-	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
@@ -25,8 +24,7 @@ import (
 var _ = types.Service(&Syncer{})
 
 func TestStop(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardChainDB, err := database.NewShardDB("", "", true)
 	if err != nil {
@@ -52,7 +50,11 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Unable to stop sync service: %v", err)
 	}
 
-	h.VerifyLogMsg("Stopping sync service")
+	msg := hook.LastEntry().Message
+	want := "Stopping sync service"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 
 	// The context should have been canceled.
 	if syncer.ctx.Err() == nil {
@@ -64,9 +66,6 @@ func TestStop(t *testing.T) {
 // in the simulateNotaryRequests goroutine when attempting to sign
 // a collation header within the goroutine's internals.
 func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
-
 	shardChainDB, err := database.NewShardDB("", "", true)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -114,8 +113,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 // by listening to the responseSent channel which occurs after successful
 // construction and sending of a response via p2p.
 func TestHandleCollationBodyRequests(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardChainDB, err := database.NewShardDB("", "", true)
 	if err != nil {
@@ -167,8 +165,17 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	}
 	syncer.msgChan <- msg
 
-	h.VerifyLogMsg(fmt.Sprintf("Received p2p request of type: %T", p2p.Message{}))
-	h.VerifyLogMsg(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex()))
+	logMsg := hook.LastEntry().Message
+	want := fmt.Sprintf("Received p2p request of type: %T", p2p.Message{})
+	if logMsg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, logMsg)
+	}
+
+	logMsg = hook.LastEntry().Message
+	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
+	if logMsg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, logMsg)
+	}
 
 	syncer.cancel()
 	// The context should have been canceled.

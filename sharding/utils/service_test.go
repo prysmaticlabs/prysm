@@ -4,13 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestHandleServiceErrors(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 	done := make(chan struct{})
 	errChan := make(chan error)
 
@@ -18,5 +16,9 @@ func TestHandleServiceErrors(t *testing.T) {
 
 	errChan <- errors.New("something wrong")
 	done <- struct{}{}
-	h.VerifyLogMsg("something wrong")
+	msg := hook.LastEntry().Message
+	want := "something wrong"
+	if msg != want {
+		t.Errorf("incorrect log, expected %v, got %v", want, msg)
+	}
 }

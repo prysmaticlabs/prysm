@@ -21,12 +21,11 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//sharding/database:go_default_library",
-        "//sharding/internal:go_default_library",
         "//sharding/mainchain:go_default_library",
         "//sharding/p2p:go_default_library",
         "//sharding/params:go_default_library",
         "//sharding/syncer:go_default_library",
         "//sharding/types:go_default_library",
-        "@com_github_ethereum_go_ethereum//log:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

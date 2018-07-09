@@ -27,8 +27,5 @@ go_test(
         "service_test.go",
     ],
     embed = [":go_default_library"],
-    deps = [
-        "//sharding/internal:go_default_library",
-        "@com_github_ethereum_go_ethereum//log:go_default_library",
-    ],
+    deps = ["@com_github_sirupsen_logrus//hooks/test:go_default_library"],
 )
