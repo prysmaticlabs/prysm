@@ -39,7 +39,7 @@ func NewObserver(p2p *p2p.Server, dbService *database.ShardDB, shardID int, sync
 func (o *Observer) Start() {
 	log.Info("Starting observer service")
 	o.shard = types.NewShard(big.NewInt(int64(o.shardID)), o.dbService.DB())
-	go o.sync.HandleCollationBodyRequests(o.shard)
+	go o.sync.HandleCollationBodyRequests(o.shard, o.ctx.Done())
 }
 
 // Stop the main loop for observer service.

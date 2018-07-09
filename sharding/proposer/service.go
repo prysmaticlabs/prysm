@@ -60,7 +60,7 @@ func (p *Proposer) Start() {
 	shard := types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.shard = shard
 	go p.proposeCollations()
-	go p.sync.HandleCollationBodyRequests(p.shard)
+	go p.sync.HandleCollationBodyRequests(p.shard, p.ctx.Done())
 }
 
 // Stop the main loop for proposing collations.

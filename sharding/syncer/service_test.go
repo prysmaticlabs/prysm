@@ -60,6 +60,7 @@ func TestStop(t *testing.T) {
 	if syncer.ctx.Err() == nil {
 		t.Error("Context was not canceled")
 	}
+	hook.Reset()
 }
 
 // This test uses a faulty Signer interface in order to trigger an error
@@ -88,7 +89,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
-	go syncer.HandleCollationBodyRequests(shard)
+	go syncer.HandleCollationBodyRequests(shard, syncer.ctx.Done())
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
@@ -152,7 +153,13 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
-	go syncer.HandleCollationBodyRequests(shard)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		syncer.HandleCollationBodyRequests(shard, doneChan)
+		<-exitRoutine
+	}()
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
@@ -165,21 +172,19 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	}
 	syncer.msgChan <- msg
 
-	logMsg := hook.AllEntries()[0].Message
+	logMsg := hook.LastEntry().Message
 	want := fmt.Sprintf("Received p2p request of type: %T", p2p.Message{})
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
 
-	logMsg = hook.AllEntries()[1].Message
+	doneChan <- struct{}{}
+	exitRoutine <- true
+
+	logMsg = hook.LastEntry().Message
 	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
-
-	syncer.cancel()
-	// The context should have been canceled.
-	if syncer.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	hook.Reset()
 }

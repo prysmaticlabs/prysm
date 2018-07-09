@@ -139,7 +139,6 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
-	exitRoutine <- true
 
 	msg := hook.AllEntries()[0].Message
 	want := "Could not fetch current block number: cannot fetch block by number"
@@ -147,11 +146,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
-	msg = hook.AllEntries()[1].Message
-	want = "Simulator context closed, exiting goroutine"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
+	exitRoutine <- true
 	hook.Reset()
 }
 
@@ -184,7 +179,6 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
-	exitRoutine <- true
 
 	msg := hook.AllEntries()[0].Message
 	want := "Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record"
@@ -192,11 +186,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
-	msg = hook.AllEntries()[1].Message
-	want = "Simulator context closed, exiting goroutine"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
+	exitRoutine <- true
 	hook.Reset()
 }
 
@@ -229,7 +219,6 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
-	exitRoutine <- true
 
 	msg := hook.AllEntries()[0].Message
 	want := "Sent request for collation body via a shardp2p feed"
@@ -237,10 +226,6 @@ func TestSimulateNotaryRequests(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
-	msg = hook.AllEntries()[1].Message
-	want = "Simulator context closed, exiting goroutine"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
+	exitRoutine <- true
 	hook.Reset()
 }
