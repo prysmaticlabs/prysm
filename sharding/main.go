@@ -45,10 +45,18 @@ VERSION:
 	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
 	app.Action = startNode
-	app.Flags = []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag}
+	app.Flags = []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag, utils.PProfFlag, utils.PProfAddrFlag, utils.PProfPortFlag, utils.MemProfileRateFlag, utils.CPUProfileFlag, utils.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
+		if err := utils.Setup(ctx); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	app.After = func(ctx *cli.Context) error {
+		utils.Exit()
 		return nil
 	}
 
