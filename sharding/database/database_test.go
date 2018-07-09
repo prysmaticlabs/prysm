@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 )
 
 // Verifies that ShardDB implements the sharding Service inteface.
-var _ = sharding.Service(&ShardDB{})
+var _ = types.Service(&ShardDB{})
 
 var testDB *ShardDB
 

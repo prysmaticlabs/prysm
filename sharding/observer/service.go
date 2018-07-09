@@ -8,7 +8,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
@@ -22,7 +22,7 @@ type Observer struct {
 	p2p       *p2p.Server
 	dbService *database.ShardDB
 	shardID   int
-	shard     *sharding.Shard
+	shard     *types.Shard
 	ctx       context.Context
 	cancel    context.CancelFunc
 	sync      *syncer.Syncer
@@ -39,7 +39,7 @@ func NewObserver(p2p *p2p.Server, dbService *database.ShardDB, shardID int, sync
 // Start the main loop for observer service.
 func (o *Observer) Start() {
 	log.Info(fmt.Sprintf("Starting observer service"))
-	o.shard = sharding.NewShard(big.NewInt(int64(o.shardID)), o.dbService.DB())
+	o.shard = types.NewShard(big.NewInt(int64(o.shardID)), o.dbService.DB())
 	go o.sync.HandleCollationBodyRequests(o.shard)
 }
 

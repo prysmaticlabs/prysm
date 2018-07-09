@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
@@ -54,8 +54,8 @@ func (p *TXPool) sendTestTransaction() {
 	}
 }
 
-func createTestTransaction() *types.Transaction {
+func createTestTransaction() *gethTypes.Transaction {
 	data := make([]byte, 1024)
 	rand.Read(data)
-	return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
+	return gethTypes.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
 }

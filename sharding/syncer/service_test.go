@@ -10,19 +10,19 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
-var _ = sharding.Service(&Syncer{})
+var _ = types.Service(&Syncer{})
 
 func TestStop(t *testing.T) {
 	h := internal.NewLogHandler(t)
@@ -83,7 +83,7 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	}
 
 	feed := server.Feed(messages.CollationBodyRequest{})
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB.DB())
+	shard := types.NewShard(big.NewInt(int64(shardID)), shardChainDB.DB())
 
 	syncer.msgChan = make(chan p2p.Message)
 	syncer.errChan = make(chan error)
@@ -128,16 +128,16 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 
 	body := []byte{1, 2, 3, 4, 5}
 	shardID := big.NewInt(0)
-	chunkRoot := types.DeriveSha(sharding.Chunks(body))
+	chunkRoot := gethTypes.DeriveSha(types.Chunks(body))
 	period := big.NewInt(0)
 	proposerAddress := common.BytesToAddress([]byte{})
 
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
+	header := types.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
 
 	// Stores the collation into the inmemory kv store shardChainDB.
-	collation := sharding.NewCollation(header, body, nil)
+	collation := types.NewCollation(header, body, nil)
 
-	shard := sharding.NewShard(shardID, shardChainDB.DB())
+	shard := types.NewShard(shardID, shardChainDB.DB())
 
 	if err := shard.SaveCollation(collation); err != nil {
 		t.Fatalf("Could not store collation in shardChainDB: %v", err)

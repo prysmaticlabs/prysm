@@ -23,8 +23,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//sharding:go_default_library",
         "//sharding/internal:go_default_library",
+        "//sharding/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
     ],

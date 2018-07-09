@@ -18,6 +18,7 @@ go_library(
         "@com_github_ethereum_go_ethereum//metrics:go_default_library",
         "@com_github_ethereum_go_ethereum//metrics/exp:go_default_library",
         "@com_github_fjl_memsize//memsizeui:go_default_library",
-        "@in_gopkg_urfave_cli_v1//:go_default_library",
+        "@com_github_mattn_go_colorable//:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )
