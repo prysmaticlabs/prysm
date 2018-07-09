@@ -32,7 +32,7 @@ func (p *TXPool) Start() {
 
 // Stop the main loop for a transaction pool in the shard network.
 func (p *TXPool) Stop() error {
-	log.Warn("Stopping shard txpool service")
+	log.Info("Stopping shard txpool service")
 	p.ticker.Stop()
 	return nil
 }

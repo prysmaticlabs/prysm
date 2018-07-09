@@ -47,6 +47,6 @@ func (o *Observer) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer o.cancel()
-	log.Warn("Stopping observer service")
+	log.Info("Stopping observer service")
 	return nil
 }

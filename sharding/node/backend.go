@@ -112,12 +112,12 @@ func (s *ShardEthereum) Start() {
 		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 		defer signal.Stop(sigc)
 		<-sigc
-		log.Warn("Got interrupt, shutting down...")
+		log.Info("Got interrupt, shutting down...")
 		go s.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
 		// ensure trace and CPU profile data is flushed.
@@ -138,7 +138,7 @@ func (s *ShardEthereum) Close() {
 			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}
-	log.Warn("Stopping sharding node")
+	log.Info("Stopping sharding node")
 
 	// unblock n.Wait
 	close(s.stop)

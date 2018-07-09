@@ -84,10 +84,10 @@ func (p *Proposer) proposeCollations() {
 				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():
-			log.Warn("Proposer context closed, exiting goroutine")
+			log.Info("Proposer context closed, exiting goroutine")
 			return
 		case <-p.txpoolSub.Err():
-			log.Warn("Subscriber closed")
+			log.Debug("Subscriber closed")
 			return
 		}
 	}

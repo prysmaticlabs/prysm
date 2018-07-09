@@ -33,7 +33,7 @@ func (n *Notary) Start() {
 
 // Stop the main loop for notarizing collations.
 func (n *Notary) Stop() error {
-	log.Warn("Stopping notary service")
+	log.Info("Stopping notary service")
 	return nil
 }
 

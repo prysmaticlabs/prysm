@@ -62,7 +62,7 @@ func (s *Syncer) Stop() error {
 	defer s.cancel()
 	defer close(s.errChan)
 	defer close(s.msgChan)
-	log.Warn("Stopping sync service")
+	log.Info("Stopping sync service")
 	s.bodyRequests.Unsubscribe()
 	return nil
 }

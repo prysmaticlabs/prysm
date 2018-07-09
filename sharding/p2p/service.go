@@ -33,7 +33,7 @@ func (s *Server) Start() {
 
 // Stop the main p2p loop.
 func (s *Server) Stop() error {
-	log.Warn("Stopping shardp2p server")
+	log.Info("Stopping shardp2p server")
 	return nil
 }
 

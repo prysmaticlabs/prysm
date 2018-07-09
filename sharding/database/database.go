@@ -58,7 +58,7 @@ func (s *ShardDB) Start() {
 
 // Stop the shard DB service gracefully.
 func (s *ShardDB) Stop() error {
-	log.Warn("Stopping shardDB service")
+	log.Info("Stopping shardDB service")
 	s.db.Close()
 	return nil
 }

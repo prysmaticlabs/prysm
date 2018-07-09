@@ -52,7 +52,7 @@ func (s *Simulator) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
-	log.Warn("Stopping simulator service")
+	log.Info("Stopping simulator service")
 	return nil
 }
 
@@ -67,7 +67,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		select {
 		// Makes sure to close this goroutine when the service stops.
 		case <-done:
-			log.Warn("Simulator context closed, exiting goroutine")
+			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-delayChan:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
