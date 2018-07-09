@@ -53,3 +53,9 @@ go_repository(
     importpath = "github.com/sirupsen/logrus",
     commit = "e54a77765aca7bbdd8e56c1c54f60579968b2dc9",
 )
+
+go_repository(
+    name = "org_golang_x_sys",
+    commit = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2",
+    importpath = "golang.org/x/sys",
+)
