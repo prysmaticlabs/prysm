@@ -107,6 +107,7 @@ func TestStartStop(t *testing.T) {
 	if simulator.ctx.Err() == nil {
 		t.Error("Context was not canceled")
 	}
+	hook.Reset()
 }
 
 // This test uses a faulty chain reader in order to trigger an error
@@ -138,19 +139,20 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
+	exitRoutine <- true
 
-	msg := hook.LastEntry().Message
+	msg := hook.AllEntries()[0].Message
 	want := "Could not fetch current block number: cannot fetch block by number"
 	if msg != want {
 		t.Errorf("incorrect log, expected %v, got %v", want, msg)
 	}
 
-	exitRoutine <- true
-	msg = hook.LastEntry().Message
+	msg = hook.AllEntries()[1].Message
 	want = "Simulator context closed, exiting goroutine"
 	if msg != want {
 		t.Errorf("incorrect log, expected %v, got %v", want, msg)
 	}
+	hook.Reset()
 }
 
 // This test uses a faulty SMCCaller in order to trigger an error
@@ -182,19 +184,20 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
+	exitRoutine <- true
 
-	msg := hook.LastEntry().Message
+	msg := hook.AllEntries()[0].Message
 	want := "Error constructing collation body request: could not fetch collation record from SMC: error fetching collation record"
 	if msg != want {
 		t.Errorf("incorrect log, expected %v, got %v", want, msg)
 	}
 
-	exitRoutine <- true
-	msg = hook.LastEntry().Message
+	msg = hook.AllEntries()[1].Message
 	want = "Simulator context closed, exiting goroutine"
 	if msg != want {
 		t.Errorf("incorrect log, expected %v, got %v", want, msg)
 	}
+	hook.Reset()
 }
 
 // This test checks the proper functioning of the simulateNotaryRequests goroutine
@@ -226,17 +229,18 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
+	exitRoutine <- true
 
-	msg := hook.LastEntry().Message
+	msg := hook.AllEntries()[0].Message
 	want := "Sent request for collation body via a shardp2p feed"
 	if msg != want {
 		t.Errorf("incorrect log, expected %v, got %v", want, msg)
 	}
 
-	exitRoutine <- true
-	msg = hook.LastEntry().Message
+	msg = hook.AllEntries()[1].Message
 	want = "Simulator context closed, exiting goroutine"
 	if msg != want {
 		t.Errorf("incorrect log, expected %v, got %v", want, msg)
 	}
+	hook.Reset()
 }
