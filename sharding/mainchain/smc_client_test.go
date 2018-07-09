@@ -11,12 +11,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 )
 
 // Verifies that SMCCLient implements the sharding Service inteface.
-var _ = sharding.Service(&SMCClient{})
+var _ = types.Service(&SMCClient{})
 
 // mockClient is struct to implement the smcClient methods for testing.
 type mockClient struct {
@@ -41,7 +41,7 @@ type mockClient struct {
 // it is replaced by the simulated backend.
 func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
 
-	var receipt *types.Receipt
+	var receipt *gethTypes.Receipt
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, durationInSeconds*time.Second)
 
@@ -64,9 +64,9 @@ func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, d
 
 // Creates and send Fake Transactions to the backend to be mined, takes in the context and
 // the current blocknumber as an argument and returns the signed transaction after it has been sent.
-func (m *mockClient) CreateAndSendFakeTx(ctx context.Context) (*types.Transaction, error) {
-	tx := types.NewTransaction(m.blockNumber.Uint64(), common.HexToAddress("0x"), nil, 50000, nil, nil)
-	signedtx, err := types.SignTx(tx, types.MakeSigner(&params.ChainConfig{}, m.blockNumber), key)
+func (m *mockClient) CreateAndSendFakeTx(ctx context.Context) (*gethTypes.Transaction, error) {
+	tx := gethTypes.NewTransaction(m.blockNumber.Uint64(), common.HexToAddress("0x"), nil, 50000, nil, nil)
+	signedtx, err := gethTypes.SignTx(tx, gethTypes.MakeSigner(&params.ChainConfig{}, m.blockNumber), key)
 	if err != nil {
 		return nil, err
 	}

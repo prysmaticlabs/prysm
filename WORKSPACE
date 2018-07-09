@@ -36,15 +36,26 @@ go_repository(
     commit = "eb95493d32b6e1eb1cad63518637e1a958632389",
 )
 
-# TODO: Update this to use github.com/urfave/cli.
 go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+    name = "com_github_urfave_cli",
+    importpath = "github.com/urfave/cli",
+    commit = "8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff",
 )
 
 go_repository(
     name = "com_github_fjl_memsize",
     importpath = "github.com/fjl/memsize",
     commit = "ca190fb6ffbc076ff49197b7168a760f30182d2e",
+)
+
+go_repository(
+    name = "com_github_mattn_go_colorable",
+    importpath = "github.com/mattn/go-colorable",
+    commit = "efa589957cd060542a26d2dd7832fd6a6c6c3ade",
+)
+
+go_repository(
+    name = "com_github_mattn_go_isatty",
+    importpath = "github.com/mattn/go-isatty",
+    commit = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
 )

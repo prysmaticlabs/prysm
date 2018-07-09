@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 )
 
@@ -45,15 +45,15 @@ type ContractTransactor interface {
 type EthClient interface {
 	Account() *accounts.Account
 	WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error
-	TransactionReceipt(hash common.Hash) (*types.Receipt, error)
+	TransactionReceipt(hash common.Hash) (*gethTypes.Receipt, error)
 	DepositFlag() bool
 }
 
 // Reader defines an interface for a struct that can read mainchain information
 // such as blocks, transactions, receipts, and more. Useful for testing.
 type Reader interface {
-	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
-	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
+	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
 }
 
 // RecordFetcher serves as an interface for a struct that can fetch collation information

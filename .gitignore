@@ -1,2 +1,5 @@
 # Ignore bazel directories
 bazel-*
+build
+.DS_Store
+.gitattributes

@@ -3,20 +3,26 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "customflags.go",
+        "flags.go",
         "marshal.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/utils",
     visibility = ["//visibility:public"],
     deps = [
+        "//sharding/params:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
+        "@com_github_ethereum_go_ethereum//node:go_default_library",
         "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = [
+        "customflags_test.go",
         "marshal_test.go",
         "service_test.go",
     ],

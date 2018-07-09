@@ -13,17 +13,17 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
-var _ = sharding.Service(&Simulator{})
+var _ = types.Service(&Simulator{})
 
 type faultyReader struct{}
 type goodReader struct{}
@@ -59,25 +59,25 @@ func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg
 		Signature [32]byte
 	})
 	body := []byte{1, 2, 3, 4, 5}
-	res.ChunkRoot = [32]byte(types.DeriveSha(sharding.Chunks(body)))
+	res.ChunkRoot = [32]byte(gethTypes.DeriveSha(types.Chunks(body)))
 	res.Proposer = common.BytesToAddress([]byte{})
 	res.IsElected = false
 	return *res, nil
 }
 
-func (f *faultyReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+func (f *faultyReader) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
 	return nil, fmt.Errorf("cannot fetch block by number")
 }
 
-func (f *faultyReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+func (f *faultyReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return nil, nil
 }
 
-func (g *goodReader) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return types.NewBlock(&types.Header{Number: big.NewInt(0)}, nil, nil, nil), nil
+func (g *goodReader) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return gethTypes.NewBlock(&gethTypes.Header{Number: big.NewInt(0)}, nil, nil, nil), nil
 }
 
-func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return nil, nil
 }
 

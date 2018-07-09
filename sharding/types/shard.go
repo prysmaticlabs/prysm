@@ -1,4 +1,4 @@
-package sharding
+package types
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -185,8 +185,8 @@ func (s *Shard) SaveBody(body []byte) error {
 	if len(body) == 0 {
 		return errors.New("body is empty")
 	}
-	chunks := Chunks(body)               // wrapper allowing us to merklizing the chunks.
-	chunkRoot := types.DeriveSha(chunks) // merklize the serialized blobs.
+	chunks := Chunks(body)                   // wrapper allowing us to merklizing the chunks.
+	chunkRoot := gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
 	s.SetAvailability(&chunkRoot, true)
 	return s.shardDB.Put(chunkRoot.Bytes(), body)
 }

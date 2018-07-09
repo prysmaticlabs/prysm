@@ -8,12 +8,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 )
 
@@ -47,7 +47,7 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
 
-	shard := sharding.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
+	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
 
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Feed(messages.CollationBodyRequest{}).Subscribe(s.msgChan)
@@ -70,7 +70,7 @@ func (s *Syncer) Stop() error {
 // HandleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (s *Syncer) HandleCollationBodyRequests(collationFetcher sharding.CollationFetcher) {
+func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFetcher) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
