@@ -13,23 +13,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/notary"
-	"github.com/ethereum/go-ethereum/sharding/observer"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/proposer"
-	"github.com/ethereum/go-ethereum/sharding/simulator"
-	"github.com/ethereum/go-ethereum/sharding/syncer"
-	"github.com/ethereum/go-ethereum/sharding/txpool"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/notary"
+	"github.com/prysmaticlabs/geth-sharding/sharding/observer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/proposer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/simulator"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 const shardChainDBName = "shardchaindata"
@@ -40,12 +39,12 @@ const shardChainDBName = "shardchaindata"
 type ShardEthereum struct {
 	shardConfig *params.Config // Holds necessary information to configure shards.
 	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
-	actor       sharding.Actor // Either notary, proposer, or observer.
+	actor       types.Actor    // Either notary, proposer, or observer.
 	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
-	services     map[reflect.Type]sharding.Service // Service registry.
-	serviceTypes []reflect.Type                    // Keeps an ordered slice of registered service types.
+	services     map[reflect.Type]types.Service // Service registry.
+	serviceTypes []reflect.Type                 // Keeps an ordered slice of registered service types.
 	lock         sync.RWMutex
 	stop         chan struct{} // Channel to wait for termination notifications
 }
@@ -54,7 +53,7 @@ type ShardEthereum struct {
 // geth sharding entrypoint.
 func New(ctx *cli.Context) (*ShardEthereum, error) {
 	shardEthereum := &ShardEthereum{
-		services: make(map[reflect.Type]sharding.Service),
+		services: make(map[reflect.Type]types.Service),
 		stop:     make(chan struct{}),
 	}
 
@@ -73,21 +72,21 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
+	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
+	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
+		return nil, err
+	}
+
 	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
 	if err := shardEthereum.registerSimulatorService(actorFlag, shardEthereum.shardConfig, shardIDFlag); err != nil {
-		return nil, err
-	}
-
-	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -118,12 +117,11 @@ func (s *ShardEthereum) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
 		// ensure trace and CPU profile data is flushed.
-		debug.Exit()
-		debug.LoudPanic("boom")
+		panic("Panic closing the sharding node")
 	}()
 
 	// Wait for stop channel to be closed
@@ -137,7 +135,7 @@ func (s *ShardEthereum) Close() {
 
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
+			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}
 	log.Info("Stopping sharding node")
@@ -148,7 +146,7 @@ func (s *ShardEthereum) Close() {
 
 // registerService appends a service constructor function to the service registry of the
 // sharding node.
-func (s *ShardEthereum) registerService(service sharding.Service) error {
+func (s *ShardEthereum) registerService(service types.Service) error {
 	kind := reflect.TypeOf(service)
 	if _, exists := s.services[kind]; exists {
 		return fmt.Errorf("service already exists: %v", kind)
@@ -257,6 +255,11 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
+	var sync *syncer.Syncer
+	if err := s.fetchService(&sync); err != nil {
+		return err
+	}
+
 	if actor == "notary" {
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
 		if err != nil {
@@ -270,13 +273,13 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID)
+		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.registerService(prop)
 	}
-	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID)
+	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
 	if err != nil {
 		return fmt.Errorf("could not register observer service: %v", err)
 	}

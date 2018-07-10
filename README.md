@@ -136,7 +136,7 @@ Omitting the `--actor` flag will launch a simple observer service attached to th
 
 The Sharding Manager Contract is built in Solidity and deployed to a running geth node upon launch of the sharding node if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
 
-    go generate github.com/ethereum/go-ethereum/sharding
+    go generate github.com/prysmaticlabs/geth-sharding/sharding
     # OR
     cd sharding && go generate
 
@@ -145,7 +145,7 @@ The Sharding Manager Contract is built in Solidity and deployed to a running get
 To run the unit tests of our system do:
 
 ```
-go test github.com/ethereum/go-ethereum/sharding
+go test github.com/prysmaticlabs/geth-sharding/sharding
 ```
 
 We will require more complex testing scenarios (fuzz tests) to measure the full integrity of the system as it evolves.

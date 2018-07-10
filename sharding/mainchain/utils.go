@@ -6,11 +6,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // dialRPC endpoint to node.
@@ -33,7 +33,7 @@ func initSMC(s *SMCClient) (*contracts.SMC, error) {
 	// TODO: Separate contract deployment from the sharding node. It would only need to be deployed
 	// once on the mainnet, so this code would not need to ship with the node.
 	if len(b) == 0 {
-		log.Info(fmt.Sprintf("No sharding manager contract found at %s. Deploying new contract.", params.DefaultConfig.SMCAddress.Hex()))
+		log.Infof("No sharding manager contract found at %s, deploying new contract", params.DefaultConfig.SMCAddress.Hex())
 
 		txOps, err := s.CreateTXOpts(big.NewInt(0))
 		if err != nil {
@@ -52,7 +52,7 @@ func initSMC(s *SMCClient) (*contracts.SMC, error) {
 			time.Sleep(1 * time.Second)
 		}
 
-		log.Info(fmt.Sprintf("New contract deployed at %s", addr.Hex()))
+		log.Infof("New contract deployed at %s", addr.Hex())
 		return contract, nil
 	}
 

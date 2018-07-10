@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 type smcTestHelper struct {
@@ -147,7 +147,7 @@ func (s *smcTestHelper) deregisterNotaries(params ...int) error {
 
 // addHeader is a helper function to add header to smc.
 func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.Int, chunkRoot uint8) error {
-	sig := []byte{'S', 'I', 'G', 'N', 'A', 'T', 'U', 'R', 'E'}
+	sig := [32]byte{'S', 'I', 'G', 'N', 'A', 'T', 'U', 'R', 'E'}
 	_, err := s.smc.AddHeader(a.txOpts, shard, period, [32]byte{chunkRoot}, sig)
 	if err != nil {
 		return err
