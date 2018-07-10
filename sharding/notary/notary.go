@@ -12,12 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if
@@ -39,7 +39,7 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 		// TODO: Error handling for getting disconnected from the client.
 		head := <-headerChan
 		// Query the current state to see if we are an eligible notary.
-		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
+		log.Infof("Received new header: %v", head.Number.String())
 
 		// Check if we are in the notary pool before checking if we are an eligible notary.
 		v, err := isAccountInNotaryPool(caller, account)
@@ -74,7 +74,7 @@ func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Accoun
 		}
 
 		if addr == account.Address {
-			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
+			log.Infof("Selected as notary on shard: %d", s)
 		}
 
 	}
@@ -106,7 +106,7 @@ func isAccountInNotaryPool(caller mainchain.ContractCaller, account *accounts.Ac
 	}
 
 	if !nreg.Deposited {
-		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.Hex()))
+		log.Warnf("Account %s not in notary pool.", account.Address.Hex())
 	}
 
 	return nreg.Deposited, nil
@@ -173,9 +173,8 @@ func settingCanonicalShardChain(shard types.Shard, manager mainchain.ContractMan
 
 	// Logs if quorum has been reached and collation is added to the canonical shard chain
 	if collationRecords.IsElected {
-		log.Info(fmt.Sprintf(
-			"Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
-			shardID, period, headerHash))
+		log.Infof("Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
+			shardID, period, headerHash)
 
 		// Setting collation header as canonical in the shard chain
 		header, err := shard.HeaderByHash(headerHash)
@@ -271,7 +270,7 @@ func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClien
 
 	if b, err := isAccountInNotaryPool(manager, client.Account()); b || err != nil {
 		if b {
-			log.Info(fmt.Sprint("Already joined notary pool"))
+			log.Info("Already joined notary pool")
 			return nil
 		}
 		return err
@@ -308,7 +307,7 @@ func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClien
 		return errors.New("account has not been able to be deposited in notary pool")
 	}
 
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
+	log.Infof("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex())
 
 	return nil
 }
@@ -355,7 +354,7 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 		return errors.New("notary unable to be deregistered successfully from pool")
 	}
 
-	log.Info(fmt.Sprintf("Notary deregistered from the pool with hash: %s", tx.Hash().Hex()))
+	log.Infof("Notary deregistered from the pool with hash: %s", tx.Hash().Hex())
 	return nil
 
 }
@@ -402,7 +401,7 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 		return errors.New("notary unable to be released from the pool")
 	}
 
-	log.Info(fmt.Sprintf("notary with address: %s released from pool", client.Account().Address.Hex()))
+	log.Infof("Notary with address: %s released from pool", client.Account().Address.Hex())
 
 	return nil
 
@@ -488,7 +487,7 @@ func submitVote(shard types.Shard, manager mainchain.ContractManager, client mai
 		return errors.New("notary has not voted")
 	}
 
-	log.Info(fmt.Sprintf("Notary has voted for shard: %v in the %v period", shardID, period))
+	log.Infof("Notary has voted for shard: %v in the %v period", shardID, period)
 
 	err = settingCanonicalShardChain(shard, manager, period, headerHash)
 

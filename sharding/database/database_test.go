@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
-	internal "github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Verifies that ShardDB implements the sharding Service inteface.
@@ -21,21 +20,24 @@ func init() {
 }
 
 func TestLifecycle(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	s, err := NewShardDB("/tmp/datadir", "shardchaindb", false)
 	if err != nil {
-		t.Fatalf("Could not initialize a new sb: %v", err)
+		t.Fatalf("could not initialize a new sb: %v", err)
 	}
 
 	s.Start()
-	h.VerifyLogMsg("Starting shardDB service")
-	// ethdb.NewLDBDatabase logs the following
-	h.VerifyLogMsg("Allocated cache and file handles")
+	msg := hook.LastEntry().Message
+	if msg != "Starting shardDB service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting shardDB service", msg)
+	}
 
 	s.Stop()
-	h.VerifyLogMsg("Stopping shardDB service")
+	msg = hook.LastEntry().Message
+	if msg != "Stopping shardDB service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping shardDB service", msg)
+	}
 
 	// Access DB after it's stopped, this should fail
 	_, err = s.db.Get([]byte("ralph merkle"))

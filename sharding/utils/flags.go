@@ -18,12 +18,19 @@
 package utils
 
 import (
+	"fmt"
 	"math/big"
+	"net/http"
+	"runtime"
 
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/fjl/memsize/memsizeui"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
+
+var Memsize memsizeui.Handler
 
 // These are all the command line flags we support.
 // If you add to this list, please remember to include the
@@ -32,6 +39,34 @@ import (
 // The flags are defined here so their names and help texts
 // are the same for all commands.
 var (
+	// Debug Flags
+	PProfFlag = cli.BoolFlag{
+		Name:  "pprof",
+		Usage: "Enable the pprof HTTP server",
+	}
+	PProfPortFlag = cli.IntFlag{
+		Name:  "pprofport",
+		Usage: "pprof HTTP server listening port",
+		Value: 6060,
+	}
+	PProfAddrFlag = cli.StringFlag{
+		Name:  "pprofaddr",
+		Usage: "pprof HTTP server listening interface",
+		Value: "127.0.0.1",
+	}
+	MemProfileRateFlag = cli.IntFlag{
+		Name:  "memprofilerate",
+		Usage: "Turn on memory profiling with the given rate",
+		Value: runtime.MemProfileRate,
+	}
+	CPUProfileFlag = cli.StringFlag{
+		Name:  "cpuprofile",
+		Usage: "Write CPU profile to the given file",
+	}
+	TraceFlag = cli.StringFlag{
+		Name:  "trace",
+		Usage: "Write execution trace to the given file",
+	}
 	// General settings
 	IPCPathFlag = DirectoryFlag{
 		Name:  "ipcpath",
@@ -89,4 +124,47 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 		}
 		return action(ctx)
 	}
+}
+
+// Debug setup and exit functions.
+
+// Setup initializes profiling based on the CLI flags.
+// It should be called as early as possible in the program.
+func Setup(ctx *cli.Context) error {
+	// profiling, tracing
+	runtime.MemProfileRate = ctx.GlobalInt(MemProfileRateFlag.Name)
+	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
+		if err := Handler.StartGoTrace(TraceFlag.Name); err != nil {
+			return err
+		}
+	}
+	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
+		if err := Handler.StartCPUProfile(cpuFile); err != nil {
+			return err
+		}
+	}
+
+	// pprof server
+	if ctx.GlobalBool(PProfFlag.Name) {
+		address := fmt.Sprintf("%s:%d", ctx.GlobalString(PProfAddrFlag.Name), ctx.GlobalInt(PProfPortFlag.Name))
+		StartPProf(address)
+	}
+	return nil
+}
+
+func StartPProf(address string) {
+	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
+	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
+	go func() {
+		if err := http.ListenAndServe(address, nil); err != nil {
+			log.Error("Failure in running pprof server", "err", err)
+		}
+	}()
+}
+
+// Exit stops all running profiles, flushing their output to the
+// respective file.
+func Exit() {
+	Handler.StopCPUProfile()
+	Handler.StopGoTrace()
 }
