@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // HandleServiceErrors manages a goroutine that listens for errors broadcast to

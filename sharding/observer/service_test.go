@@ -3,22 +3,21 @@ package observer
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
-	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Verifies that Observer implements the Actor interface.
 var _ = types.Actor(&Observer{})
 
 func TestStartStop(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+
+	hook := logTest.NewGlobal()
 
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -42,17 +41,26 @@ func TestStartStop(t *testing.T) {
 	}
 
 	observer.sync.Start()
-	h.VerifyLogMsg("Starting sync service")
+	msg := hook.LastEntry().Message
+	if msg != "Starting sync service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting sync service", msg)
+	}
 
 	observer.Start()
-	h.VerifyLogMsg("Starting observer service")
+	msg = hook.LastEntry().Message
+	if msg != "Starting observer service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting observer service", msg)
+	}
 
 	err = observer.Stop()
 	if err != nil {
 		t.Fatalf("Unable to stop observer service: %v", err)
 	}
 
-	h.VerifyLogMsg("Stopping observer service")
+	msg = hook.LastEntry().Message
+	if msg != "Stopping observer service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping observer service", msg)
+	}
 
 	if observer.ctx.Err() == nil {
 		t.Errorf("Context was not cancelled")

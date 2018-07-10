@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // AddHeader adds the collation header to the main chain by sending
@@ -44,7 +44,7 @@ func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransact
 		return fmt.Errorf("add header transaction failed with receipt status %v", receipt.Status)
 	}
 
-	log.Info(fmt.Sprintf("Add header transaction hash: %v", tx.Hash().Hex()))
+	log.Infof("Add header transaction hash: %v", tx.Hash().Hex())
 	return nil
 }
 
@@ -89,7 +89,7 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	var sig32 [32]byte
 	copy(sig32[:], sig)
 	collation.Header().AddSig(sig32)
-	log.Info(fmt.Sprintf("Collation %v created for shardID %v period %v", collation.Header().Hash().Hex(), collation.Header().ShardID(), collation.Header().Period()))
+	log.Infof("Collation %v created for shardID %v period %v", collation.Header().Hash().Hex(), collation.Header().ShardID(), collation.Header().Period())
 	return collation, nil
 }
 

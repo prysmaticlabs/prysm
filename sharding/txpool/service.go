@@ -3,14 +3,13 @@ package txpool
 
 import (
 	"crypto/rand"
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	log "github.com/sirupsen/logrus"
 )
 
 // TXPool handles a transaction pool for a sharded system.
@@ -50,7 +49,7 @@ func (p *TXPool) sendTestTransaction() {
 	for range p.ticker.C {
 		tx := createTestTransaction()
 		nsent := p.transactionsFeed.Send(tx)
-		log.Info(fmt.Sprintf("Sent transaction %x to %d subscribers", tx.Hash(), nsent))
+		log.Infof("Sent transaction %x to %d subscribers", tx.Hash(), nsent)
 	}
 }
 

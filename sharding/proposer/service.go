@@ -4,12 +4,10 @@ package proposer
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
@@ -17,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -61,12 +60,12 @@ func (p *Proposer) Start() {
 	shard := types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.shard = shard
 	go p.proposeCollations()
-	go p.sync.HandleCollationBodyRequests(p.shard)
+	go p.sync.HandleCollationBodyRequests(p.shard, p.ctx.Done())
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shard.ShardID()))
+	log.Warnf("Stopping proposer service in shard %d", p.shard.ShardID())
 	defer p.cancel()
 	p.txpoolSub.Unsubscribe()
 	return nil
@@ -80,9 +79,9 @@ func (p *Proposer) proposeCollations() {
 	for {
 		select {
 		case tx := <-requests:
-			log.Info(fmt.Sprintf("Received transaction: %x", tx.Hash()))
+			log.Infof("Received transaction: %x", tx.Hash())
 			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{tx}); err != nil {
-				log.Error(fmt.Sprintf("Create collation failed: %v", err))
+				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():
 			log.Debug("Proposer context closed, exiting goroutine")
@@ -110,11 +109,11 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transac
 
 	// Saves the collation to persistent storage in the shardDB.
 	if err := p.shard.SaveCollation(collation); err != nil {
-		log.Error(fmt.Sprintf("Could not save collation to persistent storage: %v", err))
+		log.Errorf("Could not save collation to persistent storage: %v", err)
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDB", collation.Header().Hash().Hex()))
+	log.Infof("Saved collation with header hash %v to shardChainDB", collation.Header().Hash().Hex())
 
 	// Check SMC if we can submit header before addHeader.
 	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)
