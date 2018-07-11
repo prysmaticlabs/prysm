@@ -87,12 +87,14 @@ To concretize these phases, we will be releasing our implementation of sharding 
 
 ## The Ruby Release: Local Network
 
-Our current work is focused on creating a localized version of phase 1, quadratic sharding that would include the following:
+Our current work is focused on creating a localized version of a beacon chain with a sharding system that would include the following:
 
--   A minimal, **sharding node** system that will interact with a **Sharding Manager Contract** on a locally running geth node
--   Ability to deposit ETH into the SMC through the command line and to be selected as a notary by the local **SMC** in addition to the ability to withdraw the ETH staked
--   A **proposer** that listens for pending tx’s, creates collations, and submits them to the SMC
--   Ability to inspect the shard states and visualize the working system locally
+-   A minimal, **beacon chain node** that will interact with a main chain geth node via JSON-RPC
+-   A **Validator Registration Contract** deployed on the main chain where a beacon node can read logs to check for registered validators
+-   A minimal, gossipsub shardp2p network
+-   Ability for proposers/notaries/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
+-   Ability to serialize blobs into collations on shard chains and advance the growth of the shard chains
+-   An observer node that can join a network on shardp2p, sync to the latest head, and send tx's to nodes in the network
 
 
 We will forego several security considerations that will be critical for testnet and mainnet release for the purposes of demonstration and local network testing as part of the Ruby Release (See: [Security Considerations Not Included in Ruby](#not-included-in-ruby-release)).
@@ -101,7 +103,7 @@ ETA: To be determined
 
 ## The Sapphire Release: Ropsten Testnet
 
-Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a set of notaries voting on collations through the **on-chain SMC**. This will require a lot more elaborate simulations around the safety of the randomness behind the notary assignments in the SMC. Futhermore we need to pass stress testing against DoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently with notaries reaching consensus on these collations.
+Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a a beacon chain + sharding system. This will require a lot more elaborate simulations around the safety of the randomness behind the notary assignments in the SMC. Futhermore we need to pass stress testing against DoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently with notaries reaching consensus on these collations, alongside beacon node validators producing blocks via PoS.
 
 Part 2 of the **Sapphire Release** will focus on implementing state execution and defining the State Transition Function for sharding on a local testnet (as outlined in [Beyond Phase 1](#beyond-phase-1)) as an extenstion to the Ruby Release.
 
@@ -109,17 +111,17 @@ ETA: To be determined
 
 ## The Diamond Release: Ethereum Mainnet
 
-The **Diamond Release** will reconcile the best parts of the previous releases and deploy a full-featured, cross-shard transaction system through a Sharding Manager Contract on the Ethereum mainnet. As expected, this is the most difficult and time consuming release on the horizon for Prysmatic Labs. We plan on growing our community effort significantly over the first few releases to get all hands-on deck preparing for real ether to be staked in the SMC.
+The **Diamond Release** will reconcile the best parts of the previous releases and deploy a full-featured, cross-shard transaction system through a Sharding Manager Contract on the Ethereum mainnet. As expected, this is the most difficult and time consuming release on the horizon for Prysmatic Labs. We plan on growing our community effort significantly over the first few releases to get all hands-on deck preparing for this.
 
 The Diamond Release should be considered the production release candidate for sharding Ethereum on the mainnet.
 
 ETA: To Be determined
 
-# Go-Ethereum Sharding Alpha Implementation
+# Beacon Chain + Sharding Alpha Implementation
 
-Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a sharding node that allows staking to become a notary, proposer, manages shard state local storage, and does on-chain voting of collation headers via the Sharding Manager Contract.
+Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows for users to become a notary, proposer, and to manage the growth of shard chains.
 
-Here is a full reference spec explaining how our initial system will function:
+Here is a reference spec explaining how our initial system will function:
 
 ## System Architecture
 
@@ -173,19 +175,6 @@ The sharding node begins to work by its main loop, which involves the following 
 
 6.  _**Other notaries vote, period ends, and header is selected as canonical shard chain header:**_ Once notaries vote, headers that received >=2/3 votes are selected as canonical
 
-<!--[Transaction Generator]generate test txs->[Shard TXPool],[Geth Node]-deploys>[Sharding Manager Contract{bg:wheat}], [Shard TXPool]<fetch pending txs-.->[Proposer Client], [Proposer Client]-propose collation>[Sharding Manager Contract],[Notary Client]download availability and vote->[Sharding Manager Contract{bg:wheat}]-->
-![system functioning](https://yuml.me/6c2f90a5.png)
-
-## The Sharding Manager Contract
-
-Our solidity implementation of the Sharding Manager Contract follows the reference spec outlined in ETHResearch's [minimal sharding protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
-
-<!-- removed old solidity code cause it will be bound to change -->
-
-Our current [solidity implementation](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/contracts/sharding_manager.sol) includes all of these functions along with other utilities important for the our Ruby Release sharding scheme. 
-
-For more details on these methods, please refer to the Phase 1 spec as it details all important requirements and additional functions to be included in the production-ready SMC.
-
 ### Notary Sampling
 
 The probability of being selected as a notary on a particular shard is being heavily researched in the latest ETHResearch discussions. As specified in the [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) by Vitalik, “if validators [collators] could choose, then attackers with small total stake could concentrate their stake onto one shard and attack it, thereby eliminating the system’s security.”
@@ -220,10 +209,6 @@ In addition to launching a notary client, our system requires a user to concurre
 This client connects via JSON-RPC to give the client the ability to call required functions on the SMC. The proposer is tasked with packaging pending transaction data into _blobs_ and **not** executing these transactions. This is very important, we will not consider state execution until later phases of a sharding roadmap.
 
 Then, the proposer node calls the `addHeader` function on the SMC by submitting this collation header. We’ll explore the structure of collation headers in this next section.
-
-### Collation Headers
-
-Work in progress.
 
 ## Peer Discovery and Shard Wire Protocol
 
@@ -260,30 +245,6 @@ Additionally, the EVM contains a call-depth limit such that recursive invocation
 It is important to note that the merkle root of an Ethereum account is updated any time an `SSTORE` opcode is executed successfully by a program on the EVM that results in a key or value changing in the state merklix (merkle radix) tree.
 
 How is this relevant to sharding? It is important to note the importance of certain opcodes in our implementation and how we will need to introduce and modify several of them for both security and scalability considerations in a sharded chain.
-
-Work in progress.
-
-## Sharding In-Practice
-
-### Use-Case Stories: Proposers
-
-The primary purpose of proposers is to package transaction data into collations that can then be submitted to the SMC.
-
-The primary incentive for proposers to generate these collations is to receive a payout to their coinbase address from transactions fees once these collations are added to a block in the canonical chain. This process, however, cannot occur until we have state execution in our protocol, so proposers will be running at a loss for our Phase 1 implementation.
-
-### Use-Case Stories: Notaries
-
-The primary purpose of notaries is to use Proof of Stake and reach **consensus** on valid shard chains based on the collations they process and add to the Sharding Manager Contract. They have three primary things to do:
-
--   They can deposit ETH into the SMC and become a notary. They then have to wait to be selected by the SMC on a particular period to vote on collation headers in the SMC.
--   They download availability of collation headers submitted to their assigned shard in the period.
--   They vote on available collation headers
-
-## Current Status
-
-Currently, Prysmatic Labs is focusing its initial implementation around the logic of the notary and proposer clients, as well as shard state local storage and p2p networking. We have built the command line entrypoints as well as the minimum, required functions of the Sharding Manager Contract that is deployed to a local Ethereum blockchain instance. Our notary client is able to subscribe for block headers from the running Geth node and determine when we are selected as an eligible notary in a given period if we have deposited ETH into the contract.
-
-You can track our progress, open issues, and projects in our repository [here](https://github.com/prysmaticlabs/geth-sharding).
 
 # Security Considerations
 
