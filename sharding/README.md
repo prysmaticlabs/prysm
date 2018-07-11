@@ -56,64 +56,34 @@ An approach to solving the scalability trilemma is the idea of blockchain shardi
 
 ## Basic Sharding Idea and Design
 
-A sharded blockchain system is made possible by having nodes store “signed metadata” in the main chain of latest changes within each shard chain. Through this, we manage to create a layer of abstraction that tells us enough information about the global, synced state of parallel shard chains. These messages are called **collation headers**, which are specific structures that encompass important information about the chainstate of a shard in question. Collations are created by actors known as **proposers** that are tasked with packaging transactions into collation bodies. These collations are then voted on by a party of actors known as **notaries**. These notaries are randomly selected for particular periods of time in certain shards and are then tasked into reaching consensus on these chains via a **proof of stake** system occurring through a smart contract on the Ethereum main chain.
+A sharded blockchain system is made possible by having nodes store “signed metadata” in the main chain of latest changes within each shard chain. Through this, we manage to create a layer of abstraction that tells us enough information about the global, synced state of parallel shard chains. These messages are called **cross-links**, which are specific structures that encompass important information about the shard blocks (known as **collations**) of a shard in question. Collations are created by actors known as **proposers** that are tasked with packaging transactions into collation bodies. These collations are then voted on by a party of actors known as **notaries**. These notaries are randomly selected for particular periods of time in certain shards and are then tasked into reaching consensus on these chains via a **proof of stake** system.
 
-These collations are holistic descriptions of the state and transactions on a certain shard.  A collation header at its most basic, high level summary contains the following information:
+Cross-links are stored in blocks on a full proof of stake chain known as a **beacon chain**, which will be implemented as a sidechain to the Ethereum main chain initially.
 
--   Information about what shard the collation corresponds to (let’s say shard 10)
+Cross-links are holistic descriptions of the state and transactions on a certain shard. Transactions in a shard are stored in **collations** which contain both a collation header and collation body  A collation header at its most basic, high level summary contains information about who created it, when it was added to a shard, and its internal data stored as serialized blobs.
 
-For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have two types of nodes that do the heavy lifting of our sharding logic: **proposers and notaries**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, and submit them to a smart contract on the Ethereum main chain.
+For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have a few types of nodes that do the heavy lifting of our sharding logic: **proposers, notaries, and attesters**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, grow the shard chains, and submit cross-links to the beacon chain.
 
 <!--[Proposer{bg:wheat}]fetch txs-.->[TXPool], [TXPool]-.->[Proposer{bg:wheat}], [Proposer{bg:wheat}]-package txs>[Collation|header|body], [Collation|header|body]-submit header>[Sharding Manager Contract], [Notary{bg:wheat}]downloads collation availability and votes-.->[Sharding Manager Contract]-->
 ![proposers](https://yuml.me/69cbd7da.png)
 
-Notaries stake ETH into the contract and vote on collations submitted by proposers during a certain period. Notaries are in charge of checking for data availability of such collations and reach consensus on canonical shard chains.
+We still keep the Ethereum main chain and deploy a smart contract into it known as the **Validator Registration Contract**, where users can deposit and burn 32 ETH. Beacon chain nodes would listen to deposits in this contract and consequently queue up a user with the associated address as a validator in the beacon chain PoS system. Validators then become part of a registered validator set in the beacon chain, and are committees of validators are selected to become notaries on shard chains in certain periods of blocks until they are ventually reshuffled into different shards.
 
-So then, are proposers in charge of state execution? The short answer is that phase 1 will contain **no state execution**. Instead, proposers will simply package all types of transactions into collations and later down the line, agents known as executors will download, run, and validate state as they need to through possibly different types of execution engines (potentially TrueBit-style, interactive execution).
+Notaries are in charge of checking for data availability of such collations and reach consensus on canonical shard chains. So then, are proposers in charge of state execution? The short answer is that phase 1 will contain **no state execution**. Instead, proposers will simply package all types of transactions into collations and later down the line, agents known as executors will download, run, and validate state as they need to through possibly different types of execution engines (potentially TrueBit-style, interactive execution).
 
 This separation of concerns between notaries and proposers allows for more computational efficiency within the system, as notaries will not have to do the heavy lifting of state execution and focus solely on consensus through fork-choice rules. In this scheme, it makes sense that eventually **proposers** will become **executors** in later phases of a sharding spec.
-
-Notaries periodically get assigned to different shards, a period is defined as a certain interval of blocks.
 
 Given that we are splitting up the global state of the Ethereum blockchain into shards, new types of attacks arise because fewer resources are required to completely dominate a shard. This is why a **source of randomness** and periods are critical components to ensuring the integrity of the system.
 
 The Ethereum Wiki’s [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) suggests pseudorandom sampling of notaries on each shard. The goal is so that these notaries will not know which shard they will get in advance. Otherwise, malicious actors could concentrate resources into a single shard and try to overtake it (See: [1% Attack](https://medium.com/@icebearhww/ethereum-sharding-and-finality-65248951f649)).
 
-Casper Proof of Stake (Casper [FFG](https://arxiv.org/abs/1710.09437) and [CBC](https://arxiv.org/abs/1710.09437)) makes this quite trivial because there is already a set of global validators that we can select notaries from. The source of randomness needs to be common to ensure that this sampling is entirely compulsory and can’t be gamed by the notaries in question.
-
-In practice, the first phase of sharding will not be a complete overhaul of the network, but rather an implementation through a smart contract on the main chain known as the **Sharding Manager Contract (SMC)**. Its responsibility is to manage submitted collation headers and manage notaries.
-
-Among its basic responsibilities, the SMC is responsible for reconciling notaries across all shards. It is in charge of pseudorandomly sampling notaries from addresses that have staked ETH into the SMC. The SMC is also responsible for providing immediate collation header verification that records a valid collation header hash on the main chain. In essence, sharding revolves around being able to store collation headers and their associated votes in the main chain through this smart contract.
+Sharding revolves around being able to store shard metadata in a full proof of stake chain known as a beacon chain. For pseudorandomness generation, a RANDAO mechanism can be used in the beacon chain to shuffle validators securely.
 
 # Roadmap Phases
 
-Prysmatic Labs will follow the parts of the (now deprecated) Phase 1 Spec posted on [ETHResearch](https://ethresear.ch/t/sharding-phase-1-spec/1407) by the Foundation's research team to roll out a local version of qudratic sharding. In essence, the high-level sharding roadmap is as follows as outlined by Justin Drake:
+Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch]() by the Foundation's research team and roll out a sharding client that communicates with this beacon.
 
-- Phase 1: Basic sharding without EVM
-  - Blob shard without transactions
-  - Proposers
-  - Notaries
-- Phase 2: EVM state transition function
-  - Full nodes only
-  - Asynchronous cross-contract calls only
-  - Account abstraction
-  - eWASM
-  - Archive accumulators
-  - Storage rent
-- Phase 3: Light client state protocol
-  - Executors
-  - Stateless clients
-- Phase 4: Cross-shard transactions
-  - Internally-synchronous zones
-- Phase 5: Tight coupling with main chain security
-  - Data availability proofs
-  - Casper integration
-  - Internally fork-free sharding
-  - Manager shard
-- Phase 6: Super-quadratic sharding
-  - Load balancing
-
-To concretize these phases, we will be releasing our implementation of sharding for the geth client as follows:
+To concretize these phases, we will be releasing our implementation of sharding and the beacon chain as follows:
 
 ## The Ruby Release: Local Network
 
@@ -335,65 +305,7 @@ One way to enforce **validity** during the windback process is for nodes to prod
 
 On the other hand, to enforce **availability** for the windback process, a possible approach is for nodes to produce “proofs of custody” in collation headers that prove the notary was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for notaries to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the node's private key through a hashing scheme. The security in this relies in the idea that a node would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a node processed the collation body and proof was created.
 
-## The Data Availability Problem
-
-### Introduction and Background
-
-Work in progress.
-
-### On Uniquely Attributable Faults
-
-Work in progress.
-
-### Erasure Codes
-
-Work in progress.
-
-# Beyond Phase 1
-
-## Cross-Shard Communication
-
-### Receipts Method
-
-Work in progress.
-
-### Merge Blocks
-
-Work in progress.
-
-### Synchronous State Execution
-
-Work in progress.
-
-## Transparent Sharding
-
-One of the first question dApp developers ask about sharding is how much will they need to change their workflow and smart contract development to adopt the sharded blockchain scheme. An idea tangentially explored by Vitalik in his [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) was the concept of **“transparent sharding”** which means that sharding will exist exclusively at the protocol layer and will not be exposed to developers. The Ethereum state system will continue to look as it currently does, but the protocol will have a built-in system that creates shards, balances state across shards, gets rid of shards that are too small, and more. This will all be done behind the scenes, allowing devs to continue their current workflow on Ethereum. This was only briefly mentioned, but will be critical to ensure a better user experience moving forward after security considerations are addressed.
-
-## Tightly-Coupled Sharding (Fork-Free Sharding)
-
-A current problem with the scheme we are following for sharding is the reliance on **two fork-choice rules**. When we are reaching consensus on the best shard chain, we not only have to check for the longest canonical, main chain, but also the longest shard chain **within** this longest main chain. Fork-choice rules have long been an approach to solve the constraints that distributed systems impose on us due to factors outside of our control (Byzantine faults) and are the current standard in most public blockchains.
-
-A problem that can occur with current distributed fork-choice ledgers is the possibility of choosing a wrong fork and continuing to do PoW on it, thereby wasting potential profits of mining on the canonical chain. Another current burden is the large amount of data that needs to be downloaded in order to validate which fork is potentially the best one to follow in any situation, opening up avenues for spam DDoS attacks.
-
-Fortunately, there is a potential method of creating a fork-free sharding mechanism that relies on what we are currently implementing through the Sharding Manager Contract that has been explored by Justin Drake and Vitalik in [this](https://ethresear.ch/t/fork-free-sharding/1058) and this [other post](https://ethresear.ch/t/a-model-for-stage-4-tightly-coupled-sharding-plus-full-casper/1065), respectively.
-
-The current spec of the Sharding Manager Contract __already does a canonical ordering of collation headers for us__ (i.e. we can track the timestamped logs of collation headers being added). Because the data for the SMC lives on the canonical main chain, we are able to easily extract an exact ordering and validity from headers added through the contract.
-
-To add validity to our current SMC spec, Drake mentions that we can use a succinct zkSNARK in the collation root proving validity upon construction that can be checked directly by the `addHeader` function on the the SMC.
-
-The other missing piece is the guarantee of data availability within collation headers submitted to the SMC which can once again be done through zero-knowledge proofs and erasure codes (See: The Data Availability Problem). By escalating this up to the SMC, we can ensure what Vitalik calls “tightly-coupled” sharding, in which case breaking a single shard would entail also breaking the progression of the canonical chain, enabling easier cross-shard communication due to having a single source of truth being the SMC and the associated collation headers it has processed. In Justin Drake’s words, “there is no fork-choice rule within the SMC”.
-
-It is important to note that this “tightly coupled” sharding has been relegated to the latter phases of the roadmap.
-
-Work in progress.
-
 # Active Questions and Research
-
-## Selecting Notaries Via Random Beacon Chains
-
-In our current implementation for the Ruby Release, we are selecting notaries through a pseudorandom method built into the SMC directly. Inspired by dfinity's random beacon chains, the Ethereum Research team has been proposing [better solutions](https://github.com/ethereum/research/tree/master/sharding_fork_choice_poc) that have faster finality guarantees. The random beacon chain would be in charge for pseudorandomly sampling notaries and would allow for cool stuff such as off-chain collation headers that were not possible before. Through this, no gas would need to be paid for including collation headers and we can achieve faster finality guarantees, making the system way better than before.
-
-<https://ethresear.ch/t/posw-random-beacon/1814/6>
 
 ## Leaderless Random Beacons
 
@@ -419,25 +331,6 @@ Active research is on going for moving Ethereum fron DEVp2p to libp2p. We are lo
 With a sharded network comes sharded state storage. State sync today is difficult for clients today. While the blockchain data stored on disk might use~80gb for a fast sync, less than 5gb of that disk is state data while state sync accounts for the majority of time spent syncing. As the state grows, this issue will also grow. We imagine that it might be difficult to sync effectively when there are 100 shards and 100 different state tries. One recommendation from the Ethereum Research team outlines using [sparse merkle trees].(https://www.links.org/files/RevocationTransparency.pdf)
 
 <https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453>
-
-## Proof of Custody
-
-A critique against the notary scheme currently followed in the minimal sharding protocol is the susceptibility of these agents towards the “validator’s dilemma”, wherein agents are incentivized to be “lazy” and trust the work of other validators when making coordinated decisions. Specifically, notaries are tasked with checking data availability of collation headers submitted to the SMC during their assigned period. This means notaries have to download headers via a shardp2p network and commit their votes after confirming availability. Proposers can try to game validators by publishing unavailable proposals and then challenging lazy validators to take their deposits. In order to prevent abuse of collation availability traps, the responsibility of notaries is extended to also provide a “Merkle root of a signature tree, where each signature in the signature tree is the signature of the corresponding chunk of the original collation data.” (ETHResearch) This means that at challenge time, notaries must have the fully available collation data in order to construct a signature tree of all its chunks.
-
-<https://ethresear.ch/t/extending-skin-in-the-game-of-notarization-with-proofs-of-custody/1639>
-
-## Safe Notary Pool Sizes: RANDAO Exploration
-
-When notary pool sizes are too small a few things can happen: A small pool would result in the notary requiring a large amount of bandwidth. The amount of bandwidth required by each notary is inversely proportional to the size of the pool, so in order to be sufficiently decentralized the notary pool should be large enough so that the bandwidth required should be manageable with poor internet connection. Secondly the notary pool size has a direct effect on the capital requirements in order to take over notarisation and revert/censor transactions. An acceptable notary pool size would be one that required a minimum acceptable capital threshold for a takeover of the chain. In Vitalik’s RANDAO analysis he looked at how vulnerable the RANDAO chain was comparatively to a POW(Proof of Work) chain. The result of the exercise was that an attacker with a 40% of stake on the RANDAO chain can effectively revert transactions; to achieve the same result on a POW chain they would require 50% of the hashpower. On the other hand if the chain utilised a 2/2 notarization committee, the attacker would need to up their stake to 46% on the chain to be able to effectively censor transactions.
-
-<https://ethresear.ch/t/safe-notary-pool-size/1728>
-
-## Cross Links Between Shard Chain and Main Chain
-
-For synchronizing cross shard chain communications, we are researching how to properly link between the shard chain and the beacon chain. In order to accomplish this, a randomly sampled committee will vote to approve a collation in a sharded chain per period and per shard. As Vitalik wrote, there are two ways create cross links between main shard and shards. On-chain aggregation and off-chain aggregation. For on-chain aggregation, the state of beacon chain will keep track of the randomly sampled committee as validators. Each validator can make one vote casper FFG style, the vote will also contain cross-link of that committee. For off-chain aggregation, every beacon chain block creator will choose one CAS to link the sharded chain to main chain. Off chain aggregation mechanisms have benefits as there is no need for the beacon chain to track of vote counts.
-
-<https://ethresear.ch/t/extending-minimal-sharding-with-cross-links/1989/8>
-<https://ethresear.ch/t/two-ways-to-do-cross-links/2074/2>
 
 ## Fixed ETH Deposit Size for Notaries
 
