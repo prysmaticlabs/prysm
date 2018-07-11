@@ -111,7 +111,7 @@ ETA: To be determined
 
 ## The Diamond Release: Ethereum Mainnet
 
-The **Diamond Release** will reconcile the best parts of the previous releases and deploy a full-featured, cross-shard transaction system through a Sharding Manager Contract on the Ethereum mainnet. As expected, this is the most difficult and time consuming release on the horizon for Prysmatic Labs. We plan on growing our community effort significantly over the first few releases to get all hands-on deck preparing for this.
+The **Diamond Release** will reconcile the best parts of the previous releases and deploy a full-featured, cross-shard transaction system through a beacon chain, casper FFG-enabled, sharding release. As expected, this is the most difficult and time consuming release on the horizon for Prysmatic Labs. We plan on growing our community effort significantly over the first few releases to get all hands-on deck preparing for this.
 
 The Diamond Release should be considered the production release candidate for sharding Ethereum on the mainnet.
 
@@ -125,55 +125,39 @@ Here is a reference spec explaining how our initial system will function:
 
 ## System Architecture
 
-Our implementation revolves around 5 core components:
+Our implementation revolves around the following core components:
 
--   A **locally-running geth node** that spins up an instance of the Ethereum blockchain and mines on the Proof of Work chain
--   A **Sharding Manager Contract (SMC)** that is deployed onto this blockchain instance
--   A **sharding node** that connects to the running geth node through JSON-RPC, provides bindings to the SMC
--   A **notary service** that allows users to stake ETH into the SMC and be selected as a notary in a certain period on a shard
--   A **proposer service** that is tasked with processing pending tx's into collations that are then submitted to the SMC. In phase 1, proposers _do not_ execute state, but rather just serialize pending tx data into possibly valid/invalid data blobs.
-
-Our initial implementation will function through simple command line arguments that will allow a user running the local geth node to deposit ETH into the SMC and join as a notary that is randomly assigned to a shard in a certain period.
+-   A **main chain node** that spins up an instance of the Ethereum blockchain and mines on the Proof of Work chain
+-   A **beacon chain** that connects to this main chain node via JSON-RPC
+-   A **shardp2p system** that allows nodes to reshuffle across shard networks
 
 A basic, end-to-end example of the system is as follows:
 
-1.  _**User starts a sharding node and deposits 1000ETH into the SMC:**_ the sharding node connects to a locally running geth node and asks the user to confirm a deposit from his/her personal account.
+1.  _**User deposits 32 ETH into a Validator Registration Contract on the main chain:**_ the beacon chain listens for the logs in the main chain to queue that validator into the beacon chain chain's main event loop
 
-2.  _**Client connects & listens to incoming headers from the geth node and assigns user as notary on a shard per period:**_ The notary is selected in CURRENT_PERIOD + LOOKEAD_PERIOD (which is around a 5 minutes notice) and must download data for collation headers submitted in that time period.
+2.  _**Registered validator begins PoS process to propose blocks:**_ the PoS validator has the resposibility to participate in the addition of new blocks to the beacon chain
 
-3.  _**Concurrently, a proposer protocol processes pending transaction data into blobs:**_ the proposer client will create collation bodies and submit their headers to the SMC. In Phase 1, it is important to note that we will _not_ have any state execution. Proposers will just serialize pending tx into fixed collation body sizes without executing them for state transition validity.
+3.  _**RANDAO mechanism selects committees of proposers/notaries/attesters for shards:**_ the beacon chain node will use its RANDAO mechanism to select committees of proposers, notaries, and attesters that each have responsibilities within the sharding system. Refer to the [Full Casper Chain V2 Doc](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) for extensive detail on the different fields in the state of the beacon chain related to sharding
 
-5.  _**The set of notaries vote on collation headers as canonical unitl the period ends:**_ the headers that received >= 2/3 votes are accepted as canonical.
-
-6.  _**User is selected as notary again on the SMC in a different period or can withdraw his/her stake:**_ the user can keep staking and voting on incoming collation headers and restart the process, or withdraw his/her stake and be deregistered from the SMC.
-
-Now, we’ll explore our architecture and implementation in detail as part of the go-ethereum repository.
+4. _**Beacon Chain State Advances, Committees are Reshuffled:**_ upon completing responsibilities, the different actors of the sharding system are them reshuffled into new committees on different shards
 
 ## System Start and User Entrypoint
 
-Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **SMC** into. Users can spin up a notary client as a command line entrypoint into geth while the node is running as follows:
+Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **Validator Registration Contract**. Then, the deployed address of this contract can be supplied to the beacon chain as an argument:
 
-    geth sharding --actor "notary" --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345 --deposit
+    beacon-chain  --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345 --vrc VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
 
-This will extract 1000ETH from the user's account balance and insert him/her into the SMC's notaries. Then, the program will listen for incoming block headers and notify the user when he/she has been selected as to vote on collations for a certain shard in a given period. Once you are selected, the sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node begins to work by its main loop, which involves the following steps:
 
-Users can also run a proposer client that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 
-    geth sharding --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+2.  _**Assign the validator as a proposer/notary/attester based on RANDAO mechanism:**_ on incoming headers, the client will interact with the SMC to check if the current user is an eligible notary for an upcoming period (only a few minutes notice)
 
-This client is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals (collation headers) to the SMC via the `addHeader` function.
+3.  _**Process shard cross-links:**_ once a notary is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
 
-The sharding node begins to work by its main loop, which involves the following steps:
+5.  _**Reshuffle committees**_ the notary votes on the available collation header that came first in the submissions. 
 
-1.  _**Subscribe to incoming block headers:**_ the client will begin by issuing a subscription over JSON-RPC for block headers from the running geth node.
-
-2.  _**Check shards for notary selection within LOOKEAD_PERIOD:**_ on incoming headers, the client will interact with the SMC to check if the current user is an eligible notary for an upcoming period (only a few minutes notice)
-
-3.  _**If the notary is selected, check data availability for submitted collation headers:**_ once a notary is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
-
-5.  _**The notary issues a vote:**_ the notary votes on the available collation header that came first in the submissions. 
-
-6.  _**Other notaries vote, period ends, and header is selected as canonical shard chain header:**_ Once notaries vote, headers that received >=2/3 votes are selected as canonical
+6.  _**Propose blocks and finalize incoming blocks via PoS:**_ Once notaries vote, headers that received >=2/3 votes are selected as canonical
 
 ### Notary Sampling
 
@@ -190,27 +174,7 @@ At that point, the attacker has the ability to conduct 51% attacks against that 
 
 However, this problem transcends the sharding scheme itself and goes into the broader problem of fraud detection, which we have yet to comprehensively address.
 
-## The Notary Client
-
-One of the main running threads of our implementation is the notary client, which serves as a bridge between users staking their ETH to become notaries and the **Sharding Manager Contract** that verifies collation headers on the canonical chain.
-
-When we launch the client, The instance connects to a running geth node via JSON-RPC and calls the deposit function on a deployed, Sharding Manager Contract to insert the user into a notary pool. Then, we subscribe for updates on incoming block headers and determine if the user is a notary on receiving each header. Once we are selected within a LOOKAHEAD_PERIOD, our client fetches data associated with submitted collation headers to that shard. The notary votes on the SMC, and if other notaries reach consensus, the collation is accepted as canonical.
-
-### Local Shard Storage
-
-Local shard information is done through a key-value store used to store the mainchain information in the local data directory specified by the running geth node. Adding a collation to a shard will effectively modify this key-value store.
-
-Work in progress.
-
-## The Proposer Client
-
-In addition to launching a notary client, our system requires a user to concurrently launch a proposer client that is tasked with fetching pending tx’s from the network and creating collations that can be sent to the SMC.
-
-This client connects via JSON-RPC to give the client the ability to call required functions on the SMC. The proposer is tasked with packaging pending transaction data into _blobs_ and **not** executing these transactions. This is very important, we will not consider state execution until later phases of a sharding roadmap.
-
-Then, the proposer node calls the `addHeader` function on the SMC by submitting this collation header. We’ll explore the structure of collation headers in this next section.
-
-## Peer Discovery and Shard Wire Protocol
+## Peer Discovery and ShardP2P
 
 Work in progress.
 
@@ -323,15 +287,13 @@ Now you should have a remote pointing to the `origin` repo (geth-sharding) and t
 
 # Acknowledgements
 
-A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/geth-sharding) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang) for the help and guidance in our approach.
+A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/geth-sharding) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang, Vitalik, Justin Drake) for the help and guidance in our approach.
 
 # References
 
 [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ)
 
 [Sharding Reference Spec](https://github.com/ethereum/sharding/blob/develop/docs/doc.md)
-
-[Ethereum Sharding and Finality - Hsiao-Wei Wang](https://medium.com/@icebearhww/ethereum-sharding-and-finality-65248951f649)
 
 [Data Availability and Erasure Coding](https://github.com/ethereum/research/wiki/A-note-on-data-availability-and-erasure-coding)
 
