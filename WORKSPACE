@@ -49,13 +49,19 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_mattn_go_colorable",
-    importpath = "github.com/mattn/go-colorable",
-    commit = "efa589957cd060542a26d2dd7832fd6a6c6c3ade",
+    name = "com_github_sirupsen_logrus",
+    importpath = "github.com/sirupsen/logrus",
+    commit = "e54a77765aca7bbdd8e56c1c54f60579968b2dc9",
 )
 
 go_repository(
-    name = "com_github_mattn_go_isatty",
-    importpath = "github.com/mattn/go-isatty",
-    commit = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
+    name = "org_golang_x_sys",
+    commit = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2",
+    importpath = "golang.org/x/sys",
+)
+
+go_repository(
+    name = "org_golang_x_crypto",
+    commit = "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+    importpath = "golang.org/x/crypto",
 )

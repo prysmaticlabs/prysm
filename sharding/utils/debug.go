@@ -13,12 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package debug interfaces Go runtime debugging facilities.
-// This package is mostly glue code making these facilities available
-// through the CLI and RPC subsystem. If you want to use them from Go code,
-// use package runtime instead.
-package debug
+package utils
 
 import (
 	"bytes"
@@ -30,11 +25,12 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+	"runtime/trace"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // Handler is the global debugging handler.
@@ -49,24 +45,6 @@ type HandlerT struct {
 	cpuFile   string
 	traceW    io.WriteCloser
 	traceFile string
-}
-
-// Verbosity sets the log verbosity ceiling. The verbosity of individual packages
-// and source files can be raised using Vmodule.
-func (*HandlerT) Verbosity(level int) {
-	glogger.Verbosity(log.Lvl(level))
-}
-
-// Vmodule sets the log verbosity pattern. See package log for details on the
-// pattern syntax.
-func (*HandlerT) Vmodule(pattern string) error {
-	return glogger.Vmodule(pattern)
-}
-
-// BacktraceAt sets the log backtrace location. See package log for details on
-// the pattern syntax.
-func (*HandlerT) BacktraceAt(location string) error {
-	return glogger.BacktraceAt(location)
 }
 
 // MemStats returns detailed runtime memory statistics.
@@ -138,6 +116,42 @@ func (h *HandlerT) GoTrace(file string, nsec uint) error {
 	}
 	time.Sleep(time.Duration(nsec) * time.Second)
 	h.StopGoTrace()
+	return nil
+}
+
+// StartGoTrace turns on tracing, writing to the given file.
+func (h *HandlerT) StartGoTrace(file string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.traceW != nil {
+		return errors.New("trace already in progress")
+	}
+	f, err := os.Create(expandHome(file))
+	if err != nil {
+		return err
+	}
+	if err := trace.Start(f); err != nil {
+		f.Close()
+		return err
+	}
+	h.traceW = f
+	h.traceFile = file
+	log.Info("Go tracing started", "dump", h.traceFile)
+	return nil
+}
+
+// StopTrace stops an ongoing trace.
+func (h *HandlerT) StopGoTrace() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	trace.Stop()
+	if h.traceW == nil {
+		return errors.New("trace not in progress")
+	}
+	log.Info("Done writing Go trace", "dump", h.traceFile)
+	h.traceW.Close()
+	h.traceW = nil
+	h.traceFile = ""
 	return nil
 }
 

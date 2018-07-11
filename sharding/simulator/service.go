@@ -2,17 +2,16 @@ package simulator
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	log "github.com/sirupsen/logrus"
 )
 
 // Simulator is a service in a shard node that simulates requests from
@@ -53,7 +52,7 @@ func (s *Simulator) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
-	log.Warn("Stopping simulator service")
+	log.Info("Stopping simulator service")
 	return nil
 }
 
@@ -73,14 +72,14 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		case <-delayChan:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
-				log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+				log.Errorf("Could not fetch current block number: %v", err)
 				continue
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
-				log.Error(fmt.Sprintf("Error constructing collation body request: %v", err))
+				log.Errorf("Error constructing collation body request: %v", err)
 				continue
 			}
 			if req != nil {

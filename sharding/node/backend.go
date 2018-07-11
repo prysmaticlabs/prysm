@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -117,7 +117,7 @@ func (s *ShardEthereum) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
 		// ensure trace and CPU profile data is flushed.
@@ -135,7 +135,7 @@ func (s *ShardEthereum) Close() {
 
 	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			log.Crit(fmt.Sprintf("Could not stop the following service: %v, %v", kind, err))
+			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}
 	log.Info("Stopping sharding node")
