@@ -7,7 +7,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/syncer",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/database:go_default_library",
         "//sharding/mainchain:go_default_library",
