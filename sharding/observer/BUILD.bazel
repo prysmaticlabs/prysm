@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["service.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/observer",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/database:go_default_library",
         "//sharding/mainchain:go_default_library",
