@@ -10,7 +10,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/utils",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/params:go_default_library",
         "@com_github_ethereum_go_ethereum//node:go_default_library",

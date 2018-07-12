@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["service.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/txpool",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

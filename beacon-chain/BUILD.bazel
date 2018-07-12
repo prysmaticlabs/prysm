@@ -4,5 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
 )
