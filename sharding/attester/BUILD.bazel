@@ -6,7 +6,7 @@ go_library(
         "attester.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/notary",
+    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/attester",
     visibility = ["//visibility:public"],
     deps = [
         "//sharding/contracts:go_default_library",
