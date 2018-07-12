@@ -1,6 +1,6 @@
 # Prysmatic Labs Main Sharding Reference
 
-This document serves as a main reference for Prysmatic Labs' sharding implementation for the go-ethereum client, along with our roadmap and compilation of active research and approaches to various sharding schemes.
+This document serves as a main reference for Prysmatic Labs' sharding and beacon chain implementation in Go, along with our roadmap and compilation of active research.
 
 # Table of Contents
 
@@ -10,39 +10,14 @@ This document serves as a main reference for Prysmatic Labs' sharding implementa
     -   [The Ruby Release: Local Network](#the-ruby-release-local-network)
     -   [The Sapphire Release: Ropsten Testnet](#the-sapphire-release-ropsten-testnet)
     -   [The Diamond Release: Ethereum Mainnet](#the-diamond-release-ethereum-mainnet)
--   [Go-Ethereum Sharding Alpha Implementation](#go-ethereum-sharding-alpha-implementation)
+-   [Beacon Chain and Sharding Alpha Implementation](#beacon-chain-and-sharding-alpha-implementation)
     -   [System Architecture](#system-architecture)
     -   [System Start and User Entrypoint](#system-start-and-user-entrypoint)
-    -   [The Sharding Manager Contract](#the-sharding-manager-contract)
-        -   [Notary Sampling](#notary-sampling)
-    -   [The Notary Client](#the-notary-client)
-        -   [Local Shard Storage](#local-shard-storage)
-    -   [The Proposer Client](#the-proposer-client)
-        -   [Collation Headers](#collation-headers)
-    -   [Protocol Modifications](#protocol-modifications)
-        -   [Protocol Primitives: Collations, Blocks, Transactions, Accounts](#protocol-primitives-collations-blocks-transactions-accounts)
-        -   [The EVM: What You Need to Know](#the-evm-what-you-need-to-know)
-    -   [Sharding In-Practice](#sharding-in-practice)
-        -   [Use-Case Stories: Proposers](#use-case-stories-proposers)
-        -   [Use-Case Stories: Notaries](#use-case-stories-notaries)
-    -   [Current Status](#current-status)
+    -   [Notary Sampling](#notary-sampling)
 -   [Security Considerations](#security-considerations)
     -   [Not Included in Ruby Release](#not-included-in-ruby-release)
-    -   [Bribing, Coordinated Attack Models](#bribing-coordinated-attack-models)
     -   [Enforced Windback](#enforced-windback)
-    -   [The Data Availability Problem](#the-data-availability-problem)
-        -   [Introduction and Background](#introduction-and-background)
-        -   [On Uniquely Attributable Faults](#on-uniquely-attributable-faults)
-        -   [Erasure Codes](#erasure-codes)
--   [Beyond Phase 1](#beyond-phase-1)
-    -   [Cross-Shard Communication](#cross-shard-communication)
-        -   [Receipts Method](#receipts-method)
-        -   [Merge Blocks](#merge-blocks)
-        -   [Synchronous State Execution](#synchronous-state-execution)
-    -   [Transparent Sharding](#transparent-sharding)
-    -   [Tightly-Coupled Sharding (Fork-Free Sharding)](#tightly-coupled-sharding-fork-free-sharding)
 -   [Active Questions and Research](#active-questions-and-research)
--   [Community Updates and Contributions](#community-updates-and-contributions)
 -   [Acknowledgements](#acknowledgements)
 -   [References](#references)
 
@@ -64,9 +39,6 @@ Cross-links are holistic descriptions of the state and transactions on a certain
 
 For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have a few types of nodes that do the heavy lifting of our sharding logic: **proposers, notaries, and attesters**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, grow the shard chains, and submit cross-links to the beacon chain.
 
-<!--[Proposer{bg:wheat}]fetch txs-.->[TXPool], [TXPool]-.->[Proposer{bg:wheat}], [Proposer{bg:wheat}]-package txs>[Collation|header|body], [Collation|header|body]-submit header>[Sharding Manager Contract], [Notary{bg:wheat}]downloads collation availability and votes-.->[Sharding Manager Contract]-->
-![proposers](https://yuml.me/69cbd7da.png)
-
 We still keep the Ethereum main chain and deploy a smart contract into it known as the **Validator Registration Contract**, where users can deposit and burn 32 ETH. Beacon chain nodes would listen to deposits in this contract and consequently queue up a user with the associated address as a validator in the beacon chain PoS system. Validators then become part of a registered validator set in the beacon chain, and are committees of validators are selected to become notaries on shard chains in certain periods of blocks until they are ventually reshuffled into different shards.
 
 Notaries are in charge of checking for data availability of such collations and reach consensus on canonical shard chains. So then, are proposers in charge of state execution? The short answer is that phase 1 will contain **no state execution**. Instead, proposers will simply package all types of transactions into collations and later down the line, agents known as executors will download, run, and validate state as they need to through possibly different types of execution engines (potentially TrueBit-style, interactive execution).
@@ -81,7 +53,7 @@ Sharding revolves around being able to store shard metadata in a full proof of s
 
 # Roadmap Phases
 
-Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch]() by the Foundation's research team and roll out a sharding client that communicates with this beacon.
+Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) by the Foundation's research team and roll out a sharding client that communicates with this beacon.
 
 To concretize these phases, we will be releasing our implementation of sharding and the beacon chain as follows:
 
@@ -117,7 +89,7 @@ The Diamond Release should be considered the production release candidate for sh
 
 ETA: To Be determined
 
-# Beacon Chain + Sharding Alpha Implementation
+# Beacon Chain and Sharding Alpha Implementation
 
 Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows for users to become a notary, proposer, and to manage the growth of shard chains.
 
@@ -159,7 +131,7 @@ This will kickstart the entire beacon chain sync process and listen for registra
 
 6.  _**Propose blocks and finalize incoming blocks via PoS:**_ Once notaries vote, headers that received >=2/3 votes are selected as canonical
 
-### Notary Sampling
+## Notary Sampling
 
 The probability of being selected as a notary on a particular shard is being heavily researched in the latest ETHResearch discussions. As specified in the [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) by Vitalik, “if validators [collators] could choose, then attackers with small total stake could concentrate their stake onto one shard and attack it, thereby eliminating the system’s security.”
 
@@ -174,19 +146,7 @@ At that point, the attacker has the ability to conduct 51% attacks against that 
 
 However, this problem transcends the sharding scheme itself and goes into the broader problem of fraud detection, which we have yet to comprehensively address.
 
-## Peer Discovery and ShardP2P
-
-Work in progress.
-
-## Protocol Modifications
-
-### Protocol Primitives: Collations, Blocks, Transactions, Accounts
-
-(Outline the interfaces for each of these constructs, mention crucial changes in types or receiver methods in Go for each, mention transaction access lists)
-
-Work in progress.
-
-### The EVM: What You Need to Know
+## The EVM: What You Need to Know
 
 As an important aside, we’ll take a brief detour into the EVM and what we need to understand before we modify it for a sharded blockchain. At its core, the functionality of the EVM optimizes for _security_ and not for computational power with the following restrictions:
 
@@ -216,9 +176,7 @@ How is this relevant to sharding? It is important to note the importance of cert
 
 We will not be considering data availability proofs (part of the stateless client model) as part of the ruby release we will not be implementing them as it just yet as they are an area of active research.
 
-## Bribing, Coordinated Attack Models
-
-Work in progress.
+Additionally, we will be using simple blockhashes for randomness in committee selections instead of a full RANDAO mechanism.
 
 ## Enforced Windback
 
@@ -257,34 +215,6 @@ With a sharded network comes sharded state storage. State sync today is difficul
 
 <https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453>
 
-## Fixed ETH Deposit Size for Notaries
-
-A notary must submit a deposit to the Sharding Manager Contract in order to get randomly selected to vote on a block. A fixed size deposit is good for making the random selection convenient and work well with slashing, as it can always destroy at least a minimum amount of ether. However, a fixed-size deposit does not do well with rewards and penalties. An alternative solution is to design incentive system where rewards and penalties are tracked in a separate variable, and when the final balance when the withdrawal penalties minus rewards reach a threshold, the notary can be voted out. Such a design might ignore an important function which is to reduce the influence of notaries that are offline. In Casper FFG, if more than 1/3 of validators to offline around same time, the deposits will begin to leak quickly. This is called quadratic leak.
-
-<https://ethresear.ch/t/fixed-size-deposits-and-rewards-penalties-quad-leak/2073/7>
-
-# Community Updates and Contributions
-
-Excited by our work and want to get involved in building out our sharding releases? We created this document as a single source of reference for all things related to sharding Ethereum, and we need as much help as we can get!
-
-You can explore our [Current Projects](https://github.com/prysmaticlabs/geth-sharding/projects) in-the works for the Ruby release. Each of the project boards contain a full collection of open and closed issues relevant to the different parts of our first implementation that we use to track our open source progress. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Gitter](https://gitter.im/prysmaticlabs/geth-sharding), so drop us a line there if you want to get more involved or have any questions on our implementation!
-
-**Contribution Steps**
-
--   Create a folder in your `$GOPATH` and navigate to it `mkdir -p $GOPATH/src/github.com/ethereum && cd $GOPATH/src/github.com/ethereum`
--   Clone our repository as `go-ethereum`, `git clone https://github.com/prysmaticlabs/geth-sharding ./go-ethereum`
--   Fork the `go-ethereum` repository on Github: <https://github.com/ethereum/go-ethereum>
--   Add a remote to your fork
-    \`git remote add YOURNAME <https://github.com/YOURNAME/go-ethereum>
-
-Now you should have a remote pointing to the `origin` repo (geth-sharding) and to your forked, go-ethereum repo on Github. To commit changes and start a Pull Request, our workflow is as follows:
-
--   Create a new branch with a clear feature name such as `git checkout -b collations-pool`
--   Issue changes with clear commit messages
--   Push to your remote `git push YOURNAME collations-pool`
--   Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `go-ethereum:collations-pool` (your fork on your profile).
--   Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
-
 # Acknowledgements
 
 A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/geth-sharding) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang, Vitalik, Justin Drake) for the help and guidance in our approach.
@@ -299,27 +229,11 @@ A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/get
 
 [Proof of Visibility for Data Availability](https://ethresear.ch/t/proof-of-visibility-for-data-availability/1073)
 
-[Enforcing Windback and Proof of Custody](https://ethresear.ch/t/enforcing-windback-validity-and-availability-and-a-proof-of-custody/949)
-
-[Fork-Free Sharding](https://ethresear.ch/t/fork-free-sharding/1058)
-
-[Delayed State Execution](https://ethresear.ch/t/delayed-state-execution-finality-and-cross-chain-operations/987)
-
-[State Execution Scalability and Cost Under DDoS Attacks](https://ethresear.ch/t/state-execution-scalability-and-cost-under-dos-attacks/1048)
-
-[Guaranteed Collation Subsidies](https://ethresear.ch/t/guaranteed-collation-subsidies/1016)
-
-[Fork Choice Rule for Collation Proposals](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922)
-
-[Model for Phase 4 Tightly-Coupled Sharding](https://ethresear.ch/t/a-model-for-stage-4-tightly-coupled-sharding-plus-full-casper/1065)
-
 [History, State, and Asynchronous Accumulators in the Stateless Model](https://ethresear.ch/t/history-state-and-asynchronous-accumulators-in-the-stateless-model/287)
 
 [Torus Shaped Sharding Network](https://ethresear.ch/t/torus-shaped-sharding-network/1720)
 
 [Data Availability Proof-friendly State Tree Transitions](https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453)
-
-[General Framework of Overhead and Finality Time in Sharding](https://ethresear.ch/t/a-general-framework-of-overhead-and-finality-time-in-sharding-and-a-proposal/1638)
 
 [Safety Notary Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728)
 
