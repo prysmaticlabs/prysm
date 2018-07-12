@@ -8,7 +8,7 @@ go_library(
         "shard.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/types",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/utils:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

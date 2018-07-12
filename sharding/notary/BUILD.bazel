@@ -7,7 +7,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/notary",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/contracts:go_default_library",
         "//sharding/database:go_default_library",
