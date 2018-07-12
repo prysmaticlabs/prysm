@@ -7,7 +7,7 @@ import (
 )
 
 // CollationBodyRequest defines a p2p message being sent over subscription feeds
-// by notaries to other notaries or to proposers.
+// by attesters to other attesters or to proposers.
 type CollationBodyRequest struct {
 	ChunkRoot *common.Hash
 	ShardID   *big.Int

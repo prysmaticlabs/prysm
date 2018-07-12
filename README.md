@@ -18,7 +18,7 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 -   [Sharding Instructions](#sharding)
     -   [Running a Local Geth Node](#running-a-local-geth-node)
     -   [Transaction Generator](#transaction-generator)
-    -   [Becoming a Notary](#becoming-a-notary)
+    -   [Becoming an Attester](#becoming-an-attester)
     -   [Running a Collation Proposal Node](#running-a-collation-proposal-node)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
@@ -102,19 +102,19 @@ Now, save the passphrase you used in the geth node into a text file called passw
 
 Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870). Generating test transactions on a local network will allow for benchmarking of tx throughput within our system.
 
-## Becoming a Notary
+## Becoming an Attester
 
-Our system outlined below follows the [Minimal Sharding Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650) as outlined by Vitalik on ETHResearch where any actor can submit collation headers via the SMC, but only a selected committee of notaries is allowed to vote on collations in each period. Notaries are in charge of data availability checking and consensus is reached upon a collation header receiving >= 2/3 votes in a period.
+Our system outlined below follows the [Minimal Sharding Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650) as outlined by Vitalik on ETHResearch where any actor can submit collation headers via the SMC, but only a selected committee of attesters is allowed to vote on collations in each period. Attesters are in charge of data availability checking and consensus is reached upon a collation header receiving >= 2/3 votes in a period.
 
-To deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
+To deposit ETH and join as an attester in the Sharding Manager Contract, run the following command:
 
 ```
-geth sharding --actor "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+geth sharding --actor "attester" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will extract 1000ETH from your account balance and insert you into the SMC's attesters. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
-Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function.
 
 ## Running a Collation Proposal Node
 

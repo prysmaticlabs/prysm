@@ -64,7 +64,7 @@ func TestStop(t *testing.T) {
 }
 
 // This test uses a faulty Signer interface in order to trigger an error
-// in the simulateNotaryRequests goroutine when attempting to sign
+// in the simulateAttesterRequests goroutine when attempting to sign
 // a collation header within the goroutine's internals.
 func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	shardChainDB, err := database.NewShardDB("", "", true)

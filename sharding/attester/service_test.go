@@ -1,4 +1,4 @@
-package notary
+package attester
 
 import (
 	"context"
@@ -17,20 +17,20 @@ var (
 	addr   = crypto.PubkeyToAddress(key.PublicKey)
 )
 
-// Verifies that Notary implements the Actor interface.
-var _ = types.Actor(&Notary{})
+// Verifies that Attester implements the Actor interface.
+var _ = types.Actor(&Attester{})
 
 func TestHasAccountBeenDeregistered(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend, BlockNumber: 1}
 
 	client.SetDepositFlag(true)
-	err := joinNotaryPool(client, client, nil)
+	err := joinAttesterPool(client, client, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = leaveNotaryPool(client, client)
+	err = leaveAttesterPool(client, client)
 
 	if err != nil {
 		t.Error(err)
@@ -43,7 +43,7 @@ func TestHasAccountBeenDeregistered(t *testing.T) {
 	}
 
 	if !dreg {
-		t.Error("account unable to be deregistered from notary pool")
+		t.Error("account unable to be deregistered from attester pool")
 	}
 }
 
@@ -52,20 +52,20 @@ func TestIsLockupOver(t *testing.T) {
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 
 	client.SetDepositFlag(true)
-	err := joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err := joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = leaveNotaryPool(client, client)
+	err = leaveAttesterPool(client, client)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	client.FastForward(int(shardparams.DefaultConfig.NotaryLockupLength + 100))
+	client.FastForward(int(shardparams.DefaultConfig.AttesterLockupLength + 100))
 
-	err = releaseNotary(client, client, client)
+	err = releaseAttester(client, client, client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,142 +81,142 @@ func TestIsLockupOver(t *testing.T) {
 	}
 }
 
-func TestIsAccountInNotaryPool(t *testing.T) {
+func TestIsAccountInAttesterPool(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 
 	// address should not be in pool initially.
-	b, err := isAccountInNotaryPool(client, client.Account())
+	b, err := isAccountInAttesterPool(client, client.Account())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if b {
-		t.Fatal("account unexpectedly in notary pool")
+		t.Fatal("account unexpectedly in attester pool")
 	}
 
-	txOpts, _ := client.CreateTXOpts(shardparams.DefaultConfig.NotaryDeposit)
-	if _, err := smc.RegisterNotary(txOpts); err != nil {
+	txOpts, _ := client.CreateTXOpts(shardparams.DefaultConfig.AttesterDeposit)
+	if _, err := smc.RegisterAttester(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}
 	client.CommitWithBlock()
-	b, err = isAccountInNotaryPool(client, client.Account())
+	b, err = isAccountInAttesterPool(client, client.Account())
 	if err != nil {
 		t.Error(err)
 	}
 	if !b {
-		t.Error("account not in notary pool when expected to be")
+		t.Error("account not in attester pool when expected to be")
 	}
 }
 
-func TestJoinNotaryPool(t *testing.T) {
+func TestJoinAttesterPool(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 
-	// There should be no notary initially.
-	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+	// There should be no attester initially.
+	numAttesters, err := smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Error(err)
 	}
-	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Errorf("unexpected number of notaries. Got %d, wanted 0.", numNotaries)
+	if big.NewInt(0).Cmp(numAttesters) != 0 {
+		t.Errorf("unexpected number of attesters. Got %d, wanted 0.", numAttesters)
 	}
 
 	client.SetDepositFlag(false)
-	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err == nil {
-		t.Error("joined notary pool while --deposit was not present")
+		t.Error("joined attester pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
-	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
 
-	// Now there should be one notary.
-	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
+	// Now there should be one attester.
+	numAttesters, err = smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Error(err)
 	}
-	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+	if big.NewInt(1).Cmp(numAttesters) != 0 {
+		t.Errorf("unexpected number of attesters. Got %d, wanted 1", numAttesters)
 	}
 
 	// Join while deposited should do nothing.
-	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
 
-	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
+	numAttesters, err = smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Error(err)
 	}
-	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+	if big.NewInt(1).Cmp(numAttesters) != 0 {
+		t.Errorf("unexpected number of attesters. Got %d, wanted 1", numAttesters)
 	}
 }
 
-func TestLeaveNotaryPool(t *testing.T) {
+func TestLeaveAttesterPool(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 	client.SetDepositFlag(true)
 
-	// Test leaving notary pool before joining it.
-	err := leaveNotaryPool(client, client)
+	// Test leaving attester pool before joining it.
+	err := leaveAttesterPool(client, client)
 	if err == nil {
-		t.Error("able to leave notary pool despite having not joined it")
+		t.Error("able to leave attester pool despite having not joined it")
 	}
 
 	// Roundtrip test, join and leave pool.
-	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
 	client.CommitWithBlock()
 
-	// Now there should be one notary.
-	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+	// Now there should be one attester.
+	numAttesters, err := smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Error(err)
 	}
-	if big.NewInt(1).Cmp(numNotaries) != 0 {
-		t.Errorf("unexpected number of notaries. Got %d, wanted 1", numNotaries)
+	if big.NewInt(1).Cmp(numAttesters) != 0 {
+		t.Errorf("unexpected number of attesters. Got %d, wanted 1", numAttesters)
 	}
 
-	err = leaveNotaryPool(client, client)
+	err = leaveAttesterPool(client, client)
 	if err != nil {
 		t.Error(err)
 	}
 	client.CommitWithBlock()
 
-	numNotaries, err = smc.NotaryPoolLength(&bind.CallOpts{})
+	numAttesters, err = smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
 		t.Error(err)
 	}
-	if big.NewInt(0).Cmp(numNotaries) != 0 {
-		t.Errorf("unexpected number of notaries. Got %d, wanted 0", numNotaries)
+	if big.NewInt(0).Cmp(numAttesters) != 0 {
+		t.Errorf("unexpected number of attesters. Got %d, wanted 0", numAttesters)
 	}
 }
 
-func TestReleaseNotary(t *testing.T) {
+func TestReleaseAttester(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 	client.SetDepositFlag(true)
 
-	// Test release notary before joining it.
-	err := releaseNotary(client, client, client)
+	// Test release attester before joining it.
+	err := releaseAttester(client, client, client)
 	if err == nil {
-		t.Error("released From notary despite never joining pool")
+		t.Error("released From attester despite never joining pool")
 	}
 
 	// Roundtrip test, join and leave pool.
-	err = joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = leaveNotaryPool(client, client)
+	err = leaveAttesterPool(client, client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -225,19 +225,19 @@ func TestReleaseNotary(t *testing.T) {
 	if err != nil {
 		t.Error("unable to retrieve balance")
 	}
-	client.FastForward(int(shardparams.DefaultConfig.NotaryLockupLength + 10))
+	client.FastForward(int(shardparams.DefaultConfig.AttesterLockupLength + 10))
 
-	err = releaseNotary(client, client, client)
+	err = releaseAttester(client, client, client)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	nreg, err := smc.NotaryRegistry(&bind.CallOpts{}, addr)
+	nreg, err := smc.AttesterRegistry(&bind.CallOpts{}, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if nreg.Deposited {
-		t.Error("Unable to release Notary and deposit money back")
+		t.Error("Unable to release Attester and deposit money back")
 	}
 
 	newbalance, err := client.Backend.BalanceAt(context.Background(), addr, nil)
@@ -255,7 +255,7 @@ func TestSubmitVote(t *testing.T) {
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
 	client.SetDepositFlag(true)
 
-	err := joinNotaryPool(client, client, shardparams.DefaultConfig)
+	err := joinAttesterPool(client, client, shardparams.DefaultConfig)
 	if err != nil {
 		t.Error(err)
 	}

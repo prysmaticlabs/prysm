@@ -90,11 +90,11 @@ var (
 	// Sharding Settings
 	DepositFlag = cli.BoolFlag{
 		Name:  "deposit",
-		Usage: "To become a notary in a sharding node, " + new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
+		Usage: "To become an attester in a sharding node, " + new(big.Int).Div(shardparams.DefaultConfig.AttesterDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
 	}
 	ActorFlag = cli.StringFlag{
 		Name:  "actor",
-		Usage: `use the --actor notary or --actor proposer to start a notary or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
+		Usage: `use the --actor attester or --actor proposer to start an attester or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
 	}
 	ShardIDFlag = cli.IntFlag{
 		Name:  "shardid",

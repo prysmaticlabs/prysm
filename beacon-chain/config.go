@@ -15,6 +15,6 @@ const (
 	DefaultSwitchDynasty = 9999999999999999999
 	// MaxValidators in the protocol.
 	MaxValidators = 2 ^ 24
-	// NotariesPerCrosslink fixed to 100.
-	NotariesPerCrosslink = 100
+	// AttestersPerCrosslink fixed to 100.
+	AttestersPerCrosslink = 100
 )

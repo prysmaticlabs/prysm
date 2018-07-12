@@ -16,7 +16,7 @@ import (
 
 // Simulator is a service in a shard node that simulates requests from
 // remote notes coming over the shardp2p network. For example, if
-// we are running a proposer service, we would want to simulate notary requests
+// we are running a proposer service, we would want to simulate attester requests
 // requests coming to us via a p2p feed. This service will be removed
 // once p2p internals and end-to-end testing across remote
 // nodes have been implemented.
@@ -44,7 +44,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
+	go s.simulateAttesterRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
 }
 
 // Stop the main loop for simulator requests.
@@ -56,13 +56,13 @@ func (s *Simulator) Stop() error {
 	return nil
 }
 
-// simulateNotaryRequests simulates p2p message sent out by notaries
-// once the system is in production. Notaries will be performing
+// simulateAttesterRequests simulates p2p message sent out by attesters
+// once the system is in production. Attesters will be performing
 // this action within their own service when they are selected on a shard, period
 // pair to perform their responsibilities. This function in particular simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
-func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
+func (s *Simulator) simulateAttesterRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.

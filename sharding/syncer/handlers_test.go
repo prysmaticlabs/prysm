@@ -197,7 +197,7 @@ func TestCollationBodyResponse(t *testing.T) {
 	}
 }
 
-func TestConstructNotaryRequest(t *testing.T) {
+func TestConstructAttesterRequest(t *testing.T) {
 
 	backend, smc := setup(t)
 	node := &mockNode{smc: smc, t: t, Backend: backend}
@@ -236,22 +236,22 @@ func TestConstructNotaryRequest(t *testing.T) {
 	}
 
 	if nilRequest != nil {
-		t.Errorf("constructNotaryRequest should return nil for an inexistent collation header. got: %v", err)
+		t.Errorf("constructAttesterRequest should return nil for an inexistent collation header. got: %v", err)
 	}
 
 	if request.ChunkRoot.Hex() != chunkRoot.Hex() {
-		t.Errorf("Chunk root from notary request incorrect. want: %v, got: %v", chunkRoot.Hex(), request.ChunkRoot.Hex())
+		t.Errorf("Chunk root from attester request incorrect. want: %v, got: %v", chunkRoot.Hex(), request.ChunkRoot.Hex())
 	}
 
 	if request.Proposer.Hex() != proposerAddress.Hex() {
-		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), request.Proposer.Hex())
+		t.Errorf("Proposer address from attester request incorrect. want: %v, got: %v", proposerAddress.Hex(), request.Proposer.Hex())
 	}
 
 	if request.ShardID.Cmp(shardID) != 0 {
-		t.Errorf("ShardID from notary request incorrect. want: %s, got: %s", shardID, request.ShardID)
+		t.Errorf("ShardID from attester request incorrect. want: %s, got: %s", shardID, request.ShardID)
 	}
 
 	if request.Period.Cmp(period) != 0 {
-		t.Errorf("Proposer address from notary request incorrect. want: %s, got: %s", period, request.Period)
+		t.Errorf("Proposer address from attester request incorrect. want: %s, got: %s", period, request.Period)
 	}
 }
