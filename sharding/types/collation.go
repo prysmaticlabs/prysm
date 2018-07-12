@@ -9,7 +9,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/shared"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"
@@ -142,11 +142,11 @@ func BytesToChunks(body []byte) Chunks {
 }
 
 // convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding
-func convertTxToRawBlob(txs []*gethTypes.Transaction) ([]*utils.RawBlob, error) {
-	blobs := make([]*utils.RawBlob, len(txs))
+func convertTxToRawBlob(txs []*gethTypes.Transaction) ([]*shared.RawBlob, error) {
+	blobs := make([]*shared.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
 		err := error(nil)
-		blobs[i], err = utils.NewRawBlob(txs[i], false)
+		blobs[i], err = shared.NewRawBlob(txs[i], false)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	serializedTx, err := utils.Serialize(blobs)
+	serializedTx, err := shared.Serialize(blobs)
 	if err != nil {
 		return nil, err
 	}
@@ -174,13 +174,13 @@ func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 }
 
 // convertRawBlobToTx converts raw blobs back to their original transactions.
-func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*gethTypes.Transaction, error) {
+func convertRawBlobToTx(rawBlobs []shared.RawBlob) ([]*gethTypes.Transaction, error) {
 	blobs := make([]*gethTypes.Transaction, len(rawBlobs))
 
 	for i := 0; i < len(rawBlobs); i++ {
 		blobs[i] = gethTypes.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
 
-		err := utils.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
+		err := shared.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
 		if err != nil {
 			return nil, fmt.Errorf("creation of transactions from raw blobs failed: %v", err)
 		}
@@ -191,7 +191,7 @@ func convertRawBlobToTx(rawBlobs []utils.RawBlob) ([]*gethTypes.Transaction, err
 // DeserializeBlobToTx takes byte array blob and converts it back
 // to original txs and returns the txs in tx array.
 func DeserializeBlobToTx(serialisedBlob []byte) (*[]*gethTypes.Transaction, error) {
-	deserializedBlobs, err := utils.Deserialize(serialisedBlob)
+	deserializedBlobs, err := shared.Deserialize(serialisedBlob)
 	if err != nil {
 		return nil, err
 	}

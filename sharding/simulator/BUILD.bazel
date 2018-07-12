@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["service.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/simulator",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/mainchain:go_default_library",
         "//sharding/p2p:go_default_library",
