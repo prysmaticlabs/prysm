@@ -51,7 +51,7 @@ You can install them using your favourite package manager.
 
 # Sharding Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin running out system
+To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin running our system
 
 ## Running a Local Geth Node
 
@@ -104,7 +104,7 @@ $ bazel build //sharding/...
 ## Becoming a Notary
 
 
-To deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
+Make sure a geth node is running as a separate process. Then, to deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
 
 ```
 $ bazel run //sharding --actor "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
