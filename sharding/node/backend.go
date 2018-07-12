@@ -254,6 +254,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 	if err := s.fetchService(&shardChainDB); err != nil {
 		return err
 	}
+
 	var sync *syncer.Syncer
 	if err := s.fetchService(&sync); err != nil {
 		return err
