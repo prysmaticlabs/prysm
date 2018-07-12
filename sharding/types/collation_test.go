@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/shared"
 )
 
 // fieldAccess is to access unexported fields in structs in another package
@@ -206,9 +206,9 @@ func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := utils.Serialize(blobs)
+		_, err := shared.Serialize(blobs)
 		if err != nil {
-			b.Errorf("utils.Serialize failed: %v", err)
+			b.Errorf("shared.Serialize failed: %v", err)
 		}
 	}
 }
@@ -242,9 +242,9 @@ func runDeserializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := utils.Deserialize(blob)
+		_, err := shared.Deserialize(blob)
 		if err != nil {
-			b.Errorf("utils.Deserialize failed: %v", err)
+			b.Errorf("shared.Deserialize failed: %v", err)
 		}
 	}
 }
