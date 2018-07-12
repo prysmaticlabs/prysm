@@ -94,11 +94,17 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
+	simulator.Start()
+	msg := hook.LastEntry().Message
+	if msg != "Starting simulator service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting simulator service", msg)
+	}
+
 	if err := simulator.Stop(); err != nil {
 		t.Fatalf("Unable to stop simulator service: %v", err)
 	}
 
-	msg := hook.LastEntry().Message
+	msg = hook.LastEntry().Message
 	if msg != "Stopping simulator service" {
 		t.Errorf("incorrect log, expected %s, got %s", "Stopping simulator service", msg)
 	}
