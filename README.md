@@ -2,24 +2,20 @@
 
 ![Travis Build](https://travis-ci.org/prysmaticlabs/geth-sharding.svg?branch=master)
 
-This is the main repository for the sharding implementation for the go-ethereum project by [Prysmatic Labs](https://prysmaticlabs.com). For the original, go-ethereum project, refer to the following [link](https://github.com/ethereum/go-ethereum).
+This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com). 
 
 Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 
-Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc serves as a source of truth for the sharding implementation we follow at Prysmatic Labs.
+Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
 
 
 # Table of Contents
 
 -   [Installation](#installation)
 -   [Sharding Instructions](#sharding)
-    -   [Running a Local Geth Node](#running-a-local-geth-node)
-    -   [Transaction Generator](#transaction-generator)
-    -   [Becoming a Notary](#becoming-a-notary)
-    -   [Running a Collation Proposal Node](#running-a-collation-proposal-node)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -29,36 +25,33 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 Create a folder in your `$GOPATH` and navigate to it
 
 ```
-$ mkdir -p $GOPATH/src/github.com/ethereum && cd $GOPATH/src/github.com/ethereum
+$ mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
 ```
 
-Clone our repository as `go-ethereum`
+Clone our repository: 
 
 ```
-$ git clone https://github.com/prysmaticlabs/geth-sharding ./go-ethereum
+$ git clone https://github.com/prysmaticlabs/geth-sharding
 ```
 
-For prerequisites and detailed build instructions please read the
-[Installation Instructions](https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum)
-on the wiki.
+Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
+
+```
+$ bazel
+```
+
+You will also need to download Geth:
+
+```
+$ go get -u github.com/ethereum/go-ethereum
+```
 
 Building geth requires both a Go (version 1.7 or later) and a C compiler.
 You can install them using your favourite package manager.
-Once the dependencies are installed, run
-
-```
-$ make geth
-```
-
-or, to build the full suite of utilities:
-
-```
-$ make all
-```
 
 # Sharding Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin proposing collations into shard chains.
+To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin running out system
 
 ## Running a Local Geth Node
 
@@ -84,9 +77,8 @@ The `alloc` portion specifies account addresses with prefunded ETH when the Ethe
 
 Then, you can build `geth` and init a new instance of a local, Ethereum blockchain as follows:
 
-    $ make geth
-    $ ./build/bin/geth init /path/to/genesis.json -datadir /path/to/your/datadir
-    $ ./build/bin/geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
+    $ geth init /path/to/genesis.json -datadir /path/to/your/datadir
+    $ geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
 
 It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
 
@@ -98,18 +90,24 @@ Then, the geth console can start up and you can start a miner as follows:
 
 Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
 
-## Transaction Generator
 
-Work in Progress. To track our current draft of the tx generator cli spec, visit this [link](https://docs.google.com/document/d/1YohsW4R9dIRo0u5RqfNOYjCkYKVCmzjgoBDBYDdu5m0/edit?usp=drive_web&ouid=105756662967435769870). Generating test transactions on a local network will allow for benchmarking of tx throughput within our system.
+# Sharding Minimal Protocol 
+
+**NOTE**: This section is in flux: will be deprecated in favor of a beacon chain)
+
+Build our system first
+
+```
+$ bazel build //sharding/...
+```
 
 ## Becoming a Notary
 
-Our system outlined below follows the [Minimal Sharding Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650) as outlined by Vitalik on ETHResearch where any actor can submit collation headers via the SMC, but only a selected committee of notaries is allowed to vote on collations in each period. Notaries are in charge of data availability checking and consensus is reached upon a collation header receiving >= 2/3 votes in a period.
 
 To deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
 
 ```
-geth sharding --actor "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+$ bazel run //sharding --actor "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
 This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
@@ -119,14 +117,14 @@ Concurrently, you will need to run another service that is tasked with processin
 ## Running a Collation Proposal Node
 
 ```
-geth sharding --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
+$ bazel run //sharding --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
 ```
 
 This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals on shard 0 (collation headers) to the SMC via the `addHeader` function.
 
 ## Running an Observer Node
 
-    geth sharding --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
+    $ bazel run //sharding --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
 
 Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network on shard 0.
 
@@ -136,19 +134,23 @@ Omitting the `--actor` flag will launch a simple observer service attached to th
 
 The Sharding Manager Contract is built in Solidity and deployed to a running geth node upon launch of the sharding node if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
 
-    go generate github.com/prysmaticlabs/geth-sharding/sharding
+    go generate github.com/prysmaticlabs/geth-sharding/sharding/contracts
     # OR
-    cd sharding && go generate
+    cd sharding/contracts && go generate
 
 # Testing
 
 To run the unit tests of our system do:
 
 ```
-go test github.com/prysmaticlabs/geth-sharding/sharding
+$ bazel test //...
 ```
 
-We will require more complex testing scenarios (fuzz tests) to measure the full integrity of the system as it evolves.
+To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run
+
+```
+$ gometalinter ./
+```
 
 # Contributing
 
@@ -158,10 +160,8 @@ We have put all of our contribution guidelines into [CONTRIBUTING.md](https://gi
 
 # License
 
-The go-ethereum library (i.e. all code outside of the `cmd` directory) is licensed under the
-[GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html), also
-included in our repository in the `COPYING.LESSER` file.
+The go-ethereum library is licensed under the
+[GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html)
 
-The go-ethereum binaries (i.e. all code inside of the `cmd` directory) is licensed under the
-[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also included
-in our repository in the `COPYING` file.
+The go-ethereum binaries is licensed under the
+[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
