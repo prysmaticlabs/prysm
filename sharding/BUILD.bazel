@@ -15,5 +15,5 @@ go_library(
 go_binary(
     name = "sharding",
     embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
 )
