@@ -1,6 +1,6 @@
 # Prysmatic Labs Beacon Chain Implementation
 
-This is the main repository for the beacon chain implementation of Ethereum 2.0 in Golang by [Prysmatic Labs](https://prysmaticlabs.com). Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
+This is the main project folder for the beacon chain implementation of Ethereum 2.0 in Golang by [Prysmatic Labs](https://prysmaticlabs.com). Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
