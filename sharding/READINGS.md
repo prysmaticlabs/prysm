@@ -120,7 +120,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 -   [Merge Blocks](https://ethresear.ch/t/merge-blocks-and-synchronous-cross-shard-state-execution/1240/4)
 -   [Fast Shard Chains With Notarization](https://ethresear.ch/t/as-fast-as-possible-shard-chains-with-notarization/1806/2)
 -   [RANDAO Attester Committees](https://ethresear.ch/t/fork-free-randao/1835/3)
--   [Safe Attester Pool Size](https://ethresear.ch/t/safe-attester-pool-size/1728/3)
+-   [Safe Attester Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728/3)
 -   [Cross Links Between Main and Shard Chains](https://ethresear.ch/t/cross-links-between-main-chain-and-shards/1860/2)
 
 ## Necessary Go Knowledge & Readings
