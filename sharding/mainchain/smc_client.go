@@ -18,12 +18,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/sharding/contracts"
+	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	log "github.com/sirupsen/logrus"
 )
 
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
@@ -73,7 +73,7 @@ func (s *SMCClient) Start() {
 	// Sets up a connection to a Geth node via RPC.
 	rpcClient, err := dialRPC(s.endpoint)
 	if err != nil {
-		log.Crit(fmt.Sprintf("Cannot start rpc client: %v", err))
+		log.Panicf("Cannot start rpc client: %v", err)
 		return
 	}
 
@@ -83,19 +83,19 @@ func (s *SMCClient) Start() {
 	// Check account existence and unlock account before starting.
 	accounts := s.keystore.Accounts()
 	if len(accounts) == 0 {
-		log.Crit("No accounts found")
+		log.Panic("No accounts found")
 		return
 	}
 
 	if err := s.unlockAccount(accounts[0]); err != nil {
-		log.Crit(fmt.Sprintf("Cannot unlock account: %v", err))
+		log.Panic(fmt.Sprintf("Cannot unlock account: %v", err))
 		return
 	}
 
 	// Initializes bindings to SMC.
 	smc, err := initSMC(s)
 	if err != nil {
-		log.Crit(fmt.Sprintf("Failed to initialize SMC: %v", err))
+		log.Panic(fmt.Sprintf("Failed to initialize SMC: %v", err))
 		return
 	}
 
@@ -115,7 +115,7 @@ func (s *SMCClient) CreateTXOpts(value *big.Int) (*bind.TransactOpts, error) {
 	return &bind.TransactOpts{
 		From:  account.Address,
 		Value: value,
-		Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		Signer: func(signer gethTypes.Signer, addr common.Address, tx *gethTypes.Transaction) (*gethTypes.Transaction, error) {
 			networkID, err := s.client.NetworkID(context.Background())
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch networkID: %v", err)
@@ -184,7 +184,7 @@ func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, du
 
 // TransactionReceipt allows an SMCClient to retrieve transaction receipts on
 // the mainchain by hash.
-func (s *SMCClient) TransactionReceipt(hash common.Hash) (*types.Receipt, error) {
+func (s *SMCClient) TransactionReceipt(hash common.Hash) (*gethTypes.Receipt, error) {
 
 	receipt, err := s.client.TransactionReceipt(context.Background(), hash)
 	if err != nil {

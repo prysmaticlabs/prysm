@@ -4,19 +4,19 @@ package proposer
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	"github.com/ethereum/go-ethereum/sharding/mainchain"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
-	"github.com/ethereum/go-ethereum/sharding/p2p/messages"
-	"github.com/ethereum/go-ethereum/sharding/params"
-	"github.com/ethereum/go-ethereum/sharding/txpool"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // Proposer holds functionality required to run a collation proposer
@@ -30,15 +30,16 @@ type Proposer struct {
 	txpoolSub event.Subscription
 	dbService *database.ShardDB
 	shardID   int
-	shard     *sharding.Shard
+	shard     *types.Shard
 	ctx       context.Context
 	cancel    context.CancelFunc
+	sync      *syncer.Syncer
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int) (*Proposer, error) {
+func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config,
@@ -50,20 +51,22 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 		shardID,
 		nil,
 		ctx,
-		cancel}, nil
+		cancel,
+		sync}, nil
 }
 
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
-	shard := sharding.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
+	shard := types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.shard = shard
 	go p.proposeCollations()
+	go p.sync.HandleCollationBodyRequests(p.shard, p.ctx.Done())
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
-	log.Info(fmt.Sprintf("Stopping proposer service in shard %d", p.shard.ShardID()))
+	log.Warnf("Stopping proposer service in shard %d", p.shard.ShardID())
 	defer p.cancel()
 	p.txpoolSub.Unsubscribe()
 	return nil
@@ -72,7 +75,7 @@ func (p *Proposer) Stop() error {
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
 	feed := p.p2p.Feed(messages.TransactionBroadcast{})
-	ch := make(chan p2p.Message, 20) // Is this buffer size too small?
+	ch := make(chan p2p.Message, 20)
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
 	defer close(ch)
@@ -84,9 +87,9 @@ func (p *Proposer) proposeCollations() {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
-			log.Info(fmt.Sprintf("Received transaction with hash: %x", tx.Transaction.Hash()))
-			if err := p.createCollation(p.ctx, []*types.Transaction{tx.Transaction}); err != nil {
-				log.Error(fmt.Sprintf("Create collation failed: %v", err))
+			log.Infof("Received transaction: %x", tx.Transaction.Hash())
+			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{tx.Transaction}); err != nil {
+				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():
 			log.Debug("Proposer context closed, exiting goroutine")
@@ -98,7 +101,7 @@ func (p *Proposer) proposeCollations() {
 	}
 }
 
-func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction) error {
+func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
 	// Get current block number.
 	blockNumber, err := p.client.ChainReader().BlockByNumber(ctx, nil)
 	if err != nil {
@@ -114,11 +117,11 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*types.Transaction
 
 	// Saves the collation to persistent storage in the shardDB.
 	if err := p.shard.SaveCollation(collation); err != nil {
-		log.Error(fmt.Sprintf("Could not save collation to persistent storage: %v", err))
+		log.Errorf("Could not save collation to persistent storage: %v", err)
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("Saved collation with header hash %v to shardChainDB", collation.Header().Hash().Hex()))
+	log.Infof("Saved collation with header hash %v to shardChainDB", collation.Header().Hash().Hex())
 
 	// Check SMC if we can submit header before addHeader.
 	canAdd, err := checkHeaderAdded(p.client, p.shard.ShardID(), period)

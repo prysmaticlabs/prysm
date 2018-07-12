@@ -3,19 +3,21 @@ package observer
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding"
-	"github.com/ethereum/go-ethereum/sharding/database"
-	internal "github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Verifies that Observer implements the Actor interface.
-var _ = sharding.Actor(&Observer{})
+var _ = types.Actor(&Observer{})
 
 func TestStartStop(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+
+	hook := logTest.NewGlobal()
 
 	server, err := p2p.NewServer()
 	if err != nil {
@@ -26,22 +28,39 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup db: %v", err)
 	}
 	shardID := 0
+	client := &mainchain.SMCClient{}
 
-	observer, err := NewObserver(server, shardChainDB, shardID)
+	syncer, err := syncer.NewSyncer(params.DefaultConfig, client, server, shardChainDB, shardID)
+	if err != nil {
+		t.Fatalf("Unable to setup sync service: %v", err)
+	}
+
+	observer, err := NewObserver(server, shardChainDB, shardID, syncer, client)
 	if err != nil {
 		t.Fatalf("Unable to set up observer service: %v", err)
 	}
 
-	observer.Start()
+	observer.sync.Start()
+	msg := hook.LastEntry().Message
+	if msg != "Starting sync service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting sync service", msg)
+	}
 
-	h.VerifyLogMsg("Starting observer service")
+	observer.Start()
+	msg = hook.LastEntry().Message
+	if msg != "Starting observer service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting observer service", msg)
+	}
 
 	err = observer.Stop()
 	if err != nil {
 		t.Fatalf("Unable to stop observer service: %v", err)
 	}
 
-	h.VerifyLogMsg("Stopping observer service")
+	msg = hook.LastEntry().Message
+	if msg != "Stopping observer service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping observer service", msg)
+	}
 
 	if observer.ctx.Err() == nil {
 		t.Errorf("Context was not cancelled")

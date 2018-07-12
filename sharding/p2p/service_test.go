@@ -1,8 +1,6 @@
 package p2p
 
-import (
-	"github.com/ethereum/go-ethereum/sharding"
-)
+import "github.com/prysmaticlabs/geth-sharding/sharding/types"
 
 // Ensure that server implements service.
-var _ = sharding.Service(&Server{})
+var _ = types.Service(&Server{})

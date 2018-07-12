@@ -7,10 +7,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/sharding/internal"
-	"github.com/ethereum/go-ethereum/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 )
 
 var (
@@ -21,11 +21,11 @@ var (
 func TestCreateCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
-	var txs []*types.Transaction
+	var txs []*gethTypes.Transaction
 	for i := 0; i < 10; i++ {
 		data := make([]byte, 1024)
 		rand.Read(data)
-		txs = append(txs, types.NewTransaction(0, common.HexToAddress("0x0"),
+		txs = append(txs, gethTypes.NewTransaction(0, common.HexToAddress("0x0"),
 			nil, 0, nil, data))
 	}
 
@@ -45,11 +45,11 @@ func TestCreateCollation(t *testing.T) {
 		t.Errorf("Create collation should have failed with invalid shard number")
 	}
 	// negative test case #2, create collation with blob size > collationBodySizeLimit.
-	var badTxs []*types.Transaction
+	var badTxs []*gethTypes.Transaction
 	for i := 0; i <= 1024; i++ {
 		data := make([]byte, 1024)
 		rand.Read(data)
-		badTxs = append(badTxs, types.NewTransaction(0, common.HexToAddress("0x0"),
+		badTxs = append(badTxs, gethTypes.NewTransaction(0, common.HexToAddress("0x0"),
 			nil, 0, nil, data))
 	}
 	collation, err = createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(2), badTxs)
@@ -71,7 +71,7 @@ func TestCreateCollation(t *testing.T) {
 	if *collation.ProposerAddress() != node.Account().Address {
 		t.Errorf("Incorrect proposer address, got %v", *collation.ProposerAddress())
 	}
-	if collation.Header().Sig() != nil {
+	if collation.Header().Sig() != [32]byte{} {
 		t.Errorf("Proposer signaure can not be empty")
 	}
 }
@@ -79,11 +79,11 @@ func TestCreateCollation(t *testing.T) {
 func TestAddCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
-	var txs []*types.Transaction
+	var txs []*gethTypes.Transaction
 	for i := 0; i < 10; i++ {
 		data := make([]byte, 1024)
 		rand.Read(data)
-		txs = append(txs, types.NewTransaction(0, common.HexToAddress("0x0"),
+		txs = append(txs, gethTypes.NewTransaction(0, common.HexToAddress("0x0"),
 			nil, 0, nil, data))
 	}
 
@@ -127,11 +127,11 @@ func TestAddCollation(t *testing.T) {
 func TestCheckCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
-	var txs []*types.Transaction
+	var txs []*gethTypes.Transaction
 	for i := 0; i < 10; i++ {
 		data := make([]byte, 1024)
 		rand.Read(data)
-		txs = append(txs, types.NewTransaction(0, common.HexToAddress("0x0"),
+		txs = append(txs, gethTypes.NewTransaction(0, common.HexToAddress("0x0"),
 			nil, 0, nil, data))
 	}
 

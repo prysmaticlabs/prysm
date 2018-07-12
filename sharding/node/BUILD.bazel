@@ -1,0 +1,36 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["backend.go"],
+    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/node",
+    visibility = ["//sharding:__subpackages__"],
+    deps = [
+        "//sharding/database:go_default_library",
+        "//sharding/mainchain:go_default_library",
+        "//sharding/notary:go_default_library",
+        "//sharding/observer:go_default_library",
+        "//sharding/p2p:go_default_library",
+        "//sharding/params:go_default_library",
+        "//sharding/proposer:go_default_library",
+        "//sharding/simulator:go_default_library",
+        "//sharding/syncer:go_default_library",
+        "//sharding/txpool:go_default_library",
+        "//sharding/types:go_default_library",
+        "//sharding/utils:go_default_library",
+        "@com_github_ethereum_go_ethereum//event:go_default_library",
+        "@com_github_ethereum_go_ethereum//node:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["backend_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//sharding/types:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
+    ],
+)

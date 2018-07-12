@@ -3,8 +3,8 @@ package txpool
 
 import (
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	log "github.com/sirupsen/logrus"
 )
 
 // TXPool handles a transaction pool for a sharded system.

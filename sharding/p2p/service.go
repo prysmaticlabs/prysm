@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // Sender represents a struct that is able to relay information via shardp2p.
