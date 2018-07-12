@@ -75,7 +75,7 @@ To start a local Geth node, you can create your own `genesis.json` file similar 
 
 The `alloc` portion specifies account addresses with prefunded ETH when the Ethereum blockchain is created. You can modify this section of the genesis to include your own test address and prefund it with 100ETH.
 
-Then, you can build `geth` and init a new instance of a local, Ethereum blockchain as follows:
+Then, you can build and init a new instance of a local, Ethereum blockchain as follows:
 
     $ geth init /path/to/genesis.json -datadir /path/to/your/datadir
     $ geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
