@@ -14,5 +14,5 @@ go_library(
 go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
 )
