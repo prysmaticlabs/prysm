@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // CollationBodyRequest defines a p2p message being sent over subscription feeds
@@ -21,4 +22,10 @@ type CollationBodyRequest struct {
 type CollationBodyResponse struct {
 	HeaderHash *common.Hash
 	Body       []byte
+}
+
+// TransactionBroadcast defines the p2p message broadcast from simulators
+// to the rest of the actors for transactions to be included in collation.
+type TransactionBroadcast struct {
+	Transaction *types.Transaction
 }

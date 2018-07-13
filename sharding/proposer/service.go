@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
@@ -73,14 +74,21 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	requests := make(chan *gethTypes.Transaction)
-	p.txpoolSub = p.txpool.TransactionsFeed().Subscribe(requests)
-	defer close(requests)
+	feed := p.p2p.Feed(messages.TransactionBroadcast{})
+	ch := make(chan p2p.Message, 20)
+	sub := feed.Subscribe(ch)
+	defer sub.Unsubscribe()
+	defer close(ch)
 	for {
 		select {
-		case tx := <-requests:
-			log.Infof("Received transaction: %x", tx.Hash())
-			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{tx}); err != nil {
+		case msg := <-ch:
+			tx, ok := msg.Data.(messages.TransactionBroadcast)
+			if !ok {
+				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
+				break
+			}
+			log.Infof("Received transaction: %x", tx.Transaction.Hash())
+			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{tx.Transaction}); err != nil {
 				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():
