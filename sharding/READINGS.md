@@ -112,7 +112,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 -   [Future Compatibility for Sharding](https://ethresear.ch/t/future-compatibility-for-sharding/386)
 -   [Fork Choice Rule for Collation Proposal Mechanisms](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922/8)
 -   [State Execution](https://ethresear.ch/t/state-execution-scalability-and-cost-under-dos-attacks/1048)
--   [Fast Shard Chains With Notarization](https://ethresear.ch/t/as-fast-as-possible-shard-chains-with-notarization/1806/2)
+-   [Fast Shard Chains With Attestation](https://ethresear.ch/t/as-fast-as-possible-shard-chains-with-notarization/1806/2)
 -   [RANDAO Attester Committees](https://ethresear.ch/t/fork-free-randao/1835/3)
 -   [Safe Attester Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728/3)
 -   [Cross Links Between Main and Shard Chains](https://ethresear.ch/t/cross-links-between-main-chain-and-shards/1860/2)
