@@ -260,14 +260,14 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
-	if actor == "notary" {
+	switch actor {
+	case "notary":
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
 		if err != nil {
 			return fmt.Errorf("could not register notary service: %v", err)
 		}
 		return s.registerService(not)
-	} else if actor == "proposer" {
-
+	case "proposer":
 		var pool *txpool.TXPool
 		if err := s.fetchService(&pool); err != nil {
 			return err
@@ -278,12 +278,19 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.registerService(prop)
+	case "simulator":
+		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15) // 15 second delay between simulator requests.
+		if err != nil {
+			return fmt.Errorf("could not register simulator service: %v", err)
+		}
+		return s.registerService(sim)
+	default:
+		obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
+		if err != nil {
+			return fmt.Errorf("could not register observer service: %v", err)
+		}
+		return s.registerService(obs)
 	}
-	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
-	if err != nil {
-		return fmt.Errorf("could not register observer service: %v", err)
-	}
-	return s.registerService(obs)
 }
 
 func (s *ShardEthereum) registerSimulatorService(actorFlag string, config *params.Config, shardID int) error {

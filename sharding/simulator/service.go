@@ -2,9 +2,12 @@ package simulator
 
 import (
 	"context"
+	"crypto/rand"
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
@@ -44,6 +47,8 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
+
+	go s.broadcastTransactions(time.Tick(time.Second*s.delay), s.ctx.Done())
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
 }
 
@@ -92,4 +97,29 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 		}
 	}
+}
+
+// broadcastTransactions sends a transaction with random bytes over by a delay period,
+// this method is for testing purposes only, and will be replaced by a more functional CLI tool.
+func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-chan struct{}) {
+	for {
+		select {
+		// Makes sure to close this goroutine when the service stops.
+		case <-done:
+			log.Debug("Simulator context closed, exiting goroutine")
+			return
+		case <-delayChan:
+			tx := createTestTx()
+			s.p2p.Broadcast(messages.TransactionBroadcast{Transaction: tx})
+			log.Info("Transaction broadcasted")
+		}
+	}
+}
+
+// createTestTx is a helper method to generate tx with random data bytes.
+// it is used for broadcastTransactions.
+func createTestTx() *types.Transaction {
+	data := make([]byte, 1024)
+	rand.Read(data)
+	return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
 }
