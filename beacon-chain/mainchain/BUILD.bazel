@@ -4,9 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = ["service.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain/mainchain",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages_-"],
     deps = [
         "@com_github_ethereum_go_ethereum//:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
