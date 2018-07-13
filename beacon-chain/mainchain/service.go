@@ -2,7 +2,7 @@ package mainchain
 
 import (
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // Web3Service fetches important information about the canonical

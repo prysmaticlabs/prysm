@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/node"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/urfave/cli"
 )
 
@@ -24,6 +25,7 @@ func main() {
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
+	app.Flags = []cli.Flag{types.Web3ProviderFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
