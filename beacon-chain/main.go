@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/node"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -33,9 +33,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		if _, err := fmt.Fprintln(os.Stderr, err); err != nil {
-			panic(err)
-		}
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }
