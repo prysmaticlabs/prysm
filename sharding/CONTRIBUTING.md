@@ -8,19 +8,20 @@ You can explore our [Current Projects](https://github.com/prysmaticlabs/geth-sha
 
 **Contribution Steps**
 
--   Create a folder in your `$GOPATH` and navigate to it `mkdir -p $GOPATH/src/github.com/ethereum && cd $GOPATH/src/github.com/ethereum`
--   Clone our repository as `go-ethereum`, `git clone https://github.com/prysmaticlabs/geth-sharding ./go-ethereum`
+-   Follow the setup instructions in our [README.md](https://github.com/prysmaticlabs/geth-sharding/blob/master/README.md)
+-   Create a folder in your `$GOPATH` and navigate to it `mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs`
+-   `git clone https://github.com/prysmaticlabs/geth-sharding`
 -   Fork the our repository on Github: <https://github.com/prysmaticlabs/geth-sharding>
 -   Add a remote to your fork
     \`git remote add YOURNAME <https://github.com/YOURNAME/geth-sharding>
 
-Now you should have a remote pointing to the `origin` repo (geth-sharding) and to your forked, go-ethereum repo on Github. To commit changes and start a Pull Request, our workflow is as follows:
+Now you should have a remote pointing to the `origin` repo (geth-sharding). To commit changes and start a Pull Request, our workflow is as follows:
 
 -   Create a new branch with a clear feature name such as `git checkout -b collations-pool`
 -   Issue changes with clear commit messages
--   Run the linter and CI tester as follows `go run build/ci.go test && go run build/ci.go lint`
+-   Run the linter and tester as follows `gometalinter && bazel test //...`
 -   Push to your remote `git push YOURNAME collations-pool`
--   Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `go-ethereum:collations-pool` (your fork on your profile).
+-   Go to the [geth-sharding](https://github.com/prysmaticlabs/geth-sharding) repository on Github and start a PR comparing `geth-sharding:master` with `geth-sharding:collations-pool` (your fork on your profile).
 -   Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
 
 Pull requests must be cleanly rebased ontop of master. If master advances while your PR is in review, please keep rebasing it.

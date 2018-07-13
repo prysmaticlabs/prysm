@@ -36,11 +36,10 @@ go_repository(
     commit = "eb95493d32b6e1eb1cad63518637e1a958632389",
 )
 
-# TODO: Update this to use github.com/urfave/cli.
 go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+    name = "com_github_urfave_cli",
+    importpath = "github.com/urfave/cli",
+    commit = "8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff",
 )
 
 go_repository(
@@ -377,6 +376,12 @@ go_repository(
     name = "com_github_satori_go_uuid",
     commit = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
     importpath = "github.com/satori/go.uuid",
+)
+
+go_repository(
+    name = "com_github_sirupsen_logrus",
+    importpath = "github.com/sirupsen/logrus",
+    commit = "e54a77765aca7bbdd8e56c1c54f60579968b2dc9",
 )
 
 go_repository(

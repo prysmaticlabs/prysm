@@ -3,13 +3,11 @@
 package notary
 
 import (
-	"fmt"
-
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // Notary holds functionality required to run a collation notary
@@ -47,13 +45,13 @@ func (n *Notary) notarizeCollations() {
 	// are blocking.
 	if n.smcClient.DepositFlag() {
 		if err := joinNotaryPool(n.smcClient, n.smcClient, n.config); err != nil {
-			log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+			log.Errorf("Could not fetch current block number: %v", err)
 			return
 		}
 	}
 
 	if err := subscribeBlockHeaders(n.smcClient.ChainReader(), n.smcClient, n.smcClient.Account()); err != nil {
-		log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+		log.Errorf("Could not fetch current block number: %v", err)
 		return
 	}
 }

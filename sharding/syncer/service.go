@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 // Syncer represents a service that provides handlers for shard chain
@@ -48,11 +47,11 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
 
-	shard := sharding.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
+	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
 
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Feed(pb.CollationBodyRequest{}).Subscribe(s.msgChan)
-	go s.HandleCollationBodyRequests(shard)
+	go s.HandleCollationBodyRequests(shard, s.ctx.Done())
 	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 }
 
@@ -63,7 +62,7 @@ func (s *Syncer) Stop() error {
 	defer s.cancel()
 	defer close(s.errChan)
 	defer close(s.msgChan)
-	log.Warn("Stopping sync service")
+	log.Info("Stopping sync service")
 	s.bodyRequests.Unsubscribe()
 	return nil
 }
@@ -71,15 +70,15 @@ func (s *Syncer) Stop() error {
 // HandleCollationBodyRequests subscribes to messages from the shardp2p
 // network and responds to a specific peer that requested the body using
 // the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (s *Syncer) HandleCollationBodyRequests(collationFetcher sharding.CollationFetcher) {
+func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFetcher, done <-chan struct{}) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
-		case <-s.ctx.Done():
+		case <-done:
 			return
 		case req := <-s.msgChan:
 			if req.Data != nil {
-				log.Info(fmt.Sprintf("Received p2p request of type: %T", req))
+				log.Infof("Received p2p request of type: %T", req)
 				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
@@ -88,7 +87,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher sharding.Collation
 
 				// Reply to that specific peer only.
 				s.p2p.Send(res, req.Peer)
-				log.Info(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", common.BytesToHash(res.HeaderHash).Hex()))
+				log.Infof("Responding to p2p request with collation with headerHash: %v", res.HeaderHash)
 			}
 		case <-s.bodyRequests.Err():
 			s.errChan <- errors.New("subscriber failed")

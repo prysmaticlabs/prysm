@@ -7,22 +7,20 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
-	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = sharding.Service(&Syncer{})
+var _ = types.Service(&Syncer{})
 
 func TestStop(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardChainDB, err := database.NewShardDB("", "", true)
 	if err != nil {
@@ -48,21 +46,23 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Unable to stop sync service: %v", err)
 	}
 
-	h.VerifyLogMsg("Stopping sync service")
+	msg := hook.LastEntry().Message
+	want := "Stopping sync service"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
 
 	// The context should have been canceled.
 	if syncer.ctx.Err() == nil {
 		t.Error("Context was not canceled")
 	}
+	hook.Reset()
 }
 
 // This test uses a faulty Signer interface in order to trigger an error
 // in the simulateNotaryRequests goroutine when attempting to sign
 // a collation header within the goroutine's internals.
 func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
-
 	shardChainDB, err := database.NewShardDB("", "", true)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -79,13 +79,19 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	}
 
 	feed := server.Feed(pb.CollationBodyRequest{})
-	shard := sharding.NewShard(big.NewInt(int64(shardID)), shardChainDB.DB())
+	shard := types.NewShard(big.NewInt(int64(shardID)), shardChainDB.DB())
 
 	syncer.msgChan = make(chan p2p.Message)
 	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
-	go syncer.HandleCollationBodyRequests(shard)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		syncer.HandleCollationBodyRequests(shard, doneChan)
+		<-exitRoutine
+	}()
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
@@ -98,20 +104,15 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
 	}
 
-	syncer.cancel()
-
-	// The context should have been canceled.
-	if syncer.ctx.Err() == nil {
-		t.Error("Context was not canceled")
-	}
+	doneChan <- struct{}{}
+	exitRoutine <- true
 }
 
 // This test checks the proper functioning of the handleCollationBodyRequests goroutine
 // by listening to the responseSent channel which occurs after successful
 // construction and sending of a response via p2p.
 func TestHandleCollationBodyRequests(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	log.Root().SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	shardChainDB, err := database.NewShardDB("", "", true)
 	if err != nil {
@@ -124,16 +125,16 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 
 	body := []byte{1, 2, 3, 4, 5}
 	shardID := big.NewInt(0)
-	chunkRoot := types.DeriveSha(sharding.Chunks(body))
+	chunkRoot := gethTypes.DeriveSha(types.Chunks(body))
 	period := big.NewInt(0)
 	proposerAddress := common.BytesToAddress([]byte{})
 
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
+	header := types.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
 
 	// Stores the collation into the inmemory kv store shardChainDB.
-	collation := sharding.NewCollation(header, body, nil)
+	collation := types.NewCollation(header, body, nil)
 
-	shard := sharding.NewShard(shardID, shardChainDB.DB())
+	shard := types.NewShard(shardID, shardChainDB.DB())
 
 	if err := shard.SaveCollation(collation); err != nil {
 		t.Fatalf("Could not store collation in shardChainDB: %v", err)
@@ -150,7 +151,13 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
-	go syncer.HandleCollationBodyRequests(shard)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		syncer.HandleCollationBodyRequests(shard, doneChan)
+		<-exitRoutine
+	}()
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
@@ -162,13 +169,19 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		},
 	}
 	syncer.msgChan <- msg
+	doneChan <- struct{}{}
+	exitRoutine <- true
 
-	h.VerifyLogMsg(fmt.Sprintf("Received p2p request of type: %T", p2p.Message{}))
-	h.VerifyLogMsg(fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex()))
-
-	syncer.cancel()
-	// The context should have been canceled.
-	if syncer.ctx.Err() == nil {
-		t.Error("Context was not canceled")
+	logMsg := hook.AllEntries()[0].Message
+	want := fmt.Sprintf("Received p2p request of type: %T", p2p.Message{})
+	if logMsg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
+
+	logMsg = hook.AllEntries()[1].Message
+	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
+	if logMsg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
+	}
+	hook.Reset()
 }

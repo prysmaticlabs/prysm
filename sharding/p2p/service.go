@@ -15,13 +15,13 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/golang/protobuf/proto"
 
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	log "github.com/sirupsen/logrus"
 )
 
 var logger = log.New()

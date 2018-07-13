@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if
@@ -26,7 +26,7 @@ import (
 // eliminates those that ask for too much gas, and routes them over
 // to the SMC to create a collation.
 func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCaller, account *accounts.Account) error {
-	headerChan := make(chan *types.Header, 16)
+	headerChan := make(chan *gethTypes.Header, 16)
 
 	_, err := reader.SubscribeNewHead(context.Background(), headerChan)
 	if err != nil {
@@ -39,7 +39,7 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 		// TODO: Error handling for getting disconnected from the client.
 		head := <-headerChan
 		// Query the current state to see if we are an eligible notary.
-		log.Info(fmt.Sprintf("Received new header: %v", head.Number.String()))
+		log.Infof("Received new header: %v", head.Number.String())
 
 		// Check if we are in the notary pool before checking if we are an eligible notary.
 		v, err := isAccountInNotaryPool(caller, account)
@@ -59,7 +59,7 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 // collation for the available shards in the SMC. The function calls
 // getEligibleNotary from the SMC and notary a collation if
 // conditions are met.
-func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account, head *types.Header) error {
+func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account, head *gethTypes.Header) error {
 	log.Info("Checking if we are an eligible collation notary for a shard...")
 	shardCount, err := caller.GetShardCount()
 	if err != nil {
@@ -74,7 +74,7 @@ func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Accoun
 		}
 
 		if addr == account.Address {
-			log.Info(fmt.Sprintf("Selected as notary on shard: %d", s))
+			log.Infof("Selected as notary on shard: %d", s)
 		}
 
 	}
@@ -106,7 +106,7 @@ func isAccountInNotaryPool(caller mainchain.ContractCaller, account *accounts.Ac
 	}
 
 	if !nreg.Deposited {
-		log.Warn(fmt.Sprintf("Account %s not in notary pool.", account.Address.Hex()))
+		log.Warnf("Account %s not in notary pool.", account.Address.Hex())
 	}
 
 	return nreg.Deposited, nil
@@ -143,7 +143,7 @@ func isLockUpOver(caller mainchain.ContractCaller, reader mainchain.Reader, acco
 
 }
 
-func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, duration time.Duration) error {
+func transactionWaiting(client mainchain.EthClient, tx *gethTypes.Transaction, duration time.Duration) error {
 
 	err := client.WaitForTransaction(context.Background(), tx.Hash(), duration)
 	if err != nil {
@@ -155,14 +155,14 @@ func transactionWaiting(client mainchain.EthClient, tx *types.Transaction, durat
 		return err
 	}
 
-	if receipt.Status == types.ReceiptStatusFailed {
+	if receipt.Status == gethTypes.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to release Notary")
 	}
 	return nil
 
 }
 
-func settingCanonicalShardChain(shard sharding.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
+func settingCanonicalShardChain(shard types.Shard, manager mainchain.ContractManager, period *big.Int, headerHash *common.Hash) error {
 
 	shardID := shard.ShardID()
 	collationRecords, err := manager.SMCCaller().CollationRecords(&bind.CallOpts{}, shardID, period)
@@ -173,9 +173,8 @@ func settingCanonicalShardChain(shard sharding.Shard, manager mainchain.Contract
 
 	// Logs if quorum has been reached and collation is added to the canonical shard chain
 	if collationRecords.IsElected {
-		log.Info(fmt.Sprintf(
-			"Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
-			shardID, period, headerHash))
+		log.Infof("Shard %v in period %v has chosen the collation with its header hash %v to be added to the canonical shard chain",
+			shardID, period, headerHash)
 
 		// Setting collation header as canonical in the shard chain
 		header, err := shard.HeaderByHash(headerHash)
@@ -193,7 +192,7 @@ func settingCanonicalShardChain(shard sharding.Shard, manager mainchain.Contract
 
 }
 
-func getCurrentNetworkState(manager mainchain.ContractManager, shard sharding.Shard, reader mainchain.Reader) (int64, *big.Int, *types.Block, error) {
+func getCurrentNetworkState(manager mainchain.ContractManager, shard types.Shard, reader mainchain.Reader) (int64, *big.Int, *gethTypes.Block, error) {
 
 	shardcount, err := manager.GetShardCount()
 	if err != nil {
@@ -215,7 +214,7 @@ func getCurrentNetworkState(manager mainchain.ContractManager, shard sharding.Sh
 
 }
 
-func checkCollationPeriod(manager mainchain.ContractManager, block *types.Block, shardID *big.Int) (*big.Int, *big.Int, error) {
+func checkCollationPeriod(manager mainchain.ContractManager, block *gethTypes.Block, shardID *big.Int) (*big.Int, *big.Int, error) {
 
 	period := big.NewInt(0).Div(block.Number(), big.NewInt(shardparams.DefaultConfig.PeriodLength))
 	collPeriod, err := manager.SMCCaller().LastSubmittedCollation(&bind.CallOpts{}, shardID)
@@ -271,7 +270,7 @@ func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClien
 
 	if b, err := isAccountInNotaryPool(manager, client.Account()); b || err != nil {
 		if b {
-			log.Info(fmt.Sprint("Already joined notary pool"))
+			log.Info("Already joined notary pool")
 			return nil
 		}
 		return err
@@ -297,7 +296,7 @@ func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClien
 	if err != nil {
 		return err
 	}
-	if receipt.Status == types.ReceiptStatusFailed {
+	if receipt.Status == gethTypes.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to deposit ETH and become a notary")
 	}
 
@@ -308,7 +307,7 @@ func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClien
 		return errors.New("account has not been able to be deposited in notary pool")
 	}
 
-	log.Info(fmt.Sprintf("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex()))
+	log.Infof("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, big.NewInt(params.Ether)), tx.Hash().Hex())
 
 	return nil
 }
@@ -344,7 +343,7 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 		return err
 	}
 
-	if receipt.Status == types.ReceiptStatusFailed {
+	if receipt.Status == gethTypes.ReceiptStatusFailed {
 		return errors.New("transaction was not successful, unable to deregister notary")
 	}
 
@@ -355,7 +354,7 @@ func leaveNotaryPool(manager mainchain.ContractManager, client mainchain.EthClie
 		return errors.New("notary unable to be deregistered successfully from pool")
 	}
 
-	log.Info(fmt.Sprintf("Notary deregistered from the pool with hash: %s", tx.Hash().Hex()))
+	log.Infof("Notary deregistered from the pool with hash: %s", tx.Hash().Hex())
 	return nil
 
 }
@@ -402,7 +401,7 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 		return errors.New("notary unable to be released from the pool")
 	}
 
-	log.Info(fmt.Sprintf("notary with address: %s released from pool", client.Account().Address.Hex()))
+	log.Infof("Notary with address: %s released from pool", client.Account().Address.Hex())
 
 	return nil
 
@@ -410,7 +409,7 @@ func releaseNotary(manager mainchain.ContractManager, client mainchain.EthClient
 
 // submitVote votes for a collation on the shard
 // by taking in the shard and the hash of the collation header
-func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
+func submitVote(shard types.Shard, manager mainchain.ContractManager, client mainchain.EthClient, reader mainchain.Reader, headerHash *common.Hash) error {
 
 	_, shardID, block, err := getCurrentNetworkState(manager, shard, reader)
 	if err != nil {
@@ -488,7 +487,7 @@ func submitVote(shard sharding.Shard, manager mainchain.ContractManager, client 
 		return errors.New("notary has not voted")
 	}
 
-	log.Info(fmt.Sprintf("Notary has voted for shard: %v in the %v period", shardID, period))
+	log.Infof("Notary has voted for shard: %v in the %v period", shardID, period)
 
 	err = settingCanonicalShardChain(shard, manager, period, headerHash)
 

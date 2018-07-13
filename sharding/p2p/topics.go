@@ -10,6 +10,7 @@ import (
 var topicTypeMapping = map[pb.Topic]reflect.Type{
 	pb.Topic_COLLATION_BODY_REQUEST:  reflect.TypeOf(pb.CollationBodyRequest{}),
 	pb.Topic_COLLATION_BODY_RESPONSE: reflect.TypeOf(pb.CollationBodyResponse{}),
+	pb.Topic_TRANSACTIONS:            reflect.TypeOf(pb.Transaction{}),
 }
 
 // Mapping of message types to topic enums.

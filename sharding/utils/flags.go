@@ -18,58 +18,19 @@
 package utils
 
 import (
+	"fmt"
 	"math/big"
-	"os"
-	"path/filepath"
+	"net/http"
+	"runtime"
 
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/fjl/memsize/memsizeui"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
-	"gopkg.in/urfave/cli.v1"
+	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
-var (
-	CommandHelpTemplate = `{{.cmd.Name}}{{if .cmd.Subcommands}} command{{end}}{{if .cmd.Flags}} [command options]{{end}} [arguments...]
-{{if .cmd.Description}}{{.cmd.Description}}
-{{end}}{{if .cmd.Subcommands}}
-SUBCOMMANDS:
-	{{range .cmd.Subcommands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
-	{{end}}{{end}}{{if .categorizedFlags}}
-{{range $idx, $categorized := .categorizedFlags}}{{$categorized.Name}} OPTIONS:
-{{range $categorized.Flags}}{{"\t"}}{{.}}
-{{end}}
-{{end}}{{end}}`
-)
-
-func init() {
-	cli.AppHelpTemplate = `{{.Name}} {{if .Flags}}[global options] {{end}}command{{if .Flags}} [command options]{{end}} [arguments...]
-VERSION:
-   {{.Version}}
-COMMANDS:
-   {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
-   {{end}}{{if .Flags}}
-GLOBAL OPTIONS:
-   {{range .Flags}}{{.}}
-   {{end}}{{end}}
-`
-
-	cli.CommandHelpTemplate = CommandHelpTemplate
-}
-
-// NewApp creates an app with sane defaults.
-func NewApp(gitCommit, usage string) *cli.App {
-	app := cli.NewApp()
-	app.Name = filepath.Base(os.Args[0])
-	app.Author = ""
-	//app.Authors = nil
-	app.Email = ""
-	app.Version = params.Version
-	if len(gitCommit) >= 8 {
-		app.Version += "-" + gitCommit[:8]
-	}
-	app.Usage = usage
-	return app
-}
+var Memsize memsizeui.Handler
 
 // These are all the command line flags we support.
 // If you add to this list, please remember to include the
@@ -77,8 +38,35 @@ func NewApp(gitCommit, usage string) *cli.App {
 //
 // The flags are defined here so their names and help texts
 // are the same for all commands.
-
 var (
+	// Debug Flags
+	PProfFlag = cli.BoolFlag{
+		Name:  "pprof",
+		Usage: "Enable the pprof HTTP server",
+	}
+	PProfPortFlag = cli.IntFlag{
+		Name:  "pprofport",
+		Usage: "pprof HTTP server listening port",
+		Value: 6060,
+	}
+	PProfAddrFlag = cli.StringFlag{
+		Name:  "pprofaddr",
+		Usage: "pprof HTTP server listening interface",
+		Value: "127.0.0.1",
+	}
+	MemProfileRateFlag = cli.IntFlag{
+		Name:  "memprofilerate",
+		Usage: "Turn on memory profiling with the given rate",
+		Value: runtime.MemProfileRate,
+	}
+	CPUProfileFlag = cli.StringFlag{
+		Name:  "cpuprofile",
+		Usage: "Write CPU profile to the given file",
+	}
+	TraceFlag = cli.StringFlag{
+		Name:  "trace",
+		Usage: "Write execution trace to the given file",
+	}
 	// General settings
 	IPCPathFlag = DirectoryFlag{
 		Name:  "ipcpath",
@@ -136,4 +124,47 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 		}
 		return action(ctx)
 	}
+}
+
+// Debug setup and exit functions.
+
+// Setup initializes profiling based on the CLI flags.
+// It should be called as early as possible in the program.
+func Setup(ctx *cli.Context) error {
+	// profiling, tracing
+	runtime.MemProfileRate = ctx.GlobalInt(MemProfileRateFlag.Name)
+	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
+		if err := Handler.StartGoTrace(TraceFlag.Name); err != nil {
+			return err
+		}
+	}
+	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
+		if err := Handler.StartCPUProfile(cpuFile); err != nil {
+			return err
+		}
+	}
+
+	// pprof server
+	if ctx.GlobalBool(PProfFlag.Name) {
+		address := fmt.Sprintf("%s:%d", ctx.GlobalString(PProfAddrFlag.Name), ctx.GlobalInt(PProfPortFlag.Name))
+		StartPProf(address)
+	}
+	return nil
+}
+
+func StartPProf(address string) {
+	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
+	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
+	go func() {
+		if err := http.ListenAndServe(address, nil); err != nil {
+			log.Error("Failure in running pprof server", "err", err)
+		}
+	}()
+}
+
+// Exit stops all running profiles, flushing their output to the
+// respective file.
+func Exit() {
+	Handler.StopCPUProfile()
+	Handler.StopGoTrace()
 }

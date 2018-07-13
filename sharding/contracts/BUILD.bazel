@@ -8,7 +8,7 @@ go_library(
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/contracts",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",

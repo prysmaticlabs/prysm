@@ -15,11 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 var (
@@ -119,17 +119,17 @@ func (m *mockSigner) Sign(hash common.Hash) ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
+func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*shardingTypes.Collation, error) {
 	shardID := big.NewInt(1)
 	chunkRoot := common.BytesToHash([]byte{})
 	period := big.NewInt(1)
 	proposerAddress := common.BytesToAddress([]byte{})
 
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
-	return sharding.NewCollation(header, []byte{}, []*types.Transaction{}), nil
+	header := shardingTypes.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
+	return shardingTypes.NewCollation(header, []byte{}, []*types.Transaction{}), nil
 }
 
-func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*sharding.Collation, error) {
+func (f *faultyCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*shardingTypes.Collation, error) {
 	return nil, errors.New("could not fetch collation")
 }
 
@@ -186,7 +186,7 @@ func TestCollationBodyResponse(t *testing.T) {
 	period := new(big.Int).SetUint64(goodReq.Period)
 	proposer := common.BytesToAddress(goodReq.ProposerAddress)
 
-	header := sharding.NewCollationHeader(
+	header := shardingTypes.NewCollationHeader(
 		shardID,
 		&chunkRoot,
 		period,

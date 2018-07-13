@@ -2,18 +2,18 @@ package simulator
 
 import (
 	"context"
-	"fmt"
+	"crypto/rand"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	log "github.com/sirupsen/logrus"
 )
 
 // Simulator is a service in a shard node that simulates requests from
@@ -45,6 +45,7 @@ func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.S
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
+
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
 }
 
@@ -53,7 +54,7 @@ func (s *Simulator) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
-	log.Warn("Stopping simulator service")
+	log.Info("Stopping simulator service")
 	return nil
 }
 
@@ -73,14 +74,14 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 		case <-delayChan:
 			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
-				log.Error(fmt.Sprintf("Could not fetch current block number: %v", err))
+				log.Errorf("Could not fetch current block number: %v", err)
 				continue
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
-				log.Error(fmt.Sprintf("Error constructing collation body request: %v", err))
+				log.Errorf("Error constructing collation body request: %v", err)
 				continue
 			}
 
@@ -90,4 +91,30 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 		}
 	}
+}
+
+// broadcastTransactions sends a transaction with random bytes over by a delay period,
+// this method is for testing purposes only, and will be replaced by a more functional CLI tool.
+func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-chan struct{}) {
+	for {
+		select {
+		// Makes sure to close this goroutine when the service stops.
+		case <-done:
+			log.Debug("Simulator context closed, exiting goroutine")
+			return
+		case <-delayChan:
+			tx := createTestTx()
+			s.p2p.Broadcast(tx)
+			log.Info("Transaction broadcasted")
+		}
+	}
+}
+
+// createTestTx is a helper method to generate tx with random data bytes.
+// it is used for broadcastTransactions.
+func createTestTx() *pb.Transaction {
+	data := make([]byte, 1024)
+	rand.Read(data)
+	//return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
+	return &pb.Transaction{}
 }

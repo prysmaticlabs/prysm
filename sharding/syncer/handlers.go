@@ -6,17 +6,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/geth-sharding/sharding"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 // RespondCollationBody is called by a node responding to another node's request
 // for a collation body given a (shardID, chunkRoot, period, proposerAddress) tuple.
 // The proposer will fetch the corresponding data from persistent storage (shardDB) by
 // constructing a collation header from the input and calculating its hash.
-func RespondCollationBody(req p2p.Message, collationFetcher sharding.CollationFetcher) (*pb.CollationBodyResponse, error) {
+func RespondCollationBody(req p2p.Message, collationFetcher types.CollationFetcher) (*pb.CollationBodyResponse, error) {
 	// Type assertion helps us catch incorrect data requests.
 	msg, ok := req.Data.(pb.CollationBodyRequest)
 	if !ok {
@@ -28,8 +28,10 @@ func RespondCollationBody(req p2p.Message, collationFetcher sharding.CollationFe
 	period := new(big.Int).SetUint64(msg.Period)
 	proposer := common.BytesToAddress(msg.ProposerAddress)
 	var sig [32]byte
-	copy(sig[:], msg.Signature[0:32])
-	header := sharding.NewCollationHeader(shardID, &chunkRoot, period, &proposer, sig)
+	if len(msg.Signature) >= 32 {
+		copy(sig[:], msg.Signature[0:32])
+	}
+	header := types.NewCollationHeader(shardID, &chunkRoot, period, &proposer, sig)
 
 	// Fetch the collation by its header hash from the shardChainDB.
 	headerHash := header.Hash()
