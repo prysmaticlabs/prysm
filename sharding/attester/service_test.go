@@ -7,9 +7,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
 var (

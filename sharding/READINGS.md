@@ -80,7 +80,6 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 -   [How to Scale Ethereum: Sharding Explained](https://medium.com/prysmatic-labs/how-to-scale-ethereum-sharding-explained-ba2e283b7fce)
 -   [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ)
 -   [Sharding Introduction: R&D Compendium](https://github.com/ethereum/wiki/wiki/Sharding-introduction-R&D-compendium)
--   [Sharding Minimal Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
 
 ### For Core Contributors
 
@@ -97,8 +96,6 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 **Sharding Concepts and Notes**
 
 -   [Sharding Concepts Mental Map](https://www.mindomo.com/zh/mindmap/sharding-d7cf8b6dee714d01a77388cb5d9d2a01)
--   [Sharding Minimal Protocol](https://ethresear.ch/t/a-minimal-sharding-protocol-that-may-be-worthwhile-as-a-development-target-now/1650)
--   [Sharding Roadmap](https://github.com/ethereum/wiki/wiki/Sharding-roadmap)
 -   [Taiwan Sharding Workshop Notes](https://hackmd.io/s/HJ_BbgCFz#%E2%9F%A0-General-Introduction)
 -   [Sharding Research Compendium](http://notes.ethereum.org/s/BJc_eGVFM)
 -   [Torus Shaped Sharding Network](https://ethresear.ch/t/torus-shaped-sharding-network/1720/8)
@@ -115,9 +112,6 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 -   [Future Compatibility for Sharding](https://ethresear.ch/t/future-compatibility-for-sharding/386)
 -   [Fork Choice Rule for Collation Proposal Mechanisms](https://ethresear.ch/t/fork-choice-rule-for-collation-proposal-mechanisms/922/8)
 -   [State Execution](https://ethresear.ch/t/state-execution-scalability-and-cost-under-dos-attacks/1048)
--   [Enforcing Windback](https://ethresear.ch/t/enforcing-windback-validity-and-availability-and-a-proof-of-custody/949/5)
--   [Fork Free Sharding](https://ethresear.ch/t/fork-free-sharding/1058/12)
--   [Merge Blocks](https://ethresear.ch/t/merge-blocks-and-synchronous-cross-shard-state-execution/1240/4)
 -   [Fast Shard Chains With Notarization](https://ethresear.ch/t/as-fast-as-possible-shard-chains-with-notarization/1806/2)
 -   [RANDAO Attester Committees](https://ethresear.ch/t/fork-free-randao/1835/3)
 -   [Safe Attester Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728/3)

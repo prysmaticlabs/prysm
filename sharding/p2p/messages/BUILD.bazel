@@ -4,6 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = ["messages.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages",
-    visibility = ["//visibility:public"],
-    deps = ["@com_github_ethereum_go_ethereum//common:go_default_library"],
+    visibility = ["//sharding:__subpackages__"],
+    deps = [
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+    ],
 )

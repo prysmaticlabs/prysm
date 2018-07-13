@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/attester"
+	"github.com/prysmaticlabs/geth-sharding/sharding/notary"
 	"github.com/prysmaticlabs/geth-sharding/sharding/observer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
@@ -39,7 +39,7 @@ const shardChainDBName = "shardchaindata"
 type ShardEthereum struct {
 	shardConfig *params.Config // Holds necessary information to configure shards.
 	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
-	actor       types.Actor    // Either attester, proposer, or observer.
+	actor       types.Actor    // Either notary, proposer, or observer.
 	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
@@ -239,7 +239,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	return s.registerService(pool)
 }
 
-// Registers the actor according to CLI flags. Either attester/proposer/observer.
+// Registers the actor according to CLI flags. Either notary/proposer/observer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.fetchService(&shardp2p); err != nil {
@@ -260,14 +260,14 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
-	if actor == "attester" {
-		not, err := attester.NewAttester(config, client, shardp2p, shardChainDB)
+	switch actor {
+	case "notary":
+		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
 		if err != nil {
-			return fmt.Errorf("could not register attester service: %v", err)
+			return fmt.Errorf("could not register notary service: %v", err)
 		}
 		return s.registerService(not)
-	} else if actor == "proposer" {
-
+	case "proposer":
 		var pool *txpool.TXPool
 		if err := s.fetchService(&pool); err != nil {
 			return err
@@ -278,18 +278,25 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.registerService(prop)
+	case "simulator":
+		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15) // 15 second delay between simulator requests.
+		if err != nil {
+			return fmt.Errorf("could not register simulator service: %v", err)
+		}
+		return s.registerService(sim)
+	default:
+		obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
+		if err != nil {
+			return fmt.Errorf("could not register observer service: %v", err)
+		}
+		return s.registerService(obs)
 	}
-	obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
-	if err != nil {
-		return fmt.Errorf("could not register observer service: %v", err)
-	}
-	return s.registerService(obs)
 }
 
 func (s *ShardEthereum) registerSimulatorService(actorFlag string, config *params.Config, shardID int) error {
-	// Should not trigger simulation requests if actor is an attester, as this
-	// is supposed to "simulate" attesters sending requests via p2p.
-	if actorFlag == "attester" {
+	// Should not trigger simulation requests if actor is a notary, as this
+	// is supposed to "simulate" notaries sending requests via p2p.
+	if actorFlag == "notary" {
 		return nil
 	}
 

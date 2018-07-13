@@ -10,7 +10,7 @@ import (
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -222,6 +222,44 @@ func TestSimulateAttesterRequests(t *testing.T) {
 
 	msg := hook.AllEntries()[0].Message
 	want := "Sent request for collation body via a shardp2p feed"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	exitRoutine <- true
+	hook.Reset()
+}
+
+// This test verifies actor simulator can successfully broadcast
+// transactions to rest of the peers.
+func TestBroadcastTransactions(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		simulator.broadcastTransactions(delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+
+	msg := hook.AllEntries()[0].Message
+	want := "Transaction broadcasted"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}

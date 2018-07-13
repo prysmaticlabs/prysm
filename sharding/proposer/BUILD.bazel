@@ -7,11 +7,12 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/proposer",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/database:go_default_library",
         "//sharding/mainchain:go_default_library",
         "//sharding/p2p:go_default_library",
+        "//sharding/p2p/messages:go_default_library",
         "//sharding/params:go_default_library",
         "//sharding/syncer:go_default_library",
         "//sharding/txpool:go_default_library",

@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/params",
-    visibility = ["//visibility:public"],
+    visibility = ["//sharding:__subpackages__"],
     deps = ["@com_github_ethereum_go_ethereum//common:go_default_library"],
 )
 
