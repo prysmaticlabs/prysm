@@ -17,7 +17,7 @@ import (
 type BeaconNode struct {
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
-	stop     chan struct{} // Channel to wait for termination notifications
+	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -60,7 +60,7 @@ func (b *BeaconNode) Start() {
 		panic("Panic closing the beacon node")
 	}()
 
-	// Wait for stop channel to be closed
+	// Wait for stop channel to be closed.
 	<-stop
 }
 

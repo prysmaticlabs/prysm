@@ -45,7 +45,7 @@ type ShardEthereum struct {
 	// Lifecycle and service stores.
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
-	stop     chan struct{} // Channel to wait for termination notifications
+	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
