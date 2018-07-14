@@ -117,7 +117,6 @@ func (s *ShardEthereum) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		// Ensure trace and CPU profile data is flushed.
 		panic("Panic closing the sharding node")
 	}()
 
