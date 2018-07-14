@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -65,6 +66,7 @@ func (b *BeaconNode) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
+		debug.Exit() // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the beacon node")
 	}()
 
