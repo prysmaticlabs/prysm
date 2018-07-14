@@ -113,11 +113,11 @@ func TestLatestMainchainInfo(t *testing.T) {
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
-	if web3Service.BlockNumber.Cmp(header.Number) != 0 {
-		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.BlockNumber)
+	if web3Service.blockNumber.Cmp(header.Number) != 0 {
+		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
 	}
 
-	if web3Service.BlockHash.Hex() != header.Hash().Hex() {
-		t.Errorf("blockhash not set, expected %v, got %v", header.Hash().Hex(), web3Service.BlockHash.Hex())
+	if web3Service.blockHash.Hex() != header.Hash().Hex() {
+		t.Errorf("blockhash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
 }

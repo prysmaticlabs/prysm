@@ -30,8 +30,8 @@ type Web3Service struct {
 	cancel      context.CancelFunc
 	headerChan  chan *gethTypes.Header
 	endpoint    string
-	BlockNumber *big.Int    // the latest mainchain blocknumber.
-	BlockHash   common.Hash // the latest mainchain blockhash.
+	blockNumber *big.Int    // the latest mainchain blocknumber.
+	blockHash   common.Hash // the latest mainchain blockhash.
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -46,8 +46,8 @@ func NewWeb3Service(endpoint string) (*Web3Service, error) {
 		cancel:      cancel,
 		headerChan:  make(chan *gethTypes.Header),
 		endpoint:    endpoint,
-		BlockNumber: nil,
-		BlockHash:   common.BytesToHash([]byte{}),
+		blockNumber: nil,
+		blockHash:   common.BytesToHash([]byte{}),
 	}, nil
 }
 
@@ -81,10 +81,22 @@ func (w *Web3Service) latestMainchainInfo(reader Reader, done <-chan struct{}) {
 		case <-done:
 			return
 		case header := <-w.headerChan:
-			w.BlockNumber = header.Number
-			w.BlockHash = header.Hash()
-			log.Infof("Latest mainchain blocknumber: %v", w.BlockNumber)
-			log.Infof("Latest mainchain blockhash: %v", w.BlockHash.Hex())
+			w.blockNumber = header.Number
+			w.blockHash = header.Hash()
+			log.Infof("Latest mainchain blocknumber: %v", w.blockNumber)
+			log.Infof("Latest mainchain blockhash: %v", w.blockHash.Hex())
 		}
 	}
+}
+
+// LatestBlockNumber is a getter for blockNumber to make it read-only
+// (prevent modification by outside services).
+func (w *Web3Service) LatestBlockNumber() *big.Int {
+	return w.blockNumber
+}
+
+// LatestBlockHash is a getter for blockHash to make it read-only
+// (prevent modification by outside services).
+func (w *Web3Service) LatestBlockHash() common.Hash {
+	return w.blockHash
 }
