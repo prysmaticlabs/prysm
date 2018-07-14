@@ -3,7 +3,6 @@ package syncer
 import (
 	"fmt"
 	"math/big"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
@@ -43,7 +42,6 @@ func TestStop(t *testing.T) {
 
 	feed := server.Feed(messages.CollationBodyRequest{})
 	syncer.msgChan = make(chan p2p.Message)
-	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
 	if err := syncer.Stop(); err != nil {
@@ -61,55 +59,6 @@ func TestStop(t *testing.T) {
 		t.Error("Context was not canceled")
 	}
 	hook.Reset()
-}
-
-// This test uses a faulty Signer interface in order to trigger an error
-// in the simulateNotaryRequests goroutine when attempting to sign
-// a collation header within the goroutine's internals.
-func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
-	shardChainDB, err := database.NewShardDB("", "", true)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	shardID := 0
-	server, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("Unable to setup p2p server: %v", err)
-	}
-
-	syncer, err := NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, shardChainDB, shardID)
-	if err != nil {
-		t.Fatalf("Unable to setup syncer service: %v", err)
-	}
-
-	feed := server.Feed(messages.CollationBodyRequest{})
-	shard := types.NewShard(big.NewInt(int64(shardID)), shardChainDB.DB())
-
-	syncer.msgChan = make(chan p2p.Message)
-	syncer.errChan = make(chan error)
-	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
-
-	doneChan := make(chan struct{})
-	exitRoutine := make(chan bool)
-
-	go func() {
-		syncer.HandleCollationBodyRequests(shard, doneChan)
-		<-exitRoutine
-	}()
-
-	msg := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: messages.CollationBodyRequest{},
-	}
-	syncer.msgChan <- msg
-	receivedErr := <-syncer.errChan
-	expectedErr := "could not construct response"
-	if !strings.Contains(receivedErr.Error(), expectedErr) {
-		t.Errorf("Expected error did not match. want: %v, got: %v", expectedErr, receivedErr)
-	}
-
-	doneChan <- struct{}{}
-	exitRoutine <- true
 }
 
 // This test checks the proper functioning of the handleCollationBodyRequests goroutine
@@ -152,7 +101,6 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	feed := server.Feed(messages.CollationBodyRequest{})
 
 	syncer.msgChan = make(chan p2p.Message)
-	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
 	doneChan := make(chan struct{})

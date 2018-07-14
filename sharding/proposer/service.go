@@ -65,14 +65,13 @@ func (p *Proposer) Start() {
 	feed := p.p2p.Feed(messages.TransactionBroadcast{})
 	p.txpoolSub = feed.Subscribe(p.msgChan)
 	go p.proposeCollations()
-	go p.sync.HandleCollationBodyRequests(p.shard, p.ctx.Done())
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
 	log.Warnf("Stopping proposer service in shard %d", p.shard.ShardID())
-	defer close(p.msgChan)
 	defer p.cancel()
+	defer close(p.msgChan)
 	p.txpoolSub.Unsubscribe()
 	return nil
 }
