@@ -2,8 +2,6 @@ package syncer
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -11,10 +9,9 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
-	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -32,7 +29,6 @@ type Syncer struct {
 	cancel       context.CancelFunc
 	msgChan      chan p2p.Message
 	bodyRequests event.Subscription
-	errChan      chan error // Useful channel for handling errors at the service layer.
 }
 
 // NewSyncer creates a struct instance of a syncer service.
@@ -40,8 +36,7 @@ type Syncer struct {
 // a shardChainDB, and a shardID.
 func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB *database.ShardDB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	errChan := make(chan error)
-	return &Syncer{config, client, shardID, shardChainDB, p2p, ctx, cancel, nil, nil, errChan}, nil
+	return &Syncer{config, client, shardID, shardChainDB, p2p, ctx, cancel, nil, nil}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
@@ -53,7 +48,6 @@ func (s *Syncer) Start() {
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Feed(pb.CollationBodyRequest{}).Subscribe(s.msgChan)
 	go s.HandleCollationBodyRequests(shard, s.ctx.Done())
-	go utils.HandleServiceErrors(s.ctx.Done(), s.errChan)
 }
 
 // Stop the main loop.
@@ -61,7 +55,6 @@ func (s *Syncer) Stop() error {
 	// Triggers a cancel call in the service's context which shuts down every goroutine
 	// in this service.
 	defer s.cancel()
-	defer close(s.errChan)
 	defer close(s.msgChan)
 	log.Info("Stopping sync service")
 	s.bodyRequests.Unsubscribe()
@@ -82,7 +75,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 				log.Debugf("Received p2p request of type: %T", req.Data)
 				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
-					s.errChan <- fmt.Errorf("could not construct response: %v", err)
+					log.Errorf("Could not construct response: %v", err)
 					continue
 				}
 
@@ -97,7 +90,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 				log.Infof("Responding to p2p request with collation with headerHash: 0x%v", common.Bytes2Hex(res.HeaderHash))
 			}
 		case <-s.bodyRequests.Err():
-			s.errChan <- errors.New("subscriber failed")
+			log.Debugf("Subscriber failed")
 			return
 		}
 	}

@@ -9,7 +9,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
 )
 
 // Discovery interval for multicast DNS querying.

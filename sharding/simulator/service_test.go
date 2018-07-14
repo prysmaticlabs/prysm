@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,12 +22,12 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = types.Service(&Simulator{})
-
 func init() {
 	log.SetLevel(log.DebugLevel)
 	log.SetOutput(ioutil.Discard)
 }
+
+var _ = types.Service(&Simulator{})
 
 type faultyReader struct{}
 type goodReader struct{}
@@ -148,7 +149,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	msg := hook.AllEntries()[1].Message
+	msg := hook.LastEntry().Message
 	want := "Could not fetch current block number: cannot fetch block by number"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
@@ -265,7 +266,7 @@ func TestBroadcastTransactions(t *testing.T) {
 
 	msg := hook.AllEntries()[0].Message
 	want := "Transaction broadcasted"
-	if msg != want {
+	if !strings.Contains(msg, want) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 

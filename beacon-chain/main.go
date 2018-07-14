@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/node"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -43,7 +44,7 @@ VERSION:
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
 
-	app.Flags = []cli.Flag{debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
+	app.Flags = []cli.Flag{types.Web3ProviderFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

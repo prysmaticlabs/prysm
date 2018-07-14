@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"math/big"
+	mrand "math/rand"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -12,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
+	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,6 +47,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
 
+	go s.broadcastTransactions(time.Tick(s.delay), s.ctx.Done())
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(s.delay), s.ctx.Done())
 }
 
@@ -58,10 +60,7 @@ func (s *Simulator) Stop() error {
 	return nil
 }
 
-// simulateNotaryRequests simulates p2p message sent out by notaries
-// once the system is in production. Notaries will be performing
-// this action within their own service when they are selected on a shard, period
-// pair to perform their responsibilities. This function in particular simulates
+// simulateNotaryRequests simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
 func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
@@ -79,6 +78,7 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
+			period = period.Sub(period, big.NewInt(1))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
 				log.Errorf("Error constructing collation body request: %v", err)
@@ -106,8 +106,12 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-cha
 			return
 		case <-delayChan:
 			tx := createTestTx()
+
 			s.p2p.Broadcast(tx)
-			log.Info("Transaction broadcasted")
+			log.Debug("Transaction broadcasted")
+			// s.p2p.Broadcast(messages.TransactionBroadcast{Transaction: tx})
+			// log.Debugf("Transaction broadcast with hash: %v", tx.Hash().Hex())
+
 		}
 	}
 }
@@ -117,6 +121,9 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-cha
 func createTestTx() *pb.Transaction {
 	data := make([]byte, 1024)
 	rand.Read(data)
-	//return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
-	return &pb.Transaction{}
+	// TODO: add more fields.
+	return &pb.Transaction{
+		Nonce: mrand.Uint64(),
+		Input: data,
+	}
 }

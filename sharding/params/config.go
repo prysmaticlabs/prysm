@@ -11,7 +11,7 @@ import (
 
 // DefaultConfig contains default configs for node to use in the sharded universe.
 var DefaultConfig = &Config{
-	SMCAddress:            common.HexToAddress("0x0"),
+	SMCAddress:            common.HexToAddress("0x748c193E6f1aC27643F392256C0fF518d3f526E3"),
 	PeriodLength:          5,
 	NotaryDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
 	NotaryLockupLength:    16128,

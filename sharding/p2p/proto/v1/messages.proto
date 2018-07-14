@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package messages;
+package ethereum.messages.v1;
 
 enum Topic {
   UNKNOWN = 0;
@@ -23,4 +23,17 @@ message CollationBodyResponse {
 }
 
 message Transaction {
+  uint64 nonce = 1;
+  uint64 gas_price = 2;
+  uint64 gas_limit = 3;
+  bytes recipient = 4;
+  uint64 value = 5;
+  bytes input = 6;
+  Signture signature = 7;
+}
+
+message Signture {
+  uint64 v = 1;
+  uint64 r = 2;
+  uint64 s = 3;
 }

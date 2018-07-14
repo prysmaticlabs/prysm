@@ -8,7 +8,7 @@ go_library(
     deps = [
         "//sharding/mainchain:go_default_library",
         "//sharding/p2p:go_default_library",
-        "//sharding/p2p/proto:go_default_library",
+        "//sharding/p2p/proto/v1:go_default_library",
         "//sharding/params:go_default_library",
         "//sharding/syncer:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
@@ -18,6 +18,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
