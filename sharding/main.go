@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -45,18 +46,18 @@ VERSION:
 	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
 	app.Action = startNode
-	app.Flags = []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag, utils.PProfFlag, utils.PProfAddrFlag, utils.PProfPortFlag, utils.MemProfileRateFlag, utils.CPUProfileFlag, utils.TraceFlag}
+	app.Flags = []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		if err := utils.Setup(ctx); err != nil {
+		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
 		return nil
 	}
 
 	app.After = func(ctx *cli.Context) error {
-		utils.Exit()
+		debug.Exit()
 		return nil
 	}
 
