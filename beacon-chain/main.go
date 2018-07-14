@@ -4,24 +4,23 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/geth-sharding/sharding/node"
-	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/node"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 func startNode(ctx *cli.Context) error {
-	shardingNode, err := node.New(ctx)
+	beacon, err := node.New(ctx)
 	if err != nil {
 		return err
 	}
-	// starts a connection to a beacon node and kicks off every registered service.
-	shardingNode.Start()
+	beacon.Start()
 	return nil
 }
 
 func main() {
+	app := cli.NewApp()
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 USAGE:
@@ -40,24 +39,17 @@ VERSION:
    {{.Version}}
    {{end}}
 `
-
-	app := cli.NewApp()
-	app.Name = "sharding"
-	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
-`
+	app.Name = "beacon-chain"
+	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
-	app.Flags = []cli.Flag{utils.ActorFlag, utils.DataDirFlag, utils.PasswordFileFlag, utils.NetworkIdFlag, utils.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
+
+	app.Flags = []cli.Flag{debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
-		return nil
-	}
-
-	app.After = func(ctx *cli.Context) error {
-		debug.Exit()
 		return nil
 	}
 
