@@ -47,7 +47,6 @@ func (b *BeaconNode) Start() {
 
 	log.Info("Starting beacon node")
 
-	// Starts every service attached to the beacon node's registry.
 	b.services.StartAll()
 
 	stop := b.stop
@@ -66,7 +65,7 @@ func (b *BeaconNode) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		// ensure trace and CPU profile data is flushed.
+		// Ensure trace and CPU profile data is flushed.
 		panic("Panic closing the beacon node")
 	}()
 
@@ -79,11 +78,8 @@ func (b *BeaconNode) Close() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Stops every service registered in the beacon node.
 	b.services.StopAll()
 	log.Info("Stopping beacon node")
-
-	// unblock n.Wait
 	close(b.stop)
 }
 

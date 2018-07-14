@@ -15,7 +15,6 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// starts a connection to a beacon node and kicks off every registered service.
 	beacon.Start()
 	return nil
 }

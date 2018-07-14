@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
+	"github.com/prysmaticlabs/geth-sharding/bazel-geth-sharding/external/com_github_ethereum_go_ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 	"github.com/urfave/cli"
@@ -61,9 +61,7 @@ VERSION:
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		if _, err := fmt.Fprintln(os.Stderr, err); err != nil {
-			panic(err)
-		}
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }
