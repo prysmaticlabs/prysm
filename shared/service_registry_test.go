@@ -34,7 +34,7 @@ func TestRegisterServiceTwice(t *testing.T) {
 		t.Fatalf("failed to register first service")
 	}
 
-	// checks if first service was indeed registered
+	// Checks if first service was indeed registered.
 	if len(registry.serviceTypes) != 1 {
 		t.Fatalf("service types slice should contain 1 service, contained %v", len(registry.serviceTypes))
 	}

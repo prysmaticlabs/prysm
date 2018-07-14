@@ -99,8 +99,6 @@ func (s *ShardEthereum) Start() {
 
 	log.Info("Starting sharding node")
 
-	// Starts all services registered to the ShardEthereum instance in order of
-	// registration.
 	s.services.StartAll()
 
 	stop := s.stop
@@ -119,11 +117,11 @@ func (s *ShardEthereum) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		// ensure trace and CPU profile data is flushed.
+		// Ensure trace and CPU profile data is flushed.
 		panic("Panic closing the sharding node")
 	}()
 
-	// Wait for stop channel to be closed
+	// Wait for stop channel to be closed.
 	<-stop
 }
 
@@ -132,11 +130,9 @@ func (s *ShardEthereum) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	// Stops all services registered to the ShardEthereum instance.
 	s.services.StopAll()
 	log.Info("Stopping sharding node")
 
-	// unblock n.Wait
 	close(s.stop)
 }
 
@@ -162,7 +158,6 @@ func (s *ShardEthereum) registerP2P() error {
 	return s.services.RegisterService(shardp2p)
 }
 
-// registerMainchainClient
 func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {

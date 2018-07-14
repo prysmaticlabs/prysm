@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/node"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -14,7 +14,6 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// starts a connection to a beacon node and kicks off every registered service.
 	beacon.Start()
 	return nil
 }
@@ -31,9 +30,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		if _, err := fmt.Fprintln(os.Stderr, err); err != nil {
-			panic(err)
-		}
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }

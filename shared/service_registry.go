@@ -6,15 +6,9 @@ import (
 	"reflect"
 )
 
-// ServiceRegistry provides a useful pattern for managing services attached to a struct.
-// This can be used for managing routines that are part of items such as a
-// beacon chain node, or a sharding client. That is, it allows for ease of dependency
-// management and ensures services dependent on others use the same references in memory.
-//
-// A beacon chain node, for example, has various services including p2p, proposers, attesters,
-// and more. Proposers depend on p2p, so upon registering a proposer service, a p2p service
-// can be fetched from the service registry and passed into the p2p constructor.
-// See beacon-chain/node/node.go for examples.
+// ServiceRegistry provides a useful pattern for managing services.
+// It allows for ease of dependency management and ensures services
+// dependent on others use the same references in memory.
 type ServiceRegistry struct {
 	services     map[reflect.Type]Service // map of types to services.
 	serviceTypes []reflect.Type           // keep an ordered slice of registered service types.
