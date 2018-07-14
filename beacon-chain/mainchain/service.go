@@ -53,7 +53,7 @@ func NewWeb3Service(endpoint string) (*Web3Service, error) {
 
 // Start a web3 service's main event loop.
 func (w *Web3Service) Start() {
-	log.Infof("Starting web3 mainchain service at %v", w.endpoint)
+	log.Infof("Starting web3 mainchain service at %s", w.endpoint)
 	rpcClient, err := rpc.Dial(w.endpoint)
 	if err != nil {
 		log.Errorf("Cannot connect to RPC client: %v", err)
