@@ -1,11 +1,15 @@
 package node
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +20,7 @@ import (
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
+	ctx      *cli.Context
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
@@ -26,8 +31,13 @@ type BeaconNode struct {
 func New(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 	beacon := &BeaconNode{
+		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+
+	if err := beacon.registerWeb3Service(); err != nil {
+		return nil, err
 	}
 
 	return beacon, nil
@@ -73,4 +83,13 @@ func (b *BeaconNode) Close() {
 	b.services.StopAll()
 	log.Info("Stopping beacon node")
 	close(b.stop)
+}
+
+func (b *BeaconNode) registerWeb3Service() error {
+	endpoint := b.ctx.GlobalString(types.Web3ProviderFlag.Name)
+	web3Service, err := powchain.NewWeb3Service(context.TODO(), endpoint)
+	if err != nil {
+		return fmt.Errorf("could not register web3Service: %v", err)
+	}
+	return b.services.RegisterService(web3Service)
 }
