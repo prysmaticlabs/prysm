@@ -29,6 +29,10 @@ func TestNewWeb3Service(t *testing.T) {
 	if _, err := NewWeb3Service(endpoint); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
+	endpoint = "ftp://127.0.0.1"
+	if _, err := NewWeb3Service(endpoint); err == nil {
+		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
+	}
 }
 
 func TestStart(t *testing.T) {

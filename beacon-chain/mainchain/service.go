@@ -37,8 +37,8 @@ type Web3Service struct {
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string.
 func NewWeb3Service(endpoint string) (*Web3Service, error) {
-	if strings.Contains(endpoint, "http") {
-		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %v", endpoint)
+	if !strings.HasPrefix(endpoint, "ws") && !strings.HasPrefix(endpoint, "ipc") {
+		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", endpoint)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Web3Service{
@@ -56,7 +56,7 @@ func (w *Web3Service) Start() {
 	log.Infof("Starting web3 mainchain service at %v", w.endpoint)
 	rpcClient, err := rpc.Dial(w.endpoint)
 	if err != nil {
-		log.Errorf("Cannot start RPC client: %v", err)
+		log.Errorf("Cannot connect to RPC client: %v", err)
 		return
 	}
 	client := ethclient.NewClient(rpcClient)
@@ -72,7 +72,7 @@ func (w *Web3Service) Stop() error {
 }
 
 func (w *Web3Service) latestMainchainInfo(reader Reader, done <-chan struct{}) {
-	if _, err := reader.SubscribeNewHead(context.Background(), w.headerChan); err != nil {
+	if _, err := reader.SubscribeNewHead(w.ctx, w.headerChan); err != nil {
 		log.Errorf("Unable to subscribe to incoming headers: %v", err)
 		return
 	}
@@ -83,20 +83,18 @@ func (w *Web3Service) latestMainchainInfo(reader Reader, done <-chan struct{}) {
 		case header := <-w.headerChan:
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
-			log.Infof("Latest mainchain blocknumber: %v", w.blockNumber)
-			log.Infof("Latest mainchain blockhash: %v", w.blockHash.Hex())
+			log.Debugf("Latest mainchain blocknumber: %v", w.blockNumber)
+			log.Debugf("Latest mainchain blockhash: %v", w.blockHash.Hex())
 		}
 	}
 }
 
-// LatestBlockNumber is a getter for blockNumber to make it read-only
-// (prevent modification by outside services).
+// LatestBlockNumber is a getter for blockNumber to make it read-only.
 func (w *Web3Service) LatestBlockNumber() *big.Int {
 	return w.blockNumber
 }
 
-// LatestBlockHash is a getter for blockHash to make it read-only
-// (prevent modification by outside services).
+// LatestBlockHash is a getter for blockHash to make it read-only.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
