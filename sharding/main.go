@@ -4,9 +4,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/geth-sharding/bazel-geth-sharding/external/com_github_ethereum_go_ethereum/log"
 	"github.com/prysmaticlabs/geth-sharding/sharding/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
