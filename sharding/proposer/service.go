@@ -34,6 +34,7 @@ type Proposer struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	sync      *syncer.Syncer
+	msgChan   chan p2p.Message
 }
 
 // NewProposer creates a struct instance of a proposer service.
@@ -52,14 +53,17 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 		nil,
 		ctx,
 		cancel,
-		sync}, nil
+		sync,
+		nil}, nil
 }
 
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
-	shard := types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
-	p.shard = shard
+	p.shard = types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
+	p.msgChan = make(chan p2p.Message, 20)
+	feed := p.p2p.Feed(messages.TransactionBroadcast{})
+	p.txpoolSub = feed.Subscribe(p.msgChan)
 	go p.proposeCollations()
 	go p.sync.HandleCollationBodyRequests(p.shard, p.ctx.Done())
 }
@@ -67,6 +71,7 @@ func (p *Proposer) Start() {
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
 	log.Warnf("Stopping proposer service in shard %d", p.shard.ShardID())
+	defer close(p.msgChan)
 	defer p.cancel()
 	p.txpoolSub.Unsubscribe()
 	return nil
@@ -74,14 +79,9 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	feed := p.p2p.Feed(messages.TransactionBroadcast{})
-	ch := make(chan p2p.Message, 20)
-	sub := feed.Subscribe(ch)
-	defer sub.Unsubscribe()
-	defer close(ch)
 	for {
 		select {
-		case msg := <-ch:
+		case msg := <-p.msgChan:
 			tx, ok := msg.Data.(messages.TransactionBroadcast)
 			if !ok {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")

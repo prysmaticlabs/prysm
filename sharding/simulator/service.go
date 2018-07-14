@@ -48,8 +48,8 @@ func (s *Simulator) Start() {
 
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
 
-	go s.broadcastTransactions(time.Tick(time.Second*s.delay), s.ctx.Done())
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
+	go s.broadcastTransactions(time.Tick(s.delay), s.ctx.Done())
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(s.delay), s.ctx.Done())
 }
 
 // Stop the main loop for simulator requests.
@@ -61,10 +61,7 @@ func (s *Simulator) Stop() error {
 	return nil
 }
 
-// simulateNotaryRequests simulates p2p message sent out by notaries
-// once the system is in production. Notaries will be performing
-// this action within their own service when they are selected on a shard, period
-// pair to perform their responsibilities. This function in particular simulates
+// simulateNotaryRequests simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
 func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
