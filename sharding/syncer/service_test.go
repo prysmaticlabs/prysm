@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
@@ -14,10 +15,16 @@ import (
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = types.Service(&Syncer{})
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(ioutil.Discard)
+}
 
 func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -161,7 +168,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: pb.CollationBodyRequest{
+		Data: &pb.CollationBodyRequest{
 			ChunkRoot:       chunkRoot.Bytes(),
 			ShardId:         shardID.Uint64(),
 			Period:          period.Uint64(),
@@ -173,7 +180,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	exitRoutine <- true
 
 	logMsg := hook.AllEntries()[0].Message
-	want := fmt.Sprintf("Received p2p request of type: %T", p2p.Message{})
+	want := fmt.Sprintf("Received p2p request of type: %T", &pb.CollationBodyRequest{})
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}

@@ -485,3 +485,9 @@ go_repository(
     commit = "0f5c6873267e5abf306ffcdfcfa4bf77517ef4a7",
     importpath = "github.com/gxed/GoEndian",
 )
+
+go_repository(
+    name = "com_github_syndtr_goleveldb",
+    commit = "c4c61651e9e37fa117f53c5a906d3b63090d8445",
+    importpath = "github.com/syndtr/goleveldb",
+)

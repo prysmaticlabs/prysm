@@ -46,7 +46,7 @@ func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
 	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
 
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(time.Second*s.delay), s.ctx.Done())
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(s.delay), s.ctx.Done())
 }
 
 // Stop the main loop for simulator requests.
@@ -87,7 +87,9 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 
 			if req != nil {
 				s.p2p.Broadcast(req)
-				log.Info("Sent request for collation body via a shardp2p broadcast")
+				log.Debug("Sent request for collation body via a shardp2p broadcast")
+			} else {
+				log.Warn("Syncer generated nil CollationBodyRequest")
 			}
 		}
 	}

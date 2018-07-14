@@ -79,10 +79,16 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 			return
 		case req := <-s.msgChan:
 			if req.Data != nil {
-				log.Infof("Received p2p request of type: %T", req)
+				log.Debugf("Received p2p request of type: %T", req.Data)
 				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
 					s.errChan <- fmt.Errorf("could not construct response: %v", err)
+					continue
+				}
+
+				if res == nil {
+					// TODO: Send that we don't have it?
+					log.Debug("No response for this collation request. Not sending anything.")
 					continue
 				}
 

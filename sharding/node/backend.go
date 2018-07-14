@@ -242,7 +242,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		}
 		return s.services.RegisterService(prop)
 	case "simulator":
-		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15) // 15 second delay between simulator requests.
+		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second /*delay*/)
 		if err != nil {
 			return fmt.Errorf("could not register simulator service: %v", err)
 		}
@@ -273,7 +273,7 @@ func (s *ShardEthereum) registerSimulatorService(actorFlag string, config *param
 	}
 
 	// 15 second delay between simulator requests.
-	sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
+	sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second /*delay*/)
 	if err != nil {
 		return fmt.Errorf("could not register simulator service: %v", err)
 	}

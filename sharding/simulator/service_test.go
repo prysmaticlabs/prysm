@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
@@ -16,10 +17,16 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = types.Service(&Simulator{})
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(ioutil.Discard)
+}
 
 type faultyReader struct{}
 type goodReader struct{}
@@ -141,7 +148,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	msg := hook.AllEntries()[0].Message
+	msg := hook.AllEntries()[1].Message
 	want := "Could not fetch current block number: cannot fetch block by number"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
@@ -239,7 +246,7 @@ func TestBroadcastTransactions(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}

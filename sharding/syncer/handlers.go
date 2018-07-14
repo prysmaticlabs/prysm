@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // RespondCollationBody is called by a node responding to another node's request
@@ -18,9 +19,10 @@ import (
 // constructing a collation header from the input and calculating its hash.
 func RespondCollationBody(req p2p.Message, collationFetcher types.CollationFetcher) (*pb.CollationBodyResponse, error) {
 	// Type assertion helps us catch incorrect data requests.
-	msg, ok := req.Data.(pb.CollationBodyRequest)
+	msg, ok := req.Data.(*pb.CollationBodyRequest)
 	if !ok {
-		return nil, fmt.Errorf("received incorrect data request type: %v", msg)
+		log.Debugf("Request data type: %T", req.Data)
+		return nil, fmt.Errorf("received incorrect data request type. Data: %+v", msg)
 	}
 
 	shardID := new(big.Int).SetUint64(msg.ShardId)
@@ -38,6 +40,9 @@ func RespondCollationBody(req p2p.Message, collationFetcher types.CollationFetch
 	collation, err := collationFetcher.CollationByHeaderHash(&headerHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch collation: %v", err)
+	}
+	if collation == nil {
+		return nil, nil
 	}
 
 	return &pb.CollationBodyResponse{HeaderHash: headerHash.Bytes(), Body: collation.Body()}, nil
@@ -60,6 +65,7 @@ func RequestCollationBody(fetcher mainchain.RecordFetcher, shardID *big.Int, per
 	}
 
 	if sum == 0 {
+		log.Debugf("No collation exists for shard %d and period %d", shardID, period)
 		return nil, nil
 	}
 

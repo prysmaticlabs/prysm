@@ -165,12 +165,12 @@ func TestCollationBodyResponse(t *testing.T) {
 
 	badMsg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: incorrectReq,
+		Data: &incorrectReq,
 	}
 
 	goodMsg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: goodReq,
+		Data: &goodReq,
 	}
 
 	if _, err := RespondCollationBody(badMsg, fetcher); err == nil {

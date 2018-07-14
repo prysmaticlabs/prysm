@@ -160,7 +160,6 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 		}
 
 		i := feed.Send(Message{Data: d})
-		logger.Debug(fmt.Sprintf("Send a request to %d subs", i))
-		fmt.Printf("Send a request to %d subs", i)
+		logger.Debugf("Send a request to %d subs", i)
 	}
 }
