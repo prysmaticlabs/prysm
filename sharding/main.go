@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -61,9 +61,7 @@ VERSION:
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		if _, err := fmt.Fprintln(os.Stderr, err); err != nil {
-			panic(err)
-		}
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }
