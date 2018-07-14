@@ -37,7 +37,7 @@ func TestStart(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(endpoint)
 	if err != nil {
-		t.Fatalf("Unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
 
 	web3Service.Start()
@@ -56,7 +56,7 @@ func TestStop(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(endpoint)
 	if err != nil {
-		t.Fatalf("Unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
 
 	if err := web3Service.Stop(); err != nil {
@@ -71,7 +71,7 @@ func TestStop(t *testing.T) {
 
 	// The context should have been canceled.
 	if web3Service.ctx.Err() == nil {
-		t.Error("Context was not canceled")
+		t.Error("context was not canceled")
 	}
 	hook.Reset()
 }
@@ -81,7 +81,7 @@ func TestBadReader(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(endpoint)
 	if err != nil {
-		t.Fatalf("Unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
 	web3Service.latestMainchainInfo(&badReader{}, web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
@@ -96,7 +96,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(endpoint)
 	if err != nil {
-		t.Fatalf("Unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
 
 	doneChan := make(chan struct{})
