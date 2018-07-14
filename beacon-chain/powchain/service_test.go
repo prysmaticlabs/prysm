@@ -1,4 +1,4 @@
-package mainchain
+package powchain
 
 import (
 	"context"
@@ -50,13 +50,13 @@ func TestStart(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
-		t.Fatalf("unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
 	web3Service.Start()
 
 	msg := hook.LastEntry().Message
-	want := "Cannot start RPC client"
+	want := "Cannot connect to PoW chain RPC client"
 	if strings.Contains(want, msg) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -69,15 +69,15 @@ func TestStop(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
-		t.Fatalf("unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
 	if err := web3Service.Stop(); err != nil {
-		t.Fatalf("Unable to stop web3 mainchain service: %v", err)
+		t.Fatalf("Unable to stop web3 PoW chain service: %v", err)
 	}
 
 	msg := hook.LastEntry().Message
-	want := "Stopping web3 mainchain service"
+	want := "Stopping web3 PoW chain service"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -94,11 +94,11 @@ func TestBadReader(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
-		t.Fatalf("unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.latestMainchainInfo(&badReader{}, web3Service.ctx.Done())
+	web3Service.latestPOWChainInfo(&badReader{}, web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
-	want := "Unable to subscribe to incoming headers: subscription has failed"
+	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -109,14 +109,14 @@ func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
-		t.Fatalf("unable to setup web3 mainchain service: %v", err)
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.latestMainchainInfo(&goodReader{}, doneChan)
+		web3Service.latestPOWChainInfo(&goodReader{}, doneChan)
 		<-exitRoutine
 	}()
 
@@ -131,6 +131,6 @@ func TestLatestMainchainInfo(t *testing.T) {
 	}
 
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
-		t.Errorf("blockhash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
 }

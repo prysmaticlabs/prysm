@@ -1,4 +1,4 @@
-package mainchain
+package powchain
 
 import (
 	"context"
@@ -21,17 +21,17 @@ type Reader interface {
 
 // Web3Service fetches important information about the canonical
 // Ethereum PoW chain via a web3 endpoint using an ethclient. The Random
-// Beacon Chain requires synchronization with the mainchain's current
+// Beacon Chain requires synchronization with the PoW chain's current
 // blockhash, block number, and access to logs within the
-// Validator Registration Contract on the mainchain to kick off the beacon
+// Validator Registration Contract on the PoW chain to kick off the beacon
 // chain's validator registration process.
 type Web3Service struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	headerChan  chan *gethTypes.Header
 	endpoint    string
-	blockNumber *big.Int    // the latest mainchain blocknumber.
-	blockHash   common.Hash // the latest mainchain blockhash.
+	blockNumber *big.Int    // the latest PoW chain blocknumber.
+	blockHash   common.Hash // the latest PoW chain blockhash.
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -53,27 +53,27 @@ func NewWeb3Service(ctx context.Context, endpoint string) (*Web3Service, error) 
 
 // Start a web3 service's main event loop.
 func (w *Web3Service) Start() {
-	log.Infof("Starting web3 mainchain service at %s", w.endpoint)
+	log.Infof("Starting web3 PoW chain service at %s", w.endpoint)
 	rpcClient, err := rpc.Dial(w.endpoint)
 	if err != nil {
-		log.Errorf("Cannot connect to RPC client: %v", err)
+		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
 		return
 	}
 	client := ethclient.NewClient(rpcClient)
-	go w.latestMainchainInfo(client, w.ctx.Done())
+	go w.latestPOWChainInfo(client, w.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (w *Web3Service) Stop() error {
 	defer w.cancel()
 	defer close(w.headerChan)
-	log.Info("Stopping web3 mainchain service")
+	log.Info("Stopping web3 PoW chain service")
 	return nil
 }
 
-func (w *Web3Service) latestMainchainInfo(reader Reader, done <-chan struct{}) {
+func (w *Web3Service) latestPOWChainInfo(reader Reader, done <-chan struct{}) {
 	if _, err := reader.SubscribeNewHead(w.ctx, w.headerChan); err != nil {
-		log.Errorf("Unable to subscribe to incoming headers: %v", err)
+		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
 		return
 	}
 	for {
@@ -83,8 +83,8 @@ func (w *Web3Service) latestMainchainInfo(reader Reader, done <-chan struct{}) {
 		case header := <-w.headerChan:
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
-			log.Debugf("Latest mainchain blocknumber: %v", w.blockNumber)
-			log.Debugf("Latest mainchain blockhash: %v", w.blockHash.Hex())
+			log.Debugf("Latest PoW chain blocknumber: %v", w.blockNumber)
+			log.Debugf("Latest PoW chain blockhash: %v", w.blockHash.Hex())
 		}
 	}
 }

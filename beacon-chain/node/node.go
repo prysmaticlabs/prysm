@@ -8,7 +8,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
@@ -87,7 +87,7 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) registerWeb3Service() error {
 	endpoint := b.ctx.GlobalString(types.Web3ProviderFlag.Name)
-	web3Service, err := mainchain.NewWeb3Service(context.TODO(), endpoint)
+	web3Service, err := powchain.NewWeb3Service(context.TODO(), endpoint)
 	if err != nil {
 		return fmt.Errorf("could not register web3Service: %v", err)
 	}
