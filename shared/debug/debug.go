@@ -1,3 +1,4 @@
+// Package debug defines useful profiling utils that came originally with go-ethereum.
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,12 +14,14 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-package utils
+package debug
 
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -30,11 +33,44 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fjl/memsize/memsizeui"
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 // Handler is the global debugging handler.
 var Handler = new(HandlerT)
+var Memsize memsizeui.Handler
+var (
+	// Debug Flags
+	PProfFlag = cli.BoolFlag{
+		Name:  "pprof",
+		Usage: "Enable the pprof HTTP server",
+	}
+	PProfPortFlag = cli.IntFlag{
+		Name:  "pprofport",
+		Usage: "pprof HTTP server listening port",
+		Value: 6060,
+	}
+	PProfAddrFlag = cli.StringFlag{
+		Name:  "pprofaddr",
+		Usage: "pprof HTTP server listening interface",
+		Value: "127.0.0.1",
+	}
+	MemProfileRateFlag = cli.IntFlag{
+		Name:  "memprofilerate",
+		Usage: "Turn on memory profiling with the given rate",
+		Value: runtime.MemProfileRate,
+	}
+	CPUProfileFlag = cli.StringFlag{
+		Name:  "cpuprofile",
+		Usage: "Write CPU profile to the given file",
+	}
+	TraceFlag = cli.StringFlag{
+		Name:  "trace",
+		Usage: "Write execution trace to the given file",
+	}
+)
 
 // HandlerT implements the debugging API.
 // Do not create values of this type, use the one
@@ -61,9 +97,9 @@ func (*HandlerT) GcStats() *debug.GCStats {
 	return s
 }
 
-// CpuProfile turns on CPU profiling for nsec seconds and writes
+// CPUProfile turns on CPU profiling for nsec seconds and writes
 // profile data to file.
-func (h *HandlerT) CpuProfile(file string, nsec uint) error {
+func (h *HandlerT) CPUProfile(file string, nsec uint) error {
 	if err := h.StartCPUProfile(file); err != nil {
 		return err
 	}
@@ -140,7 +176,7 @@ func (h *HandlerT) StartGoTrace(file string) error {
 	return nil
 }
 
-// StopTrace stops an ongoing trace.
+// StopGoTrace stops an ongoing trace.
 func (h *HandlerT) StopGoTrace() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -247,4 +283,71 @@ func expandHome(p string) string {
 		}
 	}
 	return filepath.Clean(p)
+}
+
+// MigrateFlags sets the global flag from a local flag when it's set.
+// This is a temporary function used for migrating old command/flags to the
+// new format.
+//
+// e.g. geth account new --keystore /tmp/mykeystore --lightkdf
+//
+// is equivalent after calling this method with:
+//
+// geth --keystore /tmp/mykeystore --lightkdf account new
+//
+// This allows the use of the existing configuration functionality.
+// When all flags are migrated this function can be removed and the existing
+// configuration functionality must be changed that is uses local flags
+func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error {
+	return func(ctx *cli.Context) error {
+		for _, name := range ctx.FlagNames() {
+			if ctx.IsSet(name) {
+				ctx.GlobalSet(name, ctx.String(name))
+			}
+		}
+		return action(ctx)
+	}
+}
+
+// Debug setup and exit functions.
+
+// Setup initializes profiling based on the CLI flags.
+// It should be called as early as possible in the program.
+func Setup(ctx *cli.Context) error {
+	// profiling, tracing
+	runtime.MemProfileRate = ctx.GlobalInt(MemProfileRateFlag.Name)
+	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
+		if err := Handler.StartGoTrace(TraceFlag.Name); err != nil {
+			return err
+		}
+	}
+	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
+		if err := Handler.StartCPUProfile(cpuFile); err != nil {
+			return err
+		}
+	}
+
+	// pprof server
+	if ctx.GlobalBool(PProfFlag.Name) {
+		address := fmt.Sprintf("%s:%d", ctx.GlobalString(PProfAddrFlag.Name), ctx.GlobalInt(PProfPortFlag.Name))
+		StartPProf(address)
+	}
+	return nil
+}
+
+func StartPProf(address string) {
+	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
+	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
+	go func() {
+		if err := http.ListenAndServe(address, nil); err != nil {
+			log.Error("Failure in running pprof server", "err", err)
+		}
+	}()
+}
+
+// Exit stops all running profiles, flushing their output to the
+// respective file.
+func Exit() {
+	Handler.StopCPUProfile()
+	Handler.StopGoTrace()
 }
