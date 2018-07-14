@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,8 +21,14 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(ioutil.Discard)
+}
 
 var _ = types.Service(&Simulator{})
 
@@ -265,8 +273,8 @@ func TestBroadcastTransactions(t *testing.T) {
 	doneChan <- struct{}{}
 
 	msg := hook.AllEntries()[0].Message
-	want := "Transaction broadcasted"
-	if msg != want {
+	want := "Transaction broadcast with hash"
+	if !strings.Contains(msg, want) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
