@@ -1,6 +1,7 @@
 package node
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/urfave/cli"
@@ -9,7 +10,8 @@ import (
 // Test that the sharding node can build with default flag values.
 func TestNode_Builds(t *testing.T) {
 	app := cli.NewApp()
-	context := cli.NewContext(app, nil, nil)
+	set := flag.NewFlagSet("web3provider", 0)
+	context := cli.NewContext(app, set, nil)
 
 	_, err := New(context)
 	if err != nil {
