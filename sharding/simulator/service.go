@@ -108,7 +108,7 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-cha
 		case <-delayChan:
 			tx := createTestTx()
 			s.p2p.Broadcast(messages.TransactionBroadcast{Transaction: tx})
-			log.Info("Transaction broadcasted")
+			log.Debugf("Transaction broadcast with hash: %v", tx.Hash().Hex())
 		}
 	}
 }
