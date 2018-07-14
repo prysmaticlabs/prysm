@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
@@ -87,7 +88,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 
 				// Reply to that specific peer only.
 				s.p2p.Send(res, req.Peer)
-				log.Infof("Responding to p2p request with collation with headerHash: %v", res.HeaderHash)
+				log.Infof("Responding to p2p request with collation with headerHash: 0x%v", common.Bytes2Hex(res.HeaderHash))
 			}
 		case <-s.bodyRequests.Err():
 			s.errChan <- errors.New("subscriber failed")
