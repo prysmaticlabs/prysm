@@ -10,7 +10,8 @@ import (
 // Test that the sharding node can build with default flag values.
 func TestNode_Builds(t *testing.T) {
 	app := cli.NewApp()
-	set := flag.NewFlagSet("web3provider", 0)
+	set := flag.NewFlagSet("test", 0)
+	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	context := cli.NewContext(app, set, nil)
 
 	_, err := New(context)

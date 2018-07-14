@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -86,7 +87,7 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) registerWeb3Service() error {
 	endpoint := b.ctx.GlobalString(types.Web3ProviderFlag.Name)
-	web3Service, err := mainchain.NewWeb3Service(endpoint)
+	web3Service, err := mainchain.NewWeb3Service(context.TODO(), endpoint)
 	if err != nil {
 		return fmt.Errorf("could not register web3Service: %v", err)
 	}

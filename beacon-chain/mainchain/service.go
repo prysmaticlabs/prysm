@@ -36,13 +36,13 @@ type Web3Service struct {
 
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string.
-func NewWeb3Service(endpoint string) (*Web3Service, error) {
+func NewWeb3Service(ctx context.Context, endpoint string) (*Web3Service, error) {
 	if !strings.HasPrefix(endpoint, "ws") && !strings.HasPrefix(endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", endpoint)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	web3ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
-		ctx:         ctx,
+		ctx:         web3ctx,
 		cancel:      cancel,
 		headerChan:  make(chan *gethTypes.Header),
 		endpoint:    endpoint,

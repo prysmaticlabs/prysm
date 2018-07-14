@@ -26,12 +26,21 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 
 func TestNewWeb3Service(t *testing.T) {
 	endpoint := "http://127.0.0.1"
-	if _, err := NewWeb3Service(endpoint); err == nil {
+	ctx := context.Background()
+	if _, err := NewWeb3Service(ctx, endpoint); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
 	endpoint = "ftp://127.0.0.1"
-	if _, err := NewWeb3Service(endpoint); err == nil {
+	if _, err := NewWeb3Service(ctx, endpoint); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
+	}
+	endpoint = "ws://127.0.0.1"
+	if _, err := NewWeb3Service(ctx, endpoint); err != nil {
+		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
+	}
+	endpoint = "ipc://geth.ipc"
+	if _, err := NewWeb3Service(ctx, endpoint); err != nil {
+		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
 }
 
@@ -39,7 +48,7 @@ func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
 		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
@@ -58,7 +67,7 @@ func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
 		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
@@ -83,7 +92,7 @@ func TestStop(t *testing.T) {
 func TestBadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
 		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
@@ -98,7 +107,7 @@ func TestBadReader(t *testing.T) {
 
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint)
 	if err != nil {
 		t.Fatalf("unable to setup web3 mainchain service: %v", err)
 	}
