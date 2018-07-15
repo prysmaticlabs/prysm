@@ -21,15 +21,15 @@ This is a utility to help users deploy validator registration contract for runni
 ### Example
 To use IPC:
 ```
-./deployVRC  --ipcPath /path/to/your/geth.ipc --dataDirPath /path/to/your/dataDir --passwordFile /path/to/your/password.txt
+bazel run //deployVRC --ipcPath /path/to/your/geth.ipc --dataDirPath /path/to/your/dataDir --passwordFile /path/to/your/password.txt
 ```
 To use HTTP-RPC:
 ```
-./deployVRC --httpPath http://localhost:8545/  --dataDirPath ~/go/src/github.com/ethereum/localDataDir --passwordFile password.txt
+bazel run //deployVRC --httpPath http://localhost:8545/  --dataDirPath ~/go/src/github.com/ethereum/localDataDir --passwordFile password.txt
 ```
 or
 ```
-./deployVRC --dataDirPath ~/go/src/github.com/ethereum/localDataDir --passwordFile password.txt
+bazel run //deployVRC --dataDirPath ~/go/src/github.com/ethereum/localDataDir --passwordFile password.txt
 
 ```
 

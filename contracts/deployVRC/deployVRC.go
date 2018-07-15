@@ -2,11 +2,10 @@ package main
 
 import (
 	"bufio"
-	"fmt"
+	"context"
 	"math/big"
 	"os"
 	"time"
-	"context"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -66,7 +65,7 @@ func main() {
 		// uses HTTP-RPC if IPC is not set
 		if ipcPath == "" {
 			rpcClient, err = rpc.Dial(httpPath)
-		} else  {
+		} else {
 			rpcClient, err = rpc.Dial(ipcPath)
 		}
 		if err != nil {
@@ -106,8 +105,7 @@ func main() {
 			Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 				networkID, err := client.NetworkID(context.Background())
 				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 				return ks.SignTx(ks.Accounts()[0], tx, networkID)
 			},
@@ -125,6 +123,14 @@ func main() {
 				log.Fatal(err)
 			}
 			time.Sleep(1 * time.Second)
+		}
+
+		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+		if err != nil {
+			log.Fatal(err)
+		}
+		if receipt.Status == types.ReceiptStatusFailed {
+			log.Fatalf("transaction was not successful, unable to deploy vrc")
 		}
 
 		log.Infof("New contract deployed at %s", addr.Hex())
