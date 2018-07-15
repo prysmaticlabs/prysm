@@ -65,3 +65,9 @@ go_repository(
     commit = "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
     importpath = "golang.org/x/crypto",
 )
+
+go_repository(
+    name = "com_github_syndtr_goleveldb",
+    commit = "c4c61651e9e37fa117f53c5a906d3b63090d8445",
+    importpath = "github.com/syndtr/goleveldb",
+)

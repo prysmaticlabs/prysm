@@ -5,9 +5,7 @@
     "misspell",
     "goimports",
     "nakedret",
-    "unused",
     "unparam",
-    "gosimple",
-    "staticcheck"
+    "megacheck"
   ]
 }

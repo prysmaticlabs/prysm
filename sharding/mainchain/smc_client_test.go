@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
 
@@ -30,9 +29,6 @@ var _ = types.Service(&SMCClient{})
 
 // mockClient is struct to implement the smcClient methods for testing.
 type mockClient struct {
-	smc         *contracts.SMC
-	depositFlag bool
-	t           *testing.T
 	backend     *backends.SimulatedBackend
 	blockNumber *big.Int
 }
@@ -104,14 +100,15 @@ func TestWaitForTransaction_TransactionNotMined(t *testing.T) {
 	}
 
 	receipt, err := client.backend.TransactionReceipt(ctx, tx.Hash())
+	if err != nil {
+		t.Error(err)
+	}
 	if receipt != nil {
 		t.Errorf("transaction mined despite backend not being committed: %v", receipt)
 	}
-	err = client.WaitForTransaction(ctx, tx.Hash(), timeout)
-	if err == nil {
+	if err = client.WaitForTransaction(ctx, tx.Hash(), timeout); err == nil {
 		t.Error("transaction is supposed to timeout and return a error")
 	}
-
 }
 
 func TestWaitForTransaction_IsMinedImmediately(t *testing.T) {
@@ -145,7 +142,6 @@ func TestWaitForTransaction_IsMinedImmediately(t *testing.T) {
 	}()
 	client.Commit()
 	wg.Wait()
-
 }
 func TestWaitForTransaction_TimesOut(t *testing.T) {
 	backend := setup()
@@ -169,7 +165,6 @@ func TestWaitForTransaction_TimesOut(t *testing.T) {
 		wg.Done()
 	}()
 	wg.Wait()
-
 }
 func TestWaitForTransaction_IsCancelledWhenParentCtxCancelled(t *testing.T) {
 	backend := setup()
@@ -196,5 +191,4 @@ func TestWaitForTransaction_IsCancelledWhenParentCtxCancelled(t *testing.T) {
 	newCtx.Done()
 
 	wg.Wait()
-
 }
