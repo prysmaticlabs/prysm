@@ -69,6 +69,9 @@ func main() {
 		} else  {
 			rpcClient, err = rpc.Dial(ipcPath)
 		}
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		client := ethclient.NewClient(rpcClient)
 
