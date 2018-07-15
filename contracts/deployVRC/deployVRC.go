@@ -27,6 +27,7 @@ func main() {
 	var dataDirPath string
 	var ipcPath string
 	var passwordFile string
+	var httpPath string
 
 	app := cli.NewApp()
 	app.Name = "deployVRC"
@@ -40,9 +41,14 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
-			Value:       "./geth.ipc",
 			Usage:       "Filename for IPC socket/pipe within the datadir",
 			Destination: &ipcPath,
+		},
+		cli.StringFlag{
+			Name:        "httpPath",
+			Value:       "http://localhost:8545/",
+			Usage:       "HTTP-RPC server listening interface",
+			Destination: &httpPath,
 		},
 		cli.StringFlag{
 			Name:        "passwordFile",
@@ -54,10 +60,16 @@ func main() {
 
 	app.Action = func(c *cli.Context) {
 		// Set up RPC client
-		rpcClient, err := rpc.Dial(ipcPath)
-		if err != nil {
-			log.Fatal(err)
+		var rpcClient *rpc.Client
+		var err error
+
+		// uses HTTP-RPC if IPC is not set
+		if ipcPath == "" {
+			rpcClient, err = rpc.Dial(httpPath)
+		} else  {
+			rpcClient, err = rpc.Dial(ipcPath)
 		}
+
 		client := ethclient.NewClient(rpcClient)
 
 		config := &node.Config{

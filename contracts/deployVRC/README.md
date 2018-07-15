@@ -12,16 +12,26 @@ This is a utility to help users deploy validator registration contract for runni
 
 *Flags:*  
    **--dataDirPath**    Data directory for the databases and keystore (default: "./datadir")  
-   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")      
+   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")
+   **--httpPath**      HTTP-RPC server listening interface (default: "http://localhost:8545/")
    **--passwordFile**   Password file for unlock account (default: "./password.txt")   
    **--help, -h**            show help   
    **--version, -v**         print the version   
 
 ### Example
+To use IPC:
 ```
 ./deployVRC  --ipcPath /path/to/your/geth.ipc --dataDirPath /path/to/your/dataDir --passwordFile /path/to/your/password.txt
 ```
+To use HTTP-RPC:
+```
+./deployVRC --httpPath http://localhost:8545/  --dataDirPath ~/go/src/github.com/ethereum/localDataDir --passwordFile password.txt
+```
+or
+```
+./deployVRC --dataDirPath ~/go/src/github.com/ethereum/localDataDir --passwordFile password.txt
 
+```
 
 ### Output
 ```
