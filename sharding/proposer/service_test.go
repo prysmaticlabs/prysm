@@ -8,14 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
-)
-
-var (
-	key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	addr   = crypto.PubkeyToAddress(key.PublicKey)
 )
 
 func TestCreateCollation(t *testing.T) {
@@ -29,7 +23,7 @@ func TestCreateCollation(t *testing.T) {
 			nil, 0, nil, data))
 	}
 
-	collation, err := createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(1), txs)
+	_, err := createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(1), txs)
 	if err != nil {
 		t.Fatalf("Create collation failed: %v", err)
 	}
@@ -40,7 +34,7 @@ func TestCreateCollation(t *testing.T) {
 	}
 
 	// negative test case #1: create collation with shard > shardCount.
-	collation, err = createCollation(node, node.Account(), node, big.NewInt(101), big.NewInt(2), txs)
+	_, err = createCollation(node, node.Account(), node, big.NewInt(101), big.NewInt(2), txs)
 	if err == nil {
 		t.Errorf("Create collation should have failed with invalid shard number")
 	}
@@ -52,13 +46,13 @@ func TestCreateCollation(t *testing.T) {
 		badTxs = append(badTxs, gethTypes.NewTransaction(0, common.HexToAddress("0x0"),
 			nil, 0, nil, data))
 	}
-	collation, err = createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(2), badTxs)
+	_, err = createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(2), badTxs)
 	if err == nil {
 		t.Errorf("Create collation should have failed with Txs longer than collation body limit")
 	}
 
 	// normal test case #1 create collation with correct parameters.
-	collation, err = createCollation(node, node.Account(), node, big.NewInt(5), big.NewInt(5), txs)
+	collation, err := createCollation(node, node.Account(), node, big.NewInt(5), big.NewInt(5), txs)
 	if err != nil {
 		t.Errorf("Create collation failed: %v", err)
 	}
@@ -117,11 +111,10 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// negative test case #1 create the same collation that just got added to SMC.
-	collation, err = createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(1), txs)
+	_, err = createCollation(node, node.Account(), node, big.NewInt(0), big.NewInt(1), txs)
 	if err == nil {
 		t.Errorf("Create collation should fail due to same collation in SMC")
 	}
-
 }
 
 func TestCheckCollation(t *testing.T) {
@@ -160,6 +153,9 @@ func TestCheckCollation(t *testing.T) {
 	}
 	// normal test case 2: check if we can add header for period 2, should return true.
 	a, err = checkHeaderAdded(node, big.NewInt(0), big.NewInt(2))
+	if err != nil {
+		t.Error(err)
+	}
 	if !a {
 		t.Errorf("Check header submitted shouldn't return: %v", a)
 	}

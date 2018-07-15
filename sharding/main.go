@@ -50,10 +50,7 @@ VERSION:
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		if err := debug.Setup(ctx); err != nil {
-			return err
-		}
-		return nil
+		return debug.Setup(ctx)
 	}
 
 	app.After = func(ctx *cli.Context) error {

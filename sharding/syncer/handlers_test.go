@@ -112,12 +112,7 @@ func (m *mockNode) BlockByNumber(ctx context.Context, number *big.Int) (*types.B
 type faultyRequest struct{}
 type faultyCollationFetcher struct{}
 
-type mockSigner struct{}
 type mockCollationFetcher struct{}
-
-func (m *mockSigner) Sign(hash common.Hash) ([]byte, error) {
-	return []byte{}, nil
-}
 
 func (m *mockCollationFetcher) CollationByHeaderHash(headerHash *common.Hash) (*shardingTypes.Collation, error) {
 	shardID := big.NewInt(1)
@@ -226,6 +221,9 @@ func TestConstructNotaryRequest(t *testing.T) {
 
 	// Adds the header to the SMC.
 	opt, err := node.CreateTXOpts(big.NewInt(0))
+	if err != nil {
+		t.Error(err)
+	}
 	smc.AddHeader(opt, shardID, period, chunkRoot, [32]byte{})
 
 	backend.Commit()

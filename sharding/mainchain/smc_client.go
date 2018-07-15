@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"sync"
 	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -41,7 +40,6 @@ type SMCClient struct {
 	keystore     *keystore.KeyStore // Keystore containing the single signer.
 	smc          *contracts.SMC     // The deployed sharding management contract.
 	rpcClient    *rpc.Client        // The RPC client connection to the main geth node.
-	lock         sync.Mutex         // Mutex lock for concurrency management.
 }
 
 // NewSMCClient constructs a new instance of an SMCClient.
@@ -207,11 +205,6 @@ func (s *SMCClient) SetDepositFlag(deposit bool) {
 // DataDirPath returns the datadir flag as a string.
 func (s *SMCClient) DataDirPath() string {
 	return s.dataDirPath
-}
-
-// Client to interact with a geth node via JSON-RPC.
-func (s *SMCClient) ethereumClient() *ethclient.Client {
-	return s.client
 }
 
 // unlockAccount will unlock the specified account using utils.PasswordFileFlag
