@@ -18,8 +18,12 @@ This is a utility to help users deploy validator registration contract for runni
    **--version, -v**         print the version   
 
 ### Example
+```
 ./deployVRC  --ipcPath /path/to/your/geth.ipc --dataDirPath /path/to/your/dataDir --passwordFile /path/to/your/password.txt
+```
 
 
 ### Output
+```
 INFO[0001] New contract deployed at 0x5275C2220C574330E230bFB7e4a0b96f60a18f02 
+```
