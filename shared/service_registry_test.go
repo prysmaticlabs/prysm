@@ -9,7 +9,6 @@ type mockService struct{}
 type secondMockService struct{}
 
 func (m *mockService) Start() {
-	return
 }
 
 func (m *mockService) Stop() error {
@@ -17,7 +16,6 @@ func (m *mockService) Stop() error {
 }
 
 func (s *secondMockService) Start() {
-	return
 }
 
 func (s *secondMockService) Stop() error {

@@ -9,7 +9,7 @@ matrix:
         - lint
       script:
         - 
-          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter
+          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m
     - os: linux
       env: V=0.15.0
       before_install:
@@ -42,11 +42,12 @@ matrix:
           ./install.sh --user
           rm -f install.sh
         # Decrypt service account (only works on prysmaticlabs branches)
-        - if [[ $encrypted_64ca747eb448_iv ]]; then
-            openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-            -in service-account.json.enc -out /tmp/service-account.json -d;
-            REMOTE_FLAGS=--config=remote;
-          fi
+        # TODO(#282): enable remote caching / execution
+        #- if [[ $encrypted_64ca747eb448_iv ]]; then
+        #    openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+        #    -in service-account.json.enc -out /tmp/service-account.json -d;
+        #    REMOTE_FLAGS=--config=remote;
+        #  fi
       
       install: true # Skip install go packages.
           

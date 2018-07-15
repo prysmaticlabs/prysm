@@ -97,7 +97,7 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}

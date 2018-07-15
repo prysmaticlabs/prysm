@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 // Verifies that ShardDB implements the sharding Service inteface.
@@ -106,6 +107,9 @@ func Test_DBGet(t *testing.T) {
 
 	key2 := []byte{}
 	val2, err := testDB.db.Get(key2)
+	if err == nil || err.Error() != leveldberrors.ErrNotFound.Error() {
+		t.Errorf("Expected error %v but got %v", leveldberrors.ErrNotFound, err)
+	}
 	if len(val2) != 0 {
 		t.Errorf("non-existent key should not have a value. key=%v, value=%v", key2, val2)
 	}
