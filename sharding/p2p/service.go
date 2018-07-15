@@ -95,6 +95,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 	// TODO: Support passing value and pointer type messages.
 
 	// TODO: Remove debug log after send is implemented.
+	_ = peer
 	log.Debug("Broadcasting to everyone rather than sending a single peer.")
 	s.Broadcast(msg)
 }

@@ -18,7 +18,6 @@ var _ = topicPeerLister(&floodsub.PubSub{})
 var _ = topicPeerLister(&fakeTopicPeerLister{})
 
 type fakeTopicPeerLister struct {
-	peers []peer.ID
 }
 
 func (f *fakeTopicPeerLister) ListPeers(topic string) []peer.ID {
