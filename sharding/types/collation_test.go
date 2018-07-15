@@ -12,15 +12,6 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/shared"
 )
 
-// fieldAccess is to access unexported fields in structs in another package
-func fieldAccess(i interface{}, fields []string) reflect.Value {
-	val := reflect.ValueOf(i)
-	for i := 0; i < len(fields); i++ {
-		val = reflect.Indirect(val).FieldByName(fields[i])
-	}
-	return val
-
-}
 func TestCollation_Transactions(t *testing.T) {
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
 	body := []byte{}

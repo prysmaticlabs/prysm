@@ -26,5 +26,6 @@ go_test(
         "//sharding/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+        "@com_github_syndtr_goleveldb//leveldb/errors:go_default_library",
     ],
 )

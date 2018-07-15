@@ -31,8 +31,7 @@ func prefixFor(name string) (prefix string) {
 	} else {
 		prefix = "--"
 	}
-
-	return
+	return prefix
 }
 
 func prefixedNames(fullName string) (prefixed string) {
@@ -44,7 +43,7 @@ func prefixedNames(fullName string) (prefixed string) {
 			prefixed += ", "
 		}
 	}
-	return
+	return prefixed
 }
 
 // Custom cli.Flag type which expand the received string to an absolute path.

@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
@@ -24,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/simulator"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 	"github.com/prysmaticlabs/geth-sharding/shared"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
@@ -39,9 +37,6 @@ const shardChainDBName = "shardchaindata"
 // Ethereum network.
 type ShardEthereum struct {
 	shardConfig *params.Config // Holds necessary information to configure shards.
-	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
-	actor       types.Actor    // Either notary, proposer, or observer.
-	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
 	services *shared.ServiceRegistry
