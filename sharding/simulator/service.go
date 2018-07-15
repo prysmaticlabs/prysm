@@ -48,8 +48,8 @@ func (s *Simulator) Start() {
 
 	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
 
-	go s.broadcastTransactions(time.Tick(s.delay), s.ctx.Done())
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.Tick(s.delay), s.ctx.Done())
+	go s.broadcastTransactions(time.NewTicker(s.delay).C, s.ctx.Done())
+	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.NewTicker(s.delay).C, s.ctx.Done())
 }
 
 // Stop the main loop for simulator requests.
