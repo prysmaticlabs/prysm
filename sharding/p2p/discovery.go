@@ -10,6 +10,7 @@ import (
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 // Discovery interval for multicast DNS querying.
@@ -52,11 +53,11 @@ type discovery struct {
 func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 	d.host.Peerstore().AddAddrs(pi.ID, pi.Addrs, ps.PermanentAddrTTL)
 	if err := d.host.Connect(d.ctx, pi); err != nil {
-		logger.Warn(fmt.Sprintf("Failed to connect to peer: %v", err))
+		log.Warn(fmt.Sprintf("Failed to connect to peer: %v", err))
 	}
 
-	logger.Debug(fmt.Sprintf("Peers now: %s", d.host.Peerstore().Peers()))
-	logger.Debug(fmt.Sprintf("gsub has peers: %v", d.topicPeerMap()))
+	log.Debug(fmt.Sprintf("Peers now: %s", d.host.Peerstore().Peers()))
+	log.Debug(fmt.Sprintf("gsub has peers: %v", d.topicPeerMap()))
 }
 
 // topicPeerMap helper function for inspecting which peers are available for

@@ -226,7 +226,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	msg := hook.AllEntries()[0].Message
+	msg := hook.Entries[1].Message
 	want := "Sent request for collation body via a shardp2p broadcast"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
@@ -264,7 +264,7 @@ func TestBroadcastTransactions(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	msg := hook.AllEntries()[0].Message
+	msg := hook.Entries[1].Message
 	want := "Transaction broadcasted"
 	if !strings.Contains(msg, want) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)

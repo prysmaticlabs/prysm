@@ -127,13 +127,13 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
-	logMsg := hook.AllEntries()[0].Message
+	logMsg := hook.Entries[0].Message
 	want := fmt.Sprintf("Received p2p request of type: %T", &pb.CollationBodyRequest{})
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
 
-	logMsg = hook.AllEntries()[1].Message
+	logMsg = hook.Entries[3].Message
 	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)

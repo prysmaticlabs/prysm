@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
@@ -14,15 +15,20 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
+	log "github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Ensure that server implements service.
 var _ = types.Service(&Server{})
 
-/*
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(ioutil.Discard)
+}
+
 func TestLifecycle(t *testing.T) {
-	h := internal.NewLogHandler(t)
-	logger.SetHandler(h)
+	hook := logTest.NewGlobal()
 
 	s, err := NewServer()
 	if err != nil {
@@ -30,17 +36,24 @@ func TestLifecycle(t *testing.T) {
 	}
 
 	s.Start()
-	h.VerifyLogMsg("Starting shardp2p server")
+	msg := hook.Entries[0]
+	want := "Starting shardp2p server"
+	if msg == nil || msg.Message != want {
+		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
+	}
 
 	s.Stop()
-	h.VerifyLogMsg("Stopping shardp2p server")
+	msg = hook.LastEntry()
+	want = "Stopping shardp2p server"
+	if msg == nil || msg.Message != want {
+		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
+	}
 
 	// The context should have been cancelled.
 	if s.ctx.Err() == nil {
 		t.Error("Context was not cancelled")
 	}
 }
-*/
 
 func TestBroadcast(t *testing.T) {
 	s, err := NewServer()
