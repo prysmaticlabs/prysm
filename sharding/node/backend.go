@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync"
 	"syscall"
 	"time"
@@ -27,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
+	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -43,17 +44,17 @@ type ShardEthereum struct {
 	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
 
 	// Lifecycle and service stores.
-	services     map[reflect.Type]types.Service // Service registry.
-	serviceTypes []reflect.Type                 // Keeps an ordered slice of registered service types.
-	lock         sync.RWMutex
-	stop         chan struct{} // Channel to wait for termination notifications
+	services *shared.ServiceRegistry
+	lock     sync.RWMutex
+	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
 // geth sharding entrypoint.
 func New(ctx *cli.Context) (*ShardEthereum, error) {
+	registry := shared.NewServiceRegistry()
 	shardEthereum := &ShardEthereum{
-		services: make(map[reflect.Type]types.Service),
+		services: registry,
 		stop:     make(chan struct{}),
 	}
 
@@ -72,21 +73,17 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
-	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
-		return nil, err
-	}
-
 	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
+	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerSimulatorService(actorFlag, shardEthereum.shardConfig, shardIDFlag); err != nil {
+	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -99,10 +96,7 @@ func (s *ShardEthereum) Start() {
 
 	log.Info("Starting sharding node")
 
-	for _, kind := range s.serviceTypes {
-		// Start each service in order of registration.
-		s.services[kind].Start()
-	}
+	s.services.StartAll()
 
 	stop := s.stop
 	s.lock.Unlock()
@@ -120,11 +114,11 @@ func (s *ShardEthereum) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		// ensure trace and CPU profile data is flushed.
+		debug.Exit() // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the sharding node")
 	}()
 
-	// Wait for stop channel to be closed
+	// Wait for stop channel to be closed.
 	<-stop
 }
 
@@ -133,42 +127,10 @@ func (s *ShardEthereum) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	for kind, service := range s.services {
-		if err := service.Stop(); err != nil {
-			log.Panicf("Could not stop the following service: %v, %v", kind, err)
-		}
-	}
+	s.services.StopAll()
 	log.Info("Stopping sharding node")
 
-	// unblock n.Wait
 	close(s.stop)
-}
-
-// registerService appends a service constructor function to the service registry of the
-// sharding node.
-func (s *ShardEthereum) registerService(service types.Service) error {
-	kind := reflect.TypeOf(service)
-	if _, exists := s.services[kind]; exists {
-		return fmt.Errorf("service already exists: %v", kind)
-	}
-	s.services[kind] = service
-	s.serviceTypes = append(s.serviceTypes, kind)
-	return nil
-}
-
-// fetchService takes in a struct pointer and sets the value of that pointer
-// to a service currently stored in the service registry. This ensures the input argument is
-// set to the right pointer that refers to the originally registered service.
-func (s *ShardEthereum) fetchService(service interface{}) error {
-	if reflect.TypeOf(service).Kind() != reflect.Ptr {
-		return fmt.Errorf("input must be of pointer type, received value type instead: %T", service)
-	}
-	element := reflect.ValueOf(service).Elem()
-	if running, ok := s.services[element.Type()]; ok {
-		element.Set(reflect.ValueOf(running))
-		return nil
-	}
-	return fmt.Errorf("unknown service: %T", service)
 }
 
 // registerShardChainDB attaches a LevelDB wrapped object to the shardEthereum instance.
@@ -181,21 +143,18 @@ func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not register shardDB service: %v", err)
 	}
-	return s.registerService(shardDB)
+	return s.services.RegisterService(shardDB)
 }
 
 // registerP2P attaches a p2p server to the ShardEthereum instance.
-// TODO: Design this p2p service and the methods it should expose as well as
-// its event loop.
 func (s *ShardEthereum) registerP2P() error {
 	shardp2p, err := p2p.NewServer()
 	if err != nil {
 		return fmt.Errorf("could not register shardp2p service: %v", err)
 	}
-	return s.registerService(shardp2p)
+	return s.services.RegisterService(shardp2p)
 }
 
-// registerMainchainClient
 func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
@@ -216,7 +175,7 @@ func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not register smc client service: %v", err)
 	}
-	return s.registerService(client)
+	return s.services.RegisterService(client)
 }
 
 // registerTXPool is only relevant to proposers in the sharded system. It will
@@ -229,34 +188,34 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 		return nil
 	}
 	var shardp2p *p2p.Server
-	if err := s.fetchService(&shardp2p); err != nil {
+	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
 	}
 	pool, err := txpool.NewTXPool(shardp2p)
 	if err != nil {
 		return fmt.Errorf("could not register shard txpool service: %v", err)
 	}
-	return s.registerService(pool)
+	return s.services.RegisterService(pool)
 }
 
 // Registers the actor according to CLI flags. Either notary/proposer/observer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
-	if err := s.fetchService(&shardp2p); err != nil {
+	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
 	}
 	var client *mainchain.SMCClient
-	if err := s.fetchService(&client); err != nil {
+	if err := s.services.FetchService(&client); err != nil {
 		return err
 	}
 
 	var shardChainDB *database.ShardDB
-	if err := s.fetchService(&shardChainDB); err != nil {
+	if err := s.services.FetchService(&shardChainDB); err != nil {
 		return err
 	}
 
 	var sync *syncer.Syncer
-	if err := s.fetchService(&sync); err != nil {
+	if err := s.services.FetchService(&sync); err != nil {
 		return err
 	}
 
@@ -266,10 +225,16 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		if err != nil {
 			return fmt.Errorf("could not register notary service: %v", err)
 		}
-		return s.registerService(not)
+		return s.services.RegisterService(not)
+	case "simulator":
+		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
+		if err != nil {
+			return fmt.Errorf("could not register simulator service: %v", err)
+		}
+		return s.services.RegisterService(sim)
 	case "proposer":
 		var pool *txpool.TXPool
-		if err := s.fetchService(&pool); err != nil {
+		if err := s.services.FetchService(&pool); err != nil {
 			return err
 		}
 
@@ -277,58 +242,27 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
-		return s.registerService(prop)
-	case "simulator":
-		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15) // 15 second delay between simulator requests.
-		if err != nil {
-			return fmt.Errorf("could not register simulator service: %v", err)
-		}
-		return s.registerService(sim)
+		return s.services.RegisterService(prop)
 	default:
 		obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
 		if err != nil {
 			return fmt.Errorf("could not register observer service: %v", err)
 		}
-		return s.registerService(obs)
+		return s.services.RegisterService(obs)
 	}
 }
-
-func (s *ShardEthereum) registerSimulatorService(actorFlag string, config *params.Config, shardID int) error {
-	// Should not trigger simulation requests if actor is a notary, as this
-	// is supposed to "simulate" notaries sending requests via p2p.
-	if actorFlag == "notary" {
-		return nil
-	}
-
-	var shardp2p *p2p.Server
-	if err := s.fetchService(&shardp2p); err != nil {
-		return err
-	}
-	var client *mainchain.SMCClient
-	if err := s.fetchService(&client); err != nil {
-		return err
-	}
-
-	// 15 second delay between simulator requests.
-	sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
-	if err != nil {
-		return fmt.Errorf("could not register simulator service: %v", err)
-	}
-	return s.registerService(sim)
-}
-
 func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int) error {
 	var shardp2p *p2p.Server
-	if err := s.fetchService(&shardp2p); err != nil {
+	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
 	}
 	var client *mainchain.SMCClient
-	if err := s.fetchService(&client); err != nil {
+	if err := s.services.FetchService(&client); err != nil {
 		return err
 	}
 
 	var shardChainDB *database.ShardDB
-	if err := s.fetchService(&shardChainDB); err != nil {
+	if err := s.services.FetchService(&shardChainDB); err != nil {
 		return err
 	}
 
@@ -336,5 +270,5 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 	if err != nil {
 		return fmt.Errorf("could not register syncer service: %v", err)
 	}
-	return s.registerService(sync)
+	return s.services.RegisterService(sync)
 }
