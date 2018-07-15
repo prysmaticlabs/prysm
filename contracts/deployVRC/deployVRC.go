@@ -3,40 +3,36 @@ package main
 import (
 	"bufio"
 	"context"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/geth-sharding/contracts"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-// ClientIdentifier tells us what client the node we interact with over RPC is running.
-const ClientIdentifier = "geth"
-
 func main() {
-	var dataDirPath string
+	var keystoreUTCPath string
 	var ipcPath string
 	var passwordFile string
 	var httpPath string
+	var privKeyString string
 
 	app := cli.NewApp()
 	app.Name = "deployVRC"
 	app.Usage = "this is a util to deploy validator registration contract"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:        "dataDirPath",
-			Value:       "./datadir",
-			Usage:       "Data directory for the databases and keystore",
-			Destination: &dataDirPath,
+			Name:        "keystoreUTCPath",
+			Usage:       "Location of keystore",
+			Destination: &keystoreUTCPath,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -55,14 +51,20 @@ func main() {
 			Usage:       "Password file for unlock account",
 			Destination: &passwordFile,
 		},
+		cli.StringFlag{
+			Name:        "privKey",
+			Usage:       "Private key to unlock account",
+			Destination: &privKeyString,
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
 		// Set up RPC client
 		var rpcClient *rpc.Client
 		var err error
+		var txOps *bind.TransactOpts
 
-		// uses HTTP-RPC if IPC is not set
+		// Uses HTTP-RPC if IPC is not set
 		if ipcPath == "" {
 			rpcClient, err = rpc.Dial(httpPath)
 		} else {
@@ -74,41 +76,35 @@ func main() {
 
 		client := ethclient.NewClient(rpcClient)
 
-		config := &node.Config{
-			DataDir: dataDirPath,
-		}
+		// User inputs private key, sign tx with private key
+		if privKeyString != "" {
+			privKey, err := crypto.HexToECDSA(privKeyString)
+			if err != nil {
+				log.Fatal(err)
+			}
+			txOps = bind.NewKeyedTransactor(privKey)
+			txOps.Value = big.NewInt(0)
 
-		// Set up keystore
-		scryptN, scryptP, keydir, err := config.AccountConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
+			// User inputs keystore json file, sign tx with keystore json
+		} else {
+			file, err := os.Open(passwordFile)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
+			scanner := bufio.NewScanner(file)
+			scanner.Split(bufio.ScanWords)
+			scanner.Scan()
+			password := scanner.Text()
 
-		file, err := os.Open(passwordFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+			keyJSON, _ := ioutil.ReadFile(keystoreUTCPath)
+			privKey, err := keystore.DecryptKey(keyJSON, password)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		// Retrieve password to unlock account
-		scanner := bufio.NewScanner(file)
-		scanner.Split(bufio.ScanWords)
-		scanner.Scan()
-		password := scanner.Text()
-		ks.Unlock(ks.Accounts()[0], password)
-
-		// Construct transaction
-		txOps := &bind.TransactOpts{
-			From:  ks.Accounts()[0].Address,
-			Value: big.NewInt(0),
-			Signer: func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-				networkID, err := client.NetworkID(context.Background())
-				if err != nil {
-					log.Fatal(err)
-				}
-				return ks.SignTx(ks.Accounts()[0], tx, networkID)
-			},
+			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
+			txOps.Value = big.NewInt(0)
 		}
 
 		// Deploy validator registration contract
@@ -123,14 +119,6 @@ func main() {
 				log.Fatal(err)
 			}
 			time.Sleep(1 * time.Second)
-		}
-
-		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
-		if err != nil {
-			log.Fatal(err)
-		}
-		if receipt.Status == types.ReceiptStatusFailed {
-			log.Fatalf("transaction was not successful, unable to deploy vrc")
 		}
 
 		log.Infof("New contract deployed at %s", addr.Hex())
