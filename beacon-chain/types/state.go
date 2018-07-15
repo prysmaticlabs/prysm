@@ -60,3 +60,8 @@ type CrosslinkRecord struct {
 	Epoch uint64      // Epoch records the epoch the crosslink was submitted in.
 	Hash  common.Hash // Hash is the block hash.
 }
+
+// NewGenesisStates initializes a beacon chain with starting parameters.
+func NewGenesisStates() (*ActiveState, *CrystallizedState) {
+	return nil, nil
+}

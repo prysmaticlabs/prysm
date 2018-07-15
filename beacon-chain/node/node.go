@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared"
@@ -20,20 +21,27 @@ import (
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx      *cli.Context
-	services *shared.ServiceRegistry
-	lock     sync.RWMutex
-	stop     chan struct{} // Channel to wait for termination notifications.
+	ctx         *cli.Context
+	beaconChain *blockchain.BeaconChain
+	services    *shared.ServiceRegistry
+	lock        sync.RWMutex
+	stop        chan struct{} // Channel to wait for termination notifications.
 }
 
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func New(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
+	chain, err := blockchain.NewBeaconChain()
+	if err != nil {
+		return nil, err
+	}
+
 	beacon := &BeaconNode{
-		ctx:      ctx,
-		services: registry,
-		stop:     make(chan struct{}),
+		ctx:         ctx,
+		services:    registry,
+		beaconChain: chain,
+		stop:        make(chan struct{}),
 	}
 
 	if err := beacon.registerWeb3Service(); err != nil {
@@ -92,4 +100,14 @@ func (b *BeaconNode) registerWeb3Service() error {
 		return fmt.Errorf("could not register web3Service: %v", err)
 	}
 	return b.services.RegisterService(web3Service)
+}
+
+func (b *BeaconNode) registerBeaconDB(ctx *cli.Context) error {
+	// path = ctx.GlobalString(utils.DataDirFlag.Name)
+	// shardDB, err := database.NewShardDB(path, shardChainDBName, false)
+	// if err != nil {
+	// 	return fmt.Errorf("could not register shardDB service: %v", err)
+	// }
+	// return s.services.RegisterService(shardDB)
+	return nil
 }

@@ -20,6 +20,7 @@ type BeaconChain struct {
 // NewBeaconChain initializes an instance using genesis state parameters if
 // none provided.
 func NewBeaconChain() (*BeaconChain, error) {
+	// TODO: load from disk if CLI argument is provided.
 	return &BeaconChain{}, nil
 }
 
@@ -49,11 +50,11 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 	b.persist()
 }
 
-// persist stores the RLP encoding of the beacon chain into the db.
+// persist stores the RLP encoding of the latest beacon chain state into the db.
 func (b *BeaconChain) persist() error {
 	enc, err := rlp.EncodeToBytes(b)
 	if err != nil {
 		return err
 	}
-	return b.db.Put([]byte("beacon-chain"), enc)
+	return b.db.Put([]byte("beacon-chain-state"), enc)
 }
