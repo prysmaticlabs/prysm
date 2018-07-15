@@ -1,0 +1,13 @@
+{
+  "Enable": [
+    "gofmt",
+    "deadcode",
+    "misspell",
+    "goimports",
+    "nakedret",
+    "unused",
+    "unparam",
+    "gosimple",
+    "staticcheck"
+  ]
+}

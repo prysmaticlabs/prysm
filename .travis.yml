@@ -9,7 +9,7 @@ matrix:
         - lint
       script:
         - 
-          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter
+          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
     - os: linux
       env: V=0.15.0
       before_install:
