@@ -2,7 +2,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["marshal.go"],
+    srcs = [
+        "marshal.go",
+        "service_registry.go",
+        "types.go",
+    ],
     importpath = "github.com/prysmaticlabs/geth-sharding/shared",
     visibility = ["//visibility:public"],
     deps = ["@com_github_ethereum_go_ethereum//rlp:go_default_library"],
@@ -10,6 +14,9 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["marshal_test.go"],
+    srcs = [
+        "marshal_test.go",
+        "service_registry_test.go",
+    ],
     embed = [":go_default_library"],
 )
