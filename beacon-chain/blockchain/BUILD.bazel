@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["core.go"],
+    importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
+        "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+    ],
+)
