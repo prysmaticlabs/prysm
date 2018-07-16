@@ -35,19 +35,19 @@ func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 }
 
 // MutateActiveState allows external services to modify a beacon chain object.
-func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) {
+func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
 	b.activeState = activeState
-	b.persist()
+	return b.persist()
 }
 
 // MutateCrystallizedState allows external services to modify the crystallized state.
-func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) {
+func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
 	b.crystallizedState = crystallizedState
-	b.persist()
+	return b.persist()
 }
 
 // persist stores the RLP encoding of the latest beacon chain state into the db.
