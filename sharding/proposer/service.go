@@ -6,7 +6,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/shared/legacyutil"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,19 +78,6 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
-// TODO: Move this somewhere else
-// Transform (or translate?) proto transaction to geth's transction.
-func transform(t *pb.Transaction) *gethTypes.Transaction {
-	return gethTypes.NewTransaction(
-		t.Nonce,
-		common.BytesToAddress(t.Recipient),
-		big.NewInt(0).SetUint64(t.Value),
-		t.GasLimit,
-		big.NewInt(0).SetUint64(t.GasPrice),
-		t.Input,
-	)
-}
-
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
 	feed := p.p2p.Feed(pb.Transaction{})
@@ -107,7 +94,7 @@ func (p *Proposer) proposeCollations() {
 				break
 			}
 			// log.Debugf("Received transaction: %x", tx)
-			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{transform(tx)}); err != nil {
+			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{legacyutil.TransformTransaction(tx)}); err != nil {
 				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():

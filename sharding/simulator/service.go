@@ -78,6 +78,8 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
+			// Collation for current period may not exist yet, so let's ask for
+			// the collation at period - 1.
 			period = period.Sub(period, big.NewInt(1))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
@@ -106,12 +108,8 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-cha
 			return
 		case <-delayChan:
 			tx := createTestTx()
-
 			s.p2p.Broadcast(tx)
 			log.Debug("Transaction broadcasted")
-			// s.p2p.Broadcast(messages.TransactionBroadcast{Transaction: tx})
-			// log.Debugf("Transaction broadcast with hash: %v", tx.Hash().Hex())
-
 		}
 	}
 }

@@ -11,7 +11,6 @@ package p2p
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -68,13 +67,13 @@ func NewServer() (*Server, error) {
 func (s *Server) Start() {
 	log.Info("Starting shardp2p server")
 	if err := startDiscovery(s.ctx, s.host, s.gsub); err != nil {
-		log.Error(fmt.Sprintf("Could not start p2p discovery! %v", err))
+		log.Errorf("Could not start p2p discovery! %v", err)
 		return
 	}
 
 	// Subscribe to all topics.
 	for topic, msgType := range topicTypeMapping {
-		log.Debug(fmt.Sprintf("Subscribing to topic: %s", topic))
+		log.Debugf("Subscribing to topic: %s", topic)
 		go s.subscribeToTopic(topic, msgType)
 	}
 }
@@ -104,22 +103,22 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 func (s *Server) Broadcast(msg interface{}) {
 	// TODO https://github.com/prysmaticlabs/geth-sharding/issues/176
 	topic := topic(msg)
-	log.Debug(fmt.Sprintf("Broadcasting msg on topic %s for message type %T", topic, msg))
+	log.Debugf("Broadcasting msg on topic %s for message type %T", topic, msg)
 
 	if topic == pb.Topic_UNKNOWN {
-		log.Warn(fmt.Sprintf("Topic is unknown for message type %T. %v", msg, msg))
+		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
 	}
 
 	// TODO: Next assertion may fail if your msg is not a pointer to a msg.
 	m, ok := msg.(proto.Message)
 	if !ok {
-		log.Error(fmt.Sprintf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg))
+		log.Errorf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg)
 		return
 	}
 
 	b, err := proto.Marshal(m)
 	if err != nil {
-		log.Error(fmt.Sprintf("Failed to marshal data for broadcast: %v", err))
+		log.Errorf("Failed to marshal data for broadcast: %v", err)
 		return
 	}
 	s.gsub.Publish(topic.String(), b)
@@ -128,7 +127,7 @@ func (s *Server) Broadcast(msg interface{}) {
 func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 	sub, err := s.gsub.Subscribe(topic.String())
 	if err != nil {
-		log.Error(fmt.Sprintf("Failed to subscribe to topic: %v", err))
+		log.Errorf("Failed to subscribe to topic: %v", err)
 		return
 	}
 	defer sub.Cancel()
@@ -141,7 +140,7 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 			return // Context closed or something.
 		}
 		if err != nil {
-			log.Error(fmt.Sprintf("Failed to get next message: %v", err))
+			log.Errorf("Failed to get next message: %v", err)
 			return
 		}
 
@@ -154,7 +153,7 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 		}
 		err = proto.Unmarshal(msg.Data, d)
 		if err != nil {
-			log.Error(fmt.Sprintf("Failed to decode data: %v", err))
+			log.Errorf("Failed to decode data: %v", err)
 			continue
 		}
 

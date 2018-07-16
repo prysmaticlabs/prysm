@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	host "github.com/libp2p/go-libp2p-host"
@@ -35,7 +34,7 @@ func startDiscovery(ctx context.Context, host host.Host, gsub topicPeerLister) e
 }
 
 // topicPeerLister has a method to return connected peers on a given topic.
-// This is implemented by floodsub.PubSub
+// This is implemented by floodsub.PubSub.
 type topicPeerLister interface {
 	ListPeers(string) []peer.ID
 }
@@ -53,11 +52,11 @@ type discovery struct {
 func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 	d.host.Peerstore().AddAddrs(pi.ID, pi.Addrs, ps.PermanentAddrTTL)
 	if err := d.host.Connect(d.ctx, pi); err != nil {
-		log.Warn(fmt.Sprintf("Failed to connect to peer: %v", err))
+		log.Warnf("Failed to connect to peer: %v", err)
 	}
 
-	log.Debug(fmt.Sprintf("Peers now: %s", d.host.Peerstore().Peers()))
-	log.Debug(fmt.Sprintf("gsub has peers: %v", d.topicPeerMap()))
+	log.Debugf("Peers now: %s", d.host.Peerstore().Peers())
+	log.Debugf("gsub has peers: %v", d.topicPeerMap())
 }
 
 // topicPeerMap helper function for inspecting which peers are available for
