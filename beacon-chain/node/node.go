@@ -102,12 +102,12 @@ func (b *BeaconNode) registerWeb3Service() error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerBeaconDB(ctx *cli.Context) error {
-	// path = ctx.GlobalString(utils.DataDirFlag.Name)
-	// shardDB, err := database.NewShardDB(path, shardChainDBName, false)
-	// if err != nil {
-	// 	return fmt.Errorf("could not register shardDB service: %v", err)
-	// }
-	// return s.services.RegisterService(shardDB)
-	return nil
-}
+// func (b *BeaconNode) registerBeaconDB(ctx *cli.Context) error {
+// path = ctx.GlobalString(utils.DataDirFlag.Name)
+// shardDB, err := database.NewShardDB(path, shardChainDBName, false)
+// if err != nil {
+// 	return fmt.Errorf("could not register shardDB service: %v", err)
+// }
+// return s.services.RegisterService(shardDB)
+// return nil
+// }
