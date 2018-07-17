@@ -19,9 +19,10 @@ type BeaconChain struct {
 
 // NewBeaconChain initializes an instance using genesis state parameters if
 // none provided.
-func NewBeaconChain() (*BeaconChain, error) {
-	// TODO: load from disk if CLI argument is provided.
-	return &BeaconChain{}, nil
+func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
+	return &BeaconChain{
+		db: db,
+	}, nil
 }
 
 // ActiveState exposes a getter to external services.

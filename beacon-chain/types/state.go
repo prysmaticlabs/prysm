@@ -63,5 +63,25 @@ type CrosslinkRecord struct {
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState) {
-	return nil, nil
+	active := &ActiveState{
+		Height:            0,
+		Randao:            common.BytesToHash([]byte{}),
+		FfgVoterBitmask:   []byte{},
+		BalanceDeltas:     []uint{},
+		PartialCrosslinks: []PartialCrosslinkRecord{},
+		TotalSkipCount:    0,
+	}
+	crystallized := &CrystallizedState{
+		ActiveValidators:   []ValidatorRecord{},
+		QueuedValidators:   []ValidatorRecord{},
+		ExitedValidators:   []ValidatorRecord{},
+		CurrentShuffling:   []uint16{},
+		CurrentEpoch:       0,
+		LastJustifiedEpoch: 0,
+		LastFinalizedEpoch: 0,
+		Dynasty:            0,
+		TotalDeposits:      0,
+		CrosslinkSeed:      common.BytesToHash([]byte{}),
+	}
+	return active, crystallized
 }

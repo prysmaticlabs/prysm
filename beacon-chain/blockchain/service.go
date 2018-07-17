@@ -16,14 +16,18 @@ type ChainService struct {
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService() (*ChainService, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewChainService(ctx context.Context) (*ChainService, error) {
+	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{ctx, cancel, nil}, nil
 }
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Infof("Starting blockchain service")
+	chain, err := NewBeaconChain()
+	if err != nil {
+		log.Errorf("Unable to setup blockchain: %v", err)
+	}
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
