@@ -118,7 +118,8 @@ func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) 
 		select {
 		case err := <-sub.Err():
 			log.Errorf("Failed to subscribe to VRC log: %v", err)
-
+		case <-done:
+			return
 		case VRClog := <-w.logChan:
 			// public key is the second topic from validatorRegistered log and strip off 0x
 			pubKeyLog := VRClog.Topics[1].Hex()[2:]
