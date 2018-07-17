@@ -11,8 +11,9 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/database"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/utils"
 	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/geth-sharding/shared/cmd"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -41,7 +42,7 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	path := ctx.GlobalString(types.DataDirFlag.Name)
+	path := ctx.GlobalString(cmd.DataDirFlag.Name)
 	if err := beacon.registerBeaconDB(path); err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService() error {
-	endpoint := b.ctx.GlobalString(types.Web3ProviderFlag.Name)
+	endpoint := b.ctx.GlobalString(utils.Web3ProviderFlag.Name)
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), endpoint)
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
