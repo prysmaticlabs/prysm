@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )

@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 )
 
 // TransformTransaction of proto transaction to geth's transction.

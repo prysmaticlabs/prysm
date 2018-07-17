@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -19,7 +19,7 @@ import (
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	pb "github.com/prysmaticlabs/geth-sharding/sharding/p2p/proto/v1"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	log "github.com/sirupsen/logrus"
 )
 
