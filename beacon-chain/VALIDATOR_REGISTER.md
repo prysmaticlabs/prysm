@@ -18,7 +18,7 @@ Launch beacon chain node with account holder's public key and just deployed VRC 
 ```
 
 ### Step 3: Send a transaction to VRC with 32 ETH and public key corresponded to beacon chain node account holder's public key
-Use Remix for example, see the following screen shot
+With Remix, you interact with the deployed contract by sending a transaction to the deposit method with 32 ETH and the same public key you launched beacon chain node with
 
 
 ### Step 4: After the transaction gets mined, beacon chain node will report account holder has been registered. Congrats!
