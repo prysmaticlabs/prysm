@@ -7,7 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -27,19 +28,19 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 func TestNewWeb3Service(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
-	if _, err := NewWeb3Service(ctx, endpoint); err == nil {
+	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
 	endpoint = "ftp://127.0.0.1"
-	if _, err := NewWeb3Service(ctx, endpoint); err == nil {
+	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
 	endpoint = "ws://127.0.0.1"
-	if _, err := NewWeb3Service(ctx, endpoint); err != nil {
+	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
 	endpoint = "ipc://geth.ipc"
-	if _, err := NewWeb3Service(ctx, endpoint); err != nil {
+	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
 }
@@ -48,7 +49,7 @@ func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -92,7 +93,7 @@ func TestStop(t *testing.T) {
 func TestBadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -107,7 +108,7 @@ func TestBadReader(t *testing.T) {
 
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint)
+	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -133,4 +134,19 @@ func TestLatestMainchainInfo(t *testing.T) {
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
+}
+
+func TestListenVRCLog(t *testing.T) {
+
+	endpoint := "ws://127.0.0.1"
+	_, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		<-exitRoutine
+	}()
 }
