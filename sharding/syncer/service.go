@@ -4,11 +4,12 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	log "github.com/sirupsen/logrus"
@@ -45,7 +46,7 @@ func (s *Syncer) Start() {
 	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
 
 	s.msgChan = make(chan p2p.Message, 100)
-	s.bodyRequests = s.p2p.Feed(messages.CollationBodyRequest{}).Subscribe(s.msgChan)
+	s.bodyRequests = s.p2p.Feed(pb.CollationBodyRequest{}).Subscribe(s.msgChan)
 	go s.HandleCollationBodyRequests(shard, s.ctx.Done())
 }
 
@@ -71,16 +72,22 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 			return
 		case req := <-s.msgChan:
 			if req.Data != nil {
-				log.Infof("Received p2p request of type: %T", req)
+				log.Debugf("Received p2p request of type: %T", req.Data)
 				res, err := RespondCollationBody(req, collationFetcher)
 				if err != nil {
 					log.Errorf("Could not construct response: %v", err)
 					continue
 				}
 
+				if res == nil {
+					// TODO: Send that we don't have it?
+					log.Debug("No response for this collation request. Not sending anything.")
+					continue
+				}
+
 				// Reply to that specific peer only.
-				s.p2p.Send(*res, req.Peer)
-				log.Infof("Responding to p2p request with collation with headerHash: %v", res.HeaderHash.Hex())
+				s.p2p.Send(res, req.Peer)
+				log.Infof("Responding to p2p request with collation with headerHash: 0x%v", common.Bytes2Hex(res.HeaderHash))
 			}
 		case <-s.bodyRequests.Err():
 			log.Debugf("Subscriber failed")

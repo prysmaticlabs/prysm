@@ -314,6 +314,9 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 // Setup initializes profiling based on the CLI flags.
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
+	// TODO: Set verbosity level from flag.
+	log.SetLevel(log.DebugLevel)
+
 	// profiling, tracing
 	runtime.MemProfileRate = ctx.GlobalInt(MemProfileRateFlag.Name)
 	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
