@@ -54,7 +54,8 @@ func TestStartDiscovery_HandlePeerFound(t *testing.T) {
 func expectPeers(t *testing.T, h *bhost.BasicHost, n int) {
 	if len(h.Peerstore().Peers()) != n {
 		t.Errorf(
-			"Expected 2 peer for host %v, but has %d peers. They are: %v.",
+			"Expected %d peer for host %v, but has %d peers. They are: %v.",
+			n,
 			h.ID(),
 			len(h.Peerstore().Peers()),
 			h.Peerstore().Peers(),
