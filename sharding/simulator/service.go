@@ -4,16 +4,16 @@ import (
 	"context"
 	"crypto/rand"
 	"math/big"
+	mrand "math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
+
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,8 +45,7 @@ func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.S
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
-
-	s.requestFeed = s.p2p.Feed(messages.CollationBodyRequest{})
+	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
 
 	go s.broadcastTransactions(time.NewTicker(s.delay).C, s.ctx.Done())
 	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.NewTicker(s.delay).C, s.ctx.Done())
@@ -79,18 +78,20 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			}
 
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
+			// Collation for current period may not exist yet, so let's ask for
+			// the collation at period - 1.
+			period = period.Sub(period, big.NewInt(1))
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
 				log.Errorf("Error constructing collation body request: %v", err)
 				continue
 			}
+
 			if req != nil {
-				msg := p2p.Message{
-					Peer: p2p.Peer{},
-					Data: *req,
-				}
-				s.requestFeed.Send(msg)
-				log.Info("Sent request for collation body via a shardp2p feed")
+				s.p2p.Broadcast(req)
+				log.Debug("Sent request for collation body via a shardp2p broadcast")
+			} else {
+				log.Warn("Syncer generated nil CollationBodyRequest")
 			}
 		}
 	}
@@ -107,16 +108,20 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-cha
 			return
 		case <-delayChan:
 			tx := createTestTx()
-			s.p2p.Broadcast(messages.TransactionBroadcast{Transaction: tx})
-			log.Debugf("Transaction broadcast with hash: %v", tx.Hash().Hex())
+			s.p2p.Broadcast(tx)
+			log.Debug("Transaction broadcasted")
 		}
 	}
 }
 
 // createTestTx is a helper method to generate tx with random data bytes.
 // it is used for broadcastTransactions.
-func createTestTx() *types.Transaction {
+func createTestTx() *pb.Transaction {
 	data := make([]byte, 1024)
 	rand.Read(data)
-	return types.NewTransaction(0, common.HexToAddress("0x0"), nil, 0, nil, data)
+	// TODO: add more fields.
+	return &pb.Transaction{
+		Nonce: mrand.Uint64(),
+		Input: data,
+	}
 }
