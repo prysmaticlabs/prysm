@@ -23,12 +23,16 @@ type BeaconChain struct {
 // NewBeaconChain initializes an instance using genesis state parameters if
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
-	if _, err := db.Get([]byte(stateLookupKey)); err != nil {
-		log.Errorf("State does not exist: %v", err)
-	}
-	return &BeaconChain{
+	beaconChain := &BeaconChain{
 		db: db,
-	}, nil
+	}
+	if _, err := db.Get([]byte(stateLookupKey)); err != nil {
+		log.Info("No chainstate found on disk, initializing beacon from genesis")
+		active, crystallized := types.NewGenesisStates()
+		beaconChain.activeState = active
+		beaconChain.crystallizedState = crystallized
+	}
+	return beaconChain, nil
 }
 
 // ActiveState exposes a getter to external services.

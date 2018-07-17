@@ -24,7 +24,7 @@ func init() {
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	b, err := NewBeaconDB(context.Background(), "/tmp/datadir", "beaconchaindata", false)
+	b, err := NewBeaconDB(context.Background(), "/tmp/lifecycledir", "beaconchaindata", false)
 	if err != nil {
 		t.Fatalf("could not initialize a new DB: %v", err)
 	}

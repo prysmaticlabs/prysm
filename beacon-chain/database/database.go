@@ -61,7 +61,7 @@ func (b *BeaconDB) Start() {
 
 // Stop the beaconDB service gracefully.
 func (b *BeaconDB) Stop() error {
-	log.Info("Stopping shardDB service")
+	log.Info("Stopping beaconDB service")
 	b.db.Close()
 	b.cancel()
 	return nil
