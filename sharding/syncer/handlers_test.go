@@ -15,9 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
 	shardingTypes "github.com/prysmaticlabs/geth-sharding/sharding/types"
 )
@@ -147,11 +147,11 @@ func TestCollationBodyResponse(t *testing.T) {
 	proposerAddress := common.BytesToAddress([]byte{})
 	chunkRoot := common.BytesToHash([]byte{})
 
-	goodReq := messages.CollationBodyRequest{
-		ChunkRoot: &chunkRoot,
-		ShardID:   big.NewInt(1),
-		Period:    big.NewInt(1),
-		Proposer:  &proposerAddress,
+	goodReq := pb.CollationBodyRequest{
+		ChunkRoot:       chunkRoot.Bytes(),
+		ShardId:         1,
+		Period:          1,
+		ProposerAddress: proposerAddress.Bytes(),
 	}
 	incorrectReq := faultyRequest{}
 
@@ -160,31 +160,41 @@ func TestCollationBodyResponse(t *testing.T) {
 
 	badMsg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: incorrectReq,
+		Data: &incorrectReq,
 	}
 
 	goodMsg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: goodReq,
+		Data: &goodReq,
 	}
 
 	if _, err := RespondCollationBody(badMsg, fetcher); err == nil {
-		t.Errorf("Incorrect request should throw error. Expecting messages.CollationBodyRequest{}, received: %v", incorrectReq)
+		t.Errorf("Incorrect request should throw error. Expecting pb.CollationBodyRequest{}, received: %v", incorrectReq)
 	}
 
 	if _, err := RespondCollationBody(goodMsg, faultyFetcher); err == nil {
 		t.Error("Faulty collatiom fetcher should cause function to throw error. no error thrown.")
 	}
 
-	header := shardingTypes.NewCollationHeader(goodReq.ShardID, goodReq.ChunkRoot, goodReq.Period, goodReq.Proposer, [32]byte{})
+	shardID := new(big.Int).SetUint64(goodReq.ShardId)
+	chunkRoot = common.BytesToHash(goodReq.ChunkRoot)
+	period := new(big.Int).SetUint64(goodReq.Period)
+	proposer := common.BytesToAddress(goodReq.ProposerAddress)
+
+	header := shardingTypes.NewCollationHeader(
+		shardID,
+		&chunkRoot,
+		period,
+		&proposer,
+		[32]byte{})
 	body := []byte{}
 	response, err := RespondCollationBody(goodMsg, fetcher)
 	if err != nil {
 		t.Fatalf("Could not construct collation body response: %v", err)
 	}
 
-	if response.HeaderHash.Hex() != header.Hash().Hex() {
-		t.Errorf("Incorrect header hash received. want: %v, received: %v", header.Hash().Hex(), response.HeaderHash.Hex())
+	if common.BytesToHash(response.HeaderHash).Hex() != header.Hash().Hex() {
+		t.Errorf("Incorrect header hash received. want: %v, received: %v", header.Hash().Hex(), common.BytesToHash(response.HeaderHash).Hex())
 	}
 
 	if !bytes.Equal(response.Body, body) {
@@ -237,19 +247,19 @@ func TestConstructNotaryRequest(t *testing.T) {
 		t.Errorf("constructNotaryRequest should return nil for an inexistent collation header. got: %v", err)
 	}
 
-	if request.ChunkRoot.Hex() != chunkRoot.Hex() {
-		t.Errorf("Chunk root from notary request incorrect. want: %v, got: %v", chunkRoot.Hex(), request.ChunkRoot.Hex())
+	if common.BytesToHash(request.ChunkRoot).Hex() != chunkRoot.Hex() {
+		t.Errorf("Chunk root from notary request incorrect. want: %v, got: %v", chunkRoot.Hex(), common.BytesToHash(request.ChunkRoot).Hex())
 	}
 
-	if request.Proposer.Hex() != proposerAddress.Hex() {
-		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), request.Proposer.Hex())
+	if common.BytesToAddress(request.ProposerAddress).Hex() != proposerAddress.Hex() {
+		t.Errorf("Proposer address from notary request incorrect. want: %v, got: %v", proposerAddress.Hex(), common.BytesToAddress(request.ProposerAddress).Hex())
 	}
 
-	if request.ShardID.Cmp(shardID) != 0 {
-		t.Errorf("ShardID from notary request incorrect. want: %s, got: %s", shardID, request.ShardID)
+	if shardID.Uint64() != request.ShardId {
+		t.Errorf("ShardID from notary request incorrect. want: %d, got: %d", shardID.Uint64(), request.ShardId)
 	}
 
-	if request.Period.Cmp(period) != 0 {
-		t.Errorf("Proposer address from notary request incorrect. want: %s, got: %s", period, request.Period)
+	if request.Period != period.Uint64() {
+		t.Errorf("Proposer address from notary request incorrect. want: %d, got: %d", period.Uint64(), request.Period)
 	}
 }

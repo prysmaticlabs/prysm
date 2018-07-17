@@ -24,6 +24,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "medium",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [

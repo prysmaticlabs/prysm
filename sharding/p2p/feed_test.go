@@ -1,6 +1,9 @@
 package p2p
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestFeed_ReturnsSameFeed(t *testing.T) {
 	tests := []struct {
@@ -13,6 +16,7 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 		{a: 'a', b: 'b', want: true},
 		{a: struct{ c int }{c: 1}, b: struct{ c int }{c: 2}, want: true},
 		{a: struct{ c string }{c: "a"}, b: struct{ c string }{c: "b"}, want: true},
+		{a: reflect.TypeOf(struct{ c int }{c: 1}), b: struct{ c int }{c: 2}, want: true},
 		// Inequality tests
 		{a: 1, b: '2', want: false},
 		{a: 'a', b: 1, want: false},
