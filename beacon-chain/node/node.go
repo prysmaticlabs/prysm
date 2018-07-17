@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/database"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared"
@@ -17,34 +18,39 @@ import (
 	"github.com/urfave/cli"
 )
 
+var beaconChainDBName = "beaconchaindata"
+
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx         *cli.Context
-	beaconChain *blockchain.BeaconChain
-	services    *shared.ServiceRegistry
-	lock        sync.RWMutex
-	stop        chan struct{} // Channel to wait for termination notifications.
+	ctx      *cli.Context
+	services *shared.ServiceRegistry
+	lock     sync.RWMutex
+	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func New(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
-	chain, err := blockchain.NewBeaconChain()
-	if err != nil {
+
+	beacon := &BeaconNode{
+		ctx:      ctx,
+		services: registry,
+		stop:     make(chan struct{}),
+	}
+
+	path := ctx.GlobalString(types.DataDirFlag.Name)
+	if err := beacon.registerBeaconDB(path); err != nil {
 		return nil, err
 	}
 
-	beacon := &BeaconNode{
-		ctx:         ctx,
-		services:    registry,
-		beaconChain: chain,
-		stop:        make(chan struct{}),
+	if err := beacon.registerBlockchainService(); err != nil {
+		return nil, err
 	}
 
-	if err := beacon.registerWeb3Service(); err != nil {
+	if err := beacon.registerPOWChainService(); err != nil {
 		return nil, err
 	}
 
@@ -93,21 +99,32 @@ func (b *BeaconNode) Close() {
 	close(b.stop)
 }
 
-func (b *BeaconNode) registerWeb3Service() error {
+func (b *BeaconNode) registerBeaconDB(path string) error {
+	beaconDB, err := database.NewBeaconDB(context.TODO(), path, beaconChainDBName, false)
+	if err != nil {
+		return fmt.Errorf("could not register beaconDB service: %v", err)
+	}
+	return b.services.RegisterService(beaconDB)
+}
+
+func (b *BeaconNode) registerBlockchainService() error {
+	var beaconDB *database.BeaconDB
+	if err := b.services.FetchService(&beaconDB); err != nil {
+		return err
+	}
+
+	blockchainService, err := blockchain.NewChainService(context.TODO(), beaconDB)
+	if err != nil {
+		return fmt.Errorf("could not register blockchain service: %v", err)
+	}
+	return b.services.RegisterService(blockchainService)
+}
+
+func (b *BeaconNode) registerPOWChainService() error {
 	endpoint := b.ctx.GlobalString(types.Web3ProviderFlag.Name)
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), endpoint)
 	if err != nil {
-		return fmt.Errorf("could not register web3Service: %v", err)
+		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
 	}
 	return b.services.RegisterService(web3Service)
 }
-
-// func (b *BeaconNode) registerBeaconDB(ctx *cli.Context) error {
-// path = ctx.GlobalString(utils.DataDirFlag.Name)
-// shardDB, err := database.NewShardDB(path, shardChainDBName, false)
-// if err != nil {
-// 	return fmt.Errorf("could not register shardDB service: %v", err)
-// }
-// return s.services.RegisterService(shardDB)
-// return nil
-// }

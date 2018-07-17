@@ -53,7 +53,7 @@ func NewWeb3Service(ctx context.Context, endpoint string) (*Web3Service, error) 
 
 // Start a web3 service's main event loop.
 func (w *Web3Service) Start() {
-	log.Infof("Starting web3 PoW chain service at %s", w.endpoint)
+	log.Infof("Starting web3 proof-of-work chain service at %s", w.endpoint)
 	rpcClient, err := rpc.Dial(w.endpoint)
 	if err != nil {
 		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
@@ -67,7 +67,7 @@ func (w *Web3Service) Start() {
 func (w *Web3Service) Stop() error {
 	defer w.cancel()
 	defer close(w.headerChan)
-	log.Info("Stopping web3 PoW chain service")
+	log.Info("Stopping web3 proof-of-work chain service")
 	return nil
 }
 

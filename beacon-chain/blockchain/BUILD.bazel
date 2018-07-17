@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/database:go_default_library",
         "//beacon-chain/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
         "@com_github_ethereum_go_ethereum//rlp:go_default_library",

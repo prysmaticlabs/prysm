@@ -6,7 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
+	log "github.com/sirupsen/logrus"
 )
+
+var stateLookupKey = "beacon-chain-state"
 
 // BeaconChain represents the core PoS blockchain object containing
 // both a crystallized and active state.
@@ -20,6 +23,9 @@ type BeaconChain struct {
 // NewBeaconChain initializes an instance using genesis state parameters if
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
+	if _, err := db.Get([]byte(stateLookupKey)); err != nil {
+		log.Errorf("State does not exist: %v", err)
+	}
 	return &BeaconChain{
 		db: db,
 	}, nil
@@ -57,5 +63,5 @@ func (b *BeaconChain) persist() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put([]byte("beacon-chain-state"), enc)
+	return b.db.Put([]byte(stateLookupKey), enc)
 }

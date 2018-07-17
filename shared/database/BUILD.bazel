@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["inmemory.go"],
+    importpath = "github.com/prysmaticlabs/geth-sharding/shared/database",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["inmemory_test.go"],
+    embed = [":go_default_library"],
+    deps = ["@com_github_ethereum_go_ethereum//ethdb:go_default_library"],
+)

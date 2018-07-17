@@ -77,7 +77,7 @@ func TestStop(t *testing.T) {
 	}
 
 	msg := hook.LastEntry().Message
-	want := "Stopping web3 PoW chain service"
+	want := "Stopping web3 proof-of-work chain service"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
