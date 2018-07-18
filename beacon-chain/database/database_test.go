@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -17,7 +19,8 @@ var _ = shared.Service(&BeaconDB{})
 var testDB *BeaconDB
 
 func init() {
-	beaconDB, _ := NewBeaconDB(context.Background(), "/tmp/datadir", "beaconchaindata", false)
+	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	beaconDB, _ := NewBeaconDB(context.Background(), tmp, "beaconchaindata", false)
 	testDB = beaconDB
 	testDB.Start()
 }
@@ -25,7 +28,8 @@ func init() {
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	b, err := NewBeaconDB(context.Background(), "/tmp/lifecycledir", "beaconchaindata", false)
+	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
+	b, err := NewBeaconDB(context.Background(), tmp, "beaconchaindata", false)
 	if err != nil {
 		t.Fatalf("could not initialize a new DB: %v", err)
 	}

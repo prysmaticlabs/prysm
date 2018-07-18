@@ -1,6 +1,8 @@
 package database
 
 import (
+	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -16,15 +18,16 @@ var _ = types.Service(&ShardDB{})
 var testDB *ShardDB
 
 func init() {
-	shardDB, _ := NewShardDB("/tmp/datadir", "shardchaindata", false)
+	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	shardDB, _ := NewShardDB(tmp, "shardchaindata", false)
 	testDB = shardDB
 	testDB.Start()
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-
-	s, err := NewShardDB("/tmp/datadir", "shardchaindb", false)
+	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
+	s, err := NewShardDB(tmp, "shardchaindb", false)
 	if err != nil {
 		t.Fatalf("could not initialize a new sb: %v", err)
 	}
