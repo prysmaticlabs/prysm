@@ -10,6 +10,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
+	log "github.com/sirupsen/logrus"
+	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 // Shard defines a way for services attached to a sharding-enabled node to
@@ -45,6 +47,10 @@ func (s *Shard) ValidateShardID(h *CollationHeader) error {
 // HeaderByHash looks up a collation header from the shardDB using the header's hash.
 func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 	encoded, err := s.shardDB.Get(hash.Bytes())
+	if err != nil && err.Error() == leveldberrors.ErrNotFound.Error() {
+		log.Debugf("No header found for hash %v", hash.Hex())
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("get failed: %v", err)
 	}
@@ -67,6 +73,10 @@ func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, erro
 	header, err := s.HeaderByHash(headerHash)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch header by hash: %v", err)
+	}
+
+	if header == nil {
+		return nil, nil
 	}
 
 	body, err := s.BodyByChunkRoot(header.ChunkRoot())
