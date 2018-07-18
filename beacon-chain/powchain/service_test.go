@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/params"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -40,19 +41,19 @@ func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 func TestNewWeb3Service(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
-	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err == nil {
+	if _, err := NewWeb3Service(ctx, &params.Web3ServiceConfig{endpoint, "", common.Address{}}); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
 	endpoint = "ftp://127.0.0.1"
-	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err == nil {
+	if _, err := NewWeb3Service(ctx, &params.Web3ServiceConfig{endpoint, "", common.Address{}}); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
 	endpoint = "ws://127.0.0.1"
-	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err != nil {
+	if _, err := NewWeb3Service(ctx, &params.Web3ServiceConfig{endpoint, "", common.Address{}}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
 	endpoint = "ipc://geth.ipc"
-	if _, err := NewWeb3Service(ctx, endpoint, common.Address{}, ""); err != nil {
+	if _, err := NewWeb3Service(ctx, &params.Web3ServiceConfig{endpoint, "", common.Address{}}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
 }
@@ -61,7 +62,7 @@ func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), &params.Web3ServiceConfig{endpoint, "", common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -80,7 +81,7 @@ func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), &params.Web3ServiceConfig{endpoint, "", common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -105,7 +106,7 @@ func TestStop(t *testing.T) {
 func TestBadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), &params.Web3ServiceConfig{endpoint, "", common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -120,7 +121,7 @@ func TestBadReader(t *testing.T) {
 
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), &params.Web3ServiceConfig{endpoint, "", common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -151,7 +152,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 func TestBadLogger(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), &params.Web3ServiceConfig{endpoint, "", common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -167,7 +168,7 @@ func TestBadLogger(t *testing.T) {
 func TestGoodLogger(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), &params.Web3ServiceConfig{endpoint, "", common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}

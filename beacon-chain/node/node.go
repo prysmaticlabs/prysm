@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/params"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	"github.com/prysmaticlabs/geth-sharding/shared"
@@ -87,11 +88,11 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) registerWeb3Service() error {
-	endpoint := b.ctx.GlobalString(types.Web3ProviderFlag.Name)
-	pubKey := b.ctx.GlobalString(types.PubKeyFlag.Name)
-	vrcAddr := common.HexToAddress(b.ctx.GlobalString(types.VrcContractFlag.Name))
-
-	web3Service, err := powchain.NewWeb3Service(context.TODO(), endpoint, vrcAddr, pubKey)
+	web3Service, err := powchain.NewWeb3Service(context.TODO(), &params.Web3ServiceConfig{
+		Endpoint: b.ctx.GlobalString(types.Web3ProviderFlag.Name),
+		Pubkey:   b.ctx.GlobalString(types.PubKeyFlag.Name),
+		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(types.VrcContractFlag.Name)),
+	})
 	if err != nil {
 		return fmt.Errorf("could not register web3Service: %v", err)
 	}

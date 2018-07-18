@@ -11,6 +11,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/params"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,9 +46,9 @@ type Web3Service struct {
 
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string.
-func NewWeb3Service(ctx context.Context, endpoint string, vrcAddress common.Address, pubKey string) (*Web3Service, error) {
-	if !strings.HasPrefix(endpoint, "ws") && !strings.HasPrefix(endpoint, "ipc") {
-		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", endpoint)
+func NewWeb3Service(ctx context.Context, config *params.Web3ServiceConfig) (*Web3Service, error) {
+	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
+		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
 	}
 	web3ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
@@ -55,12 +56,12 @@ func NewWeb3Service(ctx context.Context, endpoint string, vrcAddress common.Addr
 		cancel:              cancel,
 		headerChan:          make(chan *gethTypes.Header),
 		logChan:             make(chan gethTypes.Log),
-		pubKey:              pubKey,
-		endpoint:            endpoint,
+		pubKey:              config.Pubkey,
+		endpoint:            config.Endpoint,
 		validatorRegistered: false,
 		blockNumber:         nil,
 		blockHash:           common.BytesToHash([]byte{}),
-		vrcAddress:          vrcAddress,
+		vrcAddress:          config.VrcAddr,
 	}, nil
 }
 
