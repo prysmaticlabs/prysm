@@ -25,29 +25,22 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 Create a folder in your `$GOPATH` and navigate to it
 
 ```
-$ mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
+mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
 ```
 
 Clone our repository:
 
 ```
-$ git clone https://github.com/prysmaticlabs/geth-sharding
+git clone https://github.com/prysmaticlabs/geth-sharding
 ```
 
 Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
 
 ```
-$ bazel
+bazel version
 ```
 
-You will also need to download Geth:
-
-```
-$ go get -u github.com/ethereum/go-ethereum
-```
-
-Building geth requires both a Go (version 1.7 or later) and a C compiler.
-You can install them using your favourite package manager.
+Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build geth-sharding.
 
 # Sharding Instructions
 
@@ -117,14 +110,25 @@ Concurrently, you will need to run another service that is tasked with processin
 ## Running a Collation Proposal Node
 
 ```
-$ ./bazel-bin/path/to/your/sharding/binary --actor "proposer" --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
+bazel run //sharding -- \
+   --actor "proposer" \
+   --datadir /path/to/your/datadir \
+   --password /path/to/your/password.txt \
+   --shardid 0 \
+   --networkid 12345
 ```
 
 This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals on shard 0 (collation headers) to the SMC via the `addHeader` function.
 
 ## Running an Observer Node
 
-    $ ./bazel-bin/path/to/your/sharding/binary --datadir /path/to/your/datadir --password /path/to/your/password.txt --shardid 0 --networkid 12345
+```
+bazel run //sharding -- \
+   --datadir /path/to/your/datadir \
+   --password /path/to/your/password.txt \
+   --shardid 0 \
+   --networkid 12345
+```
 
 Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network on shard 0.
 
@@ -149,7 +153,7 @@ $ bazel test //...
 To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run
 
 ```
-$ gometalinter ./
+$ gometalinter ./...
 ```
 
 # Contributing
