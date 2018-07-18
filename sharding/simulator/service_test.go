@@ -4,23 +4,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 
+=======
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
-
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(ioutil.Discard)
+}
 
 var _ = types.Service(&Simulator{})
 
@@ -89,16 +99,22 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	simulator.Start()
+	msg := hook.LastEntry().Message
+	if msg != "Starting simulator service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting simulator service", msg)
 	}
 
 	if err := simulator.Stop(); err != nil {
 		t.Fatalf("Unable to stop simulator service: %v", err)
 	}
 
-	msg := hook.LastEntry().Message
+	msg = hook.LastEntry().Message
 	if msg != "Stopping simulator service" {
 		t.Errorf("incorrect log, expected %s, got %s", "Stopping simulator service", msg)
 	}
@@ -127,8 +143,6 @@ func TestSimulateAttesterRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
-
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
@@ -140,7 +154,7 @@ func TestSimulateAttesterRequests_FaultyReader(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	msg := hook.AllEntries()[0].Message
+	msg := hook.LastEntry().Message
 	want := "Could not fetch current block number: cannot fetch block by number"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
@@ -166,8 +180,6 @@ func TestSimulateAttesterRequests_FaultyCaller(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
-
-	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -207,7 +219,6 @@ func TestSimulateAttesterRequests(t *testing.T) {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
 
-	simulator.requestFeed = server.Feed(messages.CollationBodyRequest{})
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
@@ -220,8 +231,8 @@ func TestSimulateAttesterRequests(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
-	msg := hook.AllEntries()[0].Message
-	want := "Sent request for collation body via a shardp2p feed"
+	msg := hook.Entries[1].Message
+	want := "Sent request for collation body via a shardp2p broadcast"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -241,7 +252,11 @@ func TestBroadcastTransactions(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
+<<<<<<< HEAD
 	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1)
+=======
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -258,9 +273,15 @@ func TestBroadcastTransactions(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
+<<<<<<< HEAD
 	msg := hook.AllEntries()[0].Message
 	want := "Transaction broadcasted"
 	if msg != want {
+=======
+	msg := hook.Entries[1].Message
+	want := "Transaction broadcasted"
+	if !strings.Contains(msg, want) {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 

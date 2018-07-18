@@ -44,7 +44,11 @@ func (n *Attester) attestCollations() {
 	// TODO: handle this better through goroutines. Right now, these methods
 	// are blocking.
 	if n.smcClient.DepositFlag() {
+<<<<<<< HEAD:sharding/attester/service.go
 		if err := joinAttesterPool(n.smcClient, n.smcClient, n.config); err != nil {
+=======
+		if err := joinNotaryPool(n.smcClient, n.smcClient); err != nil {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service.go
 			log.Errorf("Could not fetch current block number: %v", err)
 			return
 		}

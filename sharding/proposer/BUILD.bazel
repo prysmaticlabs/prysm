@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/proposer",
     visibility = ["//sharding:__subpackages__"],
     deps = [
+        "//proto/sharding/v1:go_default_library",
         "//sharding/database:go_default_library",
         "//sharding/mainchain:go_default_library",
         "//sharding/p2p:go_default_library",
@@ -17,6 +18,7 @@ go_library(
         "//sharding/syncer:go_default_library",
         "//sharding/txpool:go_default_library",
         "//sharding/types:go_default_library",
+        "//shared/legacyutil:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
@@ -27,6 +29,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
@@ -35,6 +38,5 @@ go_test(
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
     ],
 )

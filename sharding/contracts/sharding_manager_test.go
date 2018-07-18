@@ -30,9 +30,14 @@ type testAccount struct {
 
 var (
 	accountBalance2000Eth, _     = new(big.Int).SetString("2000000000000000000000", 10)
+<<<<<<< HEAD
 	attesterDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	attesterDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
 	FastForward100Blocks         = 100
+=======
+	notaryDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
+	notaryDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	ctx                          = context.Background()
 )
 
@@ -163,6 +168,9 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 	}
 
 	cr, err := s.smc.CollationRecords(&bind.CallOpts{}, shard, period)
+	if err != nil {
+		return err
+	}
 	if cr.ChunkRoot != [32]byte{chunkRoot} {
 		return fmt.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
@@ -347,9 +355,18 @@ func TestAttesterDeregisterThenRegister(t *testing.T) {
 		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
+<<<<<<< HEAD
 	// Attester 0 re-registers again.
 	err = s.registerAttesters(attesterDeposit, 0, 1)
 	err = checkAttesterPoolLength(s.smc, big.NewInt(0))
+=======
+	// Notary 0 re-registers again.
+	err = s.registerNotaries(notaryDeposit, 0, 1)
+	if err == nil {
+		t.Error("Expected re-registration to fail")
+	}
+	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	if err != nil {
 		t.Errorf("Attester pool length mismatched: %v", err)
 	}
@@ -406,6 +423,7 @@ func TestAttesterRelease(t *testing.T) {
 func TestAttesterInstantRelease(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
+<<<<<<< HEAD
 	// Attester 0 registers.
 	err := s.registerAttesters(attesterDeposit, 0, 1)
 	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
@@ -423,6 +441,27 @@ func TestAttesterInstantRelease(t *testing.T) {
 
 	// Attester 0 tries to release before lockup ends.
 	_, err = s.smc.ReleaseAttester(s.testAccounts[0].txOpts)
+=======
+	// Notary 0 registers.
+	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
+		t.Error(err)
+	}
+	if err := checkNotaryPoolLength(s.smc, big.NewInt(1)); err != nil {
+		t.Errorf("Notary pool length mismatched: %v", err)
+	}
+	s.fastForward(1)
+
+	// Notary 0 deregisters.
+	s.deregisterNotaries(0, 1)
+	if err := checkNotaryPoolLength(s.smc, big.NewInt(0)); err != nil {
+		t.Errorf("Notary pool length mismatched: %v", err)
+	}
+
+	// Notary 0 tries to release before lockup ends.
+	if _, err := s.smc.ReleaseNotary(s.testAccounts[0].txOpts); err == nil {
+		t.Error("Expected release notary to fail")
+	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.backend.Commit()
 	attester, err := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
@@ -432,8 +471,16 @@ func TestAttesterInstantRelease(t *testing.T) {
 		t.Errorf("Attester deposit flag should be true before released")
 	}
 	balance, err := s.backend.BalanceAt(ctx, s.testAccounts[0].addr, nil)
+<<<<<<< HEAD
 	if balance.Cmp(attesterDeposit) > 0 {
 		t.Errorf("Attester received deposit before lockup ends")
+=======
+	if err != nil {
+		t.Error(err)
+	}
+	if balance.Cmp(notaryDeposit) > 0 {
+		t.Errorf("Notary received deposit before lockup ends")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 }
 
@@ -605,8 +652,15 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 // TestSubmitVote tests attester submit votes in normal condition.
 func TestSubmitVote(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
 	// Attester 0 registers.
 	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
+	// Notary 0 registers.
+	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
+		t.Error(err)
+	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -614,8 +668,7 @@ func TestSubmitVote(t *testing.T) {
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
-	err = s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
-	if err != nil {
+	if err := s.addHeader(&s.testAccounts[0], shard0, period1, 'A'); err != nil {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
@@ -634,6 +687,9 @@ func TestSubmitVote(t *testing.T) {
 		t.Fatalf("Attester submits vote failed: %v", err)
 	}
 	c, err = s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
+	if err != nil {
+		t.Error(err)
+	}
 	if c.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("Incorrect attester vote count, want: 1, got: %v", c)
 	}
@@ -652,8 +708,15 @@ func TestSubmitVote(t *testing.T) {
 // TestSubmitVoteTwice tests attester tries to submit same vote twice.
 func TestSubmitVoteTwice(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
 	// Attester 0 registers.
 	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
+	// Notary 0 registers.
+	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
+		t.Error(err)
+	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -661,11 +724,11 @@ func TestSubmitVoteTwice(t *testing.T) {
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
-	err = s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
-	if err != nil {
+	if err := s.addHeader(&s.testAccounts[0], shard0, period1, 'A'); err != nil {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
+<<<<<<< HEAD
 	// Attester 0 votes on header.
 	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
 	if err != nil {
@@ -676,6 +739,16 @@ func TestSubmitVoteTwice(t *testing.T) {
 	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
 	if err == nil {
 		t.Errorf("attester voting twice should have failed")
+=======
+	// Notary 0 votes on header.
+	if err := s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A'); err != nil {
+		t.Errorf("Notary submits vote failed: %v", err)
+	}
+
+	// Notary 0 votes on header again, it should fail.
+	if err := s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A'); err == nil {
+		t.Errorf("notary voting twice should have failed")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 
 	// Check attester's vote count is correct in shard.
@@ -715,8 +788,15 @@ func TestSubmitVoteByNonEligibleAttester(t *testing.T) {
 // TestSubmitVoteWithOutAHeader tests an attester tries to submit vote before header gets added.
 func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
 	// Attester 0 registers.
 	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
+	// Notary 0 registers.
+	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
+		t.Error(err)
+	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -725,10 +805,16 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	index0 := big.NewInt(0)
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
 
+<<<<<<< HEAD
 	// Attester 0 votes on header, it should fail because no header has added.
 	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
 	if err == nil {
 		t.Errorf("Attester votes should have failed due to missing header")
+=======
+	// Notary 0 votes on header, it should fail because no header has added.
+	if err := s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A'); err == nil {
+		t.Errorf("Notary votes should have failed due to missing header")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 
 	// Check attester's vote count is correct in shard
@@ -741,8 +827,15 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 // TestSubmitVoteWithInvalidArgs tests attester submits vote using wrong chunkroot and period.
 func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
 	// Attester 0 registers.
 	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
+	// Notary 0 registers.
+	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
+		t.Error(err)
+	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -750,13 +843,13 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	shard0 := big.NewInt(0)
 	index0 := big.NewInt(0)
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
-	err = s.addHeader(&s.testAccounts[0], shard0, period1, 'A')
-	if err != nil {
+	if err := s.addHeader(&s.testAccounts[0], shard0, period1, 'A'); err != nil {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
 	// Attester voting with incorrect period.
 	period2 := big.NewInt(2)
+<<<<<<< HEAD
 	err = s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'A')
 	if err == nil {
 		t.Errorf("Attester votes should have failed due to incorrect period")
@@ -766,5 +859,14 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	err = s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'B')
 	if err == nil {
 		t.Errorf("Attester votes should have failed due to incorrect chunk root")
+=======
+	if err := s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'A'); err == nil {
+		t.Errorf("Notary votes should have failed due to incorrect period")
+	}
+
+	// Notary voting with incorrect chunk root.
+	if err := s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'B'); err == nil {
+		t.Errorf("Notary votes should have failed due to incorrect chunk root")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 }

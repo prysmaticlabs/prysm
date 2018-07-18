@@ -1,22 +1,18 @@
 package attester
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -48,7 +44,11 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 		}
 
 		if v {
+<<<<<<< HEAD:sharding/attester/attester.go
 			if err := checkSMCForAttester(caller, account, head); err != nil {
+=======
+			if err := checkSMCForNotary(caller, account); err != nil {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/notary.go
 				return fmt.Errorf("unable to watch shards. %v", err)
 			}
 		}
@@ -59,8 +59,13 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 // collation for the available shards in the SMC. The function calls
 // getEligibleAttester from the SMC and attester a collation if
 // conditions are met.
+<<<<<<< HEAD:sharding/attester/attester.go
 func checkSMCForAttester(caller mainchain.ContractCaller, account *accounts.Account, head *gethTypes.Header) error {
 	log.Info("Checking if we are an eligible collation attester for a shard...")
+=======
+func checkSMCForNotary(caller mainchain.ContractCaller, account *accounts.Account) error {
+	log.Info("Checking if we are an eligible collation notary for a shard...")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/notary.go
 	shardCount, err := caller.GetShardCount()
 	if err != nil {
 		return fmt.Errorf("can't get shard count from smc: %v", err)
@@ -112,6 +117,7 @@ func isAccountInAttesterPool(caller mainchain.ContractCaller, account *accounts.
 	return nreg.Deposited, nil
 }
 
+<<<<<<< HEAD:sharding/attester/attester.go
 // hasAccountBeenDeregistered checks if the account has been deregistered from the attester pool.
 func hasAccountBeenDeregistered(caller mainchain.ContractCaller, account *accounts.Account) (bool, error) {
 	nreg, err := getAttesterRegistry(caller, account)
@@ -264,6 +270,12 @@ func verifyAttester(manager mainchain.ContractManager, client mainchain.EthClien
 // attester in the SMC. If the account is not in the set, it will deposit ETH
 // into contract.
 func joinAttesterPool(manager mainchain.ContractManager, client mainchain.EthClient, config *shardparams.Config) error {
+=======
+// joinNotaryPool checks if the deposit flag is true and the account is a
+// notary in the SMC. If the account is not in the set, it will deposit ETH
+// into contract.
+func joinNotaryPool(manager mainchain.ContractManager, client mainchain.EthClient) error {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/notary.go
 	if !client.DepositFlag() {
 		return errors.New("joinAttesterPool called when deposit flag was not set")
 	}
@@ -311,6 +323,7 @@ func joinAttesterPool(manager mainchain.ContractManager, client mainchain.EthCli
 
 	return nil
 }
+<<<<<<< HEAD:sharding/attester/attester.go
 
 // leaveAttesterPool causes the attester to deregister and leave the attester pool
 // by calling the DeregisterAttester function in the SMC.
@@ -493,3 +506,5 @@ func submitVote(shard types.Shard, manager mainchain.ContractManager, client mai
 
 	return err
 }
+=======
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/notary.go

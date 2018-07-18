@@ -1,4 +1,4 @@
-package beacon
+package params
 
 const (
 	// AttesterCount is the number of attesters per committee/

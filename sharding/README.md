@@ -13,7 +13,11 @@ This document serves as a main reference for Prysmatic Labs' sharding and beacon
 -   [Beacon Chain and Sharding Alpha Implementation](#beacon-chain-and-sharding-alpha-implementation)
     -   [System Architecture](#system-architecture)
     -   [System Start and User Entrypoint](#system-start-and-user-entrypoint)
+<<<<<<< HEAD
     -   [Attester Sampling](#attester-sampling)
+=======
+    -   [Notary Sampling](#notary-sampling)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 -   [Security Considerations](#security-considerations)
     -   [Not Included in Ruby Release](#not-included-in-ruby-release)
     -   [Enforced Windback](#enforced-windback)
@@ -31,12 +35,17 @@ An approach to solving the scalability trilemma is the idea of blockchain shardi
 
 ## Basic Sharding Idea and Design
 
+<<<<<<< HEAD
 A sharded blockchain system is made possible by having nodes store “signed metadata” in the main chain of latest changes within each shard chain. Through this, we manage to create a layer of abstraction that tells us enough information about the global, synced state of parallel shard chains. These messages are called **cross-links**, which are specific structures that encompass important information about the shard blocks (known as **collations**) of a shard in question. Collations are created by actors known as **proposers** that are tasked with packaging transactions into collation bodies. These collations are then voted on by a party of actors known as **attesters**. These attesters are randomly selected for particular periods of time in certain shards and are then tasked into reaching consensus on these chains via a **proof of stake** system.
+=======
+A sharded blockchain system is made possible by having nodes store “signed metadata” in the main chain of latest changes within each shard chain. Through this, we manage to create a layer of abstraction that tells us enough information about the global, synced state of parallel shard chains. These messages are called **cross-links**, which are specific structures that encompass important information about the shard blocks (known as **collations**) of a shard in question. Collations are created by actors known as **proposers** that are tasked with packaging transactions into collation bodies. These collations are then voted on by a party of actors known as **notaries**. These notaries are randomly selected for particular periods of time in certain shards and are then tasked into reaching consensus on these chains via a **proof of stake** system.
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 Cross-links are stored in blocks on a full proof of stake chain known as a **beacon chain**, which will be implemented as a sidechain to the Ethereum main chain initially.
 
 Cross-links are holistic descriptions of the state and transactions on a certain shard. Transactions in a shard are stored in **collations** which contain both a collation header and collation body  A collation header at its most basic, high level summary contains information about who created it, when it was added to a shard, and its internal data stored as serialized blobs.
 
+<<<<<<< HEAD
 For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have a few types of nodes that do the heavy lifting of our sharding logic: **proposers, attesters, and attesters**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, grow the shard chains, and submit cross-links to the beacon chain.
 
 We still keep the Ethereum main chain and deploy a smart contract into it known as the **Validator Registration Contract**, where users can deposit and burn 32 ETH. Beacon chain nodes would listen to deposits in this contract and consequently queue up a user with the associated address as a validator in the beacon chain PoS system. Validators then become part of a registered validator set in the beacon chain, and are committees of validators are selected to become attesters on shard chains in certain periods of blocks until they are ventually reshuffled into different shards.
@@ -48,6 +57,19 @@ This separation of concerns between attesters and proposers allows for more comp
 Given that we are splitting up the global state of the Ethereum blockchain into shards, new types of attacks arise because fewer resources are required to completely dominate a shard. This is why a **source of randomness** and periods are critical components to ensuring the integrity of the system.
 
 The Ethereum Wiki’s [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) suggests pseudorandom sampling of attesters on each shard. The goal is so that these attesters will not know which shard they will get in advance. Otherwise, malicious actors could concentrate resources into a single shard and try to overtake it (See: [1% Attack](https://medium.com/@icebearhww/ethereum-sharding-and-finality-65248951f649)).
+=======
+For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have a few types of nodes that do the heavy lifting of our sharding logic: **proposers, notaries, and attesters**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, grow the shard chains, and submit cross-links to the beacon chain.
+
+We still keep the Ethereum main chain and deploy a smart contract into it known as the **Validator Registration Contract**, where users can deposit and burn 32 ETH. Beacon chain nodes would listen to deposits in this contract and consequently queue up a user with the associated address as a validator in the beacon chain PoS system. Validators then become part of a registered validator set in the beacon chain, and are committees of validators are selected to become notaries on shard chains in certain periods of blocks until they are ventually reshuffled into different shards.
+
+Notaries are in charge of checking for data availability of such collations and reach consensus on canonical shard chains. So then, are proposers in charge of state execution? The short answer is that phase 1 will contain **no state execution**. Instead, proposers will simply package all types of transactions into collations and later down the line, agents known as executors will download, run, and validate state as they need to through possibly different types of execution engines (potentially TrueBit-style, interactive execution).
+
+This separation of concerns between notaries and proposers allows for more computational efficiency within the system, as notaries will not have to do the heavy lifting of state execution and focus solely on consensus through fork-choice rules. In this scheme, it makes sense that eventually **proposers** will become **executors** in later phases of a sharding spec.
+
+Given that we are splitting up the global state of the Ethereum blockchain into shards, new types of attacks arise because fewer resources are required to completely dominate a shard. This is why a **source of randomness** and periods are critical components to ensuring the integrity of the system.
+
+The Ethereum Wiki’s [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) suggests pseudorandom sampling of notaries on each shard. The goal is so that these notaries will not know which shard they will get in advance. Otherwise, malicious actors could concentrate resources into a single shard and try to overtake it (See: [1% Attack](https://medium.com/@icebearhww/ethereum-sharding-and-finality-65248951f649)).
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 Sharding revolves around being able to store shard metadata in a full proof of stake chain known as a beacon chain. For pseudorandomness generation, a RANDAO mechanism can be used in the beacon chain to shuffle validators securely.
 
@@ -64,7 +86,11 @@ Our current work is focused on creating a localized version of a beacon chain wi
 -   A minimal, **beacon chain node** that will interact with a main chain geth node via JSON-RPC
 -   A **Validator Registration Contract** deployed on the main chain where a beacon node can read logs to check for registered validators
 -   A minimal, gossipsub shardp2p network
+<<<<<<< HEAD
 -   Ability for proposers/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
+=======
+-   Ability for proposers/notaries/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 -   Ability to serialize blobs into collations on shard chains and advance the growth of the shard chains
 -   An observer node that can join a network on shardp2p, sync to the latest head, and send tx's to nodes in the network
 
@@ -75,7 +101,11 @@ ETA: To be determined
 
 ## The Sapphire Release: Ropsten Testnet
 
+<<<<<<< HEAD
 Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a a beacon chain + sharding system. This will require a lot more elaborate simulations around the safety of the randomness behind the attester assignments in the SMC. Futhermore we need to pass stress testing against DoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently with attesters reaching consensus on these collations, alongside beacon node validators producing blocks via PoS.
+=======
+Part 1 of the **Sapphire Release** will focus around getting the **Ruby Release** polished enough to be live on an Ethereum testnet and manage a a beacon chain + sharding system. This will require a lot more elaborate simulations around the safety of the randomness behind the notary assignments in the SMC. Futhermore we need to pass stress testing against DoS and other sorts of byzantine attacks. Additionally, it will be the first release to have real users proposing collations concurrently with notaries reaching consensus on these collations, alongside beacon node validators producing blocks via PoS.
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 Part 2 of the **Sapphire Release** will focus on implementing state execution and defining the State Transition Function for sharding on a local testnet (as outlined in [Beyond Phase 1](#beyond-phase-1)) as an extenstion to the Ruby Release.
 
@@ -91,7 +121,11 @@ ETA: To Be determined
 
 # Beacon Chain and Sharding Alpha Implementation
 
+<<<<<<< HEAD
 Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows for users to become a attester, proposer, and to manage the growth of shard chains.
+=======
+Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows for users to become a notary, proposer, and to manage the growth of shard chains.
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 Here is a reference spec explaining how our initial system will function:
 
@@ -109,7 +143,11 @@ A basic, end-to-end example of the system is as follows:
 
 2.  _**Registered validator begins PoS process to propose blocks:**_ the PoS validator has the resposibility to participate in the addition of new blocks to the beacon chain
 
+<<<<<<< HEAD
 3.  _**RANDAO mechanism selects committees of proposers/attesters/attesters for shards:**_ the beacon chain node will use its RANDAO mechanism to select committees of proposers, attesters, and attesters that each have responsibilities within the sharding system. Refer to the [Full Casper Chain V2 Doc](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) for extensive detail on the different fields in the state of the beacon chain related to sharding
+=======
+3.  _**RANDAO mechanism selects committees of proposers/notaries/attesters for shards:**_ the beacon chain node will use its RANDAO mechanism to select committees of proposers, notaries, and attesters that each have responsibilities within the sharding system. Refer to the [Full Casper Chain V2 Doc](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) for extensive detail on the different fields in the state of the beacon chain related to sharding
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 4. _**Beacon Chain State Advances, Committees are Reshuffled:**_ upon completing responsibilities, the different actors of the sharding system are them reshuffled into new committees on different shards
 
@@ -123,6 +161,7 @@ This will kickstart the entire beacon chain sync process and listen for registra
 
 1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 
+<<<<<<< HEAD
 2.  _**Assign the validator as a proposer/attester/attester based on RANDAO mechanism:**_ on incoming headers, the client will interact with the SMC to check if the current user is an eligible attester for an upcoming period (only a few minutes notice)
 
 3.  _**Process shard cross-links:**_ once a attester is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
@@ -138,6 +177,23 @@ The probability of being selected as a attester on a particular shard is being h
 The idea is that attesters should not be able to figure out which shard they will become a attester of and during which period they will be assigned with anything more than a few minutes notice.
 
 Ideally, we want attesters to shuffle across shards very rapidly and through a source of pseudorandomness built in-protocol.
+=======
+2.  _**Assign the validator as a proposer/notary/attester based on RANDAO mechanism:**_ on incoming headers, the client will interact with the SMC to check if the current user is an eligible notary for an upcoming period (only a few minutes notice)
+
+3.  _**Process shard cross-links:**_ once a notary is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
+
+5.  _**Reshuffle committees**_ the notary votes on the available collation header that came first in the submissions. 
+
+6.  _**Propose blocks and finalize incoming blocks via PoS:**_ Once notaries vote, headers that received >=2/3 votes are selected as canonical
+
+## Notary Sampling
+
+The probability of being selected as a notary on a particular shard is being heavily researched in the latest ETHResearch discussions. As specified in the [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) by Vitalik, “if validators [collators] could choose, then attackers with small total stake could concentrate their stake onto one shard and attack it, thereby eliminating the system’s security.”
+
+The idea is that notaries should not be able to figure out which shard they will become a notary of and during which period they will be assigned with anything more than a few minutes notice.
+
+Ideally, we want notaries to shuffle across shards very rapidly and through a source of pseudorandomness built in-protocol.
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 Despite its benefits, random sampling does not help in a bribing, coordinated attack model. In Vitalik’s own words:
 
@@ -186,7 +242,11 @@ This process of checking previous blocks is known as **“windback”**. In a [p
 
 One way to enforce **validity** during the windback process is for nodes to produce zero-knowedge proofs of validity that can then be stored in collation headers for quick verification.
 
+<<<<<<< HEAD
 On the other hand, to enforce **availability** for the windback process, a possible approach is for nodes to produce “proofs of custody” in collation headers that prove the attester was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for attesters to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the node's private key through a hashing scheme. The security in this relies in the idea that a node would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a node processed the collation body and proof was created.
+=======
+On the other hand, to enforce **availability** for the windback process, a possible approach is for nodes to produce “proofs of custody” in collation headers that prove the notary was in possession of the full data of a collation when produced. Drake proposes a constant time, non-interactive zkSNARK method for notaries to check these proofs of custody. In his construction, he mentions splitting up a collation body into “chunks” that are then mixed with the node's private key through a hashing scheme. The security in this relies in the idea that a node would not leak his/her private key without compromising him or herself, so it provides a succinct way of checking if the full data was available when a node processed the collation body and proof was created.
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 # Active Questions and Research
 
@@ -235,7 +295,11 @@ A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/get
 
 [Data Availability Proof-friendly State Tree Transitions](https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453)
 
+<<<<<<< HEAD
 [Safety Attester Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728)
+=======
+[Safety Notary Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 [Fixed Size Deposits and Rewards Penalties Quadleak](https://ethresear.ch/t/fixed-size-deposits-and-rewards-penalties-quad-leak/2073/7)
 

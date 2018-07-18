@@ -2,26 +2,28 @@ package syncer
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
-	"strings"
 	"testing"
-
-	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
-
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/params"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	log "github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = types.Service(&Syncer{})
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(ioutil.Discard)
+}
 
 func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -41,9 +43,8 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Unable to setup sync service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 	syncer.msgChan = make(chan p2p.Message)
-	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
 	if err := syncer.Stop(); err != nil {
@@ -63,6 +64,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
+<<<<<<< HEAD
 // This test uses a faulty Signer interface in order to trigger an error
 // in the simulateAttesterRequests goroutine when attempting to sign
 // a collation header within the goroutine's internals.
@@ -112,6 +114,8 @@ func TestHandleCollationBodyRequests_FaultySigner(t *testing.T) {
 	exitRoutine <- true
 }
 
+=======
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 // This test checks the proper functioning of the handleCollationBodyRequests goroutine
 // by listening to the responseSent channel which occurs after successful
 // construction and sending of a response via p2p.
@@ -149,10 +153,9 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
 
-	feed := server.Feed(messages.CollationBodyRequest{})
+	feed := server.Feed(pb.CollationBodyRequest{})
 
 	syncer.msgChan = make(chan p2p.Message)
-	syncer.errChan = make(chan error)
 	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
 
 	doneChan := make(chan struct{})
@@ -165,24 +168,24 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: messages.CollationBodyRequest{
-			ChunkRoot: &chunkRoot,
-			ShardID:   shardID,
-			Period:    period,
-			Proposer:  &proposerAddress,
+		Data: &pb.CollationBodyRequest{
+			ChunkRoot:       chunkRoot.Bytes(),
+			ShardId:         shardID.Uint64(),
+			Period:          period.Uint64(),
+			ProposerAddress: proposerAddress.Bytes(),
 		},
 	}
 	syncer.msgChan <- msg
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
-	logMsg := hook.AllEntries()[0].Message
-	want := fmt.Sprintf("Received p2p request of type: %T", p2p.Message{})
+	logMsg := hook.Entries[0].Message
+	want := fmt.Sprintf("Received p2p request of type: %T", &pb.CollationBodyRequest{})
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
 
-	logMsg = hook.AllEntries()[1].Message
+	logMsg = hook.Entries[3].Message
 	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)

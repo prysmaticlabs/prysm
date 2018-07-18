@@ -8,6 +8,7 @@ import (
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/shared/legacyutil"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,6 +36,7 @@ type Proposer struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	sync      *syncer.Syncer
+	msgChan   chan p2p.Message
 }
 
 // NewProposer creates a struct instance of a proposer service.
@@ -46,35 +49,43 @@ func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Se
 		client,
 		p2p,
 		txpool,
-		nil,
+		nil, // txpoolSub
 		dbService,
 		shardID,
-		nil,
+		nil, // shard
 		ctx,
 		cancel,
-		sync}, nil
+		sync,
+		nil, // msgChan
+	}, nil
 }
 
 // Start the main loop for proposing collations.
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
-	shard := types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
-	p.shard = shard
+	p.shard = types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
+	p.msgChan = make(chan p2p.Message, 20)
+	feed := p.p2p.Feed(pb.Transaction{})
+	p.txpoolSub = feed.Subscribe(p.msgChan)
 	go p.proposeCollations()
-	go p.sync.HandleCollationBodyRequests(p.shard, p.ctx.Done())
 }
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
 	log.Warnf("Stopping proposer service in shard %d", p.shard.ShardID())
 	defer p.cancel()
+	defer close(p.msgChan)
 	p.txpoolSub.Unsubscribe()
 	return nil
 }
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
+<<<<<<< HEAD
 	feed := p.p2p.Feed(messages.TransactionBroadcast{})
+=======
+	feed := p.p2p.Feed(pb.Transaction{})
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	ch := make(chan p2p.Message, 20)
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
@@ -82,13 +93,22 @@ func (p *Proposer) proposeCollations() {
 	for {
 		select {
 		case msg := <-ch:
+<<<<<<< HEAD
 			tx, ok := msg.Data.(messages.TransactionBroadcast)
+=======
+			tx, ok := msg.Data.(*pb.Transaction)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 			if !ok {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
+<<<<<<< HEAD
 			log.Infof("Received transaction: %x", tx.Transaction.Hash())
 			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{tx.Transaction}); err != nil {
+=======
+			// log.Debugf("Received transaction: %x", tx)
+			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{legacyutil.TransformTransaction(tx)}); err != nil {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():

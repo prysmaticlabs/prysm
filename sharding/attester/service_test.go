@@ -1,11 +1,11 @@
 package attester
 
 import (
-	"context"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+<<<<<<< HEAD:sharding/attester/service_test.go
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
 	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
@@ -15,6 +15,11 @@ import (
 var (
 	key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	addr   = crypto.PubkeyToAddress(key.PublicKey)
+=======
+	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service_test.go
 )
 
 // Verifies that Attester implements the Actor interface.
@@ -25,6 +30,7 @@ func TestHasAccountBeenDeregistered(t *testing.T) {
 	client := &internal.MockClient{SMC: smc, T: t, Backend: backend, BlockNumber: 1}
 
 	client.SetDepositFlag(true)
+<<<<<<< HEAD:sharding/attester/service_test.go
 	err := joinAttesterPool(client, client, nil)
 	if err != nil {
 		t.Error(err)
@@ -79,6 +85,12 @@ func TestIsLockupOver(t *testing.T) {
 	if !lockup {
 		t.Error("lockup period is not over despite account being relased from registry")
 	}
+=======
+	err := joinNotaryPool(client, client)
+	if err != nil {
+		t.Error(err)
+	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service_test.go
 }
 
 func TestIsAccountInAttesterPool(t *testing.T) {
@@ -122,13 +134,21 @@ func TestJoinAttesterPool(t *testing.T) {
 	}
 
 	client.SetDepositFlag(false)
+<<<<<<< HEAD:sharding/attester/service_test.go
 	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
+=======
+	err = joinNotaryPool(client, client)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service_test.go
 	if err == nil {
 		t.Error("joined attester pool while --deposit was not present")
 	}
 
 	client.SetDepositFlag(true)
+<<<<<<< HEAD:sharding/attester/service_test.go
 	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
+=======
+	err = joinNotaryPool(client, client)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service_test.go
 	if err != nil {
 		t.Error(err)
 	}
@@ -143,7 +163,11 @@ func TestJoinAttesterPool(t *testing.T) {
 	}
 
 	// Join while deposited should do nothing.
+<<<<<<< HEAD:sharding/attester/service_test.go
 	err = joinAttesterPool(client, client, shardparams.DefaultConfig)
+=======
+	err = joinNotaryPool(client, client)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service_test.go
 	if err != nil {
 		t.Error(err)
 	}
@@ -156,6 +180,7 @@ func TestJoinAttesterPool(t *testing.T) {
 		t.Errorf("unexpected number of attesters. Got %d, wanted 1", numAttesters)
 	}
 }
+<<<<<<< HEAD:sharding/attester/service_test.go
 
 func TestLeaveAttesterPool(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
@@ -260,3 +285,5 @@ func TestSubmitVote(t *testing.T) {
 		t.Error(err)
 	}
 }
+=======
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/service_test.go

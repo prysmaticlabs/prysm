@@ -61,6 +61,9 @@ func Test_ShardKVGet(t *testing.T) {
 
 	key2 := []byte{}
 	val2, err := kv.Get(key2)
+	if err == nil {
+		t.Error("kv.Get for non-existent key should have returned an error")
+	}
 	if len(val2) != 0 {
 		t.Errorf("non-existent key should not have a value. key=%v, value=%v", key2, val2)
 	}

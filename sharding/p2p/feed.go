@@ -25,7 +25,16 @@ import (
 //   msg := <- ch
 //   fmt.Printf("Message received: %v", msg.Data)
 func (s *Server) Feed(msg interface{}) *event.Feed {
-	t := reflect.TypeOf(msg)
+	var t reflect.Type
+
+	// Support passing reflect.Type as the msg.
+	switch msg.(type) {
+	case reflect.Type:
+		t = msg.(reflect.Type)
+	default:
+		t = reflect.TypeOf(msg)
+	}
+
 	if s.feeds[t] == nil {
 		s.feeds[t] = new(event.Feed)
 	}
