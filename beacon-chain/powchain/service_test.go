@@ -25,6 +25,18 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 	return nil, nil
 }
 
+type badLogger struct{}
+
+func (b *badLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
+	return nil, errors.New("subscription has failed")
+}
+
+type goodLogger struct{}
+
+func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
 func TestNewWeb3Service(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
@@ -136,17 +148,54 @@ func TestLatestMainchainInfo(t *testing.T) {
 	}
 }
 
-func TestListenVRCLog(t *testing.T) {
-
+func TestBadLogger(t *testing.T) {
+	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	_, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+	web3Service.queryValidatorStatus(&badLogger{}, web3Service.ctx.Done())
+	msg := hook.LastEntry().Message
+	want := "Unable to query logs from VRC: subscription has failed"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+	hook.Reset()
+}
+
+func TestGoodLogger(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), endpoint, common.Address{}, "")
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
+	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	pubkey := common.HexToHash(web3Service.pubKey)
+
+	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	go func() {
+		web3Service.queryValidatorStatus(&goodLogger{}, doneChan)
 		<-exitRoutine
 	}()
+
+	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
+	web3Service.logChan <- log
+	exitRoutine <- true
+
+	msg := hook.LastEntry().Message
+	want := "Validator registered in VRC with public key: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	if !web3Service.validatorRegistered {
+		t.Error("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
+	}
+
+	hook.Reset()
 }

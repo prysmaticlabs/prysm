@@ -109,15 +109,13 @@ func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) 
 			w.vrcAddress,
 		},
 	}
-	sub, err := logger.SubscribeFilterLogs(context.Background(), query, w.logChan)
+	_, err := logger.SubscribeFilterLogs(context.Background(), query, w.logChan)
 	if err != nil {
 		log.Errorf("Unable to query logs from VRC: %v", err)
 		return
 	}
 	for {
 		select {
-		case err := <-sub.Err():
-			log.Errorf("Failed to subscribe to VRC log: %v", err)
 		case <-done:
 			return
 		case VRClog := <-w.logChan:
@@ -140,4 +138,9 @@ func (w *Web3Service) LatestBlockNumber() *big.Int {
 // LatestBlockHash is a getter for blockHash to make it read-only.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
+}
+
+// ValidatorRegistered is a getter for validatorRegistered to make it read-only.
+func (w *Web3Service) ValidatorRegistered() bool {
+	return w.validatorRegistered
 }
