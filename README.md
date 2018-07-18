@@ -2,7 +2,7 @@
 
 ![Travis Build](https://travis-ci.org/prysmaticlabs/geth-sharding.svg?branch=master)
 
-This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com). 
+This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
 
 Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
 
@@ -28,7 +28,7 @@ Create a folder in your `$GOPATH` and navigate to it
 $ mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
 ```
 
-Clone our repository: 
+Clone our repository:
 
 ```
 $ git clone https://github.com/prysmaticlabs/geth-sharding
@@ -91,7 +91,7 @@ Then, the geth console can start up and you can start a miner as follows:
 Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
 
 
-# Sharding Minimal Protocol 
+# Sharding Minimal Protocol
 
 **NOTE**: This section is in flux: will be deprecated in favor of a beacon chain)
 
@@ -101,18 +101,18 @@ Build our system first
 $ bazel build //sharding/...
 ```
 
-## Becoming a Notary
+## Becoming a Attester
 
 
-Make sure a geth node is running as a separate process. Then, to deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
+Make sure a geth node is running as a separate process. Then, to deposit ETH and join as an attester in the Sharding Manager Contract, run the following command:
 
 ```
-$ ./bazel-bin/path/to/your/sharding/binary  --actor "notary" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
+$ ./bazel-bin/path/to/your/sharding/binary  --actor "attester" --deposit --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345
 ```
 
-This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will extract 1000ETH from your account balance and insert you into the SMC's attesters. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
-Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function.
 
 ## Running a Collation Proposal Node
 

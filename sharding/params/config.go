@@ -13,12 +13,12 @@ import (
 var DefaultConfig = &Config{
 	SMCAddress:            common.HexToAddress("0x0"),
 	PeriodLength:          5,
-	NotaryDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
-	NotaryLockupLength:    16128,
+	AttesterDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
+	AttesterLockupLength:    16128,
 	ProposerLockupLength:  48,
-	NotaryCommitteeSize:   135,
-	NotaryQuorumSize:      90,
-	NotaryChallengePeriod: 25,
+	AttesterCommitteeSize:   135,
+	AttesterQuorumSize:      90,
+	AttesterChallengePeriod: 25,
 }
 
 // DefaultChainConfig contains default chain configs of an individual shard.
@@ -28,12 +28,12 @@ var DefaultChainConfig = &ChainConfig{}
 type Config struct {
 	SMCAddress            common.Address // SMCAddress is the address of SMC in mainchain.
 	PeriodLength          int64          // PeriodLength is num of blocks in period.
-	NotaryDeposit         *big.Int       // NotaryDeposit is a required deposit size in wei.
-	NotaryLockupLength    int64          // NotaryLockupLength to lockup notary deposit from time of deregistration.
+	AttesterDeposit         *big.Int       // AttesterDeposit is a required deposit size in wei.
+	AttesterLockupLength    int64          // AttesterLockupLength to lockup attester deposit from time of deregistration.
 	ProposerLockupLength  int64          // ProposerLockupLength to lockup proposer deposit from time of deregistration.
-	NotaryCommitteeSize   int64          // NotaryCommitSize sampled per block from the notaries pool per period per shard.
-	NotaryQuorumSize      int64          // NotaryQuorumSize votes the collation needs to get accepted to the canonical chain.
-	NotaryChallengePeriod int64          // NotaryChallengePeriod is the duration a notary has to store collations for.
+	AttesterCommitteeSize   int64          // AttesterCommitSize sampled per block from the attesters pool per period per shard.
+	AttesterQuorumSize      int64          // AttesterQuorumSize votes the collation needs to get accepted to the canonical chain.
+	AttesterChallengePeriod int64          // AttesterChallengePeriod is the duration an attester has to store collations for.
 }
 
 // ChainConfig contains chain config of an individual shard. Still to be designed.

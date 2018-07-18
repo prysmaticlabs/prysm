@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/notary"
+	"github.com/prysmaticlabs/geth-sharding/sharding/attester"
 	"github.com/prysmaticlabs/geth-sharding/sharding/observer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
@@ -193,7 +193,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	return s.services.RegisterService(pool)
 }
 
-// Registers the actor according to CLI flags. Either notary/proposer/observer.
+// Registers the actor according to CLI flags. Either attester/proposer/observer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
@@ -215,10 +215,10 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 	}
 
 	switch actor {
-	case "notary":
-		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
+	case "attester":
+		not, err := attester.NewAttester(config, client, shardp2p, shardChainDB)
 		if err != nil {
-			return fmt.Errorf("could not register notary service: %v", err)
+			return fmt.Errorf("could not register attester service: %v", err)
 		}
 		return s.services.RegisterService(not)
 	case "simulator":

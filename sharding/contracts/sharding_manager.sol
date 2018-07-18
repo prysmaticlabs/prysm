@@ -3,12 +3,12 @@ pragma solidity ^0.4.23;
 
 contract SMC {
     event HeaderAdded(uint indexed shardId, bytes32 chunkRoot, uint period, address proposerAddress);
-    event NotaryRegistered(address notary, uint poolIndex);
-    event NotaryDeregistered(address notary, uint poolIndex, uint deregisteredPeriod);
-    event NotaryReleased(address notary, uint poolIndex);
-    event VoteSubmitted(uint indexed shardId, bytes32 chunkRoot, uint period, address notaryAddress);
+    event AttesterRegistered(address attester, uint poolIndex);
+    event AttesterDeregistered(address attester, uint poolIndex, uint deregisteredPeriod);
+    event AttesterReleased(address attester, uint poolIndex);
+    event VoteSubmitted(uint indexed shardId, bytes32 chunkRoot, uint period, address attesterAddress);
 
-    struct Notary {
+    struct Attester {
         uint deregisteredPeriod;
         uint poolIndex;
         uint balance;
@@ -22,14 +22,14 @@ contract SMC {
         bytes32 signature;          // Signature of the collation header after proposer signs
     }
 
-    // Notary state variables
-    address[] public notaryPool;
-    // notaryAddress => notaryStruct
-    mapping (address => Notary) public notaryRegistry;
-    // number of notaries
-    uint public notaryPoolLength;
+    // Attester state variables
+    address[] public attesterPool;
+    // attesterAddress => attesterStruct
+    mapping (address => Attester) public attesterRegistry;
+    // number of attesters
+    uint public attesterPoolLength;
     // current vote count of each shard
-    // first 31 bytes are bitfield of notary's vote
+    // first 31 bytes are bitfield of attester's vote
     // last 1 byte is the number of the total votes
     mapping (uint => bytes32) public currentVote;
 
@@ -42,13 +42,13 @@ contract SMC {
     mapping (uint => uint) public lastApprovedCollation;
 
     // Internal help functions variables 
-    // Stack of empty notary slot indicies
+    // Stack of empty attester slot indicies
     uint[] emptySlotsStack;
     // Top index of the stack
     uint emptySlotsStackTop;
-    // Notary sample size at current period and next period
-    uint currentPeriodNotarySampleSize;
-    uint nextPeriodNotarySampleSize;
+    // Attester sample size at current period and next period
+    uint currentPeriodAttesterSampleSize;
+    uint nextPeriodAttesterSampleSize;
     uint sampleSizeLastUpdatedPeriod;
 
     // Number of shards
@@ -56,115 +56,115 @@ contract SMC {
     uint public shardCount = 100;
 
     // Constant values
-    // Length of challenge period for notary's proof of custody
+    // Length of challenge period for attester's proof of custody
     uint public constant CHALLENGE_PERIOD = 25;
     // Number of blocks per period
     uint constant PERIOD_LENGTH = 5;
-    // The minimum deposit size for a notary
-    uint constant NOTARY_DEPOSIT = 1000 ether;
-    // Time the ether is locked by notaries
-    uint constant NOTARY_LOCKUP_LENGTH = 16128;
-    // Number of notaries to select from notary pool for each shard in each period
+    // The minimum deposit size for an attester
+    uint constant ATTESTER_DEPOSIT = 1000 ether;
+    // Time the ether is locked by attesters
+    uint constant ATTESTER_LOCKUP_LENGTH = 16128;
+    // Number of attesters to select from attester pool for each shard in each period
     uint constant COMMITTEE_SIZE = 135;
-    // Threshold(number of notaries in committee) for a proposal to be accepted
+    // Threshold(number of attesters in committee) for a proposal to be accepted
     uint constant QUORUM_SIZE = 90;
     // Number of periods ahead of current period, which the contract
-    // is able to return the notary of that period
+    // is able to return the attester of that period
     uint constant LOOKAHEAD_LENGTH = 4;
 
-    /// Checks if a notary with given shard id and period has been chosen as
+    /// Checks if an attester with given shard id and period has been chosen as
     /// a committee member to vote for header added on to the main chain
-    function getNotaryInCommittee(uint _shardId) public view returns(address) {
+    function getAttesterInCommittee(uint _shardId) public view returns(address) {
         uint period = block.number / PERIOD_LENGTH;
 
-        updateNotarySampleSize();
+        updateAttesterSampleSize();
 
-        // Determine notary pool length based on notary sample size
+        // Determine attester pool length based on attester sample size
         uint sampleSize;
         if (period > sampleSizeLastUpdatedPeriod) {
-            sampleSize = nextPeriodNotarySampleSize;
+            sampleSize = nextPeriodAttesterSampleSize;
         } else {
-            sampleSize = currentPeriodNotarySampleSize;
+            sampleSize = currentPeriodAttesterSampleSize;
         }
 
-        // Get the notary pool index to concatenate with shardId and blockHash for random sample
-        uint poolIndex = notaryRegistry[msg.sender].poolIndex;
+        // Get the attester pool index to concatenate with shardId and blockHash for random sample
+        uint poolIndex = attesterRegistry[msg.sender].poolIndex;
 
         // Get the most recent block number before the period started
         uint latestBlock = period * PERIOD_LENGTH - 1;
         uint latestBlockHash = uint(block.blockhash(latestBlock));
         uint index = uint(keccak256(latestBlockHash, poolIndex, _shardId)) % sampleSize;
 
-        return notaryPool[index];
+        return attesterPool[index];
     }
 
-    /// Registers notary to notatery registry, locks in the notary deposit,
+    /// Registers attester to notatery registry, locks in the attester deposit,
     /// and returns true on success
-    function registerNotary() public payable {
-        address notaryAddress = msg.sender;
-        require(!notaryRegistry[notaryAddress].deposited);
-        require(msg.value == NOTARY_DEPOSIT);
+    function registerAttester() public payable {
+        address attesterAddress = msg.sender;
+        require(!attesterRegistry[attesterAddress].deposited);
+        require(msg.value == ATTESTER_DEPOSIT);
 
-        updateNotarySampleSize();
+        updateAttesterSampleSize();
 
         uint index;
         if (emptyStack()) {
-            index = notaryPoolLength;
-            notaryPool.push(notaryAddress);
+            index = attesterPoolLength;
+            attesterPool.push(attesterAddress);
         } else {
             index = stackPop();
-            notaryPool[index] = notaryAddress;
+            attesterPool[index] = attesterAddress;
         }
-        ++notaryPoolLength;
+        ++attesterPoolLength;
 
-        notaryRegistry[notaryAddress] = Notary({
+        attesterRegistry[attesterAddress] = Attester({
             deregisteredPeriod: 0,
             poolIndex: index,
             balance: msg.value,
             deposited: true
         });
 
-        // if current index is greater than notary sample size, increase notary sample size for next period
-        if (index >= nextPeriodNotarySampleSize) {
-            nextPeriodNotarySampleSize = index + 1;
+        // if current index is greater than attester sample size, increase attester sample size for next period
+        if (index >= nextPeriodAttesterSampleSize) {
+            nextPeriodAttesterSampleSize = index + 1;
         }
 
-        emit NotaryRegistered(notaryAddress, index);
+        emit AttesterRegistered(attesterAddress, index);
     }
 
-    /// Deregisters notary from notatery registry, lock up period countdowns down,
-    /// notary may call releaseNotary after lock up period finishses to withdraw deposit,
+    /// Deregisters attester from notatery registry, lock up period countdowns down,
+    /// attester may call releaseAttester after lock up period finishses to withdraw deposit,
     /// and returns true on success
-    function deregisterNotary() public {
-        address notaryAddress = msg.sender;
-        uint index = notaryRegistry[notaryAddress].poolIndex;
-        require(notaryRegistry[notaryAddress].deposited);
-        require(notaryPool[index] == notaryAddress);
+    function deregisterAttester() public {
+        address attesterAddress = msg.sender;
+        uint index = attesterRegistry[attesterAddress].poolIndex;
+        require(attesterRegistry[attesterAddress].deposited);
+        require(attesterPool[index] == attesterAddress);
 
-        updateNotarySampleSize();
+        updateAttesterSampleSize();
 
         uint deregisteredPeriod = block.number / PERIOD_LENGTH;
-        notaryRegistry[notaryAddress].deregisteredPeriod = deregisteredPeriod;
+        attesterRegistry[attesterAddress].deregisteredPeriod = deregisteredPeriod;
 
         stackPush(index); 
-        delete notaryPool[index];
-        --notaryPoolLength;
-        emit NotaryDeregistered(notaryAddress, index, deregisteredPeriod);
+        delete attesterPool[index];
+        --attesterPoolLength;
+        emit AttesterDeregistered(attesterAddress, index, deregisteredPeriod);
     }
 
-    /// Removes an entry from notary registry, returns deposit back to the notary,
+    /// Removes an entry from attester registry, returns deposit back to the attester,
     /// and returns true on success.
-    function releaseNotary() public {
-        address notaryAddress = msg.sender;
-        uint index = notaryRegistry[notaryAddress].poolIndex;
-        require(notaryRegistry[notaryAddress].deposited == true);
-        require(notaryRegistry[notaryAddress].deregisteredPeriod != 0);
-        require((block.number / PERIOD_LENGTH) > (notaryRegistry[notaryAddress].deregisteredPeriod + NOTARY_LOCKUP_LENGTH));
+    function releaseAttester() public {
+        address attesterAddress = msg.sender;
+        uint index = attesterRegistry[attesterAddress].poolIndex;
+        require(attesterRegistry[attesterAddress].deposited == true);
+        require(attesterRegistry[attesterAddress].deregisteredPeriod != 0);
+        require((block.number / PERIOD_LENGTH) > (attesterRegistry[attesterAddress].deregisteredPeriod + ATTESTER_LOCKUP_LENGTH));
 
-        uint balance = notaryRegistry[notaryAddress].balance;
-        delete notaryRegistry[notaryAddress];
-        notaryAddress.transfer(balance);
-        emit NotaryReleased(notaryAddress, index);
+        uint balance = attesterRegistry[attesterAddress].balance;
+        delete attesterRegistry[attesterAddress];
+        attesterAddress.transfer(balance);
+        emit AttesterReleased(attesterAddress, index);
     }
 
     /// Add collation header to the main chain, anyone can call this function. It emits a log
@@ -178,7 +178,7 @@ contract SMC {
         require(_period == block.number / PERIOD_LENGTH);
         require(_period > lastSubmittedCollation[_shardId]);
 
-        updateNotarySampleSize();
+        updateAttesterSampleSize();
 
         collationRecords[_shardId][_period] = CollationRecord({
             chunkRoot: _chunkRoot,
@@ -193,7 +193,7 @@ contract SMC {
         emit HeaderAdded(_shardId, _chunkRoot, _period, msg.sender);
     }
 
-    /// Sampled notary can call the following funtion to submit vote,
+    /// Sampled attester can call the following funtion to submit vote,
     /// a vote log will be emitted for client to monitor
     function submitVote(
         uint _shardId,
@@ -206,9 +206,9 @@ contract SMC {
         require(_period == lastSubmittedCollation[_shardId]);
         require(_index < COMMITTEE_SIZE);
         require(_chunkRoot == collationRecords[_shardId][_period].chunkRoot);
-        require(notaryRegistry[msg.sender].deposited);
+        require(attesterRegistry[msg.sender].deposited);
         require(!hasVoted(_shardId, _index));
-        require(getNotaryInCommittee(_shardId) == msg.sender);
+        require(getAttesterInCommittee(_shardId) == msg.sender);
 
         castVote(_shardId, _index);
         uint voteCount = getVoteCount(_shardId);
@@ -228,7 +228,7 @@ contract SMC {
     }
 
     /// Check if a bit is set, this function is used to check
-    /// if a notary has casted the vote. Right shift currentVote by index 
+    /// if an attester has casted the vote. Right shift currentVote by index 
     /// and AND with 1, return true if voted, false if not
     function hasVoted(uint _shardId, uint _index) public view returns (bool) {
         uint votes = uint(currentVote[_shardId]);
@@ -243,7 +243,7 @@ contract SMC {
         return emptySlotsStackTop == 0;
     }
 
-    /// Save one uint into the empty slots stack for notary to use later
+    /// Save one uint into the empty slots stack for attester to use later
     function stackPush(uint _index) internal {
         if (emptySlotsStack.length == emptySlotsStackTop)
             emptySlotsStack.push(_index);
@@ -253,31 +253,31 @@ contract SMC {
         ++emptySlotsStackTop;
     }
 
-    /// To keep track of notary size in between periods, we call updateNotarySampleSize
-    /// before notary registration/deregistration so correct size can be applied next period
-    function updateNotarySampleSize() internal {
+    /// To keep track of attester size in between periods, we call updateAttesterSampleSize
+    /// before attester registration/deregistration so correct size can be applied next period
+    function updateAttesterSampleSize() internal {
         uint currentPeriod = block.number / PERIOD_LENGTH;
         if (currentPeriod < sampleSizeLastUpdatedPeriod) {
             return;
         }
-        currentPeriodNotarySampleSize = nextPeriodNotarySampleSize;
+        currentPeriodAttesterSampleSize = nextPeriodAttesterSampleSize;
         sampleSizeLastUpdatedPeriod = currentPeriod;
     }
 
-    /// Get one uint out of the empty slots stack for notary index
+    /// Get one uint out of the empty slots stack for attester index
     function stackPop() internal returns(uint) {
         require(emptySlotsStackTop > 1);
         --emptySlotsStackTop;
         return emptySlotsStack[emptySlotsStackTop];
     }
 
-    /// Set the index bit to one, notary uses this function to cast its vote,
-    /// after the notary casts its vote, we increase currentVote's count by 1
+    /// Set the index bit to one, attester uses this function to cast its vote,
+    /// after the attester casts its vote, we increase currentVote's count by 1
     function castVote(uint _shardId, uint _index) internal {
         uint votes = uint(currentVote[_shardId]);
         // Get the bitfield by shifting 1 to the index
         uint indexToFlag = 2 ** (255 - _index);
-        // OR with currentVote to cast notary index to 1
+        // OR with currentVote to cast attester index to 1
         votes = votes | indexToFlag;
         // Update vote count
         votes++;
