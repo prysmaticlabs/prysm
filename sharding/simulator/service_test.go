@@ -10,6 +10,11 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+
+=======
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -122,9 +127,9 @@ func TestStartStop(t *testing.T) {
 }
 
 // This test uses a faulty chain reader in order to trigger an error
-// in the simulateNotaryRequests goroutine when reading the block number from
+// in the simulateAttesterRequests goroutine when reading the block number from
 // the mainchain via RPC.
-func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
+func TestSimulateAttesterRequests_FaultyReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	shardID := 0
@@ -142,7 +147,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, delayChan, doneChan)
+		simulator.simulateAttesterRequests(&goodSMCCaller{}, &faultyReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -160,9 +165,9 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 }
 
 // This test uses a faulty SMCCaller in order to trigger an error
-// in the simulateNotaryRequests goroutine when reading the collation records
+// in the simulateAttesterRequests goroutine when reading the collation records
 // from the SMC.
-func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
+func TestSimulateAttesterRequests_FaultyCaller(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	shardID := 0
@@ -180,7 +185,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, delayChan, doneChan)
+		simulator.simulateAttesterRequests(&faultySMCCaller{}, &goodReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -197,10 +202,10 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	hook.Reset()
 }
 
-// This test checks the proper functioning of the simulateNotaryRequests goroutine
+// This test checks the proper functioning of the simulateAttesterRequests goroutine
 // by listening to the requestSent channel which occurs after successful
 // construction and sending of a request via p2p.
-func TestSimulateNotaryRequests(t *testing.T) {
+func TestSimulateAttesterRequests(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	shardID := 0
@@ -219,7 +224,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan, doneChan)
+		simulator.simulateAttesterRequests(&goodSMCCaller{}, &goodReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -247,7 +252,11 @@ func TestBroadcastTransactions(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
+<<<<<<< HEAD
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1)
+=======
 	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -264,9 +273,15 @@ func TestBroadcastTransactions(t *testing.T) {
 	delayChan <- time.Time{}
 	doneChan <- struct{}{}
 
+<<<<<<< HEAD
+	msg := hook.AllEntries()[0].Message
+	want := "Transaction broadcasted"
+	if msg != want {
+=======
 	msg := hook.Entries[1].Message
 	want := "Transaction broadcasted"
 	if !strings.Contains(msg, want) {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 

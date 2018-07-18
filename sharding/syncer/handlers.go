@@ -6,11 +6,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+<<<<<<< HEAD
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p/messages"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+=======
 	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
 	log "github.com/sirupsen/logrus"
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 )
 
 // RespondCollationBody is called by a node responding to another node's request
@@ -51,8 +58,13 @@ func RespondCollationBody(req p2p.Message, collationFetcher types.CollationFetch
 // RequestCollationBody fetches a collation header record submitted to the SMC for
 // a shardID, period pair and constructs a p2p collationBodyRequest that will
 // then be relayed to the appropriate proposer that submitted the collation header.
+<<<<<<< HEAD
+// In production, this will be done within an attester service.
+func RequestCollationBody(fetcher mainchain.RecordFetcher, shardID *big.Int, period *big.Int) (*messages.CollationBodyRequest, error) {
+=======
 // In production, this will be done within a notary service.
 func RequestCollationBody(fetcher mainchain.RecordFetcher, shardID *big.Int, period *big.Int) (*pb.CollationBodyRequest, error) {
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 	record, err := fetcher.CollationRecords(&bind.CallOpts{}, shardID, period)
 	if err != nil {

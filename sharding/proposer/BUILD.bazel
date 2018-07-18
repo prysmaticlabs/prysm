@@ -13,6 +13,7 @@ go_library(
         "//sharding/database:go_default_library",
         "//sharding/mainchain:go_default_library",
         "//sharding/p2p:go_default_library",
+        "//sharding/p2p/messages:go_default_library",
         "//sharding/params:go_default_library",
         "//sharding/syncer:go_default_library",
         "//sharding/txpool:go_default_library",

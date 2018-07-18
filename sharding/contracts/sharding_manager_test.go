@@ -30,8 +30,14 @@ type testAccount struct {
 
 var (
 	accountBalance2000Eth, _     = new(big.Int).SetString("2000000000000000000000", 10)
+<<<<<<< HEAD
+	attesterDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
+	attesterDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
+	FastForward100Blocks         = 100
+=======
 	notaryDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	notaryDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	ctx                          = context.Background()
 )
 
@@ -72,73 +78,73 @@ func (s *smcTestHelper) fastForward(p int) {
 	}
 }
 
-// registerNotaries is a helper function register notaries in batch.
-func (s *smcTestHelper) registerNotaries(deposit *big.Int, params ...int) error {
+// registerAttesters is a helper function register attesters in batch.
+func (s *smcTestHelper) registerAttesters(deposit *big.Int, params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		s.testAccounts[i].txOpts.Value = deposit
-		_, err := s.smc.RegisterNotary(s.testAccounts[i].txOpts)
+		_, err := s.smc.RegisterAttester(s.testAccounts[i].txOpts)
 		if err != nil {
 			return err
 		}
 		s.backend.Commit()
 
-		notary, _ := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[i].addr)
-		if !notary.Deposited ||
-			notary.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 ||
-			notary.DeregisteredPeriod.Cmp(big.NewInt(0)) != 0 {
-			return fmt.Errorf("Incorrect notary registry. Want - deposited:true, index:%v, period:0"+
-				"Got - deposited:%v, index:%v, period:%v ", i, notary.Deposited, notary.PoolIndex, notary.DeregisteredPeriod)
+		attester, _ := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[i].addr)
+		if !attester.Deposited ||
+			attester.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 ||
+			attester.DeregisteredPeriod.Cmp(big.NewInt(0)) != 0 {
+			return fmt.Errorf("Incorrect attester registry. Want - deposited:true, index:%v, period:0"+
+				"Got - deposited:%v, index:%v, period:%v ", i, attester.Deposited, attester.PoolIndex, attester.DeregisteredPeriod)
 		}
 	}
-	// Filter SMC logs by notaryRegistered.
-	log, err := s.smc.FilterNotaryRegistered(&bind.FilterOpts{})
+	// Filter SMC logs by attesterRegistered.
+	log, err := s.smc.FilterAttesterRegistered(&bind.FilterOpts{})
 	if err != nil {
 		return err
 	}
-	// Iterate notaryRegistered logs, compare each address and poolIndex.
+	// Iterate attesterRegistered logs, compare each address and poolIndex.
 	for i := 0; i < params[1]; i++ {
 		log.Next()
-		if log.Event.Notary != s.testAccounts[i].addr {
-			return fmt.Errorf("incorrect address in notaryRegistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Notary)
+		if log.Event.Attester != s.testAccounts[i].addr {
+			return fmt.Errorf("incorrect address in attesterRegistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Attester)
 		}
-		// Verify notaryPoolIndex is incremental starting from 1st registered Notary.
+		// Verify attesterPoolIndex is incremental starting from 1st registered Attester.
 		if log.Event.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 {
-			return fmt.Errorf("incorrect index in notaryRegistered log. Want: %v Got: %v", i, log.Event.Notary)
+			return fmt.Errorf("incorrect index in attesterRegistered log. Want: %v Got: %v", i, log.Event.Attester)
 		}
 	}
 	return nil
 }
 
-// deregisterNotaries is a helper function that deregister notaries in batch.
-func (s *smcTestHelper) deregisterNotaries(params ...int) error {
+// deregisterAttesters is a helper function that deregister attesters in batch.
+func (s *smcTestHelper) deregisterAttesters(params ...int) error {
 	for i := params[0]; i < params[1]; i++ {
 		s.testAccounts[i].txOpts.Value = big.NewInt(0)
-		_, err := s.smc.DeregisterNotary(s.testAccounts[i].txOpts)
+		_, err := s.smc.DeregisterAttester(s.testAccounts[i].txOpts)
 		if err != nil {
-			return fmt.Errorf("Failed to deregister notary: %v", err)
+			return fmt.Errorf("Failed to deregister attester: %v", err)
 		}
 		s.backend.Commit()
-		notary, _ := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[i].addr)
-		if notary.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
+		attester, _ := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[i].addr)
+		if attester.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
 			return fmt.Errorf("Degistered period can not be 0 right after deregistration")
 		}
 	}
-	// Filter SMC logs by notaryDeregistered.
-	log, err := s.smc.FilterNotaryDeregistered(&bind.FilterOpts{})
+	// Filter SMC logs by attesterDeregistered.
+	log, err := s.smc.FilterAttesterDeregistered(&bind.FilterOpts{})
 	if err != nil {
 		return err
 	}
-	// Iterate notaryDeregistered logs, compare each address, poolIndex and verify period is set.
+	// Iterate attesterDeregistered logs, compare each address, poolIndex and verify period is set.
 	for i := 0; i < params[1]; i++ {
 		log.Next()
-		if log.Event.Notary != s.testAccounts[i].addr {
-			return fmt.Errorf("incorrect address in notaryDeregistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Notary)
+		if log.Event.Attester != s.testAccounts[i].addr {
+			return fmt.Errorf("incorrect address in attesterDeregistered log. Want: %v Got: %v", s.testAccounts[i].addr, log.Event.Attester)
 		}
 		if log.Event.PoolIndex.Cmp(big.NewInt(int64(i))) != 0 {
-			return fmt.Errorf("incorrect index in notaryDeregistered log. Want: %v Got: %v", i, log.Event.Notary)
+			return fmt.Errorf("incorrect index in attesterDeregistered log. Want: %v Got: %v", i, log.Event.Attester)
 		}
 		if log.Event.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
-			return fmt.Errorf("incorrect period in notaryDeregistered log. Got: %v", log.Event.DeregisteredPeriod)
+			return fmt.Errorf("incorrect period in attesterDeregistered log. Got: %v", log.Event.DeregisteredPeriod)
 		}
 	}
 	return nil
@@ -186,20 +192,20 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 	return nil
 }
 
-// submitVote is a helper function for notary to submit vote on a given header.
+// submitVote is a helper function for attester to submit vote on a given header.
 func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
 	_, err := s.smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
 	if err != nil {
-		return fmt.Errorf("Notary submit vote failed: %v", err)
+		return fmt.Errorf("Attester submit vote failed: %v", err)
 	}
 	s.backend.Commit()
 
 	v, err := s.smc.HasVoted(&bind.CallOpts{}, shard, index)
 	if err != nil {
-		return fmt.Errorf("Check notary's vote failed: %v", err)
+		return fmt.Errorf("Check attester's vote failed: %v", err)
 	}
 	if !v {
-		return fmt.Errorf("Notary's indexd bit did not cast to 1 in index %v", index)
+		return fmt.Errorf("Attester's indexd bit did not cast to 1 in index %v", index)
 	}
 	// Filter SMC logs by submitVote.
 	shardIndex := []*big.Int{shard}
@@ -209,8 +215,8 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 		return err
 	}
 	log.Next()
-	if log.Event.NotaryAddress != a.addr {
-		return fmt.Errorf("incorrect notary address in submitVote log. Want: %v Got: %v", s.testAccounts[0].addr, a.addr)
+	if log.Event.AttesterAddress != a.addr {
+		return fmt.Errorf("incorrect attester address in submitVote log. Want: %v Got: %v", s.testAccounts[0].addr, a.addr)
 	}
 	if log.Event.ChunkRoot != [32]byte{chunkRoot} {
 		return fmt.Errorf("chunk root missmatch in submitVote log. Want: %v Got: %v", common.BytesToHash([]byte{chunkRoot}), common.BytesToHash(log.Event.ChunkRoot[:]))
@@ -218,15 +224,15 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 	return nil
 }
 
-// checkNotaryPoolLength is a helper function to verify current notary pool
+// checkAttesterPoolLength is a helper function to verify current attester pool
 // length is equal to n.
-func checkNotaryPoolLength(smc *SMC, n *big.Int) error {
-	numNotaries, err := smc.NotaryPoolLength(&bind.CallOpts{})
+func checkAttesterPoolLength(smc *SMC, n *big.Int) error {
+	numAttesters, err := smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
-		return fmt.Errorf("Failed to get notary pool length: %v", err)
+		return fmt.Errorf("Failed to get attester pool length: %v", err)
 	}
-	if numNotaries.Cmp(n) != 0 {
-		return fmt.Errorf("Incorrect count from notary pool. Want: %v, Got: %v", n, numNotaries)
+	if numAttesters.Cmp(n) != 0 {
+		return fmt.Errorf("Incorrect count from attester pool. Want: %v, Got: %v", n, numAttesters)
 	}
 	return nil
 }
@@ -239,178 +245,203 @@ func TestContractCreation(t *testing.T) {
 	}
 }
 
-// TestNotaryRegister tests notary registers in a normal condition.
-func TestNotaryRegister(t *testing.T) {
-	// Initializes 3 accounts to register as notaries.
-	const notaryCount = 3
-	s, _ := newSMCTestHelper(notaryCount)
+// TestAttesterRegister tests attester registers in a normal condition.
+func TestAttesterRegister(t *testing.T) {
+	// Initializes 3 accounts to register as attesters.
+	const attesterCount = 3
+	s, _ := newSMCTestHelper(attesterCount)
 
-	// Verify notary 0 has not registered.
-	notary, err := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
+	// Verify attester 0 has not registered.
+	attester, err := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
-		t.Errorf("Can't get notary registry info: %v", err)
+		t.Errorf("Can't get attester registry info: %v", err)
 	}
-	if notary.Deposited {
-		t.Errorf("Notary has not registered. Got deposited flag: %v", notary.Deposited)
+	if attester.Deposited {
+		t.Errorf("Attester has not registered. Got deposited flag: %v", attester.Deposited)
 	}
 
-	// Test notary 0 has registered.
-	err = s.registerNotaries(notaryDeposit, 0, 1)
+	// Test attester 0 has registered.
+	err = s.registerAttesters(attesterDeposit, 0, 1)
 	if err != nil {
-		t.Errorf("Register notary failed: %v", err)
+		t.Errorf("Register attester failed: %v", err)
 	}
-	// Test notary 1 and 2 have registered.
-	err = s.registerNotaries(notaryDeposit, 1, 3)
+	// Test attester 1 and 2 have registered.
+	err = s.registerAttesters(attesterDeposit, 1, 3)
 	if err != nil {
-		t.Errorf("Register notary failed: %v", err)
+		t.Errorf("Register attester failed: %v", err)
 	}
-	// Check total numbers of notaries in pool, should be 3
-	err = checkNotaryPoolLength(s.smc, big.NewInt(notaryCount))
+	// Check total numbers of attesters in pool, should be 3
+	err = checkAttesterPoolLength(s.smc, big.NewInt(attesterCount))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 }
 
-// TestNotaryRegisterInsufficientEther tests notary registers with insufficient deposit.
-func TestNotaryRegisterInsufficientEther(t *testing.T) {
+// TestAttesterRegisterInsufficientEther tests attester registers with insufficient deposit.
+func TestAttesterRegisterInsufficientEther(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
-	if err := s.registerNotaries(notaryDepositInsufficient, 0, 1); err == nil {
-		t.Errorf("Notary register should have failed with insufficient deposit")
+	if err := s.registerAttesters(attesterDepositInsufficient, 0, 1); err == nil {
+		t.Errorf("Attester register should have failed with insufficient deposit")
 	}
 }
 
-// TestNotaryDoubleRegisters tests notary registers twice.
-func TestNotaryDoubleRegisters(t *testing.T) {
+// TestAttesterDoubleRegisters tests attester registers twice.
+func TestAttesterDoubleRegisters(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
-	// Notary 0 registers.
-	err := s.registerNotaries(notaryDeposit, 0, 1)
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
 	if err != nil {
-		t.Errorf("Register notary failed: %v", err)
+		t.Errorf("Register attester failed: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
-	// Notary 0 registers again, This time should fail.
-	if err = s.registerNotaries(big.NewInt(0), 0, 1); err == nil {
-		t.Errorf("Notary register should have failed with double registers")
+	// Attester 0 registers again, This time should fail.
+	if err = s.registerAttesters(big.NewInt(0), 0, 1); err == nil {
+		t.Errorf("Attester register should have failed with double registers")
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 }
 
-// TestNotaryDeregister tests notary deregisters in a normal condition.
-func TestNotaryDeregister(t *testing.T) {
+// TestAttesterDeregister tests attester deregisters in a normal condition.
+func TestAttesterDeregister(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
-	// Notary 0 registers.
-	err := s.registerNotaries(notaryDeposit, 0, 1)
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
 	if err != nil {
-		t.Errorf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
-	// Fast forward 20 periods to check notary's deregistered period field is set correctly.
+	// Fast forward 20 periods to check attester's deregistered period field is set correctly.
 	s.fastForward(20)
 
-	// Notary 0 deregisters.
-	s.deregisterNotaries(0, 1)
-	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
+	// Attester 0 deregisters.
+	s.deregisterAttesters(0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 }
 
-// TestNotaryDeregisterThenRegister tests notary deregisters then registers before lock up ends.
-func TestNotaryDeregisterThenRegister(t *testing.T) {
+// TestAttesterDeregisterThenRegister tests attester deregisters then registers before lock up ends.
+func TestAttesterDeregisterThenRegister(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
-	// Notary 0 registers.
-	err := s.registerNotaries(notaryDeposit, 0, 1)
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
 	if err != nil {
-		t.Errorf("Failed to register notary: %v", err)
+		t.Errorf("Failed to register attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 	s.fastForward(1)
 
-	// Notary 0 deregisters.
-	s.deregisterNotaries(0, 1)
-	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
+	// Attester 0 deregisters.
+	s.deregisterAttesters(0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
+<<<<<<< HEAD
+	// Attester 0 re-registers again.
+	err = s.registerAttesters(attesterDeposit, 0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(0))
+=======
 	// Notary 0 re-registers again.
 	err = s.registerNotaries(notaryDeposit, 0, 1)
 	if err == nil {
 		t.Error("Expected re-registration to fail")
 	}
 	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 }
 
-// TestNotaryRelease tests notary releases in a normal condition.
-func TestNotaryRelease(t *testing.T) {
+// TestAttesterRelease tests attester releases in a normal condition.
+func TestAttesterRelease(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
-	// Notary 0 registers.
-	err := s.registerNotaries(notaryDeposit, 0, 1)
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
 	if err != nil {
-		t.Errorf("Failed to register notary: %v", err)
+		t.Errorf("Failed to register attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 	s.fastForward(1)
 
-	// Notary 0 deregisters.
-	s.deregisterNotaries(0, 1)
-	err = checkNotaryPoolLength(s.smc, big.NewInt(0))
+	// Attester 0 deregisters.
+	s.deregisterAttesters(0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(0))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
 	// Fast forward until lockup ends.
-	s.fastForward(int(params.DefaultConfig.NotaryLockupLength + 1))
+	s.fastForward(int(params.DefaultConfig.AttesterLockupLength + 1))
 
-	// Notary 0 releases.
-	_, err = s.smc.ReleaseNotary(s.testAccounts[0].txOpts)
+	// Attester 0 releases.
+	_, err = s.smc.ReleaseAttester(s.testAccounts[0].txOpts)
 	if err != nil {
-		t.Errorf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release attester: %v", err)
 	}
 	s.backend.Commit()
-	notary, err := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
+	attester, err := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
-		t.Errorf("Can't get notary registry info: %v", err)
+		t.Errorf("Can't get attester registry info: %v", err)
 	}
-	if notary.Deposited {
-		t.Errorf("Notary deposit flag should be false after released")
+	if attester.Deposited {
+		t.Errorf("Attester deposit flag should be false after released")
 	}
 	balance, err := s.backend.BalanceAt(ctx, s.testAccounts[0].addr, nil)
 	if err != nil {
 		t.Errorf("Can't get account balance, err: %s", err)
 	}
-	if balance.Cmp(notaryDeposit) < 0 {
-		t.Errorf("Notary did not receive deposit after lock up ends")
+	if balance.Cmp(attesterDeposit) < 0 {
+		t.Errorf("Attester did not receive deposit after lock up ends")
 	}
 }
 
-// TestNotaryInstantRelease tests notary releases before lockup ends.
-func TestNotaryInstantRelease(t *testing.T) {
+// TestAttesterInstantRelease tests attester releases before lockup ends.
+func TestAttesterInstantRelease(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
+<<<<<<< HEAD
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
+	if err != nil {
+		t.Errorf("Attester pool length mismatched: %v", err)
+	}
+	s.fastForward(1)
+
+	// Attester 0 deregisters.
+	s.deregisterAttesters(0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(0))
+	if err != nil {
+		t.Errorf("Attester pool length mismatched: %v", err)
+	}
+
+	// Attester 0 tries to release before lockup ends.
+	_, err = s.smc.ReleaseAttester(s.testAccounts[0].txOpts)
+=======
 	// Notary 0 registers.
 	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
 		t.Error(err)
@@ -430,120 +461,126 @@ func TestNotaryInstantRelease(t *testing.T) {
 	if _, err := s.smc.ReleaseNotary(s.testAccounts[0].txOpts); err == nil {
 		t.Error("Expected release notary to fail")
 	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.backend.Commit()
-	notary, err := s.smc.NotaryRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
+	attester, err := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[0].addr)
 	if err != nil {
-		t.Errorf("Can't get notary registry info: %v", err)
+		t.Errorf("Can't get attester registry info: %v", err)
 	}
-	if !notary.Deposited {
-		t.Errorf("Notary deposit flag should be true before released")
+	if !attester.Deposited {
+		t.Errorf("Attester deposit flag should be true before released")
 	}
 	balance, err := s.backend.BalanceAt(ctx, s.testAccounts[0].addr, nil)
+<<<<<<< HEAD
+	if balance.Cmp(attesterDeposit) > 0 {
+		t.Errorf("Attester received deposit before lockup ends")
+=======
 	if err != nil {
 		t.Error(err)
 	}
 	if balance.Cmp(notaryDeposit) > 0 {
 		t.Errorf("Notary received deposit before lockup ends")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 }
 
-// TestCommitteeListsAreDifferent tests different shards have different notary committee.
+// TestCommitteeListsAreDifferent tests different shards have different attester committee.
 func TestCommitteeListsAreDifferent(t *testing.T) {
-	const notaryCount = 1000
-	s, _ := newSMCTestHelper(notaryCount)
+	const attesterCount = 1000
+	s, _ := newSMCTestHelper(attesterCount)
 
-	// Register 1000 notaries to s.smc.
-	err := s.registerNotaries(notaryDeposit, 0, 1000)
+	// Register 1000 attesters to s.smc.
+	err := s.registerAttesters(attesterDeposit, 0, 1000)
 	if err != nil {
-		t.Errorf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1000))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1000))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
-	// Compare sampled first 5 notaries of shard 0 to shard 1, they should not be identical.
+	// Compare sampled first 5 attesters of shard 0 to shard 1, they should not be identical.
 	for i := 0; i < 5; i++ {
-		addr0, _ := s.smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
-		addr1, _ := s.smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(1))
+		addr0, _ := s.smc.GetAttesterInCommittee(&bind.CallOpts{}, big.NewInt(0))
+		addr1, _ := s.smc.GetAttesterInCommittee(&bind.CallOpts{}, big.NewInt(1))
 		if addr0 == addr1 {
 			t.Errorf("Shard 0 committee list is identical to shard 1's committee list")
 		}
 	}
 }
 
-// TestGetCommitteeWithNonMember tests unregistered notary tries to be in the committee.
+// TestGetCommitteeWithNonMember tests unregistered attester tries to be in the committee.
 func TestGetCommitteeWithNonMember(t *testing.T) {
-	const notaryCount = 11
-	s, _ := newSMCTestHelper(notaryCount)
+	const attesterCount = 11
+	s, _ := newSMCTestHelper(attesterCount)
 
-	// Register 10 notaries to s.smc, leave 1 address free.
-	err := s.registerNotaries(notaryDeposit, 0, 10)
+	// Register 10 attesters to s.smc, leave 1 address free.
+	err := s.registerAttesters(attesterDeposit, 0, 10)
 	if err != nil {
-		t.Errorf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(10))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(10))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
-	// Verify the unregistered account is not in the notary pool list.
+	// Verify the unregistered account is not in the attester pool list.
 	for i := 0; i < 10; i++ {
-		addr, _ := s.smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+		addr, _ := s.smc.GetAttesterInCommittee(&bind.CallOpts{}, big.NewInt(0))
 		if s.testAccounts[10].addr == addr {
-			t.Errorf("Account %s is not a notary", s.testAccounts[10].addr.String())
+			t.Errorf("Account %s is not an attester", s.testAccounts[10].addr.String())
 		}
 	}
 }
 
-// TestGetCommitteeWithinSamePeriod tests notary registers and samples within the same period.
+// TestGetCommitteeWithinSamePeriod tests attester registers and samples within the same period.
 func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
-	// Notary 0 registers.
-	err := s.registerNotaries(notaryDeposit, 0, 1)
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
 	if err != nil {
-		t.Errorf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(1))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(1))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
-	// Notary 0 samples for itself within the same period after registration.
-	sampledAddr, _ := s.smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+	// Attester 0 samples for itself within the same period after registration.
+	sampledAddr, _ := s.smc.GetAttesterInCommittee(&bind.CallOpts{}, big.NewInt(0))
 	if s.testAccounts[0].addr != sampledAddr {
-		t.Errorf("Unable to sample notary address within same period of registration, got addr: %v", sampledAddr)
+		t.Errorf("Unable to sample attester address within same period of registration, got addr: %v", sampledAddr)
 	}
 }
 
-// TestGetCommitteeAfterDeregisters tests notary tries to be in committee after deregistered.
+// TestGetCommitteeAfterDeregisters tests attester tries to be in committee after deregistered.
 func TestGetCommitteeAfterDeregisters(t *testing.T) {
-	const notaryCount = 10
-	s, _ := newSMCTestHelper(notaryCount)
+	const attesterCount = 10
+	s, _ := newSMCTestHelper(attesterCount)
 
-	// Register 10 notaries to s.smc.
-	err := s.registerNotaries(notaryDeposit, 0, notaryCount)
+	// Register 10 attesters to s.smc.
+	err := s.registerAttesters(attesterDeposit, 0, attesterCount)
 	if err != nil {
-		t.Errorf("Failed to release notary: %v", err)
+		t.Errorf("Failed to release attester: %v", err)
 	}
-	err = checkNotaryPoolLength(s.smc, big.NewInt(10))
+	err = checkAttesterPoolLength(s.smc, big.NewInt(10))
 	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
-	}
-
-	// Deregister notary 0 from s.smc.
-	s.deregisterNotaries(0, 1)
-	err = checkNotaryPoolLength(s.smc, big.NewInt(9))
-	if err != nil {
-		t.Errorf("Notary pool length mismatched: %v", err)
+		t.Errorf("Attester pool length mismatched: %v", err)
 	}
 
-	// Verify degistered notary 0 is not in the notary pool list.
+	// Deregister attester 0 from s.smc.
+	s.deregisterAttesters(0, 1)
+	err = checkAttesterPoolLength(s.smc, big.NewInt(9))
+	if err != nil {
+		t.Errorf("Attester pool length mismatched: %v", err)
+	}
+
+	// Verify degistered attester 0 is not in the attester pool list.
 	for i := 0; i < 10; i++ {
-		addr, _ := s.smc.GetNotaryInCommittee(&bind.CallOpts{}, big.NewInt(0))
+		addr, _ := s.smc.GetAttesterInCommittee(&bind.CallOpts{}, big.NewInt(0))
 		if s.testAccounts[0].addr == addr {
-			t.Errorf("Account %s is not a notary", s.testAccounts[0].addr.String())
+			t.Errorf("Account %s is not an attester", s.testAccounts[0].addr.String())
 		}
 	}
 }
@@ -612,13 +649,18 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	}
 }
 
-// TestSubmitVote tests notary submit votes in normal condition.
+// TestSubmitVote tests attester submit votes in normal condition.
 func TestSubmitVote(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
 	// Notary 0 registers.
 	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
 		t.Error(err)
 	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -630,26 +672,26 @@ func TestSubmitVote(t *testing.T) {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
-	// Notary 0 votes on header.
+	// Attester 0 votes on header.
 	c, err := s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if err != nil {
-		t.Errorf("Get notary vote count failed: %v", err)
+		t.Errorf("Get attester vote count failed: %v", err)
 	}
 	if c.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
+		t.Errorf("Incorrect attester vote count, want: 0, got: %v", c)
 	}
 
-	// Notary votes on the header that was submitted.
+	// Attester votes on the header that was submitted.
 	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
 	if err != nil {
-		t.Fatalf("Notary submits vote failed: %v", err)
+		t.Fatalf("Attester submits vote failed: %v", err)
 	}
 	c, err = s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if err != nil {
 		t.Error(err)
 	}
 	if c.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+		t.Errorf("Incorrect attester vote count, want: 1, got: %v", c)
 	}
 
 	// Check header's approved with the current period, should be period 0.
@@ -663,13 +705,18 @@ func TestSubmitVote(t *testing.T) {
 
 }
 
-// TestSubmitVoteTwice tests notary tries to submit same vote twice.
+// TestSubmitVoteTwice tests attester tries to submit same vote twice.
 func TestSubmitVoteTwice(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
 	// Notary 0 registers.
 	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
 		t.Error(err)
 	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -681,6 +728,18 @@ func TestSubmitVoteTwice(t *testing.T) {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
+<<<<<<< HEAD
+	// Attester 0 votes on header.
+	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
+	if err != nil {
+		t.Errorf("Attester submits vote failed: %v", err)
+	}
+
+	// Attester 0 votes on header again, it should fail.
+	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
+	if err == nil {
+		t.Errorf("attester voting twice should have failed")
+=======
 	// Notary 0 votes on header.
 	if err := s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A'); err != nil {
 		t.Errorf("Notary submits vote failed: %v", err)
@@ -689,17 +748,18 @@ func TestSubmitVoteTwice(t *testing.T) {
 	// Notary 0 votes on header again, it should fail.
 	if err := s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A'); err == nil {
 		t.Errorf("notary voting twice should have failed")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 
-	// Check notary's vote count is correct in shard.
+	// Check attester's vote count is correct in shard.
 	c, _ := s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+		t.Errorf("Incorrect attester vote count, want: 1, got: %v", c)
 	}
 }
 
-// TestSubmitVoteByNonEligibleNotary tests a non-eligible notary tries to submit vote.
-func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
+// TestSubmitVoteByNonEligibleAttester tests a non-eligible attester tries to submit vote.
+func TestSubmitVoteByNonEligibleAttester(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	s.fastForward(1)
 
@@ -712,26 +772,31 @@ func TestSubmitVoteByNonEligibleNotary(t *testing.T) {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
-	// Unregistered Notary 0 votes on header, it should fail.
+	// Unregistered Attester 0 votes on header, it should fail.
 	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
 	if err == nil {
-		t.Errorf("Non registered notary submits vote should have failed")
+		t.Errorf("Non registered attester submits vote should have failed")
 	}
 
-	// Check notary's vote count is correct in shard.
+	// Check attester's vote count is correct in shard.
 	c, _ := s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect notary vote count, want: 0, got: %v", c)
+		t.Errorf("Incorrect attester vote count, want: 0, got: %v", c)
 	}
 }
 
-// TestSubmitVoteWithOutAHeader tests a notary tries to submit vote before header gets added.
+// TestSubmitVoteWithOutAHeader tests an attester tries to submit vote before header gets added.
 func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
 	// Notary 0 registers.
 	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
 		t.Error(err)
 	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -740,25 +805,37 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	index0 := big.NewInt(0)
 	s.testAccounts[0].txOpts.Value = big.NewInt(0)
 
+<<<<<<< HEAD
+	// Attester 0 votes on header, it should fail because no header has added.
+	err = s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A')
+	if err == nil {
+		t.Errorf("Attester votes should have failed due to missing header")
+=======
 	// Notary 0 votes on header, it should fail because no header has added.
 	if err := s.submitVote(&s.testAccounts[0], shard0, period1, index0, 'A'); err == nil {
 		t.Errorf("Notary votes should have failed due to missing header")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 
-	// Check notary's vote count is correct in shard
+	// Check attester's vote count is correct in shard
 	c, _ := s.smc.GetVoteCount(&bind.CallOpts{}, shard0)
 	if c.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("Incorrect notary vote count, want: 1, got: %v", c)
+		t.Errorf("Incorrect attester vote count, want: 1, got: %v", c)
 	}
 }
 
-// TestSubmitVoteWithInvalidArgs tests notary submits vote using wrong chunkroot and period.
+// TestSubmitVoteWithInvalidArgs tests attester submits vote using wrong chunkroot and period.
 func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
+<<<<<<< HEAD
+	// Attester 0 registers.
+	err := s.registerAttesters(attesterDeposit, 0, 1)
+=======
 	// Notary 0 registers.
 	if err := s.registerNotaries(notaryDeposit, 0, 1); err != nil {
 		t.Error(err)
 	}
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	s.fastForward(1)
 
 	// Proposer adds header consists shard 0, period 1 and chunkroot 0xA.
@@ -770,8 +847,19 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 		t.Errorf("Proposer adds header failed: %v", err)
 	}
 
-	// Notary voting with incorrect period.
+	// Attester voting with incorrect period.
 	period2 := big.NewInt(2)
+<<<<<<< HEAD
+	err = s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'A')
+	if err == nil {
+		t.Errorf("Attester votes should have failed due to incorrect period")
+	}
+
+	// Attester voting with incorrect chunk root.
+	err = s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'B')
+	if err == nil {
+		t.Errorf("Attester votes should have failed due to incorrect chunk root")
+=======
 	if err := s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'A'); err == nil {
 		t.Errorf("Notary votes should have failed due to incorrect period")
 	}
@@ -779,5 +867,6 @@ func TestSubmitVoteWithInvalidArgs(t *testing.T) {
 	// Notary voting with incorrect chunk root.
 	if err := s.submitVote(&s.testAccounts[0], shard0, period2, index0, 'B'); err == nil {
 		t.Errorf("Notary votes should have failed due to incorrect chunk root")
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 }

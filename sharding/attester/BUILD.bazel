@@ -3,10 +3,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "notary.go",
+        "attester.go",
         "service.go",
     ],
+<<<<<<< HEAD:sharding/attester/BUILD.bazel
+    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/attester",
+=======
     importpath = "github.com/prysmaticlabs/geth-sharding/sharding/notary",
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc:sharding/notary/BUILD.bazel
     visibility = ["//sharding:__subpackages__"],
     deps = [
         "//sharding/contracts:go_default_library",

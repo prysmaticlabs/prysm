@@ -148,7 +148,7 @@ func (s *Shard) BodyByChunkRoot(chunkRoot *common.Hash) ([]byte, error) {
 	return body, nil
 }
 
-// CheckAvailability is used by notaries to confirm a header's data availability.
+// CheckAvailability is used by attesters to confirm a header's data availability.
 func (s *Shard) CheckAvailability(header *CollationHeader) (bool, error) {
 	key := dataAvailabilityLookupKey(header.ChunkRoot())
 	availability, err := s.shardDB.Get(key.Bytes())
@@ -213,7 +213,7 @@ func (s *Shard) SaveCollation(collation *Collation) error {
 }
 
 // SetCanonical sets the collation header as canonical in the shardDB. This is called
-// after the period is over and over 2/3 notaries voted on the header.
+// after the period is over and over 2/3 attesters voted on the header.
 func (s *Shard) SetCanonical(header *CollationHeader) error {
 	if err := s.ValidateShardID(header); err != nil {
 		return err

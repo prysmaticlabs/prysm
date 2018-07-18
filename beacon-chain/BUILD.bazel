@@ -5,6 +5,8 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain",
     visibility = ["//beacon-chain:__subpackages__"],
+<<<<<<< HEAD
+=======
     deps = [
         "//beacon-chain/node:go_default_library",
         "//beacon-chain/types:go_default_library",
@@ -18,4 +20,5 @@ go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
     visibility = ["//beacon-chain:__subpackages__"],
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 )

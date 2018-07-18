@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/notary"
+	"github.com/prysmaticlabs/geth-sharding/sharding/attester"
 	"github.com/prysmaticlabs/geth-sharding/sharding/observer"
 	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
@@ -37,6 +37,12 @@ const shardChainDBName = "shardchaindata"
 // Ethereum network.
 type ShardEthereum struct {
 	shardConfig *params.Config // Holds necessary information to configure shards.
+<<<<<<< HEAD
+	txPool      *txpool.TXPool // Defines the sharding-specific txpool. To be designed.
+	actor       types.Actor    // Either attester, proposer, or observer.
+	eventFeed   *event.Feed    // Used to enable P2P related interactions via different sharding actors.
+=======
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 
 	// Lifecycle and service stores.
 	services *shared.ServiceRegistry
@@ -193,7 +199,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	return s.services.RegisterService(pool)
 }
 
-// Registers the actor according to CLI flags. Either notary/proposer/observer.
+// Registers the actor according to CLI flags. Either attester/proposer/observer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
@@ -215,11 +221,19 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 	}
 
 	switch actor {
+<<<<<<< HEAD
+	case "attester":
+		not, err := attester.NewAttester(config, client, shardp2p, shardChainDB)
+=======
 	case "notary":
 		not, err := notary.NewNotary(config, client, shardp2p, shardChainDB)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 		if err != nil {
-			return fmt.Errorf("could not register notary service: %v", err)
+			return fmt.Errorf("could not register attester service: %v", err)
 		}
+<<<<<<< HEAD
+		return s.registerService(not)
+=======
 		return s.services.RegisterService(not)
 	case "simulator":
 		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
@@ -227,6 +241,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return fmt.Errorf("could not register simulator service: %v", err)
 		}
 		return s.services.RegisterService(sim)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	case "proposer":
 		var pool *txpool.TXPool
 		if err := s.services.FetchService(&pool); err != nil {
@@ -237,13 +252,50 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
+<<<<<<< HEAD
+		return s.registerService(prop)
+	case "simulator":
+		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15) // 15 second delay between simulator requests.
+		if err != nil {
+			return fmt.Errorf("could not register simulator service: %v", err)
+		}
+		return s.registerService(sim)
+=======
 		return s.services.RegisterService(prop)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	default:
 		obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
 		if err != nil {
 			return fmt.Errorf("could not register observer service: %v", err)
 		}
+<<<<<<< HEAD
+		return s.registerService(obs)
+	}
+}
+
+func (s *ShardEthereum) registerSimulatorService(actorFlag string, config *params.Config, shardID int) error {
+	// Should not trigger simulation requests if actor is a attester, as this
+	// is supposed to "simulate" attesters sending requests via p2p.
+	if actorFlag == "attester" {
+		return nil
+	}
+
+	var shardp2p *p2p.Server
+	if err := s.fetchService(&shardp2p); err != nil {
+		return err
+	}
+	var client *mainchain.SMCClient
+	if err := s.fetchService(&client); err != nil {
+		return err
+	}
+
+	// 15 second delay between simulator requests.
+	sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
+	if err != nil {
+		return fmt.Errorf("could not register simulator service: %v", err)
+=======
 		return s.services.RegisterService(obs)
+>>>>>>> f2f8850cccf5ff3498aebbce71baa05267bc07cc
 	}
 }
 func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int) error {
