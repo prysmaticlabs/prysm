@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -13,7 +15,8 @@ import (
 
 func TestNewBeaconChain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db, err := database.NewBeaconDB(context.Background(), "/tmp/beacon", "beacontest", false)
+	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	db, err := database.NewBeaconDB(context.Background(), tmp, "beacontest", false)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
@@ -40,7 +43,8 @@ func TestNewBeaconChain(t *testing.T) {
 }
 
 func TestMutateActiveState(t *testing.T) {
-	db, err := database.NewBeaconDB(context.Background(), "/tmp/beacon", "beacontest2", false)
+	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	db, err := database.NewBeaconDB(context.Background(), tmp, "beacontest2", false)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
@@ -77,7 +81,8 @@ func TestMutateActiveState(t *testing.T) {
 }
 
 func TestMutateCrystallizedState(t *testing.T) {
-	db, err := database.NewBeaconDB(context.Background(), "/tmp/beacon", "beacontest3", false)
+	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	db, err := database.NewBeaconDB(context.Background(), tmp, "beacontest3", false)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}

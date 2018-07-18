@@ -20,10 +20,15 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["core_test.go"],
+    srcs = [
+        "core_test.go",
+        "service_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/database:go_default_library",
         "//beacon-chain/types:go_default_library",
-        "//shared/database:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
