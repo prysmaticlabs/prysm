@@ -1,23 +1,29 @@
 package blockchain
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	log "github.com/sirupsen/logrus"
+	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
-var stateLookupKey = "beacon-chain-state"
+var stateLookupKey = "beaconchainstate"
 
 // BeaconChain represents the core PoS blockchain object containing
 // both a crystallized and active state.
 type BeaconChain struct {
-	activeState       *types.ActiveState
-	crystallizedState *types.CrystallizedState
-	lock              sync.Mutex
-	db                ethdb.Database
+	state *beaconState
+	lock  sync.Mutex
+	db    ethdb.Database
+}
+
+type beaconState struct {
+	ActiveState       *types.ActiveState
+	CrystallizedState *types.CrystallizedState
 }
 
 // NewBeaconChain initializes an instance using genesis state parameters if
@@ -26,30 +32,36 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	beaconChain := &BeaconChain{
 		db: db,
 	}
-	if _, err := db.Get([]byte(stateLookupKey)); err != nil {
+	enc, err := db.Get([]byte(stateLookupKey))
+	if err != nil && err.Error() == leveldberrors.ErrNotFound.Error() {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		active, crystallized := types.NewGenesisStates()
-		beaconChain.activeState = active
-		beaconChain.crystallizedState = crystallized
+		beaconChain.state.ActiveState = active
+		beaconChain.state.CrystallizedState = crystallized
+		return beaconChain, nil
+	}
+	// Deserializes the encoded object into a beacon chain.
+	if err := rlp.DecodeBytes(enc, &beaconChain.state); err != nil {
+		return nil, fmt.Errorf("could not deserialize chainstate from disk: %v", err)
 	}
 	return beaconChain, nil
 }
 
 // ActiveState exposes a getter to external services.
 func (b *BeaconChain) ActiveState() *types.ActiveState {
-	return b.activeState
+	return b.state.ActiveState
 }
 
 // CrystallizedState exposes a getter to external services.
 func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
-	return b.crystallizedState
+	return b.state.CrystallizedState
 }
 
-// MutateActiveState allows external services to modify a beacon chain object.
+// MutateActiveState allows external services to modify the active state.
 func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
-	b.activeState = activeState
+	b.state.ActiveState = activeState
 	return b.persist()
 }
 
@@ -57,15 +69,15 @@ func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
-	b.crystallizedState = crystallizedState
+	b.state.CrystallizedState = crystallizedState
 	return b.persist()
 }
 
 // persist stores the RLP encoding of the latest beacon chain state into the db.
 func (b *BeaconChain) persist() error {
-	enc, err := rlp.EncodeToBytes(b)
+	encodedState, err := rlp.EncodeToBytes(b.state)
 	if err != nil {
 		return err
 	}
-	return b.db.Put([]byte(stateLookupKey), enc)
+	return b.db.Put([]byte(stateLookupKey), encodedState)
 }

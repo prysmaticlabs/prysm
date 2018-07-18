@@ -2,6 +2,7 @@ package database
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/types"
@@ -50,13 +51,17 @@ func TestLifecycle(t *testing.T) {
 
 // Testing the concurrency of the shardDB with multiple processes attempting to write.
 func Test_DBConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(100)
 	for i := 0; i < 100; i++ {
 		go func(val string) {
+			defer wg.Done()
 			if err := testDB.db.Put([]byte("ralph merkle"), []byte(val)); err != nil {
 				t.Errorf("could not save value in db: %v", err)
 			}
 		}(strconv.Itoa(i))
 	}
+	wg.Wait()
 }
 
 func Test_DBPut(t *testing.T) {
