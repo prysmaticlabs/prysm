@@ -30,7 +30,8 @@ type beaconState struct {
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	beaconChain := &BeaconChain{
-		db: db,
+		db:    db,
+		state: &beaconState{},
 	}
 	enc, err := db.Get([]byte(stateLookupKey))
 	if err != nil && err.Error() == leveldberrors.ErrNotFound.Error() {
