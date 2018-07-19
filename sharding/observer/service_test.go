@@ -1,6 +1,7 @@
 package observer
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/geth-sharding/sharding/database"
@@ -23,7 +24,8 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
-	shardChainDB, err := database.NewShardDB("", "", true)
+	config := &database.ShardDBConfig{Name: "", DataDir: "", InMemory: true}
+	shardChainDB, err := database.NewShardDB(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Unable to setup db: %v", err)
 	}

@@ -101,7 +101,8 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) registerBeaconDB(path string) error {
-	beaconDB, err := database.NewBeaconDB(context.TODO(), path, beaconChainDBName, false)
+	config := &database.BeaconDBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
+	beaconDB, err := database.NewBeaconDB(context.TODO(), config)
 	if err != nil {
 		return fmt.Errorf("could not register beaconDB service: %v", err)
 	}

@@ -24,18 +24,25 @@ type BeaconDB struct {
 	db       ethdb.Database
 }
 
+// BeaconDBConfig specifies configuration options for the db service.
+type BeaconDBConfig struct {
+	DataDir  string
+	Name     string
+	InMemory bool
+}
+
 // NewBeaconDB initializes a beaconDB instance.
-func NewBeaconDB(ctx context.Context, dataDir string, name string, inmemory bool) (*BeaconDB, error) {
+func NewBeaconDB(ctx context.Context, config *BeaconDBConfig) (*BeaconDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
 	ctx, cancel := context.WithCancel(ctx)
 	beaconDB := &BeaconDB{
 		ctx:     ctx,
 		cancel:  cancel,
-		name:    name,
-		dataDir: dataDir,
+		name:    config.Name,
+		dataDir: config.DataDir,
 	}
-	if inmemory {
+	if config.InMemory {
 		beaconDB.inmemory = true
 		beaconDB.db = sharedDB.NewKVStore()
 	} else {

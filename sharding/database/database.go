@@ -4,6 +4,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -22,15 +23,22 @@ type ShardDB struct {
 	db       ethdb.Database
 }
 
+// ShardDBConfig specifies configuration options for the db service.
+type ShardDBConfig struct {
+	DataDir  string
+	Name     string
+	InMemory bool
+}
+
 // NewShardDB initializes a shardDB.
-func NewShardDB(dataDir string, name string, inmemory bool) (*ShardDB, error) {
+func NewShardDB(ctx context.Context, config *ShardDBConfig) (*ShardDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
 	shardDB := &ShardDB{
-		name:    name,
-		dataDir: dataDir,
+		name:    config.Name,
+		dataDir: config.DataDir,
 	}
-	if inmemory {
+	if config.InMemory {
 		shardDB.inmemory = true
 		shardDB.db = sharedDB.NewKVStore()
 	} else {

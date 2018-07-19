@@ -5,6 +5,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -135,7 +136,8 @@ func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
 	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
 		path = ctx.GlobalString(cmd.DataDirFlag.Name)
 	}
-	shardDB, err := database.NewShardDB(path, shardChainDBName, false)
+	config := &database.ShardDBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
+	shardDB, err := database.NewShardDB(context.TODO(), config)
 	if err != nil {
 		return fmt.Errorf("could not register shardDB service: %v", err)
 	}

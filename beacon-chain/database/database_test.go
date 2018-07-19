@@ -20,7 +20,8 @@ var testDB *BeaconDB
 
 func init() {
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
-	beaconDB, _ := NewBeaconDB(context.Background(), tmp, "beaconchaindata", false)
+	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
+	beaconDB, _ := NewBeaconDB(context.Background(), config)
 	testDB = beaconDB
 	testDB.Start()
 }
@@ -29,7 +30,8 @@ func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
-	b, err := NewBeaconDB(context.Background(), tmp, "beaconchaindata", false)
+	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
+	b, err := NewBeaconDB(context.Background(), config)
 	if err != nil {
 		t.Fatalf("could not initialize a new DB: %v", err)
 	}
