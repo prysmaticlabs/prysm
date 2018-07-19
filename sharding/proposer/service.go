@@ -80,7 +80,6 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	var txs []*gethTypes.Transaction
 	feed := p.p2p.Feed(pb.Transaction{})
 	ch := make(chan p2p.Message, 20)
 	sub := feed.Subscribe(ch)
@@ -94,12 +93,8 @@ func (p *Proposer) proposeCollations() {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
-			// TODO: Implement Proposer TX pool and use that to bundle up transactions
-			// By packing 100 txs into one collation means each collation is around 100kb
-			for i := 0; i < 100; i++ {
-				txs = append(txs, legacyutil.TransformTransaction(tx))
-			}
-			if err := p.createCollation(p.ctx, txs); err != nil {
+			// log.Debugf("Received transaction: %x", tx)
+			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{legacyutil.TransformTransaction(tx)}); err != nil {
 				log.Errorf("Create collation failed: %v", err)
 			}
 		case <-p.ctx.Done():
