@@ -41,6 +41,9 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 	// Deserializes the encoded object into a beacon chain.
 	if err := rlp.DecodeBytes(enc, &beaconChain.state); err != nil {
 		return nil, fmt.Errorf("could not deserialize chainstate from disk: %v", err)
