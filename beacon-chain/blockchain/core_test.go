@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"reflect"
@@ -55,10 +56,9 @@ func TestMutateActiveState(t *testing.T) {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
 
-	randao := common.BytesToHash([]byte("hello"))
 	active := &types.ActiveState{
-		Height: 100,
-		Randao: randao,
+		AttestationCount:  4096,
+		AttesterBitfields: []byte{'A', 'B', 'C'},
 	}
 	if err := beaconChain.MutateActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
@@ -73,11 +73,11 @@ func TestMutateActiveState(t *testing.T) {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
 	// The active state should still be the one we mutated and persited earlier.
-	if active.Height != newBeaconChain.state.ActiveState.Height {
-		t.Errorf("active state height incorrect. wanted %v, got %v", active.Height, newBeaconChain.state.ActiveState.Height)
+	if active.AttestationCount != newBeaconChain.state.ActiveState.AttestationCount {
+		t.Errorf("active state height incorrect. wanted %v, got %v", active.AttestationCount, newBeaconChain.state.ActiveState.AttestationCount)
 	}
-	if active.Randao.Hex() != newBeaconChain.state.ActiveState.Randao.Hex() {
-		t.Errorf("active state randao incorrect. wanted %v, got %v", active.Randao.Hex(), newBeaconChain.state.ActiveState.Randao.Hex())
+	if !bytes.Equal(active.AttesterBitfields, newBeaconChain.state.ActiveState.AttesterBitfields) {
+		t.Errorf("active state randao incorrect. wanted %v, got %v", active.AttesterBitfields, newBeaconChain.state.ActiveState.AttesterBitfields)
 	}
 }
 
