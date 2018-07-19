@@ -1,6 +1,6 @@
 # Validator Registration Workflow
 
-This doc will summarize the work flow of registering to become a validator in the beacon chain. The scope is within Ruby Release.
+This doc summarizes the work flow of registering to become a validator in the beacon chain. The scope is within Ruby Release.
 
 ### Step 1: Deploy validator registration contract if it hasn't been done
 To deploy VRC, we can use [deployVRC](https://github.com/terenc3t/geth-sharding/tree/contract-util/contracts/deployVRC) utility.  
@@ -21,8 +21,7 @@ Launch beacon chain node with account holder's public key and the VRC address we
 
 ```
 
-### Step 3: Send a transaction to VRC with 32 ETH and public key corresponded to beacon chain node account holder's public key
-It's up to you on how you want to send the deposit transaction to VRC. I perosnally find Remix to be the easier. With Remix, I sent a transaction to the deposit method with 32 ETH and the same public key we launched our beacon chain node with.
+### Step 3: Send a transaction to the deposit function in VRC with 32 ETH and beacon chain node account holder's public key as argument
 
 
 ### Step 4: Wait for deposit transaction to mine.

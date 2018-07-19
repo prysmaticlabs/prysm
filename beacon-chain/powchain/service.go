@@ -11,7 +11,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/params"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,9 +43,16 @@ type Web3Service struct {
 	blockHash           common.Hash // the latest PoW chain blockhash.
 }
 
+// Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
+type Web3ServiceConfig struct {
+	Endpoint string
+	Pubkey   string
+	VrcAddr  common.Address
+}
+
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string.
-func NewWeb3Service(ctx context.Context, config *params.Web3ServiceConfig) (*Web3Service, error) {
+func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
 	}

@@ -1,9 +1,5 @@
 package params
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-)
-
 const (
 	// AttesterCount is the number of attesters per committee/
 	AttesterCount = 32
@@ -22,10 +18,3 @@ const (
 	// NotariesPerCrosslink fixed to 100.
 	NotariesPerCrosslink = 100
 )
-
-// Web3ServiceConfig defines a config struct for a web3 service to use through its life cycle.
-type Web3ServiceConfig struct {
-	Endpoint string
-	Pubkey   string
-	VrcAddr  common.Address
-}
