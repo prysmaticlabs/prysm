@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/prysmaticlabs/geth-sharding/sharding/database"
+	sharedDB "github.com/prysmaticlabs/geth-sharding/shared/database"
 )
 
 type mockShardDB struct {
@@ -52,7 +52,7 @@ func TestShard_ValidateShardID(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	emptyAddr := common.BytesToAddress([]byte{})
 	header := NewCollationHeader(big.NewInt(1), &emptyHash, big.NewInt(1), &emptyAddr, [32]byte{})
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(big.NewInt(3), shardDB)
 
 	if err := shard.ValidateShardID(header); err == nil {
@@ -76,7 +76,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 
 	// creates a well-functioning shardDB.
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 
 	// creates a shard with a functioning DB and another one with a faulty DB.
 	shard := NewShard(big.NewInt(1), shardDB)
@@ -115,7 +115,7 @@ func TestShard_CollationByHeaderHash(t *testing.T) {
 		body:   []byte{1, 2, 3},
 	}
 
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(big.NewInt(1), shardDB)
 
 	// should throw error if saving the collation before setting the chunk root
@@ -171,7 +171,7 @@ func TestShard_ChunkRootfromHeaderHash(t *testing.T) {
 
 	collation := NewCollation(header, []byte{1, 2, 3}, nil)
 	collation.CalculateChunkRoot()
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(shardID, shardDB)
 
 	if err := shard.SaveCollation(collation); err != nil {
@@ -208,7 +208,7 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 
 	collation.CalculateChunkRoot()
 
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(shardID, shardDB)
 
 	// should not be able to set as canonical before saving the header and body first.
@@ -248,7 +248,7 @@ func TestShard_CanonicalCollation(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(shardID, shardDB)
 
 	collation := &Collation{
@@ -288,7 +288,7 @@ func TestShard_SetCanonical(t *testing.T) {
 	chunkRoot := common.BytesToHash([]byte{})
 	header := NewCollationHeader(big.NewInt(1), &chunkRoot, big.NewInt(1), nil, [32]byte{})
 
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(big.NewInt(1), shardDB)
 	otherShard := NewShard(big.NewInt(2), shardDB)
 
@@ -311,7 +311,7 @@ func TestShard_SetCanonical(t *testing.T) {
 func TestShard_BodyByChunkRoot(t *testing.T) {
 	body := []byte{1, 2, 3, 4, 5}
 	shardID := big.NewInt(1)
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(shardID, shardDB)
 
 	if err := shard.SaveBody(body); err != nil {
@@ -354,7 +354,7 @@ func TestShard_CheckAvailability(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(shardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(shardID, shardDB)
 
 	collation := &Collation{
@@ -391,7 +391,7 @@ func TestShard_SetAvailability(t *testing.T) {
 	mockDB := &mockShardDB{kv: make(map[common.Hash][]byte)}
 
 	// creates a well-functioning shardDB.
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 
 	// creates a shard with a functioning DB and another one with a faulty DB.
 	shard := NewShard(big.NewInt(1), shardDB)
@@ -425,7 +425,7 @@ func TestShard_SaveCollation(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	header := NewCollationHeader(headerShardID, &emptyHash, period, &proposerAddress, proposerSignature)
 
-	shardDB := database.NewShardKV()
+	shardDB := sharedDB.NewKVStore()
 	shard := NewShard(big.NewInt(2), shardDB)
 
 	collation := &Collation{
