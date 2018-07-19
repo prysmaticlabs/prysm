@@ -1,6 +1,8 @@
-package types
+package utils
 
-import "github.com/urfave/cli"
+import (
+	"github.com/urfave/cli"
+)
 
 var (
 	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
