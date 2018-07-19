@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
 	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
 	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/geth-sharding/shared/cmd"
 	"github.com/prysmaticlabs/geth-sharding/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -131,10 +132,11 @@ func (s *ShardEthereum) Close() {
 // registerShardChainDB attaches a LevelDB wrapped object to the shardEthereum instance.
 func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
-	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-		path = ctx.GlobalString(utils.DataDirFlag.Name)
+	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
+		path = ctx.GlobalString(cmd.DataDirFlag.Name)
 	}
-	shardDB, err := database.NewShardDB(path, shardChainDBName, false)
+	config := &database.ShardDBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
+	shardDB, err := database.NewShardDB(config)
 	if err != nil {
 		return fmt.Errorf("could not register shardDB service: %v", err)
 	}
@@ -152,18 +154,18 @@ func (s *ShardEthereum) registerP2P() error {
 
 func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
-	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-		path = ctx.GlobalString(utils.DataDirFlag.Name)
+	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
+		path = ctx.GlobalString(cmd.DataDirFlag.Name)
 	}
 
 	endpoint := ctx.Args().First()
 	if endpoint == "" {
 		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
 	}
-	if ctx.GlobalIsSet(utils.IPCPathFlag.Name) {
-		endpoint = ctx.GlobalString(utils.IPCPathFlag.Name)
+	if ctx.GlobalIsSet(cmd.IPCPathFlag.Name) {
+		endpoint = ctx.GlobalString(cmd.IPCPathFlag.Name)
 	}
-	passwordFile := ctx.GlobalString(utils.PasswordFileFlag.Name)
+	passwordFile := ctx.GlobalString(cmd.PasswordFileFlag.Name)
 	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
 
 	client, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)

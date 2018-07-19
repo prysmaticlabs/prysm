@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethdb"
+	sharedDB "github.com/prysmaticlabs/geth-sharding/shared/database"
 	log "github.com/sirupsen/logrus"
 )
 
+// ShardDB defines a service for the sharding system's persistent storage.
 type ShardDB struct {
 	inmemory bool
 	dataDir  string
@@ -20,27 +22,30 @@ type ShardDB struct {
 	db       ethdb.Database
 }
 
+// ShardDBConfig specifies configuration options for the db service.
+type ShardDBConfig struct {
+	DataDir  string
+	Name     string
+	InMemory bool
+}
+
 // NewShardDB initializes a shardDB.
-func NewShardDB(dataDir string, name string, inmemory bool) (*ShardDB, error) {
+func NewShardDB(config *ShardDBConfig) (*ShardDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
-	if inmemory {
-		return &ShardDB{
-			inmemory: inmemory,
-			dataDir:  dataDir,
-			name:     name,
-			cache:    16,
-			handles:  16,
-			db:       NewShardKV(),
-		}, nil
+	shardDB := &ShardDB{
+		name:    config.Name,
+		dataDir: config.DataDir,
 	}
-	return &ShardDB{
-		dataDir: dataDir,
-		name:    name,
-		cache:   16,
-		handles: 16,
-		db:      nil,
-	}, nil
+	if config.InMemory {
+		shardDB.inmemory = true
+		shardDB.db = sharedDB.NewKVStore()
+	} else {
+		shardDB.inmemory = false
+		shardDB.cache = 16
+		shardDB.handles = 16
+	}
+	return shardDB, nil
 }
 
 // Start the shard DB service.
