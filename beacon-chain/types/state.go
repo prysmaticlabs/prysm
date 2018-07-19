@@ -9,12 +9,8 @@ import (
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
 type ActiveState struct {
-	Height            uint64                   // Height of the current block.
-	Randao            common.Hash              // Randao beacon state from global's point of view.
-	FfgVoterBitmask   []byte                   // FfgVoterBitmask records the validators that voted for this epoch as bitfield.
-	BalanceDeltas     []uint                   // BalanceDeltas is the deltas to validator balances.
-	PartialCrosslinks []PartialCrosslinkRecord // PartialCrosslinks records data about crosslinks in progress.
-	TotalSkipCount    uint64                   // TotalSkipCount records total number of skips to determine minimal time stamp.
+	AttestationCount  uint64 // AttestationCount is the total quantity of wei that attested for the most recent checkpoint.
+	AttesterBitfields []byte // AttesterBitfields represents which validator has attested.
 }
 
 // PartialCrosslinkRecord contains information about cross links
@@ -22,7 +18,8 @@ type ActiveState struct {
 type PartialCrosslinkRecord struct {
 	ShardID        uint16      // ShardID is the shard crosslink being made for.
 	ShardBlockHash common.Hash // ShardBlockHash is the hash of the block.
-	VoterBitmask   []byte      // VoterBitmask determines which of the eligible voters are voting for it.
+	NotaryBitfield []byte      // NotaryBitfield determines which notary has voted.
+	AggregateSig   []uint      // AggregateSig is the aggregated signature of all the notaries who voted.
 }
 
 // CrystallizedState contains fields of every epoch state,
@@ -46,12 +43,12 @@ type CrystallizedState struct {
 
 // ValidatorRecord contains information about a validator
 type ValidatorRecord struct {
-	PubKey           ecdsa.PublicKey // PubKey is the validator's public key.
-	ReturnShard      uint16          // ReturnShard is the shard balance will be sent to after withdrawal.
-	ReturnAddress    common.Address  // ReturnAddress is the address balance will be sent to after withdrawal.
-	RandaoCommitment common.Hash     // RandaoCommitment is validator's current RANDAO beacon commitment.
-	Balance          uint64          // Balance is validator's current balance.
-	SwitchDynasty    uint64          // SwitchDynasty is the dynasty where the validator can (be inducted | be removed | withdraw their balance).
+	PubKey            ecdsa.PublicKey // PubKey is the validator's public key.
+	WithdrawalShard   uint16          // WithdrawalShard is the shard balance will be sent to after withdrawal.
+	WithdrawalAddress common.Address  // WithdrawalAddress is the address balance will be sent to after withdrawal.
+	RandaoCommitment  common.Hash     // RandaoCommitment is validator's current RANDAO beacon commitment.
+	Balance           uint64          // Balance is validator's current balance.
+	SwitchDynasty     uint64          // SwitchDynasty is the dynasty where the validator can (be inducted | be removed | withdraw their balance).
 }
 
 // CrosslinkRecord contains the fields of last fully formed
@@ -64,12 +61,8 @@ type CrosslinkRecord struct {
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	active := &ActiveState{
-		Height:            0,
-		Randao:            common.BytesToHash([]byte{}),
-		FfgVoterBitmask:   []byte{},
-		BalanceDeltas:     []uint{},
-		PartialCrosslinks: []PartialCrosslinkRecord{},
-		TotalSkipCount:    0,
+		AttestationCount:  0,
+		AttesterBitfields: []byte{},
 	}
 	crystallized := &CrystallizedState{
 		ActiveValidators:   []ValidatorRecord{},
