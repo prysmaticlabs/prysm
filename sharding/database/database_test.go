@@ -1,7 +1,6 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,7 +20,7 @@ var testDB *ShardDB
 func init() {
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	config := &ShardDBConfig{DataDir: tmp, Name: "shardchaindata", InMemory: false}
-	shardDB, _ := NewShardDB(context.Background(), config)
+	shardDB, _ := NewShardDB(config)
 	testDB = shardDB
 	testDB.Start()
 }
@@ -30,7 +29,7 @@ func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
 	config := &ShardDBConfig{DataDir: tmp, Name: "shardchaindata", InMemory: false}
-	s, err := NewShardDB(context.Background(), config)
+	s, err := NewShardDB(config)
 	if err != nil {
 		t.Fatalf("could not initialize a new sb: %v", err)
 	}

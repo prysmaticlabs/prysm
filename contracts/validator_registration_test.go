@@ -136,7 +136,7 @@ func TestRegister(t *testing.T) {
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	log, err := testAccount.contract.FilterValidatorRegistered(&bind.FilterOpts{})
+	log, err := testAccount.contract.FilterValidatorRegistered(&bind.FilterOpts{}, [][32]byte{}, []common.Address{}, [][32]byte{})
 	if err != nil {
 		t.Fatal(err)
 	}

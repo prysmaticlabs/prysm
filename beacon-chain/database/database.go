@@ -3,7 +3,6 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -14,8 +13,6 @@ import (
 
 // BeaconDB defines a service for the beacon chain system's persistent storage.
 type BeaconDB struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
 	inmemory bool
 	dataDir  string
 	name     string
@@ -32,13 +29,10 @@ type BeaconDBConfig struct {
 }
 
 // NewBeaconDB initializes a beaconDB instance.
-func NewBeaconDB(ctx context.Context, config *BeaconDBConfig) (*BeaconDB, error) {
+func NewBeaconDB(config *BeaconDBConfig) (*BeaconDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
-	ctx, cancel := context.WithCancel(ctx)
 	beaconDB := &BeaconDB{
-		ctx:     ctx,
-		cancel:  cancel,
 		name:    config.Name,
 		dataDir: config.DataDir,
 	}
@@ -70,7 +64,6 @@ func (b *BeaconDB) Start() {
 func (b *BeaconDB) Stop() error {
 	log.Info("Stopping beaconDB service")
 	b.db.Close()
-	b.cancel()
 	return nil
 }
 

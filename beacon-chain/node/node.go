@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/database"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
@@ -102,7 +103,7 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) registerBeaconDB(path string) error {
 	config := &database.BeaconDBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
-	beaconDB, err := database.NewBeaconDB(context.TODO(), config)
+	beaconDB, err := database.NewBeaconDB(config)
 	if err != nil {
 		return fmt.Errorf("could not register beaconDB service: %v", err)
 	}
@@ -123,8 +124,11 @@ func (b *BeaconNode) registerBlockchainService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService() error {
-	endpoint := b.ctx.GlobalString(utils.Web3ProviderFlag.Name)
-	web3Service, err := powchain.NewWeb3Service(context.TODO(), endpoint)
+	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
+		Endpoint: b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
+		Pubkey:   b.ctx.GlobalString(utils.PubKeyFlag.Name),
+		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
+	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
 	}

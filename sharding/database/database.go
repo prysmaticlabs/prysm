@@ -4,7 +4,6 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -15,8 +14,6 @@ import (
 
 // ShardDB defines a service for the sharding system's persistent storage.
 type ShardDB struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
 	inmemory bool
 	dataDir  string
 	name     string
@@ -33,13 +30,10 @@ type ShardDBConfig struct {
 }
 
 // NewShardDB initializes a shardDB.
-func NewShardDB(ctx context.Context, config *ShardDBConfig) (*ShardDB, error) {
+func NewShardDB(config *ShardDBConfig) (*ShardDB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
-	ctx, cancel := context.WithCancel(ctx)
 	shardDB := &ShardDB{
-		ctx:     ctx,
-		cancel:  cancel,
 		name:    config.Name,
 		dataDir: config.DataDir,
 	}
@@ -70,7 +64,6 @@ func (s *ShardDB) Start() {
 // Stop the shard DB service gracefully.
 func (s *ShardDB) Stop() error {
 	log.Info("Stopping shardDB service")
-	s.cancel()
 	s.db.Close()
 	return nil
 }

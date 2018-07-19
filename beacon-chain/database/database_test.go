@@ -1,7 +1,6 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,7 +20,7 @@ var testDB *BeaconDB
 func init() {
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
-	beaconDB, _ := NewBeaconDB(context.Background(), config)
+	beaconDB, _ := NewBeaconDB(config)
 	testDB = beaconDB
 	testDB.Start()
 }
@@ -31,7 +30,7 @@ func TestLifecycle(t *testing.T) {
 
 	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
 	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
-	b, err := NewBeaconDB(context.Background(), config)
+	b, err := NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("could not initialize a new DB: %v", err)
 	}

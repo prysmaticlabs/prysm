@@ -1,7 +1,6 @@
 package syncer
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -30,7 +29,7 @@ func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	config := &database.ShardDBConfig{Name: "", DataDir: "", InMemory: true}
-	shardChainDB, err := database.NewShardDB(context.Background(), config)
+	shardChainDB, err := database.NewShardDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
@@ -73,7 +72,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	config := &database.ShardDBConfig{Name: "", DataDir: "", InMemory: true}
-	shardChainDB, err := database.NewShardDB(context.Background(), config)
+	shardChainDB, err := database.NewShardDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
