@@ -115,11 +115,7 @@ A basic, end-to-end example of the system is as follows:
 
 ## System Start and User Entrypoint
 
-Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **Validator Registration Contract**. Then, the deployed address of this contract can be supplied to the beacon chain as an argument:
-
-    beacon-chain  --datadir /path/to/your/datadir --password /path/to/your/password.txt --networkid 12345 --vrc VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
-
-This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node begins to work by its main loop, which involves the following steps:
+Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **Validator Registration Contract**. This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node begins to work by its main loop, which involves the following steps:
 
 1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 

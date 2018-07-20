@@ -63,7 +63,7 @@ To start a local Geth node, you can create your own `genesis.json` file similar 
     "difficulty": "200",
     "gasLimit": "210000000000",
     "alloc": {
-        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" },
+        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" }
     }
 }
 ```
@@ -145,9 +145,9 @@ Omitting the `--actor` flag will launch a simple observer service attached to th
 
 The Sharding Manager Contract is built in Solidity and deployed to a running geth node upon launch of the sharding node if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
 
-    go generate github.com/prysmaticlabs/prysm/contracts
+    go generate github.com/prysmaticlabs/prysm/client/contracts
     # OR
-    cd contracts && go generate
+    cd client/contracts && go generate
 
 # Testing
 
