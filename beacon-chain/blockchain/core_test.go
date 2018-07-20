@@ -70,7 +70,7 @@ func TestMutateActiveState(t *testing.T) {
 	// Initializing a new beacon chain should deserialize persisted state from disk.
 	newBeaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
+		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
 	// The active state should still be the one we mutated and persited earlier.
 	if active.AttestationCount != newBeaconChain.state.ActiveState.AttestationCount {
@@ -109,7 +109,7 @@ func TestMutateCrystallizedState(t *testing.T) {
 	// Initializing a new beacon chain should deserialize persisted state from disk.
 	newBeaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
+		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
 	// The crystallized state should still be the one we mutated and persited earlier.
 	if crystallized.Dynasty != newBeaconChain.state.CrystallizedState.Dynasty {
