@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/node:go_default_library",

@@ -6,7 +6,7 @@ go_library(
         "core.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/beacon-chain/blockchain",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/database:go_default_library",

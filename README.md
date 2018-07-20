@@ -1,15 +1,15 @@
-# Prysmatic Labs Sharding Implementation
+# Prysmatic Labs Ethereum 2.0 Implementation
 
-![Travis Build](https://travis-ci.org/prysmaticlabs/geth-sharding.svg?branch=master)
+![Travis Build](https://travis-ci.org/prysmaticlabs/prysm.svg?branch=master)
 
 This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com). 
 
 Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/prysm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 
-Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
+Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
 
 
 # Table of Contents
@@ -33,7 +33,7 @@ Note: it is not necessary to clone to the gopath if you're only building with Ba
 Clone our repository: 
 
 ```
-git clone https://github.com/prysmaticlabs/geth-sharding
+git clone https://github.com/prysmaticlabs/prysm
 ```
 
 Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
@@ -42,7 +42,7 @@ Download the Bazel build tool by Google [here](https://docs.bazel.build/versions
 bazel version
 ```
 
-Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build geth-sharding.
+Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm.
 
 # Sharding Instructions
 
@@ -93,7 +93,7 @@ Now, save the passphrase you used in the geth node into a text file called passw
 Build our system first
 
 ```
-$ bazel build //sharding/...
+$ bazel build //client/...
 ```
 
 ## Becoming a Notary
@@ -102,7 +102,7 @@ $ bazel build //sharding/...
 Make sure a geth node is running as a separate process. Then, to deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
 
 ```
-bazel run //sharding -- \
+bazel run //client -- \
    --actor "notary" \
    --deposit \
    --datadir /path/to/your/datadir \
@@ -117,7 +117,7 @@ Concurrently, you will need to run another service that is tasked with processin
 ## Running a Collation Proposal Node
 
 ```
-bazel run //sharding -- \
+bazel run //client -- \
    --actor "proposer" \
    --datadir /path/to/your/datadir \
    --password /path/to/your/password.txt \
@@ -130,7 +130,7 @@ This node is tasked with processing pending transactions into blobs within colla
 ## Running an Observer Node
 
 ```
-bazel run //sharding -- \
+bazel run //client -- \
    --datadir /path/to/your/datadir \
    --password /path/to/your/password.txt \
    --shardid 0 \
@@ -145,9 +145,9 @@ Omitting the `--actor` flag will launch a simple observer service attached to th
 
 The Sharding Manager Contract is built in Solidity and deployed to a running geth node upon launch of the sharding node if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
 
-    go generate github.com/prysmaticlabs/geth-sharding/sharding/contracts
+    go generate github.com/prysmaticlabs/prysm/client/contracts
     # OR
-    cd sharding/contracts && go generate
+    cd client/contracts && go generate
 
 # Testing
 
@@ -165,7 +165,7 @@ $ gometalinter ./...
 
 # Contributing
 
-We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/geth-sharding/blob/master/sharding/CONTRIBUTING.md)! Check it out to get started.
+We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/prysm/blob/master/client/CONTRIBUTING.md)! Check it out to get started.
 
 ![nyancat](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBSus2ozk_HuGdHMHKWjb1W5CmwwoxmYIjIBmERE1u-WeONpJJXg)
 

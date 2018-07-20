@@ -6,7 +6,7 @@ go_library(
         "customflags.go",
         "flags.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/shared/cmd",
+    importpath = "github.com/prysmaticlabs/prysm/shared/cmd",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_ethereum_go_ethereum//node:go_default_library",
