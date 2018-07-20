@@ -3,7 +3,7 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/database"
+	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/prysm/shared"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )

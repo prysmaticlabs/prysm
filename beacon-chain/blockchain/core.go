@@ -8,9 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/params"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	log "github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )

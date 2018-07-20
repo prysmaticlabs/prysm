@@ -4,10 +4,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/node"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/utils"
-	"github.com/prysmaticlabs/geth-sharding/shared/cmd"
-	"github.com/prysmaticlabs/geth-sharding/shared/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
