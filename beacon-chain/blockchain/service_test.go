@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/database"
+	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
