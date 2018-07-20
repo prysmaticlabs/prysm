@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/prysm/sharding/contracts"
 )
 
 // Signer defines an interface that can read from the Ethereum mainchain as well call

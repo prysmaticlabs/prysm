@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["service.go"],
-    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/simulator",
+    importpath = "github.com/prysmaticlabs/prysm/sharding/simulator",
     visibility = ["//sharding:__subpackages__"],
     deps = [
         "//proto/sharding/v1:go_default_library",

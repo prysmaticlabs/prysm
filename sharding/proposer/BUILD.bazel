@@ -6,7 +6,7 @@ go_library(
         "proposer.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/proposer",
+    importpath = "github.com/prysmaticlabs/prysm/sharding/proposer",
     visibility = ["//sharding:__subpackages__"],
     deps = [
         "//proto/sharding/v1:go_default_library",

@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
-	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/prysm/sharding/internal"
+	"github.com/prysmaticlabs/prysm/sharding/params"
 )
 
 func TestCreateCollation(t *testing.T) {

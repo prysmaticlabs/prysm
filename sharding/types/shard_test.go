@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	sharedDB "github.com/prysmaticlabs/geth-sharding/shared/database"
+	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
 )
 
 type mockShardDB struct {

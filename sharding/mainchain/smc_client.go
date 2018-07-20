@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
+	"github.com/prysmaticlabs/prysm/sharding/contracts"
 	log "github.com/sirupsen/logrus"
 )
 

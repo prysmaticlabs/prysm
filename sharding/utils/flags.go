@@ -3,7 +3,7 @@ package utils
 import (
 	"math/big"
 
-	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	shardparams "github.com/prysmaticlabs/prysm/sharding/params"
 	"github.com/urfave/cli"
 )
 

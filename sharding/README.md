@@ -217,7 +217,7 @@ With a sharded network comes sharded state storage. State sync today is difficul
 
 # Acknowledgements
 
-A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/geth-sharding) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang, Vitalik, Justin Drake) for the help and guidance in our approach.
+A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/prysm) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang, Vitalik, Justin Drake) for the help and guidance in our approach.
 
 # References
 

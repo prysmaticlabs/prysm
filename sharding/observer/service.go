@@ -6,11 +6,11 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/prysmaticlabs/geth-sharding/sharding/database"
-	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/prysm/sharding/database"
+	"github.com/prysmaticlabs/prysm/sharding/mainchain"
+	"github.com/prysmaticlabs/prysm/sharding/p2p"
+	"github.com/prysmaticlabs/prysm/sharding/syncer"
+	"github.com/prysmaticlabs/prysm/sharding/types"
 	log "github.com/sirupsen/logrus"
 )
 

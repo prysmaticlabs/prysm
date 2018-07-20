@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/database"
-	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/database"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

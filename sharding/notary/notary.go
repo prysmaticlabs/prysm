@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
-	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/prysm/sharding/contracts"
+	"github.com/prysmaticlabs/prysm/sharding/mainchain"
+	shardparams "github.com/prysmaticlabs/prysm/sharding/params"
 	log "github.com/sirupsen/logrus"
 )
 

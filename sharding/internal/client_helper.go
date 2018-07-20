@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
-	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/prysm/sharding/contracts"
+	shardparams "github.com/prysmaticlabs/prysm/sharding/params"
 )
 
 var (

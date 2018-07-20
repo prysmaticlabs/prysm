@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/prysm/sharding/mainchain"
+	"github.com/prysmaticlabs/prysm/sharding/types"
 	log "github.com/sirupsen/logrus"
 )
 

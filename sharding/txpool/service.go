@@ -3,7 +3,7 @@ package txpool
 
 import (
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
+	"github.com/prysmaticlabs/prysm/sharding/p2p"
 	log "github.com/sirupsen/logrus"
 )
 

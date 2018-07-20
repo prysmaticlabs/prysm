@@ -9,7 +9,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/prysm/shared"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"

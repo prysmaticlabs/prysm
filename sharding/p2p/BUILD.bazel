@@ -11,7 +11,7 @@ go_library(
         "service.go",
         "topics.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/p2p",
+    importpath = "github.com/prysmaticlabs/prysm/sharding/p2p",
     visibility = ["//sharding:__subpackages__"],
     deps = [
         "//proto/sharding/v1:go_default_library",

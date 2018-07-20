@@ -19,7 +19,7 @@ import (
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -89,7 +89,7 @@ func (s *Server) Stop() error {
 // Send a message to a specific peer.
 func (s *Server) Send(msg interface{}, peer Peer) {
 	// TODO
-	// https://github.com/prysmaticlabs/geth-sharding/issues/175
+	// https://github.com/prysmaticlabs/prysm/issues/175
 
 	// TODO: Support passing value and pointer type messages.
 
@@ -101,7 +101,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg interface{}) {
-	// TODO https://github.com/prysmaticlabs/geth-sharding/issues/176
+	// TODO https://github.com/prysmaticlabs/prysm/issues/176
 	topic := topic(msg)
 	log.Debugf("Broadcasting msg on topic %s for message type %T", topic, msg)
 

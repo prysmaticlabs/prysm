@@ -7,7 +7,7 @@ go_library(
         "interfaces.go",
         "shard.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/sharding/types",
+    importpath = "github.com/prysmaticlabs/prysm/sharding/types",
     visibility = ["//sharding:__subpackages__"],
     deps = [
         "//shared:go_default_library",

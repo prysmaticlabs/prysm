@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
-	shardparams "github.com/prysmaticlabs/geth-sharding/sharding/params"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/prysm/sharding/internal"
+	shardparams "github.com/prysmaticlabs/prysm/sharding/params"
+	"github.com/prysmaticlabs/prysm/sharding/types"
 )
 
 // Verifies that Notary implements the Actor interface.

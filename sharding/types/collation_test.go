@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/geth-sharding/shared"
+	"github.com/prysmaticlabs/prysm/shared"
 )
 
 func TestCollation_Transactions(t *testing.T) {

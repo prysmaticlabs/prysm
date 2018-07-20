@@ -4,10 +4,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/geth-sharding/sharding/node"
-	"github.com/prysmaticlabs/geth-sharding/sharding/utils"
-	"github.com/prysmaticlabs/geth-sharding/shared/cmd"
-	"github.com/prysmaticlabs/geth-sharding/shared/debug"
+	"github.com/prysmaticlabs/prysm/sharding/node"
+	"github.com/prysmaticlabs/prysm/sharding/utils"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/debug"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

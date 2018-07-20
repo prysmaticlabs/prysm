@@ -6,10 +6,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
-	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
-	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/sharding/mainchain"
+	"github.com/prysmaticlabs/prysm/sharding/p2p"
+	"github.com/prysmaticlabs/prysm/sharding/types"
 	log "github.com/sirupsen/logrus"
 )
 

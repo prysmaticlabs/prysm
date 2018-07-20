@@ -8,7 +8,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
-	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -8,8 +8,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/geth-sharding/sharding/contracts"
-	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/prysm/sharding/contracts"
+	"github.com/prysmaticlabs/prysm/sharding/params"
 	log "github.com/sirupsen/logrus"
 )
 
