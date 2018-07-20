@@ -6,19 +6,19 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-// Verifies that ShardKV implements the ethdb interface.
-var _ = ethdb.Database(&ShardKV{})
+// Verifies that KVStore implements the ethdb interface.
+var _ = ethdb.Database(&KVStore{})
 
-func Test_ShardKVPut(t *testing.T) {
-	kv := NewShardKV()
+func Test_KVStorePut(t *testing.T) {
+	kv := NewKVStore()
 
 	if err := kv.Put([]byte("ralph merkle"), []byte{1, 2, 3}); err != nil {
 		t.Errorf("could not save value in kv store: %v", err)
 	}
 }
 
-func Test_ShardKVHas(t *testing.T) {
-	kv := NewShardKV()
+func Test_KVStoreHas(t *testing.T) {
+	kv := NewKVStore()
 	key := []byte("ralph merkle")
 
 	if err := kv.Put(key, []byte{1, 2, 3}); err != nil {
@@ -43,8 +43,8 @@ func Test_ShardKVHas(t *testing.T) {
 	}
 }
 
-func Test_ShardKVGet(t *testing.T) {
-	kv := NewShardKV()
+func Test_KVStoreGet(t *testing.T) {
+	kv := NewKVStore()
 	key := []byte("ralph merkle")
 
 	if err := kv.Put(key, []byte{1, 2, 3}); err != nil {
@@ -69,8 +69,8 @@ func Test_ShardKVGet(t *testing.T) {
 	}
 }
 
-func Test_ShardKVDelete(t *testing.T) {
-	kv := NewShardKV()
+func Test_KVStoreDelete(t *testing.T) {
+	kv := NewKVStore()
 	key := []byte("ralph merkle")
 
 	if err := kv.Put(key, []byte{1, 2, 3}); err != nil {

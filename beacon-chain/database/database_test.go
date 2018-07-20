@@ -7,54 +7,55 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	"github.com/prysmaticlabs/geth-sharding/shared"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
-// Verifies that ShardDB implements the sharding Service inteface.
-var _ = types.Service(&ShardDB{})
+// Verifies that BeaconDB implements the sharding Service inteface.
+var _ = shared.Service(&BeaconDB{})
 
-var testDB *ShardDB
+var testDB *BeaconDB
 
 func init() {
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
-	config := &ShardDBConfig{DataDir: tmp, Name: "shardchaindata", InMemory: false}
-	shardDB, _ := NewShardDB(config)
-	testDB = shardDB
+	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
+	beaconDB, _ := NewBeaconDB(config)
+	testDB = beaconDB
 	testDB.Start()
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
+
 	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
-	config := &ShardDBConfig{DataDir: tmp, Name: "shardchaindata", InMemory: false}
-	s, err := NewShardDB(config)
+	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
+	b, err := NewBeaconDB(config)
 	if err != nil {
-		t.Fatalf("could not initialize a new sb: %v", err)
+		t.Fatalf("could not initialize a new DB: %v", err)
 	}
 
-	s.Start()
+	b.Start()
 	msg := hook.LastEntry().Message
-	if msg != "Starting shardDB service" {
-		t.Errorf("incorrect log, expected %s, got %s", "Starting shardDB service", msg)
+	if msg != "Starting beaconDB service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting beaconDB service", msg)
 	}
 
-	s.Stop()
+	b.Stop()
 	msg = hook.LastEntry().Message
-	if msg != "Stopping shardDB service" {
-		t.Errorf("incorrect log, expected %s, got %s", "Stopping shardDB service", msg)
+	if msg != "Stopping beaconDB service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping beaconDB service", msg)
 	}
 
-	// Access DB after it's stopped, this should fail
-	_, err = s.db.Get([]byte("ralph merkle"))
+	// Access DB after it's stopped, this should fail.
+	_, err = b.db.Get([]byte("ralph merkle"))
 
 	if err.Error() != "leveldb: closed" {
-		t.Fatalf("shardDB close function did not work")
+		t.Fatalf("beaconDB close function did not work")
 	}
 }
 
-// Testing the concurrency of the shardDB with multiple processes attempting to write.
+// Testing the concurrency with multiple processes attempting to write.
 func Test_DBConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(100)

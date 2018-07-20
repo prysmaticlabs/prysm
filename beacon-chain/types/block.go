@@ -5,14 +5,14 @@ import "github.com/ethereum/go-ethereum/common"
 // Header contains the block header fields in beacon chain.
 type Header struct {
 	ParentHash              common.Hash     // ParentHash is the hash of the parent beacon block.
-	SkipCount               uint64          // SkipCount is the number of skips, this is used for the full PoS mechanism.
+	SlotNumber              uint64          // Slot number is the number a client should check to know when it creates block.
 	RandaoReveal            common.Hash     // RandaoReveal is used for Randao commitment reveal.
 	AttestationBitmask      []byte          // AttestationBitmask is the bit field of who from the attestation committee participated.
 	AttestationAggregateSig []uint          // AttestationAggregateSig is validator's aggregate sig.
 	ShardAggregateVotes     []AggregateVote // ShardAggregateVotes is shard aggregate votes.
 	MainChainRef            common.Hash     // MainChainRef is the reference to main chain block.
-	StateHash               []byte          // StateHash is the concatenation of crystallized and active state.
-	Sig                     []uint          // Sig is the signature of the proposer.
+	ActiveStateHash         []byte          // ActiveStateHash is the state that changes every block.
+	CrystallizedStateHash   []byte          // CrystallizedStateHash is the state that changes every epoch.
 }
 
 // AggregateVote contains the fields of aggregate vote in individual shard.

@@ -16,10 +16,10 @@ import (
 )
 
 // ValidatorRegistrationABI is the input ABI used to generate the binding from.
-const ValidatorRegistrationABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"usedPubkey\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"VALIDATOR_DEPOSIT\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_pubkey\",\"type\":\"bytes32\"},{\"name\":\"_withdrawalShardID\",\"type\":\"uint256\"},{\"name\":\"_withdrawalAddressbytes32\",\"type\":\"address\"},{\"name\":\"_randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"pubKey\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"withdrawalShardID\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"withdrawalAddressbytes32\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"ValidatorRegistered\",\"type\":\"event\"}]"
+const ValidatorRegistrationABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"usedPubkey\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"VALIDATOR_DEPOSIT\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_pubkey\",\"type\":\"bytes32\"},{\"name\":\"_withdrawalShardID\",\"type\":\"uint256\"},{\"name\":\"_withdrawalAddressbytes32\",\"type\":\"address\"},{\"name\":\"_randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"pubKey\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"withdrawalShardID\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"withdrawalAddressbytes32\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"ValidatorRegistered\",\"type\":\"event\"}]"
 
 // ValidatorRegistrationBin is the compiled bytecode used for deploying new contracts.
-const ValidatorRegistrationBin = `0x608060405234801561001057600080fd5b506101d3806100206000396000f3006080604052600436106100565763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301110845811461005b578063441d92cc14610087578063881d2135146100ae575b600080fd5b34801561006757600080fd5b506100736004356100da565b604080519115158252519081900360200190f35b34801561009357600080fd5b5061009c6100ef565b60408051918252519081900360200190f35b6100d860043560243573ffffffffffffffffffffffffffffffffffffffff604435166064356100fc565b005b60006020819052908152604090205460ff1681565b6801bc16d674ec80000081565b346801bc16d674ec8000001461011157600080fd5b60008481526020819052604090205460ff161561012d57600080fd5b60008481526020818152604091829020805460ff19166001179055815186815290810185905273ffffffffffffffffffffffffffffffffffffffff8416818301526060810183905290517f7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af512749181900360800190a1505050505600a165627a7a7230582030b51cf5829c9fac611cd2060acc062996b9cc9cf3d57d32b2b54c509a32b85d0029`
+const ValidatorRegistrationBin = `0x608060405234801561001057600080fd5b506101c7806100206000396000f3006080604052600436106100565763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301110845811461005b578063441d92cc14610087578063881d2135146100ae575b600080fd5b34801561006757600080fd5b506100736004356100da565b604080519115158252519081900360200190f35b34801561009357600080fd5b5061009c6100ef565b60408051918252519081900360200190f35b6100d860043560243573ffffffffffffffffffffffffffffffffffffffff604435166064356100fc565b005b60006020819052908152604090205460ff1681565b6801bc16d674ec80000081565b346801bc16d674ec8000001461011157600080fd5b60008481526020819052604090205460ff161561012d57600080fd5b60008481526020818152604091829020805460ff1916600117905581518581529151839273ffffffffffffffffffffffffffffffffffffffff86169288927f7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af512749281900390910190a4505050505600a165627a7a7230582010cee12b801046464a3d4ffaad0081c2c3cf734f886a556d1e3b4f3565b649380029`
 
 // DeployValidatorRegistration deploys a new Ethereum contract, binding an instance of ValidatorRegistration to it.
 func DeployValidatorRegistration(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ValidatorRegistration, error) {
@@ -327,10 +327,24 @@ type ValidatorRegistrationValidatorRegistered struct {
 
 // FilterValidatorRegistered is a free log retrieval operation binding the contract event 0x7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af51274.
 //
-// Solidity: event ValidatorRegistered(pubKey bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 address, randaoCommitment bytes32)
-func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegistered(opts *bind.FilterOpts) (*ValidatorRegistrationValidatorRegisteredIterator, error) {
+// Solidity: event ValidatorRegistered(pubKey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegistered(opts *bind.FilterOpts, pubKey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (*ValidatorRegistrationValidatorRegisteredIterator, error) {
 
-	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "ValidatorRegistered")
+	var pubKeyRule []interface{}
+	for _, pubKeyItem := range pubKey {
+		pubKeyRule = append(pubKeyRule, pubKeyItem)
+	}
+
+	var withdrawalAddressbytes32Rule []interface{}
+	for _, withdrawalAddressbytes32Item := range withdrawalAddressbytes32 {
+		withdrawalAddressbytes32Rule = append(withdrawalAddressbytes32Rule, withdrawalAddressbytes32Item)
+	}
+	var randaoCommitmentRule []interface{}
+	for _, randaoCommitmentItem := range randaoCommitment {
+		randaoCommitmentRule = append(randaoCommitmentRule, randaoCommitmentItem)
+	}
+
+	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "ValidatorRegistered", pubKeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
 	if err != nil {
 		return nil, err
 	}
@@ -339,10 +353,24 @@ func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegi
 
 // WatchValidatorRegistered is a free log subscription operation binding the contract event 0x7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af51274.
 //
-// Solidity: event ValidatorRegistered(pubKey bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 address, randaoCommitment bytes32)
-func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegistered(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationValidatorRegistered) (event.Subscription, error) {
+// Solidity: event ValidatorRegistered(pubKey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegistered(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationValidatorRegistered, pubKey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (event.Subscription, error) {
 
-	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "ValidatorRegistered")
+	var pubKeyRule []interface{}
+	for _, pubKeyItem := range pubKey {
+		pubKeyRule = append(pubKeyRule, pubKeyItem)
+	}
+
+	var withdrawalAddressbytes32Rule []interface{}
+	for _, withdrawalAddressbytes32Item := range withdrawalAddressbytes32 {
+		withdrawalAddressbytes32Rule = append(withdrawalAddressbytes32Rule, withdrawalAddressbytes32Item)
+	}
+	var randaoCommitmentRule []interface{}
+	for _, randaoCommitmentItem := range randaoCommitment {
+		randaoCommitmentRule = append(randaoCommitmentRule, randaoCommitmentItem)
+	}
+
+	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "ValidatorRegistered", pubKeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
 	if err != nil {
 		return nil, err
 	}
