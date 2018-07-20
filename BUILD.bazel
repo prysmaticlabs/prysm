@@ -1,7 +1,7 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
-# gazelle:prefix github.com/prysmaticlabs/geth-sharding
+# gazelle:prefix github.com/prysmaticlabs/prysm
 gazelle(
     name = "gazelle",
-    prefix = "github.com/prysmaticlabs/geth-sharding",
+    prefix = "github.com/prysmaticlabs/prysm",
 )

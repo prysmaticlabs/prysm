@@ -1,5 +1,5 @@
 language: go
-go_import_path: github.com/prysmaticlabs/geth-sharding
+go_import_path: github.com/prysmaticlabs/prysm
 sudo: false
 matrix:
   include:
