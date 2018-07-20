@@ -1,6 +1,25 @@
 package types
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+)
+
+// Block defines a beacon chain core primitive.
+type Block struct {
+	header *Header
+}
+
+// Header getter makes the property read-only.
+func (b *Block) Header() *Header {
+	return b.header
+}
+
+// NewGenesisBlock hi.
+func NewGenesisBlock() *Block {
+	return &Block{header: &Header{Timestamp: time.Now()}}
+}
 
 // Header contains the block header fields in beacon chain.
 type Header struct {
@@ -13,6 +32,7 @@ type Header struct {
 	MainChainRef            common.Hash     // MainChainRef is the reference to main chain block.
 	ActiveStateHash         []byte          // ActiveStateHash is the state that changes every block.
 	CrystallizedStateHash   []byte          // CrystallizedStateHash is the state that changes every epoch.
+	Timestamp               time.Time
 }
 
 // AggregateVote contains the fields of aggregate vote in individual shard.

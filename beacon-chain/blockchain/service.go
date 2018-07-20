@@ -37,3 +37,8 @@ func (c *ChainService) Stop() error {
 	log.Info("Stopping blockchain service")
 	return nil
 }
+
+// processBlocks runs an event loop handling incoming blocks via p2p.
+func (c *ChainService) processBlocks() {
+	return
+}

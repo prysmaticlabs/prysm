@@ -19,6 +19,11 @@ type Reader interface {
 	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
 }
 
+// POWBlockFetcher defines a struct that can retrieve mainchain blocks.
+type POWBlockFetcher interface {
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+}
+
 // Logger subscribe filtered log on the PoW chain
 type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)

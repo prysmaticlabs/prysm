@@ -1,5 +1,7 @@
 package params
 
+import "time"
+
 const (
 	// AttesterCount is the number of attesters per committee/
 	AttesterCount = 32
@@ -17,4 +19,6 @@ const (
 	MaxValidators = 2 ^ 24
 	// NotariesPerCrosslink fixed to 100.
 	NotariesPerCrosslink = 100
+	// SlotLength hi.
+	SlotLength = time.Second * 8
 )

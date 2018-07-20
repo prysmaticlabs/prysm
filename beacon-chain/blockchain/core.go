@@ -1,11 +1,15 @@
 package blockchain
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/params"
+	"github.com/prysmaticlabs/geth-sharding/beacon-chain/powchain"
 	"github.com/prysmaticlabs/geth-sharding/beacon-chain/types"
 	log "github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
@@ -61,6 +65,11 @@ func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
 
+// GenesisBlock returns the canonical, genesis block.
+func (b *BeaconChain) GenesisBlock() *types.Block {
+	return types.NewGenesisBlock()
+}
+
 // MutateActiveState allows external services to modify the active state.
 func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 	defer b.lock.Unlock()
@@ -75,6 +84,20 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 	b.lock.Lock()
 	b.state.CrystallizedState = crystallizedState
 	return b.persist()
+}
+
+// CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
+func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *types.Block) (bool, error) {
+	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Header().MainChainRef)
+	if err != nil {
+		return false, err
+	}
+	if mainchainBlock != nil {
+		return false, nil
+	}
+	// Calculate the timestamp validity condition.
+	validTime := time.Now() > b.GenesisBlock().Header().Timestamp+block.Header().SlotNumber*params.SlotLength
+	return validTime, nil
 }
 
 // persist stores the RLP encoding of the latest beacon chain state into the db.
