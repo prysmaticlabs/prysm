@@ -36,16 +36,16 @@ func TestLifecycle(t *testing.T) {
 	}
 
 	s.Start()
-	msg := hook.Entries[0]
+	msg := hook.Entries[0].Message
 	want := "Starting shardp2p server"
-	if msg == nil || msg.Message != want {
+	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
 	s.Stop()
-	msg = hook.LastEntry()
+	msg = hook.LastEntry().Message
 	want = "Stopping shardp2p server"
-	if msg == nil || msg.Message != want {
+	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
