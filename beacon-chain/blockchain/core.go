@@ -91,7 +91,7 @@ func (b *BeaconChain) persist() error {
 	return b.db.Put([]byte(stateLookupKey), encodedState)
 }
 
-// ComputeNewActiveState computes a new active state for every beacon block.
+// computeNewActiveState computes a new active state for every beacon block.
 func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveState, error) {
 
 	_, _, err := b.getAttestersProposer(seed)
@@ -155,8 +155,4 @@ func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
 		}
 	}
 	return validatorList, nil
-}
-
-func (c *ChainService) getPoWBlockHash() common.Hash {
-	return c.web3Service.LatestBlockHash()
 }
