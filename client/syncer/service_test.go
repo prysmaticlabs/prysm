@@ -14,15 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = types.Service(&Syncer{})
 
 func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(ioutil.Discard)
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 }
 
 func TestStop(t *testing.T) {
@@ -136,7 +136,7 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	}
 
 	logMsg = hook.Entries[3].Message
-	want = fmt.Sprintf("Responding to p2p request with collation with headerHash: %v", header.Hash().Hex())
+	want = fmt.Sprintf("Responding to p2p collation request")
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}

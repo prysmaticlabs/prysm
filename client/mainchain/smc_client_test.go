@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/prysmaticlabs/prysm/client/types"
 )
@@ -54,7 +53,6 @@ func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, d
 	}
 	cancel()
 	ctxTimeout.Done()
-	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
 	return nil
 }
 
