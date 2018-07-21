@@ -15,7 +15,7 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -23,8 +23,8 @@ import (
 var _ = types.Service(&Server{})
 
 func init() {
-	logger.SetLevel(logger.DebugLevel)
-	logger.SetOutput(ioutil.Discard)
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 }
 
 func TestLifecycle(t *testing.T) {

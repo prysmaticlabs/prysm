@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
@@ -27,8 +27,8 @@ func main() {
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
-	logger.SetFormatter(customFormatter)
-	log := logger.WithField("prefix", "main")
+	logrus.SetFormatter(customFormatter)
+	log := logrus.WithField("prefix", "main")
 
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}

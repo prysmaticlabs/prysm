@@ -15,7 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
@@ -73,7 +73,7 @@ func (s *Server) Start() {
 
 	// Subscribe to all topics.
 	for topic, msgType := range topicTypeMapping {
-		log.WithFields(logger.Fields{
+		log.WithFields(logrus.Fields{
 			"topic": topic,
 		}).Debug("Subscribing to topic")
 		go s.subscribeToTopic(topic, msgType)
@@ -105,7 +105,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 func (s *Server) Broadcast(msg interface{}) {
 	// TODO https://github.com/prysmaticlabs/prysm/issues/176
 	topic := topic(msg)
-	log.WithFields(logger.Fields{
+	log.WithFields(logrus.Fields{
 		"topic": topic,
 	}).Debugf("Broadcasting msg %T", msg)
 
@@ -162,7 +162,7 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 		}
 
 		i := feed.Send(Message{Data: d})
-		log.WithFields(logger.Fields{
+		log.WithFields(logrus.Fields{
 			"numSubs": i,
 		}).Debug("Send a request to subs")
 	}

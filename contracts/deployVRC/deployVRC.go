@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/contracts"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
@@ -29,8 +29,8 @@ func main() {
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
-	logger.SetFormatter(customFormatter)
-	log := logger.WithField("prefix", "main")
+	logrus.SetFormatter(customFormatter)
+	log := logrus.WithField("prefix", "main")
 
 	app := cli.NewApp()
 	app.Name = "deployVRC"
@@ -128,7 +128,7 @@ func main() {
 			time.Sleep(1 * time.Second)
 		}
 
-		log.WithFields(logger.Fields{
+		log.WithFields(logrus.Fields{
 			"address": addr.Hex(),
 		}).Info("New contract deployed")
 	}

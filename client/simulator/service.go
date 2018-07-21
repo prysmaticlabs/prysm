@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/client/syncer"
 
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-var log = logger.WithField("prefix", "simulator")
+var log = logrus.WithField("prefix", "simulator")
 
 // Simulator is a service in a shard node that simulates requests from
 // remote notes coming over the shardp2p network. For example, if

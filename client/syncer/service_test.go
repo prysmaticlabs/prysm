@@ -14,15 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = types.Service(&Syncer{})
 
 func init() {
-	logger.SetLevel(logger.DebugLevel)
-	logger.SetOutput(ioutil.Discard)
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 }
 
 func TestStop(t *testing.T) {

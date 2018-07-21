@@ -27,11 +27,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-var log = logger.WithField("prefix", "node")
+var log = logrus.WithField("prefix", "node")
 
 const shardChainDBName = "shardchaindata"
 

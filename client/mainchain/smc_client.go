@@ -22,10 +22,10 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/client/contracts"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-var log = logger.WithField("prefix", "mainchain")
+var log = logrus.WithField("prefix", "mainchain")
 
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
 const ClientIdentifier = "geth"

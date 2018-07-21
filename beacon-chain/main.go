@@ -8,18 +8,18 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
 	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
-	level, err := logger.ParseLevel(verbosity)
+	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return err
 	}
-	logger.SetLevel(level)
+	logrus.SetLevel(level)
 
 	beacon, err := node.New(ctx)
 	if err != nil {
@@ -33,8 +33,8 @@ func main() {
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
-	logger.SetFormatter(customFormatter)
-	log := logger.WithField("prefix", "main")
+	logrus.SetFormatter(customFormatter)
+	log := logrus.WithField("prefix", "main")
 	app := cli.NewApp()
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}

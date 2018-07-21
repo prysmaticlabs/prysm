@@ -17,10 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/legacyutil"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-var log = logger.WithField("prefix", "proposer")
+var log = logrus.WithField("prefix", "proposer")
 
 // Proposer holds functionality required to run a collation proposer
 // in a sharded system. Must satisfy the Service interface defined in
@@ -73,7 +73,7 @@ func (p *Proposer) Start() {
 
 // Stop the main loop for proposing collations.
 func (p *Proposer) Stop() error {
-	log.WithFields(logger.Fields{
+	log.WithFields(logrus.Fields{
 		"shardID": p.shard.ShardID(),
 	}).Warn("Stopping proposer service")
 	defer p.cancel()
@@ -131,7 +131,7 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transac
 		return nil
 	}
 
-	log.WithFields(logger.Fields{
+	log.WithFields(logrus.Fields{
 		"headerHash": collation.Header().Hash().Hex(),
 	}).Info("Saved collation to shardChainDB")
 

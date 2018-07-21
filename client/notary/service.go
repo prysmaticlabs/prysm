@@ -7,10 +7,10 @@ import (
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-var log = logger.WithField("prefix", "notary")
+var log = logrus.WithField("prefix", "notary")
 
 // Notary holds functionality required to run a collation notary
 // in a sharded system. Must satisfy the Service interface defined in
