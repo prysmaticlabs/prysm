@@ -1,13 +1,17 @@
 package blockchain
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
+	"golang.org/x/crypto/blake2s"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -83,4 +87,37 @@ func (b *BeaconChain) persist() error {
 		return err
 	}
 	return b.db.Put([]byte(stateLookupKey), encodedState)
+}
+
+// Shuffle returns a list of pseudorandomly sampled
+// indices to use to select attesters and proposers.
+func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
+	if validatorCount > params.MaxValidators {
+		return nil, errors.New("Validator count has exceeded MaxValidator Count")
+	}
+
+	// construct a list of indices up to MaxValidators
+	validatorList := make([]int, validatorCount)
+	for i := range validatorList {
+		validatorList[i] = i
+	}
+
+	hashSeed, err := blake2s.New256(seed[:])
+	if err != nil {
+		return nil, err
+	}
+
+	hashSeedByte := hashSeed.Sum(nil)
+
+	// shuffle stops at the second to last index
+	for i := 0; i < validatorCount-1; i++ {
+		// convert every 3 bytes to random number, replace validator index with that number
+		for j := 0; j+3 < len(hashSeedByte); j += 3 {
+			swapNum := int(hashSeedByte[j] + hashSeedByte[j+1] + hashSeedByte[j+2])
+			remaining := validatorCount - i
+			swapPos := swapNum%remaining + i
+			validatorList[i], validatorList[swapPos] = validatorList[swapPos], validatorList[i]
+		}
+	}
+	return validatorList, nil
 }
