@@ -3,10 +3,11 @@ package proposer
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/client/syncer"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/client/syncer"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
