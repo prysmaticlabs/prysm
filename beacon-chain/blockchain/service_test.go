@@ -6,7 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -18,9 +20,15 @@ func TestStartStop(t *testing.T) {
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
+
 	}
 	db.Start()
-	chainService, err := NewChainService(ctx, db)
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{endpoint, "", common.Address{}})
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	chainService, err := NewChainService(ctx, db, web3Service)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -13,11 +14,11 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	beaconDB    *database.BeaconDB
-	chain       *BeaconChain
-	web3Service *powchain.Web3Service
+	ctx               context.Context
+	cancel            context.CancelFunc
+	beaconDB          *database.BeaconDB
+	chain             *BeaconChain
+	web3Service       *powchain.Web3Service
 	latestBeaconBlock chan *types.Block
 }
 
@@ -25,19 +26,18 @@ type ChainService struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	beaconChain, err := NewBeaconChain(beaconDB.DB())
-	if err != nil {
-		return nil, err
-	}
-	return &ChainService{ctx, cancel, beaconDB, beaconChain, web3Service, nil}, nil
+	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil}, nil
 }
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Infof("Starting blockchain service")
-	if _, err := NewBeaconChain(c.beaconDB.DB()); err != nil {
+
+	beaconChain, err := NewBeaconChain(c.beaconDB.DB())
+	if err != nil {
 		log.Errorf("Unable to setup blockchain: %v", err)
 	}
+	c.chain = beaconChain
 	go c.updateActiveState()
 }
 

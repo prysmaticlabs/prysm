@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -58,8 +57,8 @@ func TestMutateActiveState(t *testing.T) {
 	}
 
 	active := &types.ActiveState{
-		AttestationCount:  4096,
-		AttesterBitfields: []byte{'A', 'B', 'C'},
+		TotalAttesterDeposits: 4096,
+		AttesterBitfields:     []byte{'A', 'B', 'C'},
 	}
 	if err := beaconChain.MutateActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
@@ -74,8 +73,8 @@ func TestMutateActiveState(t *testing.T) {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
 	// The active state should still be the one we mutated and persited earlier.
-	if active.AttestationCount != newBeaconChain.state.ActiveState.AttestationCount {
-		t.Errorf("active state height incorrect. wanted %v, got %v", active.AttestationCount, newBeaconChain.state.ActiveState.AttestationCount)
+	if active.TotalAttesterDeposits != newBeaconChain.state.ActiveState.TotalAttesterDeposits {
+		t.Errorf("active state height incorrect. wanted %v, got %v", active.TotalAttesterDeposits, newBeaconChain.state.ActiveState.TotalAttesterDeposits)
 	}
 	if !bytes.Equal(active.AttesterBitfields, newBeaconChain.state.ActiveState.AttesterBitfields) {
 		t.Errorf("active state randao incorrect. wanted %v, got %v", active.AttesterBitfields, newBeaconChain.state.ActiveState.AttesterBitfields)
@@ -118,29 +117,5 @@ func TestMutateCrystallizedState(t *testing.T) {
 	}
 	if crystallized.CurrentCheckpoint.Hex() != newBeaconChain.state.CrystallizedState.CurrentCheckpoint.Hex() {
 		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.CurrentCheckpoint.Hex(), newBeaconChain.state.CrystallizedState.CurrentCheckpoint.Hex())
-	}
-}
-
-func TestFaultyShuffle(t *testing.T) {
-	if _, err := Shuffle(common.Hash{'a'}, params.MaxValidators+1); err == nil {
-		t.Error("Shuffle should have failed when validator count exceeds MaxValidators")
-	}
-}
-
-func TestShuffle(t *testing.T) {
-	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
-	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
-
-	list1, err := Shuffle(hash1, 100)
-	if err != nil {
-		t.Errorf("Shuffle failed with: %v", err)
-	}
-
-	list2, err := Shuffle(hash2, 100)
-	if err != nil {
-		t.Errorf("Shuffle failed with: %v", err)
-	}
-	if reflect.DeepEqual(list1, list2) {
-		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
 }

@@ -1,8 +1,8 @@
 package blockchain
 
 import (
-	"errors"
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
-	"golang.org/x/crypto/blake2s"
-	"math"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -93,13 +93,15 @@ func (b *BeaconChain) persist() error {
 // computeNewActiveState computes a new active state for every beacon block.
 func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveState, error) {
 
-	_, _, err := b.getAttestersProposer(seed)
+	attesters, proposer, err := b.getAttestersProposer(seed)
 	if err != nil {
 		return nil, err
 	}
 	// TODO: Verify attestations from attesters
+	log.WithFields(logrus.Fields{"attestersIndices": attesters}).Debug("Attester indices")
 
 	// TODO: Verify main signature from proposer
+	log.WithFields(logrus.Fields{"proposerIndex": proposer}).Debug("Proposer index")
 
 	// TODO: Update crosslink records (post Ruby release)
 
@@ -116,42 +118,9 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
-	indices, err := Shuffle(seed, len(b.CrystallizedState().ActiveValidators))
+	indices, err := shared.Shuffle(seed, len(b.CrystallizedState().ActiveValidators))
 	if err != nil {
 		return nil, -1, err
 	}
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
-}
-
-// Shuffle returns a list of pseudorandomly sampled
-// indices to use to select attesters and proposers.
-func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
-	if validatorCount > params.MaxValidators {
-		return nil, errors.New("Validator count has exceeded MaxValidator Count")
-	}
-
-	// construct a list of indices up to MaxValidators
-	validatorList := make([]int, validatorCount)
-	for i := range validatorList {
-		validatorList[i] = i
-	}
-
-	hashSeed, err := blake2s.New256(seed[:])
-	if err != nil {
-		return nil, err
-	}
-
-	hashSeedByte := hashSeed.Sum(nil)
-
-	// shuffle stops at the second to last index
-	for i := 0; i < validatorCount-1; i++ {
-		// convert every 3 bytes to random number, replace validator index with that number
-		for j := 0; j+3 < len(hashSeedByte); j += 3 {
-			swapNum := int(hashSeedByte[j] + hashSeedByte[j+1] + hashSeedByte[j+2])
-			remaining := validatorCount - i
-			swapPos := swapNum%remaining + i
-			validatorList[i], validatorList[swapPos] = validatorList[swapPos], validatorList[i]
-		}
-	}
-	return validatorList, nil
 }
