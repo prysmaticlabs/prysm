@@ -18,7 +18,7 @@ type ChainService struct {
 	beaconDB    *database.BeaconDB
 	chain       *BeaconChain
 	web3Service *powchain.Web3Service
-	beaconBlock chan *types.Block
+	latestBeaconBlock chan *types.Block
 }
 
 // NewChainService instantiates a new service instance that will
@@ -48,11 +48,11 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// updateActiveState receives a beacon block, computes a new active state and writes it to db
+// updateActiveState receives a beacon block, computes a new active state and writes it to db.
 func (c *ChainService) updateActiveState() {
 	for {
 		select {
-		case block := <-c.beaconBlock:
+		case block := <-c.latestBeaconBlock:
 			log.WithFields(logrus.Fields{"activeStateHash": block.ActiveStateHash}).Debug("Received beacon block")
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
