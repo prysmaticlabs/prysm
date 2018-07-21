@@ -16,9 +16,11 @@ func (b *Block) Header() *Header {
 	return b.header
 }
 
-// NewGenesisBlock hi.
+// NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock() *Block {
-	return &Block{header: &Header{Timestamp: time.Now()}}
+	// TODO: fetch from persistent storage, otherwise create a new one.
+	timestamp, _ := time.Parse("Sat July 21 12:00:00 UTC 2018", "Sat July 21 12:00:00 UTC 2018")
+	return &Block{header: &Header{Timestamp: timestamp}}
 }
 
 // Header contains the block header fields in beacon chain.
