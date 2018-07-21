@@ -22,8 +22,10 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/client/contracts"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "mainchain")
 
 // ClientIdentifier tells us what client the node we interact with over RPC is running.
 const ClientIdentifier = "geth"
@@ -86,14 +88,14 @@ func (s *SMCClient) Start() {
 	}
 
 	if err := s.unlockAccount(accounts[0]); err != nil {
-		log.Panic(fmt.Sprintf("Cannot unlock account: %v", err))
+		log.Panicf("Cannot unlock account: %v", err)
 		return
 	}
 
 	// Initializes bindings to SMC.
 	smc, err := initSMC(s)
 	if err != nil {
-		log.Panic(fmt.Sprintf("Failed to initialize SMC: %v", err))
+		log.Panicf("Failed to initialize SMC: %v", err)
 		return
 	}
 
@@ -176,7 +178,7 @@ func (s *SMCClient) WaitForTransaction(ctx context.Context, hash common.Hash, du
 	}
 	cancel()
 	ctxTimeout.Done()
-	log.Info(fmt.Sprintf("Transaction: %s has been mined", hash.Hex()))
+	log.Infof("Transaction: %s has been mined", hash.Hex())
 	return nil
 }
 

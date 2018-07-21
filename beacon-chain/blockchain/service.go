@@ -5,8 +5,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "blockchain")
 
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
@@ -51,7 +53,7 @@ func (c *ChainService) updateActiveState() {
 	for {
 		select {
 		case block := <-c.beaconBlock:
-			log.Debugf("Received beacon block, last active state hash: %v", block.ActiveStateHash)
+			log.WithFields(logrus.Fields{"activeStateHash": block.ActiveStateHash}).Debug("Received beacon block")
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
