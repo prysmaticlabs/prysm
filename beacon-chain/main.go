@@ -8,11 +8,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
+	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	level, err := logger.ParseLevel(verbosity)
+	if err != nil {
+		return err
+	}
+	logger.SetLevel(level)
+
 	beacon, err := node.New(ctx)
 	if err != nil {
 		return err
@@ -22,6 +30,11 @@ func startNode(ctx *cli.Context) error {
 }
 
 func main() {
+	customFormatter := new(prefixed.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	customFormatter.FullTimestamp = true
+	logger.SetFormatter(customFormatter)
+	log := logger.WithField("prefix", "main")
 	app := cli.NewApp()
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
@@ -45,7 +58,7 @@ VERSION:
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
 
-	app.Flags = []cli.Flag{cmd.DataDirFlag, utils.VrcContractFlag, utils.PubKeyFlag, utils.Web3ProviderFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
+	app.Flags = []cli.Flag{cmd.DataDirFlag, utils.VrcContractFlag, utils.PubKeyFlag, utils.Web3ProviderFlag, cmd.VerbosityFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

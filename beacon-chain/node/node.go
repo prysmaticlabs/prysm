@@ -16,10 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
+var log = logger.WithField("prefix", "node")
 var beaconChainDBName = "beaconchaindata"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -80,7 +81,7 @@ func (b *BeaconNode) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
+				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
 			}
 		}
 		debug.Exit() // Ensure trace and CPU profile data are flushed.
