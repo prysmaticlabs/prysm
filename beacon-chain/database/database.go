@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethdb"
-	sharedDB "github.com/prysmaticlabs/geth-sharding/shared/database"
+	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
 	log "github.com/sirupsen/logrus"
 )
 

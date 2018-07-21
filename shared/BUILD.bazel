@@ -7,7 +7,7 @@ go_library(
         "service_registry.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/geth-sharding/shared",
+    importpath = "github.com/prysmaticlabs/prysm/shared",
     visibility = ["//visibility:public"],
     deps = ["@com_github_ethereum_go_ethereum//rlp:go_default_library"],
 )

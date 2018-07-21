@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/geth-sharding/contracts"
+	"github.com/prysmaticlabs/prysm/contracts"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
