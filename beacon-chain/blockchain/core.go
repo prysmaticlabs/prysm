@@ -2,17 +2,19 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	log "github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
+	"golang.org/x/crypto/blake2s"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -92,11 +94,15 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 	if err != nil {
 		return false, err
 	}
+	// There needs to be a valid mainchain block for the reference hash in a beacon block.
 	if mainchainBlock != nil {
 		return false, nil
 	}
+	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
+
 	// Calculate the timestamp validity condition.
-	validTime := time.Now() > b.GenesisBlock().Header().Timestamp+block.Header().SlotNumber*params.SlotLength
+	slotDuration := time.Duration(block.Header().SlotNumber*params.SlotLength) * time.Second
+	validTime := time.Now().After(b.GenesisBlock().Header().Timestamp.Add(slotDuration))
 	return validTime, nil
 }
 
@@ -107,4 +113,37 @@ func (b *BeaconChain) persist() error {
 		return err
 	}
 	return b.db.Put([]byte(stateLookupKey), encodedState)
+}
+
+// Shuffle returns a list of pseudorandomly sampled
+// indices to use to select attesters and proposers.
+func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
+	if validatorCount > params.MaxValidators {
+		return nil, errors.New("Validator count has exceeded MaxValidator Count")
+	}
+
+	// construct a list of indices up to MaxValidators
+	validatorList := make([]int, validatorCount)
+	for i := range validatorList {
+		validatorList[i] = i
+	}
+
+	hashSeed, err := blake2s.New256(seed[:])
+	if err != nil {
+		return nil, err
+	}
+
+	hashSeedByte := hashSeed.Sum(nil)
+
+	// shuffle stops at the second to last index
+	for i := 0; i < validatorCount-1; i++ {
+		// convert every 3 bytes to random number, replace validator index with that number
+		for j := 0; j+3 < len(hashSeedByte); j += 3 {
+			swapNum := int(hashSeedByte[j] + hashSeedByte[j+1] + hashSeedByte[j+2])
+			remaining := validatorCount - i
+			swapPos := swapNum%remaining + i
+			validatorList[i], validatorList[swapPos] = validatorList[swapPos], validatorList[i]
+		}
+	}
+	return validatorList, nil
 }

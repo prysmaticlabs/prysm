@@ -6,6 +6,12 @@ import (
 )
 
 var (
+	// VerbosityFlag defines the logrus configuration.
+	VerbosityFlag = cli.StringFlag{
+		Name:  "verbosity",
+		Usage: "Logging verbosity (debug, info=default, warn, error, fatal, panic)",
+		Value: "info",
+	}
 	// IPCPathFlag defines the filename of a pipe within the datadir.
 	IPCPathFlag = DirectoryFlag{
 		Name:  "ipcpath",

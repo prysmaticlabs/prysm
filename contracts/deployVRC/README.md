@@ -11,13 +11,13 @@ This is a utility to help users deploy validator registration contract for runni
    deployVRC [global options] command [command options] [arguments...]
 
 *Flags:*  
-   **--keystoreUTCPath**    Keystore UTC file to unlock account (default: "./datadir/keystore/UTC...")
-   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")
-   **--httpPath**      HTTP-RPC server listening interface (default: "http://localhost:8545/")
-   **--passwordFile**   Password file for unlock account (default: "./password.txt")
-   **--privKey**       Private key to unlock account
-   **--help, -h**            show help   
-   **--version, -v**         print the version   
+   **--keystoreUTCPath**    Keystore UTC file to unlock account (default: "./datadir/keystore/UTC...")   
+   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")   
+   **--httpPath**      HTTP-RPC server listening interface (default: "http://localhost:8545/")   
+   **--passwordFile**   Password file for unlock account (default: "./password.txt")   
+   **--privKey**       Private key to unlock account   
+   **--help, -h**            show help     
+   **--version, -v**         print the version     
 
 ### Example
 To use private key with default RPC:
@@ -27,16 +27,23 @@ bazel run //deployVRC --privKey yourPrivateKey
 
 To use UTC JSON with IPC:
 ```
-bazel run //deployVRC --ipcPath /path/to/your/geth.ipc --UTCPath /path/to/your/keystore/UTCJSON --passwordFile /path/to/your/password.txt
+bazel run //deployVRC --\
+  --ipcPath /path/to/your/geth.ipc \
+  --UTCPath /path/to/your/keystore/UTCJSON \
+  --passwordFile /path/to/your/password.txt
 ```
 To use UTC JSON with RPC:
 ```
-bazel run //deployVRC --httpPath http://localhost:8545/  --UTCPath /path/to/your/keystore/UTCJSON --passwordFile /path/to/your/password.txt
+bazel run //deployVRC --\
+  --httpPath http://localhost:8545/  \
+  --UTCPath /path/to/your/keystore/UTCJSON \
+  --passwordFile /path/to/your/password.txt
 ```
 or
 ```
-bazel run //deployVRC --UTCPath /path/to/your/keystore/UTCJSON --passwordFile /path/to/your/password.txt
-
+bazel run //deployVRC --\
+  --UTCPath /path/to/your/keystore/UTCJSON \
+  --passwordFile /path/to/your/password.txt
 ```
 
 ### Output

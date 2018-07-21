@@ -11,8 +11,10 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "powchain")
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
@@ -78,7 +80,9 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 
 // Start a web3 service's main event loop.
 func (w *Web3Service) Start() {
-	log.Infof("Starting web3 proof-of-work chain service at %s", w.endpoint)
+	log.WithFields(logrus.Fields{
+		"endpoint": w.endpoint,
+	}).Info("Starting web3 proof-of-work chain service")
 	rpcClient, err := rpc.Dial(w.endpoint)
 	if err != nil {
 		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
@@ -109,8 +113,10 @@ func (w *Web3Service) latestPOWChainInfo(reader Reader, done <-chan struct{}) {
 		case header := <-w.headerChan:
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
-			log.Debugf("Latest PoW chain blocknumber: %v", w.blockNumber)
-			log.Debugf("Latest PoW chain blockhash: %v", w.blockHash.Hex())
+			log.WithFields(logrus.Fields{
+				"blockNumber": w.blockNumber,
+				"blockHash":   w.blockHash.Hex(),
+			}).Debug("Latest web3 chain event")
 		}
 	}
 }
@@ -134,7 +140,9 @@ func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) 
 			// public key is the second topic from validatorRegistered log and strip off 0x
 			pubKeyLog := VRClog.Topics[1].Hex()[2:]
 			if pubKeyLog == w.pubKey {
-				log.Infof("Validator registered in VRC with public key: %v", pubKeyLog)
+				log.WithFields(logrus.Fields{
+					"publicKey": pubKeyLog,
+				}).Info("Validator registered in VRC with public key")
 				w.validatorRegistered = true
 				return
 			}

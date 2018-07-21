@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/client/contracts"
 	"github.com/prysmaticlabs/prysm/client/params"
-	log "github.com/sirupsen/logrus"
 )
 
 // dialRPC endpoint to node.
