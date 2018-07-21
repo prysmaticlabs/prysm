@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//beacon-chain/database:go_default_library",
         "//beacon-chain/params:go_default_library",
+        "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/types:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//ethdb:go_default_library",

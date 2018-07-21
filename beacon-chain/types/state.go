@@ -9,8 +9,8 @@ import (
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
 type ActiveState struct {
-	AttestationCount  uint64 // AttestationCount is the total quantity of wei that attested for the most recent checkpoint.
-	AttesterBitfields []byte // AttesterBitfields represents which validator has attested.
+	TotalAttesterDeposits uint64 // TotalAttesterDeposits is the total quantity of wei that attested for the most recent checkpoint.
+	AttesterBitfields     []byte // AttesterBitfields represents which validator has attested.
 }
 
 // PartialCrosslinkRecord contains information about cross links

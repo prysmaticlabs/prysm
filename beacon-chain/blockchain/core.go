@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 	"golang.org/x/crypto/blake2s"
+	"math"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -90,6 +91,39 @@ func (b *BeaconChain) persist() error {
 	return b.db.Put([]byte(stateLookupKey), encodedState)
 }
 
+// ComputeNewActiveState computes a new active state for every beacon block.
+func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveState, error) {
+
+	_, _, err := b.getAttestersProposer(seed)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Verify attestations from attesters
+
+	// TODO: Verify main signature from proposer
+
+	// TODO: Update crosslink records (post Ruby release)
+
+	// TODO: Track reward for the proposer that just proposed the latest beacon block
+
+	// TODO: Verify randao reveal from validator's hash pre image
+
+	return &types.ActiveState{
+		TotalAttesterDeposits: 0,
+		AttesterBitfields:     []byte{},
+	}, nil
+}
+
+// getAttestersProposer returns lists of random sampled attesters and proposer indices.
+func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
+	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
+	indices, err := Shuffle(seed, len(b.CrystallizedState().ActiveValidators))
+	if err != nil {
+		return nil, -1, err
+	}
+	return indices[:int(attesterCount)], indices[len(indices)-1], nil
+}
+
 // Shuffle returns a list of pseudorandomly sampled
 // indices to use to select attesters and proposers.
 func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
@@ -121,4 +155,8 @@ func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
 		}
 	}
 	return validatorList, nil
+}
+
+func (c *ChainService) getPoWBlockHash() common.Hash {
+	return c.web3Service.LatestBlockHash()
 }

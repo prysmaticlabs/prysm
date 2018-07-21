@@ -3,7 +3,7 @@ package types
 import "github.com/ethereum/go-ethereum/common"
 
 // Header contains the block header fields in beacon chain.
-type Header struct {
+type Block struct {
 	ParentHash              common.Hash     // ParentHash is the hash of the parent beacon block.
 	SlotNumber              uint64          // Slot number is the number a client should check to know when it creates block.
 	RandaoReveal            common.Hash     // RandaoReveal is used for Randao commitment reveal.
