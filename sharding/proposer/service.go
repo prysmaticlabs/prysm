@@ -83,20 +83,36 @@ func (p *Proposer) proposeCollations() {
 	feed := p.p2p.Feed(pb.Transaction{})
 	ch := make(chan p2p.Message, 20)
 	sub := feed.Subscribe(ch)
+	collation := []*gethTypes.Transaction{}
+	sizeOfCollation := int64(0)
+
 	defer sub.Unsubscribe()
 	defer close(ch)
 	for {
 		select {
 		case msg := <-ch:
+			log.Info("tx received")
 			tx, ok := msg.Data.(*pb.Transaction)
 			if !ok {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
 			// log.Debugf("Received transaction: %x", tx)
-			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{legacyutil.TransformTransaction(tx)}); err != nil {
-				log.Errorf("Create collation failed: %v", err)
+			gethtx := legacyutil.TransformTransaction(tx)
+
+			if (sizeOfCollation + int64(gethtx.Size())) > types.CollationSizelimit {
+				if err := p.createCollation(p.ctx, collation); err != nil {
+					log.Info("Collation created")
+					log.Errorf("Create collation failed: %v", err)
+					return
+				}
+				collation = []*gethTypes.Transaction{}
+				sizeOfCollation = 0
+				log.Info("Collation created")
 			}
+
+			collation = append(collation, legacyutil.TransformTransaction(tx))
+			sizeOfCollation += int64(gethtx.Size())
 		case <-p.ctx.Done():
 			log.Debug("Proposer context closed, exiting goroutine")
 			return

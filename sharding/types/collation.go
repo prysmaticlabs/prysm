@@ -42,7 +42,7 @@ type collationHeaderData struct {
 	ProposerSignature [32]byte        // the proposer's signature for calculating collation hash.
 }
 
-var collationSizelimit = int64(math.Pow(float64(2), float64(20)))
+var CollationSizelimit = int64(math.Pow(float64(2), float64(20)))
 
 // NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
 // and provide the body and transactions upon creation.
@@ -166,8 +166,8 @@ func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	if int64(len(serializedTx)) > collationSizelimit {
-		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), collationSizelimit)
+	if int64(len(serializedTx)) > CollationSizelimit {
+		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), CollationSizelimit)
 	}
 
 	return serializedTx, nil

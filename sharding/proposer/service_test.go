@@ -2,16 +2,73 @@ package proposer
 
 import (
 	"crypto/rand"
+	"fmt"
+	"github.com/prysmaticlabs/geth-sharding/sharding/syncer"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	pb "github.com/prysmaticlabs/geth-sharding/proto/sharding/v1"
+	"github.com/prysmaticlabs/geth-sharding/sharding/database"
 	"github.com/prysmaticlabs/geth-sharding/sharding/internal"
+	"github.com/prysmaticlabs/geth-sharding/sharding/mainchain"
+	"github.com/prysmaticlabs/geth-sharding/sharding/p2p"
 	"github.com/prysmaticlabs/geth-sharding/sharding/params"
+	"github.com/prysmaticlabs/geth-sharding/sharding/txpool"
+	"github.com/prysmaticlabs/geth-sharding/sharding/types"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+func TestProposeCollation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	server, err := p2p.NewServer()
+
+	backend, smc := internal.SetupMockClient(t)
+	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
+	if err != nil {
+		t.Fatalf("Failed to start server %v", err)
+	}
+	server.Start()
+
+	pool, err := txpool.NewTXPool(server)
+	if err != nil {
+		t.Fatalf("Failed to start server %v", err)
+	}
+	pool.Start()
+
+	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	config := &database.ShardDBConfig{DataDir: tmp, Name: "shardDB", InMemory: false}
+
+	db, err := database.NewShardDB(config)
+	db.Start()
+
+	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, db, 1)
+	if err != nil {
+		t.Fatalf("Failed to start server %v", err)
+	}
+
+	fakeProposer, err := NewProposer(params.DefaultConfig, &mainchain.SMCClient{}, server, pool, db, 1, fakeSyncer)
+	input := make([]byte, 0, 2000)
+	for int64(len(input)) < (types.CollationSizelimit)/4 {
+		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
+	}
+	tx := pb.Transaction{Input: input}
+
+	fakeProposer.Start()
+	for i := 0; i < 50; i++ {
+		fakeProposer.p2p.Broadcast(&tx)
+	}
+
+	msg := hook.LastEntry()
+	want := "Collation created"
+	if msg == nil || msg.Message != want {
+		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
+	}
+
+}
 func TestCreateCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
