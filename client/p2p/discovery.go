@@ -9,8 +9,10 @@ import (
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "p2p")
 
 // Discovery interval for multicast DNS querying.
 var discoveryInterval = 1 * time.Minute
@@ -55,8 +57,13 @@ func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 		log.Warnf("Failed to connect to peer: %v", err)
 	}
 
-	log.Debugf("Peers now: %s", d.host.Peerstore().Peers())
-	log.Debugf("gsub has peers: %v", d.topicPeerMap())
+	log.WithFields(logrus.Fields{
+		"peers": d.host.Peerstore().Peers(),
+	}).Debug("Peers are now")
+
+	log.WithFields(logrus.Fields{
+		"peerMap": d.topicPeerMap(),
+	}).Debug("Gsub has peers")
 }
 
 // topicPeerMap helper function for inspecting which peers are available for

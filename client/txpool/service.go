@@ -4,8 +4,10 @@ package txpool
 import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/client/p2p"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "txpool")
 
 // TXPool handles a transaction pool for a sharded system.
 type TXPool struct {

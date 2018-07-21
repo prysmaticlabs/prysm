@@ -10,7 +10,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/types"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // AddHeader adds the collation header to the main chain by sending
@@ -44,7 +44,9 @@ func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransact
 		return fmt.Errorf("add header transaction failed with receipt status %v", receipt.Status)
 	}
 
-	log.Infof("Add header transaction hash: %v", tx.Hash().Hex())
+	log.WithFields(logrus.Fields{
+		"txHash": tx.Hash().Hex(),
+	}).Info("Add header submitted")
 	return nil
 }
 
@@ -89,7 +91,11 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	var sig32 [32]byte
 	copy(sig32[:], sig)
 	collation.Header().AddSig(sig32)
-	log.Infof("Collation %v created for shardID %v period %v", collation.Header().Hash().Hex(), collation.Header().ShardID(), collation.Header().Period())
+	log.WithFields(logrus.Fields{
+		"hash":    collation.Header().Hash().Hex(),
+		"shardID": collation.Header().ShardID(),
+		"period":  collation.Header().Period(),
+	}).Info("Collation created")
 	return collation, nil
 }
 
