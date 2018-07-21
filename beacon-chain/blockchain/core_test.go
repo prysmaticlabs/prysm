@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -117,5 +118,29 @@ func TestMutateCrystallizedState(t *testing.T) {
 	}
 	if crystallized.CurrentCheckpoint.Hex() != newBeaconChain.state.CrystallizedState.CurrentCheckpoint.Hex() {
 		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.CurrentCheckpoint.Hex(), newBeaconChain.state.CrystallizedState.CurrentCheckpoint.Hex())
+	}
+}
+
+func TestFaultyShuffle(t *testing.T) {
+	if _, err := shuffle(common.Hash{'a'}, params.MaxValidators); err == nil {
+		t.Error("Shuffle should have failed when validator count exceeds MaxValidators")
+	}
+}
+
+func TestShuffle(t *testing.T) {
+	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
+	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
+
+	list1, err := shuffle(hash1, 100)
+	if err != nil {
+		t.Errorf("Shuffle failed with: %v", err)
+	}
+
+	list2, err := shuffle(hash2, 100)
+	if err != nil {
+		t.Errorf("Shuffle failed with: %v", err)
+	}
+	if reflect.DeepEqual(list1, list2) {
+		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
 }
