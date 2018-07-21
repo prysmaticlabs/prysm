@@ -15,7 +15,7 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -23,8 +23,8 @@ import (
 var _ = types.Service(&Server{})
 
 func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(ioutil.Discard)
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 }
 
 func TestLifecycle(t *testing.T) {
@@ -38,14 +38,14 @@ func TestLifecycle(t *testing.T) {
 	s.Start()
 	msg := hook.Entries[0]
 	want := "Starting shardp2p server"
-	if msg == nil || msg.Message != want {
+	if msg.Message != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
 	s.Stop()
 	msg = hook.LastEntry()
 	want = "Stopping shardp2p server"
-	if msg == nil || msg.Message != want {
+	if msg.Message != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
@@ -129,5 +129,4 @@ func TestSubscribeToTopic(t *testing.T) {
 	case <-ctx.Done():
 		t.Error("Context timed out before a message was received!")
 	}
-
 }
