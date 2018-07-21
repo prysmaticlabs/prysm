@@ -122,7 +122,7 @@ func TestMutateCrystallizedState(t *testing.T) {
 }
 
 func TestFaultyShuffle(t *testing.T) {
-	if _, err := shuffle(common.Hash{'a'}, params.MaxValidators); err == nil {
+	if _, err := Shuffle(common.Hash{'a'}, params.MaxValidators+1); err == nil {
 		t.Error("Shuffle should have failed when validator count exceeds MaxValidators")
 	}
 }
@@ -131,12 +131,12 @@ func TestShuffle(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
 
-	list1, err := shuffle(hash1, 100)
+	list1, err := Shuffle(hash1, 100)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
 
-	list2, err := shuffle(hash2, 100)
+	list2, err := Shuffle(hash2, 100)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
