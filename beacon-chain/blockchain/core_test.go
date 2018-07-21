@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -117,5 +118,46 @@ func TestMutateCrystallizedState(t *testing.T) {
 	}
 	if crystallized.CurrentCheckpoint.Hex() != newBeaconChain.state.CrystallizedState.CurrentCheckpoint.Hex() {
 		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.CurrentCheckpoint.Hex(), newBeaconChain.state.CrystallizedState.CurrentCheckpoint.Hex())
+	}
+}
+
+func TestGetAttestersProposer(t *testing.T) {
+	t.Log(os.TempDir())
+	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest4", InMemory: false}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("unable to setup beacon chain: %v", err)
+	}
+
+	var validators []types.ValidatorRecord
+	// Create 1000 validators in ActiveValidators
+	for i := 0; i < 1000; i++ {
+		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}}
+		validators = append(validators, validator)
+	}
+
+	beaconChain.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators})
+
+	attesters, propser, err := beaconChain.getAttestersProposer(common.Hash{'A'})
+	if err != nil {
+		t.Errorf("GetAttestersProposer function failed: %v", err)
+	}
+
+	validatorList, err := shared.Shuffle(common.Hash{'A'}, len(validators))
+	if err != nil {
+		t.Errorf("Shuffle function function failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(propser, validatorList[len(validatorList)-1]) {
+		t.Errorf("Get proposer failed, expected: %v got: %v", validatorList[len(validatorList)-1], propser)
+	}
+	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
+		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 }
