@@ -5,11 +5,17 @@ go_library(
     srcs = [
         "marshal.go",
         "service_registry.go",
+        "shuffle.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_ethereum_go_ethereum//rlp:go_default_library"],
+    deps = [
+        "//beacon-chain/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+        "@org_golang_x_crypto//blake2s:go_default_library",
+    ],
 )
 
 go_test(
@@ -17,6 +23,11 @@ go_test(
     srcs = [
         "marshal_test.go",
         "service_registry_test.go",
+        "shuffle_test.go",
     ],
     embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+    ],
 )
