@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "blockchain")
 
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.

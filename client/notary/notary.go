@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/contracts"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	shardparams "github.com/prysmaticlabs/prysm/client/params"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // subscribeBlockHeaders checks incoming block headers and determines if
@@ -35,7 +35,9 @@ func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCal
 		// TODO: Error handling for getting disconnected from the client.
 		head := <-headerChan
 		// Query the current state to see if we are an eligible notary.
-		log.Infof("Received new header: %v", head.Number.String())
+		log.WithFields(logrus.Fields{
+			"number": head.Number.String(),
+		}).Info("Received new header")
 
 		// Check if we are in the notary pool before checking if we are an eligible notary.
 		v, err := isAccountInNotaryPool(caller, account)
