@@ -9,8 +9,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "db")
 
 // ShardDB defines a service for the sharding system's persistent storage.
 type ShardDB struct {

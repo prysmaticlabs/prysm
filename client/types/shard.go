@@ -10,9 +10,11 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
+
+var log = logger.WithField("prefix", "shard")
 
 // Shard defines a way for services attached to a sharding-enabled node to
 // instantiate shards with a given ID and backend. This struct serves as

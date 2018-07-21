@@ -187,14 +187,18 @@ func TestGoodLogger(t *testing.T) {
 	web3Service.logChan <- log
 	exitRoutine <- true
 
-	msg := hook.LastEntry().Message
-	want := "Validator registered in VRC with public key: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	lastEntry := hook.LastEntry()
+	want := "Validator registered in VRC with public key"
+	if lastEntry.Message != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, lastEntry.Message)
+	}
+
+	if lastEntry.Data["publicKey"] != web3Service.pubKey {
+		t.Errorf("incorrect pubKey, expected %s, got %s", lastEntry.Data["publicKey"], web3Service.pubKey)
 	}
 
 	if !web3Service.validatorRegistered {
-		t.Error("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
+		t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
 	}
 
 	hook.Reset()

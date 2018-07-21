@@ -8,8 +8,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "db")
 
 // BeaconDB defines a service for the beacon chain system's persistent storage.
 type BeaconDB struct {
