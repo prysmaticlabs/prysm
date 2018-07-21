@@ -44,14 +44,14 @@ go_repository(
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    importpath="github.com/x-cray/logrus-prefixed-formatter",
-    commit = "bb2702d423886830dee131692131d35648c382e2"
+    importpath = "github.com/x-cray/logrus-prefixed-formatter",
+    commit = "bb2702d423886830dee131692131d35648c382e2",
 )
 
 go_repository(
     name = "com_github_mgutz_ansi",
     importpath = "github.com/mgutz/ansi",
-    commit = "9520e82c474b0a04dd04f8a40959027271bab992"
+    commit = "9520e82c474b0a04dd04f8a40959027271bab992",
 )
 
 go_repository(
