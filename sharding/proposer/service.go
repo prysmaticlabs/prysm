@@ -102,7 +102,6 @@ func (p *Proposer) proposeCollations() {
 
 			if (sizeOfCollation + int64(gethtx.Size())) > types.CollationSizelimit {
 				if err := p.createCollation(p.ctx, collation); err != nil {
-					log.Info("Collation created")
 					log.Errorf("Create collation failed: %v", err)
 					return
 				}

@@ -58,14 +58,19 @@ func TestProposeCollation(t *testing.T) {
 	tx := pb.Transaction{Input: input}
 
 	fakeProposer.Start()
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 5; i++ {
+
+		node.CommitWithBlock()
+	}
+
+	for i := 0; i < 4; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
 	}
 
-	msg := hook.LastEntry()
 	want := "Collation created"
-	if msg == nil || msg.Message != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
+	msg := hook.LastEntry()
+	for msg.Message != want {
+		msg = hook.LastEntry()
 	}
 
 }
