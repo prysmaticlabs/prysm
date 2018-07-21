@@ -50,7 +50,7 @@ func TestProposeCollation(t *testing.T) {
 		t.Fatalf("Failed to start server %v", err)
 	}
 
-	fakeProposer, err := NewProposer(params.DefaultConfig, &mainchain.SMCClient{}, server, pool, db, 1, fakeSyncer)
+	fakeProposer, err := NewProposer(params.DefaultConfig, node, server, pool, db, 1, fakeSyncer)
 	input := make([]byte, 0, 2000)
 	for int64(len(input)) < (types.CollationSizelimit)/4 {
 		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)

@@ -25,7 +25,7 @@ import (
 // sharding/service.go.
 type Proposer struct {
 	config    *params.Config
-	client    *mainchain.SMCClient
+	client    mainchain.FullClient
 	p2p       *p2p.Server
 	txpool    *txpool.TXPool
 	txpoolSub event.Subscription
@@ -41,7 +41,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
+func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config,
@@ -125,7 +125,7 @@ func (p *Proposer) proposeCollations() {
 
 func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
 	// Get current block number.
-	blockNumber, err := p.client.ChainReader().BlockByNumber(ctx, nil)
+	blockNumber, err := p.client.BlockByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
