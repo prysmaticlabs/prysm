@@ -15,12 +15,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	log "github.com/sirupsen/logrus"
 )
 
 // Sender represents a struct that is able to relay information via shardp2p.
@@ -73,7 +73,9 @@ func (s *Server) Start() {
 
 	// Subscribe to all topics.
 	for topic, msgType := range topicTypeMapping {
-		log.Debugf("Subscribing to topic: %s", topic)
+		log.WithFields(logger.Fields{
+			"topic": topic,
+		}).Debug("Subscribing to topic")
 		go s.subscribeToTopic(topic, msgType)
 	}
 }
@@ -95,7 +97,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 
 	// TODO: Remove debug log after send is implemented.
 	_ = peer
-	log.Debug("Broadcasting to everyone rather than sending a single peer.")
+	log.Debug("Broadcasting to everyone rather than sending a single peer")
 	s.Broadcast(msg)
 }
 
@@ -103,7 +105,9 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 func (s *Server) Broadcast(msg interface{}) {
 	// TODO https://github.com/prysmaticlabs/prysm/issues/176
 	topic := topic(msg)
-	log.Debugf("Broadcasting msg on topic %s for message type %T", topic, msg)
+	log.WithFields(logger.Fields{
+		"topic": topic,
+	}).Debugf("Broadcasting msg %T", msg)
 
 	if topic == pb.Topic_UNKNOWN {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
@@ -158,6 +162,8 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 		}
 
 		i := feed.Send(Message{Data: d})
-		log.Debugf("Send a request to %d subs", i)
+		log.WithFields(logger.Fields{
+			"numSubs": i,
+		}).Debug("Send a request to subs")
 	}
 }

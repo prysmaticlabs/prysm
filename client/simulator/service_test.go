@@ -18,13 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(ioutil.Discard)
+	logger.SetLevel(logger.DebugLevel)
+	logger.SetOutput(ioutil.Discard)
 }
 
 var _ = types.Service(&Simulator{})

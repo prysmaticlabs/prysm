@@ -11,8 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/types"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 )
+
+var log = logger.WithField("prefix", "observer")
 
 // Observer holds functionality required to run an observer service
 // in a sharded system. Must satisfy the Service interface defined in

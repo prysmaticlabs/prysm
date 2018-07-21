@@ -10,8 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 )
+
+var log = logger.WithField("prefix", "syncer")
 
 // RespondCollationBody is called by a node responding to another node's request
 // for a collation body given a (shardID, chunkRoot, period, proposerAddress) tuple.
