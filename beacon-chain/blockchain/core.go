@@ -97,17 +97,17 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Verify attestations from attesters
+	// TODO: Verify attestations from attesters.
 	log.WithFields(logrus.Fields{"attestersIndices": attesters}).Debug("Attester indices")
 
-	// TODO: Verify main signature from proposer
+	// TODO: Verify main signature from proposer.
 	log.WithFields(logrus.Fields{"proposerIndex": proposer}).Debug("Proposer index")
 
-	// TODO: Update crosslink records (post Ruby release)
+	// TODO: Update crosslink records (post Ruby release).
 
-	// TODO: Track reward for the proposer that just proposed the latest beacon block
+	// TODO: Track reward for the proposer that just proposed the latest beacon block.
 
-	// TODO: Verify randao reveal from validator's hash pre image
+	// TODO: Verify randao reveal from validator's hash pre image.
 
 	return &types.ActiveState{
 		TotalAttesterDeposits: 0,

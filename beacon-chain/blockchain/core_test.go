@@ -135,7 +135,7 @@ func TestGetAttestersProposer(t *testing.T) {
 	}
 
 	var validators []types.ValidatorRecord
-	// Create 1000 validators in ActiveValidators
+	// Create 1000 validators in ActiveValidators.
 	for i := 0; i < 1000; i++ {
 		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}}
 		validators = append(validators, validator)
