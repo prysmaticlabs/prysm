@@ -2,11 +2,11 @@
 
 ![Travis Build](https://travis-ci.org/prysmaticlabs/prysm.svg?branch=master)
 
-This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com). 
+This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
 
-Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
+Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Gitter below:
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/prysm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 
 Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
@@ -28,9 +28,9 @@ Create a folder in your `$GOPATH` and navigate to it
 mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
 ```
 
-Note: it is not necessary to clone to the gopath if you're only building with Bazel. 
+Note: it is not necessary to clone to the gopath if you're only building with Bazel.
 
-Clone our repository: 
+Clone our repository:
 
 ```
 git clone https://github.com/prysmaticlabs/prysm
@@ -86,7 +86,7 @@ Then, the geth console can start up and you can start a miner as follows:
 Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
 
 
-# Sharding Minimal Protocol 
+# Sharding Minimal Protocol
 
 **NOTE**: This section is in flux: will be deprecated in favor of a beacon chain)
 
@@ -112,7 +112,7 @@ bazel run //client -- \
 
 This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
-Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function. 
+Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function.
 
 ## Running a Collation Proposal Node
 
