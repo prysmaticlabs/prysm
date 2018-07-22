@@ -63,7 +63,7 @@ To start a local Geth node, you can create your own `genesis.json` file similar 
     "difficulty": "200",
     "gasLimit": "210000000000",
     "alloc": {
-        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" },
+        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" }
     }
 }
 ```
