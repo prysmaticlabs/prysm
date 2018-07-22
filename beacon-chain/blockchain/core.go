@@ -90,19 +90,19 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
 func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *types.Block) (bool, error) {
-	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Header().MainChainRef)
+	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Data().MainChainRef)
 	if err != nil {
 		return false, err
 	}
 	// There needs to be a valid mainchain block for the reference hash in a beacon block.
-	if mainchainBlock != nil {
+	if mainchainBlock == nil {
 		return false, nil
 	}
 	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
 
 	// Calculate the timestamp validity condition.
-	slotDuration := time.Duration(block.Header().SlotNumber*params.SlotLength) * time.Second
-	validTime := time.Now().After(b.GenesisBlock().Header().Timestamp.Add(slotDuration))
+	slotDuration := time.Duration(block.Data().SlotNumber*params.SlotLength) * time.Second
+	validTime := time.Now().After(b.GenesisBlock().Data().Timestamp.Add(slotDuration))
 	return validTime, nil
 }
 

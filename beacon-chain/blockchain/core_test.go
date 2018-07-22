@@ -2,17 +2,33 @@ package blockchain
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+type faultyFetcher struct{}
+
+func (f *faultyFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, errors.New("cannot fetch block")
+}
+
+type mockFetcher struct{}
+
+func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	block := gethTypes.NewBlock(&gethTypes.Header{}, nil, nil, nil)
+	return block, nil
+}
 
 func TestNewBeaconChain(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -142,5 +158,45 @@ func TestShuffle(t *testing.T) {
 	}
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
+	}
+}
+
+func TestCanProcessBlock(t *testing.T) {
+	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest4", InMemory: false}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("Unable to setup db: %v", err)
+	}
+	db.Start()
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+
+	block := types.NewBlock(1)
+	// Using a faulty fetcher should throw an error.
+	canProcess, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block)
+	if err == nil {
+		t.Errorf("Using a faulty fetcher should throw an error, received nil")
+	}
+
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	if err != nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if !canProcess {
+		t.Errorf("Should be able to process block, could not")
+	}
+
+	// Attempting to try a block with that fails the timestamp validity
+	// condition.
+	block = types.NewBlock(1000000)
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	if err != nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Errorf("Should not be able to process block with invalid timestamp condition")
 	}
 }

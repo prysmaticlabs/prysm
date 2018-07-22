@@ -8,23 +8,29 @@ import (
 
 // Block defines a beacon chain core primitive.
 type Block struct {
-	header *Header
+	data *Data
 }
 
-// Header getter makes the property read-only.
-func (b *Block) Header() *Header {
-	return b.header
+// Data getter makes the block's properties read-only.
+func (b *Block) Data() *Data {
+	return b.data
+}
+
+// NewBlock creates a new beacon block given certain arguments.
+func NewBlock(slotNumber uint64) *Block {
+	data := &Data{Timestamp: time.Now(), SlotNumber: slotNumber}
+	return &Block{data}
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock() *Block {
-	timestamp, _ := time.Parse("Sat July 21 12:00:00 UTC 2018", "Sat July 21 12:00:00 UTC 2018")
+	timestamp := time.Date(2018, time.July, 21, 12, 0, 0, 0, time.UTC)
 	// TODO: Add more default fields.
-	return &Block{header: &Header{Timestamp: timestamp}}
+	return &Block{data: &Data{Timestamp: timestamp}}
 }
 
-// Header contains the block header fields in beacon chain.
-type Header struct {
+// Data contains the fields in a beacon chain block.
+type Data struct {
 	ParentHash              common.Hash     // ParentHash is the hash of the parent beacon block.
 	SlotNumber              uint64          // Slot number is the number a client should check to know when it creates block.
 	RandaoReveal            common.Hash     // RandaoReveal is used for Randao commitment reveal.
