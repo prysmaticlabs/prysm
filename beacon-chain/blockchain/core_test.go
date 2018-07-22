@@ -179,7 +179,7 @@ func TestGetAttestersProposer(t *testing.T) {
 
 func TestCanProcessBlock(t *testing.T) {
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest4", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest5", InMemory: false}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("Unable to setup db: %v", err)
