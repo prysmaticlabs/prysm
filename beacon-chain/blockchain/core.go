@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
@@ -118,7 +118,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
-	indices, err := shared.Shuffle(seed, len(b.CrystallizedState().ActiveValidators))
+	indices, err := utils.Shuffle(seed, len(b.CrystallizedState().ActiveValidators))
 	if err != nil {
 		return nil, -1, err
 	}

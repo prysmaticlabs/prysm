@@ -13,7 +13,7 @@ go_library(
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/types:go_default_library",
-        "//shared:go_default_library",
+        "//beacon-chain/utils:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
         "@com_github_ethereum_go_ethereum//rlp:go_default_library",

@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -122,7 +122,6 @@ func TestMutateCrystallizedState(t *testing.T) {
 }
 
 func TestGetAttestersProposer(t *testing.T) {
-	t.Log(os.TempDir())
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest4", InMemory: false}
 	db, err := database.NewBeaconDB(config)
@@ -149,7 +148,7 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	validatorList, err := shared.Shuffle(common.Hash{'A'}, len(validators))
+	validatorList, err := utils.Shuffle(common.Hash{'A'}, len(validators))
 	if err != nil {
 		t.Errorf("Shuffle function function failed: %v", err)
 	}
