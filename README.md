@@ -4,9 +4,9 @@
 
 This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
 
-Before you begin, check out our [Contribution Guidelines](#contribution-guidelines) and join our active chat room on Gitter below:
+Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Gitter below:
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/prysm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 
 Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
