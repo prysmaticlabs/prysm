@@ -82,7 +82,9 @@ func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, read
 			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
 			// Collation for current period may not exist yet, so let's ask for
 			// the collation at period - 1.
-			period = period.Sub(period, big.NewInt(1))
+			if period.Cmp(big.NewInt(0)) > 0 {
+				period = period.Sub(period, big.NewInt(1))
+			}
 			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
 				log.Errorf("Error constructing collation body request: %v", err)
