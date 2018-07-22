@@ -49,11 +49,11 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerBlockchainService(); err != nil {
+	if err := beacon.registerPOWChainService(); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerPOWChainService(); err != nil {
+	if err := beacon.registerBlockchainService(); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +117,12 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), beaconDB)
+	var web3Service *powchain.Web3Service
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
+	}
+
+	blockchainService, err := blockchain.NewChainService(context.TODO(), beaconDB, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
