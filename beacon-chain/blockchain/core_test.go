@@ -148,7 +148,7 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	validatorList, err := utils.Shuffle(common.Hash{'A'}, len(validators))
+	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, len(validators))
 	if err != nil {
 		t.Errorf("Shuffle function function failed: %v", err)
 	}
