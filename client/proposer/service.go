@@ -111,6 +111,8 @@ func (p *Proposer) proposeCollations() {
 				log.Errorf("Unable to get current period: %v", err)
 			}
 
+			// This checks for either whether the size of transactions is equal to or slightly less than the CollationSizeLimit
+			// or if the current period has changed so as to know when to create collations with the received transactions.
 			if (sizeOfCollation+int64(gethtx.Size())) > types.CollationSizeLimit || period.Cmp(currentperiod) != 0 {
 				if err := p.createCollation(p.ctx, collation); err != nil {
 					log.Errorf("Create collation failed: %v", err)
