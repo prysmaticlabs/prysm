@@ -2,8 +2,8 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -13,8 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/sirupsen/logrus"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
-	"golang.org/x/crypto/blake2s"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -115,35 +116,37 @@ func (b *BeaconChain) persist() error {
 	return b.db.Put([]byte(stateLookupKey), encodedState)
 }
 
-// Shuffle returns a list of pseudorandomly sampled
-// indices to use to select attesters and proposers.
-func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
-	if validatorCount > params.MaxValidators {
-		return nil, errors.New("Validator count has exceeded MaxValidator Count")
-	}
+// computeNewActiveState computes a new active state for every beacon block.
+func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveState, error) {
 
-	// construct a list of indices up to MaxValidators
-	validatorList := make([]int, validatorCount)
-	for i := range validatorList {
-		validatorList[i] = i
-	}
-
-	hashSeed, err := blake2s.New256(seed[:])
+	attesters, proposer, err := b.getAttestersProposer(seed)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: Verify attestations from attesters.
+	log.WithFields(logrus.Fields{"attestersIndices": attesters}).Debug("Attester indices")
 
-	hashSeedByte := hashSeed.Sum(nil)
+	// TODO: Verify main signature from proposer.
+	log.WithFields(logrus.Fields{"proposerIndex": proposer}).Debug("Proposer index")
 
-	// shuffle stops at the second to last index
-	for i := 0; i < validatorCount-1; i++ {
-		// convert every 3 bytes to random number, replace validator index with that number
-		for j := 0; j+3 < len(hashSeedByte); j += 3 {
-			swapNum := int(hashSeedByte[j] + hashSeedByte[j+1] + hashSeedByte[j+2])
-			remaining := validatorCount - i
-			swapPos := swapNum%remaining + i
-			validatorList[i], validatorList[swapPos] = validatorList[swapPos], validatorList[i]
-		}
+	// TODO: Update crosslink records (post Ruby release).
+
+	// TODO: Track reward for the proposer that just proposed the latest beacon block.
+
+	// TODO: Verify randao reveal from validator's hash pre image.
+
+	return &types.ActiveState{
+		TotalAttesterDeposits: 0,
+		AttesterBitfields:     []byte{},
+	}, nil
+}
+
+// getAttestersProposer returns lists of random sampled attesters and proposer indices.
+func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
+	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
+	indices, err := utils.ShuffleIndices(seed, len(b.CrystallizedState().ActiveValidators))
+	if err != nil {
+		return nil, -1, err
 	}
-	return validatorList, nil
+	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
