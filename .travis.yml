@@ -52,6 +52,12 @@ matrix:
       install: true # Skip install go packages.
           
       script:
+        # Ensure everything builds
+        - |
+          bazel \
+            --bazelrc=.travis-bazelrc \
+            build \
+            //...
         # Run all tests.
         - |
           bazel \
