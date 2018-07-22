@@ -22,10 +22,10 @@ import (
 )
 
 func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
-	server, err := p2p.NewServer()
-
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
+
+	server, err := p2p.NewServer()
 	if err != nil {
 		t.Fatalf("Failed to start server %v", err)
 	}
@@ -40,6 +40,10 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	config := &database.ShardDBConfig{DataDir: "", Name: "", InMemory: true}
 
 	db, err := database.NewShardDB(config)
+	if err != nil {
+		t.Fatalf("Failed create shardDB %v", err)
+	}
+
 	db.Start()
 
 	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, db, 1)
