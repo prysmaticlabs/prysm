@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Syncer represents a service that provides handlers for shard chain
@@ -87,7 +88,9 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 
 				// Reply to that specific peer only.
 				s.p2p.Send(res, req.Peer)
-				log.Infof("Responding to p2p request with collation with headerHash: 0x%v", common.Bytes2Hex(res.HeaderHash))
+				log.WithFields(logrus.Fields{
+					"headerHash": fmt.Sprintf("0x%v", common.Bytes2Hex(res.HeaderHash)),
+				}).Info("Responding to p2p collation request")
 			}
 		case <-s.bodyRequests.Err():
 			log.Debugf("Subscriber failed")
