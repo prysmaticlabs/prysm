@@ -82,11 +82,11 @@ func TestProposerRoundTrip(t *testing.T) {
 
 	want := "Collation created"
 	length := len(hook.AllEntries())
-	for length < 9 {
+	for length < 5 {
 		length = len(hook.AllEntries())
 	}
 
-	msg := hook.LastEntry()
+	msg := hook.AllEntries()[4]
 
 	if msg.Message != want {
 		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
@@ -159,11 +159,11 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 
 	want := "Collation created"
 	length := len(hook.AllEntries())
-	for length < 9 {
+	for length < 5 {
 		length = len(hook.AllEntries())
 	}
 
-	msg := hook.LastEntry()
+	msg := hook.AllEntries()[4]
 
 	if msg.Message != want {
 		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
