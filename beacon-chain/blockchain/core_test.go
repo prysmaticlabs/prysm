@@ -176,12 +176,11 @@ func TestCanProcessBlock(t *testing.T) {
 
 	block := types.NewBlock(1)
 	// Using a faulty fetcher should throw an error.
-	canProcess, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block)
-	if err == nil {
+	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
 		t.Errorf("Using a faulty fetcher should throw an error, received nil")
 	}
 
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
 	}
