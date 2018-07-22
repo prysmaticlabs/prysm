@@ -89,6 +89,10 @@ func (p *Proposer) proposeCollations() {
 	sub := feed.Subscribe(ch)
 	collation := []*gethTypes.Transaction{}
 	sizeOfCollation := int64(0)
+	period, err := p.currentPeriod(p.ctx)
+	if err != nil {
+		log.Errorf("Unable to get current period: %v", err)
+	}
 
 	defer sub.Unsubscribe()
 	defer close(ch)
@@ -102,8 +106,12 @@ func (p *Proposer) proposeCollations() {
 			}
 			log.Debugf("Received transaction: %x", tx)
 			gethtx := legacyutil.TransformTransaction(tx)
+			currentperiod, err := p.currentPeriod(p.ctx)
+			if err != nil {
+				log.Errorf("Unable to get current period: %v", err)
+			}
 
-			if (sizeOfCollation + int64(gethtx.Size())) > types.CollationSizeLimit {
+			if (sizeOfCollation+int64(gethtx.Size())) > types.CollationSizeLimit || period.Cmp(currentperiod) != 0 {
 				if err := p.createCollation(p.ctx, collation); err != nil {
 					log.Errorf("Create collation failed: %v", err)
 					return
@@ -111,6 +119,10 @@ func (p *Proposer) proposeCollations() {
 				collation = []*gethTypes.Transaction{}
 				sizeOfCollation = 0
 				log.Info("Collation created")
+
+				if period.Cmp(currentperiod) != 0 {
+					_ = period.Set(currentperiod)
+				}
 			}
 
 			collation = append(collation, legacyutil.TransformTransaction(tx))
@@ -125,13 +137,25 @@ func (p *Proposer) proposeCollations() {
 	}
 }
 
-func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
+func (p *Proposer) currentPeriod(ctx context.Context) (*big.Int, error) {
+
 	// Get current block number.
 	blockNumber, err := p.client.BlockByNumber(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
+
+	return period, nil
+
+}
+
+func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
+
+	period, err := p.currentPeriod(ctx)
+	if err != nil {
+		return err
+	}
 
 	// Create collation.
 	collation, err := createCollation(p.client, p.client.Account(), p.client, p.shard.ShardID(), period, txs)

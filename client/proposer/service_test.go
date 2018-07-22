@@ -70,10 +70,10 @@ func TestProposerRoundTrip(t *testing.T) {
 	}
 	tx := pb.Transaction{Input: input}
 
-	fakeProposer.Start()
 	for i := 0; i < 5; i++ {
 		node.CommitWithBlock()
 	}
+	fakeProposer.Start()
 
 	for i := 0; i < 4; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
@@ -106,10 +106,10 @@ func TestIncompleteCollation(t *testing.T) {
 	}
 	tx := pb.Transaction{Input: input}
 
-	fakeProposer.Start()
 	for i := 0; i < 5; i++ {
 		node.CommitWithBlock()
 	}
+	fakeProposer.Start()
 
 	for i := 0; i < 3; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
@@ -127,6 +127,46 @@ func TestIncompleteCollation(t *testing.T) {
 
 	if length != 4 {
 		t.Errorf("Number of logs was supposed to be 4 but is %v", length)
+	}
+
+	fakeProposer.cancel()
+}
+
+func TestCollationWitInDiffPeriod(t *testing.T) {
+	hook := logTest.NewGlobal()
+	fakeProposer, node := settingUpProposer(t)
+
+	input := make([]byte, 0, 2000)
+	for int64(len(input)) < (types.CollationSizeLimit)/4 {
+		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
+	}
+	tx := pb.Transaction{Input: input}
+
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+	fakeProposer.Start()
+
+	fakeProposer.p2p.Broadcast(&tx)
+	<-fakeProposer.msgChan
+
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+
+	fakeProposer.p2p.Broadcast(&tx)
+	<-fakeProposer.msgChan
+
+	want := "Collation created"
+	length := len(hook.AllEntries())
+	for length < 9 {
+		length = len(hook.AllEntries())
+	}
+
+	msg := hook.LastEntry()
+
+	if msg.Message != want {
+		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
 	}
 
 	fakeProposer.cancel()
