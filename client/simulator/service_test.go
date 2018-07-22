@@ -30,10 +30,14 @@ func init() {
 var _ = types.Service(&Simulator{})
 
 type faultyReader struct{}
-type goodReader struct{}
+type goodReader struct {
+	blockNumber int64
+}
 
 type faultySMCCaller struct{}
-type goodSMCCaller struct{}
+type goodSMCCaller struct {
+	collationRecordsArgs []interface{}
+}
 
 func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
 	ChunkRoot [32]byte
@@ -50,12 +54,15 @@ func (f *faultySMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, a
 	return *res, errors.New("error fetching collation record")
 }
 
-func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+func (g *goodSMCCaller) CollationRecords(opts *bind.CallOpts, shardID *big.Int, period *big.Int) (struct {
 	ChunkRoot [32]byte
 	Proposer  common.Address
 	IsElected bool
 	Signature [32]byte
 }, error) {
+
+	g.collationRecordsArgs = []interface{}{opts, shardID, period}
+
 	res := new(struct {
 		ChunkRoot [32]byte
 		Proposer  common.Address
@@ -78,7 +85,7 @@ func (f *faultyReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethType
 }
 
 func (g *goodReader) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	return gethTypes.NewBlock(&gethTypes.Header{Number: big.NewInt(0)}, nil, nil, nil), nil
+	return gethTypes.NewBlock(&gethTypes.Header{Number: big.NewInt(g.blockNumber)}, nil, nil, nil), nil
 }
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
@@ -218,8 +225,10 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
+	smcCaller := &goodSMCCaller{}
+
 	go func() {
-		simulator.simulateNotaryRequests(&goodSMCCaller{}, &goodReader{}, delayChan, doneChan)
+		simulator.simulateNotaryRequests(smcCaller, &goodReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -234,6 +243,64 @@ func TestSimulateNotaryRequests(t *testing.T) {
 
 	exitRoutine <- true
 	hook.Reset()
+}
+
+func TestSimulateNotaryRequests_previousPeriod(t *testing.T) {
+	tests := []struct {
+		want        int64
+		blockNumber int64
+	}{
+		{
+			want:        0,
+			blockNumber: 0,
+		},
+		{
+			want:        0,
+			blockNumber: params.DefaultConfig.PeriodLength,
+		}, {
+			want:        0,
+			blockNumber: params.DefaultConfig.PeriodLength + 1,
+		},
+		{
+			want:        1,
+			blockNumber: params.DefaultConfig.PeriodLength * 2,
+		},
+	}
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+	for _, tt := range tests {
+		simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+		if err != nil {
+			t.Fatalf("Unable to setup simulator service: %v", err)
+		}
+
+		delayChan := make(chan time.Time)
+		doneChan := make(chan struct{})
+		exitRoutine := make(chan bool)
+
+		smcCaller := &goodSMCCaller{}
+		reader := &goodReader{blockNumber: tt.blockNumber}
+
+		go func() {
+			simulator.simulateNotaryRequests(smcCaller, reader, delayChan, doneChan)
+			<-exitRoutine
+		}()
+
+		delayChan <- time.Time{}
+		doneChan <- struct{}{}
+
+		period := smcCaller.collationRecordsArgs[2].(*big.Int)
+
+		if period.Cmp(big.NewInt(tt.want)) != 0 {
+			t.Errorf("Expected period %v but got %v", tt.want, period)
+		}
+
+		exitRoutine <- true
+	}
 }
 
 // This test verifies actor simulator can successfully broadcast
