@@ -10,7 +10,7 @@ import (
 
 // Shuffle returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
-func Shuffle(seed common.Hash, validatorCount int) ([]int, error) {
+func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 	if validatorCount > params.MaxValidators {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}

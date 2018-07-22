@@ -118,7 +118,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
-	indices, err := utils.Shuffle(seed, len(b.CrystallizedState().ActiveValidators))
+	indices, err := utils.ShuffleIndices(seed, len(b.CrystallizedState().ActiveValidators))
 	if err != nil {
 		return nil, -1, err
 	}
