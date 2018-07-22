@@ -15,7 +15,7 @@ func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}
 
-	// construct a list of indices up to MaxValidators
+	// construct a list of indices up to MaxValidators.
 	validatorList := make([]int, validatorCount)
 	for i := range validatorList {
 		validatorList[i] = i
@@ -28,9 +28,9 @@ func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 
 	hashSeedByte := hashSeed.Sum(nil)
 
-	// shuffle stops at the second to last index
+	// shuffle stops at the second to last index.
 	for i := 0; i < validatorCount-1; i++ {
-		// convert every 3 bytes to random number, replace validator index with that number
+		// convert every 3 bytes to random number, replace validator index with that number.
 		for j := 0; j+3 < len(hashSeedByte); j += 3 {
 			swapNum := int(hashSeedByte[j] + hashSeedByte[j+1] + hashSeedByte[j+2])
 			remaining := validatorCount - i
