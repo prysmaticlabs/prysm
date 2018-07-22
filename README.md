@@ -139,6 +139,33 @@ bazel run //client -- \
 
 Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network on shard 0.
 
+## Running via Docker
+
+To run the client within a docker container, use the `//client:image` target.
+
+```text
+bazel run //client:image
+
+INFO: Build options have changed, discarding analysis cache.
+INFO: Analysed target //client:image (306 packages loaded).
+INFO: Found 1 target...
+Target //client:image up-to-date:
+  bazel-bin/client/image-layer.tar
+INFO: Elapsed time: 8.568s, Critical Path: 0.22s
+INFO: 0 processes.
+INFO: Build completed successfully, 1 total action
+INFO: Build completed successfully, 1 total action
+37fd88e7190b: Loading layer  22.42MB/22.42MB
+Loaded image ID: sha256:89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1
+Tagging 89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1 as bazel/client:image
+...
+```
+
+TODO: Add [container_push](https://github.com/bazelbuild/rules_docker/#container_push-1) 
+targets for the container images such that they can be pulled from GCR or 
+dockerhub. 
+
+
 # Making Changes
 
 ## Rebuilding the Sharding Manager Contract Bindings
