@@ -91,16 +91,15 @@ func (p *Proposer) proposeCollations() {
 	for {
 		select {
 		case msg := <-ch:
-			log.Info("tx received")
 			tx, ok := msg.Data.(*pb.Transaction)
 			if !ok {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
-			// log.Debugf("Received transaction: %x", tx)
+			log.Debugf("Received transaction: %x", tx)
 			gethtx := legacyutil.TransformTransaction(tx)
 
-			if (sizeOfCollation + int64(gethtx.Size())) > types.CollationSizelimit {
+			if (sizeOfCollation + int64(gethtx.Size())) > types.CollationSizeLimit {
 				if err := p.createCollation(p.ctx, collation); err != nil {
 					log.Errorf("Create collation failed: %v", err)
 					return

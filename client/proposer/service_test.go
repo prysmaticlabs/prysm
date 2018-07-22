@@ -2,9 +2,7 @@ package proposer
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/client/syncer"
@@ -23,8 +21,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestProposeCollation(t *testing.T) {
-	hook := logTest.NewGlobal()
+func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	server, err := p2p.NewServer()
 
 	backend, smc := internal.SetupMockClient(t)
@@ -36,44 +33,99 @@ func TestProposeCollation(t *testing.T) {
 
 	pool, err := txpool.NewTXPool(server)
 	if err != nil {
-		t.Fatalf("Failed to start server %v", err)
+		t.Fatalf("Failed to start txpool %v", err)
 	}
 	pool.Start()
 
-	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
-	config := &database.ShardDBConfig{DataDir: tmp, Name: "shardDB", InMemory: false}
+	config := &database.ShardDBConfig{DataDir: "", Name: "", InMemory: true}
 
 	db, err := database.NewShardDB(config)
 	db.Start()
 
 	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, db, 1)
 	if err != nil {
-		t.Fatalf("Failed to start server %v", err)
+		t.Fatalf("Failed to start syncer %v", err)
 	}
 
 	fakeProposer, err := NewProposer(params.DefaultConfig, node, server, pool, db, 1, fakeSyncer)
+	if err != nil {
+		t.Fatalf("Failed to create proposer %v", err)
+	}
+
+	return fakeProposer, node
+
+}
+
+func TestProposerRoundTrip(t *testing.T) {
+	hook := logTest.NewGlobal()
+	fakeProposer, node := settingUpProposer(t)
+
 	input := make([]byte, 0, 2000)
-	for int64(len(input)) < (types.CollationSizelimit)/4 {
+	for int64(len(input)) < (types.CollationSizeLimit)/4 {
 		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
 	}
 	tx := pb.Transaction{Input: input}
 
 	fakeProposer.Start()
 	for i := 0; i < 5; i++ {
-
 		node.CommitWithBlock()
 	}
 
 	for i := 0; i < 4; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
+		<-fakeProposer.msgChan
 	}
 
 	want := "Collation created"
-	msg := hook.LastEntry()
-	for msg.Message != want {
-		msg = hook.LastEntry()
+	length := len(hook.AllEntries())
+	for length < 9 {
+		length = len(hook.AllEntries())
 	}
 
+	msg := hook.LastEntry()
+
+	if msg.Message != want {
+		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
+	}
+
+	fakeProposer.cancel()
+
+}
+
+func TestIncompleteCollation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	fakeProposer, node := settingUpProposer(t)
+
+	input := make([]byte, 0, 2000)
+	for int64(len(input)) < (types.CollationSizeLimit)/4 {
+		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
+	}
+	tx := pb.Transaction{Input: input}
+
+	fakeProposer.Start()
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+
+	for i := 0; i < 3; i++ {
+		fakeProposer.p2p.Broadcast(&tx)
+		<-fakeProposer.msgChan
+	}
+
+	want := "Starting proposer service"
+
+	msg := hook.LastEntry()
+	if msg.Message != want {
+		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
+	}
+
+	length := len(hook.AllEntries())
+
+	if length != 4 {
+		t.Errorf("Number of logs was supposed to be 4 but is %v", length)
+	}
+
+	fakeProposer.cancel()
 }
 func TestCreateCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
