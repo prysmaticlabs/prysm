@@ -2,6 +2,7 @@ package proposer
 
 import (
 	"crypto/rand"
+	//"math"
 	"math/big"
 	"testing"
 
@@ -12,6 +13,183 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 )
 
+// TODO: Fix the tests so that the following tests can be tested as a package and stop leaking into each other,
+// find another way rather than using logs to do this
+
+/*
+func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
+	backend, smc := internal.SetupMockClient(t)
+	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
+
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Failed to start server %v", err)
+	}
+	server.Start()
+
+	pool, err := txpool.NewTXPool(server)
+	if err != nil {
+		t.Fatalf("Failed to start txpool %v", err)
+	}
+	pool.Start()
+
+	config := &database.ShardDBConfig{DataDir: "", Name: "", InMemory: true}
+
+	db, err := database.NewShardDB(config)
+	if err != nil {
+		t.Fatalf("Failed create shardDB %v", err)
+	}
+
+	db.Start()
+
+	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, db, 1)
+	if err != nil {
+		t.Fatalf("Failed to start syncer %v", err)
+	}
+
+	fakeProposer, err := NewProposer(params.DefaultConfig, node, server, pool, db, 1, fakeSyncer)
+	if err != nil {
+		t.Fatalf("Failed to create proposer %v", err)
+	}
+	fakeProposer.config.CollationSizeLimit = int64(math.Pow(float64(2), float64(10)))
+
+	return fakeProposer, node
+
+}
+
+func TestProposerRoundTrip(t *testing.T) {
+	hook := logTest.NewGlobal()
+	fakeProposer, node := settingUpProposer(t)
+
+	input := make([]byte, 0, 2000)
+	for len(input) < int(fakeProposer.config.CollationSizeLimit/4) {
+		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
+	}
+	tx := pb.Transaction{Input: input}
+
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+	fakeProposer.Start()
+
+	for i := 0; i < 7; i++ {
+		fakeProposer.p2p.Broadcast(&tx)
+		<-fakeProposer.msgChan
+	}
+
+	want := "Collation created"
+	length := len(hook.AllEntries())
+	for length < 5 {
+		length = len(hook.AllEntries())
+	}
+
+	msg := hook.AllEntries()[4]
+
+	if msg.Message != want {
+		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
+	}
+
+	fakeProposer.cancel()
+	fakeProposer.Stop()
+	fakeProposer.dbService.Stop()
+	fakeProposer.txpool.Stop()
+	fakeProposer.p2p.Stop()
+
+	hook.Reset()
+
+}
+
+func TestIncompleteCollation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	fakeProposer, node := settingUpProposer(t)
+
+	input := make([]byte, 0, 2000)
+	for int64(len(input)) < (fakeProposer.config.CollationSizeLimit)/4 {
+		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
+	}
+	tx := pb.Transaction{Input: input}
+
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+	fakeProposer.Start()
+
+	for i := 0; i < 3; i++ {
+		fakeProposer.p2p.Broadcast(&tx)
+		<-fakeProposer.msgChan
+	}
+
+	want := "Starting proposer service"
+
+	msg := hook.LastEntry()
+	if msg.Message != want {
+		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
+	}
+
+	length := len(hook.AllEntries())
+
+	if length != 4 {
+		t.Errorf("Number of logs was supposed to be 4 but is %v", length)
+	}
+
+	fakeProposer.cancel()
+	fakeProposer.Stop()
+	fakeProposer.dbService.Stop()
+	fakeProposer.txpool.Stop()
+	fakeProposer.p2p.Stop()
+	hook.Reset()
+}
+
+func TestCollationWitInDiffPeriod(t *testing.T) {
+	hook := logTest.NewGlobal()
+	fakeProposer, node := settingUpProposer(t)
+
+	defer fakeProposer.p2p.Stop()
+	defer fakeProposer.txpool.Stop()
+	defer fakeProposer.dbService.Stop()
+	defer fakeProposer.Stop()
+
+	input := make([]byte, 0, 2000)
+	for int64(len(input)) < (fakeProposer.config.CollationSizeLimit)/4 {
+		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
+	}
+	tx := pb.Transaction{Input: input}
+
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+	fakeProposer.Start()
+
+	fakeProposer.p2p.Broadcast(&tx)
+	<-fakeProposer.msgChan
+
+	for i := 0; i < 5; i++ {
+		node.CommitWithBlock()
+	}
+
+	fakeProposer.p2p.Broadcast(&tx)
+	<-fakeProposer.msgChan
+
+	want := "Collation created"
+	length := len(hook.AllEntries())
+	for length < 5 {
+		length = len(hook.AllEntries())
+	}
+
+	msg := hook.AllEntries()[4]
+
+	if msg.Message != want {
+		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
+	}
+
+	fakeProposer.cancel()
+	fakeProposer.Stop()
+	fakeProposer.dbService.Stop()
+	fakeProposer.txpool.Stop()
+	fakeProposer.p2p.Stop()
+	hook.Reset()
+}
+*/
 func TestCreateCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}

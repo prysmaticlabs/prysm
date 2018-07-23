@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/client/types",
     visibility = ["//client:__subpackages__"],
     deps = [
+        "//client/params:go_default_library",
         "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",

@@ -136,6 +136,14 @@ func (s *SMCClient) ChainReader() ethereum.ChainReader {
 	return ethereum.ChainReader(s.client)
 }
 
+func (s *SMCClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return s.ChainReader().BlockByNumber(ctx, number)
+}
+
+func (s *SMCClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	return s.ChainReader().SubscribeNewHead(ctx, ch)
+}
+
 // SMCCaller to interact with the sharding manager contract.
 func (s *SMCClient) SMCCaller() *contracts.SMCCaller {
 	if s.smc == nil {

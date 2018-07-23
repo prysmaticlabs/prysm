@@ -49,6 +49,14 @@ type EthClient interface {
 	DepositFlag() bool
 }
 
+type FullClient interface {
+	EthClient
+	Reader
+	ContractCaller
+	Signer
+	ContractTransactor
+}
+
 // Reader defines an interface for a struct that can read mainchain information
 // such as blocks, transactions, receipts, and more. Useful for testing.
 type Reader interface {

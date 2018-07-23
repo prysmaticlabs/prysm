@@ -2,13 +2,14 @@ package types
 
 import (
 	"fmt"
-	"math"
+
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -41,8 +42,6 @@ type collationHeaderData struct {
 	ProposerAddress   *common.Address // address of the collation proposer.
 	ProposerSignature [32]byte        // the proposer's signature for calculating collation hash.
 }
-
-var collationSizelimit = int64(math.Pow(float64(2), float64(20)))
 
 // NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
 // and provide the body and transactions upon creation.
@@ -166,8 +165,8 @@ func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	if int64(len(serializedTx)) > collationSizelimit {
-		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), collationSizelimit)
+	if int64(len(serializedTx)) > params.DefaultConfig.CollationSizeLimit {
+		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), params.DefaultConfig.CollationSizeLimit)
 	}
 
 	return serializedTx, nil

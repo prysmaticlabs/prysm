@@ -27,7 +27,7 @@ var log = logrus.WithField("prefix", "proposer")
 // sharding/service.go.
 type Proposer struct {
 	config    *params.Config
-	client    *mainchain.SMCClient
+	client    mainchain.FullClient
 	p2p       *p2p.Server
 	txpool    *txpool.TXPool
 	txpoolSub event.Subscription
@@ -43,7 +43,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
+func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config,
@@ -87,6 +87,13 @@ func (p *Proposer) proposeCollations() {
 	feed := p.p2p.Feed(pb.Transaction{})
 	ch := make(chan p2p.Message, 20)
 	sub := feed.Subscribe(ch)
+	collation := []*gethTypes.Transaction{}
+	sizeOfCollation := int64(0)
+	period, err := p.currentPeriod(p.ctx)
+	if err != nil {
+		log.Errorf("Unable to get current period: %v", err)
+	}
+
 	defer sub.Unsubscribe()
 	defer close(ch)
 	for {
@@ -97,10 +104,31 @@ func (p *Proposer) proposeCollations() {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
 				break
 			}
-			// log.Debugf("Received transaction: %x", tx)
-			if err := p.createCollation(p.ctx, []*gethTypes.Transaction{legacyutil.TransformTransaction(tx)}); err != nil {
-				log.Errorf("Create collation failed: %v", err)
+			log.Debugf("Received transaction: %x", tx)
+			gethtx := legacyutil.TransformTransaction(tx)
+			currentperiod, err := p.currentPeriod(p.ctx)
+			if err != nil {
+				log.Errorf("Unable to get current period: %v", err)
 			}
+
+			// This checks for when the size of transactions is equal to or slightly less than the CollationSizeLimit
+			// and if the current period has changed so as to know when to create collations with the received transactions.
+			if (sizeOfCollation+int64(gethtx.Size())) > p.config.CollationSizeLimit || period.Cmp(currentperiod) != 0 {
+				if err := p.createCollation(p.ctx, collation); err != nil {
+					log.Errorf("Create collation failed: %v", err)
+					return
+				}
+				collation = []*gethTypes.Transaction{}
+				sizeOfCollation = 0
+				log.Info("Collation created")
+
+				if period.Cmp(currentperiod) != 0 {
+					_ = period.Set(currentperiod)
+				}
+			}
+
+			collation = append(collation, legacyutil.TransformTransaction(tx))
+			sizeOfCollation += int64(gethtx.Size())
 		case <-p.ctx.Done():
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
@@ -111,13 +139,25 @@ func (p *Proposer) proposeCollations() {
 	}
 }
 
-func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
+func (p *Proposer) currentPeriod(ctx context.Context) (*big.Int, error) {
+
 	// Get current block number.
-	blockNumber, err := p.client.ChainReader().BlockByNumber(ctx, nil)
+	blockNumber, err := p.client.BlockByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
+
+	return period, nil
+
+}
+
+func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transaction) error {
+
+	period, err := p.currentPeriod(ctx)
 	if err != nil {
 		return err
 	}
-	period := new(big.Int).Div(blockNumber.Number(), big.NewInt(p.config.PeriodLength))
 
 	// Create collation.
 	collation, err := createCollation(p.client, p.client.Account(), p.client, p.shard.ShardID(), period, txs)

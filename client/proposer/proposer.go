@@ -47,6 +47,7 @@ func AddHeader(client mainchain.EthClient, transactor mainchain.ContractTransact
 	log.WithFields(logrus.Fields{
 		"txHash": tx.Hash().Hex(),
 	}).Info("Add header submitted")
+
 	return nil
 }
 
