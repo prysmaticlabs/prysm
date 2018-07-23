@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: Fix the tests so that the following tests can be tested as a package and stop leaking into each other,
-// find another way rather than logs to do this
+// find another way rather than using logs to do this
 
 /*
 func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
