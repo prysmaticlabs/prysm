@@ -2,22 +2,37 @@ package blockchain
 
 import (
 	"bytes"
-	"fmt"
-	"os"
+	"context"
+	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+type faultyFetcher struct{}
+
+func (f *faultyFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, errors.New("cannot fetch block")
+}
+
+type mockFetcher struct{}
+
+func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	block := gethTypes.NewBlock(&gethTypes.Header{}, nil, nil, nil)
+	return block, nil
+}
+
 func TestNewBeaconChain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -45,8 +60,7 @@ func TestNewBeaconChain(t *testing.T) {
 }
 
 func TestMutateActiveState(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest2", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -83,8 +97,7 @@ func TestMutateActiveState(t *testing.T) {
 }
 
 func TestMutateCrystallizedState(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest3", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -122,22 +135,26 @@ func TestMutateCrystallizedState(t *testing.T) {
 }
 
 func TestGetAttestersProposer(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest4", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
+		t.Fatalf("Unable to setup db: %v", err)
 	}
 	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("Could not generate key: %v", err)
 	}
 
 	var validators []types.ValidatorRecord
 	// Create 1000 validators in ActiveValidators.
 	for i := 0; i < 1000; i++ {
-		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}}
+		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
 		validators = append(validators, validator)
 	}
 
@@ -158,5 +175,43 @@ func TestGetAttestersProposer(t *testing.T) {
 	}
 	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
+	}
+}
+
+func TestCanProcessBlock(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+
+	block := types.NewBlock(1)
+	// Using a faulty fetcher should throw an error.
+	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
+		t.Errorf("Using a faulty fetcher should throw an error, received nil")
+	}
+
+	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	if err != nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if !canProcess {
+		t.Errorf("Should be able to process block, could not")
+	}
+
+	// Attempting to try a block with that fails the timestamp validity
+	// condition.
+	block = types.NewBlock(1000000)
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	if err != nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Errorf("Should not be able to process block with invalid timestamp condition")
 	}
 }

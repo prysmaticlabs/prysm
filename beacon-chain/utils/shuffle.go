@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/blake2s"
 )
 
-// Shuffle returns a list of pseudorandomly sampled
+// ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
 func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 	if validatorCount > params.MaxValidators {

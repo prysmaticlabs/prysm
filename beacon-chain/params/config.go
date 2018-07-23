@@ -17,4 +17,6 @@ const (
 	MaxValidators = 4194304
 	// NotariesPerCrosslink fixed to 100.
 	NotariesPerCrosslink = 100
+	// SlotLength in seconds.
+	SlotLength = 8
 )
