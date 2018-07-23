@@ -2,13 +2,14 @@ package types
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/client/params"
+
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
