@@ -2,6 +2,7 @@ package proposer
 
 import (
 	"crypto/rand"
+	"math"
 	"math/big"
 	"testing"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/txpool"
-	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -55,6 +55,7 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	if err != nil {
 		t.Fatalf("Failed to create proposer %v", err)
 	}
+	fakeProposer.config.CollationSizeLimit = int64(math.Pow(float64(2), float64(10)))
 
 	return fakeProposer, node
 
@@ -64,8 +65,8 @@ func TestProposerRoundTrip(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 
-	input := make([]byte, 0, 2000)
-	for int64(len(input)) < (types.CollationSizeLimit)/4 {
+	input := make([]byte, 0, fakeProposer.config.CollationSizeLimit)
+	for len(input) < int(fakeProposer.config.CollationSizeLimit/4) {
 		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
 	}
 	tx := pb.Transaction{Input: input}
@@ -75,18 +76,18 @@ func TestProposerRoundTrip(t *testing.T) {
 	}
 	fakeProposer.Start()
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
 		<-fakeProposer.msgChan
 	}
 
 	want := "Collation created"
 	length := len(hook.AllEntries())
-	for length < 5 {
+	for length < 9 {
 		length = len(hook.AllEntries())
 	}
 
-	msg := hook.AllEntries()[4]
+	msg := hook.AllEntries()[8]
 
 	if msg.Message != want {
 		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
@@ -101,7 +102,7 @@ func TestIncompleteCollation(t *testing.T) {
 	fakeProposer, node := settingUpProposer(t)
 
 	input := make([]byte, 0, 2000)
-	for int64(len(input)) < (types.CollationSizeLimit)/4 {
+	for int64(len(input)) < (fakeProposer.config.CollationSizeLimit)/4 {
 		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
 	}
 	tx := pb.Transaction{Input: input}
@@ -137,7 +138,7 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	fakeProposer, node := settingUpProposer(t)
 
 	input := make([]byte, 0, 2000)
-	for int64(len(input)) < (types.CollationSizeLimit)/4 {
+	for int64(len(input)) < (fakeProposer.config.CollationSizeLimit)/4 {
 		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
 	}
 	tx := pb.Transaction{Input: input}

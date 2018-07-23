@@ -4,6 +4,7 @@
 package params
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +20,7 @@ var DefaultConfig = &Config{
 	NotaryCommitteeSize:   135,
 	NotaryQuorumSize:      90,
 	NotaryChallengePeriod: 25,
+	CollationSizeLimit:    int64(math.Pow(float64(2), float64(20))),
 }
 
 // DefaultChainConfig contains default chain configs of an individual shard.
@@ -34,6 +36,7 @@ type Config struct {
 	NotaryCommitteeSize   int64          // NotaryCommitSize sampled per block from the notaries pool per period per shard.
 	NotaryQuorumSize      int64          // NotaryQuorumSize votes the collation needs to get accepted to the canonical chain.
 	NotaryChallengePeriod int64          // NotaryChallengePeriod is the duration a notary has to store collations for.
+	CollationSizeLimit    int64          // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
 }
 
 // ChainConfig contains chain config of an individual shard. Still to be designed.
