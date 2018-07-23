@@ -1,18 +1,20 @@
 package blockchain
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
-	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -37,14 +39,18 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	enc, err := db.Get([]byte(stateLookupKey))
-	if err != nil && err.Error() == leveldberrors.ErrNotFound.Error() {
+	has, err := db.Has([]byte(stateLookupKey))
+	if err != nil {
+		return nil, err
+	}
+	if !has {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		active, crystallized := types.NewGenesisStates()
 		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
+	enc, err := db.Get([]byte(stateLookupKey))
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +71,11 @@ func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
 
+// GenesisBlock returns the canonical, genesis block.
+func (b *BeaconChain) GenesisBlock() *types.Block {
+	return types.NewGenesisBlock()
+}
+
 // MutateActiveState allows external services to modify the active state.
 func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 	defer b.lock.Unlock()
@@ -79,6 +90,24 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 	b.lock.Lock()
 	b.state.CrystallizedState = crystallizedState
 	return b.persist()
+}
+
+// CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
+func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *types.Block) (bool, error) {
+	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Data().MainChainRef)
+	if err != nil {
+		return false, err
+	}
+	// There needs to be a valid mainchain block for the reference hash in a beacon block.
+	if mainchainBlock == nil {
+		return false, nil
+	}
+	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
+
+	// Calculate the timestamp validity condition.
+	slotDuration := time.Duration(block.Data().SlotNumber*params.SlotLength) * time.Second
+	validTime := time.Now().After(b.GenesisBlock().Data().Timestamp.Add(slotDuration))
+	return validTime, nil
 }
 
 // persist stores the RLP encoding of the latest beacon chain state into the db.
