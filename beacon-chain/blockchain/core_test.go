@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -32,8 +32,7 @@ func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 
 func TestNewBeaconChain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -61,8 +60,7 @@ func TestNewBeaconChain(t *testing.T) {
 }
 
 func TestMutateActiveState(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest2", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -99,8 +97,7 @@ func TestMutateActiveState(t *testing.T) {
 }
 
 func TestMutateCrystallizedState(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest3", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
@@ -138,22 +135,26 @@ func TestMutateCrystallizedState(t *testing.T) {
 }
 
 func TestGetAttestersProposer(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest4", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
+		t.Fatalf("Unable to setup db: %v", err)
 	}
 	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("Could not generate key: %v", err)
 	}
 
 	var validators []types.ValidatorRecord
 	// Create 1000 validators in ActiveValidators.
 	for i := 0; i < 1000; i++ {
-		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}}
+		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
 		validators = append(validators, validator)
 	}
 
@@ -178,11 +179,10 @@ func TestGetAttestersProposer(t *testing.T) {
 }
 
 func TestCanProcessBlock(t *testing.T) {
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontest5", InMemory: false}
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
-		t.Fatalf("Unable to setup db: %v", err)
+		t.Fatalf("unable to setup db: %v", err)
 	}
 	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())

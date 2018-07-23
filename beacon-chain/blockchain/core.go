@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
-	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var stateLookupKey = "beaconchainstate"
@@ -40,14 +39,18 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	enc, err := db.Get([]byte(stateLookupKey))
-	if err != nil && err.Error() == leveldberrors.ErrNotFound.Error() {
+	has, err := db.Has([]byte(stateLookupKey))
+	if err != nil {
+		return nil, err
+	}
+	if !has {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		active, crystallized := types.NewGenesisStates()
 		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
+	enc, err := db.Get([]byte(stateLookupKey))
 	if err != nil {
 		return nil, err
 	}
