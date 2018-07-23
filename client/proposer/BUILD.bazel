@@ -39,7 +39,6 @@ go_test(
         "//client/params:go_default_library",
         "//client/syncer:go_default_library",
         "//client/txpool:go_default_library",
-        "//client/types:go_default_library",
         "//proto/sharding/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

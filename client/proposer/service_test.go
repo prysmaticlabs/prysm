@@ -65,7 +65,7 @@ func TestProposerRoundTrip(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 
-	input := make([]byte, 0, fakeProposer.config.CollationSizeLimit)
+	input := make([]byte, 0, 2000)
 	for len(input) < int(fakeProposer.config.CollationSizeLimit/4) {
 		input = append(input, []byte{'t', 'e', 's', 't', 'i', 'n', 'g'}...)
 	}
@@ -76,24 +76,25 @@ func TestProposerRoundTrip(t *testing.T) {
 	}
 	fakeProposer.Start()
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 7; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
 		<-fakeProposer.msgChan
 	}
 
 	want := "Collation created"
 	length := len(hook.AllEntries())
-	for length < 9 {
+	for length < 5 {
 		length = len(hook.AllEntries())
 	}
 
-	msg := hook.AllEntries()[8]
+	msg := hook.AllEntries()[4]
 
 	if msg.Message != want {
 		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
 	}
 
 	fakeProposer.cancel()
+	hook.Reset()
 
 }
 
@@ -131,6 +132,7 @@ func TestIncompleteCollation(t *testing.T) {
 	}
 
 	fakeProposer.cancel()
+	hook.Reset()
 }
 
 func TestCollationWitInDiffPeriod(t *testing.T) {
@@ -171,6 +173,7 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	}
 
 	fakeProposer.cancel()
+	hook.Reset()
 }
 func TestCreateCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
