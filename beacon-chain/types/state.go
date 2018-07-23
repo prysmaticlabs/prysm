@@ -1,9 +1,8 @@
 package types
 
 import (
-	"crypto/ecdsa"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 )
 
 // ActiveState contains fields of current state of beacon chain,
@@ -43,12 +42,12 @@ type CrystallizedState struct {
 
 // ValidatorRecord contains information about a validator
 type ValidatorRecord struct {
-	PubKey            ecdsa.PublicKey // PubKey is the validator's public key.
-	WithdrawalShard   uint16          // WithdrawalShard is the shard balance will be sent to after withdrawal.
-	WithdrawalAddress common.Address  // WithdrawalAddress is the address balance will be sent to after withdrawal.
-	RandaoCommitment  common.Hash     // RandaoCommitment is validator's current RANDAO beacon commitment.
-	Balance           uint64          // Balance is validator's current balance.
-	SwitchDynasty     uint64          // SwitchDynasty is the dynasty where the validator can (be inducted | be removed | withdraw their balance).
+	PubKey            enr.Secp256k1  // PubKey is the validator's public key.
+	WithdrawalShard   uint16         // WithdrawalShard is the shard balance will be sent to after withdrawal.
+	WithdrawalAddress common.Address // WithdrawalAddress is the address balance will be sent to after withdrawal.
+	RandaoCommitment  common.Hash    // RandaoCommitment is validator's current RANDAO beacon commitment.
+	Balance           uint64         // Balance is validator's current balance.
+	SwitchDynasty     uint64         // SwitchDynasty is the dynasty where the validator can (be inducted | be removed | withdraw their balance).
 }
 
 // CrosslinkRecord contains the fields of last fully formed
