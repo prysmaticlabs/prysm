@@ -14,7 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/shared"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 )
 
 // Verifies that SMCCLient implements the sharding Service inteface.
-var _ = types.Service(&SMCClient{})
+var _ = shared.Service(&SMCClient{})
 
 // mockClient is struct to implement the smcClient methods for testing.
 type mockClient struct {

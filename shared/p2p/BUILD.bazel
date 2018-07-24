@@ -41,8 +41,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//client/types:go_default_library",
         "//proto/sharding/v1:go_default_library",
+        "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_floodsub//:go_default_library",

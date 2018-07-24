@@ -16,5 +16,5 @@ go_test(
     name = "go_default_test",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
-    deps = ["//client/types:go_default_library"],
+    deps = ["//shared:go_default_library"],
 )
