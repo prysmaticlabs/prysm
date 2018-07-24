@@ -5,10 +5,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

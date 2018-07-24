@@ -10,13 +10,13 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/legacyutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
