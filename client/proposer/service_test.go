@@ -2,6 +2,8 @@ package proposer
 
 import (
 	"crypto/rand"
+	"fmt"
+	"time"
 	//"math"
 	"math/big"
 	"testing"
@@ -9,14 +11,20 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/internal"
+	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
+	"github.com/prysmaticlabs/prysm/client/syncer"
+	"github.com/prysmaticlabs/prysm/client/txpool"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // TODO: Fix the tests so that the following tests can be tested as a package and stop leaking into each other,
 // find another way rather than using logs to do this
 
-/*
 func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
@@ -51,15 +59,44 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	if err != nil {
 		t.Fatalf("Failed to create proposer %v", err)
 	}
-	fakeProposer.config.CollationSizeLimit = int64(math.Pow(float64(2), float64(10)))
+	// params.DefaultConfig is a package level pointer var asigned to fakeProposer.config,
+	// changing fakeProposer.config.CollationSizeLimit here affects all the subsequent tests
+	// that use params.DefaultConfig
+	// fakeProposer.config.CollationSizeLimit = int64(math.Pow(float64(2), float64(10)))
 
 	return fakeProposer, node
+}
 
+// waitForLogMsg keeps checking for log messages until "want" is found or a
+// timeout expires. The motivation is to be more resilient to connection
+// failure errors that can appear in the log:
+// Failed to connect to peer: dial attempt failed: <peer.ID 16Uiu2> --> <peer.ID 16Uiu2> dial attempt failed: connection refused
+func waitForLogMsg(hook *logTest.Hook, want string) error {
+	timeout := time.After(60 * time.Second)
+	tick := time.Tick(500 * time.Millisecond)
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("didn't get %q log entry on time", want)
+		case <-tick:
+			for _, msg := range hook.AllEntries() {
+				if msg.Message == want {
+					return nil
+				}
+			}
+		}
+	}
 }
 
 func TestProposerRoundTrip(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
+	defer func() {
+		fakeProposer.Stop()
+		fakeProposer.dbService.Stop()
+		fakeProposer.txpool.Stop()
+		fakeProposer.p2p.Stop()
+	}()
 
 	input := make([]byte, 0, 2000)
 	for len(input) < int(fakeProposer.config.CollationSizeLimit/4) {
@@ -77,31 +114,20 @@ func TestProposerRoundTrip(t *testing.T) {
 		<-fakeProposer.msgChan
 	}
 
-	want := "Collation created"
-	length := len(hook.AllEntries())
-	for length < 5 {
-		length = len(hook.AllEntries())
+	if err := waitForLogMsg(hook, "Collation created"); err != nil {
+		t.Fatal(err.Error())
 	}
-
-	msg := hook.AllEntries()[4]
-
-	if msg.Message != want {
-		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
-	}
-
-	fakeProposer.cancel()
-	fakeProposer.Stop()
-	fakeProposer.dbService.Stop()
-	fakeProposer.txpool.Stop()
-	fakeProposer.p2p.Stop()
-
-	hook.Reset()
-
 }
 
 func TestIncompleteCollation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
+	defer func() {
+		fakeProposer.Stop()
+		fakeProposer.dbService.Stop()
+		fakeProposer.txpool.Stop()
+		fakeProposer.p2p.Stop()
+	}()
 
 	input := make([]byte, 0, 2000)
 	for int64(len(input)) < (fakeProposer.config.CollationSizeLimit)/4 {
@@ -119,35 +145,20 @@ func TestIncompleteCollation(t *testing.T) {
 		<-fakeProposer.msgChan
 	}
 
-	want := "Starting proposer service"
-
-	msg := hook.LastEntry()
-	if msg.Message != want {
-		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
+	if err := waitForLogMsg(hook, "Starting proposer service"); err != nil {
+		t.Fatal(err.Error())
 	}
-
-	length := len(hook.AllEntries())
-
-	if length != 4 {
-		t.Errorf("Number of logs was supposed to be 4 but is %v", length)
-	}
-
-	fakeProposer.cancel()
-	fakeProposer.Stop()
-	fakeProposer.dbService.Stop()
-	fakeProposer.txpool.Stop()
-	fakeProposer.p2p.Stop()
-	hook.Reset()
 }
 
 func TestCollationWitInDiffPeriod(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
-
-	defer fakeProposer.p2p.Stop()
-	defer fakeProposer.txpool.Stop()
-	defer fakeProposer.dbService.Stop()
-	defer fakeProposer.Stop()
+	defer func() {
+		fakeProposer.Stop()
+		fakeProposer.dbService.Stop()
+		fakeProposer.txpool.Stop()
+		fakeProposer.p2p.Stop()
+	}()
 
 	input := make([]byte, 0, 2000)
 	for int64(len(input)) < (fakeProposer.config.CollationSizeLimit)/4 {
@@ -170,26 +181,11 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	fakeProposer.p2p.Broadcast(&tx)
 	<-fakeProposer.msgChan
 
-	want := "Collation created"
-	length := len(hook.AllEntries())
-	for length < 5 {
-		length = len(hook.AllEntries())
+	if err := waitForLogMsg(hook, "Collation created"); err != nil {
+		t.Fatal(err.Error())
 	}
-
-	msg := hook.AllEntries()[4]
-
-	if msg.Message != want {
-		t.Errorf("Incorrect log, wanted %v but got %v", want, msg.Message)
-	}
-
-	fakeProposer.cancel()
-	fakeProposer.Stop()
-	fakeProposer.dbService.Stop()
-	fakeProposer.txpool.Stop()
-	fakeProposer.p2p.Stop()
-	hook.Reset()
 }
-*/
+
 func TestCreateCollation(t *testing.T) {
 	backend, smc := internal.SetupMockClient(t)
 	node := &internal.MockClient{SMC: smc, T: t, Backend: backend}
