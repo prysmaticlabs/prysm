@@ -172,11 +172,7 @@ func hashActiveState(state types.ActiveState) (hash.Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	hash, err := blake2b.New256(serializedState)
-	if err != nil {
-		return nil, err
-	}
-	return hash, nil
+	return blake2b.New256(serializedState)
 }
 
 // hashCrystallizedState serializes the crystallized state object
@@ -186,11 +182,7 @@ func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	hash, err := blake2b.New256(serializedState)
-	if err != nil {
-		return nil, err
-	}
-	return hash, nil
+	return blake2b.New256(serializedState)
 }
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.

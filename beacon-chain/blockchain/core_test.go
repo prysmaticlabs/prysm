@@ -200,7 +200,7 @@ func TestCanProcessBlock(t *testing.T) {
 
 	activeHash, err := hashActiveState(*activeState)
 	if err != nil {
-		t.Fatalf("Can not hash active state: %v", err)
+		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
 	block.InsertActiveHash(activeHash)
@@ -249,7 +249,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
 	stateHash, err := hashActiveState(*activeState)
 	if err != nil {
-		t.Fatalf("Can not hash active state: %v", err)
+		t.Fatalf("Cannot hash active state: %v", err)
 	}
 	block.InsertActiveHash(stateHash)
 
@@ -267,7 +267,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	crystallizedState := &types.CrystallizedState{CurrentEpoch: 10000}
 	stateHash, err = hashCrystallizedState(*crystallizedState)
 	if err != nil {
-		t.Fatalf("Can not hash crystallized state: %v", err)
+		t.Fatalf("Cannot hash crystallized state: %v", err)
 	}
 	block.InsertCrystallizedHash(stateHash)
 
