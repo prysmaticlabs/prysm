@@ -15,17 +15,17 @@ type ActiveState struct {
 // CrystallizedState contains fields of every epoch state,
 // it changes every epoch.
 type CrystallizedState struct {
-	ActiveValidators       []ValidatorRecord // ActiveValidators is the list of active validators.
-	QueuedValidators       []ValidatorRecord // QueuedValidators is the list of joined but not yet inducted validators.
-	ExitedValidators       []ValidatorRecord // ExitedValidators is the list of removed validators pending withdrawal.
-	CurrentShuffling       []uint16          // CurrentShuffling is hhe permutation of validators used to determine who cross-links what shard in this epoch.
-	CurrentEpoch           uint64            // CurrentEpoch is the current epoch.
-	LastJustifiedEpoch     uint64            // LastJustifiedEpoch is the last justified epoch.
-	LastFinalizedEpoch     uint64            // LastFinalizedEpoch is the last finalized epoch.
-	Dynasty                uint64            // Dynasty is the current dynasty.
-	NextShard              uint16            // NextShard is the next shard that cross-linking assignment will start from.
-	CurrentCheckpoint      common.Hash       // CurrentCheckpoint is the current FFG checkpoint.
-	TotalDeposits          uint              // TotalDeposits is the Total balance of deposits.
+	ActiveValidators   []ValidatorRecord // ActiveValidators is the list of active validators.
+	QueuedValidators   []ValidatorRecord // QueuedValidators is the list of joined but not yet inducted validators.
+	ExitedValidators   []ValidatorRecord // ExitedValidators is the list of removed validators pending withdrawal.
+	CurrentShuffling   []uint16          // CurrentShuffling is hhe permutation of validators used to determine who cross-links what shard in this epoch.
+	CurrentEpoch       uint64            // CurrentEpoch is the current epoch.
+	LastJustifiedEpoch uint64            // LastJustifiedEpoch is the last justified epoch.
+	LastFinalizedEpoch uint64            // LastFinalizedEpoch is the last finalized epoch.
+	Dynasty            uint64            // Dynasty is the current dynasty.
+	NextShard          uint16            // NextShard is the next shard that cross-linking assignment will start from.
+	CurrentCheckpoint  common.Hash       // CurrentCheckpoint is the current FFG checkpoint.
+	TotalDeposits      uint              // TotalDeposits is the Total balance of deposits.
 }
 
 // ValidatorRecord contains information about a validator
