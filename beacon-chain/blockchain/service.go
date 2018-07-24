@@ -39,6 +39,7 @@ func (c *ChainService) Start() {
 	}
 	c.chain = beaconChain
 	go c.updateActiveState()
+	go c.processIncomingBlock()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -46,6 +47,32 @@ func (c *ChainService) Stop() error {
 	defer c.cancel()
 	log.Info("Stopping blockchain service")
 	return nil
+}
+
+func (c *ChainService) processIncomingBlock() {
+	// TODO: select on receiving a block via p2p.
+	// Run CanProcessBlock
+	// Calculate both states for the processed block, insert into a trie structure
+	// Persist this trie structure
+	// Repeat. A separate goroutine will be updating the head upon this trie structure being modified.
+	for {
+		select {
+		case block := <-c.latestBeaconBlock:
+			canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+			if err != nil {
+				log.Errorf("Could not check if incoming block could be processed: %v", err)
+			}
+			if !canProcess {
+				log.WithFields(logrus.Fields{
+					"incomingBlockHash": block.Hash(),
+				}).Debug("Could not process incoming block")
+				continue
+			}
+		case <-c.ctx.Done():
+			log.Debug("Chain service context closed, exiting goroutine")
+			return
+		}
+	}
 }
 
 // updateActiveState receives a beacon block, computes a new active state and writes it to db.
