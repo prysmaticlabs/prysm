@@ -12,7 +12,7 @@ go_library(
         "topics.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/p2p",
-    visibility = ["//client:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//proto/sharding/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
