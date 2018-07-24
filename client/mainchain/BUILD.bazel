@@ -30,7 +30,7 @@ go_test(
     srcs = ["smc_client_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//client/types:go_default_library",
+        "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core:go_default_library",

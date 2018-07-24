@@ -9,9 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/sirupsen/logrus"

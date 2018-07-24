@@ -7,13 +7,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/shared"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 // Verifies that ShardDB implements the sharding Service inteface.
-var _ = types.Service(&ShardDB{})
+var _ = shared.Service(&ShardDB{})
 
 var testDB *ShardDB
 

@@ -15,9 +15,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/p2p"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -27,7 +28,7 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-var _ = types.Service(&Simulator{})
+var _ = shared.Service(&Simulator{})
 
 type faultyReader struct{}
 type goodReader struct {
