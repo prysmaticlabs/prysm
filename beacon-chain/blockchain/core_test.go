@@ -195,7 +195,21 @@ func TestCanProcessBlock(t *testing.T) {
 	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
 		t.Errorf("Using a faulty fetcher should throw an error, received nil")
 	}
+	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
+	beaconChain.state.ActiveState = activeState
 
+	activeHash, err := hashActiveState(*activeState)
+	if err != nil {
+		t.Fatalf("Cannot hash active state: %v", err)
+	}
+
+	block.InsertActiveHash(activeHash)
+
+	crystallizedHash, err := hashCrystallizedState(types.CrystallizedState{})
+	if err != nil {
+		t.Fatalf("Compute crystallized state hash failed: %v", err)
+	}
+	block.InsertCrystallizedHash(crystallizedHash)
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
@@ -207,11 +221,63 @@ func TestCanProcessBlock(t *testing.T) {
 	// Attempting to try a block with that fails the timestamp validity
 	// condition.
 	block = types.NewBlock(1000000)
+	block.InsertActiveHash(activeHash)
+	block.InsertCrystallizedHash(crystallizedHash)
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
 	}
 	if canProcess {
 		t.Errorf("Should not be able to process block with invalid timestamp condition")
+	}
+}
+
+func TestProcessBlockWithBadHashes(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+
+	// Test negative scenario where active state hash is different than node's compute
+	block := types.NewBlock(1)
+	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
+	stateHash, err := hashActiveState(*activeState)
+	if err != nil {
+		t.Fatalf("Cannot hash active state: %v", err)
+	}
+	block.InsertActiveHash(stateHash)
+
+	b.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
+
+	canProcess, err := b.CanProcessBlock(&mockFetcher{}, block)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks should have failed with diff state hashes")
+	}
+	if canProcess {
+		t.Errorf("CanProcessBlocks should have returned false")
+	}
+
+	// Test negative scenario where crystallized state hash is different than node's compute
+	crystallizedState := &types.CrystallizedState{CurrentEpoch: 10000}
+	stateHash, err = hashCrystallizedState(*crystallizedState)
+	if err != nil {
+		t.Fatalf("Cannot hash crystallized state: %v", err)
+	}
+	block.InsertCrystallizedHash(stateHash)
+
+	b.state.CrystallizedState = &types.CrystallizedState{CurrentEpoch: 9999}
+
+	canProcess, err = b.CanProcessBlock(&mockFetcher{}, block)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks should have failed with diff state hashes")
+	}
+	if canProcess {
+		t.Errorf("CanProcessBlocks should have returned false")
 	}
 }
