@@ -16,10 +16,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/client/contracts"
-	"github.com/prysmaticlabs/prysm/client/p2p"
 	shardparams "github.com/prysmaticlabs/prysm/client/params"
 	shardingTypes "github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
 var (
