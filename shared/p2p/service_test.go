@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -82,6 +83,7 @@ func TestSubscribeToTopic(t *testing.T) {
 		gsub:  gsub,
 		host:  h,
 		feeds: make(map[reflect.Type]*event.Feed),
+		mutex: &sync.Mutex{},
 	}
 
 	feed := s.Feed(pb.CollationBodyRequest{})
