@@ -5,11 +5,22 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/crypto/blake2b"
 )
 
 // Block defines a beacon chain core primitive.
 type Block struct {
 	data *Data
+}
+
+// Hash generates the BLAKE2b hash of the block
+func (b Block) Hash() (hash.Hash, error) {
+	data, err := rlp.EncodeToBytes(b.Data())
+	if err != nil {
+		return nil, err
+	}
+	return blake2b.New256(data)
 }
 
 // Data getter makes the block's properties read-only.

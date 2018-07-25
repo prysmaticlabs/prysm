@@ -46,7 +46,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	msg = hook.AllEntries()[1].Message
-	want = "Starting blockchain service"
+	want = "Starting service"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -58,7 +58,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	msg = hook.AllEntries()[3].Message
-	want = "Stopping blockchain service"
+	want = "Stopping service"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
