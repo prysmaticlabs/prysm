@@ -65,7 +65,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	return beaconChain, nil
 }
 
-func (b *BeaconChain) IsthereAnEpochTransition() bool {
+func (b *BeaconChain) isEpochTransition() bool {
 	return true
 }
 
@@ -205,13 +205,13 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
 	totalDeposit := b.state.CrystallizedState.TotalDeposits
 
-	transition := b.IsthereAnEpochTransition()
+	transition := b.isEpochTransition()
 	if !transition {
 		return errors.New("invalid slot for epoch transition")
 	}
 
 	if attesterDeposits*3 >= uint64(totalDeposit)*2 {
-		log.Info("Jusitified epoch in the crystallised state is set to the current epoch")
+		log.Info("Justified epoch in the crystallised state is set to the current epoch")
 		justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
 		b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
 
@@ -219,17 +219,14 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 			b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
 		}
 
-		for i, validator := range activeValidatorSet {
-
-			b.calculateVotesPerValidator(validator, i)
+		for i, attester := range activeValidatorSet {
+			b.calculateVotesPerAttester(attester, i)
 		}
-
 	}
-
 	return nil
 }
 
-func (b *BeaconChain) calculateVotesPerValidator(validator types.ValidatorRecord, index int) error {
+func (b *BeaconChain) calculateVotesPerAttester(attester types.ValidatorRecord, index int) error {
 	var reward uint64
 	bitfields := b.state.ActiveState.AttesterBitfields
 	attesterBlock := index / 8
@@ -246,10 +243,8 @@ func (b *BeaconChain) calculateVotesPerValidator(validator types.ValidatorRecord
 			hasVoted = true
 		}
 	}
-
 	if hasVoted {
-		validator.Balance += reward
+		attester.Balance += reward
 	}
-
 	return nil
 }
