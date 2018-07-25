@@ -281,3 +281,19 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 		t.Errorf("CanProcessBlocks should have returned false")
 	}
 }
+
+func TestValidatorRewardsAndPenalties(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	defer db.Stop()
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+	b.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
+
+}

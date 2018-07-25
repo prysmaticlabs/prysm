@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"hash"
 	"math"
@@ -62,6 +63,10 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		return nil, fmt.Errorf("could not deserialize chainstate from disk: %v", err)
 	}
 	return beaconChain, nil
+}
+
+func (b *BeaconChain) IsthereAnEpochTransition() bool {
+	return true
 }
 
 // ActiveState exposes a getter to external services.
@@ -193,4 +198,58 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 		return nil, -1, err
 	}
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
+}
+
+func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
+	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
+	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
+	totalDeposit := b.state.CrystallizedState.TotalDeposits
+
+	transition := b.IsthereAnEpochTransition()
+	if !transition {
+		return errors.New("invalid slot for epoch transition")
+	}
+
+	if attesterDeposits*3 >= uint64(totalDeposit)*2 {
+		log.Info("Jusitified epoch in the crystallised state is set to the current epoch")
+		justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
+		b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
+
+		if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
+			b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
+		}
+
+		for i, validator := range activeValidatorSet {
+
+			b.calculateVotesPerValidator(validator, i)
+		}
+
+	}
+
+	return nil
+}
+
+func (b *BeaconChain) calculateVotesPerValidator(validator types.ValidatorRecord, index int) error {
+	var reward uint64
+	bitfields := b.state.ActiveState.AttesterBitfields
+	attesterBlock := index / 8
+	attesterFieldIndex := index % 8
+	hasVoted := false
+
+	if len(bitfields) < attesterBlock {
+		return errors.New("invalid bitfield")
+	}
+	if attesterFieldIndex != 0 {
+		fields := bitfields[attesterBlock]
+		attesterField := fields >> uint(attesterFieldIndex)
+		if attesterField%2 != 0 {
+			hasVoted = true
+		}
+	}
+
+	if hasVoted {
+		validator.Balance += reward
+	}
+
+	return nil
 }
