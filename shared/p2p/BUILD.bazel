@@ -29,10 +29,6 @@ go_library(
     ],
 )
 
-# by default gazelle tries to add all the test files to the  first
-# go_test; we want to treat feed_concurrent_test.go differently
-# gazelle:exclude feed_concurrent_test.go
-
 go_test(
     name = "go_default_test",
     srcs = [
@@ -58,6 +54,10 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
+
+# by default gazelle tries to add all the test files to the  first
+# go_test; we want to treat feed_concurrent_test.go differently
+# gazelle:exclude feed_concurrent_test.go
 
 go_test(
     name = "go_feed_concurrent_write_test",
