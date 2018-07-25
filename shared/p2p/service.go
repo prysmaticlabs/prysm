@@ -24,7 +24,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 )
 
-// Sender represents a struct that is able to relay information via p2o.
+// Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
 type Sender interface {
 	Send(msg interface{}, peer Peer)
