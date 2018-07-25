@@ -1,5 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
+# gazelle:exclude feed_concurrent_test.go
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -57,9 +59,7 @@ go_test(
 
 go_test(
     name = "go_feed_concurrent_write_test",
-    srcs = [
-        "feed_concurrent_test.go",
-    ],
+    srcs = ["feed_concurrent_test.go"],
     embed = [":go_default_library"],
     race = "on",
 )
