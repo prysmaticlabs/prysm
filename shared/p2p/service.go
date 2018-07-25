@@ -12,6 +12,7 @@ package p2p
 import (
 	"context"
 	"reflect"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
@@ -33,6 +34,7 @@ type Sender interface {
 type Server struct {
 	ctx    context.Context
 	cancel context.CancelFunc
+	mutex  *sync.Mutex
 	feeds  map[reflect.Type]*event.Feed
 	host   host.Host
 	gsub   *floodsub.PubSub
@@ -60,6 +62,7 @@ func NewServer() (*Server, error) {
 		feeds:  make(map[reflect.Type]*event.Feed),
 		host:   host,
 		gsub:   gsub,
+		mutex:  &sync.Mutex{},
 	}, nil
 }
 
