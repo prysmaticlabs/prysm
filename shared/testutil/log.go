@@ -36,5 +36,4 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 		t.Errorf("log found: %s", want)
 		t.FailNow()
 	}
-	return
 }
