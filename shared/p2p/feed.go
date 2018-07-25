@@ -36,9 +36,10 @@ func (s *Server) Feed(msg interface{}) *event.Feed {
 	}
 
 	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if s.feeds[t] == nil {
 		s.feeds[t] = new(event.Feed)
 	}
-	s.mutex.Unlock()
+
 	return s.feeds[t]
 }
