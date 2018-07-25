@@ -53,7 +53,7 @@ func (x Topic) String() string {
 	return proto.EnumName(Topic_name, int32(x))
 }
 func (Topic) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{0}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{0}
 }
 
 type BeaconBlockHashAnnounce struct {
@@ -67,7 +67,7 @@ func (m *BeaconBlockHashAnnounce) Reset()         { *m = BeaconBlockHashAnnounce
 func (m *BeaconBlockHashAnnounce) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockHashAnnounce) ProtoMessage()    {}
 func (*BeaconBlockHashAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{0}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{0}
 }
 func (m *BeaconBlockHashAnnounce) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BeaconBlockHashAnnounce.Unmarshal(m, b)
@@ -105,7 +105,7 @@ func (m *BeaconBlockRequest) Reset()         { *m = BeaconBlockRequest{} }
 func (m *BeaconBlockRequest) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockRequest) ProtoMessage()    {}
 func (*BeaconBlockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{1}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{1}
 }
 func (m *BeaconBlockRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BeaconBlockRequest.Unmarshal(m, b)
@@ -142,17 +142,18 @@ type BeaconBlockResponse struct {
 	MainChainRef            []byte           `protobuf:"bytes,7,opt,name=main_chain_ref,json=mainChainRef,proto3" json:"main_chain_ref,omitempty"`
 	ActiveStateHash         []byte           `protobuf:"bytes,8,opt,name=active_state_hash,json=activeStateHash,proto3" json:"active_state_hash,omitempty"`
 	CrystallizedStateHash   []byte           `protobuf:"bytes,9,opt,name=crystallized_state_hash,json=crystallizedStateHash,proto3" json:"crystallized_state_hash,omitempty"`
-	Timestamp               string           `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	XXX_NoUnkeyedLiteral    struct{}         `json:"-"`
-	XXX_unrecognized        []byte           `json:"-"`
-	XXX_sizecache           int32            `json:"-"`
+	// TODO: Handle this with wellknowntypes.
+	Timestamp            string   `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *BeaconBlockResponse) Reset()         { *m = BeaconBlockResponse{} }
 func (m *BeaconBlockResponse) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockResponse) ProtoMessage()    {}
 func (*BeaconBlockResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{2}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{2}
 }
 func (m *BeaconBlockResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BeaconBlockResponse.Unmarshal(m, b)
@@ -256,7 +257,7 @@ func (m *AggregateVote) Reset()         { *m = AggregateVote{} }
 func (m *AggregateVote) String() string { return proto.CompactTextString(m) }
 func (*AggregateVote) ProtoMessage()    {}
 func (*AggregateVote) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{3}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{3}
 }
 func (m *AggregateVote) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AggregateVote.Unmarshal(m, b)
@@ -319,7 +320,7 @@ func (m *CollationBodyRequest) Reset()         { *m = CollationBodyRequest{} }
 func (m *CollationBodyRequest) String() string { return proto.CompactTextString(m) }
 func (*CollationBodyRequest) ProtoMessage()    {}
 func (*CollationBodyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{4}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{4}
 }
 func (m *CollationBodyRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CollationBodyRequest.Unmarshal(m, b)
@@ -386,7 +387,7 @@ func (m *CollationBodyResponse) Reset()         { *m = CollationBodyResponse{} }
 func (m *CollationBodyResponse) String() string { return proto.CompactTextString(m) }
 func (*CollationBodyResponse) ProtoMessage()    {}
 func (*CollationBodyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{5}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{5}
 }
 func (m *CollationBodyResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CollationBodyResponse.Unmarshal(m, b)
@@ -437,7 +438,7 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{6}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{6}
 }
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
@@ -519,7 +520,7 @@ func (m *Signature) Reset()         { *m = Signature{} }
 func (m *Signature) String() string { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()    {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_f8e4cb9603512584, []int{7}
+	return fileDescriptor_messages_0628df6aa6c37a55, []int{7}
 }
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Signature.Unmarshal(m, b)
@@ -573,10 +574,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("proto/sharding/v1/messages.proto", fileDescriptor_messages_f8e4cb9603512584)
+	proto.RegisterFile("proto/sharding/v1/messages.proto", fileDescriptor_messages_0628df6aa6c37a55)
 }
 
-var fileDescriptor_messages_f8e4cb9603512584 = []byte{
+var fileDescriptor_messages_0628df6aa6c37a55 = []byte{
 	// 811 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x54, 0x5f, 0x6f, 0x22, 0x37,
 	0x10, 0xef, 0x86, 0x3f, 0x09, 0x03, 0xe4, 0xa8, 0x93, 0x5c, 0x36, 0x77, 0x6d, 0x0f, 0x91, 0x56,
