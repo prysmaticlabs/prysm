@@ -63,10 +63,12 @@ type AggregateVote struct {
 	AggregateSig   []uint      // AggregateSig is the aggregated signatures of individual shard.
 }
 
+// InsertActiveHash updates the activeStateHash property in the data of a beacon block.
 func (b *Block) InsertActiveHash(hash hash.Hash) {
 	b.data.ActiveStateHash = hash
 }
 
+// InsertCrystallizedHash updates the crystallizedStateHash property in the data of a beacon block.
 func (b *Block) InsertCrystallizedHash(hash hash.Hash) {
 	b.data.CrystallizedStateHash = hash
 }

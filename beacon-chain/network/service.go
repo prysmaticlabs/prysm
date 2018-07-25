@@ -11,13 +11,7 @@ var log = logrus.WithField("prefix", "network")
 
 // Service is the middleware between the application-agnostic p2p service and subscribers to the network.
 type Service struct {
-	syncService SyncService
-}
-
-// SyncService is the interface for the sync service.
-type SyncService interface {
-	ReceiveBlockHash(hash.Hash)
-	ReceiveBlock(*types.Block) error
+	syncService types.SyncService
 }
 
 // NewNetworkService instantiates a new network service.
@@ -26,7 +20,7 @@ func NewNetworkService() *Service {
 }
 
 // SetSyncService sets a concrete value for the sync service.
-func (ns *Service) SetSyncService(ss SyncService) {
+func (ns *Service) SetSyncService(ss types.SyncService) {
 	ns.syncService = ss
 }
 

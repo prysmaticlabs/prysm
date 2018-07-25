@@ -4,7 +4,9 @@ import (
 	"context"
 	"hash"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,12 +25,14 @@ var log = logrus.WithField("prefix", "sync")
 //     *  Drop peers that send invalid data
 //     *  Trottle incoming requests
 type Service struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	networkService NetworkService
-	chainService   ChainService
-	hashBuf        chan hash.Hash
-	blockBuf       chan *types.Block
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	networkService       types.NetworkService
+	chainService         types.ChainService
+	announceBlockHashBuf chan p2p.Message
+	blockBuf             chan p2p.Message
+	announceBlockHashSub event.Subscription
+	blockSub             event.Subscription
 }
 
 // Config allows the channel's buffer sizes to be changed
@@ -42,50 +46,41 @@ func DefaultConfig() Config {
 	return Config{100, 100}
 }
 
-// NetworkService is the interface for the p2p network.
-type NetworkService interface {
-	BroadcastBlockHash(hash.Hash) error
-	BroadcastBlock(*types.Block) error
-	RequestBlock(hash.Hash) error
-}
-
-// ChainService is the interface for the local beacon chain.
-type ChainService interface {
-	ProcessBlock(*types.Block) error
-	ContainsBlock(hash.Hash) bool
-}
-
 // NewSyncService accepts a context and returns a new Service.
 func NewSyncService(ctx context.Context, cfg Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:      ctx,
-		cancel:   cancel,
-		hashBuf:  make(chan hash.Hash, cfg.HashBufferSize),
-		blockBuf: make(chan *types.Block, cfg.BlockBufferSize),
+		ctx:                  ctx,
+		cancel:               cancel,
+		announceBlockHashBuf: make(chan p2p.Message, cfg.HashBufferSize),
+		blockBuf:             make(chan p2p.Message, cfg.BlockBufferSize),
 	}
 }
 
 // SetNetworkService sets a concrete value for the p2p layer.
-func (ss *Service) SetNetworkService(ps NetworkService) {
+func (ss *Service) SetNetworkService(ps types.NetworkService) {
 	ss.networkService = ps
 }
 
 // SetChainService sets a concrete value for the local beacon chain.
-func (ss *Service) SetChainService(cs ChainService) {
+func (ss *Service) SetChainService(cs types.ChainService) {
 	ss.chainService = cs
 }
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	log.Info("Starting service")
-	go run(ss.ctx.Done(), ss.hashBuf, ss.blockBuf, ss.networkService, ss.chainService)
+	ss.announceBlockHashSub = s.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
+	ss.blockSub = s.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
+	go ss.run(ss.networkService, ss.chainService, ss.ctx.Done())
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
 func (ss *Service) Stop() error {
 	log.Info("Stopping service")
 	ss.cancel()
+	ss.announceBlockHashSub.Unsubscribe()
+	ss.blockSub.Unsubscribe()
 	return nil
 }
 
@@ -96,9 +91,8 @@ func (ss *Service) ReceiveBlockHash(h hash.Hash) {
 	if ss.chainService.ContainsBlock(h) {
 		return
 	}
-
-	ss.hashBuf <- h
 	ss.networkService.BroadcastBlockHash(h)
+	ss.networkService.RequestBlock(h)
 }
 
 // ReceiveBlock accepts a block to potentially be included in the local chain.
@@ -108,27 +102,31 @@ func (ss *Service) ReceiveBlock(b *types.Block) error {
 	if err != nil {
 		return err
 	}
-
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-
-	ss.blockBuf <- b
 	ss.networkService.BroadcastBlock(b)
-
+	ss.chainService.ProcessBlock(b)
 	return nil
 }
 
-func run(done <-chan struct{}, hashBuf <-chan hash.Hash, blockBuf <-chan *types.Block, ps NetworkService, cs ChainService) {
+func (ss *Service) run(ps types.NetworkService, cs types.ChainService, done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
 			log.Infof("exiting goroutine")
 			return
-		case h := <-hashBuf:
-			ps.RequestBlock(h)
-		case b := <-blockBuf:
-			cs.ProcessBlock(b)
+		case h := <-ss.announceBlockHashBuf:
+			ss.ReceiveBlockHash(h)
+		case b := <-ss.announceBlockBuf:
+			cs.ReceiveBlock(b)
+		case <-ss.announceBlockHashSub.Err():
+			log.Debugf("Subscriber failed")
+			return
+		}
+		case <-ss.blockSub.Err():
+			log.Debugf("Subscriber failed")
+			return
 		}
 	}
 }

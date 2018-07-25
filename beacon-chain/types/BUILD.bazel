@@ -4,12 +4,15 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block.go",
+        "interfaces.go",
         "state.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/types",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_ethereum_go_ethereum//rlp:go_default_library",
         "@org_golang_x_crypto//blake2b:go_default_library",

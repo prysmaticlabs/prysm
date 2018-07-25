@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -48,6 +49,10 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 
 	path := ctx.GlobalString(cmd.DataDirFlag.Name)
 	if err := beacon.registerBeaconDB(path); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerP2P(); err != nil {
 		return nil, err
 	}
 
@@ -119,6 +124,14 @@ func (b *BeaconNode) registerBeaconDB(path string) error {
 		return fmt.Errorf("could not register beaconDB service: %v", err)
 	}
 	return b.services.RegisterService(beaconDB)
+}
+
+func (b *BeaconNode) registerP2P() error {
+	beaconp2p, err := p2p.NewServer()
+	if err != nil {
+		return fmt.Errorf("could not register p2p service: %v", err)
+	}
+	return b.services.RegisterService(beaconp2p)
 }
 
 func (b *BeaconNode) registerBlockchainService() error {

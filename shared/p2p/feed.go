@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
-// P2P feed is a one to many subscription feed of the argument type.
+// Feed is a one to many subscription feed of the argument type.
 //
 // Messages received via p2p protocol are sent to subscribers by these event
 // feeds. Message consumers should not use event feeds to reply to or broadcast

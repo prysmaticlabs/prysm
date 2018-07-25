@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
@@ -96,7 +95,7 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
-func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *types.Block) (bool, error) {
+func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
 	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Data().MainChainRef)
 	if err != nil {
 		return false, err

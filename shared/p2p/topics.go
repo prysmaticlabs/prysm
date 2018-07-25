@@ -8,9 +8,12 @@ import (
 
 // Mapping of message topic enums to protobuf types.
 var topicTypeMapping = map[pb.Topic]reflect.Type{
-	pb.Topic_COLLATION_BODY_REQUEST:  reflect.TypeOf(pb.CollationBodyRequest{}),
-	pb.Topic_COLLATION_BODY_RESPONSE: reflect.TypeOf(pb.CollationBodyResponse{}),
-	pb.Topic_TRANSACTIONS:            reflect.TypeOf(pb.Transaction{}),
+	pb.Topic_BEACON_BLOCK_HASH_ANNOUNCE: reflect.TypeOf(pb.BeaconBlockHashAnnounce{}),
+	pb.Topic_BEACON_BLOCK_REQUEST:       reflect.TypeOf(pb.BeaconBlockRequest{}),
+	pb.Topic_BEACON_BLOCK_RESPONSE:      reflect.TypeOf(pb.BeaconBlockResponse{}),
+	pb.Topic_COLLATION_BODY_REQUEST:     reflect.TypeOf(pb.CollationBodyRequest{}),
+	pb.Topic_COLLATION_BODY_RESPONSE:    reflect.TypeOf(pb.CollationBodyResponse{}),
+	pb.Topic_TRANSACTIONS:               reflect.TypeOf(pb.Transaction{}),
 }
 
 // Mapping of message types to topic enums.
