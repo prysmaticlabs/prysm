@@ -35,4 +35,10 @@ var (
 		Usage: "Password file to use for non-interactive password input",
 		Value: "",
 	}
+	// RPCProviderFlag defines a http endpoint flag to connect to mainchain.
+	RPCProviderFlag = cli.StringFlag{
+		Name:  "rpc",
+		Usage: "HTTP-RPC server end point to use to connect to mainchain.",
+		Value: "http://localhost:8545/",
+	}
 )
