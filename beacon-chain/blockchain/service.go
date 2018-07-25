@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"hash"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -31,7 +32,7 @@ func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Servi
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Infof("Starting blockchain service")
+	log.Infof("Starting service")
 
 	beaconChain, err := NewBeaconChain(c.beaconDB.DB())
 	if err != nil {
@@ -44,8 +45,21 @@ func (c *ChainService) Start() {
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
-	log.Info("Stopping blockchain service")
+	log.Info("Stopping service")
 	return nil
+}
+
+// ProcessBlock accepts a new block for inclusion in the chain.
+func (c *ChainService) ProcessBlock(b *types.Block) error {
+	c.latestBeaconBlock <- b
+	return nil
+}
+
+// ContainsBlock checks if a block for the hash exists in the chain.
+// This method must be safe to call from a goroutine
+func (c *ChainService) ContainsBlock(h hash.Hash) bool {
+	// TODO
+	return false
 }
 
 // updateActiveState receives a beacon block, computes a new active state and writes it to db.

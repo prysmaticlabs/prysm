@@ -8,7 +8,9 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/database:go_default_library",
+        "//beacon-chain/network:go_default_library",
         "//beacon-chain/powchain:go_default_library",
+        "//beacon-chain/sync:go_default_library",
         "//beacon-chain/utils:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",

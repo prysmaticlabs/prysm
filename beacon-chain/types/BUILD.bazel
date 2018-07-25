@@ -11,5 +11,7 @@ go_library(
     deps = [
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
+        "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+        "@org_golang_x_crypto//blake2b:go_default_library",
     ],
 )

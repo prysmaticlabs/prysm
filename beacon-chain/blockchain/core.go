@@ -147,7 +147,6 @@ func (b *BeaconChain) persist() error {
 
 // computeNewActiveState computes a new active state for every beacon block.
 func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveState, error) {
-
 	attesters, proposer, err := b.getAttestersProposer(seed)
 	if err != nil {
 		return nil, err
