@@ -30,6 +30,7 @@ message BeaconBlockResponse {
   bytes main_chain_ref = 7;
   bytes active_state_hash = 8;
   bytes crystallized_state_hash = 9;
+  // TODO: Handle this with wellknowntypes.
   string timestamp = 10;
 }
 

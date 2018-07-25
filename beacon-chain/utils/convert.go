@@ -35,7 +35,8 @@ func ConvertToBeaconBlock(data *pb.BeaconBlockResponse) (*types.Block, error) {
 		MainChainRef:          common.BytesToHash(data.MainChainRef),
 		ActiveStateHash:       activeStateHash,
 		CrystallizedStateHash: crystallizedStateHash,
-		Timestamp:             time.Now(),
+		// TODO: Handle this appropriately.
+		Timestamp: time.Now(),
 	}
 	return types.NewBlockWithData(blockData), nil
 }
