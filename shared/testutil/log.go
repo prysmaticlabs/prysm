@@ -30,10 +30,8 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 	}
 
 	if flag && !match {
-		t.Errorf("log not found: %s", want)
-		t.FailNow()
+		t.Fatalf("log not found: %s", want)
 	} else if !flag && match {
-		t.Errorf("log found: %s", want)
-		t.FailNow()
+		t.Fatalf("unwanted log found: %s", want)
 	}
 }

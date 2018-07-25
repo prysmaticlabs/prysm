@@ -10,9 +10,6 @@ import (
 
 var log = logrus.WithField("prefix", "sync")
 
-var hashBufferSize = 100
-var blockBufferSize = 100
-
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
 // In broad terms, a new block is synced in 4 steps:
 //     1. Receive a block hash from a peer
@@ -34,6 +31,17 @@ type Service struct {
 	blockBuf       chan *types.Block
 }
 
+// Config allows the channel's buffer sizes to be changed
+type Config struct {
+	HashBufferSize int
+	BlockBufferSize int
+}
+
+// DefaultConfig provides the default configuration for a sync service
+func DefaultConfig() Config {
+	return Config { 100, 100 }
+}
+
 // NetworkService is the interface for the p2p network.
 type NetworkService interface {
 	BroadcastBlockHash(hash.Hash) error
@@ -48,13 +56,13 @@ type ChainService interface {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context) *Service {
+func NewSyncService(ctx context.Context, cfg Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:      ctx,
 		cancel:   cancel,
-		hashBuf:  make(chan hash.Hash, hashBufferSize),
-		blockBuf: make(chan *types.Block, blockBufferSize),
+		hashBuf:  make(chan hash.Hash, cfg.HashBufferSize),
+		blockBuf: make(chan *types.Block, cfg.BlockBufferSize),
 	}
 }
 

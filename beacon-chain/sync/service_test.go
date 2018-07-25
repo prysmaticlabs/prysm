@@ -70,10 +70,9 @@ func (ms *MockChainService) ContainsBlock(h hash.Hash) bool {
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	// set the channel's buffer to 0 to make channel interactions synchronous
-	hashBufferSize = 0
-	blockBufferSize = 0
-	ss := NewSyncService(context.Background())
+	// set the channel's buffer to 0 to make channel interactions blocking
+	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
 	cs := MockChainService{}
@@ -106,9 +105,8 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	hashBufferSize = 0
-	blockBufferSize = 0
-	ss := NewSyncService(context.Background())
+	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
 	cs := MockChainService{}
@@ -143,9 +141,8 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	hashBufferSize = 0
-	blockBufferSize = 0
-	ss := NewSyncService(context.Background())
+	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
 	cs := MockChainService{}
@@ -194,9 +191,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestProcessSameBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	hashBufferSize = 0
-	blockBufferSize = 0
-	ss := NewSyncService(context.Background())
+	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
 	cs := MockChainService{}
@@ -220,8 +216,11 @@ func TestProcessSameBlock(t *testing.T) {
 	// if the same block is processed twice
 	ss.ProcessBlockHash(h)
 	ss.ProcessBlock(b)
-	hook.Reset()
 	ss.ProcessBlockHash(h)
+	// there's a tricky race condition where the second hash can sneak into the goroutine
+	// before the first block inserts itself into the chain. therefore, its important
+	// for hook.Reset() to be called after the second ProcessBlockHash call
+	hook.Reset()
 	ss.ProcessBlock(b)
 	ss.cancel()
 	<-exitRoutine

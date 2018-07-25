@@ -164,7 +164,7 @@ func (b *BeaconNode) registerSyncService() error {
 	var networkService *network.Service
 	b.services.FetchService(&networkService)
 
-	syncService := rbcSync.NewSyncService(context.Background())
+	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig())
 	syncService.SetChainService(chainService)
 	syncService.SetNetworkService(networkService)
 
