@@ -26,3 +26,16 @@ proto_library(
     srcs = ["messages.proto"],
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "timestamp_proto",
+    srcs = ["messages.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "timestamp_go_proto",
+    importpath = "github.com/golang/protobuf/ptypes/timestamp",
+    proto = ":timestamp_proto",
+    visibility = ["//visibility:public"],
+)

@@ -25,7 +25,7 @@ message BeaconBlockResponse {
   uint64 slot_number = 2;
   bytes randao_reveal = 3;
   bytes attestation_bitmask = 4;
-  repeated uint64 attestation_aggregate_sig = 5;
+  repeated uint32 attestation_aggregate_sig = 5;
   repeated AggregateVote shard_aggregate_votes = 6;
   bytes main_chain_ref = 7;
   bytes active_state_hash = 8;

@@ -2,12 +2,14 @@ package sync
 
 import (
 	"context"
-	"hash"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2s"
 )
 
 var log = logrus.WithField("prefix", "sync")
@@ -27,6 +29,7 @@ var log = logrus.WithField("prefix", "sync")
 type Service struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
+	p2p                  *p2p.Server
 	networkService       types.NetworkService
 	chainService         types.ChainService
 	announceBlockHashBuf chan p2p.Message
@@ -47,32 +50,25 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p *p2p.Server, ns types.NetworkService, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
+		p2p:                  beaconp2p,
+		networkService:       ns,
+		chainService:         cs,
 		announceBlockHashBuf: make(chan p2p.Message, cfg.HashBufferSize),
 		blockBuf:             make(chan p2p.Message, cfg.BlockBufferSize),
 	}
 }
 
-// SetNetworkService sets a concrete value for the p2p layer.
-func (ss *Service) SetNetworkService(ps types.NetworkService) {
-	ss.networkService = ps
-}
-
-// SetChainService sets a concrete value for the local beacon chain.
-func (ss *Service) SetChainService(cs types.ChainService) {
-	ss.chainService = cs
-}
-
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	log.Info("Starting service")
-	ss.announceBlockHashSub = s.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
-	ss.blockSub = s.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
-	go ss.run(ss.networkService, ss.chainService, ss.ctx.Done())
+	ss.announceBlockHashSub = ss.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
+	ss.blockSub = ss.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
+	go ss.run(ss.ctx.Done())
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -87,46 +83,62 @@ func (ss *Service) Stop() error {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(h hash.Hash) {
-	if ss.chainService.ContainsBlock(h) {
-		return
-	}
-	ss.networkService.BroadcastBlockHash(h)
-	ss.networkService.RequestBlock(h)
-}
-
-// ReceiveBlock accepts a block to potentially be included in the local chain.
-// The service will filter blocks that have not been requested (unimplemented).
-func (ss *Service) ReceiveBlock(b *types.Block) error {
-	h, err := b.Hash()
+func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
+	h, err := blake2s.New256(data.Hash)
 	if err != nil {
 		return err
 	}
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	ss.networkService.BroadcastBlock(b)
-	ss.chainService.ProcessBlock(b)
+	ss.networkService.BroadcastBlockHash(h)
+	ss.networkService.RequestBlock(h)
 	return nil
 }
 
-func (ss *Service) run(ps types.NetworkService, cs types.ChainService, done <-chan struct{}) {
+// ReceiveBlock accepts a block to potentially be included in the local chain.
+// The service will filter blocks that have not been requested (unimplemented).
+func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
+	block, err := utils.ConvertToBeaconBlock(data)
+	if err != nil {
+		return err
+	}
+	h, err := block.Hash()
+	if err != nil {
+		return err
+	}
+	if ss.chainService.ContainsBlock(h) {
+		return nil
+	}
+	ss.networkService.BroadcastBlock(block)
+	ss.chainService.ProcessBlock(block)
+	return nil
+}
+
+func (ss *Service) run(done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
-			log.Infof("exiting goroutine")
+			log.Infof("Exiting goroutine")
 			return
-		case h := <-ss.announceBlockHashBuf:
-			ss.ReceiveBlockHash(h)
-		case b := <-ss.announceBlockBuf:
-			cs.ReceiveBlock(b)
-		case <-ss.announceBlockHashSub.Err():
-			log.Debugf("Subscriber failed")
-			return
-		}
-		case <-ss.blockSub.Err():
-			log.Debugf("Subscriber failed")
-			return
+		case msg := <-ss.announceBlockHashBuf:
+			data, ok := msg.Data.(pb.BeaconBlockHashAnnounce)
+			if !ok {
+				log.Errorf("Received malformed beacon block hash announcement p2p message")
+				continue
+			}
+			if err := ss.ReceiveBlockHash(&data); err != nil {
+				log.Errorf("Could not receive incoming block hash: %v", err)
+			}
+		case msg := <-ss.blockBuf:
+			data, ok := msg.Data.(pb.BeaconBlockResponse)
+			if !ok {
+				log.Errorf("Received malformed beacon block p2p message")
+				continue
+			}
+			if err := ss.ReceiveBlock(&data); err != nil {
+				log.Errorf("Could not receive incoming block: %v", err)
+			}
 		}
 	}
 }
