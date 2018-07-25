@@ -14,6 +14,7 @@ type Block struct {
 	data *Data
 }
 
+// Hash generates the BLAKE2b hash of the block
 func (b Block) Hash() (hash.Hash, error) {
 	data, err := rlp.EncodeToBytes(b.Data())
 	if err != nil {

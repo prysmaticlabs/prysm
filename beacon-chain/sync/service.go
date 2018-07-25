@@ -15,7 +15,7 @@ var log = logrus.WithField("prefix", "sync")
 //     1. Receive a block hash from a peer
 //     2. Request the block for the hash from the network
 //     3. Receive the block
-//     4. Send the block to the local chain to validate
+//     4. Forward block to the beacon service for full validation
 //
 //  In addition, Service will handle the following responsibilities:
 //     *  Decide which messages are forwarded to other peers
@@ -33,13 +33,13 @@ type Service struct {
 
 // Config allows the channel's buffer sizes to be changed
 type Config struct {
-	HashBufferSize int
+	HashBufferSize  int
 	BlockBufferSize int
 }
 
 // DefaultConfig provides the default configuration for a sync service
 func DefaultConfig() Config {
-	return Config { 100, 100 }
+	return Config{100, 100}
 }
 
 // NetworkService is the interface for the p2p network.
@@ -89,10 +89,10 @@ func (ss *Service) Stop() error {
 	return nil
 }
 
-// ProcessBlockHash accepts a block hash.
+// ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ProcessBlockHash(h hash.Hash) {
+func (ss *Service) ReceiveBlockHash(h hash.Hash) {
 	if ss.chainService.ContainsBlock(h) {
 		return
 	}
@@ -101,9 +101,9 @@ func (ss *Service) ProcessBlockHash(h hash.Hash) {
 	ss.networkService.BroadcastBlockHash(h)
 }
 
-// ProcessBlock accepts a block to potentially be included in the local chain.
+// ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
-func (ss *Service) ProcessBlock(b *types.Block) error {
+func (ss *Service) ReceiveBlock(b *types.Block) error {
 	h, err := b.Hash()
 	if err != nil {
 		return err

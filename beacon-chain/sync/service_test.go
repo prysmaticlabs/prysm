@@ -71,7 +71,7 @@ func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	// set the channel's buffer to 0 to make channel interactions blocking
-	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
 	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
@@ -92,7 +92,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}
 
 	// if a new hash is processed
-	ss.ProcessBlockHash(h)
+	ss.ReceiveBlockHash(h)
 
 	ss.cancel()
 	<-exitRoutine
@@ -105,7 +105,7 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
 	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
@@ -128,8 +128,8 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	// if the hash and the block are processed in order
-	ss.ProcessBlockHash(h)
-	ss.ProcessBlock(b)
+	ss.ReceiveBlockHash(h)
+	ss.ReceiveBlock(b)
 	ss.cancel()
 	<-exitRoutine
 
@@ -141,7 +141,7 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
 	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
@@ -174,10 +174,10 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	// if two different blocks are submitted
-	ss.ProcessBlockHash(h1)
-	ss.ProcessBlock(b1)
-	ss.ProcessBlockHash(h2)
-	ss.ProcessBlock(b2)
+	ss.ReceiveBlockHash(h1)
+	ss.ReceiveBlock(b1)
+	ss.ReceiveBlockHash(h2)
+	ss.ReceiveBlock(b2)
 	ss.cancel()
 	<-exitRoutine
 
@@ -191,7 +191,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestProcessSameBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config { HashBufferSize: 0, BlockBufferSize: 0 }
+	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
 	ss := NewSyncService(context.Background(), cfg)
 
 	ns := MockNetworkService{}
@@ -214,14 +214,14 @@ func TestProcessSameBlock(t *testing.T) {
 	}
 
 	// if the same block is processed twice
-	ss.ProcessBlockHash(h)
-	ss.ProcessBlock(b)
-	ss.ProcessBlockHash(h)
+	ss.ReceiveBlockHash(h)
+	ss.ReceiveBlock(b)
+	ss.ReceiveBlockHash(h)
 	// there's a tricky race condition where the second hash can sneak into the goroutine
 	// before the first block inserts itself into the chain. therefore, its important
 	// for hook.Reset() to be called after the second ProcessBlockHash call
 	hook.Reset()
-	ss.ProcessBlock(b)
+	ss.ReceiveBlock(b)
 	ss.cancel()
 	<-exitRoutine
 

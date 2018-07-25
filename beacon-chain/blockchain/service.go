@@ -51,7 +51,7 @@ func (c *ChainService) Stop() error {
 
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(b *types.Block) error {
-	// TODO
+	c.latestBeaconBlock <- b
 	return nil
 }
 

@@ -16,8 +16,8 @@ type Service struct {
 
 // SyncService is the interface for the sync service.
 type SyncService interface {
-	ProcessBlockHash(hash.Hash)
-	ProcessBlock(*types.Block) error
+	ReceiveBlockHash(hash.Hash)
+	ReceiveBlock(*types.Block) error
 }
 
 // NewNetworkService instantiates a new network service.
