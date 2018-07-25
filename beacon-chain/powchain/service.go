@@ -40,6 +40,7 @@ type Logger interface {
 type Web3Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
+	client              *ethclient.Client
 	headerChan          chan *gethTypes.Header
 	logChan             chan gethTypes.Log
 	pubKey              string
@@ -88,9 +89,9 @@ func (w *Web3Service) Start() {
 		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
 		return
 	}
-	client := ethclient.NewClient(rpcClient)
-	go w.latestPOWChainInfo(client, w.ctx.Done())
-	go w.queryValidatorStatus(client, w.ctx.Done())
+	w.client = ethclient.NewClient(rpcClient)
+	go w.latestPOWChainInfo(w.client, w.ctx.Done())
+	go w.queryValidatorStatus(w.client, w.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -163,4 +164,9 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 // ValidatorRegistered is a getter for validatorRegistered to make it read-only.
 func (w *Web3Service) ValidatorRegistered() bool {
 	return w.validatorRegistered
+}
+
+// Client returns the currently active ethclient.
+func (w *Web3Service) Client() *ethclient.Client {
+	return w.client
 }
