@@ -2,7 +2,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "io_bazel_rules_go",
-    # in order to be able to enable race detecto we need to use a version
+    # in order to be able to enable race detection we need to use a version
     # < 0.13.0 until this bug is fixed: https://github.com/bazelbuild/rules_go/issues/1592
     urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.12.1/rules_go-0.12.1.tar.gz"],
     sha256 = "8b68d0630d63d95dacc0016c3bb4b76154fe34fca93efd65d1c366de3fcb4294",

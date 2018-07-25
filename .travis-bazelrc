@@ -1,9 +1,5 @@
 startup --host_jvm_args=-Xmx500m --host_jvm_args=-Xms500m
 
-# Disable sandboxing since it may fail inside of Travis' containers because the
-# mount system call is not permitted.
-build --spawn_strategy=standalone --genrule_strategy=standalone
-
 # Remote caching over Google Cloud Storage
 # TODO(#282): Enable remote caching/execution
 #build:remote --remote_http_cache=https://storage.googleapis.com/prysmatic-bazel-cache
