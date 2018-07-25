@@ -164,7 +164,9 @@ func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	if endpoint == "" {
 		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
 	}
-	if ctx.GlobalIsSet(cmd.IPCPathFlag.Name) {
+	if ctx.GlobalIsSet(cmd.RPCProviderFlag.Name) {
+		endpoint = ctx.GlobalString(cmd.RPCProviderFlag.Name)
+	} else if ctx.GlobalIsSet(cmd.IPCPathFlag.Name) {
 		endpoint = ctx.GlobalString(cmd.IPCPathFlag.Name)
 	}
 	passwordFile := ctx.GlobalString(cmd.PasswordFileFlag.Name)
