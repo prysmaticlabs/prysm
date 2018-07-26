@@ -12,15 +12,15 @@ import (
 
 // DefaultConfig contains default configs for node to use in the sharded universe.
 var DefaultConfig = &Config{
-	SMCAddress:            common.HexToAddress("0x0"),
-	PeriodLength:          5,
-	NotaryDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
-	NotaryLockupLength:    16128,
-	ProposerLockupLength:  48,
-	NotaryCommitteeSize:   135,
-	NotaryQuorumSize:      90,
-	NotaryChallengePeriod: 25,
-	CollationSizeLimit:    int64(math.Pow(float64(2), float64(20))),
+	SMCAddress:              common.HexToAddress("0x0"),
+	PeriodLength:            5,
+	AttesterDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
+	AttesterLockupLength:    16128,
+	ProposerLockupLength:    48,
+	AttesterCommitteeSize:   135,
+	AttesterQuorumSize:      90,
+	AttesterChallengePeriod: 25,
+	CollationSizeLimit:      int64(math.Pow(float64(2), float64(20))),
 }
 
 // DefaultChainConfig contains default chain configs of an individual shard.
@@ -28,15 +28,15 @@ var DefaultChainConfig = &ChainConfig{}
 
 // Config contains configs for node to participate in the sharded universe.
 type Config struct {
-	SMCAddress            common.Address // SMCAddress is the address of SMC in mainchain.
-	PeriodLength          int64          // PeriodLength is num of blocks in period.
-	NotaryDeposit         *big.Int       // NotaryDeposit is a required deposit size in wei.
-	NotaryLockupLength    int64          // NotaryLockupLength to lockup notary deposit from time of deregistration.
-	ProposerLockupLength  int64          // ProposerLockupLength to lockup proposer deposit from time of deregistration.
-	NotaryCommitteeSize   int64          // NotaryCommitSize sampled per block from the notaries pool per period per shard.
-	NotaryQuorumSize      int64          // NotaryQuorumSize votes the collation needs to get accepted to the canonical chain.
-	NotaryChallengePeriod int64          // NotaryChallengePeriod is the duration a notary has to store collations for.
-	CollationSizeLimit    int64          // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
+	SMCAddress              common.Address // SMCAddress is the address of SMC in mainchain.
+	PeriodLength            int64          // PeriodLength is num of blocks in period.
+	AttesterDeposit         *big.Int       // AttesterDeposit is a required deposit size in wei.
+	AttesterLockupLength    int64          // AttesterLockupLength to lockup attester deposit from time of deregistration.
+	ProposerLockupLength    int64          // ProposerLockupLength to lockup proposer deposit from time of deregistration.
+	AttesterCommitteeSize   int64          // AttesterCommitSize sampled per block from the attesters pool per period per shard.
+	AttesterQuorumSize      int64          // AttesterQuorumSize votes the collation needs to get accepted to the canonical chain.
+	AttesterChallengePeriod int64          // AttesterChallengePeriod is the duration a attester has to store collations for.
+	CollationSizeLimit      int64          // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
 }
 
 // ChainConfig contains chain config of an individual shard. Still to be designed.
