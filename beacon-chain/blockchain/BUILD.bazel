@@ -30,8 +30,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//bazel-prysm/beacon-chain/params:go_default_library",
         "//beacon-chain/database:go_default_library",
+        "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/types:go_default_library",
         "//beacon-chain/utils:go_default_library",
