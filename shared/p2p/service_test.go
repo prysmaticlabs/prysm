@@ -91,6 +91,35 @@ func TestSubscribeToTopic(t *testing.T) {
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
 
+	testSubscribe(t, s, gsub, ch, ctx)
+}
+
+func TestSubscribe(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+	h := bhost.New(swarmt.GenSwarm(t, ctx))
+
+	gsub, err := floodsub.NewFloodSub(ctx, h)
+	if err != nil {
+		t.Errorf("Failed to create floodsub: %v", err)
+	}
+
+	s := Server{
+		ctx:   ctx,
+		gsub:  gsub,
+		host:  h,
+		feeds: make(map[reflect.Type]*event.Feed),
+		mutex: &sync.Mutex{},
+	}
+
+	ch := make(chan Message)
+	sub := s.Subscribe(pb.CollationBodyRequest{}, ch)
+	defer sub.Unsubscribe()
+
+	testSubscribe(t, s, gsub, ch, ctx)
+}
+
+func testSubscribe(t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message, ctx context.Context) {
 	topic := pb.Topic_COLLATION_BODY_REQUEST
 	msgType := topicTypeMapping[topic]
 	go s.subscribeToTopic(topic, msgType)
@@ -131,5 +160,4 @@ func TestSubscribeToTopic(t *testing.T) {
 	case <-ctx.Done():
 		t.Error("Context timed out before a message was received!")
 	}
-
 }
