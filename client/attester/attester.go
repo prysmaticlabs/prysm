@@ -127,7 +127,8 @@ func joinAttesterPool(manager mainchain.ContractManager, client mainchain.EthCli
 	}
 
 	log.Info("Joining attester pool")
-	txOps, err := manager.CreateTXOpts(shardparams.DefaultConfig.AttesterDeposit)
+	c := shardparams.DefaultConfig()
+	txOps, err := manager.CreateTXOpts(c.AttesterDeposit)
 	if err != nil {
 		return fmt.Errorf("unable to initiate the deposit transaction: %v", err)
 	}
@@ -157,7 +158,7 @@ func joinAttesterPool(manager mainchain.ContractManager, client mainchain.EthCli
 		return errors.New("account has not been able to be deposited in attester pool")
 	}
 
-	log.Infof("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(shardparams.DefaultConfig.AttesterDeposit, big.NewInt(params.Ether)), tx.Hash().Hex())
+	log.Infof("Deposited %dETH into contract with transaction hash: %s", new(big.Int).Div(c.AttesterDeposit, big.NewInt(params.Ether)), tx.Hash().Hex())
 
 	return nil
 }

@@ -48,13 +48,12 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 
 	db.Start()
 
-	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig, &mainchain.SMCClient{}, server, db, 1)
+	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig(), &mainchain.SMCClient{}, server, db, 1)
 	if err != nil {
 		t.Fatalf("Failed to start syncer %v", err)
 	}
 
-	c := params.GetDefaultConfig()
-	fakeProposer, err := NewProposer(c, node, server, pool, db, 1, fakeSyncer)
+	fakeProposer, err := NewProposer(params.DefaultConfig(), node, server, pool, db, 1, fakeSyncer)
 	if err != nil {
 		t.Fatalf("Failed to create proposer %v", err)
 	}
@@ -200,7 +199,7 @@ func TestCreateCollation(t *testing.T) {
 	}
 
 	// fast forward to 2nd period.
-	for i := 0; i < 2*int(params.DefaultConfig.PeriodLength); i++ {
+	for i := 0; i < 2*int(params.DefaultPeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -258,7 +257,7 @@ func TestAddCollation(t *testing.T) {
 	}
 
 	// fast forward to next period.
-	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
+	for i := 0; i < int(params.DefaultPeriodLength); i++ {
 		backend.Commit()
 	}
 
@@ -304,7 +303,7 @@ func TestCheckCollation(t *testing.T) {
 		t.Errorf("Create collation failed: %v", err)
 	}
 
-	for i := 0; i < int(params.DefaultConfig.PeriodLength); i++ {
+	for i := 0; i < int(params.DefaultPeriodLength); i++ {
 		backend.Commit()
 	}
 

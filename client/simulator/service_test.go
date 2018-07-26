@@ -102,7 +102,7 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
+	simulator, err := NewSimulator(params.DefaultConfig(), &mainchain.SMCClient{}, server, shardID, 1*time.Second)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestSimulateAttesterRequests_FaultyReader(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig(), &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestSimulateAttesterRequests_FaultyCaller(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig(), &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestSimulateAttesterRequests(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+	simulator, err := NewSimulator(params.DefaultConfig(), &mainchain.SMCClient{}, server, shardID, 0)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
@@ -257,14 +257,14 @@ func TestSimulateAttesterRequests_previousPeriod(t *testing.T) {
 		},
 		{
 			want:        0,
-			blockNumber: params.DefaultConfig.PeriodLength,
+			blockNumber: params.DefaultPeriodLength,
 		}, {
 			want:        0,
-			blockNumber: params.DefaultConfig.PeriodLength + 1,
+			blockNumber: params.DefaultPeriodLength + 1,
 		},
 		{
 			want:        1,
-			blockNumber: params.DefaultConfig.PeriodLength * 2,
+			blockNumber: params.DefaultPeriodLength * 2,
 		},
 	}
 
@@ -274,7 +274,7 @@ func TestSimulateAttesterRequests_previousPeriod(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 	for _, tt := range tests {
-		simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 0)
+		simulator, err := NewSimulator(params.DefaultConfig(), &mainchain.SMCClient{}, server, shardID, 0)
 		if err != nil {
 			t.Fatalf("Unable to setup simulator service: %v", err)
 		}
@@ -315,7 +315,7 @@ func TestBroadcastTransactions(t *testing.T) {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
 
-	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.SMCClient{}, server, shardID, 1*time.Second)
+	simulator, err := NewSimulator(params.DefaultConfig(), &mainchain.SMCClient{}, server, shardID, 1*time.Second)
 	if err != nil {
 		t.Fatalf("Unable to setup simulator service: %v", err)
 	}
