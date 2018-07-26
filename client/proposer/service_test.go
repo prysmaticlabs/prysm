@@ -89,7 +89,6 @@ func TestProposerRoundTrip(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
-		fakeProposer.Stop()
 		fakeProposer.dbService.Stop()
 		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
@@ -105,6 +104,7 @@ func TestProposerRoundTrip(t *testing.T) {
 		node.CommitWithBlock()
 	}
 	fakeProposer.Start()
+	defer fakeProposer.Stop()
 
 	for i := 0; i < 4; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
@@ -119,7 +119,6 @@ func TestIncompleteCollation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
-		fakeProposer.Stop()
 		fakeProposer.dbService.Stop()
 		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
@@ -139,13 +138,16 @@ func TestIncompleteCollation(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
 	}
+	fakeProposer.Stop()
 
-	index, err := waitForLogMsg(hook, "Starting proposer service")
+	index, err := waitForLogMsg(hook, "Stopping proposer service")
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	if index != len(hook.AllEntries())-1 {
-		t.Fatal("start log message is not the last one")
+	for i := index; i >= 0; i-- {
+		if hook.AllEntries()[i].Message == "Collation created" {
+			t.Fatal("Collation created before stopping proposer")
+		}
 	}
 }
 
@@ -153,7 +155,6 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
-		fakeProposer.Stop()
 		fakeProposer.dbService.Stop()
 		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
@@ -169,6 +170,7 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 		node.CommitWithBlock()
 	}
 	fakeProposer.Start()
+	defer fakeProposer.Stop()
 
 	for i := 0; i < 5; i++ {
 		node.CommitWithBlock()
