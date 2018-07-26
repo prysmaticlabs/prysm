@@ -11,11 +11,11 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/params"
 )
 
 type faultyFetcher struct{}
@@ -335,13 +335,13 @@ func TestRotateValidatorSet(t *testing.T) {
 
 	newQueuedValidators, newActiveValidators, newExitedValidators := b.RotateValidatorSet()
 
-	if len(newActiveValidators)  != 4 {
+	if len(newActiveValidators) != 4 {
 		t.Errorf("Get active validator count failed, wanted 5, got %v", len(newActiveValidators))
 	}
 	if len(newQueuedValidators) != 4 {
 		t.Errorf("Get queued validator count failed, wanted 4, got %v", len(newQueuedValidators))
 	}
-	if len(newExitedValidators)  != 7 {
+	if len(newExitedValidators) != 7 {
 		t.Errorf("Get exited validator count failed, wanted 6, got %v", len(newExitedValidators))
 	}
 }
