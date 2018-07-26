@@ -74,6 +74,21 @@ func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
 
+// ActiveValidatorCount exposes a getter to total number of active validator.
+func (b *BeaconChain) ActiveValidatorCount() int {
+	return len(b.state.CrystallizedState.ActiveValidators)
+}
+
+// QueuedValidatorCount exposes a getter to total number of queued validator.
+func (b *BeaconChain) QueuedValidatorCount() int {
+	return len(b.state.CrystallizedState.QueuedValidators)
+}
+
+// ExitedValidatorCount exposes a getter to total number of exited validator.
+func (b *BeaconChain) ExitedValidatorCount() int {
+	return len(b.state.CrystallizedState.ExitedValidators)
+}
+
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() *types.Block {
 	return types.NewGenesisBlock()
@@ -129,6 +144,43 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 	}
 
 	return validTime, nil
+}
+
+// CleanUpValidatorSet is called  every dynasty transition. It's primary function is
+// to go through queued validators and induct them to be active, and remove bad
+// active validator (balances below threshold) to the exit set. It also cross checks
+// every validator's switch dynasty before induct or remove.
+func (b *BeaconChain) CleanUpValidatorSet() ([]types.ValidatorRecord, []types.ValidatorRecord, []types.ValidatorRecord) {
+
+	var newExitedValidator []types.ValidatorRecord
+	newActiveValidators := b.state.CrystallizedState.ActiveValidators
+
+	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
+	for i, validator := range newActiveValidators {
+
+		if validator.Balance < params.DefaultBalance/2 {
+			newExitedValidator = append(newExitedValidator, validator)
+			newActiveValidators = append(newActiveValidators[:i], newActiveValidators[:i+1]...)
+		} else if validator.SwitchDynasty == b.CrystallizedState().Dynasty+1 {
+			newExitedValidator = append(newExitedValidator, validator)
+			newActiveValidators = append(newActiveValidators[:i], newActiveValidators[:i+1]...)
+		}
+	}
+
+	// Get the total number of validator we can induct.
+	inductNum := math.Min(float64(b.ActiveValidatorCount()), float64(b.QueuedValidatorCount()))
+
+	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
+	for i := 0; i < int(inductNum); i++ {
+		if b.CrystallizedState().QueuedValidators[i].SwitchDynasty > b.CrystallizedState().Dynasty+1 {
+			inductNum = float64(i)
+			break
+		}
+		newActiveValidators = append(newActiveValidators, b.CrystallizedState().QueuedValidators[i])
+	}
+	newQueuedValidator := b.CrystallizedState().QueuedValidators[int(inductNum):]
+
+	return newQueuedValidator, newActiveValidators, newExitedValidator
 }
 
 // persist stores the RLP encoding of the latest beacon chain state into the db.
