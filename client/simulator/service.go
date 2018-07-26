@@ -25,13 +25,13 @@ var log = logrus.WithField("prefix", "simulator")
 // once p2p internals and end-to-end testing across remote
 // nodes have been implemented.
 type Simulator struct {
-	config      *params.Config
-	client      *mainchain.SMCClient
-	p2p         *p2p.Server
-	shardID     int
-	ctx         context.Context
-	cancel      context.CancelFunc
-	delay       time.Duration
+	config  *params.Config
+	client  *mainchain.SMCClient
+	p2p     *p2p.Server
+	shardID int
+	ctx     context.Context
+	cancel  context.CancelFunc
+	delay   time.Duration
 }
 
 // NewSimulator creates a struct instance of a simulator service.
