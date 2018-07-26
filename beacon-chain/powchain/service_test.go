@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 type badReader struct{}
@@ -20,6 +21,7 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 }
 
 type goodReader struct{}
+
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return nil, nil
@@ -109,7 +111,7 @@ func TestBadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.latestPOWChainInfo(&badReader{}, web3Service.ctx.Done())
+	web3Service.fetchChainInfo(web3Service.ctx, &badReader{}, &goodLogger{})
 	msg := hook.LastEntry().Message
 	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
 	if msg != want {
@@ -125,18 +127,18 @@ func TestLatestMainchainInfo(t *testing.T) {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
-	doneChan := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.latestPOWChainInfo(&goodReader{}, doneChan)
+		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
 		<-exitRoutine
 	}()
 
 	header := &gethTypes.Header{Number: big.NewInt(42)}
 
 	web3Service.headerChan <- header
-	doneChan <- struct{}{}
+	cancel()
 	exitRoutine <- true
 
 	if web3Service.blockNumber.Cmp(header.Number) != 0 {
@@ -155,7 +157,7 @@ func TestBadLogger(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.queryValidatorStatus(&badLogger{}, web3Service.ctx.Done())
+	web3Service.fetchChainInfo(web3Service.ctx, &goodReader{}, &badLogger{})
 	msg := hook.LastEntry().Message
 	want := "Unable to query logs from VRC: subscription has failed"
 	if msg != want {
@@ -175,16 +177,17 @@ func TestGoodLogger(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
-	doneChan := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.queryValidatorStatus(&goodLogger{}, doneChan)
+		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
 		<-exitRoutine
 	}()
 
 	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
 	web3Service.logChan <- log
+	cancel()
 	exitRoutine <- true
 
 	lastEntry := hook.LastEntry()
@@ -202,4 +205,47 @@ func TestGoodLogger(t *testing.T) {
 	}
 
 	hook.Reset()
+}
+
+func TestHeaderAfterValidation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	pubkey := common.HexToHash(web3Service.pubKey)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	exitRoutine := make(chan bool)
+
+	go func() {
+		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		<-exitRoutine
+	}()
+
+	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
+	web3Service.logChan <- log
+
+	header := &gethTypes.Header{Number: big.NewInt(42)}
+	web3Service.headerChan <- header
+
+	cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")
+
+	if !web3Service.validatorRegistered {
+		t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
+	}
+
+	if web3Service.blockNumber.Cmp(header.Number) != 0 {
+		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
+	}
+
+	if web3Service.blockHash.Hex() != header.Hash().Hex() {
+		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+	}
 }
