@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type badReader struct{}
@@ -21,7 +21,6 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 }
 
 type goodReader struct{}
-
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return nil, nil
