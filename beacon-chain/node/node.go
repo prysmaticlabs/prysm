@@ -166,7 +166,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 
 func (b *BeaconNode) registerNetworkService() error {
 	networkService := network.NewNetworkService()
-
 	return b.services.RegisterService(networkService)
 }
 
@@ -177,11 +176,9 @@ func (b *BeaconNode) registerSyncService() error {
 	var networkService *network.Service
 	b.services.FetchService(&networkService)
 
-	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig())
-	syncService.SetChainService(chainService)
-	syncService.SetNetworkService(networkService)
+	var p2pService *p2p.Server
+	b.services.FetchService(&p2pService)
 
-	networkService.SetSyncService(syncService)
-
+	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig(), p2pService, networkService, chainService)
 	return b.services.RegisterService(syncService)
 }

@@ -9,19 +9,13 @@ import (
 
 var log = logrus.WithField("prefix", "network")
 
-// Service is the middleware between the application-agnostic p2p service and subscribers to the network.
-type Service struct {
-	syncService types.SyncService
-}
+// Service is the middleware between the application-agnostic p2p service
+// and subscribers to the network.
+type Service struct{}
 
 // NewNetworkService instantiates a new network service.
 func NewNetworkService() *Service {
 	return &Service{}
-}
-
-// SetSyncService sets a concrete value for the sync service.
-func (ns *Service) SetSyncService(ss types.SyncService) {
-	ns.syncService = ss
 }
 
 // Start launches the service's goroutine.
