@@ -91,46 +91,7 @@ func TestSubscribeToTopic(t *testing.T) {
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
 
-	topic := pb.Topic_COLLATION_BODY_REQUEST
-	msgType := topicTypeMapping[topic]
-	go s.subscribeToTopic(topic, msgType)
-
-	// Short delay to let goroutine add subscription.
-	time.Sleep(time.Millisecond * 10)
-
-	// The topic should be subscribed with gsub.
-	topics := gsub.GetTopics()
-	if len(topics) < 1 || topics[0] != topic.String() {
-		t.Errorf("Unexpected subscribed topics: %v. Wanted %s", topics, topic)
-	}
-
-	pbMsg := &pb.CollationBodyRequest{ShardId: 5}
-
-	done := make(chan bool)
-	go func() {
-		// The message should be received from the feed.
-		msg := <-ch
-		if !proto.Equal(msg.Data.(proto.Message), pbMsg) {
-			t.Errorf("Unexpected msg: %+v. Wanted %+v.", msg.Data, pbMsg)
-		}
-
-		done <- true
-	}()
-
-	b, err := proto.Marshal(pbMsg)
-	if err != nil {
-		t.Errorf("Failed to marshal pbMsg: %v", err)
-	}
-	if err = gsub.Publish(topic.String(), b); err != nil {
-		t.Errorf("Failed to publish message: %v", err)
-	}
-
-	// Wait for our message assertion to complete.
-	select {
-	case <-done:
-	case <-ctx.Done():
-		t.Error("Context timed out before a message was received!")
-	}
+	testSubscribe(t, s, gsub, ch, ctx)
 }
 
 func TestSubscribe(t *testing.T) {
@@ -155,6 +116,10 @@ func TestSubscribe(t *testing.T) {
 	sub := s.Subscribe(pb.CollationBodyRequest{}, ch)
 	defer sub.Unsubscribe()
 
+	testSubscribe(t, s, gsub, ch, ctx)
+}
+
+func testSubscribe(t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message, ctx context.Context) {
 	topic := pb.Topic_COLLATION_BODY_REQUEST
 	msgType := topicTypeMapping[topic]
 	go s.subscribeToTopic(topic, msgType)
