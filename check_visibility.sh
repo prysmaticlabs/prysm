@@ -24,6 +24,6 @@ then
 else
   echo "FAIL: The above targets belong to protected packages and the targets \
 are visible outside of their package!"
-  echo "Please run reduce the target visibility."
+  echo "Please reduce the target visibility."
   exit 1
 fi
