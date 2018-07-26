@@ -3,6 +3,7 @@ package proposer
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"time"
 	//"math"
 	"math/big"
@@ -21,9 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-// TODO: Fix the tests so that the following tests can be tested as a package and stop leaking into each other,
-// find another way rather than using logs to do this
 
 func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	backend, smc := internal.SetupMockClient(t)
@@ -55,33 +53,32 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 		t.Fatalf("Failed to start syncer %v", err)
 	}
 
-	fakeProposer, err := NewProposer(params.DefaultConfig, node, server, pool, db, 1, fakeSyncer)
+	c := params.GetDefaultConfig()
+	fakeProposer, err := NewProposer(c, node, server, pool, db, 1, fakeSyncer)
 	if err != nil {
 		t.Fatalf("Failed to create proposer %v", err)
 	}
-	// params.DefaultConfig is a package level pointer var asigned to fakeProposer.config,
-	// changing fakeProposer.config.CollationSizeLimit here affects all the subsequent tests
-	// that use params.DefaultConfig
-	// fakeProposer.config.CollationSizeLimit = int64(math.Pow(float64(2), float64(10)))
+	fakeProposer.config.CollationSizeLimit = int64(math.Pow(float64(2), float64(10)))
 
 	return fakeProposer, node
 }
 
 // waitForLogMsg keeps checking for log messages until "want" is found or a
-// timeout expires. The motivation is to be more resilient to connection
-// failure errors that can appear in the log:
+// timeout expires, returning the index of the message if found.
+// The motivation is to be more resilient to connection failure errors that can
+// appear in the log:
 // Failed to connect to peer: dial attempt failed: <peer.ID 16Uiu2> --> <peer.ID 16Uiu2> dial attempt failed: connection refused
-func waitForLogMsg(hook *logTest.Hook, want string) error {
+func waitForLogMsg(hook *logTest.Hook, want string) (int, error) {
 	timeout := time.After(60 * time.Second)
 	tick := time.Tick(500 * time.Millisecond)
 	for {
 		select {
 		case <-timeout:
-			return fmt.Errorf("didn't get %q log entry on time", want)
+			return 0, fmt.Errorf("didn't get %q log entry on time", want)
 		case <-tick:
-			for _, msg := range hook.AllEntries() {
+			for index, msg := range hook.AllEntries() {
 				if msg.Message == want {
-					return nil
+					return index, nil
 				}
 			}
 		}
@@ -109,12 +106,11 @@ func TestProposerRoundTrip(t *testing.T) {
 	}
 	fakeProposer.Start()
 
-	for i := 0; i < 7; i++ {
+	for i := 0; i < 4; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
-		<-fakeProposer.msgChan
 	}
 
-	if err := waitForLogMsg(hook, "Collation created"); err != nil {
+	if _, err := waitForLogMsg(hook, "Collation created"); err != nil {
 		t.Fatal(err.Error())
 	}
 }
@@ -142,11 +138,14 @@ func TestIncompleteCollation(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		fakeProposer.p2p.Broadcast(&tx)
-		<-fakeProposer.msgChan
 	}
 
-	if err := waitForLogMsg(hook, "Starting proposer service"); err != nil {
+	index, err := waitForLogMsg(hook, "Starting proposer service")
+	if err != nil {
 		t.Fatal(err.Error())
+	}
+	if index != len(hook.AllEntries())-1 {
+		t.Fatal("start log message is not the last one")
 	}
 }
 
@@ -171,17 +170,13 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	}
 	fakeProposer.Start()
 
-	fakeProposer.p2p.Broadcast(&tx)
-	<-fakeProposer.msgChan
-
 	for i := 0; i < 5; i++ {
 		node.CommitWithBlock()
 	}
 
 	fakeProposer.p2p.Broadcast(&tx)
-	<-fakeProposer.msgChan
 
-	if err := waitForLogMsg(hook, "Collation created"); err != nil {
+	if _, err := waitForLogMsg(hook, "Collation created"); err != nil {
 		t.Fatal(err.Error())
 	}
 }

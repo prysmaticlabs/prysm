@@ -23,6 +23,21 @@ var DefaultConfig = &Config{
 	CollationSizeLimit:      int64(math.Pow(float64(2), float64(20))),
 }
 
+// GetDefaultConfig returns a fresh DefaultConfig value following the factory pattern.
+func GetDefaultConfig() *Config {
+	return &Config{
+		SMCAddress:              common.HexToAddress("0x0"),
+		PeriodLength:            5,
+		AttesterDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
+		AttesterLockupLength:    16128,
+		ProposerLockupLength:    48,
+		AttesterCommitteeSize:   135,
+		AttesterQuorumSize:      90,
+		AttesterChallengePeriod: 25,
+		CollationSizeLimit:      int64(math.Pow(float64(2), float64(20))),
+	}
+}
+
 // DefaultChainConfig contains default chain configs of an individual shard.
 var DefaultChainConfig = &ChainConfig{}
 
