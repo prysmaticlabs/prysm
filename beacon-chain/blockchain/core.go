@@ -152,23 +152,23 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 // every validator's switch dynasty before induct or remove.
 func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.ValidatorRecord, []types.ValidatorRecord) {
 
-	var newExitedValidator []types.ValidatorRecord
+	var newExitedValidators []types.ValidatorRecord
 	var newActiveValidators []types.ValidatorRecord
 
 	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
 	for _, validator := range b.state.CrystallizedState.ActiveValidators {
 
 		if validator.Balance < params.DefaultBalance/2 {
-			newExitedValidator = append(newExitedValidator, validator)
+			newExitedValidators = append(newExitedValidators, validator)
 		} else if validator.SwitchDynasty == b.CrystallizedState().Dynasty+1 {
-			newExitedValidator = append(newExitedValidator, validator)
+			newExitedValidators = append(newExitedValidators, validator)
 		} else {
 			newActiveValidators = append(newActiveValidators, validator)
 		}
 	}
 
 	// Get the total number of validator we can induct.
-	inductNum := b.ActiveValidatorCount()
+	inductNum := b.ActiveValidatorCount() / 30 + 1
 	if b.QueuedValidatorCount() < inductNum {
 		inductNum = b.QueuedValidatorCount()
 	}
@@ -181,9 +181,9 @@ func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.Val
 		}
 		newActiveValidators = append(newActiveValidators, b.CrystallizedState().QueuedValidators[i])
 	}
-	newQueuedValidator := b.CrystallizedState().QueuedValidators[int(inductNum):]
+	newQueuedValidators := b.CrystallizedState().QueuedValidators[inductNum:]
 
-	return newQueuedValidator, newActiveValidators, newExitedValidator
+	return newQueuedValidators, newActiveValidators, newExitedValidators
 }
 
 // persist stores the RLP encoding of the latest beacon chain state into the db.
