@@ -65,8 +65,10 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	return beaconChain, nil
 }
 
-func (b *BeaconChain) isEpochTransition() bool {
-	return true
+func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
+	currentEpoch := b.state.CrystallizedState.CurrentEpoch
+	isTransition := (slotNumber / params.SlotLength) > currentEpoch
+	return isTransition
 }
 
 // ActiveState exposes a getter to external services.
@@ -189,6 +191,21 @@ func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
 	return blake2b.New256(serializedState)
 }
 
+func (b *BeaconChain) resetAttesterBitfields() {
+
+	bitfields := b.state.ActiveState.AttesterBitfields
+	length := int(len(bitfields) / 8)
+
+	newbitfields := make([]byte, length)
+	b.state.ActiveState.AttesterBitfields = newbitfields
+}
+
+func (b *BeaconChain) resetTotalDeposit() {
+	defer b.lock.Unlock()
+	b.lock.Lock()
+	b.state.ActiveState.TotalAttesterDeposits = 0
+}
+
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
@@ -204,23 +221,27 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
 	totalDeposit := b.state.CrystallizedState.TotalDeposits
 
-	transition := b.isEpochTransition()
-	if !transition {
-		return errors.New("invalid slot for epoch transition")
-	}
+	attesterFactor := attesterDeposits * 3
+	totalFactor := uint64(totalDeposit * 2)
 
-	if attesterDeposits*3 >= uint64(totalDeposit)*2 {
+	if attesterFactor >= totalFactor {
 		log.Info("Justified epoch in the crystallised state is set to the current epoch")
+
+		b.lock.Lock()
 		justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
 		b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
 
 		if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
 			b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
 		}
+		b.lock.Unlock()
 
 		for i, attester := range activeValidatorSet {
 			b.calculateVotesPerAttester(attester, i)
 		}
+
+		b.resetAttesterBitfields()
+		b.resetTotalDeposit()
 	}
 	return nil
 }
@@ -231,6 +252,9 @@ func (b *BeaconChain) calculateVotesPerAttester(attester types.ValidatorRecord, 
 	attesterBlock := index / 8
 	attesterFieldIndex := index % 8
 	hasVoted := false
+
+	defer b.lock.Unlock()
+	b.lock.Lock()
 
 	if len(bitfields) < attesterBlock {
 		return errors.New("invalid bitfield")
@@ -245,7 +269,7 @@ func (b *BeaconChain) calculateVotesPerAttester(attester types.ValidatorRecord, 
 	if hasVoted {
 		attester.Balance += reward
 	} else {
-		attester.Balance += penalty
+		attester.Balance -= penalty
 	}
 	return nil
 }

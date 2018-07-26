@@ -40,6 +40,7 @@ func (c *ChainService) Start() {
 	}
 	c.chain = beaconChain
 	go c.updateActiveState()
+	go c.updateEpoch()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -78,6 +79,26 @@ func (c *ChainService) updateActiveState() {
 			err = c.chain.MutateActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
+			}
+
+		case <-c.ctx.Done():
+			log.Debug("Chain service context closed, exiting goroutine")
+			return
+		}
+	}
+}
+
+func (c *ChainService) updateEpoch() {
+	for {
+		select {
+		case block := <-c.latestBeaconBlock:
+
+			currentslot := block.Data().SlotNumber
+			transition := c.chain.isEpochTransition(currentslot)
+			if transition {
+				if err := c.chain.computeValidatorRewardsAndPenalties(); err != nil {
+					log.Errorf("Error computing validator rewards and penalties %v", err)
+				}
 			}
 
 		case <-c.ctx.Done():
