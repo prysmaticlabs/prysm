@@ -47,7 +47,7 @@ func (s *Syncer) Start() {
 	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
 
 	s.msgChan = make(chan p2p.Message, 100)
-	s.bodyRequests = s.p2p.Feed(pb.CollationBodyRequest{}).Subscribe(s.msgChan)
+	s.bodyRequests = s.p2p.Subscribe(pb.CollationBodyRequest{}, s.msgChan)
 	go s.HandleCollationBodyRequests(shard, s.ctx.Done())
 }
 

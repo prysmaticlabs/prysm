@@ -45,9 +45,8 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Unable to setup sync service: %v", err)
 	}
 
-	feed := server.Feed(pb.CollationBodyRequest{})
 	syncer.msgChan = make(chan p2p.Message)
-	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
+	syncer.bodyRequests = server.Subscribe(pb.CollationBodyRequest{}, syncer.msgChan)
 
 	if err := syncer.Stop(); err != nil {
 		t.Fatalf("Unable to stop sync service: %v", err)
@@ -104,10 +103,8 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
 
-	feed := server.Feed(pb.CollationBodyRequest{})
-
 	syncer.msgChan = make(chan p2p.Message)
-	syncer.bodyRequests = feed.Subscribe(syncer.msgChan)
+	syncer.bodyRequests = server.Subscribe(pb.CollationBodyRequest{}, syncer.msgChan)
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
