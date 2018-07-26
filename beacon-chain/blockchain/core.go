@@ -152,7 +152,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 // every validator's switch dynasty before induct or remove.
 func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.ValidatorRecord, []types.ValidatorRecord) {
 
-	var newExitedValidators []types.ValidatorRecord
+	var newExitedValidators = b.CrystallizedState().ExitedValidators
 	var newActiveValidators []types.ValidatorRecord
 
 	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
@@ -168,10 +168,11 @@ func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.Val
 	}
 
 	// Get the total number of validator we can induct.
-	inductNum := b.ActiveValidatorCount() / 30 + 1
+	inductNum := b.ActiveValidatorCount()/30 + 1
 	if b.QueuedValidatorCount() < inductNum {
 		inductNum = b.QueuedValidatorCount()
 	}
+	log.Info(inductNum)
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
 	for i := 0; i < inductNum; i++ {

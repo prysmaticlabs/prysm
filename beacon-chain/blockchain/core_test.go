@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/params"
 )
 
 type faultyFetcher struct{}
@@ -279,5 +280,68 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 	if canProcess {
 		t.Errorf("CanProcessBlocks should have returned false")
+	}
+}
+
+func TestRotateValidatorSet(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("Unable to setup beacon chain: %v", err)
+	}
+
+	activeValidators := []types.ValidatorRecord{
+		{Balance: 10000, WithdrawalAddress: common.Address{'A'}},
+		{Balance: 15000, WithdrawalAddress: common.Address{'B'}},
+		{Balance: 20000, WithdrawalAddress: common.Address{'C'}},
+		{Balance: 25000, WithdrawalAddress: common.Address{'D'}},
+		{Balance: 30000, WithdrawalAddress: common.Address{'E'}},
+	}
+
+	queuedValidators := []types.ValidatorRecord{
+		{Balance: params.DefaultBalance, WithdrawalAddress: common.Address{'F'}},
+		{Balance: params.DefaultBalance, WithdrawalAddress: common.Address{'G'}},
+		{Balance: params.DefaultBalance, WithdrawalAddress: common.Address{'H'}},
+		{Balance: params.DefaultBalance, WithdrawalAddress: common.Address{'I'}},
+		{Balance: params.DefaultBalance, WithdrawalAddress: common.Address{'J'}},
+	}
+
+	exitedValidators := []types.ValidatorRecord{
+		{Balance: 99999, WithdrawalAddress: common.Address{'K'}},
+		{Balance: 99999, WithdrawalAddress: common.Address{'L'}},
+		{Balance: 99999, WithdrawalAddress: common.Address{'M'}},
+		{Balance: 99999, WithdrawalAddress: common.Address{'N'}},
+		{Balance: 99999, WithdrawalAddress: common.Address{'O'}},
+	}
+
+	b.CrystallizedState().ActiveValidators = activeValidators
+	b.CrystallizedState().QueuedValidators = queuedValidators
+	b.CrystallizedState().ExitedValidators = exitedValidators
+
+	if b.ActiveValidatorCount() != 5 {
+		t.Errorf("Get active validator count failed, wanted 5, got %v", b.ActiveValidatorCount())
+	}
+	if b.QueuedValidatorCount() != 5 {
+		t.Errorf("Get queued validator count failed, wanted 5, got %v", b.QueuedValidatorCount())
+	}
+	if b.ExitedValidatorCount() != 5 {
+		t.Errorf("Get exited validator count failed, wanted 5, got %v", b.ExitedValidatorCount())
+	}
+
+	newQueuedValidators, newActiveValidators, newExitedValidators := b.RotateValidatorSet()
+
+	if len(newActiveValidators)  != 4 {
+		t.Errorf("Get active validator count failed, wanted 5, got %v", len(newActiveValidators))
+	}
+	if len(newQueuedValidators) != 4 {
+		t.Errorf("Get queued validator count failed, wanted 4, got %v", len(newQueuedValidators))
+	}
+	if len(newExitedValidators)  != 7 {
+		t.Errorf("Get exited validator count failed, wanted 6, got %v", len(newExitedValidators))
 	}
 }
