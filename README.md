@@ -96,21 +96,21 @@ Build our system first
 $ bazel build //client/...
 ```
 
-## Becoming a Notary
+## Becoming a Attester
 
 
-Make sure a geth node is running as a separate process. Then, to deposit ETH and join as a notary in the Sharding Manager Contract, run the following command:
+Make sure a geth node is running as a separate process. Then, to deposit ETH and join as a attester in the Sharding Manager Contract, run the following command:
 
 ```
 bazel run //client -- \
-   --actor "notary" \
+   --actor "attester" \
    --deposit \
    --datadir /path/to/your/datadir \
    --password /path/to/your/password.txt \
    --networkid 12345
 ```
 
-This will extract 1000ETH from your account balance and insert you into the SMC's notaries. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
+This will extract 1000ETH from your account balance and insert you into the SMC's attesters. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
 
 Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function.
 

@@ -6,9 +6,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/client/node",
     visibility = ["//client:__subpackages__"],
     deps = [
+        "//client/attester:go_default_library",
         "//client/database:go_default_library",
         "//client/mainchain:go_default_library",
-        "//client/notary:go_default_library",
         "//client/observer:go_default_library",
         "//client/params:go_default_library",
         "//client/proposer:go_default_library",
