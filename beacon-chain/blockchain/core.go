@@ -146,34 +146,37 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 	return validTime, nil
 }
 
-// CleanUpValidatorSet is called  every dynasty transition. It's primary function is
+// RotateValidatorSet is called  every dynasty transition. It's primary function is
 // to go through queued validators and induct them to be active, and remove bad
-// active validator (balances below threshold) to the exit set. It also cross checks
+// active validator whose balance is below threshold to the exit set. It also cross checks
 // every validator's switch dynasty before induct or remove.
-func (b *BeaconChain) CleanUpValidatorSet() ([]types.ValidatorRecord, []types.ValidatorRecord, []types.ValidatorRecord) {
+func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.ValidatorRecord, []types.ValidatorRecord) {
 
 	var newExitedValidator []types.ValidatorRecord
-	newActiveValidators := b.state.CrystallizedState.ActiveValidators
+	var newActiveValidators []types.ValidatorRecord
 
 	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
-	for i, validator := range newActiveValidators {
+	for _, validator := range b.state.CrystallizedState.ActiveValidators {
 
 		if validator.Balance < params.DefaultBalance/2 {
 			newExitedValidator = append(newExitedValidator, validator)
-			newActiveValidators = append(newActiveValidators[:i], newActiveValidators[:i+1]...)
 		} else if validator.SwitchDynasty == b.CrystallizedState().Dynasty+1 {
 			newExitedValidator = append(newExitedValidator, validator)
-			newActiveValidators = append(newActiveValidators[:i], newActiveValidators[:i+1]...)
+		} else {
+			newActiveValidators = append(newActiveValidators, validator)
 		}
 	}
 
 	// Get the total number of validator we can induct.
-	inductNum := math.Min(float64(b.ActiveValidatorCount()), float64(b.QueuedValidatorCount()))
+	inductNum := b.ActiveValidatorCount()
+	if b.QueuedValidatorCount() < inductNum {
+		inductNum = b.QueuedValidatorCount()
+	}
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
-	for i := 0; i < int(inductNum); i++ {
+	for i := 0; i < inductNum; i++ {
 		if b.CrystallizedState().QueuedValidators[i].SwitchDynasty > b.CrystallizedState().Dynasty+1 {
-			inductNum = float64(i)
+			inductNum = i
 			break
 		}
 		newActiveValidators = append(newActiveValidators, b.CrystallizedState().QueuedValidators[i])
