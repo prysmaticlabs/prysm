@@ -13,7 +13,7 @@ type Node interface {
 	Close()
 }
 
-// Actor refers to either a notary, proposer, or observer in the sharding spec.
+// Actor refers to either a attester, proposer, or observer in the sharding spec.
 type Actor interface {
 	shared.Service
 	// TODO: will actors have actor-specific methods? To be decided.

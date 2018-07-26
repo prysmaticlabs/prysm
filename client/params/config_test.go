@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestNotaryDeposit(t *testing.T) {
+func TestAttesterDeposit(t *testing.T) {
 	want, err := new(big.Int).SetString("1000000000000000000000", 10) // 1000 ETH
 	if !err {
 		t.Fatalf("Failed to setup test")
 	}
-	if DefaultConfig.NotaryDeposit.Cmp(want) != 0 {
-		t.Errorf("Notary deposit size incorrect. Wanted %d, got %d", want, DefaultConfig.NotaryDeposit)
+	if DefaultConfig.AttesterDeposit.Cmp(want) != 0 {
+		t.Errorf("Attester deposit size incorrect. Wanted %d, got %d", want, DefaultConfig.AttesterDeposit)
 	}
 }
 
@@ -21,9 +21,9 @@ func TestPeriodLength(t *testing.T) {
 	}
 }
 
-func TestNotaryLockupLength(t *testing.T) {
-	if DefaultConfig.NotaryLockupLength != 16128 {
-		t.Errorf("Shard count incorrect. Wanted %d, got %d", 16128, DefaultConfig.NotaryLockupLength)
+func TestAttesterLockupLength(t *testing.T) {
+	if DefaultConfig.AttesterLockupLength != 16128 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 16128, DefaultConfig.AttesterLockupLength)
 	}
 }
 
@@ -33,20 +33,20 @@ func TestProposerLockupLength(t *testing.T) {
 	}
 }
 
-func TestNotaryCommitteeSize(t *testing.T) {
-	if DefaultConfig.NotaryCommitteeSize != 135 {
-		t.Errorf("Shard count incorrect. Wanted %d, got %d", 135, DefaultConfig.NotaryCommitteeSize)
+func TestAttesterCommitteeSize(t *testing.T) {
+	if DefaultConfig.AttesterCommitteeSize != 135 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 135, DefaultConfig.AttesterCommitteeSize)
 	}
 }
 
-func TestNotaryQuorumSize(t *testing.T) {
-	if DefaultConfig.NotaryQuorumSize != 90 {
-		t.Errorf("Shard count incorrect. Wanted %d, got %d", 90, DefaultConfig.NotaryQuorumSize)
+func TestAttesterQuorumSize(t *testing.T) {
+	if DefaultConfig.AttesterQuorumSize != 90 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 90, DefaultConfig.AttesterQuorumSize)
 	}
 }
 
-func TestNotaryChallengePeriod(t *testing.T) {
-	if DefaultConfig.NotaryChallengePeriod != 25 {
-		t.Errorf("Shard count incorrect. Wanted %d, got %d", 25, DefaultConfig.NotaryChallengePeriod)
+func TestAttesterChallengePeriod(t *testing.T) {
+	if DefaultConfig.AttesterChallengePeriod != 25 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 25, DefaultConfig.AttesterChallengePeriod)
 	}
 }
