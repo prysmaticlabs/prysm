@@ -7,7 +7,6 @@ import (
 	mrand "math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
@@ -21,19 +20,18 @@ var log = logrus.WithField("prefix", "simulator")
 
 // Simulator is a service in a shard node that simulates requests from
 // remote notes coming over the shardp2p network. For example, if
-// we are running a proposer service, we would want to simulate notary requests
+// we are running a proposer service, we would want to simulate attester requests
 // requests coming to us via a p2p feed. This service will be removed
 // once p2p internals and end-to-end testing across remote
 // nodes have been implemented.
 type Simulator struct {
-	config      *params.Config
-	client      *mainchain.SMCClient
-	p2p         *p2p.Server
-	shardID     int
-	ctx         context.Context
-	cancel      context.CancelFunc
-	delay       time.Duration
-	requestFeed *event.Feed
+	config  *params.Config
+	client  *mainchain.SMCClient
+	p2p     *p2p.Server
+	shardID int
+	ctx     context.Context
+	cancel  context.CancelFunc
+	delay   time.Duration
 }
 
 // NewSimulator creates a struct instance of a simulator service.
@@ -41,16 +39,15 @@ type Simulator struct {
 // and a shardID.
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, delay, nil}, nil
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, delay}, nil
 }
 
 // Start the main loop for simulating p2p requests.
 func (s *Simulator) Start() {
 	log.Info("Starting simulator service")
-	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
 
 	go s.broadcastTransactions(time.NewTicker(s.delay).C, s.ctx.Done())
-	go s.simulateNotaryRequests(s.client.SMCCaller(), s.client.ChainReader(), time.NewTicker(s.delay).C, s.ctx.Done())
+	go s.simulateAttesterRequests(s.client.SMCCaller(), s.client.ChainReader(), time.NewTicker(s.delay).C, s.ctx.Done())
 }
 
 // Stop the main loop for simulator requests.
@@ -62,10 +59,10 @@ func (s *Simulator) Stop() error {
 	return nil
 }
 
-// simulateNotaryRequests simulates
+// simulateAttesterRequests simulates
 // requests for collation bodies that will be relayed to the appropriate proposer
 // by the p2p feed layer.
-func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
+func (s *Simulator) simulateAttesterRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.

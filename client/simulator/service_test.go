@@ -130,9 +130,9 @@ func TestStartStop(t *testing.T) {
 }
 
 // This test uses a faulty chain reader in order to trigger an error
-// in the simulateNotaryRequests goroutine when reading the block number from
+// in the simulateAttesterRequests goroutine when reading the block number from
 // the mainchain via RPC.
-func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
+func TestSimulateAttesterRequests_FaultyReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	shardID := 0
@@ -150,7 +150,7 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		simulator.simulateNotaryRequests(&goodSMCCaller{}, &faultyReader{}, delayChan, doneChan)
+		simulator.simulateAttesterRequests(&goodSMCCaller{}, &faultyReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -168,9 +168,9 @@ func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 }
 
 // This test uses a faulty SMCCaller in order to trigger an error
-// in the simulateNotaryRequests goroutine when reading the collation records
+// in the simulateAttesterRequests goroutine when reading the collation records
 // from the SMC.
-func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
+func TestSimulateAttesterRequests_FaultyCaller(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	shardID := 0
@@ -188,7 +188,7 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		simulator.simulateNotaryRequests(&faultySMCCaller{}, &goodReader{}, delayChan, doneChan)
+		simulator.simulateAttesterRequests(&faultySMCCaller{}, &goodReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -205,10 +205,10 @@ func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
 	hook.Reset()
 }
 
-// This test checks the proper functioning of the simulateNotaryRequests goroutine
+// This test checks the proper functioning of the simulateAttesterRequests goroutine
 // by listening to the requestSent channel which occurs after successful
 // construction and sending of a request via p2p.
-func TestSimulateNotaryRequests(t *testing.T) {
+func TestSimulateAttesterRequests(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	shardID := 0
@@ -229,7 +229,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	smcCaller := &goodSMCCaller{}
 
 	go func() {
-		simulator.simulateNotaryRequests(smcCaller, &goodReader{}, delayChan, doneChan)
+		simulator.simulateAttesterRequests(smcCaller, &goodReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -246,7 +246,7 @@ func TestSimulateNotaryRequests(t *testing.T) {
 	hook.Reset()
 }
 
-func TestSimulateNotaryRequests_previousPeriod(t *testing.T) {
+func TestSimulateAttesterRequests_previousPeriod(t *testing.T) {
 	tests := []struct {
 		want        int64
 		blockNumber int64
@@ -287,7 +287,7 @@ func TestSimulateNotaryRequests_previousPeriod(t *testing.T) {
 		reader := &goodReader{blockNumber: tt.blockNumber}
 
 		go func() {
-			simulator.simulateNotaryRequests(smcCaller, reader, delayChan, doneChan)
+			simulator.simulateAttesterRequests(smcCaller, reader, delayChan, doneChan)
 			<-exitRoutine
 		}()
 
