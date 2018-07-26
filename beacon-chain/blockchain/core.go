@@ -226,7 +226,7 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 }
 
 func (b *BeaconChain) calculateVotesPerAttester(attester types.ValidatorRecord, index int) error {
-	var reward uint64
+	var reward, penalty uint64
 	bitfields := b.state.ActiveState.AttesterBitfields
 	attesterBlock := index / 8
 	attesterFieldIndex := index % 8
@@ -244,6 +244,8 @@ func (b *BeaconChain) calculateVotesPerAttester(attester types.ValidatorRecord, 
 	}
 	if hasVoted {
 		attester.Balance += reward
+	} else {
+		attester.Balance += penalty
 	}
 	return nil
 }
