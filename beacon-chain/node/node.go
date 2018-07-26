@@ -33,6 +33,7 @@ type BeaconNode struct {
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
+	db       *database.BeaconDB
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -46,8 +47,7 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	path := ctx.GlobalString(cmd.DataDirFlag.Name)
-	if err := beacon.registerBeaconDB(path); err != nil {
+	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
 	}
 
@@ -107,32 +107,31 @@ func (b *BeaconNode) Close() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.db.Close()
 	b.services.StopAll()
 	log.Info("Stopping beacon node")
 	close(b.stop)
 }
 
-func (b *BeaconNode) registerBeaconDB(path string) error {
+func (b *BeaconNode) startDB(ctx *cli.Context) error {
+	path := ctx.GlobalString(cmd.DataDirFlag.Name)
 	config := &database.BeaconDBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
-	beaconDB, err := database.NewBeaconDB(config)
+	db, err := database.NewBeaconDB(config)
 	if err != nil {
-		return fmt.Errorf("could not register beaconDB service: %v", err)
-	}
-	return b.services.RegisterService(beaconDB)
-}
-
-func (b *BeaconNode) registerBlockchainService() error {
-	var beaconDB *database.BeaconDB
-	if err := b.services.FetchService(&beaconDB); err != nil {
 		return err
 	}
 
+	b.db = db
+	return nil
+}
+
+func (b *BeaconNode) registerBlockchainService() error {
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), beaconDB, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
