@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,6 @@ type Service struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	p2p                  *p2p.Server
-	networkService       types.NetworkService
 	chainService         types.ChainService
 	announceBlockHashBuf chan p2p.Message
 	blockBuf             chan p2p.Message
@@ -50,13 +48,12 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p *p2p.Server, ns types.NetworkService, cs types.ChainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p *p2p.Server, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		p2p:                  beaconp2p,
-		networkService:       ns,
 		chainService:         cs,
 		announceBlockHashBuf: make(chan p2p.Message, cfg.HashBufferSize),
 		blockBuf:             make(chan p2p.Message, cfg.BlockBufferSize),
@@ -91,18 +88,17 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	ss.networkService.BroadcastBlockHash(h)
-	ss.networkService.RequestBlock(h)
+	log.Infof("Broadcasting blockhash to peers: %x", h.Sum(nil))
+	log.Info("Requesting full block data from sender")
+	// TODO: Broadcast the block hash to other peers.
+	// TODO: Request the full block data from peer that sent the block hash.
 	return nil
 }
 
 // ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
 func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
-	block, err := utils.ConvertToBeaconBlock(data)
-	if err != nil {
-		return err
-	}
+	block := types.NewBlockWithData(data)
 	h, err := block.Hash()
 	if err != nil {
 		return err
@@ -110,7 +106,8 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	ss.networkService.BroadcastBlock(block)
+	// TODO: Broadcast the block to other peers.
+	log.Info("Broadcasting block to peers: %x", h.Sum(nil))
 	ss.chainService.ProcessBlock(block)
 	return nil
 }
@@ -123,6 +120,7 @@ func (ss *Service) run(done <-chan struct{}) {
 			return
 		case msg := <-ss.announceBlockHashBuf:
 			data, ok := msg.Data.(pb.BeaconBlockHashAnnounce)
+			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block hash announcement p2p message")
 				continue
@@ -132,6 +130,7 @@ func (ss *Service) run(done <-chan struct{}) {
 			}
 		case msg := <-ss.blockBuf:
 			data, ok := msg.Data.(pb.BeaconBlockResponse)
+			// TODO: Handle tihs at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue

@@ -9,19 +9,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
-// SyncService is the interface for the sync service.
-type SyncService interface {
-	ReceiveBlockHash(hash.Hash)
-	ReceiveBlock(*Block) error
-}
-
-// NetworkService is the interface for the p2p network.
-type NetworkService interface {
-	BroadcastBlockHash(hash.Hash) error
-	BroadcastBlock(*Block) error
-	RequestBlock(hash.Hash) error
-}
-
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {
 	ProcessBlock(*Block) error

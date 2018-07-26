@@ -204,13 +204,13 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	block.InsertActiveHash(activeHash)
+	block.InsertActiveHash(activeHash.Sum(nil))
 
 	crystallizedHash, err := hashCrystallizedState(types.CrystallizedState{})
 	if err != nil {
 		t.Fatalf("Compute crystallized state hash failed: %v", err)
 	}
-	block.InsertCrystallizedHash(crystallizedHash)
+	block.InsertCrystallizedHash(crystallizedHash.Sum(nil))
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
@@ -222,8 +222,8 @@ func TestCanProcessBlock(t *testing.T) {
 	// Attempting to try a block with that fails the timestamp validity
 	// condition.
 	block = types.NewBlock(1000000)
-	block.InsertActiveHash(activeHash)
-	block.InsertCrystallizedHash(crystallizedHash)
+	block.InsertActiveHash(activeHash.Sum(nil))
+	block.InsertCrystallizedHash(crystallizedHash.Sum(nil))
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
@@ -252,7 +252,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
-	block.InsertActiveHash(stateHash)
+	block.InsertActiveHash(stateHash.Sum(nil))
 
 	b.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
 
@@ -270,7 +270,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
 	}
-	block.InsertCrystallizedHash(stateHash)
+	block.InsertCrystallizedHash(stateHash.Sum(nil))
 
 	b.state.CrystallizedState = &types.CrystallizedState{CurrentEpoch: 9999}
 

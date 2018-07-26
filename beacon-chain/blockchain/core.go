@@ -89,7 +89,7 @@ func (b *BeaconChain) ExitedValidatorCount() int {
 }
 
 // GenesisBlock returns the canonical, genesis block.
-func (b *BeaconChain) GenesisBlock() *types.Block {
+func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
 }
 
@@ -111,7 +111,7 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
 func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
-	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Data().MainChainRef)
+	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.MainChainRef())
 	if err != nil {
 		return false, err
 	}
@@ -122,8 +122,18 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
 
 	// Calculate the timestamp validity condition.
-	slotDuration := time.Duration(block.Data().SlotNumber*params.SlotLength) * time.Second
-	validTime := time.Now().After(b.GenesisBlock().Data().Timestamp.Add(slotDuration))
+	slotDuration := time.Duration(block.SlotNumber()*params.SlotLength) * time.Second
+	genesis, err := b.GenesisBlock()
+	if err != nil {
+		return false, err
+	}
+
+	genesisTime, err := genesis.Timestamp()
+	if err != nil {
+		return false, err
+	}
+
+	validTime := time.Now().After(genesisTime.Add(slotDuration))
 
 	// Verify state hashes from the block are correct
 	hash, err := hashActiveState(*b.ActiveState())
@@ -131,17 +141,28 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if !bytes.Equal(block.Data().ActiveStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), block.Data().ActiveStateHash.Sum(nil))
+	activeStateHash, err := block.ActiveStateHash()
+	if err != nil {
+		return false, err
 	}
+
+	crystallizedStatehash, err := block.CrystallizedStateHash()
+	if err != nil {
+		return false, err
+	}
+
+	if !bytes.Equal(activeStateHash.Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), activeStateHash.Sum(nil))
+	}
+
 	hash, err = hashCrystallizedState(*b.CrystallizedState())
 	if err != nil {
 		return false, err
 	}
-	if !bytes.Equal(block.Data().CrystallizedStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), block.Data().CrystallizedStateHash.Sum(nil))
-	}
 
+	if !bytes.Equal(crystallizedStatehash.Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), crystallizedStatehash.Sum(nil))
+	}
 	return validTime, nil
 }
 

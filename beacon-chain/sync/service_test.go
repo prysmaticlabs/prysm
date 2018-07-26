@@ -17,28 +17,6 @@ import (
 
 var testLog = log.WithField("prefix", "sync_test")
 
-type MockNetworkService struct{}
-
-func (ns *MockNetworkService) BroadcastBlockHash(h hash.Hash) error {
-	testLog.Infof("broadcasting hash: %x", h.Sum(nil))
-	return nil
-}
-
-func (ns *MockNetworkService) BroadcastBlock(b *types.Block) error {
-	h, err := b.Hash()
-	if err != nil {
-		return err
-	}
-
-	testLog.Infof("broadcasting block: %x", h.Sum(nil))
-	return nil
-}
-
-func (ns *MockNetworkService) RequestBlock(h hash.Hash) error {
-	testLog.Infof("requesting block: %x", h.Sum(nil))
-	return nil
-}
-
 // MockChainService implements a simplified local chain that stores blocks in a slice
 type MockChainService struct {
 	processedHashes []hash.Hash
@@ -50,11 +28,10 @@ func (ms *MockChainService) ProcessBlock(b *types.Block) error {
 		return err
 	}
 
-	testLog.Infof("forwarding block: %x", h.Sum(nil))
 	if ms.processedHashes == nil {
 		ms.processedHashes = []hash.Hash{}
 	}
-
+	log.Info("Processed block with hash: %x", h)
 	ms.processedHashes = append(ms.processedHashes, h)
 	return nil
 }
@@ -73,13 +50,12 @@ func TestProcessBlockHash(t *testing.T) {
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	ns := &MockNetworkService{}
 	cs := &MockChainService{}
 	beaconp2p, err := p2p.NewServer()
 	if err != nil {
 		t.Fatalf("unable to setup beaconp2p: %v", err)
 	}
-	ss := NewSyncService(context.Background(), cfg, beaconp2p, ns, cs)
+	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
 
 	exitRoutine := make(chan bool)
 
@@ -109,21 +85,20 @@ func TestProcessBlockHash(t *testing.T) {
 	}
 
 	// Sync service requests the contents of the block and broadcasts the hash to peers.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("broadcasting hash: %x", h.Sum(nil)))
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("requesting block: %x", h.Sum(nil)))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting blockhash to peers: %x", h.Sum(nil)))
+	testutil.AssertLogsContain(t, hook, "Requesting full block data from sender")
 }
 
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	ns := &MockNetworkService{}
 	cs := &MockChainService{}
 	beaconp2p, err := p2p.NewServer()
 	if err != nil {
 		t.Fatalf("unable to setup beaconp2p: %v", err)
 	}
-	ss := NewSyncService(context.Background(), cfg, beaconp2p, ns, cs)
+	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
 
 	exitRoutine := make(chan bool)
 
@@ -147,8 +122,8 @@ func TestProcessBlock(t *testing.T) {
 	<-exitRoutine
 
 	// Sync service broadcasts the block and forwards the block to to the local chain.
-	testutil.AssertLogsContain(t, hook, "broadcasting block")
-	testutil.AssertLogsContain(t, hook, "forwarding block")
+	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Processed block")
 }
 
 // func TestProcessMultipleBlocks(t *testing.T) {

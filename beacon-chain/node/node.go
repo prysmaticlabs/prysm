@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
-	"github.com/prysmaticlabs/prysm/beacon-chain/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	rbcSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -61,10 +60,6 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerBlockchainService(); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerNetworkService(); err != nil {
 		return nil, err
 	}
 
@@ -164,21 +159,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerNetworkService() error {
-	networkService := network.NewNetworkService()
-	return b.services.RegisterService(networkService)
-}
-
 func (b *BeaconNode) registerSyncService() error {
 	var chainService *blockchain.ChainService
 	b.services.FetchService(&chainService)
 
-	var networkService *network.Service
-	b.services.FetchService(&networkService)
-
 	var p2pService *p2p.Server
 	b.services.FetchService(&p2pService)
 
-	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig(), p2pService, networkService, chainService)
+	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)
 }
