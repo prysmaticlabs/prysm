@@ -155,15 +155,15 @@ func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.Val
 	var newExitedValidators = b.CrystallizedState().ExitedValidators
 	var newActiveValidators []types.ValidatorRecord
 	upperbound := b.ActiveValidatorCount()/30 + 1
+	exitCount := 0
 
 	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
 	for _, validator := range b.state.CrystallizedState.ActiveValidators {
-		i := 0
 		if validator.Balance < params.DefaultBalance/2 {
 			newExitedValidators = append(newExitedValidators, validator)
-		} else if validator.SwitchDynasty == b.CrystallizedState().Dynasty+1 && i < upperbound {
+		} else if validator.SwitchDynasty == b.CrystallizedState().Dynasty+1 && exitCount < upperbound {
 			newExitedValidators = append(newExitedValidators, validator)
-			i++
+			exitCount++
 		} else {
 			newActiveValidators = append(newActiveValidators, validator)
 		}
