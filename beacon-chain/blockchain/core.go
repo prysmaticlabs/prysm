@@ -173,7 +173,6 @@ func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.Val
 	if b.QueuedValidatorCount() < inductNum {
 		inductNum = b.QueuedValidatorCount()
 	}
-	log.Info(inductNum)
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
 	for i := 0; i < inductNum; i++ {
