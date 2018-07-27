@@ -9,7 +9,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "sync")
@@ -82,7 +82,7 @@ func (ss *Service) Stop() error {
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
-	h, err := blake2s.New256(data.Hash)
+	h, err := blake2b.New256(data.Hash)
 	if err != nil {
 		return fmt.Errorf("could not calculate blake2b hash of proto hash: %v", err)
 	}
