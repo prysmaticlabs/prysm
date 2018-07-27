@@ -21,13 +21,14 @@ type ChainService struct {
 	chain             *BeaconChain
 	web3Service       *powchain.Web3Service
 	latestBeaconBlock chan *types.Block
+	processedHashes   []hash.Hash
 }
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil}, nil
+	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil, nil}, nil
 }
 
 // Start a blockchain service's main event loop.
@@ -47,6 +48,11 @@ func (c *ChainService) Stop() error {
 	defer c.cancel()
 	log.Info("Stopping service")
 	return nil
+}
+
+// ProcessedHashes by the chain service.
+func (c *ChainService) ProcessedHashes() []hash.Hash {
+	return c.processedHashes
 }
 
 // ProcessBlock accepts a new block for inclusion in the chain.

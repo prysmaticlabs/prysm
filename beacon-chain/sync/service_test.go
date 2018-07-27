@@ -45,6 +45,10 @@ func (ms *MockChainService) ContainsBlock(h hash.Hash) bool {
 	return false
 }
 
+func (ms *MockChainService) ProcessedHashes() []hash.Hash {
+	return ms.processedHashes
+}
+
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -87,6 +91,7 @@ func TestProcessBlockHash(t *testing.T) {
 	// Sync service requests the contents of the block and broadcasts the hash to peers.
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting blockhash to peers: %x", h.Sum(nil)))
 	testutil.AssertLogsContain(t, hook, "Requesting full block data from sender")
+	hook.Reset()
 }
 
 func TestProcessBlock(t *testing.T) {
@@ -116,7 +121,6 @@ func TestProcessBlock(t *testing.T) {
 		Data: blockResponse,
 	}
 
-	// if a new hash is processed
 	ss.blockBuf <- msg
 	ss.cancel()
 	<-exitRoutine
@@ -124,11 +128,96 @@ func TestProcessBlock(t *testing.T) {
 	// Sync service broadcasts the block and forwards the block to to the local chain.
 	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
 	testutil.AssertLogsContain(t, hook, "Processed block")
+	hook.Reset()
 }
 
-// func TestProcessMultipleBlocks(t *testing.T) {
-// }
+func TestProcessMultipleBlocks(t *testing.T) {
+	hook := logTest.NewGlobal()
 
-// func TestProcessSameBlock(t *testing.T) {
-// The block isn't processed the second time.
-// }
+	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
+	cs := &MockChainService{}
+	beaconp2p, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("unable to setup beaconp2p: %v", err)
+	}
+	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	blockResponse1 := pb.BeaconBlockResponse{
+		MainChainRef: []byte("foo"),
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse1,
+	}
+
+	blockResponse2 := pb.BeaconBlockResponse{
+		MainChainRef: []byte("bar"),
+	}
+
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse2,
+	}
+
+	ss.blockBuf <- msg1
+	ss.blockBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	// Sync service broadcasts the two separate blocks
+	// and forwards them to to the local chain.
+	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Processed block")
+	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Processed block")
+	hook.Reset()
+}
+
+func TestProcessSameBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
+	cs := &MockChainService{}
+	beaconp2p, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("unable to setup beaconp2p: %v", err)
+	}
+	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	blockResponse := pb.BeaconBlockResponse{
+		MainChainRef: []byte("foo"),
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+	ss.blockBuf <- msg
+	ss.blockBuf <- msg
+	ss.cancel()
+	<-exitRoutine
+
+	// Sync service broadcasts the two separate blocks
+	// and forwards them to to the local chain.
+	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Processed block")
+	if len(ss.chainService.ProcessedHashes()) > 1 {
+		t.Error("should have only processed one block, processed both instead")
+	}
+	hook.Reset()
+}

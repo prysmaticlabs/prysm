@@ -11,6 +11,7 @@ import (
 
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {
+	ProcessedHashes() []hash.Hash
 	ProcessBlock(*Block) error
 	ContainsBlock(hash.Hash) bool
 }
