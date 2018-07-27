@@ -16,9 +16,5 @@ go_test(
     name = "go_default_test",
     srcs = ["database_test.go"],
     embed = [":go_default_library"],
-    deps = [
-        "//shared:go_default_library",
-        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
-        "@com_github_syndtr_goleveldb//leveldb/errors:go_default_library",
-    ],
+    deps = ["@com_github_syndtr_goleveldb//leveldb/errors:go_default_library"],
 )
