@@ -68,6 +68,7 @@ func TestMutateActiveState(t *testing.T) {
 		t.Fatalf("unable to setup db: %v", err)
 	}
 	db.Start()
+
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
@@ -362,8 +363,11 @@ func TestIsEpochTransition(t *testing.T) {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
 	b.state.CrystallizedState.CurrentEpoch = 1
-	if b.isEpochTransition(10) {
+	if !b.isEpochTransition(30) {
 		t.Errorf("there was supposed to be an epoch transition but there isn't one now")
+	}
+	if b.isEpochTransition(8) {
+		t.Errorf("there is not supposed to be an epoch transition but there is one now")
 	}
 }
 
@@ -386,17 +390,22 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 
 	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
+
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
+
 	db.Start()
 	defer db.Stop()
+
 	b, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
-	if err := b.persist(); err != nil {
-		t.Fatalf("unable to persist state to db")
+
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("Could not generate key: %v", err)
 	}
 
 	balance1 := uint64(10000)
@@ -406,11 +415,11 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 	balance5 := uint64(30000)
 
 	activeValidators := &types.CrystallizedState{ActiveValidators: []types.ValidatorRecord{
-		{Balance: balance1, WithdrawalAddress: common.Address{'A'}},
-		{Balance: balance2, WithdrawalAddress: common.Address{'B'}},
-		{Balance: balance3, WithdrawalAddress: common.Address{'C'}},
-		{Balance: balance4, WithdrawalAddress: common.Address{'D'}},
-		{Balance: balance5, WithdrawalAddress: common.Address{'E'}},
+		{Balance: balance1, WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)},
+		{Balance: balance2, WithdrawalAddress: common.Address{'B'}, PubKey: enr.Secp256k1(priv.PublicKey)},
+		{Balance: balance3, WithdrawalAddress: common.Address{'C'}, PubKey: enr.Secp256k1(priv.PublicKey)},
+		{Balance: balance4, WithdrawalAddress: common.Address{'D'}, PubKey: enr.Secp256k1(priv.PublicKey)},
+		{Balance: balance5, WithdrawalAddress: common.Address{'E'}, PubKey: enr.Secp256k1(priv.PublicKey)},
 	}}
 
 	if err := b.MutateCrystallizedState(activeValidators); err != nil {
@@ -426,8 +435,8 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 	expectedBalance1 := balance1 + params.AttesterReward
 	expectedBalance2 := balance2 - params.AttesterReward
 	expectedBalance3 := balance3 + params.AttesterReward
-	expectedBalance4 := balance3 - params.AttesterReward
-	expectedBalance5 := balance3 + params.AttesterReward
+	expectedBalance4 := balance4 - params.AttesterReward
+	expectedBalance5 := balance5 + params.AttesterReward
 
 	if expectedBalance1 != b.state.CrystallizedState.ActiveValidators[0].Balance {
 		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance1, b.state.CrystallizedState.ActiveValidators[0].Balance)
