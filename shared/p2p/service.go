@@ -91,6 +91,11 @@ func (s *Server) Stop() error {
 	return nil
 }
 
+// Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
+func (s *Server) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+	return s.Feed(msg).Subscribe(channel)
+}
+
 // Send a message to a specific peer.
 func (s *Server) Send(msg interface{}, peer Peer) {
 	// TODO

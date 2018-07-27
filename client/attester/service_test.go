@@ -37,7 +37,7 @@ func TestIsAccountInAttesterPool(t *testing.T) {
 		t.Fatal("account unexpectedly in attester pool")
 	}
 
-	txOpts, _ := client.CreateTXOpts(shardparams.DefaultConfig.AttesterDeposit)
+	txOpts, _ := client.CreateTXOpts(shardparams.DefaultAttesterDeposit())
 	if _, err := smc.RegisterAttester(txOpts); err != nil {
 		t.Fatalf("Failed to deposit: %v", err)
 	}

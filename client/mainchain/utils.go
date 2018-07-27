@@ -23,16 +23,17 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 // initSMC initializes the sharding manager contract bindings.
 // If the SMC does not exist, it will be deployed.
 func initSMC(s *SMCClient) (*contracts.SMC, error) {
-	b, err := s.client.CodeAt(context.Background(), params.DefaultConfig.SMCAddress, nil)
+	c := params.DefaultConfig()
+	b, err := s.client.CodeAt(context.Background(), c.SMCAddress, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get contract code at %s: %v", params.DefaultConfig.SMCAddress.Hex(), err)
+		return nil, fmt.Errorf("unable to get contract code at %s: %v", c.SMCAddress.Hex(), err)
 	}
 
 	// Deploy SMC for development only.
 	// TODO: Separate contract deployment from the sharding node. It would only need to be deployed
 	// once on the mainnet, so this code would not need to ship with the node.
 	if len(b) == 0 {
-		log.Infof("No sharding manager contract found at %s, deploying new contract", params.DefaultConfig.SMCAddress.Hex())
+		log.Infof("No sharding manager contract found at %s, deploying new contract", c.SMCAddress.Hex())
 
 		txOps, err := s.CreateTXOpts(big.NewInt(0))
 		if err != nil {
@@ -55,5 +56,5 @@ func initSMC(s *SMCClient) (*contracts.SMC, error) {
 		return contract, nil
 	}
 
-	return contracts.NewSMC(params.DefaultConfig.SMCAddress, s.client)
+	return contracts.NewSMC(c.SMCAddress, s.client)
 }

@@ -31,7 +31,7 @@ func TestStartStop(t *testing.T) {
 	shardID := 0
 	client := &mainchain.SMCClient{}
 
-	syncer, err := syncer.NewSyncer(params.DefaultConfig, client, server, shardChainDB, shardID)
+	syncer, err := syncer.NewSyncer(params.DefaultConfig(), client, server, shardChainDB, shardID)
 	if err != nil {
 		t.Fatalf("Unable to setup sync service: %v", err)
 	}

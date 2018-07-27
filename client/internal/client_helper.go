@@ -91,7 +91,7 @@ func (m *MockClient) CommitWithBlock() {
 }
 
 func (m *MockClient) FastForward(p int) {
-	for i := 0; i < p*int(shardparams.DefaultConfig.PeriodLength); i++ {
+	for i := 0; i < p*int(shardparams.DefaultPeriodLength); i++ {
 		m.CommitWithBlock()
 	}
 }

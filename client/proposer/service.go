@@ -66,8 +66,7 @@ func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
 	p.shard = types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
 	p.msgChan = make(chan p2p.Message, 20)
-	feed := p.p2p.Feed(pb.Transaction{})
-	p.txpoolSub = feed.Subscribe(p.msgChan)
+	p.txpoolSub = p.p2p.Subscribe(pb.Transaction{}, p.msgChan)
 	go p.proposeCollations()
 }
 
@@ -84,9 +83,8 @@ func (p *Proposer) Stop() error {
 
 // proposeCollations listens to the transaction feed and submits collations over an interval.
 func (p *Proposer) proposeCollations() {
-	feed := p.p2p.Feed(pb.Transaction{})
 	ch := make(chan p2p.Message, 20)
-	sub := feed.Subscribe(ch)
+	sub := p.p2p.Subscribe(pb.Transaction{}, ch)
 	collation := []*gethTypes.Transaction{}
 	sizeOfCollation := int64(0)
 	period, err := p.currentPeriod(p.ctx)
