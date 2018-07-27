@@ -1,11 +1,12 @@
 package types
 
 import (
+	"fmt"
 	"hash"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"golang.org/x/crypto/blake2b"
@@ -66,9 +67,9 @@ func NewGenesisBlock() (*Block, error) {
 
 // Hash generates the blake2b hash of the block
 func (b *Block) Hash() (hash.Hash, error) {
-	data, err := rlp.EncodeToBytes(b.data)
+	data, err := proto.Marshal(b.data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not marshal block proto data: %v", err)
 	}
 	return blake2b.New256(data)
 }
