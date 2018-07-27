@@ -289,9 +289,8 @@ func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
 // resetAttesterBitfields resets the attester bitfields in the ActiveState to zero.
 func (b *BeaconChain) resetAttesterBitfields() error {
 
-	bitfields := b.state.ActiveState.AttesterBitfields
-	length := int(len(bitfields) / 8)
-	if len(bitfields)%8 != 0 {
+	length := int(len(b.state.CrystallizedState.ActiveValidators) / 8)
+	if len(b.state.CrystallizedState.ActiveValidators)%8 != 0 {
 		length += 1
 	}
 

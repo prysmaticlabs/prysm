@@ -459,3 +459,81 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 	}
 
 }
+
+func TestResetAttesterBitfields(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+
+	db.Start()
+	defer db.Stop()
+
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("unable to setup beacon chain: %v", err)
+	}
+
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("Could not generate key: %v", err)
+	}
+
+	var validators []types.ValidatorRecord
+
+	for i := 0; i < 32; i++ {
+		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
+		validators = append(validators, validator)
+	}
+
+	if err := b.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
+		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	}
+
+	testAttesterBitfield := []byte{2, 4, 6, 9}
+
+	if err := b.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+		t.Fatal("unable to mutate active state")
+	}
+	if err := b.resetAttesterBitfields(); err != nil {
+		t.Fatalf("unable to reset Attester Bitfields")
+	}
+
+	if bytes.Equal(testAttesterBitfield, b.state.ActiveState.AttesterBitfields) {
+		t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
+	}
+
+	if !bytes.Equal(b.state.ActiveState.AttesterBitfields, make([]byte, 4)) {
+		t.Fatalf("attester bitfields are not zeroed out: %v", b.state.ActiveState.AttesterBitfields)
+	}
+
+	// Testing with a non-multiple of 8 for number of validators
+	validators = nil
+
+	for i := 0; i < 41; i++ {
+		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
+		validators = append(validators, validator)
+	}
+
+	if err := b.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
+		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	}
+
+	if err := b.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+		t.Fatal("unable to mutate active state")
+	}
+	if err := b.resetAttesterBitfields(); err != nil {
+		t.Fatalf("unable to reset Attester Bitfields")
+	}
+
+	if bytes.Equal(testAttesterBitfield, b.state.ActiveState.AttesterBitfields) {
+		t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
+	}
+
+	if !bytes.Equal(b.state.ActiveState.AttesterBitfields, make([]byte, 6)) {
+		t.Fatalf("attester bitfields are not zeroed out: %v", b.state.ActiveState.AttesterBitfields)
+	}
+
+}
