@@ -46,18 +46,18 @@ type Proposer struct {
 func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
-		config,
-		client,
-		p2p,
-		txpool,
-		nil, // txpoolSub
-		dbService,
-		shardID,
-		nil, // shard
-		ctx,
-		cancel,
-		sync,
-		nil, // msgChan
+		config:    config,
+		client:    client,
+		p2p:       p2p,
+		txpool:    txpool,
+		txpoolSub: nil,
+		dbService: dbService,
+		shardID:   shardID,
+		shard:     nil,
+		ctx:       ctx,
+		cancel:    cancel,
+		sync:      sync,
+		msgChan:   nil,
 	}, nil
 }
 

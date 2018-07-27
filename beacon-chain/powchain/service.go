@@ -89,8 +89,7 @@ func (w *Web3Service) Start() {
 		return
 	}
 	client := ethclient.NewClient(rpcClient)
-	go w.latestPOWChainInfo(client, w.ctx.Done())
-	go w.queryValidatorStatus(client, w.ctx.Done())
+	go w.fetchChainInfo(w.ctx, client, client)
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -101,27 +100,11 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
-func (w *Web3Service) latestPOWChainInfo(reader Reader, done <-chan struct{}) {
+func (w *Web3Service) fetchChainInfo(ctx context.Context, reader Reader, logger Logger) {
 	if _, err := reader.SubscribeNewHead(w.ctx, w.headerChan); err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
 		return
 	}
-	for {
-		select {
-		case <-done:
-			return
-		case header := <-w.headerChan:
-			w.blockNumber = header.Number
-			w.blockHash = header.Hash()
-			log.WithFields(logrus.Fields{
-				"blockNumber": w.blockNumber,
-				"blockHash":   w.blockHash.Hex(),
-			}).Debug("Latest web3 chain event")
-		}
-	}
-}
-
-func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.vrcAddress,
@@ -134,8 +117,15 @@ func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) 
 	}
 	for {
 		select {
-		case <-done:
+		case <-ctx.Done():
 			return
+		case header := <-w.headerChan:
+			w.blockNumber = header.Number
+			w.blockHash = header.Hash()
+			log.WithFields(logrus.Fields{
+				"blockNumber": w.blockNumber,
+				"blockHash":   w.blockHash.Hex(),
+			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
 			// public key is the second topic from validatorRegistered log and strip off 0x
 			pubKeyLog := VRClog.Topics[1].Hex()[2:]
@@ -144,7 +134,7 @@ func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) 
 					"publicKey": pubKeyLog,
 				}).Info("Validator registered in VRC with public key")
 				w.validatorRegistered = true
-				return
+				w.logChan = nil
 			}
 		}
 	}
