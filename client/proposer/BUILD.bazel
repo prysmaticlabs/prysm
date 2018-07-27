@@ -32,10 +32,17 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//client/database:go_default_library",
         "//client/internal:go_default_library",
+        "//client/mainchain:go_default_library",
         "//client/params:go_default_library",
+        "//client/syncer:go_default_library",
+        "//client/txpool:go_default_library",
+        "//proto/sharding/v1:go_default_library",
+        "//shared/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
