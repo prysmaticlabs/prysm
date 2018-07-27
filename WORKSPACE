@@ -521,9 +521,3 @@ go_repository(
     commit = "c4c61651e9e37fa117f53c5a906d3b63090d8445",
     importpath = "github.com/syndtr/goleveldb",
 )
-
-go_repository(
-    name = "com_github_google_protobuf",
-    commit = "93b26e6a70e37abb14f2f88194949312b0592a84",
-    importpath = "github.com/google/protobuf",
-)
