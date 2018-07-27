@@ -184,10 +184,14 @@ func (b *BeaconNode) registerSyncService() error {
 }
 
 func (b *BeaconNode) registerSimulatorService() error {
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
-	simulatorService := simulator.NewSimulator(context.TODO(), web3Service, time.Second*10)
+	simulatorService := simulator.NewSimulator(context.TODO(), p2pService, web3Service, time.Second*10)
 	return b.services.RegisterService(simulatorService)
 }

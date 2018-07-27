@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"hash"
 
@@ -64,7 +65,11 @@ func (c *ChainService) ProcessBlock(b *types.Block) error {
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine
 func (c *ChainService) ContainsBlock(h hash.Hash) bool {
-	// TODO
+	for _, h1 := range c.processedHashes {
+		if bytes.Equal(h.Sum(nil), h1.Sum(nil)) {
+			return true
+		}
+	}
 	return false
 }
 
