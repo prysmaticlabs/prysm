@@ -11,7 +11,7 @@ var (
 	// DepositFlag defines whether a node will withdraw ETH from the user's account.
 	DepositFlag = cli.BoolFlag{
 		Name:  "deposit",
-		Usage: "To become a attester in a sharding node, " + new(big.Int).Div(shardparams.DefaultConfig.AttesterDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
+		Usage: "To become a attester in a sharding node, " + new(big.Int).Div(shardparams.DefaultAttesterDeposit(), new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into SMC",
 	}
 	// ActorFlag defines the role of the sharding client. Either proposer, attester, or simulator.
 	ActorFlag = cli.StringFlag{

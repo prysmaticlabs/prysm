@@ -165,8 +165,9 @@ func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	if int64(len(serializedTx)) > params.DefaultConfig.CollationSizeLimit {
-		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), params.DefaultConfig.CollationSizeLimit)
+	csl := params.DefaultCollationSizeLimit()
+	if int64(len(serializedTx)) > csl {
+		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), csl)
 	}
 
 	return serializedTx, nil
