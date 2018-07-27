@@ -10,17 +10,32 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// DefaultConfig contains default configs for node to use in the sharded universe.
-var DefaultConfig = &Config{
-	SMCAddress:              common.HexToAddress("0x0"),
-	PeriodLength:            5,
-	AttesterDeposit:         new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil), // 1000 ETH
-	AttesterLockupLength:    16128,
-	ProposerLockupLength:    48,
-	AttesterCommitteeSize:   135,
-	AttesterQuorumSize:      90,
-	AttesterChallengePeriod: 25,
-	CollationSizeLimit:      int64(math.Pow(float64(2), float64(20))),
+const (
+	DefaultPeriodLength         = 5
+	DefaultAttesterLockupLength = 16128
+)
+
+// DefaultConfig returns pointer to a Config value with same defaults.
+func DefaultConfig() *Config {
+	return &Config{
+		SMCAddress:              common.HexToAddress("0x0"),
+		PeriodLength:            DefaultPeriodLength,
+		AttesterDeposit:         DefaultAttesterDeposit(),
+		AttesterLockupLength:    DefaultAttesterLockupLength,
+		ProposerLockupLength:    48,
+		AttesterCommitteeSize:   135,
+		AttesterQuorumSize:      90,
+		AttesterChallengePeriod: 25,
+		CollationSizeLimit:      DefaultCollationSizeLimit(),
+	}
+}
+
+func DefaultAttesterDeposit() *big.Int {
+	return new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil) // 1000 ETH
+}
+
+func DefaultCollationSizeLimit() int64 {
+	return int64(math.Pow(float64(2), float64(20)))
 }
 
 // DefaultChainConfig contains default chain configs of an individual shard.

@@ -57,7 +57,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	}
 
 	// Configure shardConfig by loading the default.
-	shardEthereum.shardConfig = params.DefaultConfig
+	shardEthereum.shardConfig = params.DefaultConfig()
 
 	if err := shardEthereum.registerShardChainDB(ctx); err != nil {
 		return nil, err

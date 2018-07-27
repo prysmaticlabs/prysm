@@ -67,7 +67,7 @@ func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey
 
 // fastForward is a helper function to skip through n period.
 func (s *smcTestHelper) fastForward(p int) {
-	for i := 0; i < p*int(params.DefaultConfig.PeriodLength); i++ {
+	for i := 0; i < p*int(params.DefaultPeriodLength); i++ {
 		s.backend.Commit()
 	}
 }
@@ -171,7 +171,7 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 
 	// Filter SMC logs by headerAdded.
 	shardIndex := []*big.Int{shard}
-	logPeriod := uint64(period.Int64() * params.DefaultConfig.PeriodLength)
+	logPeriod := uint64(period.Int64() * params.DefaultPeriodLength)
 	log, err := s.smc.FilterHeaderAdded(&bind.FilterOpts{Start: logPeriod}, shardIndex)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 	}
 	// Filter SMC logs by submitVote.
 	shardIndex := []*big.Int{shard}
-	logPeriod := uint64(period.Int64() * params.DefaultConfig.PeriodLength)
+	logPeriod := uint64(period.Int64() * params.DefaultPeriodLength)
 	log, err := s.smc.FilterVoteSubmitted(&bind.FilterOpts{Start: logPeriod}, shardIndex)
 	if err != nil {
 		return err
@@ -383,7 +383,7 @@ func TestAttesterRelease(t *testing.T) {
 	}
 
 	// Fast forward until lockup ends.
-	s.fastForward(int(params.DefaultConfig.AttesterLockupLength + 1))
+	s.fastForward(int(params.DefaultAttesterLockupLength + 1))
 
 	// Attester 0 releases.
 	_, err = s.smc.ReleaseAttester(s.testAccounts[0].txOpts)
