@@ -7,7 +7,13 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
+
+// P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
+type P2P interface {
+	Feed(msg interface{}) *event.Feed
+}
 
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {

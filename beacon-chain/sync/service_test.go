@@ -7,6 +7,7 @@ import (
 	"hash"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -17,12 +18,17 @@ import (
 
 var testLog = log.WithField("prefix", "sync_test")
 
-// MockChainService implements a simplified local chain that stores blocks in a slice
-type MockChainService struct {
+type mockP2P struct{}
+
+func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
+	return nil
+}
+
+type mockChainService struct {
 	processedHashes []hash.Hash
 }
 
-func (ms *MockChainService) ProcessBlock(b *types.Block) error {
+func (ms *mockChainService) ProcessBlock(b *types.Block) error {
 	h, err := b.Hash()
 	if err != nil {
 		return err
@@ -36,7 +42,7 @@ func (ms *MockChainService) ProcessBlock(b *types.Block) error {
 	return nil
 }
 
-func (ms *MockChainService) ContainsBlock(h hash.Hash) bool {
+func (ms *mockChainService) ContainsBlock(h hash.Hash) bool {
 	for _, h1 := range ms.processedHashes {
 		if bytes.Equal(h.Sum(nil), h1.Sum(nil)) {
 			return true
@@ -45,7 +51,7 @@ func (ms *MockChainService) ContainsBlock(h hash.Hash) bool {
 	return false
 }
 
-func (ms *MockChainService) ProcessedHashes() []hash.Hash {
+func (ms *mockChainService) ProcessedHashes() []hash.Hash {
 	return ms.processedHashes
 }
 
@@ -54,12 +60,7 @@ func TestProcessBlockHash(t *testing.T) {
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	cs := &MockChainService{}
-	beaconp2p, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("unable to setup beaconp2p: %v", err)
-	}
-	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
 
 	exitRoutine := make(chan bool)
 
@@ -98,12 +99,7 @@ func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	cs := &MockChainService{}
-	beaconp2p, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("unable to setup beaconp2p: %v", err)
-	}
-	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
 
 	exitRoutine := make(chan bool)
 
@@ -135,12 +131,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	cs := &MockChainService{}
-	beaconp2p, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("unable to setup beaconp2p: %v", err)
-	}
-	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
 
 	exitRoutine := make(chan bool)
 
@@ -185,12 +176,7 @@ func TestProcessSameBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	cs := &MockChainService{}
-	beaconp2p, err := p2p.NewServer()
-	if err != nil {
-		t.Fatalf("unable to setup beaconp2p: %v", err)
-	}
-	ss := NewSyncService(context.Background(), cfg, beaconp2p, cs)
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
 
 	exitRoutine := make(chan bool)
 

@@ -29,7 +29,7 @@ var log = logrus.WithField("prefix", "sync")
 type Service struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	p2p                  *p2p.Server
+	p2p                  types.P2P
 	chainService         types.ChainService
 	announceBlockHashBuf chan p2p.Message
 	blockBuf             chan p2p.Message
@@ -49,7 +49,7 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p *p2p.Server, cs types.ChainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                  ctx,
