@@ -14,17 +14,13 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var testLog = log.WithField("prefix", "sync_test")
-
 type mockP2P struct{}
 
 func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
 	return nil
 }
 
-func (mp *mockP2P) Broadcast(msg interface{}) {
-	return
-}
+func (mp *mockP2P) Broadcast(msg interface{}) {}
 
 type mockChainService struct {
 	processedHashes []hash.Hash
