@@ -11,25 +11,11 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "powchain")
-
-// Reader defines a struct that can fetch latest header events from a web3 endpoint.
-type Reader interface {
-	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
-}
-
-// POWBlockFetcher defines a struct that can retrieve mainchain blocks.
-type POWBlockFetcher interface {
-	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
-}
-
-// Logger subscribe filtered log on the PoW chain
-type Logger interface {
-	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
-}
 
 // Web3Service fetches important information about the canonical
 // Ethereum PoW chain via a web3 endpoint using an ethclient. The Random
@@ -82,7 +68,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 func (w *Web3Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": w.endpoint,
-	}).Info("Starting web3 proof-of-work chain service")
+	}).Info("Starting service")
 	rpcClient, err := rpc.Dial(w.endpoint)
 	if err != nil {
 		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
@@ -97,11 +83,11 @@ func (w *Web3Service) Start() {
 func (w *Web3Service) Stop() error {
 	defer w.cancel()
 	defer close(w.headerChan)
-	log.Info("Stopping web3 proof-of-work chain service")
+	log.Info("Stopping service")
 	return nil
 }
 
-func (w *Web3Service) latestPOWChainInfo(reader Reader, done <-chan struct{}) {
+func (w *Web3Service) latestPOWChainInfo(reader types.Reader, done <-chan struct{}) {
 	if _, err := reader.SubscribeNewHead(w.ctx, w.headerChan); err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
 		return
@@ -121,7 +107,7 @@ func (w *Web3Service) latestPOWChainInfo(reader Reader, done <-chan struct{}) {
 	}
 }
 
-func (w *Web3Service) queryValidatorStatus(logger Logger, done <-chan struct{}) {
+func (w *Web3Service) queryValidatorStatus(logger types.Logger, done <-chan struct{}) {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.vrcAddress,

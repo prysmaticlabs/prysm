@@ -5,7 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/blake2b"
 )
 
 // ShuffleIndices returns a list of pseudorandomly sampled
@@ -21,7 +21,7 @@ func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 		validatorList[i] = i
 	}
 
-	hashSeed, err := blake2s.New256(seed[:])
+	hashSeed, err := blake2b.New256(seed[:])
 	if err != nil {
 		return nil, err
 	}

@@ -24,7 +24,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 )
 
-// Sender represents a struct that is able to relay information via shardp2p.
+// Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
 type Sender interface {
 	Send(msg interface{}, peer Peer)
@@ -68,7 +68,7 @@ func NewServer() (*Server, error) {
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
-	log.Info("Starting shardp2p server")
+	log.Info("Starting service")
 	if err := startDiscovery(s.ctx, s.host, s.gsub); err != nil {
 		log.Errorf("Could not start p2p discovery! %v", err)
 		return
@@ -85,7 +85,7 @@ func (s *Server) Start() {
 
 // Stop the main p2p loop.
 func (s *Server) Stop() error {
-	log.Info("Stopping shardp2p server")
+	log.Info("Stopping service")
 
 	s.cancel()
 	return nil

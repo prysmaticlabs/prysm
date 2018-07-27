@@ -199,14 +199,13 @@ func TestCanProcessBlock(t *testing.T) {
 	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
 	beaconChain.state.ActiveState = activeState
 
-	activeHash, err := hashActiveState(*activeState)
+	activeHash, err := hashActiveState(activeState)
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
 	block.InsertActiveHash(activeHash)
-
-	crystallizedHash, err := hashCrystallizedState(types.CrystallizedState{})
+	crystallizedHash, err := hashCrystallizedState(&types.CrystallizedState{})
 	if err != nil {
 		t.Fatalf("Compute crystallized state hash failed: %v", err)
 	}
@@ -248,7 +247,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	// Test negative scenario where active state hash is different than node's compute
 	block := types.NewBlock(1)
 	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
-	stateHash, err := hashActiveState(*activeState)
+	stateHash, err := hashActiveState(activeState)
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
@@ -266,7 +265,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 
 	// Test negative scenario where crystallized state hash is different than node's compute
 	crystallizedState := &types.CrystallizedState{CurrentEpoch: 10000}
-	stateHash, err = hashCrystallizedState(*crystallizedState)
+	stateHash, err = hashCrystallizedState(crystallizedState)
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
 	}
