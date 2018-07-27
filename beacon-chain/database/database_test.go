@@ -7,13 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	leveldberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
-
-// Verifies that BeaconDB implements the sharding Service inteface.
-var _ = shared.Service(&BeaconDB{})
 
 var testDB *BeaconDB
 
@@ -22,12 +17,9 @@ func init() {
 	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
 	beaconDB, _ := NewBeaconDB(config)
 	testDB = beaconDB
-	testDB.Start()
 }
 
 func TestLifecycle(t *testing.T) {
-	hook := logTest.NewGlobal()
-
 	tmp := fmt.Sprintf("%s/lifecycledir", os.TempDir())
 	config := &BeaconDBConfig{DataDir: tmp, Name: "beaconchaindata", InMemory: false}
 	b, err := NewBeaconDB(config)
@@ -35,17 +27,7 @@ func TestLifecycle(t *testing.T) {
 		t.Fatalf("could not initialize a new DB: %v", err)
 	}
 
-	b.Start()
-	msg := hook.LastEntry().Message
-	if msg != "Starting beaconDB service" {
-		t.Errorf("incorrect log, expected %s, got %s", "Starting beaconDB service", msg)
-	}
-
-	b.Stop()
-	msg = hook.LastEntry().Message
-	if msg != "Stopping beaconDB service" {
-		t.Errorf("incorrect log, expected %s, got %s", "Stopping beaconDB service", msg)
-	}
+	b.Close()
 
 	// Access DB after it's stopped, this should fail.
 	_, err = b.db.Get([]byte("ralph merkle"))

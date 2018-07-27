@@ -15,7 +15,7 @@ var log = logrus.WithField("prefix", "db")
 
 // BeaconDB defines a service for the beacon chain system's persistent storage.
 type BeaconDB struct {
-	db       ethdb.Database
+	db ethdb.Database
 }
 
 // BeaconDBConfig specifies configuration options for the db service.
