@@ -40,5 +40,13 @@ func (sim *Simulator) Stop() error {
 }
 
 func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
-	return
+	for {
+		select {
+		case <-done:
+			log.Debug("Simulator context closed, exiting goroutine")
+			return
+		case <-delayChan:
+			log.Info("Received tick")
+		}
+	}
 }
