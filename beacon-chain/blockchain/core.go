@@ -65,12 +65,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	return beaconChain, nil
 }
 
-func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
-	currentEpoch := b.state.CrystallizedState.CurrentEpoch
-	isTransition := (slotNumber / params.SlotLength) > currentEpoch
-	return isTransition
-}
-
 // ActiveState exposes a getter to external services.
 func (b *BeaconChain) ActiveState() *types.ActiveState {
 	return b.state.ActiveState
@@ -99,6 +93,12 @@ func (b *BeaconChain) ExitedValidatorCount() int {
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() *types.Block {
 	return types.NewGenesisBlock()
+}
+
+func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
+	currentEpoch := b.state.CrystallizedState.CurrentEpoch
+	isTransition := (slotNumber / params.SlotLength) > currentEpoch
+	return isTransition
 }
 
 // MutateActiveState allows external services to modify the active state.
@@ -247,21 +247,6 @@ func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
 	return blake2b.New256(serializedState)
 }
 
-func (b *BeaconChain) resetAttesterBitfields() {
-
-	bitfields := b.state.ActiveState.AttesterBitfields
-	length := int(len(bitfields) / 8)
-
-	newbitfields := make([]byte, length)
-	b.state.ActiveState.AttesterBitfields = newbitfields
-}
-
-func (b *BeaconChain) resetTotalDeposit() {
-	defer b.lock.Unlock()
-	b.lock.Lock()
-	b.state.ActiveState.TotalAttesterDeposits = 0
-}
-
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
@@ -272,8 +257,77 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
+func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool {
+	voted := false
+
+	if attesterFieldIndex != 0 {
+		fields := bitfields[attesterBlock]
+		attesterField := fields >> uint(attesterFieldIndex)
+		if attesterField%2 != 0 {
+			voted = true
+		}
+	} else {
+		attesterField := bitfields[attesterBlock]
+		if attesterField%2 != 0 {
+			voted = true
+		}
+	}
+	return voted
+}
+
+func applyRewardAndPenalty(attester *types.ValidatorRecord, voted bool) {
+
+	if voted {
+		attester.Balance += params.AttesterReward
+	} else {
+		// TODO : Change this when penalties are specified for not voting
+		attester.Balance -= params.AttesterReward
+	}
+}
+
+func (b *BeaconChain) resetAttesterBitfields() error {
+
+	bitfields := b.state.ActiveState.AttesterBitfields
+	length := int(len(bitfields) / 8)
+	if len(bitfields)%8 != 0 {
+		length += 1
+	}
+
+	defer b.lock.Unlock()
+	b.lock.Lock()
+
+	newbitfields := make([]byte, length)
+	b.state.ActiveState.AttesterBitfields = newbitfields
+
+	return b.persist()
+}
+
+func (b *BeaconChain) resetTotalDeposit() error {
+	defer b.lock.Unlock()
+	b.lock.Lock()
+	b.state.ActiveState.TotalAttesterDeposits = 0
+
+	return b.persist()
+}
+
+func (b *BeaconChain) calculateVotesPerAttester(attester *types.ValidatorRecord, index int) error {
+	bitfields := b.state.ActiveState.AttesterBitfields
+	attesterBlock := (index + 1) / 8
+	attesterFieldIndex := (index + 1) % 8
+
+	if len(bitfields) < attesterBlock {
+		return errors.New("attester index does not exist")
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
+	applyRewardAndPenalty(attester, voted)
+
+	return nil
+}
+
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
-	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
+	activeValidatorSet := &b.state.CrystallizedState.ActiveValidators
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
 	totalDeposit := b.state.CrystallizedState.TotalDeposits
 
@@ -292,40 +346,12 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 		}
 		b.lock.Unlock()
 
-		for i, attester := range activeValidatorSet {
-			b.calculateVotesPerAttester(attester, i)
+		for i, attester := range *activeValidatorSet {
+			b.calculateVotesPerAttester(&attester, i)
 		}
 
 		b.resetAttesterBitfields()
 		b.resetTotalDeposit()
-	}
-	return nil
-}
-
-func (b *BeaconChain) calculateVotesPerAttester(attester types.ValidatorRecord, index int) error {
-	var reward, penalty uint64
-	bitfields := b.state.ActiveState.AttesterBitfields
-	attesterBlock := index / 8
-	attesterFieldIndex := index % 8
-	hasVoted := false
-
-	defer b.lock.Unlock()
-	b.lock.Lock()
-
-	if len(bitfields) < attesterBlock {
-		return errors.New("invalid bitfield")
-	}
-	if attesterFieldIndex != 0 {
-		fields := bitfields[attesterBlock]
-		attesterField := fields >> uint(attesterFieldIndex)
-		if attesterField%2 != 0 {
-			hasVoted = true
-		}
-	}
-	if hasVoted {
-		attester.Balance += reward
-	} else {
-		attester.Balance -= penalty
 	}
 	return nil
 }
