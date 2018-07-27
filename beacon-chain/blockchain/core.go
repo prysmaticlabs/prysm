@@ -275,7 +275,9 @@ func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool 
 	return voted
 }
 
-func applyRewardAndPenalty(attester *types.ValidatorRecord, voted bool) {
+func (b *BeaconChain) applyRewardAndPenalty(attester *types.ValidatorRecord, voted bool) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	if voted {
 		attester.Balance += params.AttesterReward
@@ -283,6 +285,8 @@ func applyRewardAndPenalty(attester *types.ValidatorRecord, voted bool) {
 		// TODO : Change this when penalties are specified for not voting
 		attester.Balance -= params.AttesterReward
 	}
+
+	return b.persist()
 }
 
 func (b *BeaconChain) resetAttesterBitfields() error {
@@ -324,7 +328,7 @@ func (b *BeaconChain) setJustifiedEpoch() error {
 	return b.persist()
 }
 
-func (b *BeaconChain) calculateVotesPerAttester(index int) error {
+func (b *BeaconChain) setRewardsAndPenalties(index int) error {
 	attester := &b.state.CrystallizedState.ActiveValidators[index]
 	bitfields := b.state.ActiveState.AttesterBitfields
 	attesterBlock := (index + 1) / 8
@@ -336,9 +340,49 @@ func (b *BeaconChain) calculateVotesPerAttester(index int) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
-	applyRewardAndPenalty(attester, voted)
+	if err := b.applyRewardAndPenalty(attester, voted); err != nil {
+		return fmt.Errorf("unable to apply rewards and penalties: %v", err)
+	}
 
 	return nil
+}
+
+//Slashing Condtions
+// TODO: Implement all the conditions when the spec is updated
+func (b *BeaconChain) heightEquivocationCondition() error {
+	return nil
+}
+
+func (b *BeaconChain) ffgSurroundCondition() error {
+	return nil
+}
+
+func (b *BeaconChain) beaconProposalCondition() error {
+	return nil
+}
+
+func (b *BeaconChain) pocSecretLeakCondtion() error {
+	return nil
+}
+
+func (b *BeaconChain) pocWrongCustodyCondtion() error {
+	return nil
+}
+
+func (b *BeaconChain) pocNoRevealCondtion() error {
+	return nil
+}
+
+func (b *BeaconChain) randaoLeakCondtion() error {
+	return nil
+}
+
+func (b *BeaconChain) slashStake(validatorIndex int, stakeToBeSlashed uint64) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.CrystallizedState.ActiveValidators[validatorIndex].Balance -= stakeToBeSlashed
+	return b.persist()
 }
 
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
@@ -357,7 +401,7 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 		}
 
 		for i, _ := range activeValidatorSet {
-			if err := b.calculateVotesPerAttester(i); err != nil {
+			if err := b.setRewardsAndPenalties(i); err != nil {
 				log.Error(err)
 			}
 		}
