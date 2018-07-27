@@ -118,6 +118,9 @@ func TestProcessBlock(t *testing.T) {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
 	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Sync service broadcasts the block and forwards the block to to the local chain.
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h.Sum(nil)))
@@ -170,12 +173,18 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
 	h1, err := block1.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block2, err := types.NewBlockWithData(&blockResponse2)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
 	h2, err := block2.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
@@ -222,6 +231,9 @@ func TestProcessSameBlock(t *testing.T) {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
 	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
