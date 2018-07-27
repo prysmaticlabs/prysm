@@ -95,7 +95,8 @@ func (m *mockNode) DepositFlag() bool {
 }
 
 func (m *mockNode) FastForward(p int) {
-	for i := 0; i < p*int(shardparams.DefaultConfig.PeriodLength); i++ {
+	c := shardparams.DefaultConfig()
+	for i := 0; i < p*int(c.PeriodLength); i++ {
 		m.CommitWithBlock()
 	}
 }
@@ -208,7 +209,8 @@ func TestConstructAttesterRequest(t *testing.T) {
 	node := &mockNode{smc: smc, t: t, Backend: backend}
 
 	// Fast forward to next period.
-	for i := 0; i < int(shardparams.DefaultConfig.PeriodLength); i++ {
+	c := shardparams.DefaultConfig()
+	for i := 0; i < int(c.PeriodLength); i++ {
 		backend.Commit()
 	}
 
