@@ -349,31 +349,80 @@ func (b *BeaconChain) setRewardsAndPenalties(index int) error {
 
 //Slashing Condtions
 // TODO: Implement all the conditions when the spec is updated
-func (b *BeaconChain) heightEquivocationCondition() error {
+func (b *BeaconChain) heightEquivocationCondition(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (b *BeaconChain) ffgSurroundCondition() error {
+func (b *BeaconChain) ffgSurroundCondition(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (b *BeaconChain) beaconProposalCondition() error {
+func (b *BeaconChain) beaconProposalCondition(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (b *BeaconChain) pocSecretLeakCondtion() error {
+func (b *BeaconChain) pocSecretLeakCondtion(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (b *BeaconChain) pocWrongCustodyCondtion() error {
+func (b *BeaconChain) pocWrongCustodyCondtion(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (b *BeaconChain) pocNoRevealCondtion() error {
+func (b *BeaconChain) pocNoRevealCondtion(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (b *BeaconChain) randaoLeakCondtion() error {
+func (b *BeaconChain) randaoLeakCondtion(validatorIndex int) error {
+	testbool := false
+	testSlash := uint64(0)
+	if !testbool {
+		if err := b.slashStake(validatorIndex, testSlash); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -383,6 +432,39 @@ func (b *BeaconChain) slashStake(validatorIndex int, stakeToBeSlashed uint64) er
 
 	b.state.CrystallizedState.ActiveValidators[validatorIndex].Balance -= stakeToBeSlashed
 	return b.persist()
+}
+
+func (b *BeaconChain) applySlashingConditions(validatorIndex int) error {
+
+	if err := b.heightEquivocationCondition(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply height equivocation condition: %v", err)
+	}
+
+	if err := b.ffgSurroundCondition(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply FFG surround condition: %v", err)
+	}
+
+	if err := b.beaconProposalCondition(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply Beacon Proposal condition: %v", err)
+	}
+
+	if err := b.pocSecretLeakCondtion(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply Secret Leak condition: %v", err)
+	}
+
+	if err := b.pocWrongCustodyCondtion(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply POC wrong custody condition: %v", err)
+	}
+
+	if err := b.pocNoRevealCondtion(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply POC no reveal condition: %v", err)
+	}
+
+	if err := b.randaoLeakCondtion(validatorIndex); err != nil {
+		return fmt.Errorf("unable to apply randao leak condition: %v", err)
+	}
+
+	return nil
 }
 
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
@@ -402,6 +484,10 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 
 		for i, _ := range activeValidatorSet {
 			if err := b.setRewardsAndPenalties(i); err != nil {
+				log.Error(err)
+			}
+
+			if err := b.applySlashingConditions(i); err != nil {
 				log.Error(err)
 			}
 		}
