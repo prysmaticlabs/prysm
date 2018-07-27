@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -33,8 +32,6 @@ type Service struct {
 	chainService         types.ChainService
 	announceBlockHashBuf chan p2p.Message
 	blockBuf             chan p2p.Message
-	announceBlockHashSub event.Subscription
-	blockSub             event.Subscription
 }
 
 // Config allows the channel's buffer sizes to be changed
@@ -64,8 +61,6 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	log.Info("Starting service")
-	ss.announceBlockHashSub = ss.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
-	ss.blockSub = ss.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
 	go ss.run(ss.ctx.Done())
 }
 
@@ -73,8 +68,6 @@ func (ss *Service) Start() {
 func (ss *Service) Stop() error {
 	log.Info("Stopping service")
 	ss.cancel()
-	ss.announceBlockHashSub.Unsubscribe()
-	ss.blockSub.Unsubscribe()
 	return nil
 }
 
@@ -108,7 +101,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	log.Info("Broadcasting block hash to peers: %x", h.Sum(nil))
+	log.Infof("Broadcasting block hash to peers: %x", h.Sum(nil))
 	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 		Hash: h.Sum(nil),
 	})
@@ -117,6 +110,10 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 }
 
 func (ss *Service) run(done <-chan struct{}) {
+	announceBlockHashSub := ss.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
+	blockSub := ss.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
+	defer announceBlockHashSub.Unsubscribe()
+	defer blockSub.Unsubscribe()
 	for {
 		select {
 		case <-done:

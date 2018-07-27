@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"hash"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 type mockP2P struct{}
 
 func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
-	return nil
+	return new(event.Feed)
 }
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
@@ -35,7 +36,6 @@ func (ms *mockChainService) ProcessBlock(b *types.Block) error {
 	if ms.processedHashes == nil {
 		ms.processedHashes = []hash.Hash{}
 	}
-	log.Info("Processed block with hash: %x", h)
 	ms.processedHashes = append(ms.processedHashes, h)
 	return nil
 }
@@ -90,7 +90,8 @@ func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
 
@@ -112,9 +113,21 @@ func TestProcessBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
+	block, err := types.NewBlockWithData(&blockResponse)
+	if err != nil {
+		t.Fatalf("Could not instantiate new block from proto: %v", err)
+	}
+	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Sync service broadcasts the block and forwards the block to to the local chain.
-	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
-	testutil.AssertLogsContain(t, hook, "Processed block")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h.Sum(nil)))
+
+	if !bytes.Equal(ms.processedHashes[0].Sum(nil), h.Sum(nil)) {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h.Sum(nil), ms.processedHashes[0].Sum(nil))
+	}
 	hook.Reset()
 }
 
@@ -122,7 +135,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
 
@@ -154,12 +168,34 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
+	block1, err := types.NewBlockWithData(&blockResponse1)
+	if err != nil {
+		t.Fatalf("Could not instantiate new block from proto: %v", err)
+	}
+	h1, err := block1.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block2, err := types.NewBlockWithData(&blockResponse2)
+	if err != nil {
+		t.Fatalf("Could not instantiate new block from proto: %v", err)
+	}
+	h2, err := block2.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
-	testutil.AssertLogsContain(t, hook, "Processed block")
-	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
-	testutil.AssertLogsContain(t, hook, "Processed block")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h1.Sum(nil)))
+	if !bytes.Equal(ms.processedHashes[0].Sum(nil), h1.Sum(nil)) {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1.Sum(nil), ms.processedHashes[0].Sum(nil))
+	}
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h2.Sum(nil)))
+	if !bytes.Equal(ms.processedHashes[1].Sum(nil), h2.Sum(nil)) {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2.Sum(nil), ms.processedHashes[1].Sum(nil))
+	}
 	hook.Reset()
 }
 
@@ -167,7 +203,8 @@ func TestProcessSameBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
 
@@ -189,12 +226,23 @@ func TestProcessSameBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
+	block, err := types.NewBlockWithData(&blockResponse)
+	if err != nil {
+		t.Fatalf("Could not instantiate new block from proto: %v", err)
+	}
+	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
-	testutil.AssertLogsContain(t, hook, "Processed block")
-	if len(ss.chainService.ProcessedHashes()) > 1 {
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h.Sum(nil)))
+	if len(ms.processedHashes) > 1 {
 		t.Error("should have only processed one block, processed both instead")
+	}
+	if !bytes.Equal(ms.processedHashes[0].Sum(nil), h.Sum(nil)) {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h.Sum(nil), ms.processedHashes[0].Sum(nil))
 	}
 	hook.Reset()
 }
