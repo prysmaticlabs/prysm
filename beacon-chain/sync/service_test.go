@@ -3,7 +3,6 @@ package sync
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"hash"
 	"testing"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"golang.org/x/crypto/blake2s"
 )
 
 var testLog = log.WithField("prefix", "sync_test")
@@ -22,6 +20,10 @@ type mockP2P struct{}
 
 func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
 	return nil
+}
+
+func (mp *mockP2P) Broadcast(msg interface{}) {
+	return
 }
 
 type mockChainService struct {
@@ -84,13 +86,6 @@ func TestProcessBlockHash(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	h, err := blake2s.New256([]byte("hi"))
-	if err != nil {
-		t.Errorf("failed to intialize hash: %v", err)
-	}
-
-	// Sync service requests the contents of the block and broadcasts the hash to peers.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting blockhash to peers: %x", h.Sum(nil)))
 	testutil.AssertLogsContain(t, hook, "Requesting full block data from sender")
 	hook.Reset()
 }
@@ -122,7 +117,7 @@ func TestProcessBlock(t *testing.T) {
 	<-exitRoutine
 
 	// Sync service broadcasts the block and forwards the block to to the local chain.
-	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
 	testutil.AssertLogsContain(t, hook, "Processed block")
 	hook.Reset()
 }
@@ -165,9 +160,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
 	testutil.AssertLogsContain(t, hook, "Processed block")
-	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
 	testutil.AssertLogsContain(t, hook, "Processed block")
 	hook.Reset()
 }
@@ -200,7 +195,7 @@ func TestProcessSameBlock(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, "Broadcasting block to peers")
+	testutil.AssertLogsContain(t, hook, "Broadcasting block hash to peers")
 	testutil.AssertLogsContain(t, hook, "Processed block")
 	if len(ss.chainService.ProcessedHashes()) > 1 {
 		t.Error("should have only processed one block, processed both instead")

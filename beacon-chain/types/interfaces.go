@@ -13,6 +13,7 @@ import (
 // P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
 type P2P interface {
 	Feed(msg interface{}) *event.Feed
+	Broadcast(msg interface{})
 }
 
 // ChainService is the interface for the local beacon chain.

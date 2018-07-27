@@ -89,9 +89,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	log.Infof("Broadcasting blockhash to peers: %x", h.Sum(nil))
 	log.Info("Requesting full block data from sender")
-	// TODO: Broadcast the block hash to other peers.
 	// TODO: Request the full block data from peer that sent the block hash.
 	return nil
 }
@@ -110,8 +108,10 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	// TODO: Broadcast the block to other peers.
-	log.Info("Broadcasting block to peers: %x", h.Sum(nil))
+	log.Info("Broadcasting block hash to peers: %x", h.Sum(nil))
+	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
+		Hash: h.Sum(nil),
+	})
 	ss.chainService.ProcessBlock(block)
 	return nil
 }
@@ -134,7 +134,7 @@ func (ss *Service) run(done <-chan struct{}) {
 			}
 		case msg := <-ss.blockBuf:
 			data, ok := msg.Data.(pb.BeaconBlockResponse)
-			// TODO: Handle tihs at p2p layer.
+			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue

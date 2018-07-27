@@ -133,8 +133,6 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	validTime := time.Now().After(genesisTime.Add(slotDuration))
-
 	// Verify state hashes from the block are correct
 	hash, err := hashActiveState(b.ActiveState())
 	if err != nil {
@@ -153,6 +151,9 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	if !bytes.Equal(block.CrystallizedStateHash().Sum(nil), hash.Sum(nil)) {
 		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash().Sum(nil), hash.Sum(nil))
 	}
+
+	validTime := time.Now().After(genesisTime.Add(slotDuration))
+
 	return validTime, nil
 }
 
