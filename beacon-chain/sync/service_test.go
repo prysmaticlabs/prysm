@@ -18,7 +18,7 @@ import (
 type mockP2P struct{}
 
 func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
-	return nil
+	return new(event.Feed)
 }
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
