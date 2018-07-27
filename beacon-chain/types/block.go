@@ -74,6 +74,11 @@ func (b *Block) Hash() (hash.Hash, error) {
 	return blake2b.New256(data)
 }
 
+// Data returns the inner proto contents of a block.
+func (b *Block) Data() *pb.BeaconBlockResponse {
+	return b.data
+}
+
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() (hash.Hash, error) {
 	return blake2b.New256(b.data.ParentHash)

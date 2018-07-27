@@ -102,9 +102,9 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 		return nil
 	}
 	log.Infof("Broadcasting block hash to peers: %x", h.Sum(nil))
-	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
-		Hash: h.Sum(nil),
-	})
+	// ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
+	// 	Hash: h.Sum(nil),
+	// })
 	ss.chainService.ProcessBlock(block)
 	return nil
 }
@@ -120,23 +120,23 @@ func (ss *Service) run(done <-chan struct{}) {
 			log.Infof("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
-			data, ok := msg.Data.(pb.BeaconBlockHashAnnounce)
+			data, ok := msg.Data.(*pb.BeaconBlockHashAnnounce)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block hash announcement p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlockHash(&data); err != nil {
+			if err := ss.ReceiveBlockHash(data); err != nil {
 				log.Errorf("Could not receive incoming block hash: %v", err)
 			}
 		case msg := <-ss.blockBuf:
-			data, ok := msg.Data.(pb.BeaconBlockResponse)
+			data, ok := msg.Data.(*pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlock(&data); err != nil {
+			if err := ss.ReceiveBlock(data); err != nil {
 				log.Errorf("Could not receive incoming block: %v", err)
 			}
 		}

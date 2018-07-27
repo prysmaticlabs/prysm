@@ -172,6 +172,6 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 		i := feed.Send(Message{Data: d})
 		log.WithFields(logrus.Fields{
 			"numSubs": i,
-		}).Debug("Send a request to subs")
+		}).Debug("Sent a request to subs")
 	}
 }

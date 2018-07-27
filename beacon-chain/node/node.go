@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -192,6 +191,7 @@ func (b *BeaconNode) registerSimulatorService() error {
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
-	simulatorService := simulator.NewSimulator(context.TODO(), p2pService, web3Service, time.Second*10)
+	cfg := simulator.DefaultConfig()
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service)
 	return b.services.RegisterService(simulatorService)
 }

@@ -59,6 +59,7 @@ func (c *ChainService) ProcessedHashes() []hash.Hash {
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(b *types.Block) error {
 	c.latestBeaconBlock <- b
+	log.Debug("Processing block...")
 	return nil
 }
 
