@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -11,18 +13,20 @@ var log = logrus.WithField("prefix", "simulator")
 
 // Simulator struct.
 type Simulator struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	delay  time.Duration
+	ctx         context.Context
+	cancel      context.CancelFunc
+	web3Service *powchain.Web3Service
+	delay       time.Duration
 }
 
 // NewSimulator hi.
-func NewSimulator(ctx context.Context, delay time.Duration) *Simulator {
+func NewSimulator(ctx context.Context, web3Service *powchain.Web3Service, delay time.Duration) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
-		ctx:    ctx,
-		cancel: cancel,
-		delay:  delay,
+		ctx:         ctx,
+		cancel:      cancel,
+		web3Service: web3Service,
+		delay:       delay,
 	}
 }
 

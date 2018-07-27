@@ -7,11 +7,13 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -46,16 +48,23 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	path := ctx.GlobalString(cmd.DataDirFlag.Name)
-	if err := beacon.registerBeaconDB(path); err != nil {
-		return nil, err
-	}
-
 	if err := beacon.registerP2P(); err != nil {
 		return nil, err
 	}
 
 	if err := beacon.registerPOWChainService(); err != nil {
+		return nil, err
+	}
+
+	if ctx.GlobalBool(utils.SimulatorFlag.Name) {
+		if err := beacon.registerSimulatorService(); err != nil {
+			return nil, err
+		}
+		return beacon, nil
+	}
+
+	path := ctx.GlobalString(cmd.DataDirFlag.Name)
+	if err := beacon.registerBeaconDB(path); err != nil {
 		return nil, err
 	}
 
@@ -161,11 +170,24 @@ func (b *BeaconNode) registerPOWChainService() error {
 
 func (b *BeaconNode) registerSyncService() error {
 	var chainService *blockchain.ChainService
-	b.services.FetchService(&chainService)
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
 
 	var p2pService *p2p.Server
-	b.services.FetchService(&p2pService)
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
 
 	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)
+}
+
+func (b *BeaconNode) registerSimulatorService() error {
+	var web3Service *powchain.Web3Service
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
+	}
+	simulatorService := simulator.NewSimulator(context.TODO(), web3Service, time.Second*10)
+	return b.services.RegisterService(simulatorService)
 }
