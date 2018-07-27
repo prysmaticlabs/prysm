@@ -108,7 +108,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	log.Info("Broadcasting block hash to peers: %x", h.Sum(nil))
+	log.Infof("Broadcasting block hash to peers: %x", h.Sum(nil))
 	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 		Hash: h.Sum(nil),
 	})
