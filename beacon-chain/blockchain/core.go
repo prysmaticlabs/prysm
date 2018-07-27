@@ -257,6 +257,7 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
+// hasVoted checks if the attester has voted by looking at the bitfield.
 func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool {
 	voted := false
 
@@ -269,6 +270,8 @@ func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool 
 	return voted
 }
 
+// applyRewardAndPenalty applies the appropriate rewards and penalties according to
+// whether the attester has voted or not.
 func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
@@ -283,6 +286,7 @@ func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
 	return b.persist()
 }
 
+// resetAttesterBitfields resets the attester bitfields in the ActiveState to zero.
 func (b *BeaconChain) resetAttesterBitfields() error {
 
 	bitfields := b.state.ActiveState.AttesterBitfields
@@ -300,6 +304,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 	return b.persist()
 }
 
+// resetTotalDeposit clears and resets the total attester deposit to zero.
 func (b *BeaconChain) resetTotalDeposit() error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
@@ -308,6 +313,7 @@ func (b *BeaconChain) resetTotalDeposit() error {
 	return b.persist()
 }
 
+// setJustifiedEpoch sets the justified epoch during an epoch transition.
 func (b *BeaconChain) setJustifiedEpoch() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -322,6 +328,8 @@ func (b *BeaconChain) setJustifiedEpoch() error {
 	return b.persist()
 }
 
+// setRewardsAndPenalties checks if the attester has voted and then applies the
+// rewards and penalties for them.
 func (b *BeaconChain) setRewardsAndPenalties(index int) error {
 	bitfields := b.state.ActiveState.AttesterBitfields
 	attesterBlock := (index + 1) / 8
@@ -343,7 +351,7 @@ func (b *BeaconChain) setRewardsAndPenalties(index int) error {
 	return nil
 }
 
-//Slashing Condtions
+// Slashing Condtions
 // TODO: Implement all the conditions when the spec is updated
 func (b *BeaconChain) heightEquivocationCondition(validatorIndex int) error {
 	testbool := false
@@ -465,6 +473,8 @@ func (b *BeaconChain) applySlashingConditions(validatorIndex int) error {
 	return nil
 }
 
+// computeValidatorRewardsAndPenalties is run every epoch transition and appropriates the
+// rewards and penalties, resets the bitfield and deposits and also applies the slashing conditions.
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
