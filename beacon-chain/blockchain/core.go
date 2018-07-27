@@ -355,7 +355,7 @@ func (b *BeaconChain) setRewardsAndPenalties(index int) error {
 // TODO: Implement all the conditions when the spec is updated
 func (b *BeaconChain) heightEquivocationCondition(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
@@ -366,7 +366,7 @@ func (b *BeaconChain) heightEquivocationCondition(validatorIndex int) error {
 
 func (b *BeaconChain) ffgSurroundCondition(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
@@ -377,7 +377,7 @@ func (b *BeaconChain) ffgSurroundCondition(validatorIndex int) error {
 
 func (b *BeaconChain) beaconProposalCondition(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
@@ -388,7 +388,7 @@ func (b *BeaconChain) beaconProposalCondition(validatorIndex int) error {
 
 func (b *BeaconChain) pocSecretLeakCondtion(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
@@ -399,7 +399,7 @@ func (b *BeaconChain) pocSecretLeakCondtion(validatorIndex int) error {
 
 func (b *BeaconChain) pocWrongCustodyCondtion(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
@@ -410,7 +410,7 @@ func (b *BeaconChain) pocWrongCustodyCondtion(validatorIndex int) error {
 
 func (b *BeaconChain) pocNoRevealCondtion(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
@@ -421,7 +421,7 @@ func (b *BeaconChain) pocNoRevealCondtion(validatorIndex int) error {
 
 func (b *BeaconChain) randaoLeakCondtion(validatorIndex int) error {
 	testbool := false
-	testSlash := uint64(0)
+	testSlash := uint64(1)
 	if !testbool {
 		if err := b.slashStake(validatorIndex, testSlash); err != nil {
 			return err
