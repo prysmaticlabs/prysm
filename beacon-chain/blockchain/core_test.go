@@ -38,7 +38,6 @@ func TestNewBeaconChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
@@ -66,7 +65,6 @@ func TestMutateActiveState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
@@ -103,7 +101,6 @@ func TestMutateCrystallizedState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
@@ -141,7 +138,6 @@ func TestGetAttestersProposer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup db: %v", err)
 	}
-	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("Unable to setup beacon chain: %v", err)
@@ -185,7 +181,6 @@ func TestCanProcessBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("Unable to setup beacon chain: %v", err)
@@ -239,7 +234,6 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	b, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("Unable to setup beacon chain: %v", err)
@@ -289,7 +283,6 @@ func TestRotateValidatorSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	b, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("Unable to setup beacon chain: %v", err)
