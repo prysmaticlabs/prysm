@@ -51,7 +51,7 @@ func NewBeaconDB(config *BeaconDBConfig) (*BeaconDB, error) {
 
 // Start the beacon DB service.
 func (b *BeaconDB) Start() {
-	log.Info("Starting beaconDB service")
+	log.Info("Starting service")
 	if !b.inmemory {
 		db, err := ethdb.NewLDBDatabase(filepath.Join(b.dataDir, b.name), b.cache, b.handles)
 		if err != nil {
@@ -64,7 +64,7 @@ func (b *BeaconDB) Start() {
 
 // Stop the beaconDB service gracefully.
 func (b *BeaconDB) Stop() error {
-	log.Info("Stopping beaconDB service")
+	log.Info("Stopping service")
 	b.db.Close()
 	return nil
 }

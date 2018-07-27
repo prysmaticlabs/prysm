@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
@@ -90,7 +89,7 @@ func (b *BeaconChain) ExitedValidatorCount() int {
 }
 
 // GenesisBlock returns the canonical, genesis block.
-func (b *BeaconChain) GenesisBlock() *types.Block {
+func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
 }
 
@@ -111,8 +110,8 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
-func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *types.Block) (bool, error) {
-	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Data().MainChainRef)
+func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
+	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.MainChainRef())
 	if err != nil {
 		return false, err
 	}
@@ -123,25 +122,37 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
 
 	// Calculate the timestamp validity condition.
-	slotDuration := time.Duration(block.Data().SlotNumber*params.SlotLength) * time.Second
-	validTime := time.Now().After(b.GenesisBlock().Data().Timestamp.Add(slotDuration))
+	slotDuration := time.Duration(block.SlotNumber()*params.SlotLength) * time.Second
+	genesis, err := b.GenesisBlock()
+	if err != nil {
+		return false, err
+	}
+
+	genesisTime, err := genesis.Timestamp()
+	if err != nil {
+		return false, err
+	}
 
 	// Verify state hashes from the block are correct
-	hash, err := hashActiveState(*b.ActiveState())
+	hash, err := hashActiveState(b.ActiveState())
 	if err != nil {
 		return false, err
 	}
 
-	if !bytes.Equal(block.Data().ActiveStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), block.Data().ActiveStateHash.Sum(nil))
+	if !bytes.Equal(block.ActiveStateHash().Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash().Sum(nil), hash.Sum(nil))
 	}
-	hash, err = hashCrystallizedState(*b.CrystallizedState())
+
+	hash, err = hashCrystallizedState(b.CrystallizedState())
 	if err != nil {
 		return false, err
 	}
-	if !bytes.Equal(block.Data().CrystallizedStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), block.Data().CrystallizedStateHash.Sum(nil))
+
+	if !bytes.Equal(block.CrystallizedStateHash().Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash().Sum(nil), hash.Sum(nil))
 	}
+
+	validTime := time.Now().After(genesisTime.Add(slotDuration))
 
 	return validTime, nil
 }
@@ -222,7 +233,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 // hashActiveState serializes the active state object then uses
 // blake2b to hash the serialized object.
-func hashActiveState(state types.ActiveState) (hash.Hash, error) {
+func hashActiveState(state *types.ActiveState) (hash.Hash, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
 		return nil, err
@@ -232,7 +243,7 @@ func hashActiveState(state types.ActiveState) (hash.Hash, error) {
 
 // hashCrystallizedState serializes the crystallized state object
 // then uses blake2b to hash the serialized object.
-func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
+func hashCrystallizedState(state *types.CrystallizedState) (hash.Hash, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
 		return nil, err

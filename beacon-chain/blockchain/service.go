@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"hash"
 
@@ -21,13 +22,14 @@ type ChainService struct {
 	chain             *BeaconChain
 	web3Service       *powchain.Web3Service
 	latestBeaconBlock chan *types.Block
+	processedHashes   []hash.Hash
 }
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil}, nil
+	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil, nil}, nil
 }
 
 // Start a blockchain service's main event loop.
@@ -49,16 +51,26 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// ProcessedHashes by the chain service.
+func (c *ChainService) ProcessedHashes() []hash.Hash {
+	return c.processedHashes
+}
+
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(b *types.Block) error {
 	c.latestBeaconBlock <- b
+	log.Debug("Processing block...")
 	return nil
 }
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine
 func (c *ChainService) ContainsBlock(h hash.Hash) bool {
-	// TODO
+	for _, h1 := range c.processedHashes {
+		if bytes.Equal(h.Sum(nil), h1.Sum(nil)) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -67,7 +79,7 @@ func (c *ChainService) updateActiveState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			log.WithFields(logrus.Fields{"activeStateHash": block.Data().ActiveStateHash}).Debug("Received beacon block")
+			log.WithFields(logrus.Fields{"activeStateHash": block.ActiveStateHash().Sum(nil)}).Debug("Received beacon block")
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
