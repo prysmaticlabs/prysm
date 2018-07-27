@@ -310,7 +310,22 @@ func (b *BeaconChain) resetTotalDeposit() error {
 	return b.persist()
 }
 
-func (b *BeaconChain) calculateVotesPerAttester(attester *types.ValidatorRecord, index int) error {
+func (b *BeaconChain) setJustifiedEpoch() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
+	b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
+
+	if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
+		b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
+	}
+
+	return b.persist()
+}
+
+func (b *BeaconChain) calculateVotesPerAttester(index int) error {
+	attester := &b.state.CrystallizedState.ActiveValidators[index]
 	bitfields := b.state.ActiveState.AttesterBitfields
 	attesterBlock := (index + 1) / 8
 	attesterFieldIndex := (index + 1) % 8
@@ -327,7 +342,7 @@ func (b *BeaconChain) calculateVotesPerAttester(attester *types.ValidatorRecord,
 }
 
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
-	activeValidatorSet := &b.state.CrystallizedState.ActiveValidators
+	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
 	totalDeposit := b.state.CrystallizedState.TotalDeposits
 
@@ -337,21 +352,22 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	if attesterFactor >= totalFactor {
 		log.Info("Justified epoch in the crystallised state is set to the current epoch")
 
-		b.lock.Lock()
-		justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
-		b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
-
-		if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
-			b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
-		}
-		b.lock.Unlock()
-
-		for i, attester := range *activeValidatorSet {
-			b.calculateVotesPerAttester(&attester, i)
+		if err := b.setJustifiedEpoch(); err != nil {
+			return fmt.Errorf("error setting justified epoch: %v", err)
 		}
 
-		b.resetAttesterBitfields()
-		b.resetTotalDeposit()
+		for i, _ := range activeValidatorSet {
+			if err := b.calculateVotesPerAttester(i); err != nil {
+				log.Error(err)
+			}
+		}
+
+		if err := b.resetAttesterBitfields(); err != nil {
+			return fmt.Errorf("error resetting bitfields: %v", err)
+		}
+		if err := b.resetTotalDeposit(); err != nil {
+			return fmt.Errorf("error resetting total deposits: %v", err)
+		}
 	}
 	return nil
 }
