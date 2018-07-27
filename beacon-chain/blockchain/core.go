@@ -260,30 +260,24 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool {
 	voted := false
 
-	if attesterFieldIndex != 0 {
-		fields := bitfields[attesterBlock]
-		attesterField := fields >> uint(attesterFieldIndex)
-		if attesterField%2 != 0 {
-			voted = true
-		}
-	} else {
-		attesterField := bitfields[attesterBlock]
-		if attesterField%2 != 0 {
-			voted = true
-		}
+	fields := bitfields[attesterBlock-1]
+	attesterField := fields >> (8 - uint(attesterFieldIndex))
+	if attesterField%2 != 0 {
+		voted = true
 	}
+
 	return voted
 }
 
-func (b *BeaconChain) applyRewardAndPenalty(attester *types.ValidatorRecord, voted bool) error {
-	b.lock.Lock()
+func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
 	defer b.lock.Unlock()
+	b.lock.Lock()
 
 	if voted {
-		attester.Balance += params.AttesterReward
+		b.state.CrystallizedState.ActiveValidators[index].Balance += params.AttesterReward
 	} else {
 		// TODO : Change this when penalties are specified for not voting
-		attester.Balance -= params.AttesterReward
+		b.state.CrystallizedState.ActiveValidators[index].Balance -= params.AttesterReward
 	}
 
 	return b.persist()
@@ -329,10 +323,12 @@ func (b *BeaconChain) setJustifiedEpoch() error {
 }
 
 func (b *BeaconChain) setRewardsAndPenalties(index int) error {
-	attester := &b.state.CrystallizedState.ActiveValidators[index]
 	bitfields := b.state.ActiveState.AttesterBitfields
 	attesterBlock := (index + 1) / 8
 	attesterFieldIndex := (index + 1) % 8
+	if attesterFieldIndex == 0 {
+		attesterFieldIndex = 8
+	}
 
 	if len(bitfields) < attesterBlock {
 		return errors.New("attester index does not exist")
@@ -340,7 +336,7 @@ func (b *BeaconChain) setRewardsAndPenalties(index int) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
-	if err := b.applyRewardAndPenalty(attester, voted); err != nil {
+	if err := b.applyRewardAndPenalty(index, voted); err != nil {
 		return fmt.Errorf("unable to apply rewards and penalties: %v", err)
 	}
 
@@ -434,6 +430,8 @@ func (b *BeaconChain) slashStake(validatorIndex int, stakeToBeSlashed uint64) er
 	return b.persist()
 }
 
+// This will be changed or removed once the spec is more defined, this is just a placeholder
+// to apply all the slashing conditions
 func (b *BeaconChain) applySlashingConditions(validatorIndex int) error {
 
 	if err := b.heightEquivocationCondition(validatorIndex); err != nil {

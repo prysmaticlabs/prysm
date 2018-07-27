@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 
@@ -283,22 +284,6 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 }
 
-func TestValidatorRewardsAndPenalties(t *testing.T) {
-
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
-	defer db.Stop()
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("Unable to setup beacon chain: %v", err)
-	}
-	b.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
-}
-
 func TestRotateValidatorSet(t *testing.T) {
 	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
@@ -361,4 +346,107 @@ func TestRotateValidatorSet(t *testing.T) {
 	if len(newExitedValidators) != 7 {
 		t.Errorf("Get exited validator count failed, wanted 6, got %v", len(newExitedValidators))
 	}
+}
+
+func TestIsEpochTransition(t *testing.T) {
+
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	defer db.Stop()
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("unable to setup beacon chain: %v", err)
+	}
+	b.state.CrystallizedState.CurrentEpoch = 1
+	if b.isEpochTransition(10) {
+		t.Errorf("there was supposed to be an epoch transition but there isn't one now")
+	}
+}
+
+func TestHasVoted(t *testing.T) {
+
+	for i := 0; i < 8; i++ {
+		testfield := int(math.Pow(2, float64(i)))
+		bitfields := []byte{byte(testfield), 0, 0}
+		attesterBlock := 1
+		attesterFieldIndex := (8 - i)
+
+		voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
+		if !voted {
+			t.Fatalf("attester was supposed to have voted but the test shows they have not, this is their bitfield and index: %b :%d", bitfields[0], attesterFieldIndex)
+		}
+	}
+}
+
+func TestApplyRewardAndPenalty(t *testing.T) {
+
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
+	}
+	db.Start()
+	defer db.Stop()
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("unable to setup beacon chain: %v", err)
+	}
+	if err := b.persist(); err != nil {
+		t.Fatalf("unable to persist state to db")
+	}
+
+	balance1 := uint64(10000)
+	balance2 := uint64(15000)
+	balance3 := uint64(20000)
+	balance4 := uint64(25000)
+	balance5 := uint64(30000)
+
+	activeValidators := &types.CrystallizedState{ActiveValidators: []types.ValidatorRecord{
+		{Balance: balance1, WithdrawalAddress: common.Address{'A'}},
+		{Balance: balance2, WithdrawalAddress: common.Address{'B'}},
+		{Balance: balance3, WithdrawalAddress: common.Address{'C'}},
+		{Balance: balance4, WithdrawalAddress: common.Address{'D'}},
+		{Balance: balance5, WithdrawalAddress: common.Address{'E'}},
+	}}
+
+	if err := b.MutateCrystallizedState(activeValidators); err != nil {
+		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	}
+
+	b.applyRewardAndPenalty(0, true)
+	b.applyRewardAndPenalty(1, false)
+	b.applyRewardAndPenalty(2, true)
+	b.applyRewardAndPenalty(3, false)
+	b.applyRewardAndPenalty(4, true)
+
+	expectedBalance1 := balance1 + params.AttesterReward
+	expectedBalance2 := balance2 - params.AttesterReward
+	expectedBalance3 := balance3 + params.AttesterReward
+	expectedBalance4 := balance3 - params.AttesterReward
+	expectedBalance5 := balance3 + params.AttesterReward
+
+	if expectedBalance1 != b.state.CrystallizedState.ActiveValidators[0].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance1, b.state.CrystallizedState.ActiveValidators[0].Balance)
+	}
+
+	if expectedBalance2 != b.state.CrystallizedState.ActiveValidators[1].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance2, b.state.CrystallizedState.ActiveValidators[1].Balance)
+	}
+
+	if expectedBalance3 != b.state.CrystallizedState.ActiveValidators[2].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance3, b.state.CrystallizedState.ActiveValidators[2].Balance)
+	}
+
+	if expectedBalance4 != b.state.CrystallizedState.ActiveValidators[3].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance4, b.state.CrystallizedState.ActiveValidators[3].Balance)
+	}
+
+	if expectedBalance5 != b.state.CrystallizedState.ActiveValidators[4].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance5, b.state.CrystallizedState.ActiveValidators[4].Balance)
+	}
+
 }
