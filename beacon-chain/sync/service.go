@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -83,7 +84,7 @@ func (ss *Service) Stop() error {
 func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
 	h, err := blake2s.New256(data.Hash)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not calculate blake2b hash of proto hash: %v", err)
 	}
 	if ss.chainService.ContainsBlock(h) {
 		return nil
@@ -98,10 +99,13 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
 // ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
 func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
-	block := types.NewBlockWithData(data)
+	block, err := types.NewBlockWithData(data)
+	if err != nil {
+		return fmt.Errorf("could not instantiate new block from proto: %v", err)
+	}
 	h, err := block.Hash()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not hash block: %v", err)
 	}
 	if ss.chainService.ContainsBlock(h) {
 		return nil

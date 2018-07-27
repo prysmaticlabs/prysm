@@ -13,7 +13,9 @@ import (
 
 // Block defines a beacon chain core primitive.
 type Block struct {
-	data *pb.BeaconBlockResponse
+	data                  *pb.BeaconBlockResponse
+	activeStateHash       hash.Hash
+	crystallizedStateHash hash.Hash
 }
 
 // AggregateVote contains the fields of aggregate vote in individual shard.
@@ -27,12 +29,28 @@ type AggregateVote struct {
 // NewBlock creates a new beacon block given certain arguments.
 func NewBlock(slotNumber uint64) *Block {
 	data := &pb.BeaconBlockResponse{Timestamp: ptypes.TimestampNow(), SlotNumber: slotNumber}
-	return &Block{data}
+	return &Block{data: data}
 }
 
 // NewBlockWithData explicitly sets the data field of a block.
-func NewBlockWithData(data *pb.BeaconBlockResponse) *Block {
-	return &Block{data}
+func NewBlockWithData(data *pb.BeaconBlockResponse) (*Block, error) {
+	activeStateHash, _ := blake2b.New256([]byte{})
+	crystallizedStateHash, _ := blake2b.New256([]byte{})
+	if len(data.ActiveStateHash) > 0 {
+		h, err := blake2b.New256(data.ActiveStateHash)
+		if err != nil {
+			return nil, err
+		}
+		activeStateHash = h
+	}
+	if len(data.CrystallizedStateHash) > 0 {
+		h, err := blake2b.New256(data.CrystallizedStateHash)
+		if err != nil {
+			return nil, err
+		}
+		activeStateHash = h
+	}
+	return &Block{data, activeStateHash, crystallizedStateHash}, nil
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
@@ -76,13 +94,13 @@ func (b *Block) RandaoReveal() (hash.Hash, error) {
 }
 
 // ActiveStateHash blake2b value.
-func (b *Block) ActiveStateHash() (hash.Hash, error) {
-	return blake2b.New256(b.data.ActiveStateHash)
+func (b *Block) ActiveStateHash() hash.Hash {
+	return b.activeStateHash
 }
 
 // CrystallizedStateHash blake2b value.
-func (b *Block) CrystallizedStateHash() (hash.Hash, error) {
-	return blake2b.New256(b.data.CrystallizedStateHash)
+func (b *Block) CrystallizedStateHash() hash.Hash {
+	return b.crystallizedStateHash
 }
 
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
@@ -91,11 +109,11 @@ func (b *Block) Timestamp() (time.Time, error) {
 }
 
 // InsertActiveHash updates the activeStateHash property in the data of a beacon block.
-func (b *Block) InsertActiveHash(hash []byte) {
-	b.data.ActiveStateHash = hash
+func (b *Block) InsertActiveHash(h hash.Hash) {
+	b.activeStateHash = h
 }
 
 // InsertCrystallizedHash updates the crystallizedStateHash property in the data of a beacon block.
-func (b *Block) InsertCrystallizedHash(hash []byte) {
-	b.data.CrystallizedStateHash = hash
+func (b *Block) InsertCrystallizedHash(h hash.Hash) {
+	b.crystallizedStateHash = h
 }

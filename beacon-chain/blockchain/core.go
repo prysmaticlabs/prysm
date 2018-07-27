@@ -136,32 +136,22 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	validTime := time.Now().After(genesisTime.Add(slotDuration))
 
 	// Verify state hashes from the block are correct
-	hash, err := hashActiveState(*b.ActiveState())
+	hash, err := hashActiveState(b.ActiveState())
 	if err != nil {
 		return false, err
 	}
 
-	activeStateHash, err := block.ActiveStateHash()
+	if !bytes.Equal(block.ActiveStateHash().Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash().Sum(nil), hash.Sum(nil))
+	}
+
+	hash, err = hashCrystallizedState(b.CrystallizedState())
 	if err != nil {
 		return false, err
 	}
 
-	crystallizedStatehash, err := block.CrystallizedStateHash()
-	if err != nil {
-		return false, err
-	}
-
-	if !bytes.Equal(activeStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), activeStateHash.Sum(nil))
-	}
-
-	hash, err = hashCrystallizedState(*b.CrystallizedState())
-	if err != nil {
-		return false, err
-	}
-
-	if !bytes.Equal(crystallizedStatehash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), crystallizedStatehash.Sum(nil))
+	if !bytes.Equal(block.CrystallizedStateHash().Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash().Sum(nil), hash.Sum(nil))
 	}
 	return validTime, nil
 }
@@ -242,7 +232,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 // hashActiveState serializes the active state object then uses
 // blake2b to hash the serialized object.
-func hashActiveState(state types.ActiveState) (hash.Hash, error) {
+func hashActiveState(state *types.ActiveState) (hash.Hash, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
 		return nil, err
@@ -252,7 +242,7 @@ func hashActiveState(state types.ActiveState) (hash.Hash, error) {
 
 // hashCrystallizedState serializes the crystallized state object
 // then uses blake2b to hash the serialized object.
-func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
+func hashCrystallizedState(state *types.CrystallizedState) (hash.Hash, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
 		return nil, err
