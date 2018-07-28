@@ -120,7 +120,7 @@ func (ss *Service) run(done <-chan struct{}) {
 			data, ok := msg.Data.(pb.BeaconBlockHashAnnounce)
 			// TODO: Handle this at p2p layer.
 			if !ok {
-				log.Errorf("Received malformed beacon block hash announcement p2p message")
+				log.Error("Received malformed beacon block hash announcement p2p message")
 				continue
 			}
 			if err := ss.ReceiveBlockHash(&data); err != nil {
