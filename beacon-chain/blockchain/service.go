@@ -62,7 +62,9 @@ func (c *ChainService) ContainsBlock(h hash.Hash) bool {
 	return false
 }
 
-// updateActiveState receives a beacon block, computes a new active state and writes it to db.
+// updateChainState receives a beacon block, computes a new active state and writes it to db. Also
+// it checks for if there is an epoch transition. If there is one it computes the validator rewards
+// and penalties.
 func (c *ChainService) updateChainState() {
 	for {
 		select {

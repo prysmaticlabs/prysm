@@ -95,24 +95,26 @@ func (b *BeaconChain) GenesisBlock() *types.Block {
 	return types.NewGenesisBlock()
 }
 
+// isEpochTransition checks if the current slotNumber divided by the epoch length(64 slots)
+// is greater than the current epoch.
 func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
 	currentEpoch := b.state.CrystallizedState.CurrentEpoch
-	isTransition := (slotNumber / params.SlotLength) > currentEpoch
+	isTransition := (slotNumber / params.EpochLength) > currentEpoch
 	return isTransition
 }
 
 // MutateActiveState allows external services to modify the active state.
 func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.ActiveState = activeState
 	return b.persist()
 }
 
 // MutateCrystallizedState allows external services to modify the crystallized state.
 func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.CrystallizedState = crystallizedState
 	return b.persist()
 }
@@ -273,8 +275,8 @@ func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool 
 // applyRewardAndPenalty applies the appropriate rewards and penalties according to
 // whether the attester has voted or not.
 func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	if voted {
 		b.state.CrystallizedState.ActiveValidators[index].Balance += params.AttesterReward
@@ -294,8 +296,8 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 		length += 1
 	}
 
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	newbitfields := make([]byte, length)
 	b.state.ActiveState.AttesterBitfields = newbitfields
@@ -305,8 +307,8 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 
 // resetTotalDeposit clears and resets the total attester deposit to zero.
 func (b *BeaconChain) resetTotalAttesterDeposit() error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.ActiveState.TotalAttesterDeposits = 0
 
 	return b.persist()

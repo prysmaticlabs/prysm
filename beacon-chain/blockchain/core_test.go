@@ -310,11 +310,13 @@ func TestIsEpochTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
 
-	beaconChain.state.CrystallizedState.CurrentEpoch = 1
-	if !beaconChain.isEpochTransition(30) {
+	if err := beaconChain.MutateCrystallizedState(&types.CrystallizedState{CurrentEpoch: 1}); err != nil {
+		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	}
+	if !beaconChain.isEpochTransition(128) {
 		t.Errorf("there was supposed to be an epoch transition but there isn't one now")
 	}
-	if beaconChain.isEpochTransition(8) {
+	if beaconChain.isEpochTransition(80) {
 		t.Errorf("there is not supposed to be an epoch transition but there is one now")
 	}
 }

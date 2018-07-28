@@ -5,8 +5,8 @@ const (
 	AttesterCount = 32
 	// AttesterReward determines how much ETH attesters get for performing their duty.
 	AttesterReward = 1
-	// EpochLength is the beacon chain epoch length in blocks.
-	EpochLength = 5
+	// EpochLength is the beacon chain epoch length in slots.
+	EpochLength = 64
 	// ShardCount is a fixed number.
 	ShardCount = 20
 	// DefaultBalance of a validator.
