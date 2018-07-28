@@ -34,13 +34,13 @@ type Service struct {
 	blockBuf             chan p2p.Message
 }
 
-// Config allows the channel's buffer sizes to be changed
+// Config allows the channel's buffer sizes to be changed.
 type Config struct {
 	HashBufferSize  int
 	BlockBufferSize int
 }
 
-// DefaultConfig provides the default configuration for a sync service
+// DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
 	return Config{100, 100}
 }
