@@ -139,8 +139,13 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if !bytes.Equal(block.ActiveStateHash().Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash().Sum(nil), hash.Sum(nil))
+	blockActiveStateHash, err := block.ActiveStateHash()
+	if err != nil {
+		return false, fmt.Errorf("could not fetch block active state hash: %v", err)
+	}
+
+	if !bytes.Equal(blockActiveStateHash.Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", blockActiveStateHash.Sum(nil), hash.Sum(nil))
 	}
 
 	hash, err = hashCrystallizedState(b.CrystallizedState())
@@ -148,8 +153,13 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if !bytes.Equal(block.CrystallizedStateHash().Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash().Sum(nil), hash.Sum(nil))
+	blockCrystallizedStateHash, err := block.CrystallizedStateHash()
+	if err != nil {
+		return false, fmt.Errorf("could not fetch block crystallized state hash: %v", err)
+	}
+
+	if !bytes.Equal(blockCrystallizedStateHash.Sum(nil), hash.Sum(nil)) {
+		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", blockCrystallizedStateHash.Sum(nil), hash.Sum(nil))
 	}
 
 	validTime := time.Now().After(genesisTime.Add(slotDuration))

@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -166,6 +166,6 @@ func (b *BeaconNode) registerSyncService() error {
 	var p2pService *p2p.Server
 	b.services.FetchService(&p2pService)
 
-	syncService := sync.NewSyncService(context.Background(), sync.DefaultConfig(), p2pService, chainService)
+	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)
 }

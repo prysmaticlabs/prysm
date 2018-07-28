@@ -73,7 +73,11 @@ func (c *ChainService) updateActiveState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			log.WithFields(logrus.Fields{"activeStateHash": block.ActiveStateHash().Sum(nil)}).Debug("Received beacon block")
+			activeStateHash, err := block.ActiveStateHash()
+			if err != nil {
+				log.Errorf("Could not get block active state hash: %x", activeStateHash.Sum(nil))
+			}
+			log.WithFields(logrus.Fields{"activeStateHash": activeStateHash.Sum(nil)}).Debug("Received beacon block")
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
