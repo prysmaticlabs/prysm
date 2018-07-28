@@ -1,13 +1,12 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"hash"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
+	blake2b "github.com/minio/blake2b-simd"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -24,7 +23,7 @@ func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
 func (mp *mockP2P) Broadcast(msg interface{}) {}
 
 type mockChainService struct {
-	processedHashes []hash.Hash
+	processedHashes [][32]byte
 }
 
 func (ms *mockChainService) ProcessBlock(b *types.Block) error {
@@ -34,22 +33,22 @@ func (ms *mockChainService) ProcessBlock(b *types.Block) error {
 	}
 
 	if ms.processedHashes == nil {
-		ms.processedHashes = []hash.Hash{}
+		ms.processedHashes = [][32]byte{}
 	}
 	ms.processedHashes = append(ms.processedHashes, h)
 	return nil
 }
 
-func (ms *mockChainService) ContainsBlock(h hash.Hash) bool {
+func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
 	for _, h1 := range ms.processedHashes {
-		if bytes.Equal(h.Sum(nil), h1.Sum(nil)) {
+		if h == h1 {
 			return true
 		}
 	}
 	return false
 }
 
-func (ms *mockChainService) ProcessedHashes() []hash.Hash {
+func (ms *mockChainService) ProcessedHashes() [][32]byte {
 	return ms.processedHashes
 }
 
@@ -67,8 +66,9 @@ func TestProcessBlockHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
+	announceHash := blake2b.Sum256([]byte{})
 	hashAnnounce := pb.BeaconBlockHashAnnounce{
-		Hash: []byte("hi"),
+		Hash: announceHash[:],
 	}
 
 	msg := p2p.Message{
@@ -101,7 +101,7 @@ func TestProcessBlock(t *testing.T) {
 	}()
 
 	blockResponse := pb.BeaconBlockResponse{
-		MainChainRef: []byte("hi"),
+		MainChainRef: []byte{1, 2, 3, 4, 5},
 	}
 
 	msg := p2p.Message{
@@ -123,10 +123,10 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	// Sync service broadcasts the block and forwards the block to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h.Sum(nil)))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h))
 
-	if !bytes.Equal(ms.processedHashes[0].Sum(nil), h.Sum(nil)) {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h.Sum(nil), ms.processedHashes[0].Sum(nil))
+	if ms.processedHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])
 	}
 	hook.Reset()
 }
@@ -146,7 +146,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}()
 
 	blockResponse1 := pb.BeaconBlockResponse{
-		MainChainRef: []byte("foo"),
+		MainChainRef: []byte{1, 2, 3, 4, 5},
 	}
 
 	msg1 := p2p.Message{
@@ -155,7 +155,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	blockResponse2 := pb.BeaconBlockResponse{
-		MainChainRef: []byte("bar"),
+		MainChainRef: []byte{6, 7, 8, 9, 10},
 	}
 
 	msg2 := p2p.Message{
@@ -188,13 +188,13 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h1.Sum(nil)))
-	if !bytes.Equal(ms.processedHashes[0].Sum(nil), h1.Sum(nil)) {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1.Sum(nil), ms.processedHashes[0].Sum(nil))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h1))
+	if ms.processedHashes[0] != h1 {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1, ms.processedHashes[0])
 	}
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h2.Sum(nil)))
-	if !bytes.Equal(ms.processedHashes[1].Sum(nil), h2.Sum(nil)) {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2.Sum(nil), ms.processedHashes[1].Sum(nil))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h2))
+	if ms.processedHashes[1] != h2 {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2, ms.processedHashes[1])
 	}
 	hook.Reset()
 }
@@ -214,7 +214,7 @@ func TestProcessSameBlock(t *testing.T) {
 	}()
 
 	blockResponse := pb.BeaconBlockResponse{
-		MainChainRef: []byte("foo"),
+		MainChainRef: []byte{1, 2, 3},
 	}
 
 	msg := p2p.Message{
@@ -237,12 +237,12 @@ func TestProcessSameBlock(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h.Sum(nil)))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h))
 	if len(ms.processedHashes) > 1 {
 		t.Error("should have only processed one block, processed both instead")
 	}
-	if !bytes.Equal(ms.processedHashes[0].Sum(nil), h.Sum(nil)) {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h.Sum(nil), ms.processedHashes[0].Sum(nil))
+	if ms.processedHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])
 	}
 	hook.Reset()
 }

@@ -203,13 +203,14 @@ func TestCanProcessBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
-
 	block.InsertActiveHash(activeHash)
+
 	crystallizedHash, err := hashCrystallizedState(&types.CrystallizedState{})
 	if err != nil {
 		t.Fatalf("Compute crystallized state hash failed: %v", err)
 	}
 	block.InsertCrystallizedHash(crystallizedHash)
+
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)

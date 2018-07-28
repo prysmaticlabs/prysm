@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"hash"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -21,7 +20,7 @@ type ChainService struct {
 	chain             *BeaconChain
 	web3Service       *powchain.Web3Service
 	latestBeaconBlock chan *types.Block
-	processedHashes   []hash.Hash
+	processedHashes   [][32]byte
 }
 
 // NewChainService instantiates a new service instance that will
@@ -51,7 +50,7 @@ func (c *ChainService) Stop() error {
 }
 
 // ProcessedHashes by the chain service.
-func (c *ChainService) ProcessedHashes() []hash.Hash {
+func (c *ChainService) ProcessedHashes() [][32]byte {
 	return c.processedHashes
 }
 
@@ -63,7 +62,7 @@ func (c *ChainService) ProcessBlock(b *types.Block) error {
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine
-func (c *ChainService) ContainsBlock(h hash.Hash) bool {
+func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	// TODO
 	return false
 }
@@ -73,11 +72,8 @@ func (c *ChainService) updateActiveState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			activeStateHash, err := block.ActiveStateHash()
-			if err != nil {
-				log.Errorf("Could not get block active state hash: %x", activeStateHash.Sum(nil))
-			}
-			log.WithFields(logrus.Fields{"activeStateHash": activeStateHash.Sum(nil)}).Debug("Received beacon block")
+			activeStateHash := block.ActiveStateHash()
+			log.WithFields(logrus.Fields{"activeStateHash": activeStateHash}).Debug("Received beacon block")
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())

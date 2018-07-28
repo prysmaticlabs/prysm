@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"hash"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -48,17 +47,19 @@ func NewGenesisBlock() (*Block, error) {
 }
 
 // Hash generates the blake2b hash of the block
-func (b *Block) Hash() (hash.Hash, error) {
+func (b *Block) Hash() ([32]byte, error) {
 	data, err := proto.Marshal(b.data)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal block proto data: %v", err)
+		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
 	}
-	return blake2b.New256(data)
+	return blake2b.Sum256(data), nil
 }
 
 // ParentHash corresponding to parent beacon block.
-func (b *Block) ParentHash() (hash.Hash, error) {
-	return blake2b.New256(b.data.ParentHash)
+func (b *Block) ParentHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.ParentHash[:32])
+	return h
 }
 
 // SlotNumber of the beacon block.
@@ -72,18 +73,24 @@ func (b *Block) MainChainRef() common.Hash {
 }
 
 // RandaoReveal returns the blake2b randao hash.
-func (b *Block) RandaoReveal() (hash.Hash, error) {
-	return blake2b.New256(b.data.RandaoReveal)
+func (b *Block) RandaoReveal() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.RandaoReveal[:32])
+	return h
 }
 
 // ActiveStateHash blake2b value.
-func (b *Block) ActiveStateHash() (hash.Hash, error) {
-	return blake2b.New256(b.data.ActiveStateHash)
+func (b *Block) ActiveStateHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.ActiveStateHash[:32])
+	return h
 }
 
 // CrystallizedStateHash blake2b value.
-func (b *Block) CrystallizedStateHash() (hash.Hash, error) {
-	return blake2b.New256(b.data.CrystallizedStateHash)
+func (b *Block) CrystallizedStateHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.CrystallizedStateHash[:32])
+	return h
 }
 
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
@@ -92,11 +99,11 @@ func (b *Block) Timestamp() (time.Time, error) {
 }
 
 // InsertActiveHash updates the activeStateHash property in the data of a beacon block.
-func (b *Block) InsertActiveHash(h hash.Hash) {
-	b.data.ActiveStateHash = h.Sum(nil)
+func (b *Block) InsertActiveHash(h [32]byte) {
+	b.data.ActiveStateHash = h[:]
 }
 
 // InsertCrystallizedHash updates the crystallizedStateHash property in the data of a beacon block.
-func (b *Block) InsertCrystallizedHash(h hash.Hash) {
-	b.data.CrystallizedStateHash = h.Sum(nil)
+func (b *Block) InsertCrystallizedHash(h [32]byte) {
+	b.data.CrystallizedStateHash = h[:]
 }
