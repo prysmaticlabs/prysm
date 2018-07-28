@@ -49,6 +49,7 @@ type EthClient interface {
 	DepositFlag() bool
 }
 
+// FullClient defines the method that will be used for full client usage.
 type FullClient interface {
 	EthClient
 	Reader
