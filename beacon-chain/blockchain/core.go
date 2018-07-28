@@ -342,8 +342,7 @@ func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
 	if len(bitfields) < attesterBlock {
 		return errors.New("attester index does not exist")
 	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
+
 	voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
 	if err := b.applyRewardAndPenalty(index, voted); err != nil {
 		return fmt.Errorf("unable to apply rewards and penalties: %v", err)

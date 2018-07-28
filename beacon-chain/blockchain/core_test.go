@@ -517,3 +517,70 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch)
 	}
 }
+
+func TestUpdateRewardsAndPenalties(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("Could not generate key: %v", err)
+	}
+
+	var validators []types.ValidatorRecord
+
+	for i := 0; i < 40; i++ {
+		validator := types.ValidatorRecord{Balance: 1000, WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
+		validators = append(validators, validator)
+	}
+
+	if err := beaconChain.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
+		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	}
+
+	//Binary Representation of Bitfield: 00010110 00101011 00101110 01001111 01010000
+
+	testAttesterBitfield := []byte{22, 43, 46, 79, 80}
+
+	if err := beaconChain.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+		t.Fatalf("unable to mutate active state: %v", err)
+	}
+	// Test Validator with index 10 would refer to the 11th bit in the bitfield
+
+	if err := beaconChain.updateRewardsAndPenalties(10); err != nil {
+		t.Fatalf("unable to update rewards and penalties: %v", err)
+	}
+
+	if beaconChain.state.CrystallizedState.ActiveValidators[10].Balance != uint64(1001) {
+		t.Fatal("validator balance not updated")
+	}
+
+	// Test Validator with index 15 would refer to the 16th bit in the bitfield
+	if err := beaconChain.updateRewardsAndPenalties(15); err != nil {
+		t.Fatalf("unable to update rewards and penalties: %v", err)
+	}
+
+	if beaconChain.state.CrystallizedState.ActiveValidators[15].Balance != uint64(1001) {
+		t.Fatal("validator balance not updated")
+	}
+
+	// Test Validator with index 23 would refer to the 24th bit in the bitfield
+	if err := beaconChain.updateRewardsAndPenalties(23); err != nil {
+		t.Fatalf("unable to update rewards and penalties: %v", err)
+	}
+
+	if beaconChain.state.CrystallizedState.ActiveValidators[23].Balance == uint64(1001) {
+		t.Fatal("validator balance not updated")
+	}
+
+	err = beaconChain.updateRewardsAndPenalties(230)
+
+	if err == nil {
+		t.Fatal("no error displayed when there is supposed to be one")
+
+	}
+
+	if err.Error() != "attester index does not exist" {
+		t.Fatalf("incorrect error message: ` %s ` is displayed when it should have been: attester index does not exist", err.Error())
+	}
+
+}
