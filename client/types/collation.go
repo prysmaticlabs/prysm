@@ -218,6 +218,9 @@ func (ch Chunks) Len() int { return len(ch) }
 
 // GetRlp returns the RLP encoding of one chunk from the list.
 func (ch Chunks) GetRlp(i int) []byte {
-	bytes, _ := rlp.EncodeToBytes(ch[i])
+	bytes, err := rlp.EncodeToBytes(ch[i])
+	if err != nil {
+		log.Errorf("Unable to RLP encode to bytes: %v", err)
+	}
 	return bytes
 }

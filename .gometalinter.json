@@ -7,6 +7,6 @@
     "nakedret",
     "unparam",
     "megacheck",
-    "gas"
+    "gosec"
   ]
 }
