@@ -24,7 +24,7 @@ func TestStartStop(t *testing.T) {
 	}
 	db.Start()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{endpoint, "", common.Address{}})
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	msg := hook.AllEntries()[0].Message
-	want := "Starting beaconDB service"
+	want := "Starting service"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}

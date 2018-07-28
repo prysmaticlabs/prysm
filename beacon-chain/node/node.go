@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
-	"github.com/prysmaticlabs/prysm/beacon-chain/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	rbcSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -51,15 +51,15 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerP2P(); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerPOWChainService(); err != nil {
 		return nil, err
 	}
 
 	if err := beacon.registerBlockchainService(); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerNetworkService(); err != nil {
 		return nil, err
 	}
 
@@ -121,6 +121,14 @@ func (b *BeaconNode) registerBeaconDB(path string) error {
 	return b.services.RegisterService(beaconDB)
 }
 
+func (b *BeaconNode) registerP2P() error {
+	beaconp2p, err := p2p.NewServer()
+	if err != nil {
+		return fmt.Errorf("could not register p2p service: %v", err)
+	}
+	return b.services.RegisterService(beaconp2p)
+}
+
 func (b *BeaconNode) registerBlockchainService() error {
 	var beaconDB *database.BeaconDB
 	if err := b.services.FetchService(&beaconDB); err != nil {
@@ -151,24 +159,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerNetworkService() error {
-	networkService := network.NewNetworkService()
-
-	return b.services.RegisterService(networkService)
-}
-
 func (b *BeaconNode) registerSyncService() error {
 	var chainService *blockchain.ChainService
 	b.services.FetchService(&chainService)
 
-	var networkService *network.Service
-	b.services.FetchService(&networkService)
+	var p2pService *p2p.Server
+	b.services.FetchService(&p2pService)
 
-	syncService := rbcSync.NewSyncService(context.Background(), rbcSync.DefaultConfig())
-	syncService.SetChainService(chainService)
-	syncService.SetNetworkService(networkService)
-
-	networkService.SetSyncService(syncService)
-
+	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)
 }
