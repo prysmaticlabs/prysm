@@ -161,10 +161,14 @@ func (b *BeaconNode) registerPOWChainService() error {
 
 func (b *BeaconNode) registerSyncService() error {
 	var chainService *blockchain.ChainService
-	b.services.FetchService(&chainService)
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
 
 	var p2pService *p2p.Server
-	b.services.FetchService(&p2pService)
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
 
 	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)

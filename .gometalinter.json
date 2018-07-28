@@ -6,6 +6,7 @@
     "goimports",
     "nakedret",
     "unparam",
-    "megacheck"
+    "megacheck",
+    "gas"
   ]
 }

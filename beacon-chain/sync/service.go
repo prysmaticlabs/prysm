@@ -102,8 +102,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 		Hash: h[:],
 	})
-	ss.chainService.ProcessBlock(block)
-	return nil
+	return ss.chainService.ProcessBlock(block)
 }
 
 func (ss *Service) run(done <-chan struct{}) {
