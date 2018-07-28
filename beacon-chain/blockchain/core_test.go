@@ -481,59 +481,140 @@ func TestResetAttesterBitfields(t *testing.T) {
 		t.Fatalf("Could not generate key: %v", err)
 	}
 
-	var validators []types.ValidatorRecord
+	// Testing validator set sizes from 1 to 100.
 
-	for i := 0; i < 32; i++ {
-		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
-		validators = append(validators, validator)
+	for j := 1; j <= 100; j++ {
+
+		var validators []types.ValidatorRecord
+
+		for i := 0; i < j; i++ {
+			validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
+			validators = append(validators, validator)
+		}
+
+		if err := b.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
+			t.Fatalf("unable to mutate crystallizedstate: %v", err)
+		}
+
+		testAttesterBitfield := []byte{2, 4, 6, 9}
+
+		if err := b.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+			t.Fatal("unable to mutate active state")
+		}
+		if err := b.resetAttesterBitfields(); err != nil {
+			t.Fatalf("unable to reset Attester Bitfields")
+		}
+
+		if bytes.Equal(testAttesterBitfield, b.state.ActiveState.AttesterBitfields) {
+			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
+		}
+
+		bitfieldLength := j / 8
+		if j%8 != 0 {
+			bitfieldLength += 1
+		}
+
+		if !bytes.Equal(b.state.ActiveState.AttesterBitfields, make([]byte, bitfieldLength)) {
+			t.Fatalf("attester bitfields are not zeroed out: %v", b.state.ActiveState.AttesterBitfields)
+		}
+
 	}
 
-	if err := b.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
-		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+}
+
+func TestResetTotalDeposit(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
 	}
 
-	testAttesterBitfield := []byte{2, 4, 6, 9}
+	db.Start()
+	defer db.Stop()
 
-	if err := b.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
-		t.Fatal("unable to mutate active state")
-	}
-	if err := b.resetAttesterBitfields(); err != nil {
-		t.Fatalf("unable to reset Attester Bitfields")
-	}
-
-	if bytes.Equal(testAttesterBitfield, b.state.ActiveState.AttesterBitfields) {
-		t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
 
-	if !bytes.Equal(b.state.ActiveState.AttesterBitfields, make([]byte, 4)) {
-		t.Fatalf("attester bitfields are not zeroed out: %v", b.state.ActiveState.AttesterBitfields)
+	ActiveState := &types.ActiveState{TotalAttesterDeposits: 10000}
+	if err := b.MutateActiveState(ActiveState); err != nil {
+		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
-	// Testing with a non-multiple of 8 for number of validators
-	validators = nil
-
-	for i := 0; i < 41; i++ {
-		validator := types.ValidatorRecord{WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
-		validators = append(validators, validator)
+	if b.state.ActiveState.TotalAttesterDeposits != uint64(10000) {
+		t.Fatalf("attester deposit was not saved: %d", b.state.ActiveState.TotalAttesterDeposits)
 	}
 
-	if err := b.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
-		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	if err := b.resetTotalDeposit(); err != nil {
+		t.Fatalf("unable to reset total attester deposit: %v", err)
 	}
 
-	if err := b.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
-		t.Fatal("unable to mutate active state")
+	if b.state.ActiveState.TotalAttesterDeposits != uint64(0) {
+		t.Fatalf("attester deposit was not able to be reset: %d", b.state.ActiveState.TotalAttesterDeposits)
 	}
-	if err := b.resetAttesterBitfields(); err != nil {
-		t.Fatalf("unable to reset Attester Bitfields")
+}
+
+func TestUpdateJustifiedEpoch(t *testing.T) {
+	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewBeaconDB(config)
+
+	if err != nil {
+		t.Fatalf("unable to setup db: %v", err)
 	}
 
-	if bytes.Equal(testAttesterBitfield, b.state.ActiveState.AttesterBitfields) {
-		t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
+	db.Start()
+	defer db.Stop()
+
+	b, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
 
-	if !bytes.Equal(b.state.ActiveState.AttesterBitfields, make([]byte, 6)) {
-		t.Fatalf("attester bitfields are not zeroed out: %v", b.state.ActiveState.AttesterBitfields)
+	CrystallizedState := &types.CrystallizedState{CurrentEpoch: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	if err := b.MutateCrystallizedState(CrystallizedState); err != nil {
+		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
+	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(3) ||
+		b.state.CrystallizedState.LastJustifiedEpoch != uint64(4) ||
+		b.state.CrystallizedState.CurrentEpoch != uint64(5) {
+		t.Fatal("crystallized state unable to be saved")
+	}
+
+	if err := b.updateJustifiedEpoch(); err != nil {
+		t.Fatalf("unable to update justified epoch: %v", err)
+	}
+
+	if b.state.CrystallizedState.LastJustifiedEpoch != uint64(5) {
+		t.Fatalf("unable to update last justified epoch: %d", b.state.CrystallizedState.LastJustifiedEpoch)
+	}
+
+	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(4) {
+		t.Fatalf("unable to update last finalized epoch: %d", b.state.CrystallizedState.LastFinalizedEpoch)
+	}
+
+	CrystallizedState = &types.CrystallizedState{CurrentEpoch: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	if err := b.MutateCrystallizedState(CrystallizedState); err != nil {
+		t.Fatalf("unable to Mutate Active state: %v", err)
+	}
+
+	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(3) ||
+		b.state.CrystallizedState.LastJustifiedEpoch != uint64(4) ||
+		b.state.CrystallizedState.CurrentEpoch != uint64(8) {
+		t.Fatal("crystallized state unable to be saved")
+	}
+
+	if err := b.updateJustifiedEpoch(); err != nil {
+		t.Fatalf("unable to update justified epoch: %v", err)
+	}
+
+	if b.state.CrystallizedState.LastJustifiedEpoch != uint64(8) {
+		t.Fatalf("unable to update last justified epoch: %d", b.state.CrystallizedState.LastJustifiedEpoch)
+	}
+
+	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(3) {
+		t.Fatalf("unable to update last finalized epoch: %d", b.state.CrystallizedState.LastFinalizedEpoch)
+	}
 }
