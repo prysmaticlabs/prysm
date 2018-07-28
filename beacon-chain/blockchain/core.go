@@ -304,7 +304,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 }
 
 // resetTotalDeposit clears and resets the total attester deposit to zero.
-func (b *BeaconChain) resetTotalDeposit() error {
+func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	defer b.lock.Unlock()
 	b.lock.Lock()
 	b.state.ActiveState.TotalAttesterDeposits = 0
@@ -495,15 +495,15 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 				log.Error(err)
 			}
 
-			if err := b.applySlashingConditions(i); err != nil {
-				log.Error(err)
-			}
+			/*			if err := b.applySlashingConditions(i); err != nil {
+						log.Error(err)
+					}*/
 		}
 
 		if err := b.resetAttesterBitfields(); err != nil {
 			return fmt.Errorf("error resetting bitfields: %v", err)
 		}
-		if err := b.resetTotalDeposit(); err != nil {
+		if err := b.resetTotalAttesterDeposit(); err != nil {
 			return fmt.Errorf("error resetting total deposits: %v", err)
 		}
 	}

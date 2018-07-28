@@ -445,7 +445,7 @@ func TestResetAttesterBitfields(t *testing.T) {
 
 }
 
-func TestResetTotalDeposit(t *testing.T) {
+func TestResetTotalAttesterDeposit(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
 
@@ -458,7 +458,7 @@ func TestResetTotalDeposit(t *testing.T) {
 		t.Fatalf("attester deposit was not saved: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
 	}
 
-	if err := beaconChain.resetTotalDeposit(); err != nil {
+	if err := beaconChain.resetTotalAttesterDeposit(); err != nil {
 		t.Fatalf("unable to reset total attester deposit: %v", err)
 	}
 
@@ -583,4 +583,70 @@ func TestUpdateRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("incorrect error message: ` %s ` is displayed when it should have been: attester index does not exist", err.Error())
 	}
 
+}
+
+func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
+	priv, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("Could not generate key: %v", err)
+	}
+
+	var validators []types.ValidatorRecord
+
+	for i := 0; i < 40; i++ {
+		validator := types.ValidatorRecord{Balance: 1000, WithdrawalAddress: common.Address{'A'}, PubKey: enr.Secp256k1(priv.PublicKey)}
+		validators = append(validators, validator)
+	}
+
+	if err := beaconChain.MutateCrystallizedState(&types.CrystallizedState{
+		ActiveValidators:   validators,
+		TotalDeposits:      10000,
+		CurrentEpoch:       5,
+		LastJustifiedEpoch: 4,
+		LastFinalizedEpoch: 3}); err != nil {
+		t.Fatalf("unable to mutate crystallizedstate: %v", err)
+	}
+
+	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
+
+	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
+
+	ActiveState := &types.ActiveState{TotalAttesterDeposits: 8000, AttesterBitfields: testAttesterBitfield}
+	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
+		t.Fatalf("unable to Mutate Active state: %v", err)
+	}
+
+	if err := beaconChain.computeValidatorRewardsAndPenalties(); err != nil {
+		t.Fatalf("could not compute validator rewards and penalties: %v", err)
+	}
+
+	if beaconChain.state.CrystallizedState.LastJustifiedEpoch != uint64(5) {
+		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch)
+	}
+
+	if beaconChain.state.CrystallizedState.LastFinalizedEpoch != uint64(4) {
+		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch)
+	}
+
+	if beaconChain.state.CrystallizedState.ActiveValidators[0].Balance != uint64(1001) {
+		t.Fatalf("validator balance not updated: %d", beaconChain.state.CrystallizedState.ActiveValidators[1].Balance)
+	}
+
+	if beaconChain.state.CrystallizedState.ActiveValidators[7].Balance != uint64(999) {
+		t.Fatalf("validator balance not updated: %d", beaconChain.state.CrystallizedState.ActiveValidators[1].Balance)
+	}
+
+	if beaconChain.state.CrystallizedState.ActiveValidators[29].Balance != uint64(999) {
+		t.Fatalf("validator balance not updated: %d", beaconChain.state.CrystallizedState.ActiveValidators[1].Balance)
+	}
+
+	if beaconChain.state.ActiveState.TotalAttesterDeposits != uint64(0) {
+		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
+	}
+
+	if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfields, make([]byte, 5)) {
+		t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfields)
+	}
 }
