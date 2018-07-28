@@ -32,8 +32,7 @@ func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 	return block, nil
 }
 
-func TestNewBeaconChain(t *testing.T) {
-	hook := logTest.NewGlobal()
+func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.BeaconDB) {
 	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewBeaconDB(config)
 	if err != nil {
@@ -44,6 +43,14 @@ func TestNewBeaconChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
+
+	return beaconChain, db
+}
+
+func TestNewBeaconChain(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
 
 	msg := hook.LastEntry().Message
 	want := "No chainstate found on disk, initializing beacon from genesis"
@@ -62,17 +69,8 @@ func TestNewBeaconChain(t *testing.T) {
 }
 
 func TestMutateActiveState(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
-
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
 
 	active := &types.ActiveState{
 		TotalAttesterDeposits: 4096,
@@ -100,16 +98,8 @@ func TestMutateActiveState(t *testing.T) {
 }
 
 func TestMutateCrystallizedState(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
 
 	currentCheckpoint := common.BytesToHash([]byte("checkpoint"))
 	crystallized := &types.CrystallizedState{
@@ -138,16 +128,8 @@ func TestMutateCrystallizedState(t *testing.T) {
 }
 
 func TestGetAttestersProposer(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("Unable to setup db: %v", err)
-	}
-	db.Start()
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("Unable to setup beacon chain: %v", err)
-	}
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
 
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -182,16 +164,8 @@ func TestGetAttestersProposer(t *testing.T) {
 }
 
 func TestCanProcessBlock(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("Unable to setup beacon chain: %v", err)
-	}
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
 
 	block := types.NewBlock(1)
 	// Using a faulty fetcher should throw an error.
@@ -236,16 +210,8 @@ func TestCanProcessBlock(t *testing.T) {
 }
 
 func TestProcessBlockWithBadHashes(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("Unable to setup beacon chain: %v", err)
-	}
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Stop()
 
 	// Test negative scenario where active state hash is different than node's compute
 	block := types.NewBlock(1)
@@ -256,9 +222,9 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 	block.InsertActiveHash(stateHash)
 
-	b.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
+	beaconChain.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
 
-	canProcess, err := b.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
 		t.Fatalf("CanProcessBlocks should have failed with diff state hashes")
 	}
@@ -274,9 +240,9 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 	block.InsertCrystallizedHash(stateHash)
 
-	b.state.CrystallizedState = &types.CrystallizedState{CurrentEpoch: 9999}
+	beaconChain.state.CrystallizedState = &types.CrystallizedState{CurrentEpoch: 9999}
 
-	canProcess, err = b.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
 		t.Fatalf("CanProcessBlocks should have failed with diff state hashes")
 	}
@@ -286,17 +252,8 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 }
 
 func TestRotateValidatorSet(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
+	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("Unable to setup beacon chain: %v", err)
-	}
 
 	activeValidators := []types.ValidatorRecord{
 		{Balance: 10000, WithdrawalAddress: common.Address{'A'}},
@@ -322,21 +279,21 @@ func TestRotateValidatorSet(t *testing.T) {
 		{Balance: 99999, WithdrawalAddress: common.Address{'O'}},
 	}
 
-	b.CrystallizedState().ActiveValidators = activeValidators
-	b.CrystallizedState().QueuedValidators = queuedValidators
-	b.CrystallizedState().ExitedValidators = exitedValidators
+	beaconChain.CrystallizedState().ActiveValidators = activeValidators
+	beaconChain.CrystallizedState().QueuedValidators = queuedValidators
+	beaconChain.CrystallizedState().ExitedValidators = exitedValidators
 
-	if b.ActiveValidatorCount() != 5 {
-		t.Errorf("Get active validator count failed, wanted 5, got %v", b.ActiveValidatorCount())
+	if beaconChain.ActiveValidatorCount() != 5 {
+		t.Errorf("Get active validator count failed, wanted 5, got %v", beaconChain.ActiveValidatorCount())
 	}
-	if b.QueuedValidatorCount() != 5 {
-		t.Errorf("Get queued validator count failed, wanted 5, got %v", b.QueuedValidatorCount())
+	if beaconChain.QueuedValidatorCount() != 5 {
+		t.Errorf("Get queued validator count failed, wanted 5, got %v", beaconChain.QueuedValidatorCount())
 	}
-	if b.ExitedValidatorCount() != 5 {
-		t.Errorf("Get exited validator count failed, wanted 5, got %v", b.ExitedValidatorCount())
+	if beaconChain.ExitedValidatorCount() != 5 {
+		t.Errorf("Get exited validator count failed, wanted 5, got %v", beaconChain.ExitedValidatorCount())
 	}
 
-	newQueuedValidators, newActiveValidators, newExitedValidators := b.RotateValidatorSet()
+	newQueuedValidators, newActiveValidators, newExitedValidators := beaconChain.RotateValidatorSet()
 
 	if len(newActiveValidators) != 4 {
 		t.Errorf("Get active validator count failed, wanted 5, got %v", len(newActiveValidators))
@@ -350,23 +307,14 @@ func TestRotateValidatorSet(t *testing.T) {
 }
 
 func TestIsEpochTransition(t *testing.T) {
-
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-	db.Start()
+	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
-	b.state.CrystallizedState.CurrentEpoch = 1
-	if !b.isEpochTransition(30) {
+
+	beaconChain.state.CrystallizedState.CurrentEpoch = 1
+	if !beaconChain.isEpochTransition(30) {
 		t.Errorf("there was supposed to be an epoch transition but there isn't one now")
 	}
-	if b.isEpochTransition(8) {
+	if beaconChain.isEpochTransition(8) {
 		t.Errorf("there is not supposed to be an epoch transition but there is one now")
 	}
 }
@@ -387,21 +335,8 @@ func TestHasVoted(t *testing.T) {
 }
 
 func TestApplyRewardAndPenalty(t *testing.T) {
-
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-
-	db.Start()
+	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
-
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
 
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -422,15 +357,15 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 		{Balance: balance5, WithdrawalAddress: common.Address{'E'}, PubKey: enr.Secp256k1(priv.PublicKey)},
 	}}
 
-	if err := b.MutateCrystallizedState(activeValidators); err != nil {
+	if err := beaconChain.MutateCrystallizedState(activeValidators); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 
-	b.applyRewardAndPenalty(0, true)
-	b.applyRewardAndPenalty(1, false)
-	b.applyRewardAndPenalty(2, true)
-	b.applyRewardAndPenalty(3, false)
-	b.applyRewardAndPenalty(4, true)
+	beaconChain.applyRewardAndPenalty(0, true)
+	beaconChain.applyRewardAndPenalty(1, false)
+	beaconChain.applyRewardAndPenalty(2, true)
+	beaconChain.applyRewardAndPenalty(3, false)
+	beaconChain.applyRewardAndPenalty(4, true)
 
 	expectedBalance1 := balance1 + params.AttesterReward
 	expectedBalance2 := balance2 - params.AttesterReward
@@ -438,43 +373,31 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 	expectedBalance4 := balance4 - params.AttesterReward
 	expectedBalance5 := balance5 + params.AttesterReward
 
-	if expectedBalance1 != b.state.CrystallizedState.ActiveValidators[0].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance1, b.state.CrystallizedState.ActiveValidators[0].Balance)
+	if expectedBalance1 != beaconChain.state.CrystallizedState.ActiveValidators[0].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance1, beaconChain.state.CrystallizedState.ActiveValidators[0].Balance)
 	}
 
-	if expectedBalance2 != b.state.CrystallizedState.ActiveValidators[1].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance2, b.state.CrystallizedState.ActiveValidators[1].Balance)
+	if expectedBalance2 != beaconChain.state.CrystallizedState.ActiveValidators[1].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance2, beaconChain.state.CrystallizedState.ActiveValidators[1].Balance)
 	}
 
-	if expectedBalance3 != b.state.CrystallizedState.ActiveValidators[2].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance3, b.state.CrystallizedState.ActiveValidators[2].Balance)
+	if expectedBalance3 != beaconChain.state.CrystallizedState.ActiveValidators[2].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance3, beaconChain.state.CrystallizedState.ActiveValidators[2].Balance)
 	}
 
-	if expectedBalance4 != b.state.CrystallizedState.ActiveValidators[3].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance4, b.state.CrystallizedState.ActiveValidators[3].Balance)
+	if expectedBalance4 != beaconChain.state.CrystallizedState.ActiveValidators[3].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance4, beaconChain.state.CrystallizedState.ActiveValidators[3].Balance)
 	}
 
-	if expectedBalance5 != b.state.CrystallizedState.ActiveValidators[4].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance5, b.state.CrystallizedState.ActiveValidators[4].Balance)
+	if expectedBalance5 != beaconChain.state.CrystallizedState.ActiveValidators[4].Balance {
+		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance5, beaconChain.state.CrystallizedState.ActiveValidators[4].Balance)
 	}
 
 }
 
 func TestResetAttesterBitfields(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-
-	db.Start()
+	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
-
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
 
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -492,20 +415,20 @@ func TestResetAttesterBitfields(t *testing.T) {
 			validators = append(validators, validator)
 		}
 
-		if err := b.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
+		if err := beaconChain.MutateCrystallizedState(&types.CrystallizedState{ActiveValidators: validators}); err != nil {
 			t.Fatalf("unable to mutate crystallizedstate: %v", err)
 		}
 
 		testAttesterBitfield := []byte{2, 4, 6, 9}
 
-		if err := b.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+		if err := beaconChain.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
 			t.Fatal("unable to mutate active state")
 		}
-		if err := b.resetAttesterBitfields(); err != nil {
+		if err := beaconChain.resetAttesterBitfields(); err != nil {
 			t.Fatalf("unable to reset Attester Bitfields")
 		}
 
-		if bytes.Equal(testAttesterBitfield, b.state.ActiveState.AttesterBitfields) {
+		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.AttesterBitfields) {
 			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
 		}
 
@@ -514,8 +437,8 @@ func TestResetAttesterBitfields(t *testing.T) {
 			bitfieldLength += 1
 		}
 
-		if !bytes.Equal(b.state.ActiveState.AttesterBitfields, make([]byte, bitfieldLength)) {
-			t.Fatalf("attester bitfields are not zeroed out: %v", b.state.ActiveState.AttesterBitfields)
+		if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfields, make([]byte, bitfieldLength)) {
+			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfields)
 		}
 
 	}
@@ -523,98 +446,74 @@ func TestResetAttesterBitfields(t *testing.T) {
 }
 
 func TestResetTotalDeposit(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-
-	db.Start()
+	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
 
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
-
 	ActiveState := &types.ActiveState{TotalAttesterDeposits: 10000}
-	if err := b.MutateActiveState(ActiveState); err != nil {
+	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
-	if b.state.ActiveState.TotalAttesterDeposits != uint64(10000) {
-		t.Fatalf("attester deposit was not saved: %d", b.state.ActiveState.TotalAttesterDeposits)
+	if beaconChain.state.ActiveState.TotalAttesterDeposits != uint64(10000) {
+		t.Fatalf("attester deposit was not saved: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
 	}
 
-	if err := b.resetTotalDeposit(); err != nil {
+	if err := beaconChain.resetTotalDeposit(); err != nil {
 		t.Fatalf("unable to reset total attester deposit: %v", err)
 	}
 
-	if b.state.ActiveState.TotalAttesterDeposits != uint64(0) {
-		t.Fatalf("attester deposit was not able to be reset: %d", b.state.ActiveState.TotalAttesterDeposits)
+	if beaconChain.state.ActiveState.TotalAttesterDeposits != uint64(0) {
+		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
 	}
 }
 
 func TestUpdateJustifiedEpoch(t *testing.T) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
-
-	if err != nil {
-		t.Fatalf("unable to setup db: %v", err)
-	}
-
-	db.Start()
+	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Stop()
 
-	b, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup beacon chain: %v", err)
-	}
-
 	CrystallizedState := &types.CrystallizedState{CurrentEpoch: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
-	if err := b.MutateCrystallizedState(CrystallizedState); err != nil {
+	if err := beaconChain.MutateCrystallizedState(CrystallizedState); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
-	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(3) ||
-		b.state.CrystallizedState.LastJustifiedEpoch != uint64(4) ||
-		b.state.CrystallizedState.CurrentEpoch != uint64(5) {
+	if beaconChain.state.CrystallizedState.LastFinalizedEpoch != uint64(3) ||
+		beaconChain.state.CrystallizedState.LastJustifiedEpoch != uint64(4) ||
+		beaconChain.state.CrystallizedState.CurrentEpoch != uint64(5) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	if err := b.updateJustifiedEpoch(); err != nil {
+	if err := beaconChain.updateJustifiedEpoch(); err != nil {
 		t.Fatalf("unable to update justified epoch: %v", err)
 	}
 
-	if b.state.CrystallizedState.LastJustifiedEpoch != uint64(5) {
-		t.Fatalf("unable to update last justified epoch: %d", b.state.CrystallizedState.LastJustifiedEpoch)
+	if beaconChain.state.CrystallizedState.LastJustifiedEpoch != uint64(5) {
+		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch)
 	}
 
-	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(4) {
-		t.Fatalf("unable to update last finalized epoch: %d", b.state.CrystallizedState.LastFinalizedEpoch)
+	if beaconChain.state.CrystallizedState.LastFinalizedEpoch != uint64(4) {
+		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch)
 	}
 
 	CrystallizedState = &types.CrystallizedState{CurrentEpoch: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
-	if err := b.MutateCrystallizedState(CrystallizedState); err != nil {
+	if err := beaconChain.MutateCrystallizedState(CrystallizedState); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
-	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(3) ||
-		b.state.CrystallizedState.LastJustifiedEpoch != uint64(4) ||
-		b.state.CrystallizedState.CurrentEpoch != uint64(8) {
+	if beaconChain.state.CrystallizedState.LastFinalizedEpoch != uint64(3) ||
+		beaconChain.state.CrystallizedState.LastJustifiedEpoch != uint64(4) ||
+		beaconChain.state.CrystallizedState.CurrentEpoch != uint64(8) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	if err := b.updateJustifiedEpoch(); err != nil {
+	if err := beaconChain.updateJustifiedEpoch(); err != nil {
 		t.Fatalf("unable to update justified epoch: %v", err)
 	}
 
-	if b.state.CrystallizedState.LastJustifiedEpoch != uint64(8) {
-		t.Fatalf("unable to update last justified epoch: %d", b.state.CrystallizedState.LastJustifiedEpoch)
+	if beaconChain.state.CrystallizedState.LastJustifiedEpoch != uint64(8) {
+		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch)
 	}
 
-	if b.state.CrystallizedState.LastFinalizedEpoch != uint64(3) {
-		t.Fatalf("unable to update last finalized epoch: %d", b.state.CrystallizedState.LastFinalizedEpoch)
+	if beaconChain.state.CrystallizedState.LastFinalizedEpoch != uint64(3) {
+		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch)
 	}
 }
