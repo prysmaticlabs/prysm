@@ -96,7 +96,7 @@ func (b *Block) MainChainRef() common.Hash {
 
 // RandaoReveal returns the blake2b randao hash.
 func (b *Block) RandaoReveal() (hash.Hash, error) {
-	return blake2b.New256(b.data.MainChainRef)
+	return blake2b.New256(b.data.RandaoReveal)
 }
 
 // ActiveStateHash blake2b value.
