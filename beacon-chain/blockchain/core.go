@@ -1,10 +1,8 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"hash"
 	"math"
 	"sync"
 	"time"
@@ -139,8 +137,10 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if !bytes.Equal(block.ActiveStateHash().Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash().Sum(nil), hash.Sum(nil))
+	blockActiveStateHash := block.ActiveStateHash()
+
+	if blockActiveStateHash != hash {
+		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", blockActiveStateHash, hash)
 	}
 
 	hash, err = hashCrystallizedState(b.CrystallizedState())
@@ -148,8 +148,10 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if !bytes.Equal(block.CrystallizedStateHash().Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash().Sum(nil), hash.Sum(nil))
+	blockCrystallizedStateHash := block.CrystallizedStateHash()
+
+	if blockCrystallizedStateHash != hash {
+		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", blockCrystallizedStateHash, hash)
 	}
 
 	validTime := time.Now().After(genesisTime.Add(slotDuration))
@@ -233,22 +235,22 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 // hashActiveState serializes the active state object then uses
 // blake2b to hash the serialized object.
-func hashActiveState(state *types.ActiveState) (hash.Hash, error) {
+func hashActiveState(state *types.ActiveState) ([32]byte, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
-	return blake2b.New256(serializedState)
+	return blake2b.Sum256(serializedState), nil
 }
 
 // hashCrystallizedState serializes the crystallized state object
 // then uses blake2b to hash the serialized object.
-func hashCrystallizedState(state *types.CrystallizedState) (hash.Hash, error) {
+func hashCrystallizedState(state *types.CrystallizedState) ([32]byte, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
-	return blake2b.New256(serializedState)
+	return blake2b.Sum256(serializedState), nil
 }
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.

@@ -2,7 +2,6 @@ package types
 
 import (
 	"context"
-	"hash"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,9 +17,9 @@ type P2P interface {
 
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {
-	ProcessedHashes() []hash.Hash
-	ProcessBlock(*Block) error
-	ContainsBlock(hash.Hash) bool
+	ProcessedHashes() [][32]byte
+	ProcessBlock(b *Block) error
+	ContainsBlock(h [32]byte) bool
 }
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.

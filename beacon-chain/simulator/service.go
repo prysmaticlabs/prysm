@@ -2,7 +2,6 @@ package simulator
 
 import (
 	"context"
-	"hash"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -20,7 +19,7 @@ type Simulator struct {
 	p2p               types.P2P
 	web3Service       *powchain.Web3Service
 	delay             time.Duration
-	broadcastedBlocks map[hash.Hash]*types.Block
+	broadcastedBlocks map[[32]byte]*types.Block
 }
 
 // Config options for the simulator service.
@@ -42,7 +41,7 @@ func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Ser
 		p2p:               beaconp2p,
 		web3Service:       web3Service,
 		delay:             cfg.Delay,
-		broadcastedBlocks: make(map[hash.Hash]*types.Block),
+		broadcastedBlocks: make(map[[32]byte]*types.Block),
 	}
 }
 
@@ -71,7 +70,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Could not hash simulated block: %v", err)
 			}
-			sim.p2p.Broadcast(block.Data())
+			sim.p2p.Broadcast(block.Proto())
 			// We then store the block in a map for later retrieval upon a request for its full
 			// data being sent back.
 			sim.broadcastedBlocks[h] = block

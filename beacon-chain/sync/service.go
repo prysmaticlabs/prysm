@@ -8,7 +8,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "sync")
@@ -34,13 +33,13 @@ type Service struct {
 	blockBuf             chan p2p.Message
 }
 
-// Config allows the channel's buffer sizes to be changed
+// Config allows the channel's buffer sizes to be changed.
 type Config struct {
 	HashBufferSize  int
 	BlockBufferSize int
 }
 
-// DefaultConfig provides the default configuration for a sync service
+// DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
 	return Config{100, 100}
 }
@@ -75,10 +74,8 @@ func (ss *Service) Stop() error {
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
-	h, err := blake2b.New256(data.Hash)
-	if err != nil {
-		return fmt.Errorf("could not calculate blake2b hash of proto hash: %v", err)
-	}
+	var h [32]byte
+	copy(h[:], data.Hash[:32])
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
@@ -101,10 +98,10 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	log.Infof("Broadcasting block hash to peers: %x", h.Sum(nil))
-	// ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
-	// 	Hash: h.Sum(nil),
-	// })
+	log.Infof("Broadcasting block hash to peers: %x", h)
+	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
+		Hash: h[:],
+	})
 	ss.chainService.ProcessBlock(block)
 	return nil
 }
@@ -120,23 +117,23 @@ func (ss *Service) run(done <-chan struct{}) {
 			log.Infof("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockHashAnnounce)
+			data, ok := msg.Data.(pb.BeaconBlockHashAnnounce)
 			// TODO: Handle this at p2p layer.
 			if !ok {
-				log.Errorf("Received malformed beacon block hash announcement p2p message")
+				log.Error("Received malformed beacon block hash announcement p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlockHash(data); err != nil {
+			if err := ss.ReceiveBlockHash(&data); err != nil {
 				log.Errorf("Could not receive incoming block hash: %v", err)
 			}
 		case msg := <-ss.blockBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockResponse)
+			data, ok := msg.Data.(pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlock(data); err != nil {
+			if err := ss.ReceiveBlock(&data); err != nil {
 				log.Errorf("Could not receive incoming block: %v", err)
 			}
 		}

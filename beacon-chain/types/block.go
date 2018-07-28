@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"hash"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,9 +13,7 @@ import (
 
 // Block defines a beacon chain core primitive.
 type Block struct {
-	data                  *pb.BeaconBlockResponse
-	activeStateHash       hash.Hash
-	crystallizedStateHash hash.Hash
+	data *pb.BeaconBlockResponse
 }
 
 // AggregateVote contains the fields of aggregate vote in individual shard.
@@ -35,23 +32,7 @@ func NewBlock(slotNumber uint64) *Block {
 
 // NewBlockWithData explicitly sets the data field of a block.
 func NewBlockWithData(data *pb.BeaconBlockResponse) (*Block, error) {
-	activeStateHash, _ := blake2b.New256([]byte{})
-	crystallizedStateHash, _ := blake2b.New256([]byte{})
-	if len(data.ActiveStateHash) > 0 {
-		h, err := blake2b.New256(data.ActiveStateHash)
-		if err != nil {
-			return nil, err
-		}
-		activeStateHash = h
-	}
-	if len(data.CrystallizedStateHash) > 0 {
-		h, err := blake2b.New256(data.CrystallizedStateHash)
-		if err != nil {
-			return nil, err
-		}
-		activeStateHash = h
-	}
-	return &Block{data, activeStateHash, crystallizedStateHash}, nil
+	return &Block{data}, nil
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
@@ -65,23 +46,25 @@ func NewGenesisBlock() (*Block, error) {
 	return &Block{data: &pb.BeaconBlockResponse{Timestamp: protoGenesis}}, nil
 }
 
-// Hash generates the blake2b hash of the block
-func (b *Block) Hash() (hash.Hash, error) {
-	data, err := proto.Marshal(b.data)
-	if err != nil {
-		return nil, fmt.Errorf("could not marshal block proto data: %v", err)
-	}
-	return blake2b.New256(data)
-}
-
-// Data returns the inner proto contents of a block.
-func (b *Block) Data() *pb.BeaconBlockResponse {
+// Proto returns the underlying protobuf data within a block primitive.
+func (b *Block) Proto() *pb.BeaconBlockResponse {
 	return b.data
 }
 
+// Hash generates the blake2b hash of the block
+func (b *Block) Hash() ([32]byte, error) {
+	data, err := proto.Marshal(b.data)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
+	}
+	return blake2b.Sum256(data), nil
+}
+
 // ParentHash corresponding to parent beacon block.
-func (b *Block) ParentHash() (hash.Hash, error) {
-	return blake2b.New256(b.data.ParentHash)
+func (b *Block) ParentHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.ParentHash[:32])
+	return h
 }
 
 // SlotNumber of the beacon block.
@@ -95,18 +78,24 @@ func (b *Block) MainChainRef() common.Hash {
 }
 
 // RandaoReveal returns the blake2b randao hash.
-func (b *Block) RandaoReveal() (hash.Hash, error) {
-	return blake2b.New256(b.data.RandaoReveal)
+func (b *Block) RandaoReveal() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.RandaoReveal[:32])
+	return h
 }
 
 // ActiveStateHash blake2b value.
-func (b *Block) ActiveStateHash() hash.Hash {
-	return b.activeStateHash
+func (b *Block) ActiveStateHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.ActiveStateHash[:32])
+	return h
 }
 
 // CrystallizedStateHash blake2b value.
-func (b *Block) CrystallizedStateHash() hash.Hash {
-	return b.crystallizedStateHash
+func (b *Block) CrystallizedStateHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.CrystallizedStateHash[:32])
+	return h
 }
 
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
@@ -115,11 +104,11 @@ func (b *Block) Timestamp() (time.Time, error) {
 }
 
 // InsertActiveHash updates the activeStateHash property in the data of a beacon block.
-func (b *Block) InsertActiveHash(h hash.Hash) {
-	b.activeStateHash = h
+func (b *Block) InsertActiveHash(h [32]byte) {
+	b.data.ActiveStateHash = h[:]
 }
 
 // InsertCrystallizedHash updates the crystallizedStateHash property in the data of a beacon block.
-func (b *Block) InsertCrystallizedHash(h hash.Hash) {
-	b.crystallizedStateHash = h
+func (b *Block) InsertCrystallizedHash(h [32]byte) {
+	b.data.CrystallizedStateHash = h[:]
 }
