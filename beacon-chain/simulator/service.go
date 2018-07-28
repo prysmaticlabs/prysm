@@ -100,6 +100,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				MainChainRef:          sim.web3Service.LatestBlockHash().Bytes(),
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
+				ParentHash:            make([]byte, 32),
 			})
 			if err != nil {
 				log.Errorf("Could not create simulated block: %v", err)

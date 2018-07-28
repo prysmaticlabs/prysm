@@ -103,6 +103,7 @@ func TestProcessBlock(t *testing.T) {
 
 	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
+		ParentHash:   make([]byte, 32),
 	}
 
 	msg := p2p.Message{
@@ -145,6 +146,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	blockResponse1 := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
+		ParentHash:   make([]byte, 32),
 	}
 
 	msg1 := p2p.Message{
@@ -154,6 +156,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	blockResponse2 := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{6, 7, 8, 9, 10},
+		ParentHash:   make([]byte, 32),
 	}
 
 	msg2 := p2p.Message{
@@ -211,6 +214,7 @@ func TestProcessSameBlock(t *testing.T) {
 
 	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3},
+		ParentHash:   make([]byte, 32),
 	}
 
 	msg := p2p.Message{
