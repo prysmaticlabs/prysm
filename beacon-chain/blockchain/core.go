@@ -253,14 +253,14 @@ func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
 // getCutoffs is used to split up validators into groups at the start
 // of every epoch. It determines at what height validators can make
 // attestations and crosslinks. It returns lists of cutoff indices.
-func getCutoffs(validatorCount int) []int {
+func GetCutoffs(validatorCount int) []int {
 	var heightCutoff = []int{0}
 	var heights []int
 	var heightCount float64
 
 	// Skip heights if there's not enough validators to fill in a min sized committee.
 	if validatorCount < params.EpochLength*params.MinCommiteeSize {
-		heightCount = math.Ceil(float64(validatorCount) / params.MinCommiteeSize)
+		heightCount = math.Floor(float64(validatorCount) / params.MinCommiteeSize)
 		for i := 0; i < int(heightCount); i++ {
 			heights = append(heights, (i*params.Cofactor)%params.EpochLength)
 		}
@@ -274,7 +274,7 @@ func getCutoffs(validatorCount int) []int {
 
 	filled := 0
 	appendHeight := false
-	for i := 0; i < params.EpochLength; i++ {
+	for i := 0; i < params.EpochLength-1; i++ {
 		appendHeight = false
 		for _, height := range heights {
 			if i == height {
