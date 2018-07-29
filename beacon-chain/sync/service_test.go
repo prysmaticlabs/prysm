@@ -22,6 +22,8 @@ func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
 
+func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
+
 type mockChainService struct {
 	processedHashes [][32]byte
 }

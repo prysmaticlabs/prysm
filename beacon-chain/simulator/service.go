@@ -46,8 +46,7 @@ func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Ser
 		web3Service: web3Service,
 		delay:       cfg.Delay,
 		broadcastedBlockHashes: make(map[[32]byte]*types.Block),
-		delay:            cfg.BlockRequestBuf,
-		blockRequestChan: make(chan p2p.Message, cfg.BlockRequestBuf),
+		blockRequestChan:       make(chan p2p.Message, cfg.BlockRequestBuf),
 	}
 }
 
