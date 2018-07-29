@@ -91,7 +91,7 @@ func TestSubscribeToTopic(t *testing.T) {
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
 
-	testSubscribe(t, s, gsub, ch, ctx)
+	testSubscribe(ctx, t, s, gsub, ch)
 }
 
 func TestSubscribe(t *testing.T) {
@@ -116,10 +116,10 @@ func TestSubscribe(t *testing.T) {
 	sub := s.Subscribe(pb.CollationBodyRequest{}, ch)
 	defer sub.Unsubscribe()
 
-	testSubscribe(t, s, gsub, ch, ctx)
+	testSubscribe(ctx, t, s, gsub, ch)
 }
 
-func testSubscribe(t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message, ctx context.Context) {
+func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
 	topic := pb.Topic_COLLATION_BODY_REQUEST
 	msgType := topicTypeMapping[topic]
 	go s.subscribeToTopic(topic, msgType)
