@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -84,7 +83,7 @@ func TestProcessBlockHash(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	testutil.AssertLogsContain(t, hook, "Requesting full block data from sender")
+	testutil.AssertLogsContain(t, hook, "requesting full block data from sender")
 	hook.Reset()
 }
 
@@ -123,9 +122,6 @@ func TestProcessBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Sync service broadcasts the block and forwards the block to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h))
 
 	if ms.processedHashes[0] != h {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])
@@ -190,11 +186,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h1))
 	if ms.processedHashes[0] != h1 {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1, ms.processedHashes[0])
 	}
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h2))
 	if ms.processedHashes[1] != h2 {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2, ms.processedHashes[1])
 	}
@@ -239,7 +233,6 @@ func TestProcessSameBlock(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h))
 	if len(ms.processedHashes) > 1 {
 		t.Error("should have only processed one block, processed both instead")
 	}

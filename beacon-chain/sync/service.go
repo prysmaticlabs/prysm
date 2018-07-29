@@ -101,6 +101,8 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if err := ss.chainService.ProcessBlock(block); err != nil {
 		return fmt.Errorf("could not process block: %v", err)
 	}
+	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{Hash: h[:]})
+	log.Debugf("Relaying processed block hash to peers: %x", h)
 	return nil
 }
 
