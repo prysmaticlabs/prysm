@@ -2,6 +2,7 @@ package proposer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -66,8 +67,12 @@ func createCollation(caller mainchain.ContractCaller, account *accounts.Account,
 	}
 
 	// check with SMC to see if we can add the header.
-	if a, _ := checkHeaderAdded(caller, shardID, period); !a {
-		return nil, fmt.Errorf("can't create collation, collation with same period has already been added")
+	a, err := checkHeaderAdded(caller, shardID, period)
+	if err != nil {
+		return nil, err
+	}
+	if !a {
+		return nil, errors.New("can't create collation, collation with same period has already been added")
 	}
 
 	// serialized tx to blob for collation body.

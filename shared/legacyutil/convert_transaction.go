@@ -1,4 +1,4 @@
-// This package exists to convert Ethererum 2.0 types to go-ethereum or
+// Package legacyutil exists to convert Ethererum 2.0 types to go-ethereum or
 // Ethereum 1.0 types.
 package legacyutil
 

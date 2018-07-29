@@ -19,8 +19,15 @@ var portRange int32 = 100
 // identity.
 func buildOptions() []libp2p.Option {
 	rand.Seed(int64(time.Now().Nanosecond()))
-	priv, _, _ := crypto.GenerateKeyPair(crypto.Secp256k1, 512)
-	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", port+(rand.Int31n(portRange))))
+	priv, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 512)
+	if err != nil {
+		log.Errorf("Failed to generate crypto key pair: %v", err)
+	}
+
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", port+(rand.Int31n(portRange))))
+	if err != nil {
+		log.Errorf("Failed to p2p listen: %v", err)
+	}
 
 	return []libp2p.Option{
 		libp2p.ListenAddrs(listen),

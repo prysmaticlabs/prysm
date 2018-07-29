@@ -23,8 +23,8 @@ var (
 		Usage: "Data directory for the databases and keystore",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
-	// NetworkIdFlag defines the specific network identifier.
-	NetworkIdFlag = cli.Uint64Flag{
+	// NetworkIDFlag defines the specific network identifier.
+	NetworkIDFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: 1,

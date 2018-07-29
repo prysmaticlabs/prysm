@@ -3,6 +3,8 @@ package params
 const (
 	// AttesterCount is the number of attesters per committee/
 	AttesterCount = 32
+	// AttesterReward determines how much ETH attesters get for performing their duty.
+	AttesterReward = 1
 	// EpochLength is the beacon chain epoch length in slots.
 	EpochLength = 64
 	// ShardCount is a fixed number.
