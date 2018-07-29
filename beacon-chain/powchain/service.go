@@ -26,6 +26,7 @@ var log = logrus.WithField("prefix", "powchain")
 type Web3Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
+	client              *ethclient.Client
 	headerChan          chan *gethTypes.Header
 	logChan             chan gethTypes.Log
 	pubKey              string
@@ -74,8 +75,8 @@ func (w *Web3Service) Start() {
 		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
 		return
 	}
-	client := ethclient.NewClient(rpcClient)
-	go w.fetchChainInfo(w.ctx, client, client)
+	w.client = ethclient.NewClient(rpcClient)
+	go w.fetchChainInfo(w.ctx, w.client, w.client)
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -139,4 +140,9 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 // ValidatorRegistered is a getter for validatorRegistered to make it read-only.
 func (w *Web3Service) ValidatorRegistered() bool {
 	return w.validatorRegistered
+}
+
+// Client returns the underlying web3 client.
+func (w *Web3Service) Client() types.POWChainClient {
+	return w.client
 }

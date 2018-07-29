@@ -2,9 +2,9 @@ package simulator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
@@ -19,7 +19,6 @@ type Simulator struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
 	p2p                    types.P2P
-	web3Service            *powchain.Web3Service
 	delay                  time.Duration
 	broadcastedBlockHashes map[[32]byte]*types.Block
 	blockRequestChan       chan p2p.Message
@@ -33,18 +32,17 @@ type Config struct {
 
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
-	return &Config{Delay: time.Second * 10, BlockRequestBuf: 100}
+	return &Config{Delay: time.Second * 7, BlockRequestBuf: 100}
 }
 
 // NewSimulator hi.
-func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Service *powchain.Web3Service) *Simulator {
+func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
-		ctx:         ctx,
-		cancel:      cancel,
-		p2p:         beaconp2p,
-		web3Service: web3Service,
-		delay:       cfg.Delay,
+		ctx:    ctx,
+		cancel: cancel,
+		p2p:    beaconp2p,
+		delay:  cfg.Delay,
 		broadcastedBlockHashes: make(map[[32]byte]*types.Block),
 		blockRequestChan:       make(chan p2p.Message, cfg.BlockRequestBuf),
 	}
@@ -77,6 +75,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Could not hash simulated block: %v", err)
 			}
+			log.WithField("announcedBlockHash", fmt.Sprintf("%x", h)).Info("Announcing block hash")
 			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 				Hash: h[:],
 			})
@@ -84,7 +83,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			// data being sent back.
 			sim.broadcastedBlockHashes[h] = block
 		case msg := <-sim.blockRequestChan:
-			data, ok := msg.Data.(pb.BeaconBlockRequest)
+			data, ok := msg.Data.(*pb.BeaconBlockRequest)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Error("Received malformed beacon block request p2p message")
@@ -98,7 +97,8 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Could not hash block: %v", err)
 			}
-			// Broadcasts the full block body to the requester.
+			log.WithField("blockRequestHash", fmt.Sprintf("%x", h)).Info("Responding to full block request for hash")
+			// Sends the full block body to the requester.
 			sim.p2p.Send(block.Proto(), msg.Peer)
 		}
 	}

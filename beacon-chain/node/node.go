@@ -51,15 +51,15 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerPOWChainService(); err != nil {
-		return nil, err
-	}
-
 	if ctx.GlobalBool(utils.SimulatorFlag.Name) {
 		if err := beacon.registerSimulatorService(); err != nil {
 			return nil, err
 		}
 		return beacon, nil
+	}
+
+	if err := beacon.registerPOWChainService(); err != nil {
+		return nil, err
 	}
 
 	path := ctx.GlobalString(cmd.DataDirFlag.Name)
@@ -183,11 +183,7 @@ func (b *BeaconNode) registerSimulatorService() error {
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
-	var web3Service *powchain.Web3Service
-	if err := b.services.FetchService(&web3Service); err != nil {
-		return err
-	}
 	cfg := simulator.DefaultConfig()
-	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service)
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService)
 	return b.services.RegisterService(simulatorService)
 }

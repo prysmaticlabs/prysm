@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -27,7 +28,14 @@ type ChainService struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil, nil}, nil
+	return &ChainService{
+		ctx:               ctx,
+		cancel:            cancel,
+		beaconDB:          beaconDB,
+		web3Service:       web3Service,
+		latestBeaconBlock: make(chan *types.Block),
+		processedHashes:   [][32]byte{},
+	}, nil
 }
 
 // Start a blockchain service's main event loop.
@@ -55,9 +63,19 @@ func (c *ChainService) ProcessedHashes() [][32]byte {
 }
 
 // ProcessBlock accepts a new block for inclusion in the chain.
-func (c *ChainService) ProcessBlock(b *types.Block) error {
-	c.latestBeaconBlock <- b
-	log.Debug("Processing block...")
+func (c *ChainService) ProcessBlock(block *types.Block) error {
+	h, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+	log.WithField("blockHash", fmt.Sprintf("%x", h)).Info("Received full block, processing validity conditions")
+	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+	if err != nil {
+		return err
+	}
+	if canProcess {
+		c.latestBeaconBlock <- block
+	}
 	return nil
 }
 

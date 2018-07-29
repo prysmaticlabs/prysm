@@ -38,3 +38,11 @@ type POWBlockFetcher interface {
 type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
 }
+
+// POWChainClient defines a struct that combines all relevant PoW mainchain interactions required
+// by the beacon chain node.
+type POWChainClient interface {
+	Reader
+	POWBlockFetcher
+	Logger
+}

@@ -69,7 +69,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}()
 
 	announceHash := blake2b.Sum256([]byte{})
-	hashAnnounce := pb.BeaconBlockHashAnnounce{
+	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
 
@@ -102,7 +102,7 @@ func TestProcessBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := pb.BeaconBlockResponse{
+	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
 	}
 
@@ -115,7 +115,7 @@ func TestProcessBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlockWithData(&blockResponse)
+	block, err := types.NewBlockWithData(blockResponse)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse1 := pb.BeaconBlockResponse{
+	blockResponse1 := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
 	}
 
@@ -156,7 +156,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		Data: blockResponse1,
 	}
 
-	blockResponse2 := pb.BeaconBlockResponse{
+	blockResponse2 := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{6, 7, 8, 9, 10},
 	}
 
@@ -170,7 +170,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block1, err := types.NewBlockWithData(&blockResponse1)
+	block1, err := types.NewBlockWithData(blockResponse1)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block2, err := types.NewBlockWithData(&blockResponse2)
+	block2, err := types.NewBlockWithData(blockResponse2)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestProcessSameBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := pb.BeaconBlockResponse{
+	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3},
 	}
 
@@ -228,7 +228,7 @@ func TestProcessSameBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlockWithData(&blockResponse)
+	block, err := types.NewBlockWithData(blockResponse)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
