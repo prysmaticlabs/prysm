@@ -73,14 +73,15 @@ func (ss *Service) Stop() error {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
+func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
 	log.Info("Requesting full block data from sender")
-	// TODO: Request the full block data from peer that sent the block hash.
+	// Request the full block data from peer that sent the block hash.
+	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
 	return nil
 }
 
@@ -123,7 +124,7 @@ func (ss *Service) run(done <-chan struct{}) {
 				log.Error("Received malformed beacon block hash announcement p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlockHash(&data); err != nil {
+			if err := ss.ReceiveBlockHash(&data, msg.Peer); err != nil {
 				log.Errorf("Could not receive incoming block hash: %v", err)
 			}
 		case msg := <-ss.blockBuf:
