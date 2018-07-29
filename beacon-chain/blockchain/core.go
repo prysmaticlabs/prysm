@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -91,18 +92,26 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
 }
 
+// isEpochTransition checks if the current slotNumber divided by the epoch length(64 slots)
+// is greater than the current epoch.
+func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
+	currentEpoch := b.state.CrystallizedState.CurrentEpoch
+	isTransition := (slotNumber / params.EpochLength) > currentEpoch
+	return isTransition
+}
+
 // MutateActiveState allows external services to modify the active state.
 func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.ActiveState = activeState
 	return b.persist()
 }
 
 // MutateCrystallizedState allows external services to modify the crystallized state.
 func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.CrystallizedState = crystallizedState
 	return b.persist()
 }
@@ -261,4 +270,134 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 		return nil, -1, err
 	}
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
+}
+
+// hasVoted checks if the attester has voted by looking at the bitfield.
+func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool {
+	voted := false
+
+	fields := bitfields[attesterBlock-1]
+	attesterField := fields >> (8 - uint(attesterFieldIndex))
+	if attesterField%2 != 0 {
+		voted = true
+	}
+
+	return voted
+}
+
+// applyRewardAndPenalty applies the appropriate rewards and penalties according to
+// whether the attester has voted or not.
+func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if voted {
+		b.state.CrystallizedState.ActiveValidators[index].Balance += params.AttesterReward
+	} else {
+		// TODO : Change this when penalties are specified for not voting
+		b.state.CrystallizedState.ActiveValidators[index].Balance -= params.AttesterReward
+	}
+
+	return b.persist()
+}
+
+// resetAttesterBitfields resets the attester bitfields in the ActiveState to zero.
+func (b *BeaconChain) resetAttesterBitfields() error {
+
+	length := int(len(b.state.CrystallizedState.ActiveValidators) / 8)
+	if len(b.state.CrystallizedState.ActiveValidators)%8 != 0 {
+		length++
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	newbitfields := make([]byte, length)
+	b.state.ActiveState.AttesterBitfields = newbitfields
+
+	return b.persist()
+}
+
+// resetTotalDeposit clears and resets the total attester deposit to zero.
+func (b *BeaconChain) resetTotalAttesterDeposit() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.ActiveState.TotalAttesterDeposits = 0
+
+	return b.persist()
+}
+
+// setJustifiedEpoch sets the justified epoch during an epoch transition.
+func (b *BeaconChain) updateJustifiedEpoch() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
+	b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
+
+	if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
+		b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
+	}
+
+	return b.persist()
+}
+
+// setRewardsAndPenalties checks if the attester has voted and then applies the
+// rewards and penalties for them.
+func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
+	bitfields := b.state.ActiveState.AttesterBitfields
+	attesterBlock := (index + 1) / 8
+	attesterFieldIndex := (index + 1) % 8
+	if attesterFieldIndex == 0 {
+		attesterFieldIndex = 8
+	} else {
+		attesterBlock++
+	}
+
+	if len(bitfields) < attesterBlock {
+		return errors.New("attester index does not exist")
+	}
+
+	voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
+	if err := b.applyRewardAndPenalty(index, voted); err != nil {
+		return fmt.Errorf("unable to apply rewards and penalties: %v", err)
+	}
+
+	return nil
+}
+
+// Slashing Condtions
+// TODO: Implement all the conditions and add in the methods once the spec is updated
+
+// computeValidatorRewardsAndPenalties is run every epoch transition and appropriates the
+// rewards and penalties, resets the bitfield and deposits and also applies the slashing conditions.
+func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
+	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
+	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
+	totalDeposit := b.state.CrystallizedState.TotalDeposits
+
+	attesterFactor := attesterDeposits * 3
+	totalFactor := uint64(totalDeposit * 2)
+
+	if attesterFactor >= totalFactor {
+		log.Info("Justified epoch in the crystallised state is set to the current epoch")
+
+		if err := b.updateJustifiedEpoch(); err != nil {
+			return fmt.Errorf("error setting justified epoch: %v", err)
+		}
+
+		for i := range activeValidatorSet {
+			if err := b.updateRewardsAndPenalties(i); err != nil {
+				log.Error(err)
+			}
+		}
+
+		if err := b.resetAttesterBitfields(); err != nil {
+			return fmt.Errorf("error resetting bitfields: %v", err)
+		}
+		if err := b.resetTotalAttesterDeposit(); err != nil {
+			return fmt.Errorf("error resetting total deposits: %v", err)
+		}
+	}
+	return nil
 }
