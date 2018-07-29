@@ -129,7 +129,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
 
 	// Calculate the timestamp validity condition.
-	slotDuration := time.Duration(block.SlotNumber()*params.SlotLength) * time.Second
+	slotDuration := time.Duration(block.SlotNumber()*params.SlotDuration) * time.Second
 	genesis, err := b.GenesisBlock()
 	if err != nil {
 		return false, err
@@ -242,6 +242,16 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 	}, nil
 }
 
+// getAttestersProposer returns lists of random sampled attesters and proposer indices.
+func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
+	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
+	indices, err := utils.ShuffleIndices(seed, len(b.CrystallizedState().ActiveValidators))
+	if err != nil {
+		return nil, -1, err
+	}
+	return indices[:int(attesterCount)], indices[len(indices)-1], nil
+}
+
 // hashActiveState serializes the active state object then uses
 // blake2b to hash the serialized object.
 func hashActiveState(state *types.ActiveState) ([32]byte, error) {
@@ -262,14 +272,50 @@ func hashCrystallizedState(state *types.CrystallizedState) ([32]byte, error) {
 	return blake2b.Sum256(serializedState), nil
 }
 
-// getAttestersProposer returns lists of random sampled attesters and proposer indices.
-func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
-	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
-	indices, err := utils.ShuffleIndices(seed, len(b.CrystallizedState().ActiveValidators))
-	if err != nil {
-		return nil, -1, err
+// GetCutoffs is used to split up validators into groups at the start
+// of every epoch. It determines at what height validators can make
+// attestations and crosslinks. It returns lists of cutoff indices.
+func GetCutoffs(validatorCount int) []int {
+	var heightCutoff = []int{0}
+	var heights []int
+	var heightCount float64
+
+	// Skip heights if there's not enough validators to fill in a min sized committee.
+	if validatorCount < params.EpochLength*params.MinCommiteeSize {
+		heightCount = math.Floor(float64(validatorCount) / params.MinCommiteeSize)
+		for i := 0; i < int(heightCount); i++ {
+			heights = append(heights, (i*params.Cofactor)%params.EpochLength)
+		}
+		// Enough validators, fill in all the heights.
+	} else {
+		heightCount = params.EpochLength
+		for i := 0; i < int(heightCount); i++ {
+			heights = append(heights, i)
+		}
 	}
-	return indices[:int(attesterCount)], indices[len(indices)-1], nil
+
+	filled := 0
+	appendHeight := false
+	for i := 0; i < params.EpochLength-1; i++ {
+		appendHeight = false
+		for _, height := range heights {
+			if i == height {
+				appendHeight = true
+			}
+		}
+		if appendHeight {
+			filled++
+			heightCutoff = append(heightCutoff, filled*validatorCount/int(heightCount))
+		} else {
+			heightCutoff = append(heightCutoff, heightCutoff[len(heightCutoff)-1])
+		}
+	}
+	heightCutoff = append(heightCutoff, validatorCount)
+
+	// TODO: For the validators assigned to each height, split them up into
+	// committees for different shards. Do not assign the last END_EPOCH_GRACE_PERIOD
+	// heights in a epoch to any shards.
+	return heightCutoff
 }
 
 // hasVoted checks if the attester has voted by looking at the bitfield.
