@@ -436,7 +436,7 @@ func TestResetAttesterBitfields(t *testing.T) {
 
 		bitfieldLength := j / 8
 		if j%8 != 0 {
-			bitfieldLength += 1
+			bitfieldLength++
 		}
 
 		if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfields, make([]byte, bitfieldLength)) {

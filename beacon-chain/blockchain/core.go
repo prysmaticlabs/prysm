@@ -306,7 +306,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 
 	length := int(len(b.state.CrystallizedState.ActiveValidators) / 8)
 	if len(b.state.CrystallizedState.ActiveValidators)%8 != 0 {
-		length += 1
+		length++
 	}
 
 	b.lock.Lock()
@@ -351,7 +351,7 @@ func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
 	if attesterFieldIndex == 0 {
 		attesterFieldIndex = 8
 	} else {
-		attesterBlock += 1
+		attesterBlock++
 	}
 
 	if len(bitfields) < attesterBlock {
