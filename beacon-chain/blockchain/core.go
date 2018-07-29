@@ -391,9 +391,6 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 				log.Error(err)
 			}
 
-			/*			if err := b.applySlashingConditions(i); err != nil {
-						log.Error(err)
-					}*/
 		}
 
 		if err := b.resetAttesterBitfields(); err != nil {
