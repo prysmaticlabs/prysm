@@ -2,9 +2,11 @@ package sync
 
 import (
 	"context"
-	"hash"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,63 +25,42 @@ var log = logrus.WithField("prefix", "sync")
 //     *  Drop peers that send invalid data
 //     *  Trottle incoming requests
 type Service struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	networkService NetworkService
-	chainService   ChainService
-	hashBuf        chan hash.Hash
-	blockBuf       chan *types.Block
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	p2p                  types.P2P
+	chainService         types.ChainService
+	announceBlockHashBuf chan p2p.Message
+	blockBuf             chan p2p.Message
 }
 
-// Config allows the channel's buffer sizes to be changed
+// Config allows the channel's buffer sizes to be changed.
 type Config struct {
 	HashBufferSize  int
 	BlockBufferSize int
 }
 
-// DefaultConfig provides the default configuration for a sync service
+// DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
 	return Config{100, 100}
 }
 
-// NetworkService is the interface for the p2p network.
-type NetworkService interface {
-	BroadcastBlockHash(hash.Hash) error
-	BroadcastBlock(*types.Block) error
-	RequestBlock(hash.Hash) error
-}
-
-// ChainService is the interface for the local beacon chain.
-type ChainService interface {
-	ProcessBlock(*types.Block) error
-	ContainsBlock(hash.Hash) bool
-}
-
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:      ctx,
-		cancel:   cancel,
-		hashBuf:  make(chan hash.Hash, cfg.HashBufferSize),
-		blockBuf: make(chan *types.Block, cfg.BlockBufferSize),
+		ctx:                  ctx,
+		cancel:               cancel,
+		p2p:                  beaconp2p,
+		chainService:         cs,
+		announceBlockHashBuf: make(chan p2p.Message, cfg.HashBufferSize),
+		blockBuf:             make(chan p2p.Message, cfg.BlockBufferSize),
 	}
-}
-
-// SetNetworkService sets a concrete value for the p2p layer.
-func (ss *Service) SetNetworkService(ps NetworkService) {
-	ss.networkService = ps
-}
-
-// SetChainService sets a concrete value for the local beacon chain.
-func (ss *Service) SetChainService(cs ChainService) {
-	ss.chainService = cs
 }
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	log.Info("Starting service")
-	go run(ss.ctx.Done(), ss.hashBuf, ss.blockBuf, ss.networkService, ss.chainService)
+	go ss.run(ss.ctx.Done())
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -92,43 +73,68 @@ func (ss *Service) Stop() error {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(h hash.Hash) {
+func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
+	var h [32]byte
+	copy(h[:], data.Hash[:32])
 	if ss.chainService.ContainsBlock(h) {
-		return
+		return nil
 	}
-
-	ss.hashBuf <- h
-	ss.networkService.BroadcastBlockHash(h)
+	log.Info("Requesting full block data from sender")
+	// TODO: Request the full block data from peer that sent the block hash.
+	return nil
 }
 
 // ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
-func (ss *Service) ReceiveBlock(b *types.Block) error {
-	h, err := b.Hash()
+func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
+	block, err := types.NewBlockWithData(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not instantiate new block from proto: %v", err)
 	}
-
+	h, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash block: %v", err)
+	}
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-
-	ss.blockBuf <- b
-	ss.networkService.BroadcastBlock(b)
-
-	return nil
+	log.Infof("Broadcasting block hash to peers: %x", h)
+	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
+		Hash: h[:],
+	})
+	return ss.chainService.ProcessBlock(block)
 }
 
-func run(done <-chan struct{}, hashBuf <-chan hash.Hash, blockBuf <-chan *types.Block, ps NetworkService, cs ChainService) {
+func (ss *Service) run(done <-chan struct{}) {
+	announceBlockHashSub := ss.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
+	blockSub := ss.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
+	defer announceBlockHashSub.Unsubscribe()
+	defer blockSub.Unsubscribe()
 	for {
 		select {
 		case <-done:
-			log.Infof("exiting goroutine")
+			log.Infof("Exiting goroutine")
 			return
-		case h := <-hashBuf:
-			ps.RequestBlock(h)
-		case b := <-blockBuf:
-			cs.ProcessBlock(b)
+		case msg := <-ss.announceBlockHashBuf:
+			data, ok := msg.Data.(pb.BeaconBlockHashAnnounce)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Error("Received malformed beacon block hash announcement p2p message")
+				continue
+			}
+			if err := ss.ReceiveBlockHash(&data); err != nil {
+				log.Errorf("Could not receive incoming block hash: %v", err)
+			}
+		case msg := <-ss.blockBuf:
+			data, ok := msg.Data.(pb.BeaconBlockResponse)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Errorf("Received malformed beacon block p2p message")
+				continue
+			}
+			if err := ss.ReceiveBlock(&data); err != nil {
+				log.Errorf("Could not receive incoming block: %v", err)
+			}
 		}
 	}
 }

@@ -37,13 +37,13 @@ func TestLifecycle(t *testing.T) {
 
 	b.Start()
 	msg := hook.LastEntry().Message
-	if msg != "Starting beaconDB service" {
+	if msg != "Starting service" {
 		t.Errorf("incorrect log, expected %s, got %s", "Starting beaconDB service", msg)
 	}
 
 	b.Stop()
 	msg = hook.LastEntry().Message
-	if msg != "Stopping beaconDB service" {
+	if msg != "Stopping service" {
 		t.Errorf("incorrect log, expected %s, got %s", "Stopping beaconDB service", msg)
 	}
 

@@ -38,14 +38,14 @@ func TestLifecycle(t *testing.T) {
 
 	s.Start()
 	msg := hook.Entries[0].Message
-	want := "Starting shardp2p server"
+	want := "Starting service"
 	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
 	s.Stop()
 	msg = hook.LastEntry().Message
-	want = "Stopping shardp2p server"
+	want = "Stopping service"
 	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
@@ -148,7 +148,7 @@ func testSubscribe(t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Messag
 
 	b, err := proto.Marshal(pbMsg)
 	if err != nil {
-		t.Errorf("Failed to marshal pbMsg: %v", err)
+		t.Errorf("Failed to marshal service %v", err)
 	}
 	if err = gsub.Publish(topic.String(), b); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
