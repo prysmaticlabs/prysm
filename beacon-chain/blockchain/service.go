@@ -88,7 +88,7 @@ func (c *ChainService) updateChainState() {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			currentslot := block.Data().SlotNumber
+			currentslot := block.SlotNumber()
 
 			transition := c.chain.isEpochTransition(currentslot)
 			if transition {
