@@ -136,10 +136,13 @@ func (s *SMCClient) ChainReader() ethereum.ChainReader {
 	return ethereum.ChainReader(s.client)
 }
 
+// BlockByNumber helper function for fetching a mainchain block by its block
+// number.
 func (s *SMCClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
 	return s.ChainReader().BlockByNumber(ctx, number)
 }
 
+// SubscribeNewHead helper function for subscribing to new mainchain headers.
 func (s *SMCClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return s.ChainReader().SubscribeNewHead(ctx, ch)
 }

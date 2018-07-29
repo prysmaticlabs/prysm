@@ -40,32 +40,39 @@ import (
 
 // Handler is the global debugging handler.
 var Handler = new(HandlerT)
+
+// Memsize is the memsizeui Handler(?).
 var Memsize memsizeui.Handler
 var (
-	// Debug Flags
+	// PProfFlag to enable pprof HTTP server.
 	PProfFlag = cli.BoolFlag{
 		Name:  "pprof",
 		Usage: "Enable the pprof HTTP server",
 	}
+	// PProfPortFlag to specify HTTP server listening port.
 	PProfPortFlag = cli.IntFlag{
 		Name:  "pprofport",
 		Usage: "pprof HTTP server listening port",
 		Value: 6060,
 	}
+	// PProfAddrFlag to specify HTTP server address.
 	PProfAddrFlag = cli.StringFlag{
 		Name:  "pprofaddr",
 		Usage: "pprof HTTP server listening interface",
 		Value: "127.0.0.1",
 	}
+	// MemProfileRateFlag to specify the mem profiling rate.
 	MemProfileRateFlag = cli.IntFlag{
 		Name:  "memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
 		Value: runtime.MemProfileRate,
 	}
+	// CPUProfileFlag to specify where to write the CPU profile.
 	CPUProfileFlag = cli.StringFlag{
 		Name:  "cpuprofile",
 		Usage: "Write CPU profile to the given file",
 	}
+	// TraceFlag to specify where to write the trace execution profile.
 	TraceFlag = cli.StringFlag{
 		Name:  "trace",
 		Usage: "Write execution trace to the given file",
@@ -343,12 +350,12 @@ func Setup(ctx *cli.Context) error {
 	// pprof server
 	if ctx.GlobalBool(PProfFlag.Name) {
 		address := fmt.Sprintf("%s:%d", ctx.GlobalString(PProfAddrFlag.Name), ctx.GlobalInt(PProfPortFlag.Name))
-		StartPProf(address)
+		startPProf(address)
 	}
 	return nil
 }
 
-func StartPProf(address string) {
+func startPProf(address string) {
 	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
 	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
 	go func() {

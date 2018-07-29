@@ -7,6 +7,9 @@
     "nakedret",
     "unparam",
     "megacheck",
-    "gosec"
+    "gosec",
+    "varcheck",
+    "structcheck",
+    "golint"
   ]
 }
