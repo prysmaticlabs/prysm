@@ -373,7 +373,7 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 			return fmt.Errorf("error setting justified epoch: %v", err)
 		}
 
-		for i, _ := range activeValidatorSet {
+		for i := range activeValidatorSet {
 			if err := b.updateRewardsAndPenalties(i); err != nil {
 				log.Error(err)
 			}
