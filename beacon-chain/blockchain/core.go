@@ -135,7 +135,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	blockActiveStateHash := block.ActiveStateHash()
 
 	if blockActiveStateHash != hash {
-		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", blockActiveStateHash, hash)
+		return false, fmt.Errorf("active state hash mismatched, wanted: %x, got: %x", blockActiveStateHash, hash)
 	}
 
 	hash, err = hashCrystallizedState(b.CrystallizedState())
@@ -146,7 +146,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	blockCrystallizedStateHash := block.CrystallizedStateHash()
 
 	if blockCrystallizedStateHash != hash {
-		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", blockCrystallizedStateHash, hash)
+		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %x, got: %x", blockCrystallizedStateHash, hash)
 	}
 
 	validTime := time.Now().After(genesisTime.Add(slotDuration))

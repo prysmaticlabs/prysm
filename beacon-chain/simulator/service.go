@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
@@ -19,6 +23,7 @@ type Simulator struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
 	p2p                    types.P2P
+	web3Service            *powchain.Web3Service
 	delay                  time.Duration
 	broadcastedBlockHashes map[[32]byte]*types.Block
 	blockRequestChan       chan p2p.Message
@@ -36,13 +41,14 @@ func DefaultConfig() *Config {
 }
 
 // NewSimulator hi.
-func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P) *Simulator {
+func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Service *powchain.Web3Service) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
-		ctx:    ctx,
-		cancel: cancel,
-		p2p:    beaconp2p,
-		delay:  cfg.Delay,
+		ctx:         ctx,
+		cancel:      cancel,
+		p2p:         beaconp2p,
+		web3Service: web3Service,
+		delay:       cfg.Delay,
 		broadcastedBlockHashes: make(map[[32]byte]*types.Block),
 		blockRequestChan:       make(chan p2p.Message, cfg.BlockRequestBuf),
 	}
@@ -70,11 +76,22 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-delayChan:
-			block := types.NewBlock(0)
+			stateHash := blake2b.Sum256([]byte{1, 2, 3, 4, 5})
+			block, err := types.NewBlockWithData(&pb.BeaconBlockResponse{
+				Timestamp:             ptypes.TimestampNow(),
+				MainChainRef:          sim.web3Service.LatestBlockHash().Bytes(),
+				ActiveStateHash:       stateHash[:],
+				CrystallizedStateHash: stateHash[:],
+			})
+			if err != nil {
+				log.Errorf("Could not create simulated block: %v", err)
+			}
+
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash simulated block: %v", err)
 			}
+
 			log.WithField("announcedBlockHash", fmt.Sprintf("%x", h)).Info("Announcing block hash")
 			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 				Hash: h[:],
@@ -82,6 +99,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			// We then store the block in a map for later retrieval upon a request for its full
 			// data being sent back.
 			sim.broadcastedBlockHashes[h] = block
+
 		case msg := <-sim.blockRequestChan:
 			data, ok := msg.Data.(*pb.BeaconBlockRequest)
 			// TODO: Handle this at p2p layer.
