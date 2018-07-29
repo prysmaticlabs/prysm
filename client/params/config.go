@@ -11,7 +11,10 @@ import (
 )
 
 const (
-	DefaultPeriodLength         = 5
+	// DefaultPeriodLength is the default value for period lengths in sharding.
+	DefaultPeriodLength = 5
+	// DefaultAttesterLockupLength is the default number of blocks to lock up
+	// an attesters deposit before they can withdraw it.
 	DefaultAttesterLockupLength = 16128
 )
 
@@ -30,10 +33,13 @@ func DefaultConfig() *Config {
 	}
 }
 
+// DefaultAttesterDeposit required to be an attester.
 func DefaultAttesterDeposit() *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(21), nil) // 1000 ETH
 }
 
+// DefaultCollationSizeLimit is the integer value representing the maximum
+// number of bytes allowed in a given collation.
 func DefaultCollationSizeLimit() int64 {
 	return int64(math.Pow(float64(2), float64(20)))
 }

@@ -119,7 +119,11 @@ func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-cha
 // it is used for broadcastTransactions.
 func createTestTx() *pb.Transaction {
 	data := make([]byte, 1024)
-	rand.Read(data)
+
+	if _, err := rand.Read(data); err != nil {
+		log.Errorf("Failed to randomize data: %v", err)
+	}
+
 	// TODO: add more fields.
 	return &pb.Transaction{
 		Nonce: mrand.Uint64(),

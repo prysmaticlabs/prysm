@@ -199,7 +199,9 @@ func (s *Shard) SaveBody(body []byte) error {
 	}
 	chunks := Chunks(body)                   // wrapper allowing us to merklizing the chunks.
 	chunkRoot := gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
-	s.SetAvailability(&chunkRoot, true)
+	if err := s.SetAvailability(&chunkRoot, true); err != nil {
+		return err
+	}
 	return s.shardDB.Put(chunkRoot.Bytes(), body)
 }
 
