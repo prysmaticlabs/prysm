@@ -40,32 +40,39 @@ import (
 
 // Handler is the global debugging handler.
 var Handler = new(HandlerT)
+
+// Memsize is the memsizeui Handler(?).
 var Memsize memsizeui.Handler
 var (
-	// Debug Flags
+	// PProfFlag to enable pprof HTTP server.
 	PProfFlag = cli.BoolFlag{
 		Name:  "pprof",
 		Usage: "Enable the pprof HTTP server",
 	}
+	// PProfPortFlag to specify HTTP server listening port.
 	PProfPortFlag = cli.IntFlag{
 		Name:  "pprofport",
 		Usage: "pprof HTTP server listening port",
 		Value: 6060,
 	}
+	// PProfAddrFlag to specify HTTP server address.
 	PProfAddrFlag = cli.StringFlag{
 		Name:  "pprofaddr",
 		Usage: "pprof HTTP server listening interface",
 		Value: "127.0.0.1",
 	}
+	// MemProfileRateFlag to specify the mem profiling rate.
 	MemProfileRateFlag = cli.IntFlag{
 		Name:  "memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
 		Value: runtime.MemProfileRate,
 	}
+	// CPUProfileFlag to specify where to write the CPU profile.
 	CPUProfileFlag = cli.StringFlag{
 		Name:  "cpuprofile",
 		Usage: "Write CPU profile to the given file",
 	}
+	// TraceFlag to specify where to write the trace execution profile.
 	TraceFlag = cli.StringFlag{
 		Name:  "trace",
 		Usage: "Write execution trace to the given file",
@@ -104,8 +111,7 @@ func (h *HandlerT) CPUProfile(file string, nsec uint) error {
 		return err
 	}
 	time.Sleep(time.Duration(nsec) * time.Second)
-	h.StopCPUProfile()
-	return nil
+	return h.StopCPUProfile()
 }
 
 // StartCPUProfile turns on CPU profiling, writing to the given file.
@@ -120,7 +126,9 @@ func (h *HandlerT) StartCPUProfile(file string) error {
 		return err
 	}
 	if err := pprof.StartCPUProfile(f); err != nil {
-		f.Close()
+		if err := f.Close(); err != nil {
+			log.Errorf("Failed to close file: %v", err)
+		}
 		return err
 	}
 	h.cpuW = f
@@ -138,7 +146,9 @@ func (h *HandlerT) StopCPUProfile() error {
 		return errors.New("CPU profiling not in progress")
 	}
 	log.Info("Done writing CPU profile", "dump", h.cpuFile)
-	h.cpuW.Close()
+	if err := h.cpuW.Close(); err != nil {
+		return err
+	}
 	h.cpuW = nil
 	h.cpuFile = ""
 	return nil
@@ -151,8 +161,7 @@ func (h *HandlerT) GoTrace(file string, nsec uint) error {
 		return err
 	}
 	time.Sleep(time.Duration(nsec) * time.Second)
-	h.StopGoTrace()
-	return nil
+	return h.StopGoTrace()
 }
 
 // StartGoTrace turns on tracing, writing to the given file.
@@ -167,7 +176,9 @@ func (h *HandlerT) StartGoTrace(file string) error {
 		return err
 	}
 	if err := trace.Start(f); err != nil {
-		f.Close()
+		if err := f.Close(); err != nil {
+			log.Errorf("Failed to close file: %v", err)
+		}
 		return err
 	}
 	h.traceW = f
@@ -185,7 +196,9 @@ func (h *HandlerT) StopGoTrace() error {
 		return errors.New("trace not in progress")
 	}
 	log.Info("Done writing Go trace", "dump", h.traceFile)
-	h.traceW.Close()
+	if err := h.traceW.Close(); err != nil {
+		return err
+	}
 	h.traceW = nil
 	h.traceFile = ""
 	return nil
@@ -242,7 +255,9 @@ func (*HandlerT) WriteMemProfile(file string) error {
 // Stacks returns a printed representation of the stacks of all goroutines.
 func (*HandlerT) Stacks() string {
 	buf := new(bytes.Buffer)
-	pprof.Lookup("goroutine").WriteTo(buf, 2)
+	if err := pprof.Lookup("goroutine").WriteTo(buf, 2); err != nil {
+		log.Errorf("Failed to write pprof goroutine stacks: %v", err)
+	}
 	return buf.String()
 }
 
@@ -302,7 +317,9 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 	return func(ctx *cli.Context) error {
 		for _, name := range ctx.FlagNames() {
 			if ctx.IsSet(name) {
-				ctx.GlobalSet(name, ctx.String(name))
+				if err := ctx.GlobalSet(name, ctx.String(name)); err != nil {
+					return err
+				}
 			}
 		}
 		return action(ctx)
@@ -333,12 +350,12 @@ func Setup(ctx *cli.Context) error {
 	// pprof server
 	if ctx.GlobalBool(PProfFlag.Name) {
 		address := fmt.Sprintf("%s:%d", ctx.GlobalString(PProfAddrFlag.Name), ctx.GlobalInt(PProfPortFlag.Name))
-		StartPProf(address)
+		startPProf(address)
 	}
 	return nil
 }
 
-func StartPProf(address string) {
+func startPProf(address string) {
 	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
 	log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
 	go func() {
@@ -351,6 +368,10 @@ func StartPProf(address string) {
 // Exit stops all running profiles, flushing their output to the
 // respective file.
 func Exit() {
-	Handler.StopCPUProfile()
-	Handler.StopGoTrace()
+	if err := Handler.StopCPUProfile(); err != nil {
+		log.Errorf("Failed to stop CPU profiling: %v", err)
+	}
+	if err := Handler.StopGoTrace(); err != nil {
+		log.Errorf("Failed to stop go tracing: %v", err)
+	}
 }

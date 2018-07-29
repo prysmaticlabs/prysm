@@ -64,7 +64,11 @@ func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.In
 // Hash takes the keccak256 of the collation header's data contents.
 func (h *CollationHeader) Hash() (hash common.Hash) {
 	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, h.data)
+
+	if err := rlp.Encode(hw, h.data); err != nil {
+		log.Errorf("Failed to RLP encode data: %v", err)
+	}
+
 	hw.Sum(hash[:0])
 	return hash
 }
@@ -214,6 +218,9 @@ func (ch Chunks) Len() int { return len(ch) }
 
 // GetRlp returns the RLP encoding of one chunk from the list.
 func (ch Chunks) GetRlp(i int) []byte {
-	bytes, _ := rlp.EncodeToBytes(ch[i])
+	bytes, err := rlp.EncodeToBytes(ch[i])
+	if err != nil {
+		log.Errorf("Unable to RLP encode to bytes: %v", err)
+	}
 	return bytes
 }

@@ -94,6 +94,7 @@ func main() {
 
 			// User inputs keystore json file, sign tx with keystore json
 		} else {
+			// #nosec - Inclusion of file via variable is OK for this tool.
 			file, err := os.Open(passwordFile)
 			if err != nil {
 				log.Fatal(err)
@@ -104,7 +105,11 @@ func main() {
 			scanner.Scan()
 			password := scanner.Text()
 
-			keyJSON, _ := ioutil.ReadFile(keystoreUTCPath)
+			// #nosec - Inclusion of file via variable is OK for this tool.
+			keyJSON, err := ioutil.ReadFile(keystoreUTCPath)
+			if err != nil {
+				log.Fatal(err)
+			}
 			privKey, err := keystore.DecryptKey(keyJSON, password)
 			if err != nil {
 				log.Fatal(err)

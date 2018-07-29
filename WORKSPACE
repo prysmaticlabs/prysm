@@ -4,14 +4,15 @@ http_archive(
     name = "io_bazel_rules_go",
     # in order to be able to enable race detection we need to use a version
     # < 0.13.0 until this bug is fixed: https://github.com/bazelbuild/rules_go/issues/1592
+    # We are using 0.12 here until bazelbuild/bazel-gazelle#272 is resolved, as we cannot import
+    # protobuf/ptypes normally until this issue is fixed
     urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.12.1/rules_go-0.12.1.tar.gz"],
     sha256 = "8b68d0630d63d95dacc0016c3bb4b76154fe34fca93efd65d1c366de3fcb4294",
 )
 
 http_archive(
     name = "bazel_gazelle",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.13.0/bazel-gazelle-0.13.0.tar.gz"],
-    sha256 = "bc653d3e058964a5a26dcad02b6c72d7d63e6bb88d94704990b908a1445b8758",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.12.0/bazel-gazelle-0.12.0.tar.gz"],
 )
 
 http_archive(
