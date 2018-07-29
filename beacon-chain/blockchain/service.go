@@ -47,7 +47,7 @@ func (c *ChainService) Start() {
 		log.Errorf("Unable to setup blockchain: %v", err)
 	}
 	c.chain = beaconChain
-	go c.updateActiveState()
+	go c.updateChainState()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -86,8 +86,10 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
-// updateActiveState receives a beacon block, computes a new active state and writes it to db.
-func (c *ChainService) updateActiveState() {
+// updateChainState receives a beacon block, computes a new active state and writes it to db. Also
+// it checks for if there is an epoch transition. If there is one it computes the validator rewards
+// and penalties.
+func (c *ChainService) updateChainState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
@@ -103,6 +105,15 @@ func (c *ChainService) updateActiveState() {
 			err = c.chain.MutateActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
+			}
+
+			currentslot := block.SlotNumber()
+
+			transition := c.chain.isEpochTransition(currentslot)
+			if transition {
+				if err := c.chain.computeValidatorRewardsAndPenalties(); err != nil {
+					log.Errorf("Error computing validator rewards and penalties %v", err)
+				}
 			}
 
 		case <-c.ctx.Done():

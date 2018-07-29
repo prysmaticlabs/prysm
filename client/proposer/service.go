@@ -179,7 +179,9 @@ func (p *Proposer) createCollation(ctx context.Context, txs []*gethTypes.Transac
 		return err
 	}
 	if canAdd {
-		AddHeader(p.client, p.client, collation)
+		if err := AddHeader(p.client, p.client, collation); err != nil {
+			return err
+		}
 	}
 
 	return nil

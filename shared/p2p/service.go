@@ -133,7 +133,9 @@ func (s *Server) Broadcast(msg interface{}) {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
 		return
 	}
-	s.gsub.Publish(topic.String(), b)
+	if err := s.gsub.Publish(topic.String(), b); err != nil {
+		log.Errorf("Failed to publish to gossipsub topic: %v", err)
+	}
 }
 
 func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
