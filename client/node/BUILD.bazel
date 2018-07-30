@@ -7,7 +7,6 @@ go_library(
     visibility = ["//client:__subpackages__"],
     deps = [
         "//client/attester:go_default_library",
-        "//client/database:go_default_library",
         "//client/mainchain:go_default_library",
         "//client/observer:go_default_library",
         "//client/params:go_default_library",
@@ -18,6 +17,7 @@ go_library(
         "//client/utils:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
+        "//shared/database:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//node:go_default_library",

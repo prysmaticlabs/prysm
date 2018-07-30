@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,7 @@ var log = logrus.WithField("prefix", "blockchain")
 type ChainService struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
-	beaconDB          *database.BeaconDB
+	beaconDB          *database.DB
 	chain             *BeaconChain
 	web3Service       *powchain.Web3Service
 	latestBeaconBlock chan *types.Block
@@ -25,7 +25,7 @@ type ChainService struct {
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil, nil}, nil
 }
@@ -39,7 +39,7 @@ func (c *ChainService) Start() {
 		log.Errorf("Unable to setup blockchain: %v", err)
 	}
 	c.chain = beaconChain
-	go c.updateActiveState()
+	go c.updateChainState()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -67,8 +67,10 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
-// updateActiveState receives a beacon block, computes a new active state and writes it to db.
-func (c *ChainService) updateActiveState() {
+// updateChainState receives a beacon block, computes a new active state and writes it to db. Also
+// it checks for if there is an epoch transition. If there is one it computes the validator rewards
+// and penalties.
+func (c *ChainService) updateChainState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
@@ -84,6 +86,15 @@ func (c *ChainService) updateActiveState() {
 			err = c.chain.MutateActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
+			}
+
+			currentslot := block.SlotNumber()
+
+			transition := c.chain.isEpochTransition(currentslot)
+			if transition {
+				if err := c.chain.computeValidatorRewardsAndPenalties(); err != nil {
+					log.Errorf("Error computing validator rewards and penalties %v", err)
+				}
 			}
 
 		case <-c.ctx.Done():
