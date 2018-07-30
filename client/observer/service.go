@@ -6,10 +6,10 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -21,7 +21,7 @@ var log = logrus.WithField("prefix", "observer")
 // sharding/service.go.
 type Observer struct {
 	p2p       *p2p.Server
-	dbService *database.ShardDB
+	dbService *database.DB
 	shardID   int
 	shard     *types.Shard
 	ctx       context.Context
@@ -32,7 +32,7 @@ type Observer struct {
 
 // NewObserver creates a struct instance of a observer service,
 // it will have access to a p2p server and a shardChainDB.
-func NewObserver(p2p *p2p.Server, dbService *database.ShardDB, shardID int, sync *syncer.Syncer, client *mainchain.SMCClient) (*Observer, error) {
+func NewObserver(p2p *p2p.Server, dbService *database.DB, shardID int, sync *syncer.Syncer, client *mainchain.SMCClient) (*Observer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Observer{p2p, dbService, shardID, nil, ctx, cancel, sync, client}, nil
 }

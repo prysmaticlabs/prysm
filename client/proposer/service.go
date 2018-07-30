@@ -8,13 +8,13 @@ import (
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/legacyutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -31,7 +31,7 @@ type Proposer struct {
 	p2p       *p2p.Server
 	txpool    *txpool.TXPool
 	txpoolSub event.Subscription
-	dbService *database.ShardDB
+	dbService *database.DB
 	shardID   int
 	shard     *types.Shard
 	ctx       context.Context
@@ -43,7 +43,7 @@ type Proposer struct {
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.ShardDB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
+func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.DB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config:    config,
