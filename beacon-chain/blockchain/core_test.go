@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	"github.com/prysmaticlabs/prysm/shared/database"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -718,8 +718,8 @@ func NewBlockWithSlotNumber(t *testing.T, slotNumber uint64) *types.Block {
 
 func NewBlock(t *testing.T, slotNumber uint64, activeStateHash [32]byte, crystallizedStateHash [32]byte) *types.Block {
 	b, err := types.NewBlock(&pb.BeaconBlockResponse{
-		SlotNumber: slotNumber,
-		ActiveStateHash: activeStateHash[:],
+		SlotNumber:            slotNumber,
+		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 	})
 
