@@ -2,11 +2,14 @@ package simulator
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -69,4 +72,45 @@ func TestBroadcastBlockHash(t *testing.T) {
 		t.Error("Did not store the broadcasted block hash")
 	}
 	hook.Reset()
+}
+
+func TestBlockRequestResponse(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
+	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{})
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		sim.run(delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	block, err := types.NewBlockWithData(&pb.BeaconBlockResponse{})
+	if err != nil {
+		t.Fatalf("Could not instantiate new block from proto: %v", err)
+	}
+	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := &pb.BeaconBlockRequest{
+		Hash: h[:],
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: data,
+	}
+
+	sim.broadcastedBlockHashes[h] = block
+
+	sim.blockRequestChan <- msg
+	doneChan <- struct{}{}
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to full block request for hash: %x", h))
 }

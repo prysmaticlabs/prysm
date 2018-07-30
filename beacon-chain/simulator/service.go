@@ -114,7 +114,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Could not hash block: %v", err)
 			}
-			log.WithField("blockRequestHash", fmt.Sprintf("%x", h)).Info("Responding to full block request for hash")
+			log.Infof("Responding to full block request for hash: %x", h)
 			// Sends the full block body to the requester.
 			sim.p2p.Send(block.Proto(), msg.Peer)
 		}
