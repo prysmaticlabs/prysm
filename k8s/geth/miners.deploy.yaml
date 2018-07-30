@@ -57,7 +57,7 @@ spec:
               --ethash.dagsinmem=1
               --ethash.dagsondisk=1
               --nousb
-              --cache=512
+              --cache=1024
           volumeMounts:
             - name: chaindata
               mountPath: "/ethereum"
@@ -74,11 +74,11 @@ spec:
                   key: public_key
           resources:
             requests:
-              memory: "1Gi"
-              cpu: 1
+              memory: "2Gi"
+              cpu: "500m"
             limits:
-              memory: "1.5Gi"
-              cpu: 1
+              memory: "2Gi"
+              cpu: "500m"
       initContainers:
         - name: genesis
           image: ethereum/client-go:alltools-stable
