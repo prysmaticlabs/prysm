@@ -1,0 +1,100 @@
+kind: Deployment
+apiVersion: apps/v1beta1
+metadata:
+  name: miner
+  labels:
+    universe: geth
+    component: miner
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      universe: geth
+      component: miner
+  template:
+    metadata:
+      labels:
+        universe: geth
+        component: miner
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: miner
+          image: ethereum/client-go:alltools-stable
+          ports: 
+           - containerPort: 8545
+             name: rpc
+           - containerPort: 8546
+             name: ws
+           - containerPort: 30303
+             name: discovery-tcp
+             protocol: TCP
+           - containerPort: 30303
+             name: discovery-udp
+             protocol: UDP
+          # Use /bin/sh -c to execute geth so that we have access to HOSTNAME in 
+          # the command arguments.
+          # https://github.com/kubernetes/kubernetes/issues/57726
+          command:
+            - "/bin/sh"
+            - "-c"
+            - >
+              geth
+              --networkid=1337
+              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):30301
+              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):3000
+              --rpc
+              --rpcaddr=0.0.0.0
+              --rpccorsdomain=\"*\"
+              --ws
+              --datadir=/ethereum
+              --debug
+              --verbosity=4
+              --mine
+              --minerthreads=1
+              --etherbase=0x717c3a6e4cbd476c2312612155eb233bf498dd5b
+              --extradata=$HOSTNAME
+              --ethash.dagsinmem=1
+              --ethash.dagsondisk=1
+              --nousb
+          volumeMounts:
+            - name: chaindata
+              mountPath: "/ethereum"
+          env:
+            - name: ETHSTATS_WS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ethstats-secrets
+                  key: ws
+            - name: BOOTNODE_PUBKEY
+              valueFrom:
+                secretKeyRef:
+                  name: geth-bootnode-secret
+                  key: public_key
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: 1
+            limits:
+              memory: "1Gi"
+              cpu: 1
+      initContainers:
+        - name: genesis
+          image: ethereum/client-go:alltools-stable
+          command: ["geth"]
+          args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
+          volumeMounts:
+            - name: genesis
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+      volumes:
+        - name: chaindata
+          emptyDir: {}
+        - name: genesis
+          secret: 
+            secretName: geth-genesis
+            items:
+              - key: json
+                path: genesis.json

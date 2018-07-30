@@ -1,0 +1,31 @@
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: best-effort-priority
+value: 0
+globalDefault: false
+description: "Free quota tier. Unlikely to stay scheduled."
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: batch-priority
+value: 100
+globalDefault: false
+description: "Suitible for batch jobs that can tolerate occasional downtime."
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: production-priority
+value: 200
+globalDefault: true
+description: "Default priority for production jobs."
+---
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PriorityClass
+metadata:
+  name: monitoring-priority
+value: 300
+globalDefault: false
+description: "Reserved for monitoring health of production services."
