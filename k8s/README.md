@@ -26,7 +26,7 @@ This file is the default provided by geth-genesis secret.
         "eip155Block": 0,                                                       
         "eip158Block": 0                                                        
     },                                                                          
-    "difficulty": "0x400",                                                      
+    "difficulty": "0x0",                                                      
     "gasLimit": "0x2100000",                                                    
     "alloc": {                                                                  
        "717c3a6e4cbd476c2312612155eb233bf498dd5b":                              
