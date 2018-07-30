@@ -60,7 +60,7 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	// Configure shardConfig by loading the default.
 	shardEthereum.shardConfig = params.DefaultConfig()
 
-	if err := shardEthereum.registerShardChainDB(ctx); err != nil {
+	if err := shardEthereum.startDB(ctx); err != nil {
 		return nil, err
 	}
 
@@ -133,8 +133,8 @@ func (s *ShardEthereum) Close() {
 	close(s.stop)
 }
 
-// registerShardChainDB attaches a LevelDB wrapped object to the shardEthereum instance.
-func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
+// startDB attaches a LevelDB wrapped object to the shardEthereum instance.
+func (s *ShardEthereum) startDB(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
 		path = ctx.GlobalString(cmd.DataDirFlag.Name)
