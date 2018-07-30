@@ -5,7 +5,7 @@ k8s_objects(
     name = "everything",
     objects = [
         "//k8s/geth:everything",
-        ":priority_class"
+        ":priority_class",
     ],
 )
 

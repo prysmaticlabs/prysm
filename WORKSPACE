@@ -37,7 +37,9 @@ load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
 k8s_repositories()
 
 _CLUSTER = "minikube"
+
 _NAMESPACE = "default"
+
 [k8s_defaults(
     name = "k8s_" + kind,
     cluster = _CLUSTER,
