@@ -32,9 +32,9 @@ func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 	return block, nil
 }
 
-func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.BeaconDB) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
+func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.DB) {
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}

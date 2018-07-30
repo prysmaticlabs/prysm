@@ -16,8 +16,8 @@ func TestStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
-	db, err := database.NewBeaconDB(config)
+	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
 

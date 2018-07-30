@@ -12,44 +12,44 @@ import (
 
 var log = logrus.WithField("prefix", "db")
 
-// BeaconDB defines a service for the beacon chain system's persistent storage.
-type BeaconDB struct {
-	db ethdb.Database
+// DB defines a service for the beacon chain system's persistent storage.
+type DB struct {
+	_db ethdb.Database
 }
 
-// BeaconDBConfig specifies configuration options for the db service.
-type BeaconDBConfig struct {
+// DBConfig specifies configuration options for the db service.
+type DBConfig struct {
 	DataDir  string
 	Name     string
 	InMemory bool
 }
 
-// NewBeaconDB initializes a beaconDB instance.
-func NewBeaconDB(config *BeaconDBConfig) (*BeaconDB, error) {
+// NewDB initializes a beaconDB instance.
+func NewDB(config *DBConfig) (*DB, error) {
 	// Uses default cache and handles values.
 	// TODO: allow these arguments to be set based on cli context.
-	beaconDB := &BeaconDB{}
+	db := &DB{}
 	if config.InMemory {
-		beaconDB.db = NewKVStore()
-		return beaconDB, nil
+		db._db = NewKVStore()
+		return db, nil
 	}
 
-	db, err := ethdb.NewLDBDatabase(filepath.Join(config.DataDir, config.Name), 16, 16)
+	_db, err := ethdb.NewLDBDatabase(filepath.Join(config.DataDir, config.Name), 16, 16)
 	if err != nil {
 		log.Error(fmt.Sprintf("Could not start beaconDB: %v", err))
 		return nil, err
 	}
-	beaconDB.db = db
+	db._db = _db
 
-	return beaconDB, nil
+	return db, nil
 }
 
 // Close closes the database
-func (b *BeaconDB) Close() {
-	b.db.Close()
+func (b *DB) Close() {
+	b._db.Close()
 }
 
 // DB returns the attached ethdb instance.
-func (b *BeaconDB) DB() ethdb.Database {
-	return b.db
+func (b *DB) DB() ethdb.Database {
+	return b._db
 }

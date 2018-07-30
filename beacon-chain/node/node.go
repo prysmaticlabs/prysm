@@ -33,7 +33,7 @@ type BeaconNode struct {
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
-	db       *database.BeaconDB
+	db       *database.DB
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -115,8 +115,8 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	path := ctx.GlobalString(cmd.DataDirFlag.Name)
-	config := &database.BeaconDBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
-	db, err := database.NewBeaconDB(config)
+	config := &database.DBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
+	db, err := database.NewDB(config)
 	if err != nil {
 		return err
 	}
