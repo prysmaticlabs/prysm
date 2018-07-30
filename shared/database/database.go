@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethdb"
-	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +30,7 @@ func NewBeaconDB(config *BeaconDBConfig) (*BeaconDB, error) {
 	// TODO: allow these arguments to be set based on cli context.
 	beaconDB := &BeaconDB{}
 	if config.InMemory {
-		beaconDB.db = sharedDB.NewKVStore()
+		beaconDB.db = NewKVStore()
 		return beaconDB, nil
 	}
 

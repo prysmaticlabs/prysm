@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["inmemory.go"],
+    srcs = [
+        "database.go",
+        "inmemory.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/database",
     visibility = ["//visibility:public"],
     deps = [
@@ -14,7 +17,13 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["inmemory_test.go"],
+    srcs = [
+        "database_test.go",
+        "inmemory_test.go",
+    ],
     embed = [":go_default_library"],
-    deps = ["@com_github_ethereum_go_ethereum//ethdb:go_default_library"],
+    deps = [
+        "@com_github_ethereum_go_ethereum//ethdb:go_default_library",
+        "@com_github_syndtr_goleveldb//leveldb/errors:go_default_library",
+    ],
 )

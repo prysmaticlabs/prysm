@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
 
