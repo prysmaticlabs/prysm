@@ -23,7 +23,7 @@ func TestStartStop(t *testing.T) {
 
 	}
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{endpoint, "", common.Address{}})
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}})
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}

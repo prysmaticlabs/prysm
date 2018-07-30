@@ -38,14 +38,14 @@ func TestLifecycle(t *testing.T) {
 
 	s.Start()
 	msg := hook.Entries[0].Message
-	want := "Starting shardp2p server"
+	want := "Starting service"
 	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
 
 	s.Stop()
 	msg = hook.LastEntry().Message
-	want = "Stopping shardp2p server"
+	want = "Stopping service"
 	if msg != want {
 		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
 	}
@@ -91,7 +91,7 @@ func TestSubscribeToTopic(t *testing.T) {
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
 
-	testSubscribe(t, s, gsub, ch, ctx)
+	testSubscribe(ctx, t, s, gsub, ch)
 }
 
 func TestSubscribe(t *testing.T) {
@@ -116,10 +116,10 @@ func TestSubscribe(t *testing.T) {
 	sub := s.Subscribe(pb.CollationBodyRequest{}, ch)
 	defer sub.Unsubscribe()
 
-	testSubscribe(t, s, gsub, ch, ctx)
+	testSubscribe(ctx, t, s, gsub, ch)
 }
 
-func testSubscribe(t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message, ctx context.Context) {
+func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
 	topic := pb.Topic_COLLATION_BODY_REQUEST
 	msgType := topicTypeMapping[topic]
 	go s.subscribeToTopic(topic, msgType)
@@ -148,7 +148,7 @@ func testSubscribe(t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Messag
 
 	b, err := proto.Marshal(pbMsg)
 	if err != nil {
-		t.Errorf("Failed to marshal pbMsg: %v", err)
+		t.Errorf("Failed to marshal service %v", err)
 	}
 	if err = gsub.Publish(topic.String(), b); err != nil {
 		t.Errorf("Failed to publish message: %v", err)

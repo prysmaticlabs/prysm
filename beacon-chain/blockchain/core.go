@@ -1,10 +1,9 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"hash"
 	"math"
 	"sync"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
@@ -90,29 +88,37 @@ func (b *BeaconChain) ExitedValidatorCount() int {
 }
 
 // GenesisBlock returns the canonical, genesis block.
-func (b *BeaconChain) GenesisBlock() *types.Block {
+func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
+}
+
+// isEpochTransition checks if the current slotNumber divided by the epoch length(64 slots)
+// is greater than the current epoch.
+func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
+	currentEpoch := b.state.CrystallizedState.CurrentEpoch
+	isTransition := (slotNumber / params.EpochLength) > currentEpoch
+	return isTransition
 }
 
 // MutateActiveState allows external services to modify the active state.
 func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.ActiveState = activeState
 	return b.persist()
 }
 
 // MutateCrystallizedState allows external services to modify the crystallized state.
 func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) error {
-	defer b.lock.Unlock()
 	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.state.CrystallizedState = crystallizedState
 	return b.persist()
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
-func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *types.Block) (bool, error) {
-	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.Data().MainChainRef)
+func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
+	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.MainChainRef())
 	if err != nil {
 		return false, err
 	}
@@ -123,25 +129,41 @@ func (b *BeaconChain) CanProcessBlock(fetcher powchain.POWBlockFetcher, block *t
 	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
 
 	// Calculate the timestamp validity condition.
-	slotDuration := time.Duration(block.Data().SlotNumber*params.SlotLength) * time.Second
-	validTime := time.Now().After(b.GenesisBlock().Data().Timestamp.Add(slotDuration))
+	slotDuration := time.Duration(block.SlotNumber()*params.SlotDuration) * time.Second
+	genesis, err := b.GenesisBlock()
+	if err != nil {
+		return false, err
+	}
+
+	genesisTime, err := genesis.Timestamp()
+	if err != nil {
+		return false, err
+	}
 
 	// Verify state hashes from the block are correct
-	hash, err := hashActiveState(*b.ActiveState())
+	hash, err := hashActiveState(b.ActiveState())
 	if err != nil {
 		return false, err
 	}
 
-	if !bytes.Equal(block.Data().ActiveStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Active state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), block.Data().ActiveStateHash.Sum(nil))
+	blockActiveStateHash := block.ActiveStateHash()
+
+	if blockActiveStateHash != hash {
+		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", blockActiveStateHash, hash)
 	}
-	hash, err = hashCrystallizedState(*b.CrystallizedState())
+
+	hash, err = hashCrystallizedState(b.CrystallizedState())
 	if err != nil {
 		return false, err
 	}
-	if !bytes.Equal(block.Data().CrystallizedStateHash.Sum(nil), hash.Sum(nil)) {
-		return false, fmt.Errorf("Crystallized state hash mismatched, wanted: %v, got: %v", hash.Sum(nil), block.Data().CrystallizedStateHash.Sum(nil))
+
+	blockCrystallizedStateHash := block.CrystallizedStateHash()
+
+	if blockCrystallizedStateHash != hash {
+		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", blockCrystallizedStateHash, hash)
 	}
+
+	validTime := time.Now().After(genesisTime.Add(slotDuration))
 
 	return validTime, nil
 }
@@ -220,26 +242,6 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 	}, nil
 }
 
-// hashActiveState serializes the active state object then uses
-// blake2b to hash the serialized object.
-func hashActiveState(state types.ActiveState) (hash.Hash, error) {
-	serializedState, err := rlp.EncodeToBytes(state)
-	if err != nil {
-		return nil, err
-	}
-	return blake2b.New256(serializedState)
-}
-
-// hashCrystallizedState serializes the crystallized state object
-// then uses blake2b to hash the serialized object.
-func hashCrystallizedState(state types.CrystallizedState) (hash.Hash, error) {
-	serializedState, err := rlp.EncodeToBytes(state)
-	if err != nil {
-		return nil, err
-	}
-	return blake2b.New256(serializedState)
-}
-
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
@@ -249,3 +251,199 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 	}
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
+
+// hashActiveState serializes the active state object then uses
+// blake2b to hash the serialized object.
+func hashActiveState(state *types.ActiveState) ([32]byte, error) {
+	serializedState, err := rlp.EncodeToBytes(state)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return blake2b.Sum256(serializedState), nil
+}
+
+// hashCrystallizedState serializes the crystallized state object
+// then uses blake2b to hash the serialized object.
+func hashCrystallizedState(state *types.CrystallizedState) ([32]byte, error) {
+	serializedState, err := rlp.EncodeToBytes(state)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return blake2b.Sum256(serializedState), nil
+}
+
+// GetCutoffs is used to split up validators into groups at the start
+// of every epoch. It determines at what height validators can make
+// attestations and crosslinks. It returns lists of cutoff indices.
+func GetCutoffs(validatorCount int) []int {
+	var heightCutoff = []int{0}
+	var heights []int
+	var heightCount float64
+
+	// Skip heights if there's not enough validators to fill in a min sized committee.
+	if validatorCount < params.EpochLength*params.MinCommiteeSize {
+		heightCount = math.Floor(float64(validatorCount) / params.MinCommiteeSize)
+		for i := 0; i < int(heightCount); i++ {
+			heights = append(heights, (i*params.Cofactor)%params.EpochLength)
+		}
+		// Enough validators, fill in all the heights.
+	} else {
+		heightCount = params.EpochLength
+		for i := 0; i < int(heightCount); i++ {
+			heights = append(heights, i)
+		}
+	}
+
+	filled := 0
+	appendHeight := false
+	for i := 0; i < params.EpochLength-1; i++ {
+		appendHeight = false
+		for _, height := range heights {
+			if i == height {
+				appendHeight = true
+			}
+		}
+		if appendHeight {
+			filled++
+			heightCutoff = append(heightCutoff, filled*validatorCount/int(heightCount))
+		} else {
+			heightCutoff = append(heightCutoff, heightCutoff[len(heightCutoff)-1])
+		}
+	}
+	heightCutoff = append(heightCutoff, validatorCount)
+
+	// TODO: For the validators assigned to each height, split them up into
+	// committees for different shards. Do not assign the last END_EPOCH_GRACE_PERIOD
+	// heights in a epoch to any shards.
+	return heightCutoff
+}
+
+// hasVoted checks if the attester has voted by looking at the bitfield.
+func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool {
+	voted := false
+
+	fields := bitfields[attesterBlock-1]
+	attesterField := fields >> (8 - uint(attesterFieldIndex))
+	if attesterField%2 != 0 {
+		voted = true
+	}
+
+	return voted
+}
+
+// applyRewardAndPenalty applies the appropriate rewards and penalties according to
+// whether the attester has voted or not.
+func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if voted {
+		b.state.CrystallizedState.ActiveValidators[index].Balance += params.AttesterReward
+	} else {
+		// TODO : Change this when penalties are specified for not voting
+		b.state.CrystallizedState.ActiveValidators[index].Balance -= params.AttesterReward
+	}
+
+	return b.persist()
+}
+
+// resetAttesterBitfields resets the attester bitfields in the ActiveState to zero.
+func (b *BeaconChain) resetAttesterBitfields() error {
+
+	length := int(len(b.state.CrystallizedState.ActiveValidators) / 8)
+	if len(b.state.CrystallizedState.ActiveValidators)%8 != 0 {
+		length++
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	newbitfields := make([]byte, length)
+	b.state.ActiveState.AttesterBitfields = newbitfields
+
+	return b.persist()
+}
+
+// resetTotalAttesterDeposit clears and resets the total attester deposit to zero.
+func (b *BeaconChain) resetTotalAttesterDeposit() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.ActiveState.TotalAttesterDeposits = 0
+
+	return b.persist()
+}
+
+// updateJustifiedEpoch updates the justified epoch during an epoch transition.
+func (b *BeaconChain) updateJustifiedEpoch() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
+	b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
+
+	if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
+		b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
+	}
+
+	return b.persist()
+}
+
+// updateRewardsAndPenalties checks if the attester has voted and then applies the
+// rewards and penalties for them.
+func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
+	bitfields := b.state.ActiveState.AttesterBitfields
+	attesterBlock := (index + 1) / 8
+	attesterFieldIndex := (index + 1) % 8
+	if attesterFieldIndex == 0 {
+		attesterFieldIndex = 8
+	} else {
+		attesterBlock++
+	}
+
+	if len(bitfields) < attesterBlock {
+		return errors.New("attester index does not exist")
+	}
+
+	voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
+	if err := b.applyRewardAndPenalty(index, voted); err != nil {
+		return fmt.Errorf("unable to apply rewards and penalties: %v", err)
+	}
+
+	return nil
+}
+
+// computeValidatorRewardsAndPenalties is run every epoch transition and appropriates the
+// rewards and penalties, resets the bitfield and deposits and also applies the slashing conditions.
+func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
+	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
+	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
+	totalDeposit := b.state.CrystallizedState.TotalDeposits
+
+	attesterFactor := attesterDeposits * 3
+	totalFactor := uint64(totalDeposit * 2)
+
+	if attesterFactor >= totalFactor {
+		log.Info("Justified epoch in the crystallised state is set to the current epoch")
+
+		if err := b.updateJustifiedEpoch(); err != nil {
+			return fmt.Errorf("error setting justified epoch: %v", err)
+		}
+
+		for i := range activeValidatorSet {
+			if err := b.updateRewardsAndPenalties(i); err != nil {
+				log.Error(err)
+			}
+		}
+
+		if err := b.resetAttesterBitfields(); err != nil {
+			return fmt.Errorf("error resetting bitfields: %v", err)
+		}
+		if err := b.resetTotalAttesterDeposit(); err != nil {
+			return fmt.Errorf("error resetting total deposits: %v", err)
+		}
+	}
+	return nil
+}
+
+// Slashing Condtions
+// TODO: Implement all the conditions and add in the methods once the spec is updated

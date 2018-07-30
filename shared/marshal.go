@@ -153,7 +153,7 @@ func Deserialize(data []byte) ([]RawBlob, error) {
 
 		// if indicator is non-terminal, increase partitions counter
 		if databyteLength == 0 {
-			numPartitions += 1
+			numPartitions++
 		} else {
 			// if indicator is terminal, append blob info and reset partitions counter
 			serializedBlob := SerializedBlob{

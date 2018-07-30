@@ -6,6 +6,10 @@
     "goimports",
     "nakedret",
     "unparam",
-    "megacheck"
+    "megacheck",
+    "gosec",
+    "varcheck",
+    "structcheck",
+    "golint"
   ]
 }
