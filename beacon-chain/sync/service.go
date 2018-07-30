@@ -23,7 +23,7 @@ var log = logrus.WithField("prefix", "sync")
 //     *  Decide which messages are forwarded to other peers
 //     *  Filter redundant data and unwanted data
 //     *  Drop peers that send invalid data
-//     *  Trottle incoming requests
+//     *  Throttle incoming requests
 type Service struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
