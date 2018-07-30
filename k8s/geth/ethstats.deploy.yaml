@@ -14,7 +14,7 @@ spec:
         component: ethstats
         universe: geth
     spec:
-      priorityClassName: monitoring-priority
+      priorityClassName: production-priority
       containers:
         - name: ethstats
           image: ethereumex/eth-netstats:latest
