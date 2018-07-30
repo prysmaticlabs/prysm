@@ -364,7 +364,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 	return b.persist()
 }
 
-// resetTotalDeposit clears and resets the total attester deposit to zero.
+// resetTotalAttesterDeposit clears and resets the total attester deposit to zero.
 func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -373,7 +373,7 @@ func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	return b.persist()
 }
 
-// setJustifiedEpoch sets the justified epoch during an epoch transition.
+// updateJustifiedEpoch updates the justified epoch during an epoch transition.
 func (b *BeaconChain) updateJustifiedEpoch() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -388,7 +388,7 @@ func (b *BeaconChain) updateJustifiedEpoch() error {
 	return b.persist()
 }
 
-// setRewardsAndPenalties checks if the attester has voted and then applies the
+// updateRewardsAndPenalties checks if the attester has voted and then applies the
 // rewards and penalties for them.
 func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
 	bitfields := b.state.ActiveState.AttesterBitfields
@@ -411,9 +411,6 @@ func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
 
 	return nil
 }
-
-// Slashing Condtions
-// TODO: Implement all the conditions and add in the methods once the spec is updated
 
 // computeValidatorRewardsAndPenalties is run every epoch transition and appropriates the
 // rewards and penalties, resets the bitfield and deposits and also applies the slashing conditions.
@@ -447,3 +444,6 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	}
 	return nil
 }
+
+// Slashing Condtions
+// TODO: Implement all the conditions and add in the methods once the spec is updated
