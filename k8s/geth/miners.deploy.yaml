@@ -58,6 +58,7 @@ spec:
               --ethash.dagsondisk=1
               --nousb
               --cache=1024
+              --gasprice=0
           volumeMounts:
             - name: chaindata
               mountPath: "/ethereum"
