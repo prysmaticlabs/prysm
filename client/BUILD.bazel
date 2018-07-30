@@ -1,5 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 go_library(
     name = "go_default_library",
@@ -24,6 +25,7 @@ go_image(
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/client",
     static = "on",
+    visibility = ["//visibility:private"],
     deps = [
         "//client/node:go_default_library",
         "//client/utils:go_default_library",
@@ -33,6 +35,15 @@ go_image(
         "@com_github_urfave_cli//:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
     ],
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/client",
+    tag = "latest",
 )
 
 go_binary(
