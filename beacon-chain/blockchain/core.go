@@ -140,6 +140,10 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
+	if time.Now().Before(genesisTime.Add(slotDuration)) {
+		return false, nil
+	}
+
 	// Verify state hashes from the block are correct
 	hash, err := hashActiveState(b.ActiveState())
 	if err != nil {
@@ -163,9 +167,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", blockCrystallizedStateHash, hash)
 	}
 
-	validTime := time.Now().After(genesisTime.Add(slotDuration))
-
-	return validTime, nil
+	return true, nil
 }
 
 // RotateValidatorSet is called  every dynasty transition. It's primary function is
