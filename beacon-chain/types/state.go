@@ -9,6 +9,7 @@ import (
 
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
+// TODO: Change ActiveState to use proto
 type ActiveState struct {
 	TotalAttesterDeposits uint64 // TotalAttesterDeposits is the total quantity of wei that attested for the most recent checkpoint.
 	AttesterBitfields     []byte // AttesterBitfields represents which validator has attested.
@@ -55,7 +56,12 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	return active, crystallized
 }
 
-// Hash serializes the active state object then uses
+// Marshal encodes crystallized state object into the wire format.
+func (c *CrystallizedState) Marshal() ([]byte, error) {
+	return proto.Marshal(c.data)
+}
+
+// Hash serializes the crystallized state object then uses
 // blake2b to hash the serialized object.
 func (c *CrystallizedState) Hash() ([32]byte, error) {
 	data, err := proto.Marshal(c.data)
