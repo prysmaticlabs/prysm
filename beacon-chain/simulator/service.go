@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -23,7 +22,7 @@ type Simulator struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
 	p2p                    types.P2P
-	web3Service            *powchain.Web3Service
+	web3Service            types.POWChainService
 	delay                  time.Duration
 	broadcastedBlockHashes map[[32]byte]*types.Block
 	blockRequestChan       chan p2p.Message
@@ -41,7 +40,7 @@ func DefaultConfig() *Config {
 }
 
 // NewSimulator hi.
-func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Service *powchain.Web3Service) *Simulator {
+func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Service types.POWChainService) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
 		ctx:         ctx,

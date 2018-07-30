@@ -24,6 +24,11 @@ type ChainService interface {
 	ContainsBlock(h [32]byte) bool
 }
 
+// POWChainService is an interface for a proof-of-work chain web3 service.
+type POWChainService interface {
+	LatestBlockHash() common.Hash
+}
+
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
 	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
