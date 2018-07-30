@@ -14,7 +14,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/prysm/client/attester"
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/observer"
 	"github.com/prysmaticlabs/prysm/client/params"
@@ -25,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -45,6 +45,7 @@ type ShardEthereum struct {
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
+	db       *database.DB
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
@@ -125,6 +126,7 @@ func (s *ShardEthereum) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	s.db.Close()
 	s.services.StopAll()
 	log.Info("Stopping sharding node")
 
@@ -137,12 +139,14 @@ func (s *ShardEthereum) registerShardChainDB(ctx *cli.Context) error {
 	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
 		path = ctx.GlobalString(cmd.DataDirFlag.Name)
 	}
-	config := &database.ShardDBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
-	shardDB, err := database.NewShardDB(config)
+	config := &database.DBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
+	db, err := database.NewDB(config)
 	if err != nil {
-		return fmt.Errorf("could not register shardDB service: %v", err)
+		return fmt.Errorf("could not register database service: %v", err)
 	}
-	return s.services.RegisterService(shardDB)
+
+	s.db = db
+	return nil
 }
 
 // registerP2P attaches a p2p server to the ShardEthereum instance.
@@ -205,13 +209,9 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
 	}
+
 	var client *mainchain.SMCClient
 	if err := s.services.FetchService(&client); err != nil {
-		return err
-	}
-
-	var shardChainDB *database.ShardDB
-	if err := s.services.FetchService(&shardChainDB); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 
 	switch actor {
 	case "attester":
-		not, err := attester.NewAttester(config, client, shardp2p, shardChainDB)
+		not, err := attester.NewAttester(config, client, shardp2p, s.db)
 		if err != nil {
 			return fmt.Errorf("could not register attester service: %v", err)
 		}
@@ -239,13 +239,13 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, shardChainDB, shardID, sync)
+		prop, err := proposer.NewProposer(config, client, shardp2p, pool, s.db, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.services.RegisterService(prop)
 	default:
-		obs, err := observer.NewObserver(shardp2p, shardChainDB, shardID, sync, client)
+		obs, err := observer.NewObserver(shardp2p, s.db, shardID, sync, client)
 		if err != nil {
 			return fmt.Errorf("could not register observer service: %v", err)
 		}
@@ -262,12 +262,7 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 		return err
 	}
 
-	var shardChainDB *database.ShardDB
-	if err := s.services.FetchService(&shardChainDB); err != nil {
-		return err
-	}
-
-	sync, err := syncer.NewSyncer(config, client, shardp2p, shardChainDB, shardID)
+	sync, err := syncer.NewSyncer(config, client, shardp2p, s.db, shardID)
 	if err != nil {
 		return fmt.Errorf("could not register syncer service: %v", err)
 	}
