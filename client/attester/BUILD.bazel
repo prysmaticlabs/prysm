@@ -10,9 +10,9 @@ go_library(
     visibility = ["//client:__subpackages__"],
     deps = [
         "//client/contracts:go_default_library",
-        "//client/database:go_default_library",
         "//client/mainchain:go_default_library",
         "//client/params:go_default_library",
+        "//shared/database:go_default_library",
         "//shared/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",

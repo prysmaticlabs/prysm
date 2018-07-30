@@ -12,13 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/internal"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -39,14 +39,12 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	}
 	pool.Start()
 
-	config := &database.ShardDBConfig{DataDir: "", Name: "", InMemory: true}
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 
-	db, err := database.NewShardDB(config)
+	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("Failed create shardDB %v", err)
 	}
-
-	db.Start()
 
 	fakeSyncer, err := syncer.NewSyncer(params.DefaultConfig(), &mainchain.SMCClient{}, server, db, 1)
 	if err != nil {
@@ -88,7 +86,7 @@ func TestProposerRoundTrip(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
-		fakeProposer.dbService.Stop()
+		fakeProposer.dbService.Close()
 		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
 	}()
@@ -118,7 +116,7 @@ func TestIncompleteCollation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
-		fakeProposer.dbService.Stop()
+		fakeProposer.dbService.Close()
 		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
 	}()
@@ -154,7 +152,7 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	hook := logTest.NewGlobal()
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
-		fakeProposer.dbService.Stop()
+		fakeProposer.dbService.Close()
 		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
 	}()

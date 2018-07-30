@@ -3,9 +3,9 @@
 package attester
 
 import (
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -19,11 +19,11 @@ type Attester struct {
 	config    *params.Config
 	smcClient *mainchain.SMCClient
 	p2p       *p2p.Server
-	dbService *database.ShardDB
+	dbService *database.DB
 }
 
 // NewAttester creates a new attester instance.
-func NewAttester(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, dbService *database.ShardDB) (*Attester, error) {
+func NewAttester(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, dbService *database.DB) (*Attester, error) {
 	return &Attester{config, smcClient, p2p, dbService}, nil
 }
 

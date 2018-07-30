@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -16,13 +16,12 @@ func TestStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	config := &database.BeaconDBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
-	db, err := database.NewBeaconDB(config)
+	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
 
 	}
-	db.Start()
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}})
 	if err != nil {
@@ -46,18 +45,12 @@ func TestStartStop(t *testing.T) {
 	}
 
 	msg = hook.AllEntries()[1].Message
-	want = "Starting service"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-
-	msg = hook.AllEntries()[2].Message
 	want = "No chainstate found on disk, initializing beacon from genesis"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
-	msg = hook.AllEntries()[3].Message
+	msg = hook.AllEntries()[2].Message
 	want = "Stopping service"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)

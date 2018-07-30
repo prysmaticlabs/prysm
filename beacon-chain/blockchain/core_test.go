@@ -12,10 +12,10 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -32,13 +32,12 @@ func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 	return block, nil
 }
 
-func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.BeaconDB) {
-	config := &database.BeaconDBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewBeaconDB(config)
+func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.DB) {
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	db.Start()
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
@@ -50,7 +49,7 @@ func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.BeaconDB) {
 func TestNewBeaconChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	msg := hook.LastEntry().Message
 	want := "No chainstate found on disk, initializing beacon from genesis"
@@ -70,7 +69,7 @@ func TestNewBeaconChain(t *testing.T) {
 
 func TestMutateActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	active := &types.ActiveState{
 		TotalAttesterDeposits: 4096,
@@ -99,7 +98,7 @@ func TestMutateActiveState(t *testing.T) {
 
 func TestMutateCrystallizedState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	currentCheckpoint := common.BytesToHash([]byte("checkpoint"))
 	crystallized := &types.CrystallizedState{
@@ -129,7 +128,7 @@ func TestMutateCrystallizedState(t *testing.T) {
 
 func TestGetAttestersProposer(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -165,7 +164,7 @@ func TestGetAttestersProposer(t *testing.T) {
 
 func TestCanProcessBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	block := types.NewBlock(1)
 	// Using a faulty fetcher should throw an error.
@@ -211,7 +210,7 @@ func TestCanProcessBlock(t *testing.T) {
 
 func TestProcessBlockWithBadHashes(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	// Test negative scenario where active state hash is different than node's compute
 	block := types.NewBlock(1)
@@ -253,7 +252,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 
 func TestRotateValidatorSet(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	activeValidators := []types.ValidatorRecord{
 		{Balance: 10000, WithdrawalAddress: common.Address{'A'}},
@@ -352,7 +351,7 @@ func TestCutOffValidatorSet(t *testing.T) {
 
 func TestIsEpochTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	if err := beaconChain.MutateCrystallizedState(&types.CrystallizedState{CurrentEpoch: 1}); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
@@ -382,7 +381,7 @@ func TestHasVoted(t *testing.T) {
 
 func TestApplyRewardAndPenalty(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -443,7 +442,7 @@ func TestApplyRewardAndPenalty(t *testing.T) {
 
 func TestResetAttesterBitfields(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -493,7 +492,7 @@ func TestResetAttesterBitfields(t *testing.T) {
 
 func TestResetTotalAttesterDeposit(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	ActiveState := &types.ActiveState{TotalAttesterDeposits: 10000}
 	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
@@ -515,7 +514,7 @@ func TestResetTotalAttesterDeposit(t *testing.T) {
 
 func TestUpdateJustifiedEpoch(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 
 	CrystallizedState := &types.CrystallizedState{CurrentEpoch: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
 	if err := beaconChain.MutateCrystallizedState(CrystallizedState); err != nil {
@@ -566,7 +565,7 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 
 func TestUpdateRewardsAndPenalties(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 	priv, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatalf("Could not generate key: %v", err)
@@ -633,7 +632,7 @@ func TestUpdateRewardsAndPenalties(t *testing.T) {
 
 func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Stop()
+	defer db.Close()
 	priv, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatalf("Could not generate key: %v", err)

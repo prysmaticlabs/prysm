@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,7 @@ var log = logrus.WithField("prefix", "blockchain")
 type ChainService struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
-	beaconDB          *database.BeaconDB
+	beaconDB          *database.DB
 	chain             *BeaconChain
 	web3Service       *powchain.Web3Service
 	latestBeaconBlock chan *types.Block
@@ -25,7 +25,7 @@ type ChainService struct {
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, beaconDB *database.BeaconDB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil, nil}, nil
 }

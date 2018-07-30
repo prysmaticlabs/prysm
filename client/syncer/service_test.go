@@ -8,12 +8,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -29,8 +29,8 @@ func init() {
 func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	config := &database.ShardDBConfig{Name: "", DataDir: "", InMemory: true}
-	shardChainDB, err := database.NewShardDB(config)
+	config := &database.DBConfig{Name: "", DataDir: "", InMemory: true}
+	shardChainDB, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
@@ -71,8 +71,8 @@ func TestStop(t *testing.T) {
 func TestHandleCollationBodyRequests(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	config := &database.ShardDBConfig{Name: "", DataDir: "", InMemory: true}
-	shardChainDB, err := database.NewShardDB(config)
+	config := &database.DBConfig{Name: "", DataDir: "", InMemory: true}
+	shardChainDB, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
