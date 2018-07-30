@@ -21,14 +21,8 @@ type CrystallizedState struct {
 	data *pb.CrystallizedStateResponse
 }
 
-// NewCrystallizedState creates a new crystallized state given certain epoch.
-func NewCrystallizedState(epoch uint64) *CrystallizedState {
-	data := &pb.CrystallizedStateResponse{CurrentEpoch: epoch}
-	return &CrystallizedState{data: data}
-}
-
-// NewCrystallizedStateWithData explicitly sets the data field of a crystallized state.
-func NewCrystallizedStateWithData(data *pb.CrystallizedStateResponse) *CrystallizedState {
+// NewCrystallizedState creates a new crystallized state with a explicitly set data field.
+func NewCrystallizedState(data *pb.CrystallizedStateResponse) *CrystallizedState {
 	return &CrystallizedState{data: data}
 }
 

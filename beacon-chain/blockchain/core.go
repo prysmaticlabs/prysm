@@ -79,7 +79,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		beaconChain.state.CrystallizedState = types.NewCrystallizedStateWithData(crystallizedData)
+		beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
 	}
 	return beaconChain, nil
 }
