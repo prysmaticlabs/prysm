@@ -1,0 +1,47 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: geth-bootnode
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: bootnode
+        universe: geth
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: bootnode
+        image: ethereum/client-go:alltools-stable
+        ports: 
+          - containerPort: 8545
+            name: rpc
+          - containerPort: 30303
+            name: discovery-tcp
+            protocol: TCP
+          - containerPort: 30303
+            name: discovery-udp
+            protocol: UDP
+          - containerPort: 30301
+            name: bootnode-udp
+            protocol: UDP
+        command: ["bootnode"]
+        args:
+          - "--nodekey=/data/private_key"
+          - "--verbosity=9"
+        volumeMounts:
+          - name: secrets
+            mountPath: "/data/"
+            readOnly: true
+        resources:
+          requests:
+            memory: "25Mi"
+            cpu: "25m"
+          limits:
+            memory: "100Mi"
+            cpu: "150m"
+      volumes:
+        - name: secrets
+          secret:
+            secretName: geth-bootnode-secret
