@@ -62,7 +62,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		activeData := &pb.ActiveStateResponse{}
 		err = proto.Unmarshal(enc, activeData)
 		if err != nil {
@@ -75,7 +74,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		crystallizedData := &pb.CrystallizedStateResponse{}
 		err = proto.Unmarshal(enc, crystallizedData)
 		if err != nil {
