@@ -59,6 +59,19 @@ message CrystallizedStateResponse {
   uint64 dynasty_seed_last_reset = 13;
 }
 
+message ActiveStateHashAnnounce {
+  bytes hash = 1;
+}
+
+message ActiveStateRequest {
+  bytes hash = 1;
+}
+
+message ActiveStateResponse {
+  uint64 total_attester_deposits = 1;
+  bytes attester_bitfield = 2;
+}
+
 message AggregateVote {
   uint32 shard_id = 1;
   bytes shard_block_hash = 2;

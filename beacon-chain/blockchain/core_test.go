@@ -71,10 +71,12 @@ func TestMutateActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	active := &types.ActiveState{
+	data := &pb.ActiveStateResponse{
 		TotalAttesterDeposits: 4096,
-		AttesterBitfields:     []byte{'A', 'B', 'C'},
+		AttesterBitfield:      []byte{'A', 'B', 'C'},
 	}
+	active := types.NewActiveState(data)
+
 	if err := beaconChain.MutateActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
@@ -89,11 +91,11 @@ func TestMutateActiveState(t *testing.T) {
 	}
 
 	// The active state should still be the one we mutated and persited earlier.
-	if active.TotalAttesterDeposits != newBeaconChain.state.ActiveState.TotalAttesterDeposits {
-		t.Errorf("active state height incorrect. wanted %v, got %v", active.TotalAttesterDeposits, newBeaconChain.state.ActiveState.TotalAttesterDeposits)
+	if active.TotalAttesterDeposits() != newBeaconChain.state.ActiveState.TotalAttesterDeposits() {
+		t.Errorf("active state height incorrect. wanted %v, got %v", active.TotalAttesterDeposits(), newBeaconChain.state.ActiveState.TotalAttesterDeposits())
 	}
-	if !bytes.Equal(active.AttesterBitfields, newBeaconChain.state.ActiveState.AttesterBitfields) {
-		t.Errorf("active state randao incorrect. wanted %v, got %v", active.AttesterBitfields, newBeaconChain.state.ActiveState.AttesterBitfields)
+	if !bytes.Equal(active.AttesterBitfield(), newBeaconChain.state.ActiveState.AttesterBitfield()) {
+		t.Errorf("active state randao incorrect. wanted %v, got %v", active.AttesterBitfield(), newBeaconChain.state.ActiveState.AttesterBitfield())
 	}
 }
 
@@ -172,10 +174,10 @@ func TestCanProcessBlock(t *testing.T) {
 	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
 		t.Errorf("Using a faulty fetcher should throw an error, received nil")
 	}
-	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
+	activeState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
 	beaconChain.state.ActiveState = activeState
 
-	activeHash, err := hashActiveState(activeState)
+	activeHash, err := activeState.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
@@ -213,8 +215,8 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	activeState := &types.ActiveState{TotalAttesterDeposits: 10000}
-	activeStateHash, err := hashActiveState(activeState)
+	active := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
+	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
@@ -226,7 +228,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	block := NewBlock(t, 1, activeStateHash, crystallizedStateHash)
 
 	// Test negative scenario where active state hash is different than node's compute
-	beaconChain.state.ActiveState = &types.ActiveState{TotalAttesterDeposits: 9999}
+	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 9999})
 
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
@@ -304,7 +306,6 @@ func TestRotateValidatorSet(t *testing.T) {
 }
 
 func TestCutOffValidatorSet(t *testing.T) {
-
 	// Test scenario #1: Assume there's enough validators to fill in all the heights.
 	validatorCount := params.EpochLength * params.MinCommiteeSize
 	cutoffsValidators := GetCutoffs(validatorCount)
@@ -441,14 +442,13 @@ func TestResetAttesterBitfields(t *testing.T) {
 		beaconChain.CrystallizedState().UpdateActiveValidators(validators)
 
 		testAttesterBitfield := []byte{2, 4, 6, 9}
-
-		if err := beaconChain.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+		if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})); err != nil {
 			t.Fatal("unable to mutate active state")
 		}
 		if err := beaconChain.resetAttesterBitfields(); err != nil {
 			t.Fatalf("unable to reset Attester Bitfields")
 		}
-		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.AttesterBitfields) {
+		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.AttesterBitfield()) {
 			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
 		}
 
@@ -456,8 +456,8 @@ func TestResetAttesterBitfields(t *testing.T) {
 		if j%8 != 0 {
 			bitfieldLength++
 		}
-		if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfields, make([]byte, bitfieldLength)) {
-			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfields)
+		if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfield(), make([]byte, bitfieldLength)) {
+			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfield())
 		}
 	}
 }
@@ -466,18 +466,18 @@ func TestResetTotalAttesterDeposit(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	ActiveState := &types.ActiveState{TotalAttesterDeposits: 10000}
-	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
+	active := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
+	if err := beaconChain.MutateActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
-	if beaconChain.state.ActiveState.TotalAttesterDeposits != uint64(10000) {
-		t.Fatalf("attester deposit was not saved: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
+	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(10000) {
+		t.Fatalf("attester deposit was not saved: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
 	}
 	if err := beaconChain.resetTotalAttesterDeposit(); err != nil {
 		t.Fatalf("unable to reset total attester deposit: %v", err)
 	}
-	if beaconChain.state.ActiveState.TotalAttesterDeposits != uint64(0) {
-		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
+	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(0) {
+		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
 	}
 }
 
@@ -538,8 +538,7 @@ func TestUpdateRewardsAndPenalties(t *testing.T) {
 
 	//Binary Representation of Bitfield: 00010110 00101011 00101110 01001111 01010000
 	testAttesterBitfield := []byte{22, 43, 46, 79, 80}
-
-	if err := beaconChain.MutateActiveState(&types.ActiveState{AttesterBitfields: testAttesterBitfield}); err != nil {
+	if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
 	// Test Validator with index 10 would refer to the 11th bit in the bitfield
@@ -601,8 +600,8 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-
-	ActiveState := &types.ActiveState{TotalAttesterDeposits: 8000, AttesterBitfields: testAttesterBitfield}
+	types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})
+	ActiveState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 8000, AttesterBitfield: testAttesterBitfield})
 	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
@@ -610,10 +609,10 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(5) {
-		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch)
+		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
 	}
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(4) {
-		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch)
+		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
 	}
 	if beaconChain.CrystallizedState().ActiveValidators()[0].Balance != uint64(1001) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().ActiveValidators()[1].Balance)
@@ -624,11 +623,11 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	if beaconChain.CrystallizedState().ActiveValidators()[29].Balance != uint64(999) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().ActiveValidators()[1].Balance)
 	}
-	if beaconChain.state.ActiveState.TotalAttesterDeposits != uint64(0) {
-		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits)
+	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(0) {
+		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
 	}
-	if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfields, make([]byte, 5)) {
-		t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfields)
+	if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfield(), make([]byte, 5)) {
+		t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfield())
 	}
 }
 
