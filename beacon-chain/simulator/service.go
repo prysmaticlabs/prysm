@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"golang.org/x/crypto/blake2b"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -23,6 +22,7 @@ type Simulator struct {
 	cancel                 context.CancelFunc
 	p2p                    types.P2P
 	web3Service            types.POWChainService
+	chainService           types.StateFetcher
 	delay                  time.Duration
 	broadcastedBlockHashes map[[32]byte]*types.Block
 	blockRequestChan       chan p2p.Message
@@ -39,15 +39,16 @@ func DefaultConfig() *Config {
 	return &Config{Delay: time.Second * 7, BlockRequestBuf: 100}
 }
 
-// NewSimulator hi.
-func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Service types.POWChainService) *Simulator {
+// NewSimulator creates a simulator instance for a syncer to consume fake, generated blocks.
+func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Service types.POWChainService, chainService types.StateFetcher) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
-		ctx:         ctx,
-		cancel:      cancel,
-		p2p:         beaconp2p,
-		web3Service: web3Service,
-		delay:       cfg.Delay,
+		ctx:          ctx,
+		cancel:       cancel,
+		p2p:          beaconp2p,
+		web3Service:  web3Service,
+		chainService: chainService,
+		delay:        cfg.Delay,
 		broadcastedBlockHashes: make(map[[32]byte]*types.Block),
 		blockRequestChan:       make(chan p2p.Message, cfg.BlockRequestBuf),
 	}
@@ -75,12 +76,30 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-delayChan:
-			stateHash := blake2b.Sum256([]byte{1, 2, 3, 4, 5})
+			activeStateHash, err := sim.chainService.CurrentActiveState().Hash()
+			if err != nil {
+				log.Errorf("Could not fetch active state hash: %v", err)
+			}
+
+			var validators []*pb.ValidatorRecord
+			for i := 0; i < 100; i++ {
+				validator := &pb.ValidatorRecord{Balance: 1000, WithdrawalAddress: []byte{'A'}, PublicKey: 0}
+				validators = append(validators, validator)
+			}
+
+			crystallizedState := sim.chainService.CurrentCrystallizedState()
+			crystallizedState.UpdateActiveValidators(validators)
+
+			crystallizedStateHash, err := crystallizedState.Hash()
+			if err != nil {
+				log.Errorf("Could not fetch crystallized state hash: %v", err)
+			}
+
 			block, err := types.NewBlock(&pb.BeaconBlockResponse{
 				Timestamp:             ptypes.TimestampNow(),
 				MainChainRef:          sim.web3Service.LatestBlockHash().Bytes(),
-				ActiveStateHash:       stateHash[:],
-				CrystallizedStateHash: stateHash[:],
+				ActiveStateHash:       activeStateHash[:],
+				CrystallizedStateHash: crystallizedStateHash[:],
 			})
 			if err != nil {
 				log.Errorf("Could not create simulated block: %v", err)
@@ -91,7 +110,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				log.Errorf("Could not hash simulated block: %v", err)
 			}
 
-			log.WithField("announcedBlockHash", fmt.Sprintf("%x", h)).Info("Announcing block hash")
+			log.WithField("announcedBlockHash", fmt.Sprintf("0x%x", h)).Info("Announcing block hash")
 			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 				Hash: h[:],
 			})

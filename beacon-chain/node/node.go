@@ -48,11 +48,11 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	if err := beacon.registerP2P(); err != nil {
+	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.startDB(ctx); err != nil {
+	if err := beacon.registerP2P(); err != nil {
 		return nil, err
 	}
 
@@ -60,15 +60,14 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerBlockchainService(); err != nil {
+		return nil, err
+	}
+
 	if ctx.GlobalBool(utils.SimulatorFlag.Name) {
 		if err := beacon.registerSimulatorService(); err != nil {
 			return nil, err
 		}
-		return beacon, nil
-	}
-
-	if err := beacon.registerBlockchainService(); err != nil {
-		return nil, err
 	}
 
 	if err := beacon.registerSyncService(); err != nil {
@@ -115,9 +114,9 @@ func (b *BeaconNode) Close() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.db.Close()
-	b.services.StopAll()
 	log.Info("Stopping beacon node")
+	b.services.StopAll()
+	b.db.Close()
 	close(b.stop)
 }
 
@@ -186,11 +185,18 @@ func (b *BeaconNode) registerSimulatorService() error {
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
 	}
+
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
+
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
 	cfg := simulator.DefaultConfig()
-	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service)
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service, chainService)
 	return b.services.RegisterService(simulatorService)
 }

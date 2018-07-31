@@ -31,10 +31,20 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{})
 }
 
+type mockChainService struct{}
+
+func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
+	return nil
+}
+
+func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return nil
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{})
+	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
 
 	sim.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -50,7 +60,7 @@ func TestLifecycle(t *testing.T) {
 func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{})
+	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -77,7 +87,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 func TestBlockRequestResponse(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{})
+	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})

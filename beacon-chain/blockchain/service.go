@@ -53,6 +53,13 @@ func (c *ChainService) Start() {
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
+	log.Infof("Persisting current active and crystallized states before closing")
+	if err := c.chain.PersistActiveState(); err != nil {
+		return fmt.Errorf("Error persisting active state: %v", err)
+	}
+	if err := c.chain.PersistCrystallizedState(); err != nil {
+		return fmt.Errorf("Error persisting crystallized state: %v", err)
+	}
 	log.Info("Stopping service")
 	return nil
 }
@@ -68,7 +75,7 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
-	log.WithField("blockHash", fmt.Sprintf("%x", h)).Info("Received full block, processing validity conditions")
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
 	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
 	if err != nil {
 		return err
@@ -86,6 +93,16 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
+// CurrentCrystallizedState of the canonical chain.
+func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return c.chain.CrystallizedState()
+}
+
+// CurrentActiveState of the canonical chain.
+func (c *ChainService) CurrentActiveState() *types.ActiveState {
+	return c.chain.ActiveState()
+}
+
 // updateChainState receives a beacon block, computes a new active state and writes it to db. Also
 // it checks for if there is an epoch transition. If there is one it computes the validator rewards
 // and penalties.
@@ -93,9 +110,6 @@ func (c *ChainService) updateChainState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			activeStateHash := block.ActiveStateHash()
-			log.WithFields(logrus.Fields{"activeStateHash": activeStateHash}).Debug("Received beacon block")
-
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
 			if err != nil {

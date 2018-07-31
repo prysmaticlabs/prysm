@@ -2,9 +2,12 @@ package shared
 
 import (
 	"fmt"
-	"log"
 	"reflect"
+
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "registry")
 
 // ServiceRegistry provides a useful pattern for managing services.
 // It allows for ease of dependency management and ensures services
@@ -28,9 +31,12 @@ func (s *ServiceRegistry) StartAll() {
 	}
 }
 
-// StopAll ends every service, logging a panic if any of them fail to stop.
+// StopAll ends every service in reverse order of registration, logging a
+// panic if any of them fail to stop.
 func (s *ServiceRegistry) StopAll() {
-	for kind, service := range s.services {
+	for i := len(s.serviceTypes) - 1; i >= 0; i-- {
+		kind := s.serviceTypes[i]
+		service := s.services[kind]
 		if err := service.Stop(); err != nil {
 			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}

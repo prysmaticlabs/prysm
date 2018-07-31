@@ -110,7 +110,7 @@ func TestBadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.fetchChainInfo(web3Service.ctx, &badReader{}, &goodLogger{})
+	web3Service.fetchChainInfo(&badReader{}, &goodLogger{})
 	msg := hook.LastEntry().Message
 	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
 	if msg != want {
@@ -126,18 +126,17 @@ func TestLatestMainchainInfo(t *testing.T) {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		web3Service.fetchChainInfo(&goodReader{}, &goodLogger{})
 		<-exitRoutine
 	}()
 
 	header := &gethTypes.Header{Number: big.NewInt(42)}
 
 	web3Service.headerChan <- header
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	if web3Service.blockNumber.Cmp(header.Number) != 0 {
@@ -156,7 +155,7 @@ func TestBadLogger(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.fetchChainInfo(web3Service.ctx, &goodReader{}, &badLogger{})
+	web3Service.fetchChainInfo(&goodReader{}, &badLogger{})
 	msg := hook.LastEntry().Message
 	want := "Unable to query logs from VRC: subscription has failed"
 	if msg != want {
@@ -176,17 +175,16 @@ func TestGoodLogger(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
-	ctx, cancel := context.WithCancel(context.Background())
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		web3Service.fetchChainInfo(&goodReader{}, &goodLogger{})
 		<-exitRoutine
 	}()
 
 	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
 	web3Service.logChan <- log
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	lastEntry := hook.LastEntry()
@@ -217,11 +215,10 @@ func TestHeaderAfterValidation(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
-	ctx, cancel := context.WithCancel(context.Background())
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		web3Service.fetchChainInfo(&goodReader{}, &goodLogger{})
 		<-exitRoutine
 	}()
 
@@ -231,7 +228,7 @@ func TestHeaderAfterValidation(t *testing.T) {
 	header := &gethTypes.Header{Number: big.NewInt(42)}
 	web3Service.headerChan <- header
 
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")

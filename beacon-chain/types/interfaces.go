@@ -24,6 +24,12 @@ type ChainService interface {
 	ContainsBlock(h [32]byte) bool
 }
 
+// StateFetcher defines a struct that can fetch the latest canonical beacon state of a node.
+type StateFetcher interface {
+	CurrentActiveState() *ActiveState
+	CurrentCrystallizedState() *CrystallizedState
+}
+
 // POWChainService is an interface for a proof-of-work chain web3 service.
 type POWChainService interface {
 	LatestBlockHash() common.Hash

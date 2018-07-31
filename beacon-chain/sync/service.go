@@ -79,7 +79,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 	if ss.chainService.ContainsBlock(h) {
 		return
 	}
-	log.WithField("blockHash", fmt.Sprintf("%x", h)).Info("Received incoming block hash, requesting full block data from sender")
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
 }
@@ -101,8 +101,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	if err := ss.chainService.ProcessBlock(block); err != nil {
 		return fmt.Errorf("could not process block: %v", err)
 	}
-	ss.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{Hash: h[:]})
-	log.Debugf("Relaying processed block hash to peers: %x", h)
+	log.Debugf("Successfully processed incoming block with hash: %x", h)
 	return nil
 }
 
@@ -132,7 +131,7 @@ func (ss *Service) run(done <-chan struct{}) {
 				continue
 			}
 			if err := ss.ReceiveBlock(data); err != nil {
-				log.Error(err)
+				log.Errorf("Could not receive block: %v", err)
 			}
 		}
 	}

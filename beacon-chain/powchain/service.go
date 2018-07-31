@@ -50,9 +50,9 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
 	}
-	web3ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
-		ctx:                 web3ctx,
+		ctx:                 ctx,
 		cancel:              cancel,
 		headerChan:          make(chan *gethTypes.Header),
 		logChan:             make(chan gethTypes.Log),
@@ -76,7 +76,7 @@ func (w *Web3Service) Start() {
 		return
 	}
 	w.client = ethclient.NewClient(rpcClient)
-	go w.fetchChainInfo(w.ctx, w.client, w.client)
+	go w.fetchChainInfo(w.client, w.client)
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -87,8 +87,9 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
-func (w *Web3Service) fetchChainInfo(ctx context.Context, reader types.Reader, logger types.Logger) {
-	if _, err := reader.SubscribeNewHead(w.ctx, w.headerChan); err != nil {
+func (w *Web3Service) fetchChainInfo(reader types.Reader, logger types.Logger) {
+	headSub, err := reader.SubscribeNewHead(w.ctx, w.headerChan)
+	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
 		return
 	}
@@ -97,14 +98,22 @@ func (w *Web3Service) fetchChainInfo(ctx context.Context, reader types.Reader, l
 			w.vrcAddress,
 		},
 	}
-	_, err := logger.SubscribeFilterLogs(context.Background(), query, w.logChan)
+	logSub, err := logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
 	if err != nil {
 		log.Errorf("Unable to query logs from VRC: %v", err)
 		return
 	}
+	defer logSub.Unsubscribe()
+	defer headSub.Unsubscribe()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-w.ctx.Done():
+			return
+		case <-headSub.Err():
+			log.Debug("Unsubscribed to head events, exiting goroutine")
+			return
+		case <-logSub.Err():
+			log.Debug("Unsubscribed to log events, exiting goroutine")
 			return
 		case header := <-w.headerChan:
 			w.blockNumber = header.Number
