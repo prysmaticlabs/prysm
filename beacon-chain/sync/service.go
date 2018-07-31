@@ -87,7 +87,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce) error {
 // ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
 func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
-	block, err := types.NewBlockWithData(data)
+	block, err := types.NewBlock(data)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
 	}
