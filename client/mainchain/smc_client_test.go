@@ -14,7 +14,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/prysmaticlabs/prysm/shared"
 )
 
 var (
@@ -22,9 +21,6 @@ var (
 	addr                     = crypto.PubkeyToAddress(key.PublicKey)
 	accountBalance1001Eth, _ = new(big.Int).SetString("1001000000000000000000", 10)
 )
-
-// Verifies that SMCCLient implements the sharding Service inteface.
-var _ = shared.Service(&SMCClient{})
 
 // mockClient is struct to implement the smcClient methods for testing.
 type mockClient struct {
@@ -35,7 +31,6 @@ type mockClient struct {
 // Mirrors the function in the main file, but instead of having a client to perform rpc calls
 // it is replaced by the simulated backend.
 func (m *mockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
-
 	var receipt *gethTypes.Receipt
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, durationInSeconds*time.Second)

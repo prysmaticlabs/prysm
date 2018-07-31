@@ -42,10 +42,11 @@ type ShardEthereum struct {
 	shardConfig *params.Config // Holds necessary information to configure shards.
 
 	// Lifecycle and service stores.
-	services *shared.ServiceRegistry
-	lock     sync.RWMutex
-	stop     chan struct{} // Channel to wait for termination notifications.
-	db       *database.DB
+	services  *shared.ServiceRegistry
+	lock      sync.RWMutex
+	stop      chan struct{} // Channel to wait for termination notifications.
+	db        *database.DB
+	smcClient *mainchain.SMCClient
 }
 
 // New creates a new sharding-enabled Ethereum instance. This is called in the main
@@ -64,11 +65,11 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerP2P(); err != nil {
+	if err := shardEthereum.startMainchainClient(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerMainchainClient(ctx); err != nil {
+	if err := shardEthereum.registerP2P(); err != nil {
 		return nil, err
 	}
 
@@ -127,6 +128,7 @@ func (s *ShardEthereum) Close() {
 	defer s.lock.Unlock()
 
 	s.db.Close()
+	s.smcClient.Close()
 	s.services.StopAll()
 	log.Info("Stopping sharding node")
 
@@ -158,7 +160,7 @@ func (s *ShardEthereum) registerP2P() error {
 	return s.services.RegisterService(shardp2p)
 }
 
-func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
+func (s *ShardEthereum) startMainchainClient(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
 		path = ctx.GlobalString(cmd.DataDirFlag.Name)
@@ -180,7 +182,10 @@ func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not register smc client service: %v", err)
 	}
-	return s.services.RegisterService(client)
+
+	s.smcClient = client
+
+	return nil
 }
 
 // registerTXPool is only relevant to proposers in the sharded system. It will
@@ -210,11 +215,6 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
-	var client *mainchain.SMCClient
-	if err := s.services.FetchService(&client); err != nil {
-		return err
-	}
-
 	var sync *syncer.Syncer
 	if err := s.services.FetchService(&sync); err != nil {
 		return err
@@ -222,13 +222,13 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 
 	switch actor {
 	case "attester":
-		not, err := attester.NewAttester(config, client, shardp2p, s.db)
+		not, err := attester.NewAttester(config, s.smcClient, shardp2p, s.db)
 		if err != nil {
 			return fmt.Errorf("could not register attester service: %v", err)
 		}
 		return s.services.RegisterService(not)
 	case "simulator":
-		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
+		sim, err := simulator.NewSimulator(config, s.smcClient, shardp2p, shardID, 15*time.Second)
 		if err != nil {
 			return fmt.Errorf("could not register simulator service: %v", err)
 		}
@@ -239,13 +239,13 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, s.db, shardID, sync)
+		prop, err := proposer.NewProposer(config, s.smcClient, shardp2p, pool, s.db, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.services.RegisterService(prop)
 	default:
-		obs, err := observer.NewObserver(shardp2p, s.db, shardID, sync, client)
+		obs, err := observer.NewObserver(shardp2p, s.db, shardID, sync, s.smcClient)
 		if err != nil {
 			return fmt.Errorf("could not register observer service: %v", err)
 		}
@@ -257,12 +257,8 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
 	}
-	var client *mainchain.SMCClient
-	if err := s.services.FetchService(&client); err != nil {
-		return err
-	}
 
-	sync, err := syncer.NewSyncer(config, client, shardp2p, s.db, shardID)
+	sync, err := syncer.NewSyncer(config, s.smcClient, shardp2p, s.db, shardID)
 	if err != nil {
 		return fmt.Errorf("could not register syncer service: %v", err)
 	}

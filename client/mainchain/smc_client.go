@@ -57,24 +57,18 @@ func NewSMCClient(endpoint string, dataDirPath string, depositFlag bool, passwor
 
 	ks := keystore.NewKeyStore(keydir, scryptN, scryptP)
 
-	smcClient := &SMCClient{
+	s := &SMCClient{
 		keystore:     ks,
 		endpoint:     endpoint,
 		depositFlag:  depositFlag,
 		dataDirPath:  dataDirPath,
 		passwordFile: passwordFile,
 	}
-
-	return smcClient, nil
-}
-
-// Start the SMC Client and connect to running geth node.
-func (s *SMCClient) Start() {
 	// Sets up a connection to a Geth node via RPC.
 	rpcClient, err := dialRPC(s.endpoint)
 	if err != nil {
 		log.Panicf("Cannot start rpc client: %v", err)
-		return
+		return nil, err
 	}
 
 	s.rpcClient = rpcClient
@@ -84,28 +78,29 @@ func (s *SMCClient) Start() {
 	accounts := s.keystore.Accounts()
 	if len(accounts) == 0 {
 		log.Panic("No accounts found")
-		return
+		return nil, nil
 	}
 
 	if err := s.unlockAccount(accounts[0]); err != nil {
 		log.Panicf("Cannot unlock account: %v", err)
-		return
+		return nil, nil
 	}
 
 	// Initializes bindings to SMC.
 	smc, err := initSMC(s)
 	if err != nil {
 		log.Panicf("Failed to initialize SMC: %v", err)
-		return
+		return nil, nil
 	}
 
 	s.smc = smc
+
+	return s, nil
 }
 
-// Stop SMCClient immediately. This cancels any pending RPC connections.
-func (s *SMCClient) Stop() error {
+// Close SMCClient immediately. This cancels any pending RPC connections.
+func (s *SMCClient) Close() {
 	s.rpcClient.Close()
-	return nil
 }
 
 // CreateTXOpts creates a *TransactOpts with a signer using the default account on the keystore.
