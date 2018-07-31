@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ethereum.beacon.p2p.v1;
+package proto.beacon.p2p.v1;
 
 import "google/protobuf/timestamp.proto";
 
