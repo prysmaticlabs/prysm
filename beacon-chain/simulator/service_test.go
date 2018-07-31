@@ -88,7 +88,7 @@ func TestBlockRequestResponse(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	block, err := types.NewBlockWithData(&pb.BeaconBlockResponse{})
+	block, err := types.NewBlock(&pb.BeaconBlockResponse{})
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}

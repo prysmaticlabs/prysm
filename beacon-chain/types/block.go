@@ -24,14 +24,8 @@ type AggregateVote struct {
 	AggregateSig   []uint // AggregateSig is the aggregated signatures of individual shard.
 }
 
-// NewBlock creates a new beacon block given certain arguments.
-func NewBlock(slotNumber uint64) *Block {
-	data := &pb.BeaconBlockResponse{Timestamp: ptypes.TimestampNow(), SlotNumber: slotNumber}
-	return &Block{data: data}
-}
-
-// NewBlockWithData explicitly sets the data field of a block.
-func NewBlockWithData(data *pb.BeaconBlockResponse) (*Block, error) {
+// NewBlock explicitly sets the data field of a block.
+func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
 	return &Block{data}, nil
 }
 
@@ -101,14 +95,4 @@ func (b *Block) CrystallizedStateHash() [32]byte {
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
-}
-
-// InsertActiveHash updates the activeStateHash property in the data of a beacon block.
-func (b *Block) InsertActiveHash(h [32]byte) {
-	b.data.ActiveStateHash = h[:]
-}
-
-// InsertCrystallizedHash updates the crystallizedStateHash property in the data of a beacon block.
-func (b *Block) InsertCrystallizedHash(h [32]byte) {
-	b.data.CrystallizedStateHash = h[:]
 }

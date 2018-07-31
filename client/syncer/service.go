@@ -7,11 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -24,7 +24,7 @@ type Syncer struct {
 	config       *params.Config
 	client       *mainchain.SMCClient
 	shardID      int
-	shardChainDB *database.ShardDB
+	db           *database.DB
 	p2p          *p2p.Server
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -35,16 +35,16 @@ type Syncer struct {
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a signer, a p2p server,
 // a shardChainDB, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardChainDB *database.ShardDB, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, db *database.DB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Syncer{config, client, shardID, shardChainDB, p2p, ctx, cancel, nil, nil}, nil
+	return &Syncer{config, client, shardID, db, p2p, ctx, cancel, nil, nil}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
 
-	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.shardChainDB.DB())
+	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.db.DB())
 
 	s.msgChan = make(chan p2p.Message, 100)
 	s.bodyRequests = s.p2p.Subscribe(pb.CollationBodyRequest{}, s.msgChan)

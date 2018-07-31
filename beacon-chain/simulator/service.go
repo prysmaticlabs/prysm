@@ -76,7 +76,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			return
 		case <-delayChan:
 			stateHash := blake2b.Sum256([]byte{1, 2, 3, 4, 5})
-			block, err := types.NewBlockWithData(&pb.BeaconBlockResponse{
+			block, err := types.NewBlock(&pb.BeaconBlockResponse{
 				Timestamp:             ptypes.TimestampNow(),
 				MainChainRef:          sim.web3Service.LatestBlockHash().Bytes(),
 				ActiveStateHash:       stateHash[:],

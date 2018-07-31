@@ -3,11 +3,11 @@ package observer
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/client/database"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -23,8 +23,8 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup p2p server: %v", err)
 	}
-	config := &database.ShardDBConfig{Name: "", DataDir: "", InMemory: true}
-	shardChainDB, err := database.NewShardDB(config)
+	config := &database.DBConfig{Name: "", DataDir: "", InMemory: true}
+	shardChainDB, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("Unable to setup db: %v", err)
 	}

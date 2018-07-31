@@ -10,13 +10,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/database"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -34,6 +34,7 @@ type BeaconNode struct {
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
+	db       *database.DB
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -51,6 +52,10 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.startDB(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerPOWChainService(); err != nil {
 		return nil, err
 	}
@@ -60,11 +65,6 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 			return nil, err
 		}
 		return beacon, nil
-	}
-
-	path := ctx.GlobalString(cmd.DataDirFlag.Name)
-	if err := beacon.registerBeaconDB(path); err != nil {
-		return nil, err
 	}
 
 	if err := beacon.registerBlockchainService(); err != nil {
@@ -115,18 +115,22 @@ func (b *BeaconNode) Close() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.db.Close()
 	b.services.StopAll()
 	log.Info("Stopping beacon node")
 	close(b.stop)
 }
 
-func (b *BeaconNode) registerBeaconDB(path string) error {
-	config := &database.BeaconDBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
-	beaconDB, err := database.NewBeaconDB(config)
+func (b *BeaconNode) startDB(ctx *cli.Context) error {
+	path := ctx.GlobalString(cmd.DataDirFlag.Name)
+	config := &database.DBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
+	db, err := database.NewDB(config)
 	if err != nil {
-		return fmt.Errorf("could not register beaconDB service: %v", err)
+		return err
 	}
-	return b.services.RegisterService(beaconDB)
+
+	b.db = db
+	return nil
 }
 
 func (b *BeaconNode) registerP2P() error {
@@ -138,17 +142,12 @@ func (b *BeaconNode) registerP2P() error {
 }
 
 func (b *BeaconNode) registerBlockchainService() error {
-	var beaconDB *database.BeaconDB
-	if err := b.services.FetchService(&beaconDB); err != nil {
-		return err
-	}
-
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), beaconDB, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
