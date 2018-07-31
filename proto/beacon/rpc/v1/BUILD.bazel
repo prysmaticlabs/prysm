@@ -6,8 +6,8 @@ proto_library(
     srcs = ["services.proto"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ethereum/beacon/p2p/v1:v1_proto",
-        "//ethereum/sharding/p2p/v1:v1_proto",
+        "//proto/ethereum/beacon/p2p/v1:v1_proto",
+        "//proto/ethereum/sharding/p2p/v1:v1_proto",
     ],
 )
 
@@ -18,8 +18,8 @@ go_proto_library(
     proto = ":ethereum_beacon_rpc_v1_proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//ethereum/beacon/p2p/v1:go_default_library",
-        "//ethereum/sharding/p2p/v1:go_default_library",
+        "//proto/ethereum/beacon/p2p/v1:go_default_library",
+        "//proto/ethereum/sharding/p2p/v1:go_default_library",
     ],
 )
 

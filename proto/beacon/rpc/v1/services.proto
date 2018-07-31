@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
-import "ethereum/sharding/p2p/v1/messages.proto";
-import "ethereum/beacon/p2p/v1/messages.proto";
+import "proto/ethereum/sharding/p2p/v1/messages.proto";
+import "proto/ethereum/beacon/p2p/v1/messages.proto";
 
 service BeaconService {
     rpc ShuffleValidators(ShuffleRequest) returns (ShuffleResponse);
