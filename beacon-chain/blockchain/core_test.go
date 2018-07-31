@@ -759,7 +759,7 @@ func unique(ints []int) []int {
 
 }
 
-// NewBlock is a helper method to create blocks with sane defaults
+// NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil)
 func NewBlock(t *testing.T, b *pb.BeaconBlockResponse) *types.Block {
 	if b == nil {
