@@ -122,5 +122,5 @@ func TestBlockRequestResponse(t *testing.T) {
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to full block request for hash: %x", h))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to full block request for hash: 0x%x", h))
 }
