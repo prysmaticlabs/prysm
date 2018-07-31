@@ -35,6 +35,30 @@ message BeaconBlockResponse {
   google.protobuf.Timestamp timestamp = 10;
 }
 
+message CrystallizedStateHashAnnounce {
+  bytes hash = 1;
+}
+
+message CrystallizedStateRequest {
+  bytes hash = 1;
+}
+
+message CrystallizedStateResponse {
+  repeated ValidatorRecord active_validators = 1;
+  repeated ValidatorRecord queued_validators = 2;
+  repeated ValidatorRecord exited_validators = 3;
+  repeated uint64 current_epoch_shuffling = 4;
+  uint64 current_epoch = 5;
+  uint64 last_justified_epoch = 6;
+  uint64 last_finalized_epoch = 7;
+  uint64 current_dynasty = 8;
+  uint64 next_shard = 9;
+  bytes current_check_point = 10;
+  uint64 total_deposits = 11;
+  bytes dynasty_seed = 12;
+  uint64 dynasty_seed_last_reset = 13;
+}
+
 message AggregateVote {
   uint32 shard_id = 1;
   bytes shard_block_hash = 2;
@@ -48,6 +72,15 @@ message CollationBodyRequest {
   bytes chunk_root = 3;
   bytes proposer_address = 4;
   bytes signature = 5;
+}
+
+message ValidatorRecord {
+  uint64  public_key = 1;
+  uint64 withdrawal_shard = 2;
+  bytes withdrawal_address = 3;
+  bytes randao_commitment = 4;
+  uint64 balance = 5;
+  uint64 switch_dynasty = 6;
 }
 
 message CollationBodyResponse {
