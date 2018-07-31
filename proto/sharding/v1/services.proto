@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package sharding.v1;
+
+import "sharding/v1/messages.proto";
+
+service BeaconService {
+    rpc ShuffleValidators(ShuffleRequest) returns (ShuffleResponse);
+    rpc SignBlock(SignRequest) returns (SignResponse);
+    rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
+}
+
+message ShuffleRequest {
+    uint64 validator_count = 1;
+    uint64 validator_index = 2;
+}
+
+message ShuffleResponse {
+    bool is_proposer = 1;
+    bool is_attester = 2;
+}
+
+message ProposeRequest {
+  bytes randao_reveal = 1;
+  bytes attestation_bitmask = 2;
+  repeated uint32 attestation_aggregate_sig = 3;
+  repeated AggregateVote shard_aggregate_votes = 4;
+}
+
+message ProposeResponse {
+    bytes block_hash = 1;
+    bool processed = 2;
+}
+
+message SignRequest {
+    bytes block_hash = 1;
+    Signature signature = 2;
+}
+
+message SignResponse {
+    bool signed = 1;
+}

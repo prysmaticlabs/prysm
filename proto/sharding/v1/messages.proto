@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ethereum.messages.v1;
+package sharding.v1;
 
 import "google/protobuf/timestamp.proto";
 
