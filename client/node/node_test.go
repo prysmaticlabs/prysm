@@ -11,7 +11,7 @@ import (
 func TestNode_Builds(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-
+	set.String("datadir", "/tmp/datadir", "the node data directory")
 	context := cli.NewContext(app, set, nil)
 
 	_, err := New(context)

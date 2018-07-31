@@ -2,25 +2,26 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
-	blake2b "github.com/minio/blake2b-simd"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"golang.org/x/crypto/blake2b"
 )
 
 type mockP2P struct{}
 
-func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
-	return new(event.Feed)
+func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+	return new(event.Feed).Subscribe(channel)
 }
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
+
+func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
 
 type mockChainService struct {
 	processedHashes [][32]byte
@@ -67,7 +68,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}()
 
 	announceHash := blake2b.Sum256([]byte{})
-	hashAnnounce := pb.BeaconBlockHashAnnounce{
+	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
 
@@ -82,7 +83,7 @@ func TestProcessBlockHash(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	testutil.AssertLogsContain(t, hook, "Requesting full block data from sender")
+	testutil.AssertLogsContain(t, hook, "requesting full block data from sender")
 	hook.Reset()
 }
 
@@ -100,7 +101,7 @@ func TestProcessBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := pb.BeaconBlockResponse{
+	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
 	}
 
@@ -113,7 +114,7 @@ func TestProcessBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(&blockResponse)
+	block, err := types.NewBlock(blockResponse)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -121,9 +122,6 @@ func TestProcessBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Sync service broadcasts the block and forwards the block to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h))
 
 	if ms.processedHashes[0] != h {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])
@@ -145,7 +143,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse1 := pb.BeaconBlockResponse{
+	blockResponse1 := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
 	}
 
@@ -154,7 +152,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		Data: blockResponse1,
 	}
 
-	blockResponse2 := pb.BeaconBlockResponse{
+	blockResponse2 := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{6, 7, 8, 9, 10},
 	}
 
@@ -168,7 +166,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block1, err := types.NewBlock(&blockResponse1)
+	block1, err := types.NewBlock(blockResponse1)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -177,7 +175,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block2, err := types.NewBlock(&blockResponse2)
+	block2, err := types.NewBlock(blockResponse2)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -188,11 +186,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h1))
 	if ms.processedHashes[0] != h1 {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1, ms.processedHashes[0])
 	}
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h2))
 	if ms.processedHashes[1] != h2 {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2, ms.processedHashes[1])
 	}
@@ -213,7 +209,7 @@ func TestProcessSameBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := pb.BeaconBlockResponse{
+	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3},
 	}
 
@@ -226,7 +222,7 @@ func TestProcessSameBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(&blockResponse)
+	block, err := types.NewBlock(blockResponse)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -237,9 +233,8 @@ func TestProcessSameBlock(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Broadcasting block hash to peers: %x", h))
 	if len(ms.processedHashes) > 1 {
-		t.Error("should have only processed one block, processed both instead")
+		t.Error("Should have only processed one block, processed both instead")
 	}
 	if ms.processedHashes[0] != h {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])

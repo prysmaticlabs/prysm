@@ -517,10 +517,10 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatalf("unable to update justified epoch: %v", err)
 	}
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(8) {
-		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch)
+		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
 	}
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) {
-		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch)
+		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
 	}
 }
 

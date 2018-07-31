@@ -7,11 +7,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
 // P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
 type P2P interface {
-	Feed(msg interface{}) *event.Feed
+	Subscribe(msg interface{}, channel interface{}) event.Subscription
+	Send(msg interface{}, peer p2p.Peer)
 	Broadcast(msg interface{})
 }
 
@@ -20,6 +22,17 @@ type ChainService interface {
 	ProcessedHashes() [][32]byte
 	ProcessBlock(b *Block) error
 	ContainsBlock(h [32]byte) bool
+}
+
+// StateFetcher defines a struct that can fetch the latest canonical beacon state of a node.
+type StateFetcher interface {
+	CurrentActiveState() *ActiveState
+	CurrentCrystallizedState() *CrystallizedState
+}
+
+// POWChainService is an interface for a proof-of-work chain web3 service.
+type POWChainService interface {
+	LatestBlockHash() common.Hash
 }
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
@@ -35,4 +48,12 @@ type POWBlockFetcher interface {
 // Logger subscribe filtered log on the PoW chain
 type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
+}
+
+// POWChainClient defines a struct that combines all relevant PoW mainchain interactions required
+// by the beacon chain node.
+type POWChainClient interface {
+	Reader
+	POWBlockFetcher
+	Logger
 }

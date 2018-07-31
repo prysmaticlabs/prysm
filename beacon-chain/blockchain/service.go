@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -27,7 +28,14 @@ type ChainService struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &ChainService{ctx, cancel, beaconDB, nil, web3Service, nil, nil}, nil
+	return &ChainService{
+		ctx:               ctx,
+		cancel:            cancel,
+		beaconDB:          beaconDB,
+		web3Service:       web3Service,
+		latestBeaconBlock: make(chan *types.Block),
+		processedHashes:   [][32]byte{},
+	}, nil
 }
 
 // Start a blockchain service's main event loop.
@@ -46,6 +54,13 @@ func (c *ChainService) Start() {
 func (c *ChainService) Stop() error {
 	defer c.cancel()
 	log.Info("Stopping service")
+	log.Infof("Persisting current active and crystallized states before closing")
+	if err := c.chain.PersistActiveState(); err != nil {
+		return fmt.Errorf("Error persisting active state: %v", err)
+	}
+	if err := c.chain.PersistCrystallizedState(); err != nil {
+		return fmt.Errorf("Error persisting crystallized state: %v", err)
+	}
 	return nil
 }
 
@@ -55,8 +70,19 @@ func (c *ChainService) ProcessedHashes() [][32]byte {
 }
 
 // ProcessBlock accepts a new block for inclusion in the chain.
-func (c *ChainService) ProcessBlock(b *types.Block) error {
-	c.latestBeaconBlock <- b
+func (c *ChainService) ProcessBlock(block *types.Block) error {
+	h, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
+	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+	if err != nil {
+		return err
+	}
+	if canProcess {
+		c.latestBeaconBlock <- block
+	}
 	return nil
 }
 
@@ -67,6 +93,16 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
+// CurrentCrystallizedState of the canonical chain.
+func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return c.chain.CrystallizedState()
+}
+
+// CurrentActiveState of the canonical chain.
+func (c *ChainService) CurrentActiveState() *types.ActiveState {
+	return c.chain.ActiveState()
+}
+
 // updateChainState receives a beacon block, computes a new active state and writes it to db. Also
 // it checks for if there is an epoch transition. If there is one it computes the validator rewards
 // and penalties.
@@ -74,9 +110,6 @@ func (c *ChainService) updateChainState() {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			activeStateHash := block.ActiveStateHash()
-			log.WithFields(logrus.Fields{"activeStateHash": activeStateHash}).Debug("Received beacon block")
-
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
 			if err != nil {

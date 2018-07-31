@@ -5,6 +5,11 @@ import (
 )
 
 var (
+	// SimulatorFlag determines if a node will run only as a simulator service.
+	SimulatorFlag = cli.BoolFlag{
+		Name:  "simulator",
+		Usage: "Whether or not to run the node as a simple simulator of beacon blocks over p2p",
+	}
 	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
 	Web3ProviderFlag = cli.StringFlag{
 		Name:  "web3provider",

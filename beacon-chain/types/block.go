@@ -40,6 +40,11 @@ func NewGenesisBlock() (*Block, error) {
 	return &Block{data: &pb.BeaconBlockResponse{Timestamp: protoGenesis}}, nil
 }
 
+// Proto returns the underlying protobuf data within a block primitive.
+func (b *Block) Proto() *pb.BeaconBlockResponse {
+	return b.data
+}
+
 // Hash generates the blake2b hash of the block
 func (b *Block) Hash() ([32]byte, error) {
 	data, err := proto.Marshal(b.data)

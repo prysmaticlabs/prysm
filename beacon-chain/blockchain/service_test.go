@@ -16,6 +16,8 @@ func TestStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	defer os.RemoveAll(tmp)
+
 	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
 	db, err := database.NewDB(config)
 	if err != nil {
@@ -52,6 +54,12 @@ func TestStartStop(t *testing.T) {
 
 	msg = hook.AllEntries()[2].Message
 	want = "Stopping service"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	msg = hook.AllEntries()[3].Message
+	want = "Persisting current active and crystallized states before closing"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}

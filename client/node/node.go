@@ -135,14 +135,11 @@ func (s *ShardEthereum) Close() {
 
 // startDB attaches a LevelDB wrapped object to the shardEthereum instance.
 func (s *ShardEthereum) startDB(ctx *cli.Context) error {
-	path := node.DefaultDataDir()
-	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
-		path = ctx.GlobalString(cmd.DataDirFlag.Name)
-	}
+	path := ctx.GlobalString(cmd.DataDirFlag.Name)
 	config := &database.DBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
 	db, err := database.NewDB(config)
 	if err != nil {
-		return fmt.Errorf("could not register database service: %v", err)
+		return err
 	}
 
 	s.db = db

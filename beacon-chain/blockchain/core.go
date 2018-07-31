@@ -56,7 +56,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
-
 	if hasActive {
 		enc, err := db.Get([]byte(activeStateLookupKey))
 		if err != nil {
@@ -112,7 +111,7 @@ func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.state.ActiveState = activeState
-	return b.persistActiveState()
+	return b.PersistActiveState()
 }
 
 // MutateCrystallizedState allows external services to modify the crystallized state.
@@ -120,18 +119,13 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.state.CrystallizedState = crystallizedState
-	return b.persistCrystallizedState()
+	return b.PersistCrystallizedState()
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
 func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
-	mainchainBlock, err := fetcher.BlockByHash(context.Background(), block.MainChainRef())
-	if err != nil {
-		return false, err
-	}
-	// There needs to be a valid mainchain block for the reference hash in a beacon block.
-	if mainchainBlock == nil {
-		return false, nil
+	if _, err := fetcher.BlockByHash(context.Background(), block.MainChainRef()); err != nil {
+		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 	}
 	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
 
@@ -173,7 +167,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	return true, nil
 }
 
-// RotateValidatorSet is called  every dynasty transition. It's primary function is
+// RotateValidatorSet is called every dynasty transition. It's primary function is
 // to go through queued validators and induct them to be active, and remove bad
 // active validator whose balance is below threshold to the exit set. It also cross checks
 // every validator's switch dynasty before induct or remove.
@@ -214,8 +208,8 @@ func (b *BeaconChain) RotateValidatorSet() ([]*pb.ValidatorRecord, []*pb.Validat
 	return newQueuedValidators, newActiveValidators, newExitedValidators
 }
 
-// persistActiveState stores proto encoding of the latest beacon chain active state into the db.
-func (b *BeaconChain) persistActiveState() error {
+// PersistActiveState stores proto encoding of the latest beacon chain active state into the db.
+func (b *BeaconChain) PersistActiveState() error {
 	encodedState, err := b.ActiveState().Marshal()
 	if err != nil {
 		return err
@@ -223,8 +217,8 @@ func (b *BeaconChain) persistActiveState() error {
 	return b.db.Put([]byte(activeStateLookupKey), encodedState)
 }
 
-// persistCrystallizedState stores proto encoding of the latest beacon chain crystallized state into the db.
-func (b *BeaconChain) persistCrystallizedState() error {
+// PersistCrystallizedState stores proto encoding of the latest beacon chain crystallized state into the db.
+func (b *BeaconChain) PersistCrystallizedState() error {
 	encodedState, err := b.CrystallizedState().Marshal()
 	if err != nil {
 		return err
@@ -340,7 +334,7 @@ func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
 		validators[index].Balance -= params.AttesterReward
 	}
 	b.CrystallizedState().UpdateActiveValidators(validators)
-	return b.persistCrystallizedState()
+	return b.PersistCrystallizedState()
 }
 
 // resetAttesterBitfields resets the attester bitfields in the ActiveState to zero.
@@ -357,7 +351,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 	newbitfields := make([]byte, length)
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 
-	return b.persistCrystallizedState()
+	return b.PersistCrystallizedState()
 }
 
 // resetTotalAttesterDeposit clears and resets the total attester deposit to zero.
@@ -366,7 +360,7 @@ func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	defer b.lock.Unlock()
 	b.state.ActiveState.SetTotalAttesterDeposits(0)
 
-	return b.persistCrystallizedState()
+	return b.PersistCrystallizedState()
 }
 
 // updateJustifiedEpoch updates the justified epoch during an epoch transition.
@@ -381,7 +375,7 @@ func (b *BeaconChain) updateJustifiedEpoch() error {
 		b.state.CrystallizedState.SetLastFinalizedEpoch(justifiedEpoch)
 	}
 
-	return b.persistCrystallizedState()
+	return b.PersistCrystallizedState()
 }
 
 // updateRewardsAndPenalties checks if the attester has voted and then applies the
