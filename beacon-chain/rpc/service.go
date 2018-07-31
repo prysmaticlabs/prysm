@@ -8,11 +8,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Service hi.
 type Service struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
+// NewRPCService hi.
 func NewRPCService(ctx context.Context) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
@@ -21,6 +23,7 @@ func NewRPCService(ctx context.Context) *Service {
 	}
 }
 
+// Start hi.
 func (s *Service) Start() {
 	log.Info("Starting RPC Service")
 	lis, err := net.Listen("tcp", ":8080")
@@ -29,9 +32,24 @@ func (s *Service) Start() {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterBeaconChainServer(grpcServer, s)
+	pb.RegisterBeaconServiceServer(grpcServer, s)
 	err = grpcServer.Serve(lis)
 	if err != nil {
 		log.Fatalf("Could not serve: %v", err)
 	}
+}
+
+// ShuffleValidators hi.
+func (s *Service) ShuffleValidators(context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
+	return nil, nil
+}
+
+// ProposeBlock hi.
+func (s *Service) ProposeBlock(context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
+	return nil, nil
+}
+
+// SignBlock hi.
+func (s *Service) SignBlock(context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
+	return nil, nil
 }
