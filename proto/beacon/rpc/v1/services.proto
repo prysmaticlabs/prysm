@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package proto.beacon.rpc.v1;
+package ethereum.beacon.rpc.v1;
 
 import "proto/sharding/p2p/v1/messages.proto";
 import "proto/beacon/p2p/v1/messages.proto";
@@ -25,7 +25,7 @@ message ProposeRequest {
   bytes randao_reveal = 1;
   bytes attestation_bitmask = 2;
   repeated uint32 attestation_aggregate_sig = 3;
-  repeated proto.beacon.p2p.v1.AggregateVote shard_aggregate_votes = 5;
+  repeated ethereum.beacon.p2p.v1.AggregateVote shard_aggregate_votes = 5;
 }
 
 message ProposeResponse {
@@ -34,7 +34,7 @@ message ProposeResponse {
 
 message SignRequest {
     bytes block_hash = 1;
-    proto.sharding.p2p.v1.Signature signature = 2;
+    ethereum.sharding.p2p.v1.Signature signature = 2;
 }
 
 message SignResponse {
