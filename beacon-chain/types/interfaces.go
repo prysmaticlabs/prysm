@@ -12,7 +12,7 @@ import (
 
 // P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
 type P2P interface {
-	Feed(msg interface{}) *event.Feed
+	Subscribe(msg interface{}, channel interface{}) event.Subscription
 	Send(msg interface{}, peer p2p.Peer)
 	Broadcast(msg interface{})
 }

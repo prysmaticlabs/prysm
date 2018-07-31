@@ -15,8 +15,8 @@ import (
 
 type mockP2P struct{}
 
-func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
-	return new(event.Feed)
+func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+	return new(event.Feed).Subscribe(channel)
 }
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
@@ -234,7 +234,7 @@ func TestProcessSameBlock(t *testing.T) {
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
 	if len(ms.processedHashes) > 1 {
-		t.Error("should have only processed one block, processed both instead")
+		t.Error("Should have only processed one block, processed both instead")
 	}
 	if ms.processedHashes[0] != h {
 		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])

@@ -68,7 +68,7 @@ func (sim *Simulator) Stop() error {
 }
 
 func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
-	blockReqSub := sim.p2p.Feed(pb.BeaconBlockRequest{}).Subscribe(sim.blockRequestChan)
+	blockReqSub := sim.p2p.Subscribe(pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 	for {
 		select {

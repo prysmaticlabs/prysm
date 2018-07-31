@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -23,7 +24,7 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 type goodReader struct{}
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return nil, nil
+	return new(event.Feed).Subscribe(ch), nil
 }
 
 type badLogger struct{}
@@ -35,7 +36,7 @@ func (b *badLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQu
 type goodLogger struct{}
 
 func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return nil, nil
+	return new(event.Feed).Subscribe(ch), nil
 }
 
 func TestNewWeb3Service(t *testing.T) {

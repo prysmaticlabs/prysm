@@ -106,8 +106,8 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 }
 
 func (ss *Service) run(done <-chan struct{}) {
-	announceBlockHashSub := ss.p2p.Feed(pb.BeaconBlockHashAnnounce{}).Subscribe(ss.announceBlockHashBuf)
-	blockSub := ss.p2p.Feed(pb.BeaconBlockResponse{}).Subscribe(ss.blockBuf)
+	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
+	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
 	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
 	for {

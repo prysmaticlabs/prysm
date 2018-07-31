@@ -17,8 +17,8 @@ import (
 
 type mockP2P struct{}
 
-func (mp *mockP2P) Feed(msg interface{}) *event.Feed {
-	return new(event.Feed)
+func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+	return new(event.Feed).Subscribe(channel)
 }
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
@@ -34,11 +34,11 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 type mockChainService struct{}
 
 func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
-	return nil
+	return types.NewActiveState(&pb.ActiveStateResponse{})
 }
 
 func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return nil
+	return types.NewCrystallizedState(&pb.CrystallizedStateResponse{})
 }
 
 func TestLifecycle(t *testing.T) {

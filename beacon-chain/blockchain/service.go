@@ -53,6 +53,7 @@ func (c *ChainService) Start() {
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
+	log.Info("Stopping service")
 	log.Infof("Persisting current active and crystallized states before closing")
 	if err := c.chain.PersistActiveState(); err != nil {
 		return fmt.Errorf("Error persisting active state: %v", err)
@@ -60,7 +61,6 @@ func (c *ChainService) Stop() error {
 	if err := c.chain.PersistCrystallizedState(); err != nil {
 		return fmt.Errorf("Error persisting crystallized state: %v", err)
 	}
-	log.Info("Stopping service")
 	return nil
 }
 
