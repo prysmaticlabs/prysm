@@ -31,17 +31,19 @@ type Service struct {
 	chainService         types.ChainService
 	announceBlockHashBuf chan p2p.Message
 	blockBuf             chan p2p.Message
+	crystallizedStateBuf chan p2p.Message
 }
 
 // Config allows the channel's buffer sizes to be changed.
 type Config struct {
-	HashBufferSize  int
-	BlockBufferSize int
+	HashBufferSize              int
+	BlockBufferSize             int
+	CrystallizedStateBufferSize int
 }
 
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
-	return Config{100, 100}
+	return Config{100, 100, 100}
 }
 
 // NewSyncService accepts a context and returns a new Service.
@@ -54,6 +56,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		chainService:         cs,
 		announceBlockHashBuf: make(chan p2p.Message, cfg.HashBufferSize),
 		blockBuf:             make(chan p2p.Message, cfg.BlockBufferSize),
+		crystallizedStateBuf: make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
 	}
 }
 
@@ -105,11 +108,29 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
 	return nil
 }
 
+func (ss *Service) ReceiveCrystallisedHash(data pb.CrystallizedStateHashAnnounce, peer p2p.Peer) {
+	var h [32]byte
+	copy(h[:], data.Hash[:32])
+	log.WithField("Crystallized State Hash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state hash, requesting full state from sender")
+	// Request the full crystallized state from the peer
+	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
+}
+
+func (ss *Service) RequestCrystallisedState(hash []byte, peer p2p.Peer) {
+	var h [32]byte
+	copy(h[:], hash[:32])
+	log.WithField("Crystallized State Hash", fmt.Sprintf("0x%x", h)).Info("Requesting Crystallized state from peer")
+	// Request the full crystallized state from the peer
+	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
+}
+
 func (ss *Service) run(done <-chan struct{}) {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
+	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
 	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
+	defer crystallizedStateSub.Unsubscribe()
 	for {
 		select {
 		case <-done:
