@@ -11,14 +11,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
 
-var stateLookupKey = "beaconchainstate"
+var activeStateLookupKey = "beacon-active-state"
+var crystallizedStateLookupKey = "beacon-crystallized-state"
 
 // BeaconChain represents the core PoS blockchain object containing
 // both a crystallized and active state.
@@ -40,24 +43,43 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	has, err := db.Has([]byte(stateLookupKey))
+	hasActive, err := db.Has([]byte(activeStateLookupKey))
 	if err != nil {
 		return nil, err
 	}
-	if !has {
+	hasCrystallized, err := db.Has([]byte(crystallizedStateLookupKey))
+	if err != nil {
+		return nil, err
+	}
+	if !hasActive && !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		active, crystallized := types.NewGenesisStates()
 		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
-	enc, err := db.Get([]byte(stateLookupKey))
-	if err != nil {
-		return nil, err
+
+	if hasActive {
+		enc, err := db.Get([]byte(activeStateLookupKey))
+		if err != nil {
+			return nil, err
+		}
+		// Deserializes the encoded object into a beacon chain.
+		if err := rlp.DecodeBytes(enc, &beaconChain.state); err != nil {
+			return nil, fmt.Errorf("could not deserialize chainstate from disk: %v", err)
+		}
 	}
-	// Deserializes the encoded object into a beacon chain.
-	if err := rlp.DecodeBytes(enc, &beaconChain.state); err != nil {
-		return nil, fmt.Errorf("could not deserialize chainstate from disk: %v", err)
+	if hasCrystallized {
+		enc, err := db.Get([]byte(crystallizedStateLookupKey))
+		if err != nil {
+			return nil, err
+		}
+		crystallizedData := &pb.CrystallizedStateResponse{}
+		err = proto.Unmarshal(enc, crystallizedData)
+		if err != nil {
+			return nil, err
+		}
+		beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
 	}
 	return beaconChain, nil
 }
@@ -72,21 +94,6 @@ func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
 
-// ActiveValidatorCount exposes a getter to total number of active validator.
-func (b *BeaconChain) ActiveValidatorCount() int {
-	return len(b.state.CrystallizedState.ActiveValidators)
-}
-
-// QueuedValidatorCount exposes a getter to total number of queued validator.
-func (b *BeaconChain) QueuedValidatorCount() int {
-	return len(b.state.CrystallizedState.QueuedValidators)
-}
-
-// ExitedValidatorCount exposes a getter to total number of exited validator.
-func (b *BeaconChain) ExitedValidatorCount() int {
-	return len(b.state.CrystallizedState.ExitedValidators)
-}
-
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
@@ -95,7 +102,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 // isEpochTransition checks if the current slotNumber divided by the epoch length(64 slots)
 // is greater than the current epoch.
 func (b *BeaconChain) isEpochTransition(slotNumber uint64) bool {
-	currentEpoch := b.state.CrystallizedState.CurrentEpoch
+	currentEpoch := b.state.CrystallizedState.CurrentEpoch()
 	isTransition := (slotNumber / params.EpochLength) > currentEpoch
 	return isTransition
 }
@@ -105,7 +112,7 @@ func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.state.ActiveState = activeState
-	return b.persist()
+	return b.persistActiveState()
 }
 
 // MutateCrystallizedState allows external services to modify the crystallized state.
@@ -113,7 +120,7 @@ func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.Crystalli
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.state.CrystallizedState = crystallizedState
-	return b.persist()
+	return b.persistCrystallizedState()
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
@@ -156,7 +163,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", blockActiveStateHash, hash)
 	}
 
-	hash, err = hashCrystallizedState(b.CrystallizedState())
+	hash, err = b.CrystallizedState().Hash()
 	if err != nil {
 		return false, err
 	}
@@ -174,18 +181,18 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 // to go through queued validators and induct them to be active, and remove bad
 // active validator whose balance is below threshold to the exit set. It also cross checks
 // every validator's switch dynasty before induct or remove.
-func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.ValidatorRecord, []types.ValidatorRecord) {
+func (b *BeaconChain) RotateValidatorSet() ([]*pb.ValidatorRecord, []*pb.ValidatorRecord, []*pb.ValidatorRecord) {
 
-	var newExitedValidators = b.CrystallizedState().ExitedValidators
-	var newActiveValidators []types.ValidatorRecord
-	upperbound := b.ActiveValidatorCount()/30 + 1
+	var newExitedValidators = b.CrystallizedState().ExitedValidators()
+	var newActiveValidators []*pb.ValidatorRecord
+	upperbound := b.CrystallizedState().ActiveValidatorsLength()/30 + 1
 	exitCount := 0
 
 	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
-	for _, validator := range b.state.CrystallizedState.ActiveValidators {
+	for _, validator := range b.CrystallizedState().ActiveValidators() {
 		if validator.Balance < params.DefaultBalance/2 {
 			newExitedValidators = append(newExitedValidators, validator)
-		} else if validator.SwitchDynasty == b.CrystallizedState().Dynasty+1 && exitCount < upperbound {
+		} else if validator.SwitchDynasty == b.CrystallizedState().CurrentDynasty()+1 && exitCount < upperbound {
 			newExitedValidators = append(newExitedValidators, validator)
 			exitCount++
 		} else {
@@ -194,30 +201,40 @@ func (b *BeaconChain) RotateValidatorSet() ([]types.ValidatorRecord, []types.Val
 	}
 	// Get the total number of validator we can induct.
 	inductNum := upperbound
-	if b.QueuedValidatorCount() < inductNum {
-		inductNum = b.QueuedValidatorCount()
+	if b.CrystallizedState().QueuedValidatorsLength() < inductNum {
+		inductNum = b.CrystallizedState().QueuedValidatorsLength()
 	}
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
 	for i := 0; i < inductNum; i++ {
-		if b.CrystallizedState().QueuedValidators[i].SwitchDynasty > b.CrystallizedState().Dynasty+1 {
+		if b.CrystallizedState().QueuedValidators()[i].SwitchDynasty > b.CrystallizedState().CurrentDynasty()+1 {
 			inductNum = i
 			break
 		}
-		newActiveValidators = append(newActiveValidators, b.CrystallizedState().QueuedValidators[i])
+		newActiveValidators = append(newActiveValidators, b.CrystallizedState().QueuedValidators()[i])
 	}
-	newQueuedValidators := b.CrystallizedState().QueuedValidators[inductNum:]
+	newQueuedValidators := b.CrystallizedState().QueuedValidators()[inductNum:]
 
 	return newQueuedValidators, newActiveValidators, newExitedValidators
 }
 
-// persist stores the RLP encoding of the latest beacon chain state into the db.
-func (b *BeaconChain) persist() error {
+// TODO: Use proto marshal instead of RLP when we change activeState to proto
+// persistActiveState stores the RLP encoding of the latest beacon chain active state into the db.
+func (b *BeaconChain) persistActiveState() error {
 	encodedState, err := rlp.EncodeToBytes(b.state)
 	if err != nil {
 		return err
 	}
-	return b.db.Put([]byte(stateLookupKey), encodedState)
+	return b.db.Put([]byte(activeStateLookupKey), encodedState)
+}
+
+// persistCrystallizedState stores proto encoding of the latest beacon chain crystallized state into the db.
+func (b *BeaconChain) persistCrystallizedState() error {
+	encodedState, err := b.CrystallizedState().Marshal()
+	if err != nil {
+		return err
+	}
+	return b.db.Put([]byte(crystallizedStateLookupKey), encodedState)
 }
 
 // computeNewActiveState computes a new active state for every beacon block.
@@ -246,8 +263,9 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
-	attesterCount := math.Min(params.AttesterCount, float64(len(b.CrystallizedState().ActiveValidators)))
-	indices, err := utils.ShuffleIndices(seed, len(b.CrystallizedState().ActiveValidators))
+	attesterCount := math.Min(params.AttesterCount, float64(b.CrystallizedState().ActiveValidatorsLength()))
+
+	indices, err := utils.ShuffleIndices(seed, b.CrystallizedState().ActiveValidatorsLength())
 	if err != nil {
 		return nil, -1, err
 	}
@@ -257,16 +275,6 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 // hashActiveState serializes the active state object then uses
 // blake2b to hash the serialized object.
 func hashActiveState(state *types.ActiveState) ([32]byte, error) {
-	serializedState, err := rlp.EncodeToBytes(state)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return blake2b.Sum256(serializedState), nil
-}
-
-// hashCrystallizedState serializes the crystallized state object
-// then uses blake2b to hash the serialized object.
-func hashCrystallizedState(state *types.CrystallizedState) ([32]byte, error) {
 	serializedState, err := rlp.EncodeToBytes(state)
 	if err != nil {
 		return [32]byte{}, err
@@ -338,22 +346,23 @@ func hasVoted(bitfields []byte, attesterBlock int, attesterFieldIndex int) bool 
 func (b *BeaconChain) applyRewardAndPenalty(index int, voted bool) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	validators := b.CrystallizedState().ActiveValidators()
 
 	if voted {
-		b.state.CrystallizedState.ActiveValidators[index].Balance += params.AttesterReward
+		validators[index].Balance += params.AttesterReward
 	} else {
 		// TODO : Change this when penalties are specified for not voting
-		b.state.CrystallizedState.ActiveValidators[index].Balance -= params.AttesterReward
+		validators[index].Balance -= params.AttesterReward
 	}
-
-	return b.persist()
+	b.CrystallizedState().UpdateActiveValidators(validators)
+	return b.persistCrystallizedState()
 }
 
 // resetAttesterBitfields resets the attester bitfields in the ActiveState to zero.
 func (b *BeaconChain) resetAttesterBitfields() error {
 
-	length := int(len(b.state.CrystallizedState.ActiveValidators) / 8)
-	if len(b.state.CrystallizedState.ActiveValidators)%8 != 0 {
+	length := int(b.CrystallizedState().ActiveValidatorsLength() / 8)
+	if b.CrystallizedState().ActiveValidatorsLength()%8 != 0 {
 		length++
 	}
 
@@ -363,7 +372,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 	newbitfields := make([]byte, length)
 	b.state.ActiveState.AttesterBitfields = newbitfields
 
-	return b.persist()
+	return b.persistCrystallizedState()
 }
 
 // resetTotalAttesterDeposit clears and resets the total attester deposit to zero.
@@ -372,7 +381,7 @@ func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	defer b.lock.Unlock()
 	b.state.ActiveState.TotalAttesterDeposits = 0
 
-	return b.persist()
+	return b.persistCrystallizedState()
 }
 
 // updateJustifiedEpoch updates the justified epoch during an epoch transition.
@@ -380,14 +389,14 @@ func (b *BeaconChain) updateJustifiedEpoch() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch
-	b.state.CrystallizedState.LastJustifiedEpoch = b.state.CrystallizedState.CurrentEpoch
+	justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch()
+	b.state.CrystallizedState.SetLastJustifiedEpoch(b.state.CrystallizedState.CurrentEpoch())
 
-	if b.state.CrystallizedState.CurrentEpoch == (justifiedEpoch + 1) {
-		b.state.CrystallizedState.LastFinalizedEpoch = justifiedEpoch
+	if b.state.CrystallizedState.CurrentEpoch() == (justifiedEpoch + 1) {
+		b.state.CrystallizedState.SetLastFinalizedEpoch(justifiedEpoch)
 	}
 
-	return b.persist()
+	return b.persistCrystallizedState()
 }
 
 // updateRewardsAndPenalties checks if the attester has voted and then applies the
@@ -417,9 +426,9 @@ func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
 // computeValidatorRewardsAndPenalties is run every epoch transition and appropriates the
 // rewards and penalties, resets the bitfield and deposits and also applies the slashing conditions.
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
-	activeValidatorSet := b.state.CrystallizedState.ActiveValidators
+	activeValidatorSet := b.state.CrystallizedState.ActiveValidators()
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
-	totalDeposit := b.state.CrystallizedState.TotalDeposits
+	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
