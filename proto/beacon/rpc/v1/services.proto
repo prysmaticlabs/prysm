@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package ethereum.beacon.rpc.v1;
+package proto.beacon.rpc.v1;
 
-import "proto/ethereum/sharding/p2p/v1/messages.proto";
-import "proto/ethereum/beacon/p2p/v1/messages.proto";
+import "proto/sharding/p2p/v1/messages.proto";
+import "proto/beacon/p2p/v1/messages.proto";
 
 service BeaconService {
-    rpc ShuffleValidators(ShuffleRequest) returns (ShuffleResponse);
+    rpc ShuffleValidators(ShuffleRequest) returns (stream ShuffleResponse);
     rpc SignBlock(SignRequest) returns (SignResponse);
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
 }
@@ -25,7 +25,7 @@ message ProposeRequest {
   bytes randao_reveal = 1;
   bytes attestation_bitmask = 2;
   repeated uint32 attestation_aggregate_sig = 3;
-  repeated ethereum.beacon.p2p.v1.AggregateVote shard_aggregate_votes = 4;
+  repeated proto.beacon.p2p.v1.AggregateVote shard_aggregate_votes = 5;
 }
 
 message ProposeResponse {
@@ -35,7 +35,7 @@ message ProposeResponse {
 
 message SignRequest {
     bytes block_hash = 1;
-    ethereum.sharding.p2p.v1.Signature signature = 2;
+    proto.sharding.p2p.v1.Signature signature = 2;
 }
 
 message SignResponse {
