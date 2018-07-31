@@ -24,7 +24,9 @@ func (mp *mockP2P) Broadcast(msg interface{}) {}
 func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
 
 type mockChainService struct {
-	processedHashes [][32]byte
+	processedBlockHashes        [][32]byte
+	processedCrystallizedHashes [][32]byte
+	processedActiveHashes       [][32]byte
 }
 
 func (ms *mockChainService) ProcessBlock(b *types.Block) error {
@@ -33,15 +35,15 @@ func (ms *mockChainService) ProcessBlock(b *types.Block) error {
 		return err
 	}
 
-	if ms.processedHashes == nil {
-		ms.processedHashes = [][32]byte{}
+	if ms.processedBlockHashes == nil {
+		ms.processedBlockHashes = [][32]byte{}
 	}
-	ms.processedHashes = append(ms.processedHashes, h)
+	ms.processedBlockHashes = append(ms.processedBlockHashes, h)
 	return nil
 }
 
 func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
-	for _, h1 := range ms.processedHashes {
+	for _, h1 := range ms.processedBlockHashes {
 		if h == h1 {
 			return true
 		}
@@ -49,15 +51,67 @@ func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
-func (ms *mockChainService) ProcessedHashes() [][32]byte {
-	return ms.processedHashes
+func (ms *mockChainService) ProcessedBlockHashes() [][32]byte {
+	return ms.processedBlockHashes
+}
+
+func (ms *mockChainService) ProcessActiveState(a *types.ActiveState) error {
+	h, err := a.Hash()
+	if err != nil {
+		return err
+	}
+
+	if ms.processedActiveHashes == nil {
+		ms.processedActiveHashes = [][32]byte{}
+	}
+	ms.processedActiveHashes = append(ms.processedActiveHashes, h)
+	return nil
+}
+
+func (ms *mockChainService) ContainsActiveState(h [32]byte) bool {
+	for _, h1 := range ms.processedActiveHashes {
+		if h == h1 {
+			return true
+		}
+	}
+	return false
+}
+
+func (ms *mockChainService) ProcessedActiveStateHashes() [][32]byte {
+	return ms.processedActiveHashes
+}
+
+func (ms *mockChainService) ProcessCrystallizedState(c *types.CrystallizedState) error {
+	h, err := c.Hash()
+	if err != nil {
+		return err
+	}
+
+	if ms.processedCrystallizedHashes == nil {
+		ms.processedCrystallizedHashes = [][32]byte{}
+	}
+	ms.processedCrystallizedHashes = append(ms.processedCrystallizedHashes, h)
+	return nil
+}
+
+func (ms *mockChainService) ContainsCrystallizedState(h [32]byte) bool {
+	for _, h1 := range ms.processedCrystallizedHashes {
+		if h == h1 {
+			return true
+		}
+	}
+	return false
+}
+
+func (ms *mockChainService) ProcessedCrystallizedStateHashes() [][32]byte {
+	return ms.processedCrystallizedHashes
 }
 
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	// set the channel's buffer to 0 to make channel interactions blocking
-	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
 
 	exitRoutine := make(chan bool)
@@ -90,7 +144,7 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
@@ -124,8 +178,8 @@ func TestProcessBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if ms.processedHashes[0] != h {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])
+	if ms.processedBlockHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedBlockHashes[0])
 	}
 	hook.Reset()
 }
@@ -133,7 +187,7 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
@@ -189,11 +243,11 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	if ms.processedHashes[0] != h1 {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1, ms.processedHashes[0])
+	if ms.processedBlockHashes[0] != h1 {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1, ms.processedBlockHashes[0])
 	}
-	if ms.processedHashes[1] != h2 {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2, ms.processedHashes[1])
+	if ms.processedBlockHashes[1] != h2 {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2, ms.processedBlockHashes[1])
 	}
 	hook.Reset()
 }
@@ -201,7 +255,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestProcessSameBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{HashBufferSize: 0, BlockBufferSize: 0}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
@@ -237,11 +291,359 @@ func TestProcessSameBlock(t *testing.T) {
 
 	// Sync service broadcasts the two separate blocks
 	// and forwards them to to the local chain.
-	if len(ms.processedHashes) > 1 {
+	if len(ms.processedBlockHashes) > 1 {
 		t.Error("Should have only processed one block, processed both instead")
 	}
-	if ms.processedHashes[0] != h {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedHashes[0])
+	if ms.processedBlockHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedBlockHashes[0])
 	}
+	hook.Reset()
+}
+
+func TestProcessCrystallizedHash(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	// set the channel's buffer to 0 to make channel interactions blocking
+	cfg := Config{CrystallizedStateHashBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	announceHash := blake2b.Sum256([]byte{})
+	hashAnnounce := &pb.CrystallizedStateHashAnnounce{
+		Hash: announceHash[:],
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: hashAnnounce,
+	}
+
+	ss.announceCrystallizedHashBuf <- msg
+
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Received crystallized state hash, requesting state data from sender")
+
+	hook.Reset()
+}
+
+func TestProcessActiveHash(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	// set the channel's buffer to 0 to make channel interactions blocking
+	cfg := Config{ActiveStateHashBufferSize: 0, ActiveStateBufferSize: 0}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	announceHash := blake2b.Sum256([]byte{})
+	hashAnnounce := &pb.ActiveStateHashAnnounce{
+		Hash: announceHash[:],
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: hashAnnounce,
+	}
+
+	ss.announceActiveHashBuf <- msg
+
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Received active state hash, requesting state data from sender")
+
+	hook.Reset()
+}
+
+func TestProcessBadCrystallizedHash(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	// set the channel's buffer to 0 to make channel interactions blocking
+	cfg := Config{CrystallizedStateHashBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	// Send blockHashAnnounce msg format to crystallized state channel. Should fail
+	announceHash := blake2b.Sum256([]byte{})
+	hashAnnounce := &pb.BeaconBlockHashAnnounce{
+		Hash: announceHash[:],
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: hashAnnounce,
+	}
+
+	ss.announceCrystallizedHashBuf <- msg
+
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Received malformed crystallized state hash announcement p2p message")
+
+	hook.Reset()
+}
+
+func TestProcessBadActiveHash(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	// set the channel's buffer to 0 to make channel interactions blocking
+	cfg := Config{ActiveStateHashBufferSize: 0, ActiveStateBufferSize: 0}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	// Send blockHashAnnounce msg format to active state channel. Should fail
+	announceHash := blake2b.Sum256([]byte{})
+	hashAnnounce := &pb.BeaconBlockHashAnnounce{
+		Hash: announceHash[:],
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: hashAnnounce,
+	}
+
+	ss.announceActiveHashBuf <- msg
+
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Received malformed active state hash announcement p2p message")
+
+	hook.Reset()
+}
+
+func TestProcessCrystallizedStates(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{CrystallizedStateHashBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	stateResponse1 := &pb.CrystallizedStateResponse{
+		LastJustifiedEpoch: 100,
+		LastFinalizedEpoch: 99,
+	}
+	stateResponse2 := &pb.CrystallizedStateResponse{
+		LastJustifiedEpoch: 100,
+		LastFinalizedEpoch: 98,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse1,
+	}
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse2,
+	}
+
+	ss.crystallizedStateBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	state1 := types.NewCrystallizedState(stateResponse1)
+	state2 := types.NewCrystallizedState(stateResponse2)
+
+	h, err := state1.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ms.processedCrystallizedHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedCrystallizedHashes[0])
+	}
+
+	h, err = state2.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ms.processedCrystallizedHashes[1] != h {
+		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedCrystallizedHashes[1])
+	}
+
+	hook.Reset()
+}
+
+func TestProcessActiveStates(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{ActiveStateHashBufferSize: 0, ActiveStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	stateResponse1 := &pb.ActiveStateResponse{
+		TotalAttesterDeposits: 10000,
+	}
+	stateResponse2 := &pb.ActiveStateResponse{
+		TotalAttesterDeposits: 10001,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse1,
+	}
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse2,
+	}
+
+	ss.activeStateBuf <- msg1
+	ss.activeStateBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	state := types.NewActiveState(stateResponse1)
+	h, err := state.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ms.processedActiveHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedActiveHashes[0])
+	}
+
+	state = types.NewActiveState(stateResponse2)
+	h, err = state.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ms.processedActiveHashes[1] != h {
+		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedActiveHashes[1])
+	}
+
+	hook.Reset()
+}
+
+func TestProcessSameCrystallizedState(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{CrystallizedStateHashBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		LastJustifiedEpoch: 100,
+		LastFinalizedEpoch: 99,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+
+	ss.crystallizedStateBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	state := types.NewCrystallizedState(stateResponse)
+
+	h, err := state.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ms.processedCrystallizedHashes) > 1 {
+		t.Errorf("Processed more hash than it was received. Got=%x", len(ms.processedCrystallizedHashes))
+	}
+	if ms.processedCrystallizedHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedCrystallizedHashes[0])
+	}
+
+	hook.Reset()
+}
+
+func TestProcessSameActiveState(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{ActiveStateHashBufferSize: 0, ActiveStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	stateResponse := &pb.ActiveStateResponse{
+		TotalAttesterDeposits: 100,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+
+	ss.activeStateBuf <- msg1
+	ss.activeStateBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	state := types.NewActiveState(stateResponse)
+
+	h, err := state.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ms.processedActiveHashes) > 1 {
+		t.Errorf("Processed more hash than it was received. Got=%x", len(ms.processedActiveHashes))
+	}
+	if ms.processedActiveHashes[0] != h {
+		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedActiveHashes[0])
+	}
+
 	hook.Reset()
 }
