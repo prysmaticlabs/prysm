@@ -10,14 +10,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 var activeStateLookupKey = "beacon-active-state"
@@ -64,16 +62,20 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Deserializes the encoded object into a beacon chain.
-		if err := rlp.DecodeBytes(enc, &beaconChain.state); err != nil {
-			return nil, fmt.Errorf("could not deserialize chainstate from disk: %v", err)
+
+		activeData := &pb.ActiveStateResponse{}
+		err = proto.Unmarshal(enc, activeData)
+		if err != nil {
+			return nil, err
 		}
+		beaconChain.state.ActiveState = types.NewActiveState(activeData)
 	}
 	if hasCrystallized {
 		enc, err := db.Get([]byte(crystallizedStateLookupKey))
 		if err != nil {
 			return nil, err
 		}
+
 		crystallizedData := &pb.CrystallizedStateResponse{}
 		err = proto.Unmarshal(enc, crystallizedData)
 		if err != nil {
@@ -152,15 +154,13 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	}
 
 	// Verify state hashes from the block are correct
-	hash, err := hashActiveState(b.ActiveState())
+	hash, err := b.ActiveState().Hash()
 	if err != nil {
 		return false, err
 	}
 
-	blockActiveStateHash := block.ActiveStateHash()
-
-	if blockActiveStateHash != hash {
-		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", blockActiveStateHash, hash)
+	if block.ActiveStateHash() != hash {
+		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash(), hash)
 	}
 
 	hash, err = b.CrystallizedState().Hash()
@@ -168,10 +168,8 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	blockCrystallizedStateHash := block.CrystallizedStateHash()
-
-	if blockCrystallizedStateHash != hash {
-		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", blockCrystallizedStateHash, hash)
+	if block.CrystallizedStateHash() != hash {
+		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash(), hash)
 	}
 
 	return true, nil
@@ -218,10 +216,9 @@ func (b *BeaconChain) RotateValidatorSet() ([]*pb.ValidatorRecord, []*pb.Validat
 	return newQueuedValidators, newActiveValidators, newExitedValidators
 }
 
-// TODO: Use proto marshal instead of RLP when we change activeState to proto
-// persistActiveState stores the RLP encoding of the latest beacon chain active state into the db.
+// persistActiveState stores proto encoding of the latest beacon chain active state into the db.
 func (b *BeaconChain) persistActiveState() error {
-	encodedState, err := rlp.EncodeToBytes(b.state)
+	encodedState, err := b.ActiveState().Marshal()
 	if err != nil {
 		return err
 	}
@@ -255,10 +252,10 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 	// TODO: Verify randao reveal from validator's hash pre image.
 
-	return &types.ActiveState{
+	return types.NewActiveState(&pb.ActiveStateResponse{
 		TotalAttesterDeposits: 0,
-		AttesterBitfields:     []byte{},
-	}, nil
+		AttesterBitfield:      []byte{},
+	}), nil
 }
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
@@ -270,16 +267,6 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 		return nil, -1, err
 	}
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
-}
-
-// hashActiveState serializes the active state object then uses
-// blake2b to hash the serialized object.
-func hashActiveState(state *types.ActiveState) ([32]byte, error) {
-	serializedState, err := rlp.EncodeToBytes(state)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return blake2b.Sum256(serializedState), nil
 }
 
 // GetCutoffs is used to split up validators into groups at the start
@@ -370,7 +357,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 	defer b.lock.Unlock()
 
 	newbitfields := make([]byte, length)
-	b.state.ActiveState.AttesterBitfields = newbitfields
+	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 
 	return b.persistCrystallizedState()
 }
@@ -379,7 +366,7 @@ func (b *BeaconChain) resetAttesterBitfields() error {
 func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	b.state.ActiveState.TotalAttesterDeposits = 0
+	b.state.ActiveState.SetTotalAttesterDeposits(0)
 
 	return b.persistCrystallizedState()
 }
@@ -402,7 +389,7 @@ func (b *BeaconChain) updateJustifiedEpoch() error {
 // updateRewardsAndPenalties checks if the attester has voted and then applies the
 // rewards and penalties for them.
 func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
-	bitfields := b.state.ActiveState.AttesterBitfields
+	bitfields := b.state.ActiveState.AttesterBitfield()
 	attesterBlock := (index + 1) / 8
 	attesterFieldIndex := (index + 1) % 8
 	if attesterFieldIndex == 0 {
@@ -427,7 +414,7 @@ func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
 // rewards and penalties, resets the bitfield and deposits and also applies the slashing conditions.
 func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	activeValidatorSet := b.state.CrystallizedState.ActiveValidators()
-	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits
+	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits()
 	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
 	attesterFactor := attesterDeposits * 3

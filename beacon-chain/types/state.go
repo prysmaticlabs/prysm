@@ -9,10 +9,8 @@ import (
 
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
-// TODO: Change ActiveState to use proto
 type ActiveState struct {
-	TotalAttesterDeposits uint64 // TotalAttesterDeposits is the total quantity of wei that attested for the most recent checkpoint.
-	AttesterBitfields     []byte // AttesterBitfields represents which validator has attested.
+	data *pb.ActiveStateResponse
 }
 
 // CrystallizedState contains fields of every epoch state,
@@ -26,11 +24,18 @@ func NewCrystallizedState(data *pb.CrystallizedStateResponse) *CrystallizedState
 	return &CrystallizedState{data: data}
 }
 
+// NewActiveState creates a new active state with a explicitly set data field.
+func NewActiveState(data *pb.ActiveStateResponse) *ActiveState {
+	return &ActiveState{data: data}
+}
+
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	active := &ActiveState{
-		TotalAttesterDeposits: 0,
-		AttesterBitfields:     []byte{},
+		data: &pb.ActiveStateResponse{
+			TotalAttesterDeposits: 0,
+			AttesterBitfield:      []byte{},
+		},
 	}
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedStateResponse{
@@ -48,6 +53,41 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 		},
 	}
 	return active, crystallized
+}
+
+// Marshal encodes active state object into the wire format.
+func (a *ActiveState) Marshal() ([]byte, error) {
+	return proto.Marshal(a.data)
+}
+
+// Hash serializes the active state object then uses
+// blake2b to hash the serialized object.
+func (a *ActiveState) Hash() ([32]byte, error) {
+	data, err := proto.Marshal(a.data)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return blake2b.Sum256(data), nil
+}
+
+// TotalAttesterDeposits returns total quantity of wei that attested for the most recent checkpoint.
+func (a *ActiveState) TotalAttesterDeposits() uint64 {
+	return a.data.TotalAttesterDeposits
+}
+
+// SetTotalAttesterDeposits sets total quantity of wei that attested for the most recent checkpoint.
+func (a *ActiveState) SetTotalAttesterDeposits(deposit uint64) {
+	a.data.TotalAttesterDeposits = deposit
+}
+
+// AttesterBitfield returns a bitfield for seeing which attester has attested.
+func (a *ActiveState) AttesterBitfield() []byte {
+	return a.data.AttesterBitfield
+}
+
+// SetAttesterBitfield sets attester bitfield.
+func (a *ActiveState) SetAttesterBitfield(bitfield []byte) {
+	a.data.AttesterBitfield = bitfield
 }
 
 // Marshal encodes crystallized state object into the wire format.
