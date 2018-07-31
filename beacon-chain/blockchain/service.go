@@ -103,6 +103,11 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
+// Retrieves the last finalized epcoh of the canonical chain.
+func (c *ChainService) GetLastFinalizedEpoch() uint64 {
+	return c.CurrentCrystallizedState().LastFinalizedEpoch()
+}
+
 // updateChainState receives a beacon block, computes a new active state and writes it to db. Also
 // it checks for if there is an epoch transition. If there is one it computes the validator rewards
 // and penalties.
