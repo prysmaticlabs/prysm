@@ -41,11 +41,11 @@ spec:
             - >
               geth
               --networkid=1337
-              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):30301
-              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):3000
+              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_DISCOVERY_TCP)
+              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0
-              --rpccorsdomain=\"*\"
+              --rpccorsdomain="*"
               --ws
               --datadir=/ethereum
               --debug
@@ -78,7 +78,7 @@ spec:
               memory: "2Gi"
               cpu: "500m"
             limits:
-              memory: "2Gi"
+              memory: "2.5Gi"
               cpu: "500m"
       initContainers:
         - name: genesis
