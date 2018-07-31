@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +27,10 @@ type AggregateVote struct {
 
 // NewBlock explicitly sets the data field of a block.
 func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
+	if len(data.ParentHash) != 32 {
+		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
+	}
+
 	return &Block{data}, nil
 }
 
