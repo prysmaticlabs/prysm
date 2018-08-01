@@ -51,6 +51,7 @@ type Config struct {
 type FinalizedBlock struct {
 	BeaconBlock        *types.Block
 	LastFinalizedEpoch uint64
+	CrystallizedState  *types.CrystallizedState
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -114,7 +115,7 @@ func (ss *Service) setStateMapping(crystallizedStateHash [32]byte, block *types.
 	}
 }
 
-func (ss *Service) setFinalizedEpochforMapping(crystallizedStateHash [32]byte, block *types.Block, epoch uint64) {
+func (ss *Service) setFinalizedEpochforMapping(crystallizedStateHash [32]byte, block *types.Block, epoch uint64, CrystallizedState *types.CrystallizedState) {
 	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
 		BeaconBlock:        block,
 		LastFinalizedEpoch: epoch,
@@ -262,20 +263,28 @@ func (ss *Service) SetFinalizedEpochFromCrystallisedState(data *pb.CrystallizedS
 		return nil
 	}
 
-	ss.setFinalizedEpochforMapping(h, finalizedBlock.BeaconBlock, state.LastFinalizedEpoch())
+	ss.setFinalizedEpochforMapping(h, finalizedBlock.BeaconBlock, state.LastFinalizedEpoch(), state)
 	log.Debugf("Saved finalized epoch for block with crystallised state hash: %x", h)
 	return nil
 }
 
+func (ss *Service) writeBlockToDB(hash [32]byte) error {
+	finalizedBlock := ss.stateMapping[hash]
+	_ = finalizedBlock.BeaconBlock
+
+	if err := ss.chainService.ProcessCrystallizedState(finalizedBlock.CrystallizedState); err != nil {
+		return err
+	}
+
+	return nil
+	//TODO: Save the block to DB during inital sync
+}
+
 func (ss *Service) initialSync(done <-chan struct{}) {
-	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
-	announceCrystallizedHashSub := ss.p2p.Subscribe(pb.CrystallizedStateHashAnnounce{}, ss.announceCrystallizedHashBuf)
 	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
 
-	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
-	defer announceCrystallizedHashSub.Unsubscribe()
 	defer crystallizedStateSub.Unsubscribe()
 	for {
 		select {
@@ -300,8 +309,41 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				log.Errorf("Received malformed crystallized state p2p message")
 				continue
 			}
-			if err := ss.ReceiveCrystallizedState(data); err != nil {
-				log.Errorf("Could not receive crystallized state: %v", err)
+			if err := ss.SetFinalizedEpochFromCrystallisedState(data); err != nil {
+				log.Errorf("Could not set epoch for crystallised state: %v", err)
+			}
+
+			sync, err := ss.isFirstSync()
+
+			if err != nil {
+				log.Errorf("Could not check state of db: %v", err)
+			}
+
+			if !sync {
+				continue
+			}
+
+			/* This will retrieve the initial finalized block to be saved,
+			after the inital block has been saved syncing will be carried
+			out by a separate routine(not implemented yet).
+
+			This checks the last 20 received blocks for their finalized epoch and uses
+			the block with the largest finalized epoch as the starting point for the sync
+			*/
+
+			if len(ss.stateMapping) > 20 {
+				epoch := uint64(0)
+				var hash [32]byte
+				for k, v := range ss.stateMapping {
+					if v.LastFinalizedEpoch > epoch {
+						hash = k
+					}
+				}
+
+				if err := ss.writeBlockToDB(hash); err != nil {
+					log.Error("error saving block to beaconDB: %v", err)
+				}
+
 			}
 		}
 	}
