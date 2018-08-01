@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -98,7 +98,7 @@ func TestBlockRequestResponse(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	block, err := types.NewBlock(&pb.BeaconBlockResponse{})
+	block, err := types.NewBlock(&pb.BeaconBlockResponse{ParentHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}

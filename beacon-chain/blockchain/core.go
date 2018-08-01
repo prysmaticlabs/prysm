@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -127,7 +127,16 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	if _, err := fetcher.BlockByHash(context.Background(), block.MainChainRef()); err != nil {
 		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 	}
-	// TODO: check if the parentHash pointed by the beacon block is in the beaconDB.
+
+	// Check if the parentHash pointed by the beacon block is in the beaconDB.
+	parentHash := block.ParentHash()
+	val, err := b.db.Get(parentHash[:])
+	if err != nil {
+		return false, err
+	}
+	if val == nil {
+		return false, errors.New("parent hash points to nil in beaconDB")
+	}
 
 	// Calculate the timestamp validity condition.
 	slotDuration := time.Duration(block.SlotNumber()*params.SlotDuration) * time.Second

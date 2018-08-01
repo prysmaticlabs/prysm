@@ -1,13 +1,14 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -26,6 +27,10 @@ type AggregateVote struct {
 
 // NewBlock explicitly sets the data field of a block.
 func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
+	if len(data.ParentHash) != 32 {
+		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
+	}
+
 	return &Block{data}, nil
 }
 
