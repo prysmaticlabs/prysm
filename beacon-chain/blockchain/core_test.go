@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -168,14 +168,10 @@ func TestCanProcessBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	block := NewBlockWithSlotNumber(t, 2)
-
-	// Using a faulty fetcher should throw an error.
-	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
-		t.Error("Using a faulty fetcher should throw an error, received nil")
-	}
-
-	parentBlock := NewBlockWithSlotNumber(t, 1)
+	// Initialize a parent block
+	parentBlock := NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber: 1,
+	})
 	parentHash, err := parentBlock.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
@@ -184,9 +180,17 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
 
+	// Using a faulty fetcher should throw an error.
+	block := NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber: 2,
+	})
+	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
+		t.Error("Using a faulty fetcher should throw an error, received nil")
+	}
+
+	// Initialize initial state
 	activeState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
 	beaconChain.state.ActiveState = activeState
-
 	activeHash, err := activeState.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
@@ -194,14 +198,19 @@ func TestCanProcessBlock(t *testing.T) {
 
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 5})
 	beaconChain.state.CrystallizedState = crystallized
-
 	crystallizedHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Compute crystallized state hash failed: %v", err)
 	}
 
-	block = NewBlock(t, 1, activeHash, crystallizedHash, parentHash)
+	block = NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber:            2,
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: crystallizedHash[:],
+		ParentHash:            parentHash[:],
+	})
 
+	// A properly initialize block should not fail
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
@@ -211,7 +220,12 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Test timestamp validity condition
-	block = NewBlock(t, 1000000, activeHash, crystallizedHash, parentHash)
+	block = NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber:            1000000,
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: crystallizedHash[:],
+		ParentHash:            parentHash[:],
+	})
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
@@ -226,7 +240,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	defer db.Close()
 
 	// Test negative scenario where active state hash is different than node's compute
-	parentBlock := NewBlockWithSlotNumber(t, 1)
+	parentBlock := NewBlock(t, nil)
 	parentHash, err := parentBlock.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
@@ -235,6 +249,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
 
+	// Initialize state
 	active := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
 	activeStateHash, err := active.Hash()
 	if err != nil {
@@ -245,7 +260,13 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
 	}
-	block := NewBlock(t, 1, activeStateHash, crystallizedStateHash, parentHash)
+
+	block := NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber:            1,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		ParentHash:            parentHash[:],
+	})
 
 	// Test negative scenario where active state hash is different than node's compute
 	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 9999})
@@ -289,19 +310,30 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	}
 	beaconChain.state.CrystallizedState = crystallized
 
-	block := NewBlock(t, 2, activeStateHash, crystallizedStateHash, [32]byte{})
-
+	// Test that block processing is invalid without a parent hash
+	block := NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber:            2,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+	})
 	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing without a valid parent hash should fail")
 	}
 
 	// If parent hash is not stored in db, processing block should fail.
-	parentBlock := NewBlockWithSlotNumber(t, 1)
+	parentBlock := NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber: 1,
+	})
 	parentHash, err := parentBlock.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
-	block = NewBlock(t, 2, activeStateHash, crystallizedStateHash, parentHash)
+	block = NewBlock(t, &pb.BeaconBlockResponse{
+		SlotNumber:            2,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		ParentHash:            parentHash[:],
+	})
 
 	if _, err := beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing block should fail when parent hash is not in db")
@@ -576,9 +608,8 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	if err := beaconChain.updateJustifiedEpoch(); err != nil {
-		t.Fatalf("unable to update justified epoch: %v", err)
-	}
+	beaconChain.state.CrystallizedState.UpdateJustifiedEpoch()
+
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(5) {
 		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
 	}
@@ -595,9 +626,8 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	if err := beaconChain.updateJustifiedEpoch(); err != nil {
-		t.Fatalf("unable to update justified epoch: %v", err)
-	}
+	beaconChain.state.CrystallizedState.UpdateJustifiedEpoch()
+
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(8) {
 		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
 	}
@@ -727,30 +757,26 @@ func unique(ints []int) []int {
 
 }
 
-func NewBlockWithSlotNumber(t *testing.T, slotNumber uint64) *types.Block {
-	b, err := types.NewBlock(&pb.BeaconBlockResponse{
-		SlotNumber: slotNumber,
-		ParentHash: make([]byte, 32),
-	})
-
-	if err != nil {
-		t.Fatalf("failed to instantiate block with slot number: %d", slotNumber)
+// NewBlock is a helper method to create blocks with valid defaults.
+// For a generic block, use NewBlock(t, nil)
+func NewBlock(t *testing.T, b *pb.BeaconBlockResponse) *types.Block {
+	if b == nil {
+		b = &pb.BeaconBlockResponse{}
+	}
+	if b.ActiveStateHash == nil {
+		b.ActiveStateHash = make([]byte, 32)
+	}
+	if b.CrystallizedStateHash == nil {
+		b.CrystallizedStateHash = make([]byte, 32)
+	}
+	if b.ParentHash == nil {
+		b.ParentHash = make([]byte, 32)
 	}
 
-	return b
-}
-
-func NewBlock(t *testing.T, slotNumber uint64, activeStateHash [32]byte, crystallizedStateHash [32]byte, parentHash [32]byte) *types.Block {
-	b, err := types.NewBlock(&pb.BeaconBlockResponse{
-		SlotNumber:            slotNumber,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash[:],
-	})
-
+	blk, err := types.NewBlock(b)
 	if err != nil {
-		t.Fatalf("failed to instantiate block with slot number %d, err: %v", slotNumber, err)
+		t.Fatalf("failed to instantiate block with slot number: %v", err)
 	}
 
-	return b
+	return blk
 }

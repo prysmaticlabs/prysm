@@ -3,7 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -56,6 +56,11 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	return active, crystallized
 }
 
+// Proto returns the underlying protobuf data within a state primitive.
+func (a *ActiveState) Proto() *pb.ActiveStateResponse {
+	return a.data
+}
+
 // Marshal encodes active state object into the wire format.
 func (a *ActiveState) Marshal() ([]byte, error) {
 	return proto.Marshal(a.data)
@@ -89,6 +94,11 @@ func (a *ActiveState) AttesterBitfield() []byte {
 // SetAttesterBitfield sets attester bitfield.
 func (a *ActiveState) SetAttesterBitfield(bitfield []byte) {
 	a.data.AttesterBitfield = bitfield
+}
+
+// Proto returns the underlying protobuf data within a state primitive.
+func (c *CrystallizedState) Proto() *pb.CrystallizedStateResponse {
+	return c.data
 }
 
 // Marshal encodes crystallized state object into the wire format.
@@ -162,6 +172,11 @@ func (c *CrystallizedState) CurrentEpoch() uint64 {
 	return c.data.CurrentEpoch
 }
 
+// IncrementEpoch increments epoch by one.
+func (c *CrystallizedState) IncrementEpoch() {
+	c.data.CurrentEpoch++
+}
+
 // LastJustifiedEpoch of the beacon chain.
 func (c *CrystallizedState) LastJustifiedEpoch() uint64 {
 	return c.data.LastJustifiedEpoch
@@ -210,4 +225,14 @@ func (c *CrystallizedState) DynastySeed() common.Hash {
 // DynastySeedLastReset is the last epoch the crosslink seed was reset.
 func (c *CrystallizedState) DynastySeedLastReset() uint64 {
 	return c.data.DynastySeedLastReset
+}
+
+// UpdateJustifiedEpoch updates the justified epoch during an epoch transition.
+func (c *CrystallizedState) UpdateJustifiedEpoch() {
+	epoch := c.LastJustifiedEpoch()
+	c.SetLastJustifiedEpoch(c.CurrentEpoch())
+
+	if c.CurrentEpoch() == (epoch + 1) {
+		c.SetLastFinalizedEpoch(epoch)
+	}
 }
