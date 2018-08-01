@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ethereum.sharding.p2p.v1;
 
+// TODO: Split the topics into p2p for beacon chain and p2p for sharding.
 enum Topic {
   UNKNOWN = 0;
   COLLATION_BODY_REQUEST = 1;
