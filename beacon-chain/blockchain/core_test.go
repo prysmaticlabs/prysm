@@ -576,9 +576,8 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	if err := beaconChain.updateJustifiedEpoch(); err != nil {
-		t.Fatalf("unable to update justified epoch: %v", err)
-	}
+	beaconChain.state.CrystallizedState.UpdateJustifiedEpoch()
+
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(5) {
 		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
 	}
@@ -595,9 +594,8 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	if err := beaconChain.updateJustifiedEpoch(); err != nil {
-		t.Fatalf("unable to update justified epoch: %v", err)
-	}
+	beaconChain.state.CrystallizedState.UpdateJustifiedEpoch()
+
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(8) {
 		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
 	}

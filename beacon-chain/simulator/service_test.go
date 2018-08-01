@@ -124,3 +124,71 @@ func TestBlockRequestResponse(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to full block request for hash: 0x%x", h))
 }
+
+func TestBroadcastCrystallizedHash(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
+	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	sim.slotNum = 64
+
+	go func() {
+		sim.run(delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+
+	testutil.AssertLogsContain(t, hook, "Announcing crystallized state hash")
+
+	exitRoutine <- true
+
+	if len(sim.broadcastedCrystallizedHashes) != 1 {
+		t.Error("Did not store the broadcasted state hash")
+	}
+	hook.Reset()
+}
+
+func TestCrystallizedRequestResponse(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
+	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		sim.run(delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	state := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 99})
+
+	h, err := state.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := &pb.CrystallizedStateRequest{
+		Hash: h[:],
+	}
+
+	msg := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: data,
+	}
+
+	sim.broadcastedCrystallizedHashes[h] = state
+
+	sim.crystallizedStateRequestChan <- msg
+	doneChan <- struct{}{}
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to crystallized state request for hash: 0x%x", h))
+}
