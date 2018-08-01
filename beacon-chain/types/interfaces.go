@@ -29,6 +29,7 @@ type BlockChainService interface {
 	ProcessedBlockHashes() [][32]byte
 	ProcessBlock(b *Block) error
 	ContainsBlock(h [32]byte) bool
+	HasStoredState() (bool, error)
 }
 
 // CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.

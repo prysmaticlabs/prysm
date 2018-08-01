@@ -107,6 +107,10 @@ func (ms *mockChainService) ProcessedCrystallizedStateHashes() [][32]byte {
 	return ms.processedCrystallizedHashes
 }
 
+func (ms *mockChainService) HasStoredState() (bool, error) {
+	return false, nil
+}
+
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
