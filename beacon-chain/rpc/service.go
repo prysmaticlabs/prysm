@@ -12,7 +12,7 @@ import (
 
 var log = logrus.WithField("prefix", "rpc")
 
-// Service hi.
+// Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -20,12 +20,13 @@ type Service struct {
 	listener net.Listener
 }
 
-// Config options for the beacon RPC server.
+// Config options for the beacon node RPC server.
 type Config struct {
 	Port string
 }
 
-// NewRPCService hi.
+// NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
+// interface.
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
@@ -35,7 +36,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
-// Start hi.
+// Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
@@ -65,17 +66,19 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// ShuffleValidators hi.
+// ShuffleValidators shuffles the validators into attesters/proposers.
 func (s *Service) ShuffleValidators(req *pb.ShuffleRequest, stream pb.BeaconService_ShuffleValidatorsServer) error {
 	return stream.Send(&pb.ShuffleResponse{IsProposer: true, IsAttester: false})
 }
 
-// ProposeBlock hi.
+// ProposeBlock is called by a proposer in a sharding client and a full beacon node
+// the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
 	return nil, nil
 }
 
-// SignBlock hi.
+// SignBlock is a function called by an attester in a sharding client to sign off
+// on a block.
 func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
 	return nil, nil
 }

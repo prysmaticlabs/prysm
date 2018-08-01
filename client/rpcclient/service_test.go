@@ -2,6 +2,7 @@ package rpcclient
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -15,7 +16,7 @@ func TestLifecycle(t *testing.T) {
 	rpcClientService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, "Dialing beacon node RPC endpoint")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not connect to beacon node via RPC endpoint: %s", rpcClientService.endpoint))
 
 	rpcClientService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")

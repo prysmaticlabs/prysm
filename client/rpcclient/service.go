@@ -36,12 +36,14 @@ func NewRPCClient(ctx context.Context, cfg *Config) *Service {
 // Start the grpc connection.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	log.WithField("endpoint", s.endpoint).Info("Dialing beacon node RPC endpoint")
-	conn, err := grpc.Dial(s.endpoint, grpc.WithInsecure())
+	// Connecting to a beacon node is absolutely necessary before other actions occur
+	// within the sharding client.
+	conn, err := grpc.Dial(s.endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Errorf("Could not connect to beacon node via RPC endpoint: %s: %v", s.endpoint, err)
 		return
 	}
+	log.WithField("endpoint", s.endpoint).Info("Connected to beacon node RPC endpoint")
 	s.conn = conn
 }
 
