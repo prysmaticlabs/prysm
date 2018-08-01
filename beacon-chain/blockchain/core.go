@@ -272,8 +272,9 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 
 // GetCutoffs is used to split up validators into groups at the start
 // of every epoch. It determines at what height validators can make
-// attestations and crosslinks. It returns lists of cutoff indices.
-func GetCutoffs(validatorCount int) []int {
+// attestations and crosslinks. It returns lists of cutoff indices and heights
+// at which the attester can perform its responsibilities.
+func GetCutoffs(validatorCount int) ([]int, []int) {
 	var heightCutoff = []int{0}
 	var heights []int
 	var heightCount float64
@@ -313,7 +314,7 @@ func GetCutoffs(validatorCount int) []int {
 	// TODO: For the validators assigned to each height, split them up into
 	// committees for different shards. Do not assign the last END_EPOCH_GRACE_PERIOD
 	// heights in a epoch to any shards.
-	return heightCutoff
+	return heightCutoff, heights
 }
 
 // hasVoted checks if the attester has voted by looking at the bitfield.
