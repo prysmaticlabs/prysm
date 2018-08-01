@@ -18,6 +18,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+// TODO: Split the topics into p2p for beacon chain and p2p for sharding.
 type Topic int32
 
 const (
@@ -53,7 +54,7 @@ func (x Topic) String() string {
 	return proto.EnumName(Topic_name, int32(x))
 }
 func (Topic) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_messages_a2b5338ab8a3879b, []int{0}
+	return fileDescriptor_messages_1b8ea8c6097b7706, []int{0}
 }
 
 type CollationBodyRequest struct {
@@ -71,7 +72,7 @@ func (m *CollationBodyRequest) Reset()         { *m = CollationBodyRequest{} }
 func (m *CollationBodyRequest) String() string { return proto.CompactTextString(m) }
 func (*CollationBodyRequest) ProtoMessage()    {}
 func (*CollationBodyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_a2b5338ab8a3879b, []int{0}
+	return fileDescriptor_messages_1b8ea8c6097b7706, []int{0}
 }
 func (m *CollationBodyRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CollationBodyRequest.Unmarshal(m, b)
@@ -138,7 +139,7 @@ func (m *CollationBodyResponse) Reset()         { *m = CollationBodyResponse{} }
 func (m *CollationBodyResponse) String() string { return proto.CompactTextString(m) }
 func (*CollationBodyResponse) ProtoMessage()    {}
 func (*CollationBodyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_a2b5338ab8a3879b, []int{1}
+	return fileDescriptor_messages_1b8ea8c6097b7706, []int{1}
 }
 func (m *CollationBodyResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CollationBodyResponse.Unmarshal(m, b)
@@ -189,7 +190,7 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_a2b5338ab8a3879b, []int{2}
+	return fileDescriptor_messages_1b8ea8c6097b7706, []int{2}
 }
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
@@ -271,7 +272,7 @@ func (m *Signature) Reset()         { *m = Signature{} }
 func (m *Signature) String() string { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()    {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_a2b5338ab8a3879b, []int{3}
+	return fileDescriptor_messages_1b8ea8c6097b7706, []int{3}
 }
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Signature.Unmarshal(m, b)
@@ -321,10 +322,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("proto/sharding/p2p/v1/messages.proto", fileDescriptor_messages_a2b5338ab8a3879b)
+	proto.RegisterFile("proto/sharding/p2p/v1/messages.proto", fileDescriptor_messages_1b8ea8c6097b7706)
 }
 
-var fileDescriptor_messages_a2b5338ab8a3879b = []byte{
+var fileDescriptor_messages_1b8ea8c6097b7706 = []byte{
 	// 503 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0xdd, 0x6a, 0xdb, 0x3c,
 	0x18, 0xc7, 0x5f, 0xb5, 0xf9, 0x68, 0x9e, 0x04, 0x5e, 0x23, 0xd2, 0xce, 0x6d, 0xf7, 0x11, 0xb2,
