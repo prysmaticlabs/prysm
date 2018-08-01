@@ -372,21 +372,6 @@ func (b *BeaconChain) resetTotalAttesterDeposit() error {
 	return b.PersistCrystallizedState()
 }
 
-// updateJustifiedEpoch updates the justified epoch during an epoch transition.
-func (b *BeaconChain) updateJustifiedEpoch() error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	justifiedEpoch := b.state.CrystallizedState.LastJustifiedEpoch()
-	b.state.CrystallizedState.SetLastJustifiedEpoch(b.state.CrystallizedState.CurrentEpoch())
-
-	if b.state.CrystallizedState.CurrentEpoch() == (justifiedEpoch + 1) {
-		b.state.CrystallizedState.SetLastFinalizedEpoch(justifiedEpoch)
-	}
-
-	return b.PersistCrystallizedState()
-}
-
 // updateRewardsAndPenalties checks if the attester has voted and then applies the
 // rewards and penalties for them.
 func (b *BeaconChain) updateRewardsAndPenalties(index int) error {
@@ -424,9 +409,7 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	if attesterFactor >= totalFactor {
 		log.Info("Justified epoch in the crystallised state is set to the current epoch")
 
-		if err := b.updateJustifiedEpoch(); err != nil {
-			return fmt.Errorf("error setting justified epoch: %v", err)
-		}
+		b.state.CrystallizedState.UpdateJustifiedEpoch()
 
 		for i := range activeValidatorSet {
 			if err := b.updateRewardsAndPenalties(i); err != nil {

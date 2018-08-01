@@ -49,7 +49,15 @@ type Config struct {
 
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
-	return Config{100, 100, 100, 100, 100, 100}
+
+	return Config{
+		BlockHashBufferSize:             100,
+		BlockBufferSize:                 100,
+		ActiveStateHashBufferSize:       100,
+		ActiveStateBufferSize:           100,
+		CrystallizedStateHashBufferSize: 100,
+		CrystallizedStateBufferSize:     100,
+	}
 }
 
 // NewSyncService accepts a context and returns a new Service.
