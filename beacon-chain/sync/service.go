@@ -80,9 +80,10 @@ func (ss *Service) Start() {
 	if sync {
 		log.Info("Starting initial sync")
 
-	} else {
-		go ss.run(ss.ctx.Done())
+		return
 	}
+
+	go ss.run(ss.ctx.Done())
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -205,6 +206,47 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveStateResponse) error {
 	}
 	log.Debugf("Successfully received incoming active state with hash: %x", h)
 	return nil
+}
+
+func (ss *Service) GetCrystallisedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
+	block, err := types.NewBlock(data)
+	if err != nil {
+		return fmt.Errorf("could not instantiate new block from proto: %v", err)
+	}
+	h := block.CrystallizedStateHash()
+
+	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
+	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
+	return nil
+}
+
+func (ss *Service) initialSync(done <-chan struct{}) {
+	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
+	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
+	announceCrystallizedHashSub := ss.p2p.Subscribe(pb.CrystallizedStateHashAnnounce{}, ss.announceCrystallizedHashBuf)
+	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
+
+	defer announceBlockHashSub.Unsubscribe()
+	defer blockSub.Unsubscribe()
+	defer announceCrystallizedHashSub.Unsubscribe()
+	defer crystallizedStateSub.Unsubscribe()
+	for {
+		select {
+		case <-done:
+			log.Infof("Exiting goroutine")
+			return
+		case msg := <-ss.blockBuf:
+			data, ok := msg.Data.(*pb.BeaconBlockResponse)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Errorf("Received malformed beacon block p2p message")
+				continue
+			}
+			if err := ss.ReceiveBlock(data); err != nil {
+				log.Errorf("Could not receive block: %v", err)
+			}
+		}
+	}
 }
 
 func (ss *Service) run(done <-chan struct{}) {
