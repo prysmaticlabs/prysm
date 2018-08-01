@@ -35,6 +35,7 @@ type Service struct {
 	crystallizedStateBuf        chan p2p.Message
 	announceActiveHashBuf       chan p2p.Message
 	activeStateBuf              chan p2p.Message
+	stateMapping                map[[32]byte]FinalizedBlock
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -45,6 +46,11 @@ type Config struct {
 	ActiveStateBufferSize           int
 	CrystallizedStateHashBufferSize int
 	CrystallizedStateBufferSize     int
+}
+
+type FinalizedBlock struct {
+	BeaconBlock        *types.Block
+	LastFinalizedEpoch uint64
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -66,6 +72,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		crystallizedStateBuf:        make(chan p2p.Message, cfg.ActiveStateBufferSize),
 		announceActiveHashBuf:       make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
 		activeStateBuf:              make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
+		stateMapping:                make(map[[32]byte]FinalizedBlock),
 	}
 }
 
@@ -99,6 +106,19 @@ func (ss *Service) isFirstSync() (bool, error) {
 		return false, fmt.Errorf("error retrieving stored state: %v", err)
 	}
 	return !stored, nil
+}
+
+func (ss *Service) setStateMapping(crystallizedStateHash [32]byte, block *types.Block) {
+	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
+		BeaconBlock: block,
+	}
+}
+
+func (ss *Service) setFinalizedEpochforMapping(crystallizedStateHash [32]byte, block *types.Block, epoch uint64) {
+	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
+		BeaconBlock:        block,
+		LastFinalizedEpoch: epoch,
+	}
 }
 
 // ReceiveBlockHash accepts a block hash.
@@ -217,6 +237,33 @@ func (ss *Service) GetCrystallisedStateFromPeer(data *pb.BeaconBlockResponse, pe
 
 	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
 	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
+	ss.setStateMapping(h, block)
+	return nil
+}
+
+func (ss *Service) SetFinalizedEpochFromCrystallisedState(data *pb.CrystallizedStateResponse) error {
+	state := types.NewCrystallizedState(data)
+
+	h, err := state.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash crystallized state: %v", err)
+	}
+	if ss.chainService.ContainsCrystallizedState(h) {
+		log.WithFields(logrus.Fields{"crystallizedStateHash": h}).Debug("Crystallized state hash exists locally")
+		return nil
+	}
+	log.Debugf("Successfully received incoming crystallized state with hash: %x", h)
+
+	finalizedBlock, ok := ss.stateMapping[h]
+	if !ok {
+		if err := ss.chainService.ProcessCrystallizedState(state); err != nil {
+			return fmt.Errorf("could not process crystallized state: %v", err)
+		}
+		return nil
+	}
+
+	ss.setFinalizedEpochforMapping(h, finalizedBlock.BeaconBlock, state.LastFinalizedEpoch())
+	log.Debugf("Saved finalized epoch for block with crystallised state hash: %x", h)
 	return nil
 }
 
@@ -242,8 +289,19 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlock(data); err != nil {
-				log.Errorf("Could not receive block: %v", err)
+
+			if err := ss.GetCrystallisedStateFromPeer(data, msg.Peer); err != nil {
+				log.Errorf("Could not send request for crystallized state: %v", err)
+			}
+		case msg := <-ss.crystallizedStateBuf:
+			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Errorf("Received malformed crystallized state p2p message")
+				continue
+			}
+			if err := ss.ReceiveCrystallizedState(data); err != nil {
+				log.Errorf("Could not receive crystallized state: %v", err)
 			}
 		}
 	}
