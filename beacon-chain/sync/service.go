@@ -72,7 +72,17 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	log.Info("Starting service")
-	go ss.run(ss.ctx.Done())
+	sync, err := ss.isFirstSync()
+	if err != nil {
+		log.Errorf("Error starting sync service: %v", err)
+		return
+	}
+	if sync {
+		log.Info("Starting initial sync")
+
+	} else {
+		go ss.run(ss.ctx.Done())
+	}
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -80,6 +90,14 @@ func (ss *Service) Stop() error {
 	log.Info("Stopping service")
 	ss.cancel()
 	return nil
+}
+
+func (ss *Service) isFirstSync() (bool, error) {
+	stored, err := ss.chainService.HasStoredState()
+	if err != nil {
+		return false, fmt.Errorf("error retrieving stored state: %v", err)
+	}
+	return !stored, nil
 }
 
 // ReceiveBlockHash accepts a block hash.

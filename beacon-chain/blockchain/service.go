@@ -68,6 +68,23 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+func (c *ChainService) HasStoredState() (bool, error) {
+
+	hasActive, err := c.beaconDB.DB().Has([]byte(activeStateLookupKey))
+	if err != nil {
+		return false, err
+	}
+	hasCrystallized, err := c.beaconDB.DB().Has([]byte(crystallizedStateLookupKey))
+	if err != nil {
+		return false, err
+	}
+	if !hasActive && !hasCrystallized {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // ProcessedBlockHashes by the chain service.
 func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
