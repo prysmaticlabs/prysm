@@ -1,7 +1,10 @@
 package sync
 
 import (
+	"bytes"
 	"context"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -13,7 +16,9 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-type mockP2P struct{}
+type mockP2P struct {
+	msgchan chan interface{}
+}
 
 func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
@@ -21,7 +26,9 @@ func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscri
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
 
-func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
+func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
+	mp.msgchan <- msg
+}
 
 type mockChainService struct {
 	processedBlockHashes        [][32]byte
@@ -650,4 +657,67 @@ func TestProcessSameActiveState(t *testing.T) {
 	}
 
 	hook.Reset()
+}
+
+func TestGetCrystallizedStateFromPeer(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	mp2p := mockP2P{msgchan: make(chan interface{}, 20)}
+	ss := NewSyncService(context.Background(), cfg, &mp2p, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.initialSync(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+	generichash[1] = 'b'
+	blockResponse := &pb.BeaconBlockResponse{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		CrystallizedStateHash: generichash,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	ss.blockBuf <- msg1
+	ss.blockBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	p2pmsg := <-mp2p.msgchan
+	hash := p2pmsg.(*ethereum_beacon_p2p_v1.CrystallizedStateRequest).GetHash()
+
+	if !bytes.Equal(hash, generichash) {
+		t.Fatalf("Incorrect message sent: %v", hash)
+	}
+
+	var maphash [32]byte
+
+	copy(hash[:], p2pmsg.(*ethereum_beacon_p2p_v1.CrystallizedStateRequest).GetHash())
+
+	block, ok := ss.stateMapping[maphash]
+
+	if !ok {
+		t.Fatalf("Key value pair does not exist for the hash: %v", block)
+	}
+
+	if block.BeaconBlock.MainChainRef() != common.BytesToHash([]byte{1, 2, 3}) {
+		t.Fatal("block saved in mapping is not equal")
+	}
+
+	hook.Reset()
+
 }

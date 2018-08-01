@@ -229,7 +229,7 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveStateResponse) error {
 	return nil
 }
 
-func (ss *Service) GetCrystallisedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
+func (ss *Service) GetCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block, err := types.NewBlock(data)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -242,7 +242,7 @@ func (ss *Service) GetCrystallisedStateFromPeer(data *pb.BeaconBlockResponse, pe
 	return nil
 }
 
-func (ss *Service) SetFinalizedEpochFromCrystallisedState(data *pb.CrystallizedStateResponse) error {
+func (ss *Service) SetFinalizedEpochFromCrystallizedState(data *pb.CrystallizedStateResponse) error {
 	state := types.NewCrystallizedState(data)
 
 	h, err := state.Hash()
@@ -304,7 +304,6 @@ func (ss *Service) findLatestFinalizedBlock() error {
 
 func (ss *Service) writeBlockToDB(hash [32]byte) error {
 	finalizedBlock := ss.stateMapping[hash]
-	_ = finalizedBlock.BeaconBlock
 
 	if err := ss.chainService.ProcessCrystallizedState(finalizedBlock.CrystallizedState); err != nil {
 		return err
@@ -333,7 +332,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				continue
 			}
 
-			if err := ss.GetCrystallisedStateFromPeer(data, msg.Peer); err != nil {
+			if err := ss.GetCrystallizedStateFromPeer(data, msg.Peer); err != nil {
 				log.Errorf("Could not send request for crystallized state: %v", err)
 			}
 		case msg := <-ss.crystallizedStateBuf:
@@ -343,7 +342,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				log.Errorf("Received malformed crystallized state p2p message")
 				continue
 			}
-			if err := ss.SetFinalizedEpochFromCrystallisedState(data); err != nil {
+			if err := ss.SetFinalizedEpochFromCrystallizedState(data); err != nil {
 				log.Errorf("Could not set epoch for crystallised state: %v", err)
 			}
 
