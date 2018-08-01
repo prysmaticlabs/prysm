@@ -3,7 +3,8 @@ package p2p
 import (
 	"reflect"
 
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	beaconpb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 )
 
 // Mapping of message topic enums to protobuf types.
@@ -26,18 +27,18 @@ var topicTypeMapping = map[pb.Topic]reflect.Type{
 var typeTopicMapping = reverseMapping(topicTypeMapping)
 
 // ReverseMapping from K,V to V,K
-func reverseMapping(m map[pb.Topic]reflect.Type) map[reflect.Type]pb.Topic {
-	n := make(map[reflect.Type]pb.Topic)
+func reverseMapping(m map[shardpb.Topic]reflect.Type) map[reflect.Type]shardpb.Topic {
+	n := make(map[reflect.Type]shardpb.Topic)
 	for k, v := range m {
 		n[v] = k
 	}
 	return n
 }
 
-// Topic returns the given topic for a given interface. This is the preferred
+// These functions return the given topic for a given interface. This is the preferred
 // way to resolve a topic from an value. The msg could be a pointer or value
 // argument to resolve to the correct topic.
-func topic(msg interface{}) pb.Topic {
+func topic(msg interface{}) shardpb.Topic {
 	msgType := reflect.TypeOf(msg)
 	if msgType.Kind() == reflect.Ptr {
 		msgType = reflect.Indirect(reflect.ValueOf(msg)).Type()

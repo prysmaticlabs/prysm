@@ -1,24 +1,8 @@
 syntax = "proto3";
 
-package ethereum.messages.v1;
+package ethereum.beacon.p2p.v1;
 
 import "google/protobuf/timestamp.proto";
-
-enum Topic {
-  UNKNOWN = 0;
-  COLLATION_BODY_REQUEST = 1;
-  COLLATION_BODY_RESPONSE = 2;
-  TRANSACTIONS = 3;
-  BEACON_BLOCK_HASH_ANNOUNCE = 4;
-  BEACON_BLOCK_REQUEST = 5;
-  BEACON_BLOCK_RESPONSE = 6;
-  CRYSTALLIZED_STATE_HASH_ANNOUNCE = 7;
-  CRYSTALLIZED_STATE_REQUEST = 8;
-  CRYSTALLIZED_STATE_RESPONSE = 9;
-  ACTIVE_STATE_HASH_ANNOUNCE = 10;
-  ACTIVE_STATE_REQUEST = 11;
-  ACTIVE_STATE_RESPONSE = 12;
-} 
 
 message BeaconBlockHashAnnounce {
   bytes hash = 1;
@@ -85,40 +69,11 @@ message AggregateVote {
   repeated uint32 aggregate_sig = 4;
 }
 
-message CollationBodyRequest {
-  uint64 shard_id = 1;
-  uint64 period = 2;
-  bytes chunk_root = 3;
-  bytes proposer_address = 4;
-  bytes signature = 5;
-}
-
 message ValidatorRecord {
-  uint64  public_key = 1;
+  uint64 public_key = 1;
   uint64 withdrawal_shard = 2;
   bytes withdrawal_address = 3;
   bytes randao_commitment = 4;
   uint64 balance = 5;
   uint64 switch_dynasty = 6;
-}
-
-message CollationBodyResponse {
-  bytes header_hash = 1;
-  bytes body = 2;
-}
-
-message Transaction {
-  uint64 nonce = 1;
-  uint64 gas_price = 2;
-  uint64 gas_limit = 3;
-  bytes recipient = 4;
-  uint64 value = 5;
-  bytes input = 6;
-  Signature signature = 7;
-}
-
-message Signature {
-  uint64 v = 1;
-  uint64 r = 2;
-  uint64 s = 3;
 }

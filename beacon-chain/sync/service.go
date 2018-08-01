@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -49,6 +49,7 @@ type Config struct {
 
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
+
 	return Config{
 		BlockHashBufferSize:             100,
 		BlockBufferSize:                 100,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"time"
+
 	//"math"
 	"math/big"
 	"testing"
@@ -17,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	logTest "github.com/sirupsen/logrus/hooks/test"
