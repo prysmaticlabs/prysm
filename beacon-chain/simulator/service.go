@@ -41,7 +41,7 @@ type Config struct {
 
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
-	return &Config{Delay: time.Second * 4, BlockRequestBuf: 100, CrystallizedStateRequestBuf: 100}
+	return &Config{Delay: time.Second * 8, BlockRequestBuf: 100, CrystallizedStateRequestBuf: 100}
 }
 
 // NewSimulator creates a simulator instance for a syncer to consume fake, generated blocks.
