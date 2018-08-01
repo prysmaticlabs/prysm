@@ -87,7 +87,7 @@ func (ss *Service) Start() {
 	}
 	if sync {
 		log.Info("Starting initial sync")
-
+		go ss.initialSync(ss.ctx.Done())
 		return
 	}
 
@@ -268,6 +268,40 @@ func (ss *Service) SetFinalizedEpochFromCrystallisedState(data *pb.CrystallizedS
 	return nil
 }
 
+/* This will retrieve the initial finalized block to be saved,
+after the inital block has been saved syncing will be carried
+out by a separate routine(not implemented yet).
+
+This checks the last 20 received blocks for their finalized epoch and uses
+the block with the largest finalized epoch as the starting point for the sync
+*/
+func (ss *Service) findLatestFinalizedBlock() error {
+
+	sync, err := ss.isFirstSync()
+
+	if err != nil {
+		return err
+	}
+
+	if !sync {
+		return nil
+	}
+
+	if len(ss.stateMapping) > 20 {
+		epoch := uint64(0)
+		var hash [32]byte
+		for k, v := range ss.stateMapping {
+			if v.LastFinalizedEpoch > epoch {
+				hash = k
+			}
+		}
+		if err := ss.writeBlockToDB(hash); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (ss *Service) writeBlockToDB(hash [32]byte) error {
 	finalizedBlock := ss.stateMapping[hash]
 	_ = finalizedBlock.BeaconBlock
@@ -313,38 +347,10 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				log.Errorf("Could not set epoch for crystallised state: %v", err)
 			}
 
-			sync, err := ss.isFirstSync()
-
-			if err != nil {
-				log.Errorf("Could not check state of db: %v", err)
+			if err := ss.findLatestFinalizedBlock(); err != nil {
+				log.Errorf("unable to retrive last finalized block: %v", err)
 			}
 
-			if !sync {
-				continue
-			}
-
-			/* This will retrieve the initial finalized block to be saved,
-			after the inital block has been saved syncing will be carried
-			out by a separate routine(not implemented yet).
-
-			This checks the last 20 received blocks for their finalized epoch and uses
-			the block with the largest finalized epoch as the starting point for the sync
-			*/
-
-			if len(ss.stateMapping) > 20 {
-				epoch := uint64(0)
-				var hash [32]byte
-				for k, v := range ss.stateMapping {
-					if v.LastFinalizedEpoch > epoch {
-						hash = k
-					}
-				}
-
-				if err := ss.writeBlockToDB(hash); err != nil {
-					log.Error("error saving block to beaconDB: %v", err)
-				}
-
-			}
 		}
 	}
 }
