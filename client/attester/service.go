@@ -3,10 +3,13 @@
 package attester
 
 import (
-	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/params"
-	"github.com/prysmaticlabs/prysm/shared/database"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+
+	"github.com/prysmaticlabs/prysm/client/rpcclient"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,44 +19,104 @@ var log = logrus.WithField("prefix", "attester")
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Attester struct {
-	config    *params.Config
-	smcClient *mainchain.SMCClient
-	p2p       *p2p.Server
-	dbService *database.DB
+	ctx            context.Context
+	cancel         context.CancelFunc
+	clientService  *rpcclient.Service
+	validatorIndex int
 }
 
 // NewAttester creates a new attester instance.
-func NewAttester(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, dbService *database.DB) (*Attester, error) {
-	return &Attester{config, smcClient, p2p, dbService}, nil
+func NewAttester(ctx context.Context, clientService *rpcclient.Service) *Attester {
+	ctx, cancel := context.WithCancel(ctx)
+	return &Attester{
+		ctx:           ctx,
+		cancel:        cancel,
+		clientService: clientService,
+	}
 }
 
 // Start the main routine for a attester.
-func (n *Attester) Start() {
+func (at *Attester) Start() {
 	log.Info("Starting attester service")
-	go n.notarizeCollations()
+	rpcClient := at.clientService.BeaconServiceClient()
+	go at.fetchBeaconHashHeight(rpcClient)
+	go at.fetchCrystallizedState(rpcClient)
 }
 
 // Stop the main loop for notarizing collations.
-func (n *Attester) Stop() error {
+func (at *Attester) Stop() error {
 	log.Info("Stopping attester service")
 	return nil
 }
 
-// notarizeCollations checks incoming block headers and determines if
-// we are an eligible attester for collations.
-func (n *Attester) notarizeCollations() {
-
-	// TODO: handle this better through goroutines. Right now, these methods
-	// are blocking.
-	if n.smcClient.DepositFlag() {
-		if err := joinAttesterPool(n.smcClient, n.smcClient); err != nil {
-			log.Errorf("Could not fetch current block number: %v", err)
-			return
-		}
+func (at *Attester) fetchBeaconHashHeight(client pb.BeaconServiceClient) {
+	stream, err := client.LatestBeaconHashHeight(at.ctx, nil)
+	if err != nil {
+		log.Fatalf("Could not setup beacon chain streaming client: %v", err)
 	}
+	for {
+		beaconData, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Could not receive latest beacon block data from stream: %v", err)
+		}
+		log.WithField("hash", fmt.Sprintf("%x", beaconData.GetHash())).Info("Latest beacon block hash")
+		log.WithField("height", beaconData.GetHeight()).Info("Latest beacon block height")
 
-	if err := subscribeBlockHeaders(n.smcClient.ChainReader(), n.smcClient, n.smcClient.Account()); err != nil {
-		log.Errorf("Could not fetch current block number: %v", err)
-		return
+		// Based on the height determined from the latest crystallized state, check if
+		// it matches the latest received beacon height. If so, the attester has to perform
+		// its responsibilities.
+
+		// TODO: Attest to block if height matches.
+	}
+}
+
+func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
+	stream, err := client.LatestCrystallizedState(at.ctx, nil)
+	if err != nil {
+		log.Fatalf("Could not setup crystallized beacon state streaming client: %v", err)
+	}
+	for {
+		crystallizedState, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Could not receive latest crystallized beacon state from stream: %v", err)
+		}
+		// After receiving the crystallized state, get the number of active validators
+		// and this attester's index in the list.
+		activeValidators := crystallizedState.GetActiveValidators()
+		validatorCount := len(activeValidators)
+
+		for i, val := range activeValidators {
+			// TODO: Check the public key instead of withdrawal address. This will
+			// use BLS.
+			if bytes.Equal(val.GetWithdrawalAddress(), []byte{}) {
+				at.validatorIndex = i
+				break
+			}
+		}
+
+		// If validator index was not set, keep listening for crystallized states.
+		if &at.validatorIndex == nil {
+			continue
+		}
+
+		res, err := client.ShuffleValidators(at.ctx, &pb.ShuffleRequest{
+			ValidatorCount: uint64(validatorCount),
+			ValidatorIndex: uint64(at.validatorIndex),
+		})
+		if err != nil {
+			log.Errorf("Could not shuffle validator list: %v", err)
+			continue
+		}
+		// Based on the cutoff and attester indices, determine the beacon block
+		// height at which attester has to perform its responsibility.
+		// TODO: use res.GetCutoffIndices() and res.GetAttesterIndices() to determine
+		// height of attestation responsibility.
+		log.Info(res)
 	}
 }

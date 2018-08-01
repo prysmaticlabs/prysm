@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -67,8 +68,8 @@ func (s *Service) Stop() error {
 }
 
 // ShuffleValidators shuffles the validators into attesters/proposers.
-func (s *Service) ShuffleValidators(req *pb.ShuffleRequest, stream pb.BeaconService_ShuffleValidatorsServer) error {
-	return stream.Send(&pb.ShuffleResponse{IsProposer: true, IsAttester: false})
+func (s *Service) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
+	return nil, nil
 }
 
 // ProposeBlock is called by a proposer in a sharding client and a full beacon node
@@ -81,4 +82,14 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 // on a block.
 func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
 	return nil, nil
+}
+
+// LatestBeaconHashHeight streams the latest beacon chain data.
+func (s *Service) LatestBeaconHashHeight(req *empty.Empty, stream pb.BeaconService_LatestBeaconHashHeightServer) error {
+	return stream.Send(nil)
+}
+
+// LatestCrystallizedState streams the latest beacon crystallized state.
+func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
+	return stream.Send(nil)
 }
