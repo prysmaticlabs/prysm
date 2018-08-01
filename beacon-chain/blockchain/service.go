@@ -15,13 +15,15 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	beaconDB          *database.DB
-	chain             *BeaconChain
-	web3Service       *powchain.Web3Service
-	latestBeaconBlock chan *types.Block
-	processedHashes   [][32]byte
+	ctx                              context.Context
+	cancel                           context.CancelFunc
+	beaconDB                         *database.DB
+	chain                            *BeaconChain
+	web3Service                      *powchain.Web3Service
+	latestBeaconBlock                chan *types.Block
+	processedBlockHashes             [][32]byte
+	processedActiveStateHashes       [][32]byte
+	processedCrystallizedStateHashes [][32]byte
 }
 
 // NewChainService instantiates a new service instance that will
@@ -29,12 +31,14 @@ type ChainService struct {
 func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
-		ctx:               ctx,
-		cancel:            cancel,
-		beaconDB:          beaconDB,
-		web3Service:       web3Service,
-		latestBeaconBlock: make(chan *types.Block),
-		processedHashes:   [][32]byte{},
+		ctx:                              ctx,
+		cancel:                           cancel,
+		beaconDB:                         beaconDB,
+		web3Service:                      web3Service,
+		latestBeaconBlock:                make(chan *types.Block),
+		processedBlockHashes:             [][32]byte{},
+		processedActiveStateHashes:       [][32]byte{},
+		processedCrystallizedStateHashes: [][32]byte{},
 	}, nil
 }
 
@@ -64,9 +68,19 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// ProcessedHashes by the chain service.
-func (c *ChainService) ProcessedHashes() [][32]byte {
-	return c.processedHashes
+// ProcessedBlockHashes by the chain service.
+func (c *ChainService) ProcessedBlockHashes() [][32]byte {
+	return c.processedBlockHashes
+}
+
+// ProcessedCrystallizedStateHashes by the chain service.
+func (c *ChainService) ProcessedCrystallizedStateHashes() [][32]byte {
+	return c.processedCrystallizedStateHashes
+}
+
+// ProcessedActiveStateHashes by the chain service.
+func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
+	return c.processedActiveStateHashes
 }
 
 // ProcessBlock accepts a new block for inclusion in the chain.
@@ -86,9 +100,47 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	return nil
 }
 
+// ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
+func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
+	h, err := state.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
+
+	// TODO: Implement crystallized state verifier function and apply fork choice rules
+
+	return nil
+}
+
+// ProcessActiveState accepts a new active state object for inclusion in the chain.
+func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
+	h, err := state.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received active state, processing validity conditions")
+
+	// TODO: Implement active state verifier function and apply fork choice rules
+
+	return nil
+}
+
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
+	// TODO
+	return false
+}
+
+// ContainsCrystallizedState checks if a crystallized state for the hash exists in the chain.
+func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
+	// TODO
+	return false
+}
+
+// ContainsActiveState checks if a active state for the hash exists in the chain.
+func (c *ChainService) ContainsActiveState(h [32]byte) bool {
 	// TODO
 	return false
 }
