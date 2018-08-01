@@ -6,8 +6,8 @@ package ethereum_beacon_rpc_v1
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import v1 "proto/beacon/p2p/v1"
-import v11 "proto/sharding/p2p/v1"
+import v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import v11 "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 
 import (
 	context "golang.org/x/net/context"
