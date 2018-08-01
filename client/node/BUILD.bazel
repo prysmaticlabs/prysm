@@ -11,6 +11,7 @@ go_library(
         "//client/observer:go_default_library",
         "//client/params:go_default_library",
         "//client/proposer:go_default_library",
+        "//client/rpcclient:go_default_library",
         "//client/simulator:go_default_library",
         "//client/syncer:go_default_library",
         "//client/txpool:go_default_library",
