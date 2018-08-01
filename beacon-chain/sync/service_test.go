@@ -706,7 +706,7 @@ func TestGetCrystallizedStateFromPeer(t *testing.T) {
 
 	var maphash [32]byte
 
-	copy(hash[:], p2pmsg.(*ethereum_beacon_p2p_v1.CrystallizedStateRequest).GetHash())
+	copy(maphash[:], hash)
 
 	block, ok := ss.stateMapping[maphash]
 
@@ -715,7 +715,11 @@ func TestGetCrystallizedStateFromPeer(t *testing.T) {
 	}
 
 	if block.BeaconBlock.MainChainRef() != common.BytesToHash([]byte{1, 2, 3}) {
-		t.Fatal("block saved in mapping is not equal")
+		t.Fatalf("block saved in mapping is not equal: %v", block.BeaconBlock)
+	}
+
+	if block.BeaconBlock.CrystallizedStateHash() != maphash || block.BeaconBlock.ParentHash() != maphash {
+		t.Fatalf("block saved in mapping is not equal: %v", block.BeaconBlock)
 	}
 
 	hook.Reset()
