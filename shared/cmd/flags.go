@@ -41,4 +41,10 @@ var (
 		Usage: "HTTP-RPC server end point to use to connect to mainchain.",
 		Value: "http://localhost:8545/",
 	}
+	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
+	BeaconRPCProviderFlag = cli.StringFlag{
+		Name:  "beaconrpc",
+		Usage: "RPC endpoint exposed by a beacon node",
+		Value: "http://localhost:4000/",
+	}
 )

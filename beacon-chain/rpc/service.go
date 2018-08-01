@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -13,38 +14,60 @@ var log = logrus.WithField("prefix", "rpc")
 
 // Service hi.
 type Service struct {
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx      context.Context
+	cancel   context.CancelFunc
+	endpoint string
+	listener net.Listener
+}
+
+// Config options for the beacon RPC server.
+type Config struct {
+	Endpoint string
 }
 
 // NewRPCService hi.
-func NewRPCService(ctx context.Context) *Service {
+func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:      ctx,
+		cancel:   cancel,
+		endpoint: cfg.Endpoint,
 	}
 }
 
 // Start hi.
 func (s *Service) Start() {
-	log.Info("Starting RPC Service")
-	lis, err := net.Listen("tcp", ":8080")
+	log.Info("Starting service")
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.endpoint))
 	if err != nil {
-		log.Fatalf("Could not listen to port :8080: %v", err)
+		log.Errorf("Could not listen to port :%s: %v", s.endpoint, err)
+		return
 	}
+	s.listener = lis
+	log.Infof("RPC server listening on port :%s", s.endpoint)
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterBeaconServiceServer(grpcServer, s)
-	err = grpcServer.Serve(lis)
-	if err != nil {
-		log.Fatalf("Could not serve: %v", err)
+	go func() {
+		err = grpcServer.Serve(lis)
+		if err != nil {
+			log.Errorf("Could not serve gRPC: %v", err)
+		}
+	}()
+}
+
+// Stop the service.
+func (s *Service) Stop() error {
+	log.Info("Stopping service")
+	if s.listener != nil {
+		return s.listener.Close()
 	}
+	return nil
 }
 
 // ShuffleValidators hi.
-func (s *Service) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
-	return nil, nil
+func (s *Service) ShuffleValidators(req *pb.ShuffleRequest, stream pb.BeaconService_ShuffleValidatorsServer) error {
+	return stream.Send(&pb.ShuffleResponse{IsProposer: true, IsAttester: false})
 }
 
 // ProposeBlock hi.
