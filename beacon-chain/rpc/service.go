@@ -16,35 +16,35 @@ var log = logrus.WithField("prefix", "rpc")
 type Service struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
-	endpoint string
+	port     string
 	listener net.Listener
 }
 
 // Config options for the beacon RPC server.
 type Config struct {
-	Endpoint string
+	Port string
 }
 
 // NewRPCService hi.
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:      ctx,
-		cancel:   cancel,
-		endpoint: cfg.Endpoint,
+		ctx:    ctx,
+		cancel: cancel,
+		port:   cfg.Port,
 	}
 }
 
 // Start hi.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.endpoint))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-		log.Errorf("Could not listen to port :%s: %v", s.endpoint, err)
+		log.Errorf("Could not listen to port :%s: %v", s.port, err)
 		return
 	}
 	s.listener = lis
-	log.Infof("RPC server listening on port :%s", s.endpoint)
+	log.Infof("RPC server listening on port :%s", s.port)
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterBeaconServiceServer(grpcServer, s)

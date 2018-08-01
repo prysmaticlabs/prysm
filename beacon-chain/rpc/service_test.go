@@ -11,12 +11,12 @@ import (
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Endpoint: "9999"})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"})
 
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.endpoint))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
@@ -24,12 +24,12 @@ func TestLifecycle(t *testing.T) {
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Endpoint: "ralph merkle!!!"})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"})
 
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.endpoint))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
