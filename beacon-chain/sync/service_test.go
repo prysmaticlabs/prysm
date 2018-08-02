@@ -777,3 +777,133 @@ func TestSetFinalizedEpochFromCrystallizedState(t *testing.T) {
 	hook.Reset()
 
 }
+
+func TestFindAndSaveLastFinalizedBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.initialSync(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	var hash [32]byte
+
+	for i := 0; i < 21; i++ {
+		stateResponse := &pb.CrystallizedStateResponse{
+			LastFinalizedEpoch: 100 + uint64(i),
+		}
+		crystallisedHash, err := types.NewCrystallizedState(stateResponse).Hash()
+		if err != nil {
+			t.Fatalf("unable to get hash for crystallised state %v", err)
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			MainChainRef:          []byte{1, 2, 3},
+			ParentHash:            generichash,
+			CrystallizedStateHash: crystallisedHash[:],
+			SlotNumber:            uint64(i),
+		}
+
+		msg1 := p2p.Message{
+			Peer: p2p.Peer{},
+			Data: blockResponse,
+		}
+		msg2 := p2p.Message{
+			Peer: p2p.Peer{},
+			Data: stateResponse,
+		}
+
+		ss.blockBuf <- msg1
+		ss.crystallizedStateBuf <- msg2
+		hash = crystallisedHash
+
+	}
+
+	ss.cancel()
+	<-exitRoutine
+
+	block, ok := ss.stateMapping[hash]
+
+	if !ok {
+		t.Fatalf("Key value pair does not exist for the hash: %v", block)
+	}
+
+	if block.BeaconBlock.SlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("last finalized epoch not set: %v", block.BeaconBlock.SlotNumber())
+	}
+
+	hook.Reset()
+
+}
+
+func TestGoodBlockFetcher(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.initialSync(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	var hash [32]byte
+
+	for i := 0; i < 21; i++ {
+		stateResponse := &pb.CrystallizedStateResponse{
+			LastFinalizedEpoch: 100 + uint64(i),
+		}
+		crystallisedHash, err := types.NewCrystallizedState(stateResponse).Hash()
+		if err != nil {
+			t.Fatalf("unable to get hash for crystallised state %v", err)
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			MainChainRef:          []byte{1, 2, 3},
+			ParentHash:            generichash,
+			CrystallizedStateHash: crystallisedHash[:],
+			SlotNumber:            uint64(i),
+		}
+
+		msg1 := p2p.Message{
+			Peer: p2p.Peer{},
+			Data: blockResponse,
+		}
+		msg2 := p2p.Message{
+			Peer: p2p.Peer{},
+			Data: stateResponse,
+		}
+
+		ss.blockBuf <- msg1
+		ss.crystallizedStateBuf <- msg2
+		hash = crystallisedHash
+
+	}
+
+	ss.cancel()
+	<-exitRoutine
+
+	block, ok := ss.stateMapping[hash]
+
+	if !ok {
+		t.Fatalf("Key value pair does not exist for the hash: %v", block)
+	}
+
+	if block.BeaconBlock.SlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("last finalized epoch not set: %v", block.BeaconBlock.SlotNumber())
+	}
+
+	hook.Reset()
+
+}

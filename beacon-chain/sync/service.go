@@ -135,6 +135,7 @@ func (ss *Service) setFinalizedEpochforMapping(crystallizedStateHash [32]byte, b
 	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
 		BeaconBlock:        block,
 		LastFinalizedEpoch: epoch,
+		CrystallizedState:  CrystallizedState,
 	}
 }
 
@@ -332,6 +333,7 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 		var hash [32]byte
 		for k, v := range ss.stateMapping {
 			if v.LastFinalizedEpoch > epoch {
+				epoch = v.LastFinalizedEpoch
 				hash = k
 			}
 		}
@@ -347,7 +349,10 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 }
 
 func (ss *Service) writeBlockToDB(hash [32]byte) error {
-	finalizedBlock := ss.stateMapping[hash]
+	finalizedBlock, ok := ss.stateMapping[hash]
+	if !ok {
+		return fmt.Errorf("block unable to be retrieved from mapping with hash: %x", hash)
+	}
 
 	if err := ss.chainService.ProcessCrystallizedState(finalizedBlock.CrystallizedState); err != nil {
 		return err
@@ -375,7 +380,7 @@ func (ss *Service) blockFetcher(done <-chan struct{}) {
 				continue
 			}
 
-			if err := ss.GetCrystallizedStateFromPeer(data, msg.Peer); err != nil {
+			if err := ss.validateAndSaveNextBlock(data); err != nil {
 				log.Errorf("Could not send request for crystallized state: %v", err)
 			}
 		}
