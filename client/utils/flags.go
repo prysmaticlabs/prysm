@@ -23,4 +23,10 @@ var (
 		Name:  "shardid",
 		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
 	}
+	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
+	BeaconRPCProviderFlag = cli.StringFlag{
+		Name:  "beacon-rpc-provider",
+		Usage: "Beacon node RPC provider endpoint",
+		Value: "http://localhost:4000/",
+	}
 )
