@@ -36,6 +36,8 @@ type Service struct {
 	announceActiveHashBuf       chan p2p.Message
 	activeStateBuf              chan p2p.Message
 	stateMapping                map[[32]byte]FinalizedBlock
+	syncMode                    int
+	currentSlotNumber           uint64
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -61,7 +63,19 @@ func DefaultConfig() Config {
 
 // NewSyncService accepts a context and returns a new Service.
 func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
+	// 1 represents default sync and 0 , initial sync
+	mode := 1
 	ctx, cancel := context.WithCancel(ctx)
+	stored, err := cs.HasStoredState()
+
+	if err != nil {
+		log.Errorf("error retrieving stored state: %v", err)
+		return nil
+	}
+	if !stored {
+		mode = 0
+	}
+
 	return &Service{
 		ctx:                         ctx,
 		cancel:                      cancel,
@@ -74,24 +88,26 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		announceActiveHashBuf:       make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
 		activeStateBuf:              make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
 		stateMapping:                make(map[[32]byte]FinalizedBlock),
+		syncMode:                    mode,
+		currentSlotNumber:           0,
 	}
 }
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	log.Info("Starting service")
-	sync, err := ss.isFirstSync()
-	if err != nil {
-		log.Errorf("Error starting sync service: %v", err)
-		return
-	}
-	if sync {
+
+	switch ss.syncMode {
+	case 0:
 		log.Info("Starting initial sync")
 		go ss.initialSync(ss.ctx.Done())
-		return
+	case 1:
+		go ss.run(ss.ctx.Done())
+	default:
+		go ss.run(ss.ctx.Done())
+
 	}
 
-	go ss.run(ss.ctx.Done())
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -268,14 +284,38 @@ func (ss *Service) SetFinalizedEpochFromCrystallizedState(data *pb.CrystallizedS
 	return nil
 }
 
-/* This will retrieve the initial finalized block to be saved,
-after the inital block has been saved syncing will be carried
-out by a separate routine(not implemented yet).
+func (ss *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
+	block, err := types.NewBlock(data)
+	if err != nil {
+		return fmt.Errorf("could not instantiate new block from proto: %v", err)
+	}
 
-This checks the last 20 received blocks for their finalized epoch and uses
-the block with the largest finalized epoch as the starting point for the sync
+	if ss.currentSlotNumber == uint64(0) {
+		return fmt.Errorf("invalid slot number for syncing")
+	}
+
+	if (ss.currentSlotNumber + 1) == block.SlotNumber() {
+		hash, err := block.Hash()
+		if err != nil {
+			return err
+		}
+
+		if err := ss.writeBlockToDB(hash); err != nil {
+			return err
+		}
+		ss.currentSlotNumber = block.SlotNumber()
+	}
+
+	return nil
+}
+
+/* findLatestFinalizedBlock will retrieve the initial finalized block to be
+saved, after the inital block has been saved syncing will be carried out by
+a separate routine(not implemented yet). This checks the last 20 received
+blocks for their finalized epoch and uses the block with the largest finalized
+epoch as the starting point for the sync.
 */
-func (ss *Service) findLatestFinalizedBlock() error {
+func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 
 	sync, err := ss.isFirstSync()
 
@@ -298,6 +338,10 @@ func (ss *Service) findLatestFinalizedBlock() error {
 		if err := ss.writeBlockToDB(hash); err != nil {
 			return err
 		}
+
+		finalizedBlock := ss.stateMapping[hash]
+		ss.currentSlotNumber = finalizedBlock.BeaconBlock.SlotNumber()
+		ss.blockFetcher(ss.ctx.Done())
 	}
 	return nil
 }
@@ -312,6 +356,31 @@ func (ss *Service) writeBlockToDB(hash [32]byte) error {
 		return err
 	}
 	return nil
+}
+
+func (ss *Service) blockFetcher(done <-chan struct{}) {
+	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
+	defer blockSub.Unsubscribe()
+
+	for {
+		select {
+		case <-done:
+			log.Infof("Exiting goroutine")
+			return
+		case msg := <-ss.blockBuf:
+			data, ok := msg.Data.(*pb.BeaconBlockResponse)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Errorf("Received malformed beacon block p2p message")
+				continue
+			}
+
+			if err := ss.GetCrystallizedStateFromPeer(data, msg.Peer); err != nil {
+				log.Errorf("Could not send request for crystallized state: %v", err)
+			}
+		}
+	}
+
 }
 
 func (ss *Service) initialSync(done <-chan struct{}) {
@@ -347,7 +416,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				log.Errorf("Could not set epoch for crystallised state: %v", err)
 			}
 
-			if err := ss.findLatestFinalizedBlock(); err != nil {
+			if err := ss.findAndSaveLatestFinalizedBlock(); err != nil {
 				log.Errorf("unable to retrive last finalized block: %v", err)
 			}
 
