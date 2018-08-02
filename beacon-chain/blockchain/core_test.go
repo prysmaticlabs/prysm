@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"math"
 	"reflect"
 	"testing"
 
@@ -406,7 +405,7 @@ func TestRotateValidatorSet(t *testing.T) {
 		t.Errorf("Get exited validator count failed, wanted 5, got %v", beaconChain.CrystallizedState().ExitedValidatorsLength())
 	}
 
-	newQueuedValidators, newActiveValidators, newExitedValidators := beaconChain.RotateValidatorSet()
+	newQueuedValidators, newActiveValidators, newExitedValidators := beaconChain.rotateValidatorSet()
 
 	if len(newActiveValidators) != 4 {
 		t.Errorf("Get active validator count failed, wanted 5, got %v", len(newActiveValidators))
@@ -426,74 +425,45 @@ func TestIsEpochTransition(t *testing.T) {
 	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 1})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
-	if !beaconChain.isEpochTransition(128) {
+	if !beaconChain.IsEpochTransition(128) {
 		t.Errorf("there was supposed to be an epoch transition but there isn't one now")
 	}
-	if beaconChain.isEpochTransition(80) {
+	if beaconChain.IsEpochTransition(80) {
 		t.Errorf("there is not supposed to be an epoch transition but there is one now")
 	}
 }
 
 func TestHasVoted(t *testing.T) {
-	for i := 0; i < 8; i++ {
-		testfield := int(math.Pow(2, float64(i)))
-		bitfields := []byte{byte(testfield), 0, 0}
-		attesterBlock := 1
-		attesterFieldIndex := (8 - i)
-
-		voted := hasVoted(bitfields, attesterBlock, attesterFieldIndex)
-		if !voted {
-			t.Fatalf("attester was supposed to have voted but the test shows they have not, this is their bitfield and index: %b :%d", bitfields[0], attesterFieldIndex)
-		}
-	}
-}
-
-func TestApplyRewardAndPenalty(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	balance1 := uint64(10000)
-	balance2 := uint64(15000)
-	balance3 := uint64(20000)
-	balance4 := uint64(25000)
-	balance5 := uint64(30000)
+	// Setting bit field to 11111111
+	beaconChain.ActiveState().SetAttesterBitfield([]byte{255})
 
-	activeValidators := []*pb.ValidatorRecord{
-		{Balance: balance1, WithdrawalAddress: []byte{'A'}, PublicKey: 0},
-		{Balance: balance2, WithdrawalAddress: []byte{'B'}, PublicKey: 1},
-		{Balance: balance3, WithdrawalAddress: []byte{'C'}, PublicKey: 2},
-		{Balance: balance4, WithdrawalAddress: []byte{'D'}, PublicKey: 3},
-		{Balance: balance5, WithdrawalAddress: []byte{'E'}, PublicKey: 4},
+	for i := 0; i < len(beaconChain.ActiveState().AttesterBitfield()); i++ {
+		voted, err := beaconChain.voted(i)
+		if err != nil {
+			t.Errorf("checking bitfield for vote failed: %v", err)
+		}
+		if !voted {
+			t.Error("validator voted but received didn't vote")
+		}
 	}
 
-	beaconChain.CrystallizedState().UpdateActiveValidators(activeValidators)
+	// Setting bit field to 01010101
+	beaconChain.ActiveState().SetAttesterBitfield([]byte{85})
 
-	beaconChain.applyRewardAndPenalty(0, true)
-	beaconChain.applyRewardAndPenalty(1, false)
-	beaconChain.applyRewardAndPenalty(2, true)
-	beaconChain.applyRewardAndPenalty(3, false)
-	beaconChain.applyRewardAndPenalty(4, true)
-
-	expectedBalance1 := balance1 + params.AttesterReward
-	expectedBalance2 := balance2 - params.AttesterReward
-	expectedBalance3 := balance3 + params.AttesterReward
-	expectedBalance4 := balance4 - params.AttesterReward
-	expectedBalance5 := balance5 + params.AttesterReward
-
-	if expectedBalance1 != beaconChain.CrystallizedState().ActiveValidators()[0].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance1, beaconChain.CrystallizedState().ActiveValidators()[0].Balance)
-	}
-	if expectedBalance2 != beaconChain.CrystallizedState().ActiveValidators()[1].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance2, beaconChain.CrystallizedState().ActiveValidators()[1].Balance)
-	}
-	if expectedBalance3 != beaconChain.CrystallizedState().ActiveValidators()[2].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance3, beaconChain.CrystallizedState().ActiveValidators()[2].Balance)
-	}
-	if expectedBalance4 != beaconChain.CrystallizedState().ActiveValidators()[3].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance4, beaconChain.CrystallizedState().ActiveValidators()[3].Balance)
-	}
-	if expectedBalance5 != beaconChain.CrystallizedState().ActiveValidators()[4].Balance {
-		t.Errorf("rewards and penalties were not able to be applied correctly:%d , %d", expectedBalance5, beaconChain.CrystallizedState().ActiveValidators()[4].Balance)
+	for i := 0; i < len(beaconChain.ActiveState().AttesterBitfield()); i++ {
+		voted, err := beaconChain.voted(i)
+		if err != nil {
+			t.Errorf("checking bitfield for vote failed: %v", err)
+		}
+		if i%2 == 0 && voted {
+			t.Error("validator didn't vote but received voted")
+		}
+		if i%2 == 1 && !voted {
+			t.Error("validator voted but received didn't vote")
+		}
 	}
 }
 
@@ -516,17 +486,15 @@ func TestResetAttesterBitfields(t *testing.T) {
 		if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})); err != nil {
 			t.Fatal("unable to mutate active state")
 		}
-		if err := beaconChain.resetAttesterBitfields(); err != nil {
-			t.Fatalf("unable to reset Attester Bitfields")
-		}
+
+		beaconChain.resetAttesterBitfield()
+
 		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.AttesterBitfield()) {
 			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
 		}
 
 		bitfieldLength := j / 8
-		if j%8 != 0 {
-			bitfieldLength++
-		}
+
 		if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfield(), make([]byte, bitfieldLength)) {
 			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfield())
 		}
@@ -544,9 +512,7 @@ func TestResetTotalAttesterDeposit(t *testing.T) {
 	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(10000) {
 		t.Fatalf("attester deposit was not saved: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
 	}
-	if err := beaconChain.resetTotalAttesterDeposit(); err != nil {
-		t.Fatalf("unable to reset total attester deposit: %v", err)
-	}
+	beaconChain.ActiveState().SetTotalAttesterDeposits(0)
 	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(0) {
 		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
 	}
@@ -593,58 +559,6 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 	}
 }
 
-func TestUpdateRewardsAndPenalties(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	var validators []*pb.ValidatorRecord
-
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 1000, WithdrawalAddress: []byte{'A'}, PublicKey: 0}
-		validators = append(validators, validator)
-	}
-	beaconChain.state.CrystallizedState.UpdateActiveValidators(validators)
-
-	//Binary Representation of Bitfield: 00010110 00101011 00101110 01001111 01010000
-	testAttesterBitfield := []byte{22, 43, 46, 79, 80}
-	if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})); err != nil {
-		t.Fatalf("unable to mutate active state: %v", err)
-	}
-	// Test Validator with index 10 would refer to the 11th bit in the bitfield
-
-	if err := beaconChain.updateRewardsAndPenalties(10); err != nil {
-		t.Fatalf("unable to update rewards and penalties: %v", err)
-	}
-	if beaconChain.CrystallizedState().ActiveValidators()[10].Balance != uint64(1001) {
-		t.Fatal("validator balance not updated")
-	}
-
-	// Test Validator with index 15 would refer to the 16th bit in the bitfield
-	if err := beaconChain.updateRewardsAndPenalties(15); err != nil {
-		t.Fatalf("unable to update rewards and penalties: %v", err)
-	}
-	if beaconChain.CrystallizedState().ActiveValidators()[15].Balance != uint64(1001) {
-		t.Fatal("validator balance not updated")
-	}
-
-	// Test Validator with index 23 would refer to the 24th bit in the bitfield
-	if err := beaconChain.updateRewardsAndPenalties(23); err != nil {
-		t.Fatalf("unable to update rewards and penalties: %v", err)
-	}
-	if beaconChain.CrystallizedState().ActiveValidators()[23].Balance == uint64(1001) {
-		t.Fatal("validator balance not updated")
-	}
-
-	err := beaconChain.updateRewardsAndPenalties(230)
-	if err == nil {
-		t.Fatal("no error displayed when there is supposed to be one")
-
-	}
-	if err.Error() != "attester index does not exist" {
-		t.Fatalf("incorrect error message: ` %s ` is displayed when it should have been: attester index does not exist", err.Error())
-	}
-}
-
 func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -658,7 +572,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	data := &pb.CrystallizedStateResponse{
 		ActiveValidators:   validators,
 		CurrentCheckPoint:  []byte("checkpoint"),
-		TotalDeposits:      10000,
+		TotalDeposits:      40000,
 		CurrentEpoch:       5,
 		LastJustifiedEpoch: 4,
 		LastFinalizedEpoch: 3,
@@ -670,11 +584,11 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
 	types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})
-	ActiveState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 8000, AttesterBitfield: testAttesterBitfield})
+	ActiveState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 40000, AttesterBitfield: testAttesterBitfield})
 	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
-	if err := beaconChain.computeValidatorRewardsAndPenalties(); err != nil {
+	if err := beaconChain.calculateRewardsFFG(); err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
 	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(5) {
@@ -720,6 +634,5 @@ func NewBlock(t *testing.T, b *pb.BeaconBlockResponse) *types.Block {
 	if err != nil {
 		t.Fatalf("failed to instantiate block with slot number: %v", err)
 	}
-
 	return blk
 }
