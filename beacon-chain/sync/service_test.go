@@ -1,10 +1,8 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -17,7 +15,6 @@ import (
 )
 
 type mockP2P struct {
-	msgchan chan interface{}
 }
 
 func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
@@ -27,7 +24,6 @@ func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscri
 func (mp *mockP2P) Broadcast(msg interface{}) {}
 
 func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
-	mp.msgchan <- msg
 }
 
 type mockChainService struct {
@@ -116,6 +112,10 @@ func (ms *mockChainService) ProcessedCrystallizedStateHashes() [][32]byte {
 
 func (ms *mockChainService) HasStoredState() (bool, error) {
 	return false, nil
+}
+
+func (ms *mockChainService) SaveBlockToDB(block *types.Block) error {
+	return nil
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -664,8 +664,7 @@ func TestGetCrystallizedStateFromPeer(t *testing.T) {
 
 	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
 	ms := &mockChainService{}
-	mp2p := mockP2P{msgchan: make(chan interface{}, 20)}
-	ss := NewSyncService(context.Background(), cfg, &mp2p, ms)
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
 
@@ -697,18 +696,11 @@ func TestGetCrystallizedStateFromPeer(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	p2pmsg := <-mp2p.msgchan
-	hash := p2pmsg.(*ethereum_beacon_p2p_v1.CrystallizedStateRequest).GetHash()
+	var hash [32]byte
 
-	if !bytes.Equal(hash, generichash) {
-		t.Fatalf("Incorrect message sent: %v", hash)
-	}
+	copy(hash[:], generichash)
 
-	var maphash [32]byte
-
-	copy(maphash[:], hash)
-
-	block, ok := ss.stateMapping[maphash]
+	block, ok := ss.stateMapping[hash]
 
 	if !ok {
 		t.Fatalf("Key value pair does not exist for the hash: %v", block)
@@ -718,8 +710,68 @@ func TestGetCrystallizedStateFromPeer(t *testing.T) {
 		t.Fatalf("block saved in mapping is not equal: %v", block.BeaconBlock)
 	}
 
-	if block.BeaconBlock.CrystallizedStateHash() != maphash || block.BeaconBlock.ParentHash() != maphash {
+	if block.BeaconBlock.CrystallizedStateHash() != hash || block.BeaconBlock.ParentHash() != hash {
 		t.Fatalf("block saved in mapping is not equal: %v", block.BeaconBlock)
+	}
+
+	hook.Reset()
+
+}
+
+func TestSetFinalizedEpochFromCrystallizedState(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.initialSync(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+	generichash[1] = 'b'
+	stateResponse := &pb.CrystallizedStateResponse{
+		LastJustifiedEpoch: 100,
+		LastFinalizedEpoch: 99,
+	}
+	crystallisedHash, err := types.NewCrystallizedState(stateResponse).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash for crystallised state %v", err)
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		CrystallizedStateHash: crystallisedHash[:],
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+
+	ss.blockBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
+	ss.cancel()
+	<-exitRoutine
+
+	block, ok := ss.stateMapping[crystallisedHash]
+
+	if !ok {
+		t.Fatalf("Key value pair does not exist for the hash: %v", block)
+	}
+
+	if block.LastFinalizedEpoch != uint64(99) {
+		t.Fatalf("last finalized epoch not set: %v", block.LastFinalizedEpoch)
 	}
 
 	hook.Reset()

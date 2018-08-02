@@ -276,7 +276,7 @@ func (ss *Service) SetFinalizedEpochFromCrystallizedState(data *pb.CrystallizedS
 		if err := ss.chainService.ProcessCrystallizedState(state); err != nil {
 			return fmt.Errorf("could not process crystallized state: %v", err)
 		}
-		return nil
+		return fmt.Errorf("unable to retrieve finalized block from mapping for hash: %x", h)
 	}
 
 	ss.setFinalizedEpochforMapping(h, finalizedBlock.BeaconBlock, state.LastFinalizedEpoch(), state)
