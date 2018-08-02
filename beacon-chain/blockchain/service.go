@@ -117,6 +117,13 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	return nil
 }
 
+func (c *ChainService) SaveBlockToDB(block *types.Block) error {
+	if err := c.chain.saveBlockToDB(block); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
 func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
 	h, err := state.Hash()

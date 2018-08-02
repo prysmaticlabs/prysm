@@ -308,9 +308,10 @@ func (ss *Service) writeBlockToDB(hash [32]byte) error {
 	if err := ss.chainService.ProcessCrystallizedState(finalizedBlock.CrystallizedState); err != nil {
 		return err
 	}
-
+	if err := ss.chainService.SaveBlockToDB(finalizedBlock.BeaconBlock); err != nil {
+		return err
+	}
 	return nil
-	//TODO: Save the block to DB during inital sync
 }
 
 func (ss *Service) initialSync(done <-chan struct{}) {

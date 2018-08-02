@@ -444,5 +444,18 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	return nil
 }
 
+func (b *BeaconChain) saveBlockToDB(block *types.Block) error {
+	encodedState, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
+	return b.db.Put(hash[:], encodedState)
+}
+
 // Slashing Condtions
 // TODO: Implement all the conditions and add in the methods once the spec is updated

@@ -50,6 +50,11 @@ func (b *Block) Proto() *pb.BeaconBlockResponse {
 	return b.data
 }
 
+// Marshal encodes block object into the wire format.
+func (b *Block) Marshal() ([]byte, error) {
+	return proto.Marshal(b.data)
+}
+
 // Hash generates the blake2b hash of the block
 func (b *Block) Hash() ([32]byte, error) {
 	data, err := proto.Marshal(b.data)
