@@ -2,9 +2,9 @@ package sync
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -843,7 +843,7 @@ func TestFindAndSaveLastFinalizedBlock(t *testing.T) {
 
 }
 
-func TestGoodBlockFetcher(t *testing.T) {
+func TestBlockFetcher(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
@@ -858,7 +858,6 @@ func TestGoodBlockFetcher(t *testing.T) {
 	}()
 
 	generichash := make([]byte, 32)
-	var hash [32]byte
 
 	for i := 0; i < 21; i++ {
 		stateResponse := &pb.CrystallizedStateResponse{
@@ -887,22 +886,55 @@ func TestGoodBlockFetcher(t *testing.T) {
 
 		ss.blockBuf <- msg1
 		ss.crystallizedStateBuf <- msg2
-		hash = crystallisedHash
 
 	}
+
+	testSlotNumber := uint64(21)
+
+	blockResponse := &pb.BeaconBlockResponse{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		CrystallizedStateHash: []byte{},
+		SlotNumber:            testSlotNumber,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	ss.blockBuf <- msg1
+
+	if ss.currentSlotNumber != testSlotNumber {
+		t.Fatalf("block unable to be validated and saved for slot number: %v", ss.currentSlotNumber)
+	}
+
+	testSlotNumber = uint64(30)
+
+	blockResponse = &pb.BeaconBlockResponse{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		CrystallizedStateHash: []byte{},
+		SlotNumber:            testSlotNumber,
+	}
+
+	msg1 = p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	ss.blockBuf <- msg1
+
+	if ss.currentSlotNumber == testSlotNumber {
+		t.Fatalf("slot changed despite the block having a much higher slot number: %v", ss.currentSlotNumber)
+	}
+
+	ss.currentSlotNumber = 0
+	ss.blockBuf <- msg1
 
 	ss.cancel()
 	<-exitRoutine
-
-	block, ok := ss.stateMapping[hash]
-
-	if !ok {
-		t.Fatalf("Key value pair does not exist for the hash: %v", block)
-	}
-
-	if block.BeaconBlock.SlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("last finalized epoch not set: %v", block.BeaconBlock.SlotNumber())
-	}
+	testutil.AssertLogsContain(t, hook, "invalid slot number for syncing")
 
 	hook.Reset()
 

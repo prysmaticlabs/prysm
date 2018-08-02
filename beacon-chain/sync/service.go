@@ -296,12 +296,8 @@ func (ss *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error 
 	}
 
 	if (ss.currentSlotNumber + 1) == block.SlotNumber() {
-		hash, err := block.Hash()
-		if err != nil {
-			return err
-		}
 
-		if err := ss.writeBlockToDB(hash); err != nil {
+		if err := ss.writeBlockToDB(block); err != nil {
 			return err
 		}
 		ss.currentSlotNumber = block.SlotNumber()
@@ -337,27 +333,25 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 				hash = k
 			}
 		}
-		if err := ss.writeBlockToDB(hash); err != nil {
+		finalizedBlock, ok := ss.stateMapping[hash]
+
+		if !ok {
+			return fmt.Errorf("unable to retrieve finalized block with hash %x", hash)
+		}
+
+		if err := ss.writeBlockToDB(finalizedBlock.BeaconBlock); err != nil {
 			return err
 		}
 
-		finalizedBlock := ss.stateMapping[hash]
 		ss.currentSlotNumber = finalizedBlock.BeaconBlock.SlotNumber()
 		ss.blockFetcher(ss.ctx.Done())
 	}
 	return nil
 }
 
-func (ss *Service) writeBlockToDB(hash [32]byte) error {
-	finalizedBlock, ok := ss.stateMapping[hash]
-	if !ok {
-		return fmt.Errorf("block unable to be retrieved from mapping with hash: %x", hash)
-	}
+func (ss *Service) writeBlockToDB(block *types.Block) error {
 
-	if err := ss.chainService.ProcessCrystallizedState(finalizedBlock.CrystallizedState); err != nil {
-		return err
-	}
-	if err := ss.chainService.SaveBlockToDB(finalizedBlock.BeaconBlock); err != nil {
+	if err := ss.chainService.SaveBlockToDB(block); err != nil {
 		return err
 	}
 	return nil
