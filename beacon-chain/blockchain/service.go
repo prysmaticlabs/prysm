@@ -68,6 +68,7 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// HasStoredState checks if there is any chaindata saved in the local db.
 func (c *ChainService) HasStoredState() (bool, error) {
 
 	hasActive, err := c.beaconDB.DB().Has([]byte(activeStateLookupKey))
@@ -117,6 +118,8 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	return nil
 }
 
+// SaveBlockToDB is a mock which saves a block to the local db using the
+// blockhash as the key.
 func (c *ChainService) SaveBlockToDB(block *types.Block) error {
 	if err := c.chain.saveBlockToDB(block); err != nil {
 		return err

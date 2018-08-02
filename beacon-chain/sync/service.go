@@ -50,6 +50,8 @@ type Config struct {
 	CrystallizedStateBufferSize     int
 }
 
+// FinalizedBlock stores information regarding a block, its finalized epoch and the contents
+// of its crystallized state.
 type FinalizedBlock struct {
 	BeaconBlock        *types.Block
 	LastFinalizedEpoch uint64
@@ -70,6 +72,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 
 	if err != nil {
 		log.Errorf("error retrieving stored state: %v", err)
+		cancel()
 		return nil
 	}
 	if !stored {
@@ -117,6 +120,7 @@ func (ss *Service) Stop() error {
 	return nil
 }
 
+// isFirstSync checks if this is the first time the node is syncing with the network.
 func (ss *Service) isFirstSync() (bool, error) {
 	stored, err := ss.chainService.HasStoredState()
 	if err != nil {
@@ -125,12 +129,16 @@ func (ss *Service) isFirstSync() (bool, error) {
 	return !stored, nil
 }
 
+// setStateMapping stores the contents of a Finalized Block struct with the crystallized
+// state hash as a key.
 func (ss *Service) setStateMapping(crystallizedStateHash [32]byte, block *types.Block) {
 	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
 		BeaconBlock: block,
 	}
 }
 
+// setFinalizedEpochforMapping saves the finalized epoch for the beacon block so that an
+// initial sync can be started.
 func (ss *Service) setFinalizedEpochforMapping(crystallizedStateHash [32]byte, block *types.Block, epoch uint64, CrystallizedState *types.CrystallizedState) {
 	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
 		BeaconBlock:        block,
@@ -246,6 +254,8 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveStateResponse) error {
 	return nil
 }
 
+// GetCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
+// for a beacon block.
 func (ss *Service) GetCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block, err := types.NewBlock(data)
 	if err != nil {
@@ -259,6 +269,8 @@ func (ss *Service) GetCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, pe
 	return nil
 }
 
+// SetFinalizedEpochFromCrystallizedState receives the crystallized state response from the peer
+// and sets the finalized epoch for the beacon block.
 func (ss *Service) SetFinalizedEpochFromCrystallizedState(data *pb.CrystallizedStateResponse) error {
 	state := types.NewCrystallizedState(data)
 
@@ -285,6 +297,8 @@ func (ss *Service) SetFinalizedEpochFromCrystallizedState(data *pb.CrystallizedS
 	return nil
 }
 
+// validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
+// routine can be added to the chain.
 func (ss *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 	block, err := types.NewBlock(data)
 	if err != nil {
@@ -306,12 +320,9 @@ func (ss *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error 
 	return nil
 }
 
-/* findLatestFinalizedBlock will retrieve the initial finalized block to be
-saved, after the inital block has been saved syncing will be carried out by
-a separate routine(not implemented yet). This checks the last 20 received
-blocks for their finalized epoch and uses the block with the largest finalized
-epoch as the starting point for the sync.
-*/
+// findLatestFinalizedBlock will retrieve the initial finalized block to be
+// saved, after the inital block has been saved syncing will be carried out by
+// a separate routine(not implemented yet).
 func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 
 	sync, err := ss.isFirstSync()
@@ -349,6 +360,7 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 	return nil
 }
 
+// writeBlockToDB saves the corresponding block to the local DB.
 func (ss *Service) writeBlockToDB(block *types.Block) error {
 
 	if err := ss.chainService.SaveBlockToDB(block); err != nil {
