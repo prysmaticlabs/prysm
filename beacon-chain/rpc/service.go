@@ -89,11 +89,14 @@ func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignR
 
 // LatestBeaconBlock streams the latest beacon chain data.
 func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
+	log.Info("Latest beacon block stream being called!!!!")
 	for {
 		select {
+		case <-stream.Context().Done():
+			return nil
 		case block := <-s.chainService.BeaconBlockChan():
 			if err := stream.Send(block.Proto()); err != nil {
-				log.Errorf("Could not send latest beacon block via stream: %v", err)
+				return fmt.Errorf("Could not send latest beacon block via stream: %v", err)
 			}
 		}
 	}
@@ -103,9 +106,11 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
 	for {
 		select {
+		case <-stream.Context().Done():
+			return nil
 		case crystallizedState := <-s.chainService.CrystallizedStateChan():
 			if err := stream.Send(crystallizedState.Proto()); err != nil {
-				log.Errorf("Could not send latest crystallized state via stream: %v", err)
+				return fmt.Errorf("Could not send latest crystallized state via stream: %v", err)
 			}
 		}
 	}

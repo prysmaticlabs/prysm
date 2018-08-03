@@ -3,7 +3,6 @@
 package attester
 
 import (
-	"bytes"
 	"context"
 	"io"
 
@@ -40,7 +39,7 @@ func (at *Attester) Start() {
 	log.Info("Starting attester service")
 	rpcClient := at.clientService.BeaconServiceClient()
 	go at.fetchBeaconBlocks(rpcClient)
-	go at.fetchCrystallizedState(rpcClient)
+	// go at.fetchCrystallizedState(rpcClient)
 }
 
 // Stop the main loop for notarizing collations.
@@ -73,65 +72,65 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 	}
 }
 
-func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
-	stream, err := client.LatestCrystallizedState(at.ctx, nil)
-	if err != nil {
-		log.Fatalf("Could not setup crystallized beacon state streaming client: %v", err)
-	}
-	for {
-		crystallizedState, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("Could not receive latest crystallized beacon state from stream: %v", err)
-		}
-		// After receiving the crystallized state, get the number of active validators
-		// and this attester's index in the list.
-		activeValidators := crystallizedState.GetActiveValidators()
-		validatorCount := len(activeValidators)
+// func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
+// 	stream, err := client.LatestCrystallizedState(at.ctx, nil)
+// 	if err != nil {
+// 		log.Fatalf("Could not setup crystallized beacon state streaming client: %v", err)
+// 	}
+// 	for {
+// 		crystallizedState, err := stream.Recv()
+// 		if err == io.EOF {
+// 			break
+// 		}
+// 		if err != nil {
+// 			log.Fatalf("Could not receive latest crystallized beacon state from stream: %v", err)
+// 		}
+// 		// After receiving the crystallized state, get the number of active validators
+// 		// and this attester's index in the list.
+// 		activeValidators := crystallizedState.GetActiveValidators()
+// 		validatorCount := len(activeValidators)
 
-		for i, val := range activeValidators {
-			// TODO: Check the public key instead of withdrawal address. This will
-			// use BLS.
-			if bytes.Equal(val.GetWithdrawalAddress(), []byte{}) {
-				at.validatorIndex = i
-				break
-			}
-		}
+// 		for i, val := range activeValidators {
+// 			// TODO: Check the public key instead of withdrawal address. This will
+// 			// use BLS.
+// 			if bytes.Equal(val.GetWithdrawalAddress(), []byte{}) {
+// 				at.validatorIndex = i
+// 				break
+// 			}
+// 		}
 
-		// If validator index was not set, keep listening for crystallized states.
-		if &at.validatorIndex == nil {
-			continue
-		}
+// 		// If validator index was not set, keep listening for crystallized states.
+// 		if &at.validatorIndex == nil {
+// 			continue
+// 		}
 
-		res, err := client.ShuffleValidators(at.ctx, &pb.ShuffleRequest{
-			ValidatorCount: uint64(validatorCount),
-			ValidatorIndex: uint64(at.validatorIndex),
-		})
-		if err != nil {
-			log.Errorf("Could not shuffle validator list: %v", err)
-			continue
-		}
-		// Based on the cutoff and assigned heights, determine the beacon block
-		// height at which attester has to perform its responsibility.
-		currentAssignedHeights := res.GetAssignedAttestationHeights()
-		currentCutoffs := res.GetCutoffIndices()
+// 		res, err := client.ShuffleValidators(at.ctx, &pb.ShuffleRequest{
+// 			ValidatorCount: uint64(validatorCount),
+// 			ValidatorIndex: uint64(at.validatorIndex),
+// 		})
+// 		if err != nil {
+// 			log.Errorf("Could not shuffle validator list: %v", err)
+// 			continue
+// 		}
+// 		// Based on the cutoff and assigned heights, determine the beacon block
+// 		// height at which attester has to perform its responsibility.
+// 		currentAssignedHeights := res.GetAssignedAttestationHeights()
+// 		currentCutoffs := res.GetCutoffIndices()
 
-		// The algorithm functions as follows:
-		// Given a list of heights: [0 19 38 57 12 31 50] and
-		// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
-		// if the validator index is between 0-142, it can attest at height 0, if it is
-		// between 142-285, that validator can attest at height 19, etc.
-		heightIndex := 0
-		for i := 0; i < len(currentCutoffs)-1; i++ {
-			lowCutoff := currentCutoffs[i]
-			highCutoff := currentCutoffs[i+1]
-			if (uint64(at.validatorIndex) >= lowCutoff) && (uint64(at.validatorIndex) <= highCutoff) {
-				break
-			}
-			heightIndex++
-		}
-		at.assignedHeight = currentAssignedHeights[heightIndex]
-	}
-}
+// 		// The algorithm functions as follows:
+// 		// Given a list of heights: [0 19 38 57 12 31 50] and
+// 		// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
+// 		// if the validator index is between 0-142, it can attest at height 0, if it is
+// 		// between 142-285, that validator can attest at height 19, etc.
+// 		heightIndex := 0
+// 		for i := 0; i < len(currentCutoffs)-1; i++ {
+// 			lowCutoff := currentCutoffs[i]
+// 			highCutoff := currentCutoffs[i+1]
+// 			if (uint64(at.validatorIndex) >= lowCutoff) && (uint64(at.validatorIndex) <= highCutoff) {
+// 				break
+// 			}
+// 			heightIndex++
+// 		}
+// 		at.assignedHeight = currentAssignedHeights[heightIndex]
+// 	}
+// }

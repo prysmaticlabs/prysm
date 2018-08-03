@@ -118,12 +118,14 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
+	c.latestBeaconBlock <- block
 	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
 	if err != nil {
 		return err
 	}
 	if canProcess {
-		c.latestBeaconBlock <- block
+		// c.latestBeaconBlock <- block
+		return nil
 	}
 	return nil
 }
