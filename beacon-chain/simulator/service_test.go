@@ -168,7 +168,7 @@ func TestCrystallizedRequestResponse(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	state := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 99})
+	state := types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 99})
 
 	h, err := state.Hash()
 	if err != nil {

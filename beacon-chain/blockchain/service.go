@@ -173,9 +173,8 @@ func (c *ChainService) updateChainState() {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			currentslot := block.SlotNumber()
-
-			transition := c.chain.IsEpochTransition(currentslot)
+			// Entering epoch transitions.
+			transition := c.chain.IsEpochTransition(block.SlotNumber())
 			if transition {
 				if err := c.chain.calculateRewardsFFG(); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)

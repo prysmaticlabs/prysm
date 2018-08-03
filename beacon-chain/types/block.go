@@ -17,14 +17,6 @@ type Block struct {
 	data *pb.BeaconBlockResponse
 }
 
-// AggregateVote contains the fields of aggregate vote in individual shard.
-type AggregateVote struct {
-	ShardID        uint32 // Shard ID of the voted shard.
-	ShardBlockHash []byte // ShardBlockHash is the shard block hash of the voted shard.
-	SignerBitmask  []byte // SignerBitmask is the bit mask of every validator that signed.
-	AggregateSig   []uint // AggregateSig is the aggregated signatures of individual shard.
-}
-
 // NewBlock explicitly sets the data field of a block.
 func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
 	if len(data.ParentHash) != 32 {
@@ -71,9 +63,9 @@ func (b *Block) SlotNumber() uint64 {
 	return b.data.SlotNumber
 }
 
-// MainChainRef returns a keccak256 hash corresponding to a PoW chain block.
-func (b *Block) MainChainRef() common.Hash {
-	return common.BytesToHash(b.data.MainChainRef)
+// PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
+func (b *Block) PowChainRef() common.Hash {
+	return common.BytesToHash(b.data.PowChainRef)
 }
 
 // RandaoReveal returns the blake2b randao hash.

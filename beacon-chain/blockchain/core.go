@@ -135,14 +135,14 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 // IsEpochTransition checks if the current slotNumber divided by the epoch length(64 slots)
 // is greater than the current epoch.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
-	currentEpoch := b.state.CrystallizedState.CurrentEpoch()
+	currentEpoch := b.state.CrystallizedState.EpochNumber()
 	isTransition := (slotNumber / params.EpochLength) > currentEpoch
 	return isTransition
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
 func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
-	if _, err := fetcher.BlockByHash(context.Background(), block.MainChainRef()); err != nil {
+	if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
 		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 	}
 
@@ -213,8 +213,8 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 	// TODO: Verify randao reveal from validator's hash pre image.
 
 	return types.NewActiveState(&pb.ActiveStateResponse{
-		TotalAttesterDeposits: 0,
-		AttesterBitfield:      []byte{},
+		PendingAttestations: []*pb.AttestationRecord{},
+		RecentBlockHashes:   [][]byte{},
 	}), nil
 }
 
@@ -261,9 +261,9 @@ func (b *BeaconChain) rotateValidatorSet() ([]*pb.ValidatorRecord, []*pb.Validat
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
-	attesterCount := math.Min(params.AttesterCount, float64(b.CrystallizedState().ActiveValidatorsLength()))
+	attesterCount := math.Min(params.AttesterCount, float64(b.CrystallizedState().ValidatorsLength()))
 
-	indices, err := utils.ShuffleIndices(seed, b.CrystallizedState().ActiveValidatorsLength())
+	indices, err := utils.ShuffleIndices(seed, b.CrystallizedState().ValidatorsLength())
 	if err != nil {
 		return nil, -1, err
 	}
@@ -275,7 +275,7 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 func (b *BeaconChain) calculateRewardsFFG() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	activeValidators := b.state.CrystallizedState.ActiveValidators()
+	activeValidators := b.state.CrystallizedState.Validators()
 	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits()
 	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
