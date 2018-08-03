@@ -9,7 +9,13 @@ import (
 )
 
 func TestFaultyShuffleIndices(t *testing.T) {
-	if _, err := ShuffleIndices(common.Hash{'a'}, params.MaxValidators+1); err == nil {
+	var list []int
+
+	for i := 0; i < params.MaxValidators+1; i++ {
+		list = append(list, i)
+	}
+
+	if _, err := ShuffleIndices(common.Hash{'a'}, list); err == nil {
 		t.Error("Shuffle should have failed when validator count exceeds MaxValidators")
 	}
 }
@@ -17,16 +23,25 @@ func TestFaultyShuffleIndices(t *testing.T) {
 func TestShuffleIndices(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
+	var list1 []int
 
-	list1, err := ShuffleIndices(hash1, 100)
+	for i := 0; i < 100; i++ {
+		list1 = append(list1, i)
+	}
+
+	list2 := make([]int, len(list1))
+	copy(list2, list1)
+
+	list1, err := ShuffleIndices(hash1, list1)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
 
-	list2, err := ShuffleIndices(hash2, 100)
+	list2, err = ShuffleIndices(hash2, list2)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	}
+
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
 	}

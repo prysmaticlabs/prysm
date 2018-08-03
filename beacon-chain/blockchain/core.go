@@ -34,6 +34,11 @@ type beaconState struct {
 	CrystallizedState *types.CrystallizedState
 }
 
+type beaconCommittee struct {
+	shardID   int
+	committee []int
+}
+
 // NewBeaconChain initializes an instance using genesis state parameters if
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
@@ -136,8 +141,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 // is greater than the current epoch.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	currentEpoch := b.state.CrystallizedState.EpochNumber()
-	isTransition := (slotNumber / params.EpochLength) > currentEpoch
-	return isTransition
+	return slotNumber >= currentEpoch * params.EpochLength
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
@@ -283,7 +287,7 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 	totalFactor := uint64(totalDeposit * 2)
 
 	if attesterFactor >= totalFactor {
-		log.Info("Setting justified epoch to current epoch: %v", b.CrystallizedState().CurrentEpoch())
+		log.Info("Setting justified epoch to current epoch: %v", b.CrystallizedState().EpochNumber())
 		b.state.CrystallizedState.UpdateJustifiedEpoch()
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
@@ -305,7 +309,7 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 		log.Info("Resetting total attester deposit to zero")
 		b.ActiveState().SetTotalAttesterDeposits(0)
 
-		b.CrystallizedState().UpdateActiveValidators(activeValidators)
+		b.CrystallizedState().UpdateValidators(activeValidators)
 		err := b.PersistActiveState()
 		if err != nil {
 			return err
@@ -342,11 +346,12 @@ func (b *BeaconChain) voted(index int) (bool, error) {
 }
 
 // resetAttesterBitfield resets the attester bit field of active state to zeros.
-func (b *BeaconChain) resetAttesterBitfield() {
-	newbitfields := make([]byte, b.CrystallizedState().ActiveValidatorsLength()/8)
+func (b *BeaconChain) resetAttesterBitfield(record *pb.AttestationRecord) {
+	newbitfields := []byte{}
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
 
+// validatorIndices selects the active validators and returns their indices in a list.
 func (b *BeaconChain) validatorIndices() []int {
 	var indices []int
 	validators := b.CrystallizedState().Validators()
@@ -357,4 +362,46 @@ func (b *BeaconChain) validatorIndices() []int {
 		}
 	}
 	return indices
+}
+
+// validatorsByHeightShard splits a shuffled validator list by height and by shard,
+// it ensures there's enough validators per height and per shard, if not, it'll skip
+// some heights and shards.
+func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
+	indices := b.validatorIndices()
+	var committeesPerSlot int
+	var slotsPerCommittee int
+	var committees []*beaconCommittee
+
+	if len(indices) >= params.EpochLength*params.MinCommiteeSize {
+		committeesPerSlot = len(indices)/params.EpochLength/(params.MinCommiteeSize*2) + 1
+		slotsPerCommittee = 1
+	} else {
+		committeesPerSlot = 1
+		slotsPerCommittee = 1
+		for len(indices)*slotsPerCommittee < params.MinCommiteeSize && slotsPerCommittee < params.EpochLength {
+			slotsPerCommittee *= 2
+		}
+	}
+
+	// split the shuffled list for heights
+	shuffledList, err := utils.ShuffleIndices(b.state.CrystallizedState.DynastySeed(), indices)
+	if err != nil {
+		return nil, err
+	}
+
+	heightList := utils.SplitIndices(shuffledList, params.EpochLength)
+
+	// split the shuffled height list for shards
+	for i, subList := range heightList {
+		shardList := utils.SplitIndices(subList, params.MinCommiteeSize)
+		for _, shardIndex := range shardList {
+			shardID := int(b.CrystallizedState().CrosslinkingStartShard()) + i*committeesPerSlot/slotsPerCommittee
+			committees = append(committees, &beaconCommittee{
+				shardID:   shardID,
+				committee: shardIndex,
+			})
+		}
+	}
+	return committees, nil
 }

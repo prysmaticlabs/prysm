@@ -142,7 +142,7 @@ func TestGetAttestersProposer(t *testing.T) {
 	}
 
 	_, crystallized := types.NewGenesisStates()
-	crystallized.UpdateActiveValidators(validators)
+	crystallized.UpdateValidators(validators)
 	beaconChain.MutateCrystallizedState(crystallized)
 
 	attesters, proposer, err := beaconChain.getAttestersProposer(common.Hash{'A'})
@@ -195,7 +195,7 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 5})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 5})
 	beaconChain.state.CrystallizedState = crystallized
 	crystallizedHash, err := crystallized.Hash()
 	if err != nil {
@@ -254,7 +254,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 10000})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 10000})
 	crystallizedStateHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
@@ -279,7 +279,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 
 	// Test negative scenario where crystallized state hash is different than node's compute
-	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 9999})
+	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 9999})
 
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
@@ -302,7 +302,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	}
 	beaconChain.state.ActiveState = active
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 10000})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 10000})
 	crystallizedStateHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
@@ -391,7 +391,7 @@ func TestRotateValidatorSet(t *testing.T) {
 		{Balance: 99999, WithdrawalAddress: []byte{'O'}},
 	}
 
-	beaconChain.CrystallizedState().UpdateActiveValidators(activeValidators)
+	beaconChain.CrystallizedState().UpdateValidators(activeValidators)
 	beaconChain.CrystallizedState().UpdateQueuedValidators(queuedValidators)
 	beaconChain.CrystallizedState().UpdateExitedValidators(exitedValidators)
 
@@ -422,7 +422,7 @@ func TestIsEpochTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 1})); err != nil {
+	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 1})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 	if !beaconChain.IsEpochTransition(128) {
@@ -480,7 +480,7 @@ func TestResetAttesterBitfields(t *testing.T) {
 			validators = append(validators, validator)
 		}
 
-		beaconChain.CrystallizedState().UpdateActiveValidators(validators)
+		beaconChain.CrystallizedState().UpdateValidators(validators)
 
 		testAttesterBitfield := []byte{2, 4, 6, 9}
 		if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})); err != nil {
@@ -522,12 +522,12 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	data := &pb.CrystallizedStateResponse{CurrentEpoch: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	data := &pb.CrystallizedStateResponse{EpochNumber: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
 	beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data))
 
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
 		beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(4) ||
-		beaconChain.state.CrystallizedState.CurrentEpoch() != uint64(5) {
+		beaconChain.state.CrystallizedState.EpochNumber() != uint64(5) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
@@ -540,12 +540,12 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
 	}
 
-	data = &pb.CrystallizedStateResponse{CurrentEpoch: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	data = &pb.CrystallizedStateResponse{EpochNumber: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
 	beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data))
 
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
 		beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(4) ||
-		beaconChain.state.CrystallizedState.CurrentEpoch() != uint64(8) {
+		beaconChain.state.CrystallizedState.EpochNumber() != uint64(8) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
@@ -570,10 +570,10 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 
 	data := &pb.CrystallizedStateResponse{
-		ActiveValidators:   validators,
+		Validators:         validators,
 		CurrentCheckPoint:  []byte("checkpoint"),
 		TotalDeposits:      40000,
-		CurrentEpoch:       5,
+		EpochNumber:        5,
 		LastJustifiedEpoch: 4,
 		LastFinalizedEpoch: 3,
 	}
@@ -597,14 +597,14 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(4) {
 		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
 	}
-	if beaconChain.CrystallizedState().ActiveValidators()[0].Balance != uint64(1001) {
-		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().ActiveValidators()[1].Balance)
+	if beaconChain.CrystallizedState().Validators()[0].Balance != uint64(1001) {
+		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
 	}
-	if beaconChain.CrystallizedState().ActiveValidators()[7].Balance != uint64(999) {
-		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().ActiveValidators()[1].Balance)
+	if beaconChain.CrystallizedState().Validators()[7].Balance != uint64(999) {
+		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
 	}
-	if beaconChain.CrystallizedState().ActiveValidators()[29].Balance != uint64(999) {
-		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().ActiveValidators()[1].Balance)
+	if beaconChain.CrystallizedState().Validators()[29].Balance != uint64(999) {
+		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
 	}
 	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(0) {
 		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())

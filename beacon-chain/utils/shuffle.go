@@ -7,20 +7,15 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-// ShuffleIndices returns a list of pseudorandomly sampled
+// validatorList returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
-func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
-	if validatorCount > params.MaxValidators {
+func ShuffleIndices(seed common.Hash, validatorList []int) ([]int, error) {
+	if len(validatorList) > params.MaxValidators {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}
 
-	// construct a list of indices up to MaxValidators.
-	validatorList := make([]int, validatorCount)
-	for i := range validatorList {
-		validatorList[i] = i
-	}
-
 	hashSeed := blake2b.Sum256(seed[:])
+	validatorCount := len(validatorList)
 
 	// shuffle stops at the second to last index.
 	for i := 0; i < validatorCount-1; i++ {
