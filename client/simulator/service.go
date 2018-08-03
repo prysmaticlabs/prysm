@@ -46,7 +46,7 @@ func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.S
 		shardID: shardID,
 		ctx:     ctx,
 		cancel:  cancel,
-		delay:   delay
+		delay:   delay,
 	}, nil
 }
 
