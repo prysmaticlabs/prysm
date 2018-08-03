@@ -336,7 +336,7 @@ func (ss *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error 
 }
 
 // findLatestFinalizedBlock will retrieve the initial finalized block to be
-// saved, after the inital block has been saved syncing will be carried out by
+// saved, after the initial block has been saved syncing will be carried out by
 // a separate routine(not implemented yet).
 func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 
@@ -377,11 +377,7 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 
 // writeBlockToDB saves the corresponding block to the local DB.
 func (ss *Service) writeBlockToDB(block *types.Block) error {
-
-	if err := ss.chainService.SaveBlock(block); err != nil {
-		return err
-	}
-	return nil
+	return ss.chainService.SaveBlock(block)
 }
 
 func (ss *Service) blockFetcher(done <-chan struct{}) {
