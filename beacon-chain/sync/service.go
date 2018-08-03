@@ -35,8 +35,8 @@ type Service struct {
 	crystallizedStateBuf        chan p2p.Message
 	announceActiveHashBuf       chan p2p.Message
 	activeStateBuf              chan p2p.Message
-	stateMapping                map[[32]byte]FinalizedBlock
-	syncMode                    int
+	storedFinalizedBlocks       map[[32]byte]FinalizedBlock
+	syncMode                    Mode
 	currentSlotNumber           uint64
 }
 
@@ -48,6 +48,7 @@ type Config struct {
 	ActiveStateBufferSize           int
 	CrystallizedStateHashBufferSize int
 	CrystallizedStateBufferSize     int
+	SyncMode                        Mode
 }
 
 // FinalizedBlock stores information regarding a block, its finalized epoch and the contents
@@ -58,15 +59,29 @@ type FinalizedBlock struct {
 	CrystallizedState  *types.CrystallizedState
 }
 
+type Mode int
+
+const (
+	SYNCMODE_INITIAL Mode = 0
+	SYNCMODE_DEFAULT Mode = 1
+)
+
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
-	return Config{100, 100, 100, 100, 100, 100}
+	return Config{
+		BlockHashBufferSize:             100,
+		BlockBufferSize:                 100,
+		ActiveStateHashBufferSize:       100,
+		ActiveStateBufferSize:           100,
+		CrystallizedStateHashBufferSize: 100,
+		CrystallizedStateBufferSize:     100,
+		SyncMode:                        SYNCMODE_DEFAULT,
+	}
 }
 
 // NewSyncService accepts a context and returns a new Service.
 func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
-	// 1 represents default sync and 0 , initial sync
-	mode := 1
+
 	ctx, cancel := context.WithCancel(ctx)
 	stored, err := cs.HasStoredState()
 
@@ -76,7 +91,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		return nil
 	}
 	if !stored {
-		mode = 0
+		cfg.SyncMode = SYNCMODE_INITIAL
 	}
 
 	return &Service{
@@ -90,8 +105,8 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		crystallizedStateBuf:        make(chan p2p.Message, cfg.ActiveStateBufferSize),
 		announceActiveHashBuf:       make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
 		activeStateBuf:              make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
-		stateMapping:                make(map[[32]byte]FinalizedBlock),
-		syncMode:                    mode,
+		storedFinalizedBlocks:       make(map[[32]byte]FinalizedBlock),
+		syncMode:                    cfg.SyncMode,
 		currentSlotNumber:           0,
 	}
 }
@@ -129,10 +144,10 @@ func (ss *Service) isFirstSync() (bool, error) {
 	return !stored, nil
 }
 
-// setStateMapping stores the contents of a Finalized Block struct with the crystallized
+// setFinalizedBlock stores the contents of a Finalized Block struct with the crystallized
 // state hash as a key.
-func (ss *Service) setStateMapping(crystallizedStateHash [32]byte, block *types.Block) {
-	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
+func (ss *Service) setFinalizedBlock(crystallizedStateHash [32]byte, block *types.Block) {
+	ss.storedFinalizedBlocks[crystallizedStateHash] = FinalizedBlock{
 		BeaconBlock: block,
 	}
 }
@@ -140,7 +155,7 @@ func (ss *Service) setStateMapping(crystallizedStateHash [32]byte, block *types.
 // setFinalizedEpochforMapping saves the finalized epoch for the beacon block so that an
 // initial sync can be started.
 func (ss *Service) setFinalizedEpochforMapping(crystallizedStateHash [32]byte, block *types.Block, epoch uint64, CrystallizedState *types.CrystallizedState) {
-	ss.stateMapping[crystallizedStateHash] = FinalizedBlock{
+	ss.storedFinalizedBlocks[crystallizedStateHash] = FinalizedBlock{
 		BeaconBlock:        block,
 		LastFinalizedEpoch: epoch,
 		CrystallizedState:  CrystallizedState,
@@ -265,7 +280,7 @@ func (ss *Service) GetCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, pe
 
 	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
 	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
-	ss.setStateMapping(h, block)
+	ss.setFinalizedBlock(h, block)
 	return nil
 }
 
@@ -279,12 +294,12 @@ func (ss *Service) SetFinalizedEpochFromCrystallizedState(data *pb.CrystallizedS
 		return fmt.Errorf("could not hash crystallized state: %v", err)
 	}
 	if ss.chainService.ContainsCrystallizedState(h) {
-		log.WithFields(logrus.Fields{"crystallizedStateHash": h}).Debug("Crystallized state hash exists locally")
+		log.WithField("crystallizedStateHash", fmt.Sprintf("0x%x", h)).Debug("Crystallized state hash exists locally")
 		return nil
 	}
-	log.Debugf("Successfully received incoming crystallized state with hash: %x", h)
+	log.Debugf("Successfully received incoming crystallized state with hash: %0x", h)
 
-	finalizedBlock, ok := ss.stateMapping[h]
+	finalizedBlock, ok := ss.storedFinalizedBlocks[h]
 	if !ok {
 		if err := ss.chainService.ProcessCrystallizedState(state); err != nil {
 			return fmt.Errorf("could not process crystallized state: %v", err)
@@ -335,16 +350,16 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 		return nil
 	}
 
-	if len(ss.stateMapping) > 20 {
+	if len(ss.storedFinalizedBlocks) > 20 {
 		epoch := uint64(0)
 		var hash [32]byte
-		for k, v := range ss.stateMapping {
+		for k, v := range ss.storedFinalizedBlocks {
 			if v.LastFinalizedEpoch > epoch {
 				epoch = v.LastFinalizedEpoch
 				hash = k
 			}
 		}
-		finalizedBlock, ok := ss.stateMapping[hash]
+		finalizedBlock, ok := ss.storedFinalizedBlocks[hash]
 
 		if !ok {
 			return fmt.Errorf("unable to retrieve finalized block with hash %x", hash)
@@ -363,7 +378,7 @@ func (ss *Service) findAndSaveLatestFinalizedBlock() error {
 // writeBlockToDB saves the corresponding block to the local DB.
 func (ss *Service) writeBlockToDB(block *types.Block) error {
 
-	if err := ss.chainService.SaveBlockToDB(block); err != nil {
+	if err := ss.chainService.SaveBlock(block); err != nil {
 		return err
 	}
 	return nil

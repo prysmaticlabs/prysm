@@ -114,7 +114,7 @@ func (ms *mockChainService) HasStoredState() (bool, error) {
 	return false, nil
 }
 
-func (ms *mockChainService) SaveBlockToDB(block *types.Block) error {
+func (ms *mockChainService) SaveBlock(block *types.Block) error {
 	return nil
 }
 
@@ -700,7 +700,7 @@ func TestGetCrystallizedStateFromPeer(t *testing.T) {
 
 	copy(hash[:], generichash)
 
-	block, ok := ss.stateMapping[hash]
+	block, ok := ss.storedFinalizedBlocks[hash]
 
 	if !ok {
 		t.Fatalf("Key value pair does not exist for the hash: %v", block)
@@ -764,7 +764,7 @@ func TestSetFinalizedEpochFromCrystallizedState(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, ok := ss.stateMapping[crystallisedHash]
+	block, ok := ss.storedFinalizedBlocks[crystallisedHash]
 
 	if !ok {
 		t.Fatalf("Key value pair does not exist for the hash: %v", block)
@@ -829,7 +829,7 @@ func TestFindAndSaveLastFinalizedBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, ok := ss.stateMapping[hash]
+	block, ok := ss.storedFinalizedBlocks[hash]
 
 	if !ok {
 		t.Fatalf("Key value pair does not exist for the hash: %v", block)

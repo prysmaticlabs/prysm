@@ -444,7 +444,7 @@ func (b *BeaconChain) computeValidatorRewardsAndPenalties() error {
 	return nil
 }
 
-func (b *BeaconChain) saveBlockToDB(block *types.Block) error {
+func (b *BeaconChain) saveBlock(block *types.Block) error {
 	encodedState, err := block.Marshal()
 	if err != nil {
 		return err
