@@ -209,7 +209,7 @@ func TestConstructAttesterRequest(t *testing.T) {
 	node := &mockNode{
 		t:       t,
 		smc:     smc,
-		Backend: backend
+		Backend: backend,
 	}
 
 	// Fast forward to next period.

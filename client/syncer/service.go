@@ -46,7 +46,7 @@ func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Serv
 		ctx:          ctx,
 		cancel:       cancel,
 		msgChan:      nil,
-		bodyRequests: nil
+		bodyRequests: nil,
 	}, nil
 }
 

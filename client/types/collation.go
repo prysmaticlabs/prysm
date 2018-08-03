@@ -47,9 +47,9 @@ type collationHeaderData struct {
 // and provide the body and transactions upon creation.
 func NewCollation(header *CollationHeader, body []byte, transactions []*gethTypes.Transaction) *Collation {
 	return &Collation{
-		header: header,
-		body: body,
-		transactions: transactions
+		header:       header,
+		body:         body,
+		transactions: transactions,
 	}
 }
 
