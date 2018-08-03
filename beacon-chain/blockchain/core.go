@@ -90,7 +90,10 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		return nil, err
 	}
 	if genesisExists {
-		bytes, _ := b.db.Get([]byte("genesis"))
+		bytes, err := b.db.Get([]byte("genesis"))
+		if err != nil {
+			return nil, err
+		}
 		block := &pb.BeaconBlockResponse{}
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
