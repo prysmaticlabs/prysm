@@ -692,7 +692,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	<-exitRoutine
 
 	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("last finalized epoch not set: %v", blockResponse.GetSlotNumber())
+		t.Fatalf("slotnumber not updated: %v", blockResponse.GetSlotNumber())
 	}
 
 	hook.Reset()
@@ -732,7 +732,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.blockBuf <- msg1
 
 	if blockResponse.GetSlotNumber() == ss.currentSlotNumber {
-		t.Fatalf("last finalized epoch not set: %v", blockResponse.GetSlotNumber())
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", blockResponse.GetSlotNumber())
 	}
 
 	blockResponse.SlotNumber = 21
@@ -742,7 +742,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	<-exitRoutine
 
 	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("last finalized epoch not set: %v", blockResponse.GetSlotNumber())
+		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", blockResponse.GetSlotNumber())
 	}
 
 	hook.Reset()
