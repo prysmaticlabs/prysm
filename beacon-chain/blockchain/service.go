@@ -200,9 +200,9 @@ func (c *ChainService) updateChainState() {
 
 			currentslot := block.SlotNumber()
 
-			transition := c.chain.isEpochTransition(currentslot)
+			transition := c.chain.IsEpochTransition(currentslot)
 			if transition {
-				if err := c.chain.computeValidatorRewardsAndPenalties(); err != nil {
+				if err := c.chain.calculateRewardsFFG(); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
 				}
 			}

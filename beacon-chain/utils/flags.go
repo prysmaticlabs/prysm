@@ -26,4 +26,10 @@ var (
 		Name:  "pubkey",
 		Usage: "Validator's public key. Beacon chain node will listen to VRC log to determine when registration has completed based on this public key address.",
 	}
+	// RPCPort defines a beacon node RPC port to open.
+	RPCPort = cli.StringFlag{
+		Name:  "rpc-port",
+		Usage: "RPC port exposed by a beacon node",
+		Value: "4000",
+	}
 )

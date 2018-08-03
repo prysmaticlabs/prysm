@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -64,13 +65,15 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if ctx.GlobalBool(utils.SimulatorFlag.Name) {
-		if err := beacon.registerSimulatorService(); err != nil {
-			return nil, err
-		}
+	if err := beacon.registerSimulatorService(ctx); err != nil {
+		return nil, err
 	}
 
 	if err := beacon.registerSyncService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerRPCService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +183,10 @@ func (b *BeaconNode) registerSyncService() error {
 	return b.services.RegisterService(syncService)
 }
 
-func (b *BeaconNode) registerSimulatorService() error {
+func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
+	if !ctx.GlobalBool(utils.SimulatorFlag.Name) {
+		return nil
+	}
 	var p2pService *p2p.Server
 	if err := b.services.FetchService(&p2pService); err != nil {
 		return err
@@ -199,4 +205,12 @@ func (b *BeaconNode) registerSimulatorService() error {
 	cfg := simulator.DefaultConfig()
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service, chainService)
 	return b.services.RegisterService(simulatorService)
+}
+
+func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
+	port := ctx.GlobalString(utils.RPCPort.Name)
+	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
+		Port: port,
+	})
+	return b.services.RegisterService(rpcService)
 }

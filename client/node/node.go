@@ -5,6 +5,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/observer"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/proposer"
+	"github.com/prysmaticlabs/prysm/client/rpcclient"
 	"github.com/prysmaticlabs/prysm/client/simulator"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
@@ -83,6 +85,10 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 	}
 
 	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+		return nil, err
+	}
+
+	if err := shardEthereum.registerBeaconRPCService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -264,4 +270,12 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 		return fmt.Errorf("could not register syncer service: %v", err)
 	}
 	return s.services.RegisterService(sync)
+}
+
+func (s *ShardEthereum) registerBeaconRPCService(ctx *cli.Context) error {
+	endpoint := ctx.GlobalString(utils.BeaconRPCProviderFlag.Name)
+	rpcService := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{
+		Endpoint: endpoint,
+	})
+	return s.services.RegisterService(rpcService)
 }

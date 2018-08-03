@@ -9,11 +9,11 @@ contract ValidatorRegistration {
     );
 
     mapping (bytes32 => bool) public usedPubkey;
-    
+
     uint public constant VALIDATOR_DEPOSIT = 32 ether;
 
-    // Validator registers by sending a transaction of 32ETH to 
-    // the following deposit function. The deposit function takes in 
+    // Validator registers by sending a transaction of 32ETH to
+    // the following deposit function. The deposit function takes in
     // validator's public key, withdrawal shard ID (which shard
     // to send the deposit back to), withdrawal address (which address
     // to send the deposit back to) and randao commitment.

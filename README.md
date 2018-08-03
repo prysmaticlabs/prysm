@@ -15,7 +15,7 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 # Table of Contents
 
 -   [Installation](#installation)
--   [Sharding Instructions](#sharding)
+-   [Sharding Instructions](#sharding-instructions)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
