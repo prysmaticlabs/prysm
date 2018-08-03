@@ -87,9 +87,8 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 
 	if err != nil {
 		log.Errorf("error retrieving stored state: %v", err)
-		cancel()
-		return nil
 	}
+
 	if !stored {
 		cfg.SyncMode = SYNCMODE_INITIAL
 	}
