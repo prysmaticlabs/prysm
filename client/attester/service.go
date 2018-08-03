@@ -70,6 +70,7 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		// its responsibilities.
 
 		// TODO: determine height based on slot number and epoch.
+		//
 		// if &at.assignedHeight != nil && beaconData.GetHeight() == at.assignedHeight {
 		// 	log.Info("Assigned attestation height reached, performing attestation responsibility")
 		// }
@@ -94,17 +95,21 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		activeValidators := crystallizedState.GetActiveValidators()
 		validatorCount := len(activeValidators)
 
+		validatorIndexSet := false
+
 		for i, val := range activeValidators {
 			// TODO: Check the public key instead of withdrawal address. This will
 			// use BLS.
 			if bytes.Equal(val.GetWithdrawalAddress(), []byte{}) {
 				at.validatorIndex = i
+				validatorIndexSet = true
 				break
 			}
 		}
 
-		// If validator index was not set, keep listening for crystallized states.
-		if &at.validatorIndex == nil {
+		// If validator was not found in the validator set was not set, keep listening for
+		// crystallized states.
+		if !validatorIndexSet {
 			continue
 		}
 
@@ -112,7 +117,7 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			ValidatorCount: uint64(validatorCount),
 			ValidatorIndex: uint64(at.validatorIndex),
 		}
-		log.Infof("Request: %v", req)
+
 		res, err := client.ShuffleValidators(at.ctx, req)
 		if err != nil {
 			log.Errorf("Could not shuffle validator list: %v", err)
