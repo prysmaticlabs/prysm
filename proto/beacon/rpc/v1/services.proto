@@ -28,7 +28,7 @@ message ShuffleResponse {
     repeated uint64 attester_indices = 1;
     repeated uint64 cutoff_indices = 2;
     repeated uint64 proposer_indices = 3;
-    repeated uint64 attestation_heights = 4;
+    repeated uint64 assigned_attestation_heights = 4;
 }
 
 message ProposeRequest {

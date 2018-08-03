@@ -23,6 +23,7 @@ type Attester struct {
 	cancel         context.CancelFunc
 	clientService  *rpcclient.Service
 	validatorIndex int
+	assignedHeight uint64
 }
 
 // NewAttester creates a new attester instance.
@@ -68,8 +69,9 @@ func (at *Attester) fetchBeaconHashHeight(client pb.BeaconServiceClient) {
 		// Based on the height determined from the latest crystallized state, check if
 		// it matches the latest received beacon height. If so, the attester has to perform
 		// its responsibilities.
-
-		// TODO: Attest to block if height matches.
+		if &at.assignedHeight != nil && beaconData.GetHeight() == at.assignedHeight {
+			log.Info("Assigned attestation height reached, performing attestation responsibility")
+		}
 	}
 }
 
@@ -113,10 +115,25 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			log.Errorf("Could not shuffle validator list: %v", err)
 			continue
 		}
-		// Based on the cutoff and attester indices, determine the beacon block
+		// Based on the cutoff and assigned heights, determine the beacon block
 		// height at which attester has to perform its responsibility.
-		// TODO: use res.GetCutoffIndices() and res.GetAttesterIndices() to determine
-		// height of attestation responsibility.
-		log.Info(res)
+		currentAssignedHeights := res.GetAssignedAttestationHeights()
+		currentCutoffs := res.GetCutoffIndices()
+
+		// The algorithm functions as follows:
+		// Given a list of heights: [0 19 38 57 12 31 50] and
+		// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
+		// if the validator index is between 0-142, it can attest at height 0, if it is
+		// between 142-285, that validator can attest at height 19, etc.
+		heightIndex := 0
+		for i := 0; i < len(currentCutoffs)-1; i++ {
+			lowCutoff := currentCutoffs[i]
+			highCutoff := currentCutoffs[i+1]
+			if (uint64(at.validatorIndex) >= lowCutoff) && (uint64(at.validatorIndex) <= highCutoff) {
+				break
+			}
+			heightIndex++
+		}
+		at.assignedHeight = currentAssignedHeights[heightIndex]
 	}
 }
