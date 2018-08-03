@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -34,4 +35,50 @@ func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 		}
 	}
 	return validatorList, nil
+}
+
+// GetCutoffs is used to split up validators into groups at the start
+// of every epoch. It determines at what height validators can make
+// attestations and crosslinks. It returns lists of cutoff indices and heights.
+func GetCutoffs(validatorCount int) ([]int, []int) {
+	var heightCutoff = []int{0}
+	var heights []int
+	var heightCount float64
+
+	// Skip heights if there's not enough validators to fill in a min sized committee.
+	if validatorCount < params.EpochLength*params.MinCommiteeSize {
+		heightCount = math.Floor(float64(validatorCount) / params.MinCommiteeSize)
+		for i := 0; i < int(heightCount); i++ {
+			heights = append(heights, (i*params.Cofactor)%params.EpochLength)
+		}
+		// Enough validators, fill in all the heights.
+	} else {
+		heightCount = params.EpochLength
+		for i := 0; i < int(heightCount); i++ {
+			heights = append(heights, i)
+		}
+	}
+
+	filled := 0
+	appendHeight := false
+	for i := 0; i < params.EpochLength-1; i++ {
+		appendHeight = false
+		for _, height := range heights {
+			if i == height {
+				appendHeight = true
+			}
+		}
+		if appendHeight {
+			filled++
+			heightCutoff = append(heightCutoff, filled*validatorCount/int(heightCount))
+		} else {
+			heightCutoff = append(heightCutoff, heightCutoff[len(heightCutoff)-1])
+		}
+	}
+	heightCutoff = append(heightCutoff, validatorCount)
+
+	// TODO: For the validators assigned to each height, split them up into
+	// committees for different shards. Do not assign the last END_EPOCH_GRACE_PERIOD
+	// heights in a epoch to any shards.
+	return heightCutoff, heights
 }
