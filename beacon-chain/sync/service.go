@@ -59,13 +59,13 @@ type FinalizedBlock struct {
 	CrystallizedState  *types.CrystallizedState
 }
 
-// Defines the type for the sync mode of the client.
+// Mode refers to the type for the sync mode of the client.
 type Mode int
 
 // This specifies the different sync modes.
 const (
-	SyncMode_Initial Mode = 0
-	SyncMode_Default Mode = 1
+	SyncModeInitial Mode = 0
+	SyncModeDefault Mode = 1
 )
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -77,7 +77,7 @@ func DefaultConfig() Config {
 		ActiveStateBufferSize:           100,
 		CrystallizedStateHashBufferSize: 100,
 		CrystallizedStateBufferSize:     100,
-		SyncMode:                        SyncMode_Default,
+		SyncMode:                        SyncModeDefault,
 	}
 }
 
@@ -92,7 +92,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 	}
 
 	if !stored {
-		cfg.SyncMode = SyncMode_Initial
+		cfg.SyncMode = SyncModeInitial
 	}
 
 	return &Service{
