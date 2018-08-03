@@ -346,3 +346,15 @@ func (b *BeaconChain) resetAttesterBitfield() {
 	newbitfields := make([]byte, b.CrystallizedState().ActiveValidatorsLength()/8)
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
+
+func (b *BeaconChain) validatorIndices() []int {
+	var indices []int
+	validators := b.CrystallizedState().Validators()
+	dynasty := b.CrystallizedState().CurrentDynasty()
+	for i := 0; i < len(validators); i++ {
+		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
