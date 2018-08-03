@@ -661,8 +661,9 @@ func TestProcessSameActiveState(t *testing.T) {
 
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
+	interval := time.Duration(100000)
 
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0, SyncPollingInterval: interval}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
@@ -701,8 +702,9 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
+	interval := time.Duration(100000)
 
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0, SyncPollingInterval: interval}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
@@ -738,12 +740,12 @@ func TestSavingBlocksInSync(t *testing.T) {
 	blockResponse.SlotNumber = 21
 	ss.blockBuf <- msg1
 
-	ss.cancel()
-	<-exitRoutine
-
 	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
 		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", blockResponse.GetSlotNumber())
 	}
+
+	ss.cancel()
+	<-exitRoutine
 
 	hook.Reset()
 

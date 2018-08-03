@@ -145,15 +145,6 @@ func (ss *Service) Stop() error {
 	return nil
 }
 
-// isFirstSync checks if this is the first time the node is syncing with the network.
-func (ss *Service) isFirstSync() (bool, error) {
-	stored, err := ss.chainService.HasStoredState()
-	if err != nil {
-		return false, fmt.Errorf("error retrieving stored state: %v", err)
-	}
-	return !stored, nil
-}
-
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
@@ -261,8 +252,8 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveStateResponse) error {
 	return nil
 }
 
-// SetFinalizedEpochFromCrystallizedState receives the crystallized state response from the peer
-// and sets the finalized epoch for the beacon block.
+// SetBlockForInitalSync sets the first received block as the base finalized
+// block for initial sync.
 func (ss *Service) SetBlockForInitalSync(data *pb.BeaconBlockResponse) error {
 
 	block, err := types.NewBlock(data)
@@ -323,18 +314,20 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 
 	// This is used to check if the local chain has the same height as other synced chains in the network,
 	// if it does then this routine is exited and a new goroutine is spawned.
-	timechan := time.Tick(ss.syncPollingInterval)
+	timechan := time.NewTicker(ss.syncPollingInterval)
 
 	defer blockSub.Unsubscribe()
 	for {
 		select {
 		case <-done:
 			log.Infof("Exiting goroutine")
+			timechan.Stop()
 			return
-		case <-timechan:
+		case <-timechan.C:
 			if ss.highestObservedSlot == ss.currentSlotNumber {
 				go ss.run(ss.ctx.Done())
 				log.Infof("Exiting initial sync and starting normal sync")
+				timechan.Stop()
 				return
 			}
 		case msg := <-ss.blockBuf:
