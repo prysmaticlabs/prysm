@@ -12,6 +12,10 @@ message BeaconBlockRequest {
   bytes hash = 1;
 }
 
+message BeaconBlockRequestBySlotNumber{
+  uint64 slot_number = 1;
+}
+
 message BeaconBlockResponse {
   bytes parent_hash = 1;
   uint64 slot_number = 2;
