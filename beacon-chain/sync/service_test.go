@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -673,12 +674,11 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	}()
 
 	generichash := make([]byte, 32)
-	var hash [32]byte
 
 	blockResponse := &pb.BeaconBlockResponse{
 		MainChainRef: []byte{1, 2, 3},
 		ParentHash:   generichash,
-		SlotNumber:   uint64(1),
+		SlotNumber:   uint64(20),
 	}
 
 	msg1 := p2p.Message{
@@ -699,7 +699,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 }
 
-func TestBlockFetcher(t *testing.T) {
+func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
@@ -715,43 +715,10 @@ func TestBlockFetcher(t *testing.T) {
 
 	generichash := make([]byte, 32)
 
-	for i := 0; i < 21; i++ {
-		stateResponse := &pb.CrystallizedStateResponse{
-			LastFinalizedEpoch: 100 + uint64(i),
-		}
-		crystallisedHash, err := types.NewCrystallizedState(stateResponse).Hash()
-		if err != nil {
-			t.Fatalf("unable to get hash for crystallised state %v", err)
-		}
-
-		blockResponse := &pb.BeaconBlockResponse{
-			MainChainRef:          []byte{1, 2, 3},
-			ParentHash:            generichash,
-			CrystallizedStateHash: crystallisedHash[:],
-			SlotNumber:            uint64(i),
-		}
-
-		msg1 := p2p.Message{
-			Peer: p2p.Peer{},
-			Data: blockResponse,
-		}
-		msg2 := p2p.Message{
-			Peer: p2p.Peer{},
-			Data: stateResponse,
-		}
-
-		ss.blockBuf <- msg1
-		ss.crystallizedStateBuf <- msg2
-
-	}
-
-	testSlotNumber := uint64(21)
-
 	blockResponse := &pb.BeaconBlockResponse{
-		MainChainRef:          []byte{1, 2, 3},
-		ParentHash:            generichash,
-		CrystallizedStateHash: []byte{},
-		SlotNumber:            testSlotNumber,
+		MainChainRef: []byte{1, 2, 3},
+		ParentHash:   generichash,
+		SlotNumber:   uint64(20),
 	}
 
 	msg1 := p2p.Message{
@@ -761,36 +728,66 @@ func TestBlockFetcher(t *testing.T) {
 
 	ss.blockBuf <- msg1
 
-	if ss.currentSlotNumber != testSlotNumber {
-		t.Fatalf("block unable to be validated and saved for slot number: %v", ss.currentSlotNumber)
+	blockResponse.SlotNumber = 30
+	ss.blockBuf <- msg1
+
+	if blockResponse.GetSlotNumber() == ss.currentSlotNumber {
+		t.Fatalf("last finalized epoch not set: %v", blockResponse.GetSlotNumber())
 	}
 
-	testSlotNumber = uint64(30)
+	blockResponse.SlotNumber = 21
+	ss.blockBuf <- msg1
 
-	blockResponse = &pb.BeaconBlockResponse{
-		MainChainRef:          []byte{1, 2, 3},
-		ParentHash:            generichash,
-		CrystallizedStateHash: []byte{},
-		SlotNumber:            testSlotNumber,
+	ss.cancel()
+	<-exitRoutine
+
+	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("last finalized epoch not set: %v", blockResponse.GetSlotNumber())
 	}
 
-	msg1 = p2p.Message{
+	hook.Reset()
+
+}
+
+func TestTimeChan(t *testing.T) {
+	hook := logTest.NewGlobal()
+	interval := time.Duration(1000)
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0, SyncPollingInterval: interval}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.initialSync(ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+
+	blockResponse := &pb.BeaconBlockResponse{
+		MainChainRef: []byte{1, 2, 3},
+		ParentHash:   generichash,
+		SlotNumber:   uint64(20),
+	}
+
+	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: blockResponse,
 	}
 
 	ss.blockBuf <- msg1
 
-	if ss.currentSlotNumber == testSlotNumber {
-		t.Fatalf("slot changed despite the block having a much higher slot number: %v", ss.currentSlotNumber)
-	}
-
-	ss.currentSlotNumber = 0
+	blockResponse.SlotNumber = 21
 	ss.blockBuf <- msg1
+
+	time.Sleep(interval)
 
 	ss.cancel()
 	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "invalid slot number for syncing")
+
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
 
 	hook.Reset()
 

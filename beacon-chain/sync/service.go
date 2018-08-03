@@ -39,6 +39,7 @@ type Service struct {
 	syncMode                    Mode
 	currentSlotNumber           uint64
 	highestObservedSlot         uint64
+	syncPollingInterval         time.Duration
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -52,6 +53,7 @@ type Config struct {
 	SyncMode                        Mode
 	CurrentSlotNumber               uint64
 	HighestObservedSlot             uint64
+	SyncPollingInterval             time.Duration
 }
 
 // FinalizedBlock stores information regarding a block, its finalized epoch and the contents
@@ -83,6 +85,7 @@ func DefaultConfig() Config {
 		SyncMode:                        SyncModeDefault,
 		CurrentSlotNumber:               0,
 		HighestObservedSlot:             0,
+		SyncPollingInterval:             100000,
 	}
 }
 
@@ -114,6 +117,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		syncMode:                    cfg.SyncMode,
 		currentSlotNumber:           cfg.CurrentSlotNumber,
 		highestObservedSlot:         cfg.HighestObservedSlot,
+		syncPollingInterval:         cfg.SyncPollingInterval,
 	}
 }
 
@@ -319,7 +323,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 
 	// This is used to check if the local chain has the same height as other synced chains in the network,
 	// if it does then this routine is exited and a new goroutine is spawned.
-	timechan := time.Tick(2 * time.Minute)
+	timechan := time.Tick(ss.syncPollingInterval)
 
 	defer blockSub.Unsubscribe()
 	for {
@@ -330,6 +334,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 		case <-timechan:
 			if ss.highestObservedSlot == ss.currentSlotNumber {
 				go ss.run(ss.ctx.Done())
+				log.Infof("Exiting initial sync and starting normal sync")
 				return
 			}
 		case msg := <-ss.blockBuf:
