@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
@@ -49,7 +48,7 @@ type ActiveStateChainService interface {
 // BlockAndStateAnnouncer defines an interface that publishes a processed, canonical beacon hash, height,
 // and crystallized state over channels.
 type BlockAndStateAnnouncer interface {
-	BeaconHashHeightChan() <-chan *pb.BeaconHashHeightResponse
+	BeaconBlockChan() <-chan *Block
 	CrystallizedStateChan() <-chan *CrystallizedState
 }
 

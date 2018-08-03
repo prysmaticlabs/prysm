@@ -87,13 +87,13 @@ func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignR
 	return nil, nil
 }
 
-// LatestBeaconHashHeight streams the latest beacon chain data.
-func (s *Service) LatestBeaconHashHeight(req *empty.Empty, stream pb.BeaconService_LatestBeaconHashHeightServer) error {
+// LatestBeaconBlock streams the latest beacon chain data.
+func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
 	for {
 		select {
-		case hashAndHeight := <-s.chainService.BeaconHashHeightChan():
-			if err := stream.Send(hashAndHeight); err != nil {
-				log.Errorf("Could not send latest beacon hash and height via stream: %v", err)
+		case block := <-s.chainService.BeaconBlockChan():
+			if err := stream.Send(block.Proto()); err != nil {
+				log.Errorf("Could not send latest beacon block via stream: %v", err)
 			}
 		}
 	}

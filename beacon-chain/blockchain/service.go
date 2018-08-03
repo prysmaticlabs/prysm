@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
@@ -25,14 +24,12 @@ type ChainService struct {
 	processedBlockHashes             [][32]byte
 	processedActiveStateHashes       [][32]byte
 	processedCrystallizedStateHashes [][32]byte
-	beaconHashHeightChan             chan *pb.BeaconHashHeightResponse
 	crystallizedStateChan            chan *types.CrystallizedState
 }
 
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf       int
-	BeaconHashHeightBuf  int
 	CrystallizedStateBuf int
 }
 
@@ -40,7 +37,6 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		BeaconBlockBuf:       10,
-		BeaconHashHeightBuf:  10,
 		CrystallizedStateBuf: 10,
 	}
 }
@@ -55,7 +51,6 @@ func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, we
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
 		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
-		beaconHashHeightChan:             make(chan *pb.BeaconHashHeightResponse, cfg.BeaconHashHeightBuf),
 		crystallizedStateChan:            make(chan *types.CrystallizedState, cfg.CrystallizedStateBuf),
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
@@ -89,10 +84,10 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// BeaconHashHeightChan returns a channel accessible to outside observers announcing
-// the new beacon hash and height being processed.
-func (c *ChainService) BeaconHashHeightChan() <-chan *pb.BeaconHashHeightResponse {
-	return c.beaconHashHeightChan
+// BeaconBlockChan returns a channel accessible to outside observers announcing
+// a new, canonical beacon block.
+func (c *ChainService) BeaconBlockChan() <-chan *types.Block {
+	return c.latestBeaconBlock
 }
 
 // CrystallizedStateChan returns a channel accessible to outside observers announcing
@@ -129,10 +124,6 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	}
 	if canProcess {
 		c.latestBeaconBlock <- block
-		c.beaconHashHeightChan <- &pb.BeaconHashHeightResponse{
-			Hash:   h[:],
-			Height: block.Height(),
-		}
 	}
 	return nil
 }
@@ -211,9 +202,9 @@ func (c *ChainService) updateChainState() {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			currentslot := block.SlotNumber()
+			currentSlot := block.SlotNumber()
 
-			transition := c.chain.IsEpochTransition(currentslot)
+			transition := c.chain.IsEpochTransition(currentSlot)
 			if transition {
 				if err := c.chain.calculateRewardsFFG(); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)

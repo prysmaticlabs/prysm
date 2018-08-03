@@ -14,16 +14,15 @@ message BeaconBlockRequest {
 
 message BeaconBlockResponse {
   bytes parent_hash = 1;
-  uint64 height = 2;
-  uint64 slot_number = 3;
-  bytes randao_reveal = 4;
-  bytes attestation_bitmask = 5;
-  repeated uint32 attestation_aggregate_sig = 6;
-  repeated AggregateVote shard_aggregate_votes = 7;
-  bytes main_chain_ref = 8;
-  bytes active_state_hash = 9;
-  bytes crystallized_state_hash = 10;
-  google.protobuf.Timestamp timestamp = 11;
+  uint64 slot_number = 2;
+  bytes randao_reveal = 3;
+  bytes attestation_bitmask = 4;
+  repeated uint32 attestation_aggregate_sig = 5;
+  repeated AggregateVote shard_aggregate_votes = 6;
+  bytes main_chain_ref = 7;
+  bytes active_state_hash = 8;
+  bytes crystallized_state_hash = 9;
+  google.protobuf.Timestamp timestamp = 10;
 }
 
 message CrystallizedStateHashAnnounce {

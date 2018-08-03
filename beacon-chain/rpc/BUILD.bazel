@@ -20,7 +20,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/types:go_default_library",
-        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],

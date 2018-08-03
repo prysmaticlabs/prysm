@@ -12,7 +12,7 @@ import (
 
 type mockBeaconServiceClient struct{}
 
-func (mb *mockBeaconServiceClient) LatestBeaconHashHeight(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestBeaconHashHeightClient, error) {
+func (mb *mockBeaconServiceClient) LatestBeaconBlock(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestBeaconBlockClient, error) {
 	return nil, errors.New("error setting up")
 }
 

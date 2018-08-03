@@ -7,16 +7,11 @@ import "proto/beacon/p2p/v1/messages.proto";
 import "google/protobuf/empty.proto";
 
 service BeaconService {
-    rpc LatestBeaconHashHeight(google.protobuf.Empty) returns (stream BeaconHashHeightResponse);
+    rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlockResponse);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedStateResponse);
     rpc ShuffleValidators(ShuffleRequest) returns (ShuffleResponse);
     rpc SignBlock(SignRequest) returns (SignResponse);
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
-}
-
-message BeaconHashHeightResponse {
-    bytes hash = 1;
-    uint64 height = 2;
 }
 
 message ShuffleRequest {

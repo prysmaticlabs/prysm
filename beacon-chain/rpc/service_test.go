@@ -6,15 +6,14 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mockChainService struct{}
 
-func (ms *mockChainService) BeaconHashHeightChan() <-chan *pb.BeaconHashHeightResponse {
-	return make(chan *pb.BeaconHashHeightResponse, 0)
+func (ms *mockChainService) BeaconBlockChan() <-chan *types.Block {
+	return make(chan *types.Block, 0)
 }
 
 func (ms *mockChainService) CrystallizedStateChan() <-chan *types.CrystallizedState {

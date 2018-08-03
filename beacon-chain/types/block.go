@@ -59,11 +59,6 @@ func (b *Block) Hash() ([32]byte, error) {
 	return blake2b.Sum256(data), nil
 }
 
-// Height of the block in the chain.
-func (b *Block) Height() uint64 {
-	return b.data.Height
-}
-
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte

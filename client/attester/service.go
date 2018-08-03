@@ -5,7 +5,6 @@ package attester
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/prysmaticlabs/prysm/client/types"
@@ -40,7 +39,7 @@ func NewAttester(ctx context.Context, clientService types.RPCClient) *Attester {
 func (at *Attester) Start() {
 	log.Info("Starting attester service")
 	rpcClient := at.clientService.BeaconServiceClient()
-	go at.fetchBeaconHashHeight(rpcClient)
+	go at.fetchBeaconBlocks(rpcClient)
 	go at.fetchCrystallizedState(rpcClient)
 }
 
@@ -50,28 +49,27 @@ func (at *Attester) Stop() error {
 	return nil
 }
 
-func (at *Attester) fetchBeaconHashHeight(client pb.BeaconServiceClient) {
-	stream, err := client.LatestBeaconHashHeight(at.ctx, nil)
+func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
+	stream, err := client.LatestBeaconBlock(at.ctx, nil)
 	if err != nil {
-		log.Fatalf("Could not setup beacon chain streaming client: %v", err)
+		log.Fatalf("Could not setup beacon chain block streaming client: %v", err)
 	}
 	for {
-		beaconData, err := stream.Recv()
+		block, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Could not receive latest beacon block data from stream: %v", err)
+			log.Fatalf("Could not receive latest beacon block from stream: %v", err)
 		}
-		log.WithField("hash", fmt.Sprintf("%x", beaconData.GetHash())).Info("Latest beacon block hash")
-		log.WithField("height", beaconData.GetHeight()).Info("Latest beacon block height")
+		log.WithField("slotNumber", block.GetSlotNumber()).Info("Latest beacon block slot number")
 
 		// Based on the height determined from the latest crystallized state, check if
 		// it matches the latest received beacon height. If so, the attester has to perform
 		// its responsibilities.
-		if &at.assignedHeight != nil && beaconData.GetHeight() == at.assignedHeight {
-			log.Info("Assigned attestation height reached, performing attestation responsibility")
-		}
+		// if &at.assignedHeight != nil && beaconData.GetHeight() == at.assignedHeight {
+		// 	log.Info("Assigned attestation height reached, performing attestation responsibility")
+		// }
 	}
 }
 
