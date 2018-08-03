@@ -34,7 +34,16 @@ type Observer struct {
 // it will have access to a p2p server and a shardChainDB.
 func NewObserver(p2p *p2p.Server, dbService *database.DB, shardID int, sync *syncer.Syncer, client *mainchain.SMCClient) (*Observer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Observer{p2p, dbService, shardID, nil, ctx, cancel, sync, client}, nil
+	return &Observer{
+		p2p:       p2p,
+		dbService: dbService,
+		shardID:   shardID,
+		shard:     nil,
+		ctx:       ctx,
+		cancel:    cancel,
+		sync:      sync,
+		client:    client,
+	}, nil
 }
 
 // Start the main loop for observer service.

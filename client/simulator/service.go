@@ -39,7 +39,15 @@ type Simulator struct {
 // and a shardID.
 func NewSimulator(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Simulator{config, client, p2p, shardID, ctx, cancel, delay}, nil
+	return &Simulator{
+		config:  config,
+		client:  client,
+		p2p:     p2p,
+		shardID: shardID,
+		ctx:     ctx,
+		cancel:  cancel,
+		delay:   delay
+	}, nil
 }
 
 // Start the main loop for simulating p2p requests.

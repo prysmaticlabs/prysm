@@ -37,7 +37,17 @@ type Syncer struct {
 // a shardChainDB, and a shardID.
 func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, db *database.DB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Syncer{config, client, shardID, db, p2p, ctx, cancel, nil, nil}, nil
+	return &Syncer{
+		config:       config,
+		client:       client,
+		shardID:      shardID,
+		db:           db,
+		p2p:          p2p,
+		ctx:          ctx,
+		cancel:       cancel,
+		msgChan:      nil,
+		bodyRequests: nil
+	}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
