@@ -6,7 +6,7 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	p2pproto "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -16,10 +16,11 @@ var log = logrus.WithField("prefix", "rpc")
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
-	port     string
-	listener net.Listener
+	ctx          context.Context
+	cancel       context.CancelFunc
+	chainService types.BlockAndStateAnnouncer
+	port         string
+	listener     net.Listener
 }
 
 // Config options for the beacon node RPC server.
@@ -29,7 +30,7 @@ type Config struct {
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
+func NewRPCService(ctx context.Context, cfg *Config, chainService types.BlockAndStateAnnouncer) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:    ctx,
@@ -41,6 +42,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Errorf("Could not listen to port :%s: %v", s.port, err)
@@ -87,17 +89,24 @@ func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignR
 
 // LatestBeaconHashHeight streams the latest beacon chain data.
 func (s *Service) LatestBeaconHashHeight(req *empty.Empty, stream pb.BeaconService_LatestBeaconHashHeightServer) error {
-	log.Info("Latest beacon hash height called")
-	return stream.Send(&pb.BeaconHashHeightResponse{
-		Hash:   []byte{},
-		Height: uint64(0),
-	})
+	for {
+		select {
+		case hashAndHeight := <-s.chainService.BeaconHashHeightChan():
+			if err := stream.Send(hashAndHeight); err != nil {
+				log.Errorf("Could not send latest beacon hash and height via stream: %v", err)
+			}
+		}
+	}
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
-	log.Info("Latest beacon hash height called")
-	return stream.Send(&p2pproto.CrystallizedStateResponse{
-		ActiveValidators: nil,
-	})
+	for {
+		select {
+		case crystallizedState := <-s.chainService.CrystallizedStateChan():
+			if err := stream.Send(crystallizedState.Proto()); err != nil {
+				log.Errorf("Could not send latest crystallized state via stream: %v", err)
+			}
+		}
+	}
 }

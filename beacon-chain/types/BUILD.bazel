@@ -11,6 +11,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

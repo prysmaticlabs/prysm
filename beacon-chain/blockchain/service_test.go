@@ -29,7 +29,12 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	chainService, err := NewChainService(ctx, db, web3Service)
+	cfg := &Config{
+		BeaconBlockBuf:       0,
+		BeaconHashHeightBuf:  0,
+		CrystallizedStateBuf: 0,
+	}
+	chainService, err := NewChainService(ctx, cfg, db, web3Service)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}

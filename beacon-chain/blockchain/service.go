@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
@@ -24,18 +25,38 @@ type ChainService struct {
 	processedBlockHashes             [][32]byte
 	processedActiveStateHashes       [][32]byte
 	processedCrystallizedStateHashes [][32]byte
+	beaconHashHeightChan             chan *pb.BeaconHashHeightResponse
+	crystallizedStateChan            chan *types.CrystallizedState
+}
+
+// Config options for the service.
+type Config struct {
+	BeaconBlockBuf       int
+	BeaconHashHeightBuf  int
+	CrystallizedStateBuf int
+}
+
+// DefaultConfig options.
+func DefaultConfig() *Config {
+	return &Config{
+		BeaconBlockBuf:       10,
+		BeaconHashHeightBuf:  10,
+		CrystallizedStateBuf: 10,
+	}
 }
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                              ctx,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
-		latestBeaconBlock:                make(chan *types.Block),
+		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
+		beaconHashHeightChan:             make(chan *pb.BeaconHashHeightResponse, cfg.BeaconHashHeightBuf),
+		crystallizedStateChan:            make(chan *types.CrystallizedState, cfg.CrystallizedStateBuf),
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
 		processedCrystallizedStateHashes: [][32]byte{},
@@ -68,6 +89,18 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// BeaconHashHeightChan returns a channel accessible to outside observers announcing
+// the new beacon hash and height being processed.
+func (c *ChainService) BeaconHashHeightChan() <-chan *pb.BeaconHashHeightResponse {
+	return c.beaconHashHeightChan
+}
+
+// CrystallizedStateChan returns a channel accessible to outside observers announcing
+// a new crystallized state being processed.
+func (c *ChainService) CrystallizedStateChan() <-chan *types.CrystallizedState {
+	return c.crystallizedStateChan
+}
+
 // ProcessedBlockHashes by the chain service.
 func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
@@ -96,6 +129,10 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	}
 	if canProcess {
 		c.latestBeaconBlock <- block
+		c.beaconHashHeightChan <- &pb.BeaconHashHeightResponse{
+			Hash:   h[:],
+			Height: block.Height(),
+		}
 	}
 	return nil
 }
@@ -109,6 +146,7 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
 
 	// TODO: Implement crystallized state verifier function and apply fork choice rules
+	c.crystallizedStateChan <- state
 
 	return nil
 }

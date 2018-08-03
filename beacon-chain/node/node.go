@@ -149,7 +149,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
@@ -209,8 +209,16 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
-	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
+
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	cfg := &rpc.Config{
 		Port: port,
-	})
+	}
+
+	rpcService := rpc.NewRPCService(context.TODO(), cfg, chainService)
 	return b.services.RegisterService(rpcService)
 }
