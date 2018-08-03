@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/prysmaticlabs/prysm/client/rpcclient"
+	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -21,13 +21,13 @@ var log = logrus.WithField("prefix", "attester")
 type Attester struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
-	clientService  *rpcclient.Service
+	clientService  types.RPCClient
 	validatorIndex int
 	assignedHeight uint64
 }
 
 // NewAttester creates a new attester instance.
-func NewAttester(ctx context.Context, clientService *rpcclient.Service) *Attester {
+func NewAttester(ctx context.Context, clientService types.RPCClient) *Attester {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Attester{
 		ctx:           ctx,

@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	p2pproto "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -86,10 +87,17 @@ func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignR
 
 // LatestBeaconHashHeight streams the latest beacon chain data.
 func (s *Service) LatestBeaconHashHeight(req *empty.Empty, stream pb.BeaconService_LatestBeaconHashHeightServer) error {
-	return stream.Send(nil)
+	log.Info("Latest beacon hash height called")
+	return stream.Send(&pb.BeaconHashHeightResponse{
+		Hash:   []byte{},
+		Height: uint64(0),
+	})
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
-	return stream.Send(nil)
+	log.Info("Latest beacon hash height called")
+	return stream.Send(&p2pproto.CrystallizedStateResponse{
+		ActiveValidators: nil,
+	})
 }

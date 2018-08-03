@@ -2,6 +2,8 @@ package rpcclient
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -36,9 +38,14 @@ func NewRPCClient(ctx context.Context, cfg *Config) *Service {
 // Start the grpc connection.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	conn, err := grpc.Dial(s.endpoint, grpc.WithInsecure())
+	endpointURL, err := url.Parse(s.endpoint)
 	if err != nil {
-		log.Errorf("Could not connect to beacon node via RPC endpoint: %s: %v", s.endpoint, err)
+		log.Fatalf("Could not parse endpoint URL: %s, %v", s.endpoint, err)
+		return
+	}
+	conn, err := grpc.Dial(fmt.Sprintf("[%s]:%s", endpointURL.Hostname(), endpointURL.Port()), grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect to beacon node via RPC endpoint: %s: %v", s.endpoint, err)
 		return
 	}
 	s.conn = conn
