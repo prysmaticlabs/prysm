@@ -16,4 +16,9 @@ go_test(
     name = "go_default_test",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/rpc/v1:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
 )
