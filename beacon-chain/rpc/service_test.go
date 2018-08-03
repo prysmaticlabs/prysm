@@ -5,24 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-type mockChainService struct{}
-
-func (ms *mockChainService) BeaconBlockChan() <-chan *types.Block {
-	return make(chan *types.Block, 0)
-}
-
-func (ms *mockChainService) CrystallizedStateChan() <-chan *types.CrystallizedState {
-	return make(chan *types.CrystallizedState, 0)
-}
-
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockChainService{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"})
 
 	rpcService.Start()
 
@@ -35,7 +24,7 @@ func TestLifecycle(t *testing.T) {
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"}, &mockChainService{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"})
 
 	rpcService.Start()
 

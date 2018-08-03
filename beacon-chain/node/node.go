@@ -210,15 +210,10 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
 
-	var chainService *blockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
 	cfg := &rpc.Config{
 		Port: port,
 	}
 
-	rpcService := rpc.NewRPCService(context.TODO(), cfg, chainService)
+	rpcService := rpc.NewRPCService(context.TODO(), cfg)
 	return b.services.RegisterService(rpcService)
 }

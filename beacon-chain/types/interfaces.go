@@ -45,13 +45,6 @@ type ActiveStateChainService interface {
 	ContainsActiveState(h [32]byte) bool
 }
 
-// BlockAndStateAnnouncer defines an interface that publishes a processed, canonical beacon hash, height,
-// and crystallized state over channels.
-type BlockAndStateAnnouncer interface {
-	BeaconBlockChan() <-chan *Block
-	CrystallizedStateChan() <-chan *CrystallizedState
-}
-
 // StateFetcher defines a struct that can fetch the latest canonical beacon state of a node.
 type StateFetcher interface {
 	CurrentActiveState() *ActiveState

@@ -30,8 +30,7 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
 	cfg := &Config{
-		BeaconBlockBuf:       0,
-		CrystallizedStateBuf: 0,
+		BeaconBlockBuf: 0,
 	}
 	chainService, err := NewChainService(ctx, cfg, db, web3Service)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -16,11 +17,10 @@ var log = logrus.WithField("prefix", "rpc")
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
-	chainService types.BlockAndStateAnnouncer
-	port         string
-	listener     net.Listener
+	ctx      context.Context
+	cancel   context.CancelFunc
+	port     string
+	listener net.Listener
 }
 
 // Config options for the beacon node RPC server.
@@ -30,7 +30,7 @@ type Config struct {
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config, chainService types.BlockAndStateAnnouncer) *Service {
+func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:    ctx,
@@ -89,14 +89,18 @@ func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignR
 
 // LatestBeaconBlock streams the latest beacon chain data.
 func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
-	log.Info("Latest beacon block stream being called!!!!")
+	delayChan := time.NewTicker(time.Second * 5).C
 	for {
 		select {
 		case <-stream.Context().Done():
 			return nil
-		case block := <-s.chainService.BeaconBlockChan():
+		case <-delayChan:
+			block, err := types.NewGenesisBlock()
+			if err != nil {
+				return fmt.Errorf("could not create block: %v", block)
+			}
 			if err := stream.Send(block.Proto()); err != nil {
-				return fmt.Errorf("Could not send latest beacon block via stream: %v", err)
+				return fmt.Errorf("could not send latest beacon block via stream: %v", err)
 			}
 		}
 	}
@@ -104,13 +108,15 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 
 // LatestCrystallizedState streams the latest beacon crystallized state.
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
+	delayChan := time.NewTicker(time.Second * 5).C
 	for {
 		select {
 		case <-stream.Context().Done():
 			return nil
-		case crystallizedState := <-s.chainService.CrystallizedStateChan():
-			if err := stream.Send(crystallizedState.Proto()); err != nil {
-				return fmt.Errorf("Could not send latest crystallized state via stream: %v", err)
+		case <-delayChan:
+			_, state := types.NewGenesisStates()
+			if err := stream.Send(state.Proto()); err != nil {
+				return fmt.Errorf("could not send latest crystallized state via stream: %v", err)
 			}
 		}
 	}

@@ -24,20 +24,17 @@ type ChainService struct {
 	processedBlockHashes             [][32]byte
 	processedActiveStateHashes       [][32]byte
 	processedCrystallizedStateHashes [][32]byte
-	crystallizedStateChan            chan *types.CrystallizedState
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf       int
-	CrystallizedStateBuf int
+	BeaconBlockBuf int
 }
 
 // DefaultConfig options.
 func DefaultConfig() *Config {
 	return &Config{
-		BeaconBlockBuf:       10,
-		CrystallizedStateBuf: 10,
+		BeaconBlockBuf: 10,
 	}
 }
 
@@ -51,7 +48,6 @@ func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, we
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
 		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
-		crystallizedStateChan:            make(chan *types.CrystallizedState, cfg.CrystallizedStateBuf),
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
 		processedCrystallizedStateHashes: [][32]byte{},
@@ -84,18 +80,6 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// BeaconBlockChan returns a channel accessible to outside observers announcing
-// a new, canonical beacon block.
-func (c *ChainService) BeaconBlockChan() <-chan *types.Block {
-	return c.latestBeaconBlock
-}
-
-// CrystallizedStateChan returns a channel accessible to outside observers announcing
-// a new crystallized state being processed.
-func (c *ChainService) CrystallizedStateChan() <-chan *types.CrystallizedState {
-	return c.crystallizedStateChan
-}
-
 // ProcessedBlockHashes by the chain service.
 func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
@@ -118,14 +102,12 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-	c.latestBeaconBlock <- block
 	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
 	if err != nil {
 		return err
 	}
 	if canProcess {
-		// c.latestBeaconBlock <- block
-		return nil
+		c.latestBeaconBlock <- block
 	}
 	return nil
 }
@@ -139,7 +121,6 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
 
 	// TODO: Implement crystallized state verifier function and apply fork choice rules
-	c.crystallizedStateChan <- state
 
 	return nil
 }
