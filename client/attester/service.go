@@ -19,11 +19,12 @@ var log = logrus.WithField("prefix", "attester")
 // in a sharded system. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Attester struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	clientService  types.RPCClient
-	validatorIndex int
-	assignedHeight uint64
+	ctx              context.Context
+	cancel           context.CancelFunc
+	clientService    types.RPCClient
+	validatorIndex   int
+	assignedHeight   uint64
+	isHeightAssigned bool
 }
 
 // NewAttester creates a new attester instance.
@@ -69,11 +70,11 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		// it matches the latest received beacon height. If so, the attester has to perform
 		// its responsibilities.
 
-		// TODO: determine height based on slot number and epoch.
-		//
-		// if &at.assignedHeight != nil && beaconData.GetHeight() == at.assignedHeight {
-		// 	log.Info("Assigned attestation height reached, performing attestation responsibility")
-		// }
+		if at.isHeightAssigned && block.GetSlotNumber() == at.assignedHeight {
+			log.Info("Assigned attestation height reached, performing attestation responsibility")
+			// Reset is height assigned.
+			at.isHeightAssigned = false
+		}
 	}
 }
 
@@ -142,6 +143,7 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			}
 			heightIndex++
 		}
+		at.isHeightAssigned = true
 		at.assignedHeight = currentAssignedHeights[heightIndex]
 	}
 }
