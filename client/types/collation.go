@@ -46,7 +46,11 @@ type collationHeaderData struct {
 // NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
 // and provide the body and transactions upon creation.
 func NewCollation(header *CollationHeader, body []byte, transactions []*gethTypes.Transaction) *Collation {
-	return &Collation{header, body, transactions}
+	return &Collation{
+		header:       header,
+		body:         body,
+		transactions: transactions,
+	}
 }
 
 // NewCollationHeader initializes a collation header struct.
@@ -58,7 +62,7 @@ func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.In
 		ProposerAddress:   proposerAddress,
 		ProposerSignature: proposerSignature,
 	}
-	return &CollationHeader{data}
+	return &CollationHeader{data: data}
 }
 
 // Hash takes the keccak256 of the collation header's data contents.

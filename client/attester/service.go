@@ -24,7 +24,12 @@ type Attester struct {
 
 // NewAttester creates a new attester instance.
 func NewAttester(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, dbService *database.DB) (*Attester, error) {
-	return &Attester{config, smcClient, p2p, dbService}, nil
+	return &Attester{
+		config:    config,
+		smcClient: smcClient,
+		p2p:       p2p,
+		dbService: dbService,
+	}, nil
 }
 
 // Start the main routine for a attester.
