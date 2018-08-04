@@ -54,7 +54,8 @@ func (at *Attester) Stop() error {
 func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 	stream, err := client.LatestBeaconBlock(at.ctx, &empty.Empty{})
 	if err != nil {
-		log.Fatalf("Could not setup beacon chain block streaming client: %v", err)
+		log.Errorf("Could not setup beacon chain block streaming client: %v", err)
+		return
 	}
 	for {
 		block, err := stream.Recv()
@@ -62,7 +63,8 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Could not receive latest beacon block from stream: %v", err)
+			log.Errorf("Could not receive latest beacon block from stream: %v", err)
+			continue
 		}
 		log.WithField("slotNumber", block.GetSlotNumber()).Info("Latest beacon block slot number")
 
@@ -81,7 +83,8 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 	stream, err := client.LatestCrystallizedState(at.ctx, &empty.Empty{})
 	if err != nil {
-		log.Fatalf("Could not setup crystallized beacon state streaming client: %v", err)
+		log.Errorf("Could not setup crystallized beacon state streaming client: %v", err)
+		return
 	}
 	for {
 		crystallizedState, err := stream.Recv()
@@ -89,7 +92,8 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Could not receive latest crystallized beacon state from stream: %v", err)
+			log.Errorf("Could not receive latest crystallized beacon state from stream: %v", err)
+			continue
 		}
 		// After receiving the crystallized state, get the number of active validators
 		// and this attester's index in the list.
