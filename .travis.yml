@@ -9,11 +9,11 @@ matrix:
         - lint
       script:
         - 
-          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
+          npm install -g solium && go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
       env: V=0.15.0
       before_install:
-        # Install Bazel
+        # Install Bazel and initialize solidity linter at the end
         - |
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
@@ -70,6 +70,9 @@ matrix:
 
         # Check that target visibility is correct..
         - ./check_visibility.sh
+
+        # Check solidity linter.
+        - solium -d contracts/
 
         # Shutdown must be last.
         - bazel shutdown 
