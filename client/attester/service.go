@@ -39,7 +39,7 @@ func NewAttester(ctx context.Context, clientService types.RPCClient) *Attester {
 
 // Start the main routine for a attester.
 func (at *Attester) Start() {
-	log.Info("Starting attester service")
+	log.Info("Starting service")
 	rpcClient := at.clientService.BeaconServiceClient()
 	go at.fetchBeaconBlocks(rpcClient)
 	go at.fetchCrystallizedState(rpcClient)
@@ -47,7 +47,7 @@ func (at *Attester) Start() {
 
 // Stop the main loop for notarizing collations.
 func (at *Attester) Stop() error {
-	log.Info("Stopping attester service")
+	log.Info("Stopping service")
 	return nil
 }
 

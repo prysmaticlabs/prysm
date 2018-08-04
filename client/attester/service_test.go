@@ -32,8 +32,34 @@ func (fr *faultyRPC) ShuffleValidators(ctx context.Context, req *pb.ShuffleReque
 	return nil, errors.New("error setting up")
 }
 
-func TestLifecycle(t *testing.T) {
+type goodClient struct{}
 
+func (gc *goodClient) BeaconServiceClient() pb.BeaconServiceClient {
+	return &goodRPC{}
+}
+
+type goodRPC struct{}
+
+func (gr *goodRPC) LatestBeaconBlock(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestBeaconBlockClient, error) {
+	return nil, errors.New("error setting up")
+}
+
+func (gr *goodRPC) LatestCrystallizedState(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestCrystallizedStateClient, error) {
+	return nil, errors.New("error setting up")
+}
+
+func (gr *goodRPC) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest, opts ...grpc.CallOption) (*pb.ShuffleResponse, error) {
+	return nil, errors.New("error setting up")
+}
+
+func TestLifecycle(t *testing.T) {
+	hook := logTest.NewGlobal()
+	client := &goodClient{}
+	at := NewAttester(context.Background(), client)
+	at.Start()
+	testutil.AssertLogsContain(t, hook, "Starting service")
+	at.Stop()
+	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestFetchCrystallizedState(t *testing.T) {
