@@ -26,20 +26,21 @@ var log = logrus.WithField("prefix", "sync")
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type Service struct {
-	ctx                         context.Context
-	cancel                      context.CancelFunc
-	p2p                         types.P2P
-	chainService                types.ChainService
-	announceBlockHashBuf        chan p2p.Message
-	blockBuf                    chan p2p.Message
-	announceCrystallizedHashBuf chan p2p.Message
-	crystallizedStateBuf        chan p2p.Message
-	announceActiveHashBuf       chan p2p.Message
-	activeStateBuf              chan p2p.Message
-	syncMode                    Mode
-	currentSlotNumber           uint64
-	highestObservedSlot         uint64
-	syncPollingInterval         time.Duration
+	ctx                          context.Context
+	cancel                       context.CancelFunc
+	p2p                          types.P2P
+	chainService                 types.ChainService
+	announceBlockHashBuf         chan p2p.Message
+	blockBuf                     chan p2p.Message
+	announceCrystallizedHashBuf  chan p2p.Message
+	crystallizedStateBuf         chan p2p.Message
+	announceActiveHashBuf        chan p2p.Message
+	activeStateBuf               chan p2p.Message
+	syncMode                     Mode
+	currentSlotNumber            uint64
+	highestObservedSlot          uint64
+	syncPollingInterval          time.Duration
+	initialCrystallizedStateHash [32]byte
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -104,20 +105,21 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 	}
 
 	return &Service{
-		ctx:                         ctx,
-		cancel:                      cancel,
-		p2p:                         beaconp2p,
-		chainService:                cs,
-		announceBlockHashBuf:        make(chan p2p.Message, cfg.BlockHashBufferSize),
-		blockBuf:                    make(chan p2p.Message, cfg.BlockBufferSize),
-		announceCrystallizedHashBuf: make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
-		crystallizedStateBuf:        make(chan p2p.Message, cfg.ActiveStateBufferSize),
-		announceActiveHashBuf:       make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
-		activeStateBuf:              make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
-		syncMode:                    cfg.SyncMode,
-		currentSlotNumber:           cfg.CurrentSlotNumber,
-		highestObservedSlot:         cfg.HighestObservedSlot,
-		syncPollingInterval:         cfg.SyncPollingInterval,
+		ctx:                          ctx,
+		cancel:                       cancel,
+		p2p:                          beaconp2p,
+		chainService:                 cs,
+		announceBlockHashBuf:         make(chan p2p.Message, cfg.BlockHashBufferSize),
+		blockBuf:                     make(chan p2p.Message, cfg.BlockBufferSize),
+		announceCrystallizedHashBuf:  make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
+		crystallizedStateBuf:         make(chan p2p.Message, cfg.ActiveStateBufferSize),
+		announceActiveHashBuf:        make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
+		activeStateBuf:               make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
+		syncMode:                     cfg.SyncMode,
+		currentSlotNumber:            cfg.CurrentSlotNumber,
+		highestObservedSlot:          cfg.HighestObservedSlot,
+		syncPollingInterval:          cfg.SyncPollingInterval,
+		initialCrystallizedStateHash: [32]byte{},
 	}
 }
 
@@ -252,6 +254,19 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveStateResponse) error {
 	return nil
 }
 
+// RequestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
+// for a beacon block.
+func (ss *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
+	block, err := types.NewBlock(data)
+	if err != nil {
+		return fmt.Errorf("could not instantiate new block from proto: %v", err)
+	}
+	h := block.CrystallizedStateHash()
+	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
+	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
+	return nil
+}
+
 // SetBlockForInitalSync sets the first received block as the base finalized
 // block for initial sync.
 func (ss *Service) SetBlockForInitalSync(data *pb.BeaconBlockResponse) error {
@@ -271,7 +286,7 @@ func (ss *Service) SetBlockForInitalSync(data *pb.BeaconBlockResponse) error {
 		return err
 	}
 
-	ss.currentSlotNumber = block.SlotNumber()
+	ss.initialCrystallizedStateHash = block.CrystallizedStateHash()
 
 	log.Infof("Saved block with hash 0%x for initial sync", h)
 	return nil
@@ -311,12 +326,14 @@ func (ss *Service) writeBlockToDB(block *types.Block) error {
 
 func (ss *Service) initialSync(done <-chan struct{}) {
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
+	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
 
 	// This is used to check if the local chain has the same height as other synced chains in the network,
 	// if it does then this routine is exited and a new goroutine is spawned.
 	timechan := time.NewTicker(ss.syncPollingInterval)
 
 	defer blockSub.Unsubscribe()
+	defer crystallizedStateSub.Unsubscribe()
 	for {
 		select {
 		case <-done:
@@ -343,10 +360,16 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 			}
 
 			if ss.currentSlotNumber == 0 {
-				if err := ss.SetBlockForInitalSync(data); err != nil {
-					log.Errorf("Could not set block for initial sync %v", err)
+				if ss.initialCrystallizedStateHash != [32]byte{} {
+					continue
 				}
-				ss.requestNextBlock()
+				if err := ss.SetBlockForInitalSync(data); err != nil {
+					log.Errorf("Could not set block for initial sync: %v", err)
+				}
+				if err := ss.RequestCrystallizedStateFromPeer(data, msg.Peer); err != nil {
+					log.Errorf("Could not request crystallized state from peer: %v", err)
+				}
+
 				continue
 			}
 
@@ -358,6 +381,31 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				log.Errorf("Unable to save block: %v", err)
 			}
 			ss.requestNextBlock()
+		case msg := <-ss.crystallizedStateBuf:
+			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Errorf("Received malformed crystallized state p2p message")
+				continue
+			}
+
+			if ss.initialCrystallizedStateHash == [32]byte{} {
+				continue
+			}
+
+			crystallizedState := types.NewCrystallizedState(data)
+			hash, err := crystallizedState.Hash()
+			if err != nil {
+				log.Errorf("Unable to hash crytsallized state: %v", err)
+			}
+
+			if hash != ss.initialCrystallizedStateHash {
+				continue
+			}
+
+			ss.currentSlotNumber = crystallizedState.LastFinalizedEpoch()
+			ss.requestNextBlock()
+			crystallizedStateSub.Unsubscribe()
 		}
 	}
 }
