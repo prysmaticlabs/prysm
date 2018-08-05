@@ -25,8 +25,14 @@ contract ValidatorRegistration {
         )
         public payable
         {
-        require(msg.value == VALIDATOR_DEPOSIT);
-        require(!usedPubkey[_pubkey]);
+        require(
+            msg.value == VALIDATOR_DEPOSIT,
+            "Incorrect validator deposit"
+        );
+        require(
+            !usedPubkey[_pubkey]
+            "Public key already used"
+        );
 
         usedPubkey[_pubkey] = true;
 
