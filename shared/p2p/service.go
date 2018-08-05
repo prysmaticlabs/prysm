@@ -1,12 +1,3 @@
-// Package p2p handles peer-to-peer networking for the sharding package.
-//
-// Notes:
-// Gossip sub topics can be identified by their proto message types.
-//
-// 		topic := proto.MessageName(myMsg)
-//
-// Then we can assume that only these message types are broadcast in that
-// gossip subscription.
 package p2p
 
 import (
