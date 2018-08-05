@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/prysm/client/attester"
@@ -20,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/proposer"
 	"github.com/prysmaticlabs/prysm/client/rpcclient"
-	"github.com/prysmaticlabs/prysm/client/simulator"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
 	"github.com/prysmaticlabs/prysm/client/utils"
@@ -230,12 +228,6 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return fmt.Errorf("could not register attester service: %v", err)
 		}
 		return s.services.RegisterService(not)
-	case "simulator":
-		sim, err := simulator.NewSimulator(config, client, shardp2p, shardID, 15*time.Second)
-		if err != nil {
-			return fmt.Errorf("could not register simulator service: %v", err)
-		}
-		return s.services.RegisterService(sim)
 	case "proposer":
 		var pool *txpool.TXPool
 		if err := s.services.FetchService(&pool); err != nil {
