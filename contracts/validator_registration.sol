@@ -30,7 +30,7 @@ contract ValidatorRegistration {
             "Incorrect validator deposit"
         );
         require(
-            !usedPubkey[_pubkey]
+            !usedPubkey[_pubkey],
             "Public key already used"
         );
 
