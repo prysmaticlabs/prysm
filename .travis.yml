@@ -9,11 +9,11 @@ matrix:
         - lint
       script:
         - 
-          npm install -g solium && go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
+          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
       env: V=0.15.0
       before_install:
-        # Install Bazel and initialize solidity linter at the end
+        # Install Bazel
         - |
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
@@ -52,7 +52,7 @@ matrix:
       install: true # Skip install go packages.
           
       script:
-        # Ensure everything builds
+        # Ensure everything builds.
         - |
           bazel \
             --bazelrc=.travis-bazelrc \
@@ -68,14 +68,24 @@ matrix:
         # Check that BUILD files are formatted correctly.
         - ./check_gazelle.sh
 
-        # Check that target visibility is correct..
+        # Check that target visibility is correct.
         - ./check_visibility.sh
 
-        # Check solidity linter.
-        - solium -d contracts/
-
         # Shutdown must be last.
-        - bazel shutdown 
-          
+        - bazel shutdown
+
       notifications:
         email: false
+
+    - os: linux
+        language: node_js
+      env:
+        - solidity
+      node_js:
+        - "lts/*"
+      before_install:
+        - npm install -g solium
+      install: true # Skip npm install.
+      script:
+        # Check solidity linter.
+        - solium -d contracts/
