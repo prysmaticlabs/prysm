@@ -206,7 +206,11 @@ func TestCollationBodyResponse(t *testing.T) {
 func TestConstructAttesterRequest(t *testing.T) {
 
 	backend, smc := setup(t)
-	node := &mockNode{smc: smc, t: t, Backend: backend}
+	node := &mockNode{
+		t:       t,
+		smc:     smc,
+		Backend: backend,
+	}
 
 	// Fast forward to next period.
 	c := shardparams.DefaultConfig()
