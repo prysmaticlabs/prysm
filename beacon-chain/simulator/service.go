@@ -111,7 +111,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				log.Errorf("Could not fetch crystallized state hash: %v", err)
 			}
 
-			block, err := types.NewBlock(&pb.BeaconBlockResponse{
+			block, err := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
 				Timestamp:             ptypes.TimestampNow(),
 				MainChainRef:          sim.web3Service.LatestBlockHash().Bytes(),
