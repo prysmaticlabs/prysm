@@ -77,8 +77,8 @@ matrix:
       notifications:
         email: false
 
-    - os: linux
-        language: node_js
+    - language: node_js
+      os: linux
       env:
         - solidity
       node_js:
