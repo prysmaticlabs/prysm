@@ -675,11 +675,13 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	}()
 
 	generichash := make([]byte, 32)
+	generichash[0] = 'a'
 
 	blockResponse := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{1, 2, 3},
-		ParentHash:   generichash,
-		SlotNumber:   uint64(20),
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: generichash,
 	}
 
 	msg1 := p2p.Message{
@@ -692,8 +694,11 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber not updated: %v", blockResponse.GetSlotNumber())
+	var hash [32]byte
+	copy(hash[:], blockResponse.CrystallizedStateHash)
+
+	if hash != ss.initialCrystallizedStateHash {
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.CrystallizedStateHash)
 	}
 
 	hook.Reset()
@@ -716,11 +721,27 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}()
 
 	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		LastFinalizedEpoch: 99,
+	}
+
+	incorrectStateResponse := &pb.CrystallizedStateResponse{
+		LastFinalizedEpoch: 9,
+		LastJustifiedEpoch: 20,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of crystallized state: %v", err)
+	}
 
 	blockResponse := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{1, 2, 3},
-		ParentHash:   generichash,
-		SlotNumber:   uint64(20),
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: crystallizedStateHash[:],
 	}
 
 	msg1 := p2p.Message{
@@ -728,16 +749,35 @@ func TestSavingBlocksInSync(t *testing.T) {
 		Data: blockResponse,
 	}
 
-	ss.blockBuf <- msg1
-
-	blockResponse.SlotNumber = 30
-	ss.blockBuf <- msg1
-
-	if blockResponse.GetSlotNumber() == ss.currentSlotNumber {
-		t.Fatalf("slotnumber saved when it was not supposed too: %v", blockResponse.GetSlotNumber())
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: incorrectStateResponse,
 	}
 
-	blockResponse.SlotNumber = 21
+	ss.blockBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
+
+	if ss.currentSlotNumber == incorrectStateResponse.LastFinalizedEpoch {
+		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
+	}
+
+	msg2.Data = stateResponse
+
+	ss.crystallizedStateBuf <- msg2
+
+	if crystallizedStateHash != ss.initialCrystallizedStateHash {
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.CrystallizedStateHash)
+	}
+
+	blockResponse.SlotNumber = 30
+	msg1.Data = blockResponse
+	ss.blockBuf <- msg1
+
+	if stateResponse.GetLastFinalizedEpoch() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.GetLastFinalizedEpoch())
+	}
+
+	blockResponse.SlotNumber = 100
 	ss.blockBuf <- msg1
 
 	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
@@ -767,11 +807,22 @@ func TestTimeChan(t *testing.T) {
 	}()
 
 	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		LastFinalizedEpoch: 99,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of crystallized state: %v", err)
+	}
 
 	blockResponse := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{1, 2, 3},
-		ParentHash:   generichash,
-		SlotNumber:   uint64(20),
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: crystallizedStateHash[:],
 	}
 
 	msg1 := p2p.Message{
@@ -779,9 +830,18 @@ func TestTimeChan(t *testing.T) {
 		Data: blockResponse,
 	}
 
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+
 	ss.blockBuf <- msg1
 
-	blockResponse.SlotNumber = 21
+	ss.crystallizedStateBuf <- msg2
+
+	blockResponse.SlotNumber = 100
+	msg1.Data = blockResponse
+
 	ss.blockBuf <- msg1
 
 	time.Sleep(interval)
