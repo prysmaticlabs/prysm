@@ -49,11 +49,26 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !hasActive && !hasCrystallized {
+	hasGenesis, err := db.Has([]byte("genesis"))
+	if err != nil {
+		return nil, err
+	}
+	if !hasActive && !hasCrystallized && !hasGenesis {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		active, crystallized := types.NewGenesisStates()
 		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
+		genesisBlock, err := types.NewGenesisBlock()
+		if err != nil {
+			return nil, err
+		}
+		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
+		if err != nil {
+			return nil, err
+		}
+		if err := beaconChain.db.Put([]byte("genesis"), genesisMarshall); err != nil {
+			return nil, err
+		}
 		return beaconChain, nil
 	}
 	if hasActive {
@@ -98,9 +113,10 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
 		}
+		block.ParentHash = make([]byte, 32)
 		return types.NewBlock(block)
 	}
-	return nil, nil
+	return types.NewGenesisBlock()
 }
 
 // ActiveState exposes a getter to external services.

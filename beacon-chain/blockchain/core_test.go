@@ -59,11 +59,17 @@ func TestNewBeaconChain(t *testing.T) {
 
 	hook.Reset()
 	active, crystallized := types.NewGenesisStates()
+	if _, err := types.NewGenesisBlock(); err != nil {
+		t.Errorf("Creating a new genesis block failed %v", err)
+	}
 	if !reflect.DeepEqual(beaconChain.ActiveState(), active) {
 		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), active)
 	}
 	if !reflect.DeepEqual(beaconChain.CrystallizedState(), crystallized) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), crystallized)
+	}
+	if _, err := beaconChain.GenesisBlock(); err != nil {
+		t.Errorf("Getting new beaconchain genesis failed: %v", err)
 	}
 }
 
@@ -91,7 +97,11 @@ func TestGetGenesisBlock(t *testing.T) {
 		t.Errorf("unable to get key value of genesis: %v", err)
 	}
 
-	if time, _ := genesisBlock.Timestamp(); time.Second() != 40 {
+	time, err := genesisBlock.Timestamp()
+	if err != nil {
+		t.Errorf("Timestamp could not be retrieved: %v", err)
+	}
+	if time.Second() != 40 {
 		t.Errorf("Timestamp was not saved properly: %v", time.Second())
 	}
 }
