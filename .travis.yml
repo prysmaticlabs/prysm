@@ -52,7 +52,7 @@ matrix:
       install: true # Skip install go packages.
           
       script:
-        # Ensure everything builds
+        # Ensure everything builds.
         - |
           bazel \
             --bazelrc=.travis-bazelrc \
@@ -68,11 +68,24 @@ matrix:
         # Check that BUILD files are formatted correctly.
         - ./check_gazelle.sh
 
-        # Check that target visibility is correct..
+        # Check that target visibility is correct.
         - ./check_visibility.sh
 
         # Shutdown must be last.
-        - bazel shutdown 
-          
+        - bazel shutdown
+
       notifications:
         email: false
+
+    - language: node_js
+      os: linux
+      env:
+        - solidity
+      node_js:
+        - "lts/*"
+      before_install:
+        - npm install -g solium
+      install: true # Skip npm install.
+      script:
+        # Check solidity linter.
+        - solium -d contracts/
