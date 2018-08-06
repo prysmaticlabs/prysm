@@ -31,18 +31,7 @@ func NewBlock(data *pb.BeaconBlock) (*Block, error) {
 		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
 	}
 
-	return &Block{data}, nil
-}
-
-// NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock() (*Block, error) {
-	genesisTime := time.Date(2018, time.July, 21, 12, 0, 0, 0, time.UTC)
-	protoGenesis, err := ptypes.TimestampProto(genesisTime)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: Add more default fields.
-	return &Block{data: &pb.BeaconBlock{Timestamp: protoGenesis}}, nil
+	return &Block{data: data}, nil
 }
 
 // Proto returns the underlying protobuf data within a block primitive.

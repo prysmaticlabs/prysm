@@ -85,7 +85,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
-	return types.NewGenesisBlock()
+	return b.GetGenesisBlock()
 }
 
 // ActiveState exposes a getter to external services.
@@ -138,6 +138,24 @@ func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	currentEpoch := b.state.CrystallizedState.CurrentEpoch()
 	isTransition := (slotNumber / params.EpochLength) > currentEpoch
 	return isTransition
+}
+
+// GetGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
+func (b *BeaconChain) GetGenesisBlock() (*types.Block, error) {
+	genesisExists, err := b.db.Has([]byte("genesis"))
+	if err != nil {
+		return nil, err
+	}
+	if genesisExists {
+		bytes, _ := b.db.Get([]byte("genesis"))
+		block := &pb.BeaconBlockResponse{}
+		if err := proto.Unmarshal(bytes, block); err != nil {
+			return nil, err
+		}
+		// TODO: Add more default fields.
+		return types.NewBlock(block)
+	}
+	return nil, nil
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.

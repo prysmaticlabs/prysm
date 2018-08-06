@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -63,6 +64,35 @@ func TestNewBeaconChain(t *testing.T) {
 	}
 	if !reflect.DeepEqual(beaconChain.CrystallizedState(), crystallized) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), crystallized)
+	}
+}
+
+func TestGetGenesisBlock(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := &pb.BeaconBlockResponse{
+		ParentHash: make([]byte, 32),
+		Timestamp: &timestamp.Timestamp{
+			Seconds: 13000000,
+		},
+	}
+	bytes, err := proto.Marshal(block)
+	if err != nil {
+		t.Errorf("unable to Marshal genesis block: %v", err)
+	}
+
+	if err := db.DB().Put([]byte("genesis"), bytes); err != nil {
+		t.Errorf("unable to save key value of genesis: %v", err)
+	}
+
+	genesisBlock, err := beaconChain.GenesisBlock()
+	if err != nil {
+		t.Errorf("unable to get key value of genesis: %v", err)
+	}
+
+	if time, _ := genesisBlock.Timestamp(); time.Second() != 40 {
+		t.Errorf("Timestamp was not saved properly: %v", time.Second())
 	}
 }
 
