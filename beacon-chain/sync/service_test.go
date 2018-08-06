@@ -715,12 +715,14 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	generichash := make([]byte, 32)
 	generichash[0] = 'a'
 
-	blockResponse := &pb.BeaconBlockResponse{
+	block := &pb.BeaconBlock{
 		MainChainRef:          []byte{1, 2, 3},
 		ParentHash:            generichash,
 		SlotNumber:            uint64(20),
 		CrystallizedStateHash: generichash,
 	}
+
+	blockResponse := &pb.BeaconBlockResponse{Block: block}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
@@ -733,10 +735,10 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	<-exitRoutine
 
 	var hash [32]byte
-	copy(hash[:], blockResponse.CrystallizedStateHash)
+	copy(hash[:], blockResponse.Block.CrystallizedStateHash)
 
 	if hash != ss.initialCrystallizedStateHash {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.CrystallizedStateHash)
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
 	}
 
 	hook.Reset()
@@ -761,25 +763,37 @@ func TestSavingBlocksInSync(t *testing.T) {
 	generichash := make([]byte, 32)
 	generichash[0] = 'a'
 
-	stateResponse := &pb.CrystallizedStateResponse{
+	crystallizedState := &pb.CrystallizedState{
 		LastFinalizedEpoch: 99,
 	}
 
-	incorrectStateResponse := &pb.CrystallizedStateResponse{
+	stateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: crystallizedState,
+	}
+
+	incorrectState := &pb.CrystallizedState{
 		LastFinalizedEpoch: 9,
 		LastJustifiedEpoch: 20,
 	}
 
-	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse).Hash()
+	incorrectStateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: incorrectState,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(crystallizedState).Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of crystallized state: %v", err)
 	}
 
-	blockResponse := &pb.BeaconBlockResponse{
+	block := &pb.BeaconBlock{
 		MainChainRef:          []byte{1, 2, 3},
 		ParentHash:            generichash,
 		SlotNumber:            uint64(20),
 		CrystallizedStateHash: crystallizedStateHash[:],
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		Block: block,
 	}
 
 	msg1 := p2p.Message{
@@ -795,7 +809,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.blockBuf <- msg1
 	ss.crystallizedStateBuf <- msg2
 
-	if ss.currentSlotNumber == incorrectStateResponse.LastFinalizedEpoch {
+	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedEpoch {
 		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
 	}
 
@@ -804,22 +818,22 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.crystallizedStateBuf <- msg2
 
 	if crystallizedStateHash != ss.initialCrystallizedStateHash {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.CrystallizedStateHash)
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
 	}
 
-	blockResponse.SlotNumber = 30
+	blockResponse.Block.SlotNumber = 30
 	msg1.Data = blockResponse
 	ss.blockBuf <- msg1
 
-	if stateResponse.GetLastFinalizedEpoch() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.GetLastFinalizedEpoch())
+	if stateResponse.CrystallizedState.GetLastFinalizedEpoch() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedEpoch())
 	}
 
-	blockResponse.SlotNumber = 100
+	blockResponse.Block.SlotNumber = 100
 	ss.blockBuf <- msg1
 
-	if blockResponse.GetSlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", blockResponse.GetSlotNumber())
+	if blockResponse.Block.GetSlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", blockResponse.Block.GetSlotNumber())
 	}
 
 	ss.cancel()
@@ -847,20 +861,28 @@ func TestTimeChan(t *testing.T) {
 	generichash := make([]byte, 32)
 	generichash[0] = 'a'
 
-	stateResponse := &pb.CrystallizedStateResponse{
+	crystallizedstate := &pb.CrystallizedState{
 		LastFinalizedEpoch: 99,
 	}
 
-	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse).Hash()
+	stateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: crystallizedstate,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of crystallized state: %v", err)
 	}
 
-	blockResponse := &pb.BeaconBlockResponse{
+	block := &pb.BeaconBlock{
 		MainChainRef:          []byte{1, 2, 3},
 		ParentHash:            generichash,
 		SlotNumber:            uint64(20),
 		CrystallizedStateHash: crystallizedStateHash[:],
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		Block: block,
 	}
 
 	msg1 := p2p.Message{
@@ -877,7 +899,7 @@ func TestTimeChan(t *testing.T) {
 
 	ss.crystallizedStateBuf <- msg2
 
-	blockResponse.SlotNumber = 100
+	blockResponse.Block.SlotNumber = 100
 	msg1.Data = blockResponse
 
 	ss.blockBuf <- msg1

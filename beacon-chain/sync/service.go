@@ -257,7 +257,7 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
 // RequestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
 // for a beacon block.
 func (ss *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
-	block, err := types.NewBlock(data)
+	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
 	}
@@ -271,7 +271,7 @@ func (ss *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse
 // block for initial sync.
 func (ss *Service) SetBlockForInitalSync(data *pb.BeaconBlockResponse) error {
 
-	block, err := types.NewBlock(data)
+	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
 	}
@@ -300,7 +300,7 @@ func (ss *Service) requestNextBlock() {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (ss *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
-	block, err := types.NewBlock(data)
+	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
 	}
@@ -355,8 +355,8 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				continue
 			}
 
-			if data.GetSlotNumber() > ss.highestObservedSlot {
-				ss.highestObservedSlot = data.GetSlotNumber()
+			if data.Block.GetSlotNumber() > ss.highestObservedSlot {
+				ss.highestObservedSlot = data.Block.GetSlotNumber()
 			}
 
 			if ss.currentSlotNumber == 0 {
@@ -373,7 +373,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				continue
 			}
 
-			if data.GetSlotNumber() != (ss.currentSlotNumber + 1) {
+			if data.Block.GetSlotNumber() != (ss.currentSlotNumber + 1) {
 				continue
 			}
 
@@ -393,7 +393,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				continue
 			}
 
-			crystallizedState := types.NewCrystallizedState(data)
+			crystallizedState := types.NewCrystallizedState(data.CrystallizedState)
 			hash, err := crystallizedState.Hash()
 			if err != nil {
 				log.Errorf("Unable to hash crytsallized state: %v", err)
