@@ -166,21 +166,25 @@ func TestProcessBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := &pb.BeaconBlockResponse{
+	data := &pb.BeaconBlock{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
 		ParentHash:   make([]byte, 32),
 	}
 
+	responseBlock := &pb.BeaconBlockResponse{
+		Block: data,
+	}
+
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse,
+		Data: responseBlock,
 	}
 
 	ss.blockBuf <- msg
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(blockResponse)
+	block, err := types.NewBlock(data)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -209,24 +213,32 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse1 := &pb.BeaconBlockResponse{
+	data1 := &pb.BeaconBlock{
 		MainChainRef: []byte{1, 2, 3, 4, 5},
 		ParentHash:   make([]byte, 32),
 	}
 
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse1,
+	responseBlock1 := &pb.BeaconBlockResponse{
+		Block: data1,
 	}
 
-	blockResponse2 := &pb.BeaconBlockResponse{
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: responseBlock1,
+	}
+
+	data2 := &pb.BeaconBlock{
 		MainChainRef: []byte{6, 7, 8, 9, 10},
 		ParentHash:   make([]byte, 32),
 	}
 
+	responseBlock2 := &pb.BeaconBlockResponse{
+		Block: data2,
+	}
+
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse2,
+		Data: responseBlock2,
 	}
 
 	ss.blockBuf <- msg1
@@ -234,7 +246,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block1, err := types.NewBlock(blockResponse1)
+	block1, err := types.NewBlock(data1)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -243,7 +255,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block2, err := types.NewBlock(blockResponse2)
+	block2, err := types.NewBlock(data2)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -277,21 +289,25 @@ func TestProcessSameBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := &pb.BeaconBlockResponse{
+	data := &pb.BeaconBlock{
 		MainChainRef: []byte{1, 2, 3},
 		ParentHash:   make([]byte, 32),
 	}
 
+	responseBlock := &pb.BeaconBlockResponse{
+		Block: data,
+	}
+
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse,
+		Data: responseBlock,
 	}
 	ss.blockBuf <- msg
 	ss.blockBuf <- msg
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(blockResponse)
+	block, err := types.NewBlock(data)
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -459,22 +475,29 @@ func TestProcessCrystallizedStates(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse1 := &pb.CrystallizedStateResponse{
+	data1 := &pb.CrystallizedState{
 		LastJustifiedEpoch: 100,
 		LastFinalizedEpoch: 99,
 	}
-	stateResponse2 := &pb.CrystallizedStateResponse{
+	data2 := &pb.CrystallizedState{
 		LastJustifiedEpoch: 100,
 		LastFinalizedEpoch: 98,
 	}
 
+	responseState1 := &pb.CrystallizedStateResponse{
+		CrystallizedState: data1,
+	}
+	responseState2 := &pb.CrystallizedStateResponse{
+		CrystallizedState: data2,
+	}
+
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse1,
+		Data: responseState1,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse2,
+		Data: responseState2,
 	}
 
 	ss.crystallizedStateBuf <- msg1
@@ -482,8 +505,8 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state1 := types.NewCrystallizedState(stateResponse1)
-	state2 := types.NewCrystallizedState(stateResponse2)
+	state1 := types.NewCrystallizedState(data1)
+	state2 := types.NewCrystallizedState(data2)
 
 	h, err := state1.Hash()
 	if err != nil {
@@ -518,20 +541,27 @@ func TestProcessActiveStates(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse1 := &pb.ActiveStateResponse{
+	state1 := &pb.ActiveState{
 		TotalAttesterDeposits: 10000,
 	}
-	stateResponse2 := &pb.ActiveStateResponse{
+	state2 := &pb.ActiveState{
 		TotalAttesterDeposits: 10001,
+	}
+
+	responseState1 := &pb.ActiveStateResponse{
+		ActiveState: state1,
+	}
+	responseState2 := &pb.ActiveStateResponse{
+		ActiveState: state2,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse1,
+		Data: responseState1,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse2,
+		Data: responseState2,
 	}
 
 	ss.activeStateBuf <- msg1
@@ -539,7 +569,7 @@ func TestProcessActiveStates(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state := types.NewActiveState(stateResponse1)
+	state := types.NewActiveState(state1)
 	h, err := state.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -549,7 +579,7 @@ func TestProcessActiveStates(t *testing.T) {
 		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedActiveHashes[0])
 	}
 
-	state = types.NewActiveState(stateResponse2)
+	state = types.NewActiveState(state2)
 	h, err = state.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -576,18 +606,22 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse := &pb.CrystallizedStateResponse{
+	data := &pb.CrystallizedState{
 		LastJustifiedEpoch: 100,
 		LastFinalizedEpoch: 99,
 	}
 
+	responseState := &pb.CrystallizedStateResponse{
+		CrystallizedState: data,
+	}
+
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState,
 	}
 
 	ss.crystallizedStateBuf <- msg1
@@ -595,7 +629,7 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state := types.NewCrystallizedState(stateResponse)
+	state := types.NewCrystallizedState(data)
 
 	h, err := state.Hash()
 	if err != nil {
@@ -625,17 +659,21 @@ func TestProcessSameActiveState(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse := &pb.ActiveStateResponse{
+	data := &pb.ActiveState{
 		TotalAttesterDeposits: 100,
+	}
+
+	responseState1 := &pb.ActiveStateResponse{
+		ActiveState: data,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState1,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState1,
 	}
 
 	ss.activeStateBuf <- msg1
@@ -643,7 +681,7 @@ func TestProcessSameActiveState(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state := types.NewActiveState(stateResponse)
+	state := types.NewActiveState(data)
 
 	h, err := state.Hash()
 	if err != nil {
