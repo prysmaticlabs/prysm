@@ -7,6 +7,7 @@ go_library(
         "feed.go",
         "message.go",
         "options.go",
+        "p2p.go",
         "peer.go",
         "service.go",
         "topics.go",
@@ -33,6 +34,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "adapter_example_test.go",
         "discovery_test.go",
         "feed_example_test.go",
         "feed_test.go",

@@ -82,6 +82,17 @@ func (s *Server) Stop() error {
 	return nil
 }
 
+// RegisterTopic, message, and the adapter stack for the given topic. The message type provided
+// will be feed selector for emitting messages received on a given topic.
+//
+// The topics can originate from multiple sources. In other words, messages on TopicA may come
+// from direct peer communication or a pub/sub channel. 
+// 
+// TODO
+func (s *Server) RegisterTopic(topic, message interface{}, adapters ...Adapter) {
+	// TODO
+}
+
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
 func (s *Server) Subscribe(msg interface{}, channel interface{}) event.Subscription {
 	return s.Feed(msg).Subscribe(channel)

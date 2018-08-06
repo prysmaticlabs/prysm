@@ -6,15 +6,11 @@
 // 	- Floodsub: peer broadcasting to all peers
 // 	- Gossipsub: peer broadcasting to localized peers
 //
+// However, this communication is abstracted through the Feed, Broadcast, and Send.
+//
+//
+//
 // Read more about gossipsub at https://github.com/vyzo/gerbil-simsub
-//
-// Notes:
-// Gossip sub topics can be identified by their proto message types.
-//
-// 		topic := proto.MessageName(myMsg)
-//
-// Then we can assume that only these message types are broadcast in that
-// gossip subscription.
 package p2p
 
 import "context"
