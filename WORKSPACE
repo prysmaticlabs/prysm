@@ -71,6 +71,18 @@ load(
 
 _go_image_repos()
 
+git_repository(
+    name = "com_github_jmhodges_bazel_gomock",
+    commit = "5b73edb74e569ff404b3beffc809d6d9f205e0e4",
+    remote = "https://github.com/jmhodges/bazel_gomock.git",
+)
+
+go_repository(
+    name="com_github_golang_mock",
+    commit = "503ea999614e3b9d10f0060b8182b6fc7ea664f8",
+    importpath = "github.com/golang/mock",
+)
+
 # External dependencies
 
 go_repository(

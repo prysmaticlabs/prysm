@@ -2,59 +2,22 @@ package attester
 
 import (
 	"context"
-	"errors"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/grpc"
 )
 
 type faultyClient struct{}
 
 func (fc *faultyClient) BeaconServiceClient() pb.BeaconServiceClient {
-	return &faultyRPC{}
-}
-
-type faultyRPC struct{}
-
-func (fr *faultyRPC) LatestBeaconBlock(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestBeaconBlockClient, error) {
-	return nil, errors.New("error setting up")
-}
-
-func (fr *faultyRPC) LatestCrystallizedState(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestCrystallizedStateClient, error) {
-	return nil, errors.New("error setting up")
-}
-
-func (fr *faultyRPC) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest, opts ...grpc.CallOption) (*pb.ShuffleResponse, error) {
-	return nil, errors.New("error setting up")
-}
-
-type goodClient struct{}
-
-func (gc *goodClient) BeaconServiceClient() pb.BeaconServiceClient {
-	return &goodRPC{}
-}
-
-type goodRPC struct{}
-
-func (gr *goodRPC) LatestBeaconBlock(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestBeaconBlockClient, error) {
-	return nil, errors.New("error setting up")
-}
-
-func (gr *goodRPC) LatestCrystallizedState(ctx context.Context, emp *empty.Empty, opts ...grpc.CallOption) (pb.BeaconService_LatestCrystallizedStateClient, error) {
-	return nil, errors.New("error setting up")
-}
-
-func (gr *goodRPC) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest, opts ...grpc.CallOption) (*pb.ShuffleResponse, error) {
-	return nil, errors.New("error setting up")
+	return NewMockBeaconServiceClient(nil)
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	client := &goodClient{}
+	client := &faultyClient{}
 	at := NewAttester(context.Background(), client)
 	at.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
