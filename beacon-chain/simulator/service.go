@@ -41,7 +41,11 @@ type Config struct {
 
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
-	return &Config{Delay: time.Second * 8, BlockRequestBuf: 100, CrystallizedStateRequestBuf: 100}
+	return &Config{
+		Delay:                       time.Second * 8,
+		BlockRequestBuf:             100,
+		CrystallizedStateRequestBuf: 100,
+	}
 }
 
 // NewSimulator creates a simulator instance for a syncer to consume fake, generated blocks.
@@ -107,7 +111,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				log.Errorf("Could not fetch crystallized state hash: %v", err)
 			}
 
-			block, err := types.NewBlock(&pb.BeaconBlockResponse{
+			block, err := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           sim.web3Service.LatestBlockHash().Bytes(),

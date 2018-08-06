@@ -66,7 +66,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		activeData := &pb.ActiveStateResponse{}
+		activeData := &pb.ActiveState{}
 		err = proto.Unmarshal(enc, activeData)
 		if err != nil {
 			return nil, err
@@ -78,7 +78,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		crystallizedData := &pb.CrystallizedStateResponse{}
+		crystallizedData := &pb.CrystallizedState{}
 		err = proto.Unmarshal(enc, crystallizedData)
 		if err != nil {
 			return nil, err
@@ -141,7 +141,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 // is greater than the current epoch.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	currentEpoch := b.state.CrystallizedState.EpochNumber()
-	return slotNumber >= currentEpoch * params.EpochLength
+	return slotNumber >= currentEpoch*params.EpochLength
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
@@ -216,7 +216,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 	// TODO: Verify randao reveal from validator's hash pre image.
 
-	return types.NewActiveState(&pb.ActiveStateResponse{
+	return types.NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AttestationRecord{},
 		RecentBlockHashes:   [][]byte{},
 	}), nil

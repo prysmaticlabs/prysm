@@ -34,11 +34,11 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 type mockChainService struct{}
 
 func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
-	return types.NewActiveState(&pb.ActiveStateResponse{})
+	return types.NewActiveState(&pb.ActiveState{})
 }
 
 func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return types.NewCrystallizedState(&pb.CrystallizedStateResponse{})
+	return types.NewCrystallizedState(&pb.CrystallizedState{})
 }
 
 func TestLifecycle(t *testing.T) {
@@ -84,7 +84,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	hook.Reset()
 }
 
-func TestBlockRequestResponse(t *testing.T) {
+func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
@@ -98,7 +98,7 @@ func TestBlockRequestResponse(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	block, err := types.NewBlock(&pb.BeaconBlockResponse{ParentHash: make([]byte, 32)})
+	block, err := types.NewBlock(&pb.BeaconBlock{ParentHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatalf("Could not instantiate new block from proto: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 	hook.Reset()
 }
 
-func TestCrystallizedRequestResponse(t *testing.T) {
+func TestCrystallizedRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
@@ -168,7 +168,7 @@ func TestCrystallizedRequestResponse(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	state := types.NewCrystallizedState(&pb.CrystallizedStateResponse{EpochNumber: 99})
+	state := types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 99})
 
 	h, err := state.Hash()
 	if err != nil {

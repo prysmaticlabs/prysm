@@ -14,11 +14,11 @@ import (
 
 // Block defines a beacon chain core primitive.
 type Block struct {
-	data *pb.BeaconBlockResponse
+	data *pb.BeaconBlock
 }
 
 // NewBlock explicitly sets the data field of a block.
-func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
+func NewBlock(data *pb.BeaconBlock) (*Block, error) {
 	if len(data.ParentHash) != 32 {
 		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
 	}
@@ -34,11 +34,11 @@ func NewGenesisBlock() (*Block, error) {
 		return nil, err
 	}
 	// TODO: Add more default fields.
-	return &Block{data: &pb.BeaconBlockResponse{Timestamp: protoGenesis}}, nil
+	return &Block{data: &pb.BeaconBlock{Timestamp: protoGenesis}}, nil
 }
 
 // Proto returns the underlying protobuf data within a block primitive.
-func (b *Block) Proto() *pb.BeaconBlockResponse {
+func (b *Block) Proto() *pb.BeaconBlock {
 	return b.data
 }
 

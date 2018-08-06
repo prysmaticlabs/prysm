@@ -13,6 +13,10 @@ message BeaconBlockRequest {
 }
 
 message BeaconBlockResponse {
+  BeaconBlock block = 1;
+}
+
+message BeaconBlock {
   bytes parent_hash = 1;
   uint64 slot_number = 2;
   bytes randao_reveal = 3;
@@ -32,6 +36,10 @@ message CrystallizedStateRequest {
 }
 
 message CrystallizedStateResponse {
+  CrystallizedState crystallized_state = 1;
+}
+
+message CrystallizedState {
   uint64 epoch_number = 1;
   uint64 justified_streak = 2;
   uint64 last_justified_epoch = 3;
@@ -50,11 +58,6 @@ message ArrayShardAndIndices {
   repeated ShardAndIndices array_shard_and_indices = 1;
 }
 
-message ShardAndIndices {
-  uint64 shard_id = 1;
-  repeated uint32 validators = 2;
-}
-
 message ActiveStateHashAnnounce {
   bytes hash = 1;
 }
@@ -63,7 +66,16 @@ message ActiveStateRequest {
   bytes hash = 1;
 }
 
+message ShardAndIndices {
+  uint64 shard_id = 1;
+  repeated uint32 validators = 2;
+}
+
 message ActiveStateResponse {
+  ActiveState active_state = 1;
+}
+
+message ActiveState {
   repeated AttestationRecord pending_attestations = 1;
   repeated bytes recent_block_hashes = 2;
 }

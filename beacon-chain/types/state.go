@@ -11,46 +11,46 @@ import (
 // it changes every block.
 // TODO: Change ActiveState to use proto
 type ActiveState struct {
-	data *pb.ActiveStateResponse
+	data *pb.ActiveState
 }
 
 // CrystallizedState contains fields of every epoch state,
 // it changes every epoch.
 type CrystallizedState struct {
-	data *pb.CrystallizedStateResponse
+	data *pb.CrystallizedState
 }
 
 // NewCrystallizedState creates a new crystallized state with a explicitly set data field.
-func NewCrystallizedState(data *pb.CrystallizedStateResponse) *CrystallizedState {
+func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 	return &CrystallizedState{data: data}
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveStateResponse) *ActiveState {
+func NewActiveState(data *pb.ActiveState) *ActiveState {
 	return &ActiveState{data: data}
 }
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	active := &ActiveState{
-		data: &pb.ActiveStateResponse{
+		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AttestationRecord{},
 			RecentBlockHashes:   [][]byte{},
 		},
 	}
 	crystallized := &CrystallizedState{
-		data: &pb.CrystallizedStateResponse{
-			EpochNumber:            0, //done
-			JustifiedStreak:        0, //done
-			LastJustifiedEpoch:     0, //done
-			LastFinalizedEpoch:     0, //done
-			CurrentDynasty:         0, //done
-			CrosslinkingStartShard: 0, //done
+		data: &pb.CrystallizedState{
+			EpochNumber:            0,
+			JustifiedStreak:        0,
+			LastJustifiedEpoch:     0,
+			LastFinalizedEpoch:     0,
+			CurrentDynasty:         0,
+			CrosslinkingStartShard: 0,
 			CurrentCheckPoint:      []byte{},
-			TotalDeposits:          0,                       //done
-			DynastySeed:            []byte{},                //done
-			DynastySeedLastReset:   0,                       //done
-			Validators:             []*pb.ValidatorRecord{}, //done
+			TotalDeposits:          0,
+			DynastySeed:            []byte{},
+			DynastySeedLastReset:   0,
+			Validators:             []*pb.ValidatorRecord{},
 			IndicesForHeights:      []*pb.ArrayShardAndIndices{},
 		},
 	}
@@ -58,7 +58,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
-func (a *ActiveState) Proto() *pb.ActiveStateResponse {
+func (a *ActiveState) Proto() *pb.ActiveState {
 	return a.data
 }
 
@@ -102,7 +102,7 @@ func (a *ActiveState) ClearRecentBlockHashes() {
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
-func (c *CrystallizedState) Proto() *pb.CrystallizedStateResponse {
+func (c *CrystallizedState) Proto() *pb.CrystallizedState {
 	return c.data
 }
 

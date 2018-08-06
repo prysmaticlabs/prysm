@@ -106,7 +106,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 
 // ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
-func (ss *Service) ReceiveBlock(data *pb.BeaconBlockResponse) error {
+func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
 	block, err := types.NewBlock(data)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -142,7 +142,7 @@ func (ss *Service) ReceiveCrystallizedStateHash(data *pb.CrystallizedStateHashAn
 
 // ReceiveCrystallizedState accepts a crystallized state object to potentially be included in the local chain.
 // The service will filter crystallized state objects that have not been requested (unimplemented).
-func (ss *Service) ReceiveCrystallizedState(data *pb.CrystallizedStateResponse) error {
+func (ss *Service) ReceiveCrystallizedState(data *pb.CrystallizedState) error {
 	state := types.NewCrystallizedState(data)
 
 	h, err := state.Hash()
@@ -178,7 +178,7 @@ func (ss *Service) ReceiveActiveStateHash(data *pb.ActiveStateHashAnnounce, peer
 
 // ReceiveActiveState accepts a active state object to potentially be included in the local chain.
 // The service will filter active state objects that have not been requested (unimplemented).
-func (ss *Service) ReceiveActiveState(data *pb.ActiveStateResponse) error {
+func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
 	state := types.NewActiveState(data)
 
 	h, err := state.Hash()
@@ -226,13 +226,13 @@ func (ss *Service) run(done <-chan struct{}) {
 			}
 			ss.ReceiveBlockHash(data, msg.Peer)
 		case msg := <-ss.blockBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockResponse)
+			response, ok := msg.Data.(*pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlock(data); err != nil {
+			if err := ss.ReceiveBlock(response.Block); err != nil {
 				log.Errorf("Could not receive block: %v", err)
 			}
 		case msg := <-ss.announceCrystallizedHashBuf:
@@ -244,13 +244,13 @@ func (ss *Service) run(done <-chan struct{}) {
 			}
 			ss.ReceiveCrystallizedStateHash(data, msg.Peer)
 		case msg := <-ss.crystallizedStateBuf:
-			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
+			response, ok := msg.Data.(*pb.CrystallizedStateResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed crystallized state p2p message")
 				continue
 			}
-			if err := ss.ReceiveCrystallizedState(data); err != nil {
+			if err := ss.ReceiveCrystallizedState(response.CrystallizedState); err != nil {
 				log.Errorf("Could not receive crystallized state: %v", err)
 			}
 		case msg := <-ss.announceActiveHashBuf:
@@ -262,13 +262,13 @@ func (ss *Service) run(done <-chan struct{}) {
 			}
 			ss.ReceiveActiveStateHash(data, msg.Peer)
 		case msg := <-ss.activeStateBuf:
-			data, ok := msg.Data.(*pb.ActiveStateResponse)
+			response, ok := msg.Data.(*pb.ActiveStateResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Errorf("Received malformed active state p2p message")
 				continue
 			}
-			if err := ss.ReceiveActiveState(data); err != nil {
+			if err := ss.ReceiveActiveState(response.ActiveState); err != nil {
 				log.Errorf("Could not receive active state: %v", err)
 			}
 		}
