@@ -70,7 +70,7 @@ func TestMutateActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	data := &pb.ActiveStateResponse{
+	data := &pb.ActiveState{
 		TotalAttesterDeposits: 4096,
 		AttesterBitfield:      []byte{'A', 'B', 'C'},
 	}
@@ -102,7 +102,7 @@ func TestMutateCrystallizedState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	data := &pb.CrystallizedStateResponse{
+	data := &pb.CrystallizedState{
 		CurrentDynasty:    3,
 		CurrentCheckPoint: []byte("checkpoint"),
 	}
@@ -168,7 +168,7 @@ func TestCanProcessBlock(t *testing.T) {
 	defer db.Close()
 
 	// Initialize a parent block
-	parentBlock := NewBlock(t, &pb.BeaconBlockResponse{
+	parentBlock := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 1,
 	})
 	parentHash, err := parentBlock.Hash()
@@ -180,7 +180,7 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Using a faulty fetcher should throw an error.
-	block := NewBlock(t, &pb.BeaconBlockResponse{
+	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 2,
 	})
 	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
@@ -188,21 +188,21 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Initialize initial state
-	activeState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
+	activeState := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 5})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{CurrentEpoch: 5})
 	beaconChain.state.CrystallizedState = crystallized
 	crystallizedHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Compute crystallized state hash failed: %v", err)
 	}
 
-	block = NewBlock(t, &pb.BeaconBlockResponse{
+	block = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            2,
 		ActiveStateHash:       activeHash[:],
 		CrystallizedStateHash: crystallizedHash[:],
@@ -219,7 +219,7 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Test timestamp validity condition
-	block = NewBlock(t, &pb.BeaconBlockResponse{
+	block = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            1000000,
 		ActiveStateHash:       activeHash[:],
 		CrystallizedStateHash: crystallizedHash[:],
@@ -249,18 +249,18 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 
 	// Initialize state
-	active := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
+	active := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 10000})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{CurrentEpoch: 10000})
 	crystallizedStateHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
 	}
 
-	block := NewBlock(t, &pb.BeaconBlockResponse{
+	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
@@ -268,7 +268,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	})
 
 	// Test negative scenario where active state hash is different than node's compute
-	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 9999})
+	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 9999})
 
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
@@ -279,7 +279,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 
 	// Test negative scenario where crystallized state hash is different than node's compute
-	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 9999})
+	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedState{CurrentEpoch: 9999})
 
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
@@ -295,14 +295,14 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	defer db.Close()
 
 	// If parent hash is non-existent, processing block should fail.
-	active := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
+	active := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 	beaconChain.state.ActiveState = active
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 10000})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{CurrentEpoch: 10000})
 	crystallizedStateHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
@@ -310,7 +310,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	beaconChain.state.CrystallizedState = crystallized
 
 	// Test that block processing is invalid without a parent hash
-	block := NewBlock(t, &pb.BeaconBlockResponse{
+	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            2,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
@@ -320,14 +320,14 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	}
 
 	// If parent hash is not stored in db, processing block should fail.
-	parentBlock := NewBlock(t, &pb.BeaconBlockResponse{
+	parentBlock := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 1,
 	})
 	parentHash, err := parentBlock.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
-	block = NewBlock(t, &pb.BeaconBlockResponse{
+	block = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            2,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
@@ -422,7 +422,7 @@ func TestIsEpochTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedStateResponse{CurrentEpoch: 1})); err != nil {
+	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{CurrentEpoch: 1})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 	if !beaconChain.IsEpochTransition(128) {
@@ -483,7 +483,7 @@ func TestResetAttesterBitfields(t *testing.T) {
 		beaconChain.CrystallizedState().UpdateActiveValidators(validators)
 
 		testAttesterBitfield := []byte{2, 4, 6, 9}
-		if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})); err != nil {
+		if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveState{AttesterBitfield: testAttesterBitfield})); err != nil {
 			t.Fatal("unable to mutate active state")
 		}
 
@@ -505,7 +505,7 @@ func TestResetTotalAttesterDeposit(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	active := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 10000})
+	active := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
 	if err := beaconChain.MutateActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
@@ -522,7 +522,7 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	data := &pb.CrystallizedStateResponse{CurrentEpoch: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	data := &pb.CrystallizedState{CurrentEpoch: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
 	beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data))
 
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
@@ -540,7 +540,7 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
 	}
 
-	data = &pb.CrystallizedStateResponse{CurrentEpoch: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	data = &pb.CrystallizedState{CurrentEpoch: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
 	beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data))
 
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
@@ -569,7 +569,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	data := &pb.CrystallizedStateResponse{
+	data := &pb.CrystallizedState{
 		ActiveValidators:   validators,
 		CurrentCheckPoint:  []byte("checkpoint"),
 		TotalDeposits:      40000,
@@ -583,8 +583,8 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	types.NewActiveState(&pb.ActiveStateResponse{AttesterBitfield: testAttesterBitfield})
-	ActiveState := types.NewActiveState(&pb.ActiveStateResponse{TotalAttesterDeposits: 40000, AttesterBitfield: testAttesterBitfield})
+	types.NewActiveState(&pb.ActiveState{AttesterBitfield: testAttesterBitfield})
+	ActiveState := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 40000, AttesterBitfield: testAttesterBitfield})
 	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
@@ -616,9 +616,9 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil)
-func NewBlock(t *testing.T, b *pb.BeaconBlockResponse) *types.Block {
+func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	if b == nil {
-		b = &pb.BeaconBlockResponse{}
+		b = &pb.BeaconBlock{}
 	}
 	if b.ActiveStateHash == nil {
 		b.ActiveStateHash = make([]byte, 32)

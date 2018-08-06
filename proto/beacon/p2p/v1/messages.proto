@@ -13,6 +13,10 @@ message BeaconBlockRequest {
 }
 
 message BeaconBlockResponse {
+  BeaconBlock block = 1;
+}
+
+message BeaconBlock {
   bytes parent_hash = 1;
   uint64 slot_number = 2;
   bytes randao_reveal = 3;
@@ -34,6 +38,10 @@ message CrystallizedStateRequest {
 }
 
 message CrystallizedStateResponse {
+  CrystallizedState crystallized_state = 1;
+}
+
+message CrystallizedState {
   repeated ValidatorRecord active_validators = 1;
   repeated ValidatorRecord queued_validators = 2;
   repeated ValidatorRecord exited_validators = 3;
@@ -58,6 +66,10 @@ message ActiveStateRequest {
 }
 
 message ActiveStateResponse {
+  ActiveState active_state = 1;
+}
+
+message ActiveState {
   uint64 total_attester_deposits = 1;
   bytes attester_bitfield = 2;
 }
