@@ -161,3 +161,23 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 		t.Error("Context timed out before a message was received!")
 	}
 }
+
+func TestRegisterTopic(t *testing.T) {
+	s, err := NewServer()
+	if err != nil {
+		t.Fatalf("Failed to create new server: %v", err)
+	}
+
+	topic := "test_topic"
+
+	type TestMessage struct{}
+
+	s.RegisterTopic(topic, TestMessage{})
+
+	// TODO: Publish a message on this topic and expect that it is received from a feed.
+}
+
+func TestRegisterTopic_WithAdapers(t *testing.T) {
+	// TODO: Test that adapters are called.
+	// TODO: Use a test suite for different conditions.
+}

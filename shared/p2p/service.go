@@ -89,7 +89,7 @@ func (s *Server) Stop() error {
 // from direct peer communication or a pub/sub channel.
 //
 // TODO
-func (s *Server) RegisterTopic(topic string, message interface{}, adapters []Adapter) {
+func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Adapter) {
 	var msgType reflect.Type // TODO
 	log.WithFields(logrus.Fields{
 		"topic": topic,
@@ -103,21 +103,24 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters []Ada
 	defer sub.Cancel()
 	feed := s.Feed(msgType)
 
-	for {
-		msg, err := sub.Next(s.ctx)
+	// TODO: Run this as the last step in the adapter stack.
+	go (func() {
+		for {
+			msg, err := sub.Next(s.ctx)
 
-		if s.ctx.Err() != nil {
-			return // Context closed or something.
+			if s.ctx.Err() != nil {
+				return // Context closed or something.
+			}
+			if err != nil {
+				log.Errorf("Failed to get next message: %v", err)
+				return
+			}
+
+			// TODO: Run the adapter stack.
+
+			s.emit(feed, msg, msgType)
 		}
-		if err != nil {
-			log.Errorf("Failed to get next message: %v", err)
-			return
-		}
-
-		// TODO: Run the adapter stack.
-
-		s.emit(feed, msg, msgType)
-	}
+	})()
 
 }
 

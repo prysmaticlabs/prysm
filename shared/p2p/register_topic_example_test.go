@@ -33,7 +33,7 @@ func ExampleServer_RegisterTopic() {
 	var topic string
 	var message interface{}
 
-	s.RegisterTopic(topic, message, adapters)
+	s.RegisterTopic(topic, message, adapters...)
 
 	ch := make(chan p2p.Message)
 	sub := s.Subscribe(message, ch)
