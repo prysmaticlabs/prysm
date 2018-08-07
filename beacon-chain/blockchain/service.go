@@ -80,7 +80,7 @@ func (c *ChainService) HasStoredState() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !hasActive && !hasCrystallized {
+	if !hasActive || !hasCrystallized {
 		return false, nil
 	}
 

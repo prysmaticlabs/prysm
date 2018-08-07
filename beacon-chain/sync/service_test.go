@@ -699,16 +699,16 @@ func TestProcessSameActiveState(t *testing.T) {
 
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
-	interval := time.Duration(100000)
 
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0, SyncPollingInterval: interval}
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
 
 	go func() {
-		ss.initialSync(ss.ctx.Done())
+		ss.initialSync(delayChan, ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -747,16 +747,16 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
-	interval := time.Duration(100000)
 
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0, SyncPollingInterval: interval}
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
 
 	go func() {
-		ss.initialSync(ss.ctx.Done())
+		ss.initialSync(delayChan, ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -832,29 +832,28 @@ func TestSavingBlocksInSync(t *testing.T) {
 	blockResponse.Block.SlotNumber = 100
 	ss.blockBuf <- msg1
 
-	if blockResponse.Block.GetSlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", blockResponse.Block.GetSlotNumber())
-	}
-
 	ss.cancel()
 	<-exitRoutine
+
+	if blockResponse.Block.GetSlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", ss.currentSlotNumber)
+	}
 
 	hook.Reset()
 
 }
 
-func TestTimeChan(t *testing.T) {
+func TestDelayChan(t *testing.T) {
 	hook := logTest.NewGlobal()
-	interval := time.Duration(1000)
-
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0, SyncPollingInterval: interval}
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
 
 	go func() {
-		ss.initialSync(ss.ctx.Done())
+		ss.initialSync(delayChan, ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -904,7 +903,7 @@ func TestTimeChan(t *testing.T) {
 
 	ss.blockBuf <- msg1
 
-	time.Sleep(interval)
+	delayChan <- time.Time{}
 
 	ss.cancel()
 	<-exitRoutine

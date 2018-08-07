@@ -86,7 +86,7 @@ func DefaultConfig() Config {
 		SyncMode:                        SyncModeDefault,
 		CurrentSlotNumber:               0,
 		HighestObservedSlot:             0,
-		SyncPollingInterval:             100000,
+		SyncPollingInterval:             time.Second,
 	}
 }
 
@@ -125,18 +125,16 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
+
 	log.Info("Starting service")
+	go ss.run(ss.ctx.Done())
+}
 
-	switch ss.syncMode {
-	case 0:
-		log.Info("Starting initial sync")
-		go ss.initialSync(ss.ctx.Done())
-	case 1:
-		go ss.run(ss.ctx.Done())
-	default:
-		go ss.run(ss.ctx.Done())
+// StartInitialSync kicks off the initial syncing of beacon blocks for the node.
+func (ss *Service) StartInitialSync() {
 
-	}
+	log.Info("Starting initial sync")
+	go ss.initialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
 
 }
 
@@ -267,9 +265,9 @@ func (ss *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse
 	return nil
 }
 
-// SetBlockForInitalSync sets the first received block as the base finalized
+// SetBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
-func (ss *Service) SetBlockForInitalSync(data *pb.BeaconBlockResponse) error {
+func (ss *Service) SetBlockForInitialSync(data *pb.BeaconBlockResponse) error {
 
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
@@ -324,13 +322,9 @@ func (ss *Service) writeBlockToDB(block *types.Block) error {
 	return ss.chainService.SaveBlock(block)
 }
 
-func (ss *Service) initialSync(done <-chan struct{}) {
+func (ss *Service) initialSync(delaychan <-chan time.Time, done <-chan struct{}) {
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
 	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
-
-	// This is used to check if the local chain has the same height as other synced chains in the network,
-	// if it does then this routine is exited and a new goroutine is spawned.
-	timechan := time.NewTicker(ss.syncPollingInterval)
 
 	defer blockSub.Unsubscribe()
 	defer crystallizedStateSub.Unsubscribe()
@@ -338,13 +332,12 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 		select {
 		case <-done:
 			log.Infof("Exiting goroutine")
-			timechan.Stop()
 			return
-		case <-timechan.C:
+		case <-delaychan:
+			log.Info("testing")
 			if ss.highestObservedSlot == ss.currentSlotNumber {
-				go ss.run(ss.ctx.Done())
 				log.Infof("Exiting initial sync and starting normal sync")
-				timechan.Stop()
+				ss.Start()
 				return
 			}
 		case msg := <-ss.blockBuf:
@@ -363,7 +356,7 @@ func (ss *Service) initialSync(done <-chan struct{}) {
 				if ss.initialCrystallizedStateHash != [32]byte{} {
 					continue
 				}
-				if err := ss.SetBlockForInitalSync(data); err != nil {
+				if err := ss.SetBlockForInitialSync(data); err != nil {
 					log.Errorf("Could not set block for initial sync: %v", err)
 				}
 				if err := ss.RequestCrystallizedStateFromPeer(data, msg.Peer); err != nil {
