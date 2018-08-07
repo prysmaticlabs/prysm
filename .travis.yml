@@ -11,6 +11,12 @@ matrix:
         - 
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
+      env:
+        - coverage
+      script:
+        - ./coverage.sh
+        - bash <(curl -s https://codecov.io/bash)
+    - os: linux
       env: V=0.15.0
       before_install:
         # Install Bazel
