@@ -66,12 +66,12 @@ func (s *Server) Start() {
 	}
 
 	// Subscribe to all topics.
-	for topic, msgType := range topicTypeMapping {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-		}).Debug("Subscribing to topic")
-		go s.subscribeToTopic(topic, msgType)
-	}
+	//	for topic, msgType := range topicTypeMapping {
+	//		log.WithFields(logrus.Fields{
+	//			"topic": topic,
+	//		}).Debug("Subscribing to topic")
+	//		go s.subscribeToTopic(topic, msgType)
+	//	}
 }
 
 // Stop the main p2p loop.
@@ -86,11 +86,61 @@ func (s *Server) Stop() error {
 // will be feed selector for emitting messages received on a given topic.
 //
 // The topics can originate from multiple sources. In other words, messages on TopicA may come
-// from direct peer communication or a pub/sub channel. 
-// 
+// from direct peer communication or a pub/sub channel.
+//
 // TODO
-func (s *Server) RegisterTopic(topic, message interface{}, adapters ...Adapter) {
-	// TODO
+func (s *Server) RegisterTopic(topic string, message interface{}, adapters []Adapter) {
+	var msgType reflect.Type // TODO
+	log.WithFields(logrus.Fields{
+		"topic": topic,
+	}).Debug("Subscribing to topic")
+
+	sub, err := s.gsub.Subscribe(topic)
+	if err != nil {
+		log.Errorf("Failed to subscribe to topic: %v", err)
+		return
+	}
+	defer sub.Cancel()
+	feed := s.Feed(msgType)
+
+	for {
+		msg, err := sub.Next(s.ctx)
+
+		if s.ctx.Err() != nil {
+			return // Context closed or something.
+		}
+		if err != nil {
+			log.Errorf("Failed to get next message: %v", err)
+			return
+		}
+
+		// TODO: Run the adapter stack.
+
+		s.emit(feed, msg, msgType)
+	}
+
+}
+
+// TODO: rename
+func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
+
+	// TODO: reflect.Value.Interface() can panic so we should capture that
+	// panic so the server doesn't crash.
+	d, ok := reflect.New(msgType).Interface().(proto.Message)
+	if !ok {
+		log.Error("Received message is not a protobuf message")
+		return
+	}
+	if err := proto.Unmarshal(msg.Data, d); err != nil {
+		log.Errorf("Failed to decode data: %v", err)
+		return
+	}
+
+	i := feed.Send(Message{Data: d})
+	log.WithFields(logrus.Fields{
+		"numSubs": i,
+	}).Debug("Sent a request to subs")
+
 }
 
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.

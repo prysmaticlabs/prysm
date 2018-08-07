@@ -34,11 +34,11 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "adapter_example_test.go",
         "discovery_test.go",
         "feed_example_test.go",
         "feed_test.go",
         "options_test.go",
+        "register_topic_example_test.go",
         "service_test.go",
         "topics_test.go",
     ],

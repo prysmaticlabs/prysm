@@ -18,6 +18,11 @@ import "context"
 // Use this file for interfaces only!
 
 // Adapters are used to create middleware.
+//
+// See http://godoc.org/github.com/prysmaticlabs/prysm/shared/p2p#Server.RegisterTopic
 type Adapter func(context.Context, Message, Handler)
 
+// Handlers are the callback used in the adapter/middleware stack chain.
+//
+// See http://godoc.org/github.com/prysmaticlabs/prysm/shared/p2p#Server.RegisterTopic
 type Handler func(context.Context, Message)
