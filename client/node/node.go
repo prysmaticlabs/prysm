@@ -234,7 +234,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, s.db, shardID, sync)
+		prop, err := proposer.NewProposer(config, client, shardp2p, s.db, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}

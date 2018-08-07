@@ -45,8 +45,7 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Unable to setup sync service: %v", err)
 	}
 
-	syncer.msgChan = make(chan p2p.Message)
-	syncer.bodyRequests = server.Subscribe(pb.CollationBodyRequest{}, syncer.msgChan)
+	syncer.collationBodyBuf = make(chan p2p.Message)
 
 	if err := syncer.Stop(); err != nil {
 		t.Fatalf("Unable to stop sync service: %v", err)
@@ -88,7 +87,6 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	proposerAddress := common.BytesToAddress([]byte{})
 
 	header := types.NewCollationHeader(shardID, &chunkRoot, period, &proposerAddress, [32]byte{})
-
 	// Stores the collation into the inmemory kv store shardChainDB.
 	collation := types.NewCollation(header, body, nil)
 
@@ -102,15 +100,14 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to setup syncer service: %v", err)
 	}
-
-	syncer.msgChan = make(chan p2p.Message)
-	syncer.bodyRequests = server.Subscribe(pb.CollationBodyRequest{}, syncer.msgChan)
+	syncer.Start()
+	syncer.collationBodyBuf = make(chan p2p.Message)
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	go func() {
-		syncer.HandleCollationBodyRequests(shard, doneChan)
+		syncer.run(doneChan)
 		<-exitRoutine
 	}()
 
@@ -123,17 +120,17 @@ func TestHandleCollationBodyRequests(t *testing.T) {
 			ProposerAddress: proposerAddress.Bytes(),
 		},
 	}
-	syncer.msgChan <- msg
+	syncer.collationBodyBuf <- msg
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
-	logMsg := hook.Entries[0].Message
+	logMsg := hook.Entries[1].Message
 	want := fmt.Sprintf("Received p2p request of type: %T", &pb.CollationBodyRequest{})
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
 	}
 
-	logMsg = hook.Entries[3].Message
+	logMsg = hook.Entries[4].Message
 	want = fmt.Sprintf("Responding to p2p collation request")
 	if logMsg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, logMsg)
