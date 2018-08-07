@@ -2,10 +2,10 @@ package rpcclient
 
 import (
 	"context"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var log = logrus.WithField("prefix", "rpc-client")
@@ -16,11 +16,13 @@ type Service struct {
 	cancel   context.CancelFunc
 	conn     *grpc.ClientConn
 	endpoint string
+	withCert string
 }
 
 // Config for the RPCClient service.
 type Config struct {
 	Endpoint string
+	CertFlag string
 }
 
 // NewRPCClient sets up a new beacon node RPC client connection.
@@ -30,13 +32,26 @@ func NewRPCClient(ctx context.Context, cfg *Config) *Service {
 		ctx:      ctx,
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
+		withCert: cfg.CertFlag,
 	}
 }
 
 // Start the grpc connection.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	conn, err := grpc.Dial(s.endpoint, grpc.WithInsecure())
+	var server grpc.DialOption
+	if s.withCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.withCert, "")
+		if err != nil {
+			log.Errorf("Could not get valid credentials: %v", err)
+			return
+		}
+		server = grpc.WithTransportCredentials(creds)
+	} else {
+		server = grpc.WithInsecure()
+		log.Warnf("Your gRPC connection is insecure!")
+	}
+	conn, err := grpc.Dial(s.endpoint, server)
 	if err != nil {
 		log.Errorf("Could not connect to beacon node via RPC endpoint: %s: %v", s.endpoint, err)
 		return

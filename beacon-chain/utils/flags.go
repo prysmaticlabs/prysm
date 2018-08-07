@@ -32,4 +32,14 @@ var (
 		Usage: "RPC port exposed by a beacon node",
 		Value: "4000",
 	}
+	// CertFlag defines a flag for the node's TLS certificate
+	CertFlag = cli.StringFlag{
+		Name:  "tls-cert",
+		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
+	// KeyFlag defines a flag for the node's TLS key
+	KeyFlag = cli.StringFlag{
+		Name:  "tls-key",
+		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
+	}
 )
