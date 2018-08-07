@@ -57,14 +57,6 @@ type Config struct {
 	SyncPollingInterval             time.Duration
 }
 
-// FinalizedBlock stores information regarding a block, its finalized epoch and the contents
-// of its crystallized state.
-type FinalizedBlock struct {
-	BeaconBlock        *types.Block
-	LastFinalizedEpoch uint64
-	CrystallizedState  *types.CrystallizedState
-}
-
 // Mode refers to the type for the sync mode of the client.
 type Mode int
 
@@ -125,17 +117,16 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
+	switch ss.syncMode {
+	case 0:
+		log.Info("Starting initial sync")
+		go ss.initialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
+	case 1:
+		go ss.run(ss.ctx.Done())
+	default:
+		go ss.run(ss.ctx.Done())
 
-	log.Info("Starting service")
-	go ss.run(ss.ctx.Done())
-}
-
-// StartInitialSync kicks off the initial syncing of beacon blocks for the node.
-func (ss *Service) StartInitialSync() {
-
-	log.Info("Starting initial sync")
-	go ss.initialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
-
+	}
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -334,10 +325,9 @@ func (ss *Service) initialSync(delaychan <-chan time.Time, done <-chan struct{})
 			log.Infof("Exiting goroutine")
 			return
 		case <-delaychan:
-			log.Info("testing")
 			if ss.highestObservedSlot == ss.currentSlotNumber {
 				log.Infof("Exiting initial sync and starting normal sync")
-				ss.Start()
+				go ss.run(ss.ctx.Done())
 				return
 			}
 		case msg := <-ss.blockBuf:
