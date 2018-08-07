@@ -346,3 +346,19 @@ func (b *BeaconChain) resetAttesterBitfield() {
 	newbitfields := make([]byte, b.CrystallizedState().ActiveValidatorsLength()/8)
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
+
+func (b *BeaconChain) saveBlock(block *types.Block) error {
+	encodedState, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
+	return b.db.Put(hash[:], encodedState)
+}
+
+// Slashing Condtions
+// TODO: Implement all the conditions and add in the methods once the spec is updated
