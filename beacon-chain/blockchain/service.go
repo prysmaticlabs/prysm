@@ -179,7 +179,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 				}
 			}
 
-		case <-c.ctx.Done():
+		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 		}
