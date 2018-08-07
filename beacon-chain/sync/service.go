@@ -121,8 +121,6 @@ func (ss *Service) Start() {
 	case 0:
 		log.Info("Starting initial sync")
 		go ss.initialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
-	case 1:
-		go ss.run(ss.ctx.Done())
 	default:
 		go ss.run(ss.ctx.Done())
 
