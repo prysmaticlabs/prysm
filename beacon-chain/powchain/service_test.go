@@ -111,7 +111,9 @@ func TestBadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.fetchChainInfo(&badReader{}, &goodLogger{})
+	web3Service.reader = &badReader{}
+	web3Service.logger = &goodLogger{}
+	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
 	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
 	if msg != want {
@@ -126,11 +128,13 @@ func TestLatestMainchainInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &goodLogger{}
 
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(&goodReader{}, &goodLogger{})
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
@@ -156,7 +160,10 @@ func TestBadLogger(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.fetchChainInfo(&goodReader{}, &badLogger{})
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &badLogger{}
+
+	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
 	want := "Unable to query logs from VRC: subscription has failed"
 	if msg != want {
@@ -176,10 +183,13 @@ func TestGoodLogger(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &goodLogger{}
+
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(&goodReader{}, &goodLogger{})
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
@@ -216,10 +226,13 @@ func TestHeaderAfterValidation(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &goodLogger{}
+
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(&goodReader{}, &goodLogger{})
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 

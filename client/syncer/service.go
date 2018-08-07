@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/types"
@@ -21,70 +20,65 @@ import (
 // performing windback sync across nodes, handling reorgs, and synchronizing
 // items such as transactions and in future sharding iterations: state.
 type Syncer struct {
-	config       *params.Config
-	client       *mainchain.SMCClient
-	shardID      int
-	db           *database.DB
-	p2p          *p2p.Server
-	ctx          context.Context
-	cancel       context.CancelFunc
-	msgChan      chan p2p.Message
-	bodyRequests event.Subscription
+	config           *params.Config
+	client           *mainchain.SMCClient
+	shardID          int
+	db               *database.DB
+	p2p              *p2p.Server
+	ctx              context.Context
+	cancel           context.CancelFunc
+	collationFetcher types.CollationFetcher
+	collationBodyBuf chan p2p.Message
 }
 
 // NewSyncer creates a struct instance of a syncer service.
 // It will have access to config, a signer, a p2p server,
 // a shardChainDB, and a shardID.
-func NewSyncer(config *params.Config, client *mainchain.SMCClient, p2p *p2p.Server, db *database.DB, shardID int) (*Syncer, error) {
+func NewSyncer(config *params.Config, client *mainchain.SMCClient, shardp2p *p2p.Server, db *database.DB, shardID int) (*Syncer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Syncer{
-		config:       config,
-		client:       client,
-		shardID:      shardID,
-		db:           db,
-		p2p:          p2p,
-		ctx:          ctx,
-		cancel:       cancel,
-		msgChan:      nil,
-		bodyRequests: nil,
+		config:           config,
+		client:           client,
+		shardID:          shardID,
+		db:               db,
+		p2p:              shardp2p,
+		ctx:              ctx,
+		cancel:           cancel,
+		collationBodyBuf: make(chan p2p.Message, 100),
 	}, nil
 }
 
 // Start the main loop for handling shard chain data requests.
 func (s *Syncer) Start() {
 	log.Info("Starting sync service")
-
-	shard := types.NewShard(big.NewInt(int64(s.shardID)), s.db.DB())
-
-	s.msgChan = make(chan p2p.Message, 100)
-	s.bodyRequests = s.p2p.Subscribe(pb.CollationBodyRequest{}, s.msgChan)
-	go s.HandleCollationBodyRequests(shard, s.ctx.Done())
+	s.collationFetcher = types.NewShard(big.NewInt(int64(s.shardID)), s.db.DB())
+	go s.run(s.ctx.Done())
 }
 
 // Stop the main loop.
 func (s *Syncer) Stop() error {
-	// Triggers a cancel call in the service's context which shuts down every goroutine
-	// in this service.
 	defer s.cancel()
-	defer close(s.msgChan)
 	log.Info("Stopping sync service")
-	s.bodyRequests.Unsubscribe()
 	return nil
 }
 
-// HandleCollationBodyRequests subscribes to messages from the shardp2p
-// network and responds to a specific peer that requested the body using
-// the Send method exposed by the p2p server's API (implementing the p2p.Sender interface).
-func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFetcher, done <-chan struct{}) {
+func (s *Syncer) run(done <-chan struct{}) {
+	// collationBodySub subscribes to messages from the shardp2p
+	// network and responds to a specific peer that requested the body using
+	// the Send method exposed by the p2p server's API.
+	collationBodySub := s.p2p.Subscribe(pb.CollationBodyRequest{}, s.collationBodyBuf)
+	defer collationBodySub.Unsubscribe()
+
 	for {
 		select {
 		// Makes sure to close this goroutine when the service stops.
 		case <-done:
 			return
-		case req := <-s.msgChan:
+
+		case req := <-s.collationBodyBuf:
 			if req.Data != nil {
 				log.Debugf("Received p2p request of type: %T", req.Data)
-				res, err := RespondCollationBody(req, collationFetcher)
+				res, err := RespondCollationBody(req, s.collationFetcher)
 				if err != nil {
 					log.Errorf("Could not construct response: %v", err)
 					continue
@@ -102,7 +96,7 @@ func (s *Syncer) HandleCollationBodyRequests(collationFetcher types.CollationFet
 					"headerHash": fmt.Sprintf("0x%v", common.Bytes2Hex(res.HeaderHash)),
 				}).Info("Responding to p2p collation request")
 			}
-		case <-s.bodyRequests.Err():
+		case <-collationBodySub.Err():
 			log.Debugf("Subscriber failed")
 			return
 		}
