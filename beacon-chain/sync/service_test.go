@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -13,7 +14,8 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-type mockP2P struct{}
+type mockP2P struct {
+}
 
 func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
@@ -21,7 +23,8 @@ func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscri
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
 
-func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
+func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
+}
 
 type mockChainService struct {
 	processedBlockHashes        [][32]byte
@@ -105,6 +108,14 @@ func (ms *mockChainService) ContainsCrystallizedState(h [32]byte) bool {
 
 func (ms *mockChainService) ProcessedCrystallizedStateHashes() [][32]byte {
 	return ms.processedCrystallizedHashes
+}
+
+func (ms *mockChainService) HasStoredState() (bool, error) {
+	return false, nil
+}
+
+func (ms *mockChainService) SaveBlock(block *types.Block) error {
+	return nil
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -684,4 +695,221 @@ func TestProcessSameActiveState(t *testing.T) {
 	}
 
 	hook.Reset()
+}
+
+func TestSetBlockForInitialSync(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	go func() {
+		ss.initialSync(delayChan, ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	block := &pb.BeaconBlock{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: generichash,
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{Block: block}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	ss.blockBuf <- msg1
+
+	ss.cancel()
+	<-exitRoutine
+
+	var hash [32]byte
+	copy(hash[:], blockResponse.Block.CrystallizedStateHash)
+
+	if hash != ss.initialCrystallizedStateHash {
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
+	}
+
+	hook.Reset()
+
+}
+
+func TestSavingBlocksInSync(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	go func() {
+		ss.initialSync(delayChan, ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	crystallizedState := &pb.CrystallizedState{
+		LastFinalizedEpoch: 99,
+	}
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: crystallizedState,
+	}
+
+	incorrectState := &pb.CrystallizedState{
+		LastFinalizedEpoch: 9,
+		LastJustifiedEpoch: 20,
+	}
+
+	incorrectStateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: incorrectState,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(crystallizedState).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of crystallized state: %v", err)
+	}
+
+	block := &pb.BeaconBlock{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: crystallizedStateHash[:],
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		Block: block,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: incorrectStateResponse,
+	}
+
+	ss.blockBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
+
+	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedEpoch {
+		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
+	}
+
+	msg2.Data = stateResponse
+
+	ss.crystallizedStateBuf <- msg2
+
+	if crystallizedStateHash != ss.initialCrystallizedStateHash {
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
+	}
+
+	blockResponse.Block.SlotNumber = 30
+	msg1.Data = blockResponse
+	ss.blockBuf <- msg1
+
+	if stateResponse.CrystallizedState.GetLastFinalizedEpoch() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedEpoch())
+	}
+
+	blockResponse.Block.SlotNumber = 100
+	ss.blockBuf <- msg1
+
+	ss.cancel()
+	<-exitRoutine
+
+	if blockResponse.Block.GetSlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", ss.currentSlotNumber)
+	}
+
+	hook.Reset()
+
+}
+
+func TestDelayChan(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	go func() {
+		ss.initialSync(delayChan, ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	crystallizedstate := &pb.CrystallizedState{
+		LastFinalizedEpoch: 99,
+	}
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: crystallizedstate,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of crystallized state: %v", err)
+	}
+
+	block := &pb.BeaconBlock{
+		MainChainRef:          []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: crystallizedStateHash[:],
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		Block: block,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+
+	ss.blockBuf <- msg1
+
+	ss.crystallizedStateBuf <- msg2
+
+	blockResponse.Block.SlotNumber = 100
+	msg1.Data = blockResponse
+
+	ss.blockBuf <- msg1
+
+	delayChan <- time.Time{}
+
+	ss.cancel()
+	<-exitRoutine
+
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+
+	hook.Reset()
+
 }
