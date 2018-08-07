@@ -88,7 +88,10 @@ func setup() *backends.SimulatedBackend {
 // implemented.
 func TestWaitForTransaction_TransactionNotMined(t *testing.T) {
 	backend := setup()
-	client := &mockClient{backend: backend, blockNumber: big.NewInt(0)}
+	client := &mockClient{
+		backend:     backend,
+		blockNumber: big.NewInt(0),
+	}
 	ctx := context.Background()
 	timeout := time.Duration(1)
 

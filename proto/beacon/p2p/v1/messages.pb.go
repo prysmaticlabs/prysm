@@ -30,7 +30,7 @@ func (m *BeaconBlockHashAnnounce) Reset()         { *m = BeaconBlockHashAnnounce
 func (m *BeaconBlockHashAnnounce) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockHashAnnounce) ProtoMessage()    {}
 func (*BeaconBlockHashAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{0}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{0}
 }
 func (m *BeaconBlockHashAnnounce) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BeaconBlockHashAnnounce.Unmarshal(m, b)
@@ -68,7 +68,7 @@ func (m *BeaconBlockRequest) Reset()         { *m = BeaconBlockRequest{} }
 func (m *BeaconBlockRequest) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockRequest) ProtoMessage()    {}
 func (*BeaconBlockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{1}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{1}
 }
 func (m *BeaconBlockRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BeaconBlockRequest.Unmarshal(m, b)
@@ -95,27 +95,56 @@ func (m *BeaconBlockRequest) GetHash() []byte {
 	return nil
 }
 
+type BeaconBlockRequestBySlotNumber struct {
+	SlotNumber           uint64   `protobuf:"varint,1,opt,name=slot_number,json=slotNumber,proto3" json:"slot_number,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *BeaconBlockRequestBySlotNumber) Reset()         { *m = BeaconBlockRequestBySlotNumber{} }
+func (m *BeaconBlockRequestBySlotNumber) String() string { return proto.CompactTextString(m) }
+func (*BeaconBlockRequestBySlotNumber) ProtoMessage()    {}
+func (*BeaconBlockRequestBySlotNumber) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{2}
+}
+func (m *BeaconBlockRequestBySlotNumber) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BeaconBlockRequestBySlotNumber.Unmarshal(m, b)
+}
+func (m *BeaconBlockRequestBySlotNumber) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BeaconBlockRequestBySlotNumber.Marshal(b, m, deterministic)
+}
+func (dst *BeaconBlockRequestBySlotNumber) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BeaconBlockRequestBySlotNumber.Merge(dst, src)
+}
+func (m *BeaconBlockRequestBySlotNumber) XXX_Size() int {
+	return xxx_messageInfo_BeaconBlockRequestBySlotNumber.Size(m)
+}
+func (m *BeaconBlockRequestBySlotNumber) XXX_DiscardUnknown() {
+	xxx_messageInfo_BeaconBlockRequestBySlotNumber.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BeaconBlockRequestBySlotNumber proto.InternalMessageInfo
+
+func (m *BeaconBlockRequestBySlotNumber) GetSlotNumber() uint64 {
+	if m != nil {
+		return m.SlotNumber
+	}
+	return 0
+}
+
 type BeaconBlockResponse struct {
-	ParentHash              []byte               `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	SlotNumber              uint64               `protobuf:"varint,2,opt,name=slot_number,json=slotNumber,proto3" json:"slot_number,omitempty"`
-	RandaoReveal            []byte               `protobuf:"bytes,3,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
-	AttestationBitmask      []byte               `protobuf:"bytes,4,opt,name=attestation_bitmask,json=attestationBitmask,proto3" json:"attestation_bitmask,omitempty"`
-	AttestationAggregateSig []uint32             `protobuf:"varint,5,rep,packed,name=attestation_aggregate_sig,json=attestationAggregateSig,proto3" json:"attestation_aggregate_sig,omitempty"`
-	ShardAggregateVotes     []*AggregateVote     `protobuf:"bytes,6,rep,name=shard_aggregate_votes,json=shardAggregateVotes,proto3" json:"shard_aggregate_votes,omitempty"`
-	MainChainRef            []byte               `protobuf:"bytes,7,opt,name=main_chain_ref,json=mainChainRef,proto3" json:"main_chain_ref,omitempty"`
-	ActiveStateHash         []byte               `protobuf:"bytes,8,opt,name=active_state_hash,json=activeStateHash,proto3" json:"active_state_hash,omitempty"`
-	CrystallizedStateHash   []byte               `protobuf:"bytes,9,opt,name=crystallized_state_hash,json=crystallizedStateHash,proto3" json:"crystallized_state_hash,omitempty"`
-	Timestamp               *timestamp.Timestamp `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	XXX_NoUnkeyedLiteral    struct{}             `json:"-"`
-	XXX_unrecognized        []byte               `json:"-"`
-	XXX_sizecache           int32                `json:"-"`
+	Block                *BeaconBlock `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
 func (m *BeaconBlockResponse) Reset()         { *m = BeaconBlockResponse{} }
 func (m *BeaconBlockResponse) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockResponse) ProtoMessage()    {}
 func (*BeaconBlockResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{2}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{3}
 }
 func (m *BeaconBlockResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BeaconBlockResponse.Unmarshal(m, b)
@@ -135,70 +164,117 @@ func (m *BeaconBlockResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BeaconBlockResponse proto.InternalMessageInfo
 
-func (m *BeaconBlockResponse) GetParentHash() []byte {
+func (m *BeaconBlockResponse) GetBlock() *BeaconBlock {
+	if m != nil {
+		return m.Block
+	}
+	return nil
+}
+
+type BeaconBlock struct {
+	ParentHash              []byte               `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
+	SlotNumber              uint64               `protobuf:"varint,2,opt,name=slot_number,json=slotNumber,proto3" json:"slot_number,omitempty"`
+	RandaoReveal            []byte               `protobuf:"bytes,3,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
+	AttestationBitmask      []byte               `protobuf:"bytes,4,opt,name=attestation_bitmask,json=attestationBitmask,proto3" json:"attestation_bitmask,omitempty"`
+	AttestationAggregateSig []uint32             `protobuf:"varint,5,rep,packed,name=attestation_aggregate_sig,json=attestationAggregateSig,proto3" json:"attestation_aggregate_sig,omitempty"`
+	ShardAggregateVotes     []*AggregateVote     `protobuf:"bytes,6,rep,name=shard_aggregate_votes,json=shardAggregateVotes,proto3" json:"shard_aggregate_votes,omitempty"`
+	MainChainRef            []byte               `protobuf:"bytes,7,opt,name=main_chain_ref,json=mainChainRef,proto3" json:"main_chain_ref,omitempty"`
+	ActiveStateHash         []byte               `protobuf:"bytes,8,opt,name=active_state_hash,json=activeStateHash,proto3" json:"active_state_hash,omitempty"`
+	CrystallizedStateHash   []byte               `protobuf:"bytes,9,opt,name=crystallized_state_hash,json=crystallizedStateHash,proto3" json:"crystallized_state_hash,omitempty"`
+	Timestamp               *timestamp.Timestamp `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral    struct{}             `json:"-"`
+	XXX_unrecognized        []byte               `json:"-"`
+	XXX_sizecache           int32                `json:"-"`
+}
+
+func (m *BeaconBlock) Reset()         { *m = BeaconBlock{} }
+func (m *BeaconBlock) String() string { return proto.CompactTextString(m) }
+func (*BeaconBlock) ProtoMessage()    {}
+func (*BeaconBlock) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{4}
+}
+func (m *BeaconBlock) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BeaconBlock.Unmarshal(m, b)
+}
+func (m *BeaconBlock) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BeaconBlock.Marshal(b, m, deterministic)
+}
+func (dst *BeaconBlock) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BeaconBlock.Merge(dst, src)
+}
+func (m *BeaconBlock) XXX_Size() int {
+	return xxx_messageInfo_BeaconBlock.Size(m)
+}
+func (m *BeaconBlock) XXX_DiscardUnknown() {
+	xxx_messageInfo_BeaconBlock.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BeaconBlock proto.InternalMessageInfo
+
+func (m *BeaconBlock) GetParentHash() []byte {
 	if m != nil {
 		return m.ParentHash
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetSlotNumber() uint64 {
+func (m *BeaconBlock) GetSlotNumber() uint64 {
 	if m != nil {
 		return m.SlotNumber
 	}
 	return 0
 }
 
-func (m *BeaconBlockResponse) GetRandaoReveal() []byte {
+func (m *BeaconBlock) GetRandaoReveal() []byte {
 	if m != nil {
 		return m.RandaoReveal
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetAttestationBitmask() []byte {
+func (m *BeaconBlock) GetAttestationBitmask() []byte {
 	if m != nil {
 		return m.AttestationBitmask
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetAttestationAggregateSig() []uint32 {
+func (m *BeaconBlock) GetAttestationAggregateSig() []uint32 {
 	if m != nil {
 		return m.AttestationAggregateSig
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetShardAggregateVotes() []*AggregateVote {
+func (m *BeaconBlock) GetShardAggregateVotes() []*AggregateVote {
 	if m != nil {
 		return m.ShardAggregateVotes
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetMainChainRef() []byte {
+func (m *BeaconBlock) GetMainChainRef() []byte {
 	if m != nil {
 		return m.MainChainRef
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetActiveStateHash() []byte {
+func (m *BeaconBlock) GetActiveStateHash() []byte {
 	if m != nil {
 		return m.ActiveStateHash
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetCrystallizedStateHash() []byte {
+func (m *BeaconBlock) GetCrystallizedStateHash() []byte {
 	if m != nil {
 		return m.CrystallizedStateHash
 	}
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetTimestamp() *timestamp.Timestamp {
+func (m *BeaconBlock) GetTimestamp() *timestamp.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -216,7 +292,7 @@ func (m *CrystallizedStateHashAnnounce) Reset()         { *m = CrystallizedState
 func (m *CrystallizedStateHashAnnounce) String() string { return proto.CompactTextString(m) }
 func (*CrystallizedStateHashAnnounce) ProtoMessage()    {}
 func (*CrystallizedStateHashAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{3}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{5}
 }
 func (m *CrystallizedStateHashAnnounce) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CrystallizedStateHashAnnounce.Unmarshal(m, b)
@@ -254,7 +330,7 @@ func (m *CrystallizedStateRequest) Reset()         { *m = CrystallizedStateReque
 func (m *CrystallizedStateRequest) String() string { return proto.CompactTextString(m) }
 func (*CrystallizedStateRequest) ProtoMessage()    {}
 func (*CrystallizedStateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{4}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{6}
 }
 func (m *CrystallizedStateRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CrystallizedStateRequest.Unmarshal(m, b)
@@ -282,29 +358,17 @@ func (m *CrystallizedStateRequest) GetHash() []byte {
 }
 
 type CrystallizedStateResponse struct {
-	ActiveValidators      []*ValidatorRecord `protobuf:"bytes,1,rep,name=active_validators,json=activeValidators,proto3" json:"active_validators,omitempty"`
-	QueuedValidators      []*ValidatorRecord `protobuf:"bytes,2,rep,name=queued_validators,json=queuedValidators,proto3" json:"queued_validators,omitempty"`
-	ExitedValidators      []*ValidatorRecord `protobuf:"bytes,3,rep,name=exited_validators,json=exitedValidators,proto3" json:"exited_validators,omitempty"`
-	CurrentEpochShuffling []uint64           `protobuf:"varint,4,rep,packed,name=current_epoch_shuffling,json=currentEpochShuffling,proto3" json:"current_epoch_shuffling,omitempty"`
-	CurrentEpoch          uint64             `protobuf:"varint,5,opt,name=current_epoch,json=currentEpoch,proto3" json:"current_epoch,omitempty"`
-	LastJustifiedEpoch    uint64             `protobuf:"varint,6,opt,name=last_justified_epoch,json=lastJustifiedEpoch,proto3" json:"last_justified_epoch,omitempty"`
-	LastFinalizedEpoch    uint64             `protobuf:"varint,7,opt,name=last_finalized_epoch,json=lastFinalizedEpoch,proto3" json:"last_finalized_epoch,omitempty"`
-	CurrentDynasty        uint64             `protobuf:"varint,8,opt,name=current_dynasty,json=currentDynasty,proto3" json:"current_dynasty,omitempty"`
-	NextShard             uint64             `protobuf:"varint,9,opt,name=next_shard,json=nextShard,proto3" json:"next_shard,omitempty"`
-	CurrentCheckPoint     []byte             `protobuf:"bytes,10,opt,name=current_check_point,json=currentCheckPoint,proto3" json:"current_check_point,omitempty"`
-	TotalDeposits         uint64             `protobuf:"varint,11,opt,name=total_deposits,json=totalDeposits,proto3" json:"total_deposits,omitempty"`
-	DynastySeed           []byte             `protobuf:"bytes,12,opt,name=dynasty_seed,json=dynastySeed,proto3" json:"dynasty_seed,omitempty"`
-	DynastySeedLastReset  uint64             `protobuf:"varint,13,opt,name=dynasty_seed_last_reset,json=dynastySeedLastReset,proto3" json:"dynasty_seed_last_reset,omitempty"`
-	XXX_NoUnkeyedLiteral  struct{}           `json:"-"`
-	XXX_unrecognized      []byte             `json:"-"`
-	XXX_sizecache         int32              `json:"-"`
+	CrystallizedState    *CrystallizedState `protobuf:"bytes,1,opt,name=crystallized_state,json=crystallizedState,proto3" json:"crystallized_state,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
 }
 
 func (m *CrystallizedStateResponse) Reset()         { *m = CrystallizedStateResponse{} }
 func (m *CrystallizedStateResponse) String() string { return proto.CompactTextString(m) }
 func (*CrystallizedStateResponse) ProtoMessage()    {}
 func (*CrystallizedStateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{5}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{7}
 }
 func (m *CrystallizedStateResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CrystallizedStateResponse.Unmarshal(m, b)
@@ -324,91 +388,141 @@ func (m *CrystallizedStateResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CrystallizedStateResponse proto.InternalMessageInfo
 
-func (m *CrystallizedStateResponse) GetActiveValidators() []*ValidatorRecord {
+func (m *CrystallizedStateResponse) GetCrystallizedState() *CrystallizedState {
+	if m != nil {
+		return m.CrystallizedState
+	}
+	return nil
+}
+
+type CrystallizedState struct {
+	ActiveValidators      []*ValidatorRecord `protobuf:"bytes,1,rep,name=active_validators,json=activeValidators,proto3" json:"active_validators,omitempty"`
+	QueuedValidators      []*ValidatorRecord `protobuf:"bytes,2,rep,name=queued_validators,json=queuedValidators,proto3" json:"queued_validators,omitempty"`
+	ExitedValidators      []*ValidatorRecord `protobuf:"bytes,3,rep,name=exited_validators,json=exitedValidators,proto3" json:"exited_validators,omitempty"`
+	CurrentEpochShuffling []uint64           `protobuf:"varint,4,rep,packed,name=current_epoch_shuffling,json=currentEpochShuffling,proto3" json:"current_epoch_shuffling,omitempty"`
+	CurrentEpoch          uint64             `protobuf:"varint,5,opt,name=current_epoch,json=currentEpoch,proto3" json:"current_epoch,omitempty"`
+	LastJustifiedEpoch    uint64             `protobuf:"varint,6,opt,name=last_justified_epoch,json=lastJustifiedEpoch,proto3" json:"last_justified_epoch,omitempty"`
+	LastFinalizedEpoch    uint64             `protobuf:"varint,7,opt,name=last_finalized_epoch,json=lastFinalizedEpoch,proto3" json:"last_finalized_epoch,omitempty"`
+	CurrentDynasty        uint64             `protobuf:"varint,8,opt,name=current_dynasty,json=currentDynasty,proto3" json:"current_dynasty,omitempty"`
+	NextShard             uint64             `protobuf:"varint,9,opt,name=next_shard,json=nextShard,proto3" json:"next_shard,omitempty"`
+	CurrentCheckPoint     []byte             `protobuf:"bytes,10,opt,name=current_check_point,json=currentCheckPoint,proto3" json:"current_check_point,omitempty"`
+	TotalDeposits         uint64             `protobuf:"varint,11,opt,name=total_deposits,json=totalDeposits,proto3" json:"total_deposits,omitempty"`
+	DynastySeed           []byte             `protobuf:"bytes,12,opt,name=dynasty_seed,json=dynastySeed,proto3" json:"dynasty_seed,omitempty"`
+	DynastySeedLastReset  uint64             `protobuf:"varint,13,opt,name=dynasty_seed_last_reset,json=dynastySeedLastReset,proto3" json:"dynasty_seed_last_reset,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}           `json:"-"`
+	XXX_unrecognized      []byte             `json:"-"`
+	XXX_sizecache         int32              `json:"-"`
+}
+
+func (m *CrystallizedState) Reset()         { *m = CrystallizedState{} }
+func (m *CrystallizedState) String() string { return proto.CompactTextString(m) }
+func (*CrystallizedState) ProtoMessage()    {}
+func (*CrystallizedState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{8}
+}
+func (m *CrystallizedState) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CrystallizedState.Unmarshal(m, b)
+}
+func (m *CrystallizedState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CrystallizedState.Marshal(b, m, deterministic)
+}
+func (dst *CrystallizedState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CrystallizedState.Merge(dst, src)
+}
+func (m *CrystallizedState) XXX_Size() int {
+	return xxx_messageInfo_CrystallizedState.Size(m)
+}
+func (m *CrystallizedState) XXX_DiscardUnknown() {
+	xxx_messageInfo_CrystallizedState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CrystallizedState proto.InternalMessageInfo
+
+func (m *CrystallizedState) GetActiveValidators() []*ValidatorRecord {
 	if m != nil {
 		return m.ActiveValidators
 	}
 	return nil
 }
 
-func (m *CrystallizedStateResponse) GetQueuedValidators() []*ValidatorRecord {
+func (m *CrystallizedState) GetQueuedValidators() []*ValidatorRecord {
 	if m != nil {
 		return m.QueuedValidators
 	}
 	return nil
 }
 
-func (m *CrystallizedStateResponse) GetExitedValidators() []*ValidatorRecord {
+func (m *CrystallizedState) GetExitedValidators() []*ValidatorRecord {
 	if m != nil {
 		return m.ExitedValidators
 	}
 	return nil
 }
 
-func (m *CrystallizedStateResponse) GetCurrentEpochShuffling() []uint64 {
+func (m *CrystallizedState) GetCurrentEpochShuffling() []uint64 {
 	if m != nil {
 		return m.CurrentEpochShuffling
 	}
 	return nil
 }
 
-func (m *CrystallizedStateResponse) GetCurrentEpoch() uint64 {
+func (m *CrystallizedState) GetCurrentEpoch() uint64 {
 	if m != nil {
 		return m.CurrentEpoch
 	}
 	return 0
 }
 
-func (m *CrystallizedStateResponse) GetLastJustifiedEpoch() uint64 {
+func (m *CrystallizedState) GetLastJustifiedEpoch() uint64 {
 	if m != nil {
 		return m.LastJustifiedEpoch
 	}
 	return 0
 }
 
-func (m *CrystallizedStateResponse) GetLastFinalizedEpoch() uint64 {
+func (m *CrystallizedState) GetLastFinalizedEpoch() uint64 {
 	if m != nil {
 		return m.LastFinalizedEpoch
 	}
 	return 0
 }
 
-func (m *CrystallizedStateResponse) GetCurrentDynasty() uint64 {
+func (m *CrystallizedState) GetCurrentDynasty() uint64 {
 	if m != nil {
 		return m.CurrentDynasty
 	}
 	return 0
 }
 
-func (m *CrystallizedStateResponse) GetNextShard() uint64 {
+func (m *CrystallizedState) GetNextShard() uint64 {
 	if m != nil {
 		return m.NextShard
 	}
 	return 0
 }
 
-func (m *CrystallizedStateResponse) GetCurrentCheckPoint() []byte {
+func (m *CrystallizedState) GetCurrentCheckPoint() []byte {
 	if m != nil {
 		return m.CurrentCheckPoint
 	}
 	return nil
 }
 
-func (m *CrystallizedStateResponse) GetTotalDeposits() uint64 {
+func (m *CrystallizedState) GetTotalDeposits() uint64 {
 	if m != nil {
 		return m.TotalDeposits
 	}
 	return 0
 }
 
-func (m *CrystallizedStateResponse) GetDynastySeed() []byte {
+func (m *CrystallizedState) GetDynastySeed() []byte {
 	if m != nil {
 		return m.DynastySeed
 	}
 	return nil
 }
 
-func (m *CrystallizedStateResponse) GetDynastySeedLastReset() uint64 {
+func (m *CrystallizedState) GetDynastySeedLastReset() uint64 {
 	if m != nil {
 		return m.DynastySeedLastReset
 	}
@@ -426,7 +540,7 @@ func (m *ActiveStateHashAnnounce) Reset()         { *m = ActiveStateHashAnnounce
 func (m *ActiveStateHashAnnounce) String() string { return proto.CompactTextString(m) }
 func (*ActiveStateHashAnnounce) ProtoMessage()    {}
 func (*ActiveStateHashAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{6}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{9}
 }
 func (m *ActiveStateHashAnnounce) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ActiveStateHashAnnounce.Unmarshal(m, b)
@@ -464,7 +578,7 @@ func (m *ActiveStateRequest) Reset()         { *m = ActiveStateRequest{} }
 func (m *ActiveStateRequest) String() string { return proto.CompactTextString(m) }
 func (*ActiveStateRequest) ProtoMessage()    {}
 func (*ActiveStateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{7}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{10}
 }
 func (m *ActiveStateRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ActiveStateRequest.Unmarshal(m, b)
@@ -492,18 +606,17 @@ func (m *ActiveStateRequest) GetHash() []byte {
 }
 
 type ActiveStateResponse struct {
-	TotalAttesterDeposits uint64   `protobuf:"varint,1,opt,name=total_attester_deposits,json=totalAttesterDeposits,proto3" json:"total_attester_deposits,omitempty"`
-	AttesterBitfield      []byte   `protobuf:"bytes,2,opt,name=attester_bitfield,json=attesterBitfield,proto3" json:"attester_bitfield,omitempty"`
-	XXX_NoUnkeyedLiteral  struct{} `json:"-"`
-	XXX_unrecognized      []byte   `json:"-"`
-	XXX_sizecache         int32    `json:"-"`
+	ActiveState          *ActiveState `protobuf:"bytes,1,opt,name=active_state,json=activeState,proto3" json:"active_state,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
 func (m *ActiveStateResponse) Reset()         { *m = ActiveStateResponse{} }
 func (m *ActiveStateResponse) String() string { return proto.CompactTextString(m) }
 func (*ActiveStateResponse) ProtoMessage()    {}
 func (*ActiveStateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{8}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{11}
 }
 func (m *ActiveStateResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ActiveStateResponse.Unmarshal(m, b)
@@ -523,14 +636,53 @@ func (m *ActiveStateResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ActiveStateResponse proto.InternalMessageInfo
 
-func (m *ActiveStateResponse) GetTotalAttesterDeposits() uint64 {
+func (m *ActiveStateResponse) GetActiveState() *ActiveState {
+	if m != nil {
+		return m.ActiveState
+	}
+	return nil
+}
+
+type ActiveState struct {
+	TotalAttesterDeposits uint64   `protobuf:"varint,1,opt,name=total_attester_deposits,json=totalAttesterDeposits,proto3" json:"total_attester_deposits,omitempty"`
+	AttesterBitfield      []byte   `protobuf:"bytes,2,opt,name=attester_bitfield,json=attesterBitfield,proto3" json:"attester_bitfield,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{} `json:"-"`
+	XXX_unrecognized      []byte   `json:"-"`
+	XXX_sizecache         int32    `json:"-"`
+}
+
+func (m *ActiveState) Reset()         { *m = ActiveState{} }
+func (m *ActiveState) String() string { return proto.CompactTextString(m) }
+func (*ActiveState) ProtoMessage()    {}
+func (*ActiveState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{12}
+}
+func (m *ActiveState) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ActiveState.Unmarshal(m, b)
+}
+func (m *ActiveState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ActiveState.Marshal(b, m, deterministic)
+}
+func (dst *ActiveState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ActiveState.Merge(dst, src)
+}
+func (m *ActiveState) XXX_Size() int {
+	return xxx_messageInfo_ActiveState.Size(m)
+}
+func (m *ActiveState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ActiveState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ActiveState proto.InternalMessageInfo
+
+func (m *ActiveState) GetTotalAttesterDeposits() uint64 {
 	if m != nil {
 		return m.TotalAttesterDeposits
 	}
 	return 0
 }
 
-func (m *ActiveStateResponse) GetAttesterBitfield() []byte {
+func (m *ActiveState) GetAttesterBitfield() []byte {
 	if m != nil {
 		return m.AttesterBitfield
 	}
@@ -551,7 +703,7 @@ func (m *AggregateVote) Reset()         { *m = AggregateVote{} }
 func (m *AggregateVote) String() string { return proto.CompactTextString(m) }
 func (*AggregateVote) ProtoMessage()    {}
 func (*AggregateVote) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{9}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{13}
 }
 func (m *AggregateVote) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AggregateVote.Unmarshal(m, b)
@@ -615,7 +767,7 @@ func (m *ValidatorRecord) Reset()         { *m = ValidatorRecord{} }
 func (m *ValidatorRecord) String() string { return proto.CompactTextString(m) }
 func (*ValidatorRecord) ProtoMessage()    {}
 func (*ValidatorRecord) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e1d33f8757fc0f25, []int{10}
+	return fileDescriptor_messages_bc6e7d0a50c57853, []int{14}
 }
 func (m *ValidatorRecord) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ValidatorRecord.Unmarshal(m, b)
@@ -680,81 +832,89 @@ func (m *ValidatorRecord) GetSwitchDynasty() uint64 {
 func init() {
 	proto.RegisterType((*BeaconBlockHashAnnounce)(nil), "ethereum.beacon.p2p.v1.BeaconBlockHashAnnounce")
 	proto.RegisterType((*BeaconBlockRequest)(nil), "ethereum.beacon.p2p.v1.BeaconBlockRequest")
+	proto.RegisterType((*BeaconBlockRequestBySlotNumber)(nil), "ethereum.beacon.p2p.v1.BeaconBlockRequestBySlotNumber")
 	proto.RegisterType((*BeaconBlockResponse)(nil), "ethereum.beacon.p2p.v1.BeaconBlockResponse")
+	proto.RegisterType((*BeaconBlock)(nil), "ethereum.beacon.p2p.v1.BeaconBlock")
 	proto.RegisterType((*CrystallizedStateHashAnnounce)(nil), "ethereum.beacon.p2p.v1.CrystallizedStateHashAnnounce")
 	proto.RegisterType((*CrystallizedStateRequest)(nil), "ethereum.beacon.p2p.v1.CrystallizedStateRequest")
 	proto.RegisterType((*CrystallizedStateResponse)(nil), "ethereum.beacon.p2p.v1.CrystallizedStateResponse")
+	proto.RegisterType((*CrystallizedState)(nil), "ethereum.beacon.p2p.v1.CrystallizedState")
 	proto.RegisterType((*ActiveStateHashAnnounce)(nil), "ethereum.beacon.p2p.v1.ActiveStateHashAnnounce")
 	proto.RegisterType((*ActiveStateRequest)(nil), "ethereum.beacon.p2p.v1.ActiveStateRequest")
 	proto.RegisterType((*ActiveStateResponse)(nil), "ethereum.beacon.p2p.v1.ActiveStateResponse")
+	proto.RegisterType((*ActiveState)(nil), "ethereum.beacon.p2p.v1.ActiveState")
 	proto.RegisterType((*AggregateVote)(nil), "ethereum.beacon.p2p.v1.AggregateVote")
 	proto.RegisterType((*ValidatorRecord)(nil), "ethereum.beacon.p2p.v1.ValidatorRecord")
 }
 
 func init() {
-	proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_messages_e1d33f8757fc0f25)
+	proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_messages_bc6e7d0a50c57853)
 }
 
-var fileDescriptor_messages_e1d33f8757fc0f25 = []byte{
-	// 948 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x55, 0xdb, 0x6e, 0xdb, 0x46,
-	0x10, 0x85, 0x22, 0xd9, 0x8e, 0x47, 0x92, 0x2d, 0xaf, 0xe2, 0x8a, 0x0e, 0x10, 0x44, 0x55, 0x1a,
-	0x44, 0x6d, 0x11, 0xaa, 0x71, 0xd0, 0xa0, 0xe8, 0x9b, 0xec, 0xb4, 0xe8, 0x0d, 0x45, 0x41, 0x05,
-	0x01, 0xfa, 0x44, 0xac, 0xc8, 0x11, 0xb9, 0x35, 0xc9, 0x65, 0xb8, 0x4b, 0x39, 0xca, 0x17, 0xf4,
-	0x33, 0xfa, 0x57, 0xfd, 0x95, 0x3e, 0x16, 0x7b, 0xa1, 0x44, 0xb6, 0xae, 0x0b, 0xbf, 0x18, 0xd6,
-	0xb9, 0x71, 0x2f, 0x33, 0xb3, 0x30, 0xc9, 0x0b, 0x2e, 0xf9, 0x6c, 0x89, 0x34, 0xe0, 0xd9, 0x2c,
-	0x3f, 0xcf, 0x67, 0xeb, 0x17, 0xb3, 0x14, 0x85, 0xa0, 0x11, 0x0a, 0x57, 0x93, 0xe4, 0x23, 0x94,
-	0x31, 0x16, 0x58, 0xa6, 0xae, 0x91, 0xb9, 0xf9, 0x79, 0xee, 0xae, 0x5f, 0x3c, 0x7c, 0x1c, 0x71,
-	0x1e, 0x25, 0x38, 0xd3, 0xaa, 0x65, 0xb9, 0x9a, 0x49, 0x96, 0xa2, 0x90, 0x34, 0xcd, 0x8d, 0x71,
-	0xf2, 0x1c, 0x46, 0x17, 0xda, 0x71, 0x91, 0xf0, 0xe0, 0xea, 0x3b, 0x2a, 0xe2, 0x79, 0x96, 0xf1,
-	0x32, 0x0b, 0x90, 0x10, 0xe8, 0xc4, 0x54, 0xc4, 0x4e, 0x6b, 0xdc, 0x9a, 0xf6, 0x3c, 0xfd, 0xff,
-	0x64, 0x0a, 0xa4, 0x26, 0xf7, 0xf0, 0x5d, 0x89, 0x42, 0xde, 0xa8, 0xfc, 0xbd, 0x03, 0xc3, 0x86,
-	0x54, 0xe4, 0x3c, 0x13, 0x48, 0x1e, 0x43, 0x37, 0xa7, 0x05, 0x66, 0xd2, 0xaf, 0x59, 0xc0, 0x40,
-	0xea, 0xf3, 0x4a, 0x20, 0x12, 0x2e, 0xfd, 0xac, 0x4c, 0x97, 0x58, 0x38, 0xf7, 0xc6, 0xad, 0x69,
-	0xc7, 0x03, 0x05, 0xfd, 0xac, 0x11, 0xf2, 0x04, 0xfa, 0x05, 0xcd, 0x42, 0xca, 0xfd, 0x02, 0xd7,
-	0x48, 0x13, 0xa7, 0xad, 0x33, 0x7a, 0x06, 0xf4, 0x34, 0x46, 0x66, 0x30, 0xa4, 0x52, 0xaa, 0xad,
-	0x4a, 0xc6, 0x33, 0x7f, 0xc9, 0x64, 0x4a, 0xc5, 0x95, 0xd3, 0xd1, 0x52, 0x52, 0xa3, 0x2e, 0x0c,
-	0x43, 0xbe, 0x86, 0xb3, 0xba, 0x81, 0x46, 0x51, 0x81, 0x11, 0x95, 0xe8, 0x0b, 0x16, 0x39, 0x7b,
-	0xe3, 0xf6, 0xb4, 0xef, 0x8d, 0x6a, 0x82, 0x79, 0xc5, 0x2f, 0x58, 0x44, 0x7e, 0x85, 0x53, 0x11,
-	0xd3, 0x22, 0xac, 0xb9, 0xd6, 0x5c, 0xa2, 0x70, 0xf6, 0xc7, 0xed, 0x69, 0xf7, 0xfc, 0xa9, 0x7b,
-	0xf3, 0xed, 0xb8, 0xdb, 0x90, 0xb7, 0x5c, 0xa2, 0x37, 0xd4, 0x19, 0x0d, 0x4c, 0x90, 0x4f, 0xe0,
-	0x28, 0xa5, 0x2c, 0xf3, 0x83, 0x58, 0xfd, 0x2d, 0x70, 0xe5, 0x1c, 0x98, 0xdd, 0x2a, 0xf4, 0x52,
-	0x81, 0x1e, 0xae, 0xc8, 0x67, 0x70, 0x42, 0x03, 0xc9, 0xd6, 0xe8, 0xab, 0xe5, 0xa1, 0x39, 0xda,
-	0xfb, 0x5a, 0x78, 0x6c, 0x88, 0x85, 0xc2, 0xf5, 0xf9, 0xbe, 0x82, 0x51, 0x50, 0x6c, 0x84, 0xa4,
-	0x49, 0xc2, 0x3e, 0x60, 0x58, 0x77, 0x1c, 0x6a, 0xc7, 0x69, 0x9d, 0xde, 0xf9, 0xbe, 0x82, 0xc3,
-	0x6d, 0xf1, 0x38, 0x30, 0x6e, 0x4d, 0xbb, 0xe7, 0x0f, 0x5d, 0x53, 0x5e, 0x6e, 0x55, 0x5e, 0xee,
-	0x9b, 0x4a, 0xe1, 0xed, 0xc4, 0x93, 0x97, 0xf0, 0xe8, 0xf2, 0xa6, 0xc8, 0x5b, 0x2b, 0xcd, 0x05,
-	0xe7, 0x5f, 0xa6, 0xdb, 0xea, 0xed, 0xcf, 0x3d, 0x38, 0xbb, 0xc1, 0x60, 0xab, 0xee, 0xcd, 0xf6,
-	0x80, 0xd6, 0x34, 0x61, 0x21, 0x95, 0xbc, 0x10, 0x4e, 0x4b, 0xdf, 0xce, 0xb3, 0xff, 0xba, 0x9d,
-	0xb7, 0x95, 0xd2, 0xc3, 0x80, 0x17, 0xa1, 0x37, 0x30, 0x09, 0x5b, 0x58, 0xa8, 0xd4, 0x77, 0x25,
-	0x96, 0x18, 0xd6, 0x53, 0xef, 0xdd, 0x31, 0xd5, 0x24, 0x34, 0x53, 0xf1, 0x3d, 0x93, 0xcd, 0xd4,
-	0xf6, 0x1d, 0x53, 0x4d, 0x42, 0x2d, 0x55, 0x5d, 0x7b, 0x59, 0xe8, 0xc6, 0xc3, 0x9c, 0x07, 0xb1,
-	0x2f, 0xe2, 0x72, 0xb5, 0x4a, 0x58, 0x16, 0x39, 0x9d, 0x71, 0x7b, 0xda, 0xf1, 0x4e, 0x2d, 0xfd,
-	0x8d, 0x62, 0x17, 0x15, 0xa9, 0xba, 0xad, 0xe1, 0x73, 0xf6, 0x74, 0x43, 0xf6, 0xea, 0x6a, 0xf2,
-	0x05, 0x3c, 0x48, 0xa8, 0x90, 0xfe, 0x6f, 0xa5, 0x90, 0x6c, 0xc5, 0x30, 0xb4, 0xda, 0x7d, 0xad,
-	0x25, 0x8a, 0xfb, 0xa1, 0xa2, 0x9a, 0x8e, 0x15, 0xcb, 0xa8, 0xa9, 0x43, 0xe3, 0x38, 0xd8, 0x39,
-	0xbe, 0xad, 0x28, 0xe3, 0x78, 0x06, 0xc7, 0xd5, 0x42, 0xc2, 0x4d, 0x46, 0x85, 0xdc, 0xe8, 0x0a,
-	0xef, 0x78, 0x47, 0x16, 0x7e, 0x6d, 0x50, 0xf2, 0x08, 0x20, 0xc3, 0xf7, 0xd2, 0xd7, 0xed, 0xa4,
-	0x6b, 0xba, 0xe3, 0x1d, 0x2a, 0x64, 0xa1, 0x00, 0xe2, 0xc2, 0xb0, 0xca, 0x09, 0x62, 0x0c, 0xae,
-	0xfc, 0x9c, 0xb3, 0x4c, 0xea, 0x8a, 0xee, 0x79, 0x27, 0x96, 0xba, 0x54, 0xcc, 0x2f, 0x8a, 0x20,
-	0x4f, 0xe1, 0x48, 0x72, 0x49, 0x13, 0x3f, 0xc4, 0x9c, 0x0b, 0x26, 0x85, 0xd3, 0xd5, 0x91, 0x7d,
-	0x8d, 0xbe, 0xb6, 0x20, 0xf9, 0x18, 0x7a, 0x76, 0x59, 0xbe, 0x40, 0x0c, 0x9d, 0x9e, 0xce, 0xeb,
-	0x5a, 0x6c, 0x81, 0x18, 0x92, 0x2f, 0x61, 0x54, 0x97, 0xf8, 0xfa, 0x00, 0x0a, 0x14, 0x28, 0x9d,
-	0xbe, 0x8e, 0x7c, 0x50, 0x53, 0xff, 0x44, 0x85, 0xf4, 0x14, 0xa7, 0x46, 0xf4, 0xbc, 0xd9, 0xc3,
-	0xff, 0x37, 0xa2, 0x6b, 0xf2, 0xdb, 0x5a, 0xe6, 0x03, 0x0c, 0x1b, 0x4a, 0xdb, 0x2b, 0xaf, 0x60,
-	0x64, 0x36, 0x6c, 0xc6, 0x1d, 0x16, 0xbb, 0x9d, 0xb7, 0xf4, 0x32, 0x4f, 0x35, 0x3d, 0xb7, 0xec,
-	0xf6, 0x04, 0x3e, 0x87, 0x93, 0xad, 0x63, 0xc9, 0xe4, 0x8a, 0x61, 0x12, 0xea, 0xf1, 0xdd, 0xf3,
-	0x06, 0x15, 0x71, 0x61, 0xf1, 0xc9, 0x1f, 0x2d, 0xe8, 0x37, 0x46, 0x1d, 0x39, 0x83, 0xfb, 0x66,
-	0x88, 0xb2, 0x50, 0x7f, 0xa7, 0xef, 0x1d, 0xe8, 0xdf, 0xdf, 0x87, 0x64, 0x0a, 0x03, 0x43, 0x2d,
-	0xd5, 0x53, 0x62, 0x66, 0x95, 0x09, 0x3e, 0xd2, 0xf8, 0xf6, 0xed, 0x52, 0x97, 0x25, 0x58, 0x94,
-	0x99, 0x15, 0xe8, 0x89, 0x6f, 0x1e, 0x87, 0xbe, 0x41, 0xab, 0x61, 0xff, 0x04, 0xfa, 0xcd, 0x01,
-	0xdf, 0xd1, 0x03, 0xbe, 0x47, 0x6b, 0x53, 0x7d, 0xf2, 0x57, 0x0b, 0x8e, 0xff, 0xd1, 0x57, 0xaa,
-	0xb6, 0xf2, 0x72, 0x99, 0xb0, 0xc0, 0xbf, 0xc2, 0x8d, 0x3d, 0x8e, 0x43, 0x83, 0xfc, 0x88, 0x1b,
-	0xf2, 0x29, 0x0c, 0xae, 0x99, 0x8c, 0xc3, 0x82, 0x5e, 0xd3, 0xc4, 0x16, 0xa0, 0x79, 0xc0, 0x8e,
-	0x77, 0xb8, 0x29, 0xc3, 0xe7, 0x40, 0x6a, 0x52, 0x1a, 0x86, 0x05, 0x0a, 0x61, 0x57, 0x7b, 0xb2,
-	0x63, 0xe6, 0x86, 0x50, 0x87, 0x6b, 0x1f, 0xbd, 0x80, 0xa7, 0x29, 0x93, 0x29, 0x66, 0xd2, 0xbe,
-	0x66, 0x03, 0x43, 0x5c, 0x6e, 0x71, 0xe2, 0xc0, 0xc1, 0x92, 0x26, 0x34, 0x0b, 0xd0, 0x76, 0x6b,
-	0xf5, 0x53, 0x9f, 0xcf, 0x35, 0x93, 0x41, 0xbc, 0xed, 0x21, 0xd3, 0xa2, 0x7d, 0x83, 0xda, 0x16,
-	0x5a, 0xee, 0xeb, 0x81, 0xfe, 0xf2, 0xef, 0x00, 0x00, 0x00, 0xff, 0xff, 0xfe, 0x1a, 0x39, 0xcc,
-	0x7b, 0x08, 0x00, 0x00,
+var fileDescriptor_messages_bc6e7d0a50c57853 = []byte{
+	// 1023 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x56, 0x5f, 0x6f, 0xdb, 0x36,
+	0x10, 0x47, 0x1a, 0x27, 0x69, 0xce, 0x76, 0x12, 0x33, 0xcd, 0xa2, 0x14, 0xe8, 0x9a, 0x39, 0x2b,
+	0xea, 0x6e, 0xa8, 0xbc, 0xa6, 0xd8, 0xb0, 0xed, 0xcd, 0x49, 0x57, 0xec, 0x1f, 0x86, 0x42, 0x2e,
+	0x8a, 0xed, 0x61, 0x10, 0x68, 0xe9, 0x6c, 0x71, 0x91, 0x44, 0x55, 0xa4, 0x9c, 0x7a, 0x4f, 0xfb,
+	0x28, 0xfb, 0x46, 0xfb, 0x3a, 0x7b, 0x2c, 0x48, 0x4a, 0x32, 0x15, 0x27, 0x29, 0xfa, 0x12, 0x44,
+	0xbf, 0x7f, 0xa6, 0xce, 0x77, 0x3c, 0x43, 0x3f, 0xcb, 0xb9, 0xe4, 0xc3, 0x09, 0xd2, 0x80, 0xa7,
+	0xc3, 0xec, 0x34, 0x1b, 0xce, 0x9f, 0x0d, 0x13, 0x14, 0x82, 0xce, 0x50, 0xb8, 0x9a, 0x24, 0x9f,
+	0xa0, 0x8c, 0x30, 0xc7, 0x22, 0x71, 0x8d, 0xcc, 0xcd, 0x4e, 0x33, 0x77, 0xfe, 0xec, 0xfe, 0xc3,
+	0x19, 0xe7, 0xb3, 0x18, 0x87, 0x5a, 0x35, 0x29, 0xa6, 0x43, 0xc9, 0x12, 0x14, 0x92, 0x26, 0x99,
+	0x31, 0xf6, 0x9f, 0xc2, 0xe1, 0x99, 0x76, 0x9c, 0xc5, 0x3c, 0xb8, 0xf8, 0x91, 0x8a, 0x68, 0x94,
+	0xa6, 0xbc, 0x48, 0x03, 0x24, 0x04, 0x5a, 0x11, 0x15, 0x91, 0xb3, 0x76, 0xbc, 0x36, 0xe8, 0x78,
+	0xfa, 0xff, 0xfe, 0x00, 0x88, 0x25, 0xf7, 0xf0, 0x6d, 0x81, 0x42, 0x5e, 0xab, 0x1c, 0xc1, 0xa7,
+	0xab, 0xca, 0xb3, 0xc5, 0x38, 0xe6, 0xf2, 0xb7, 0x22, 0x99, 0x60, 0x4e, 0x1e, 0x42, 0x5b, 0xc4,
+	0x5c, 0xfa, 0xa9, 0x7e, 0xd4, 0xe6, 0x96, 0x07, 0xa2, 0x16, 0xf4, 0x5f, 0xc1, 0x7e, 0x23, 0x42,
+	0x64, 0x3c, 0x15, 0x48, 0xbe, 0x83, 0x8d, 0x89, 0x02, 0xb4, 0xa3, 0x7d, 0x7a, 0xe2, 0x5e, 0xff,
+	0xee, 0xae, 0xed, 0x35, 0x8e, 0xfe, 0x3f, 0x2d, 0x68, 0x5b, 0xb0, 0x3a, 0x42, 0x46, 0x73, 0x4c,
+	0xa5, 0x6f, 0x9d, 0x1f, 0x0c, 0xa4, 0x6a, 0x71, 0xf5, 0x8c, 0x77, 0xae, 0x9e, 0x91, 0x9c, 0x40,
+	0x37, 0xa7, 0x69, 0x48, 0xb9, 0x9f, 0xe3, 0x1c, 0x69, 0xec, 0xac, 0xeb, 0x8c, 0x8e, 0x01, 0x3d,
+	0x8d, 0x91, 0x21, 0xec, 0x53, 0x29, 0x55, 0xdd, 0x25, 0xe3, 0xa9, 0x3f, 0x61, 0x32, 0xa1, 0xe2,
+	0xc2, 0x69, 0x69, 0x29, 0xb1, 0xa8, 0x33, 0xc3, 0x90, 0xef, 0xe1, 0xc8, 0x36, 0xd0, 0xd9, 0x2c,
+	0xc7, 0x19, 0x95, 0xe8, 0x0b, 0x36, 0x73, 0x36, 0x8e, 0xd7, 0x07, 0x5d, 0xef, 0xd0, 0x12, 0x8c,
+	0x2a, 0x7e, 0xcc, 0x66, 0xe4, 0x0f, 0x38, 0x10, 0x11, 0xcd, 0x43, 0xcb, 0x35, 0xe7, 0x12, 0x85,
+	0xb3, 0x79, 0xbc, 0x3e, 0x68, 0x9f, 0x3e, 0xba, 0xa9, 0x5c, 0x75, 0xc8, 0x1b, 0x2e, 0xd1, 0xdb,
+	0xd7, 0x19, 0x0d, 0x4c, 0x90, 0xcf, 0x61, 0x27, 0xa1, 0x2c, 0xf5, 0x83, 0x48, 0xfd, 0xcd, 0x71,
+	0xea, 0x6c, 0x99, 0xb7, 0x55, 0xe8, 0xb9, 0x02, 0x3d, 0x9c, 0x92, 0x2f, 0xa0, 0x47, 0x03, 0xc9,
+	0xe6, 0xe8, 0xab, 0xe3, 0xa1, 0x29, 0xed, 0x5d, 0x2d, 0xdc, 0x35, 0xc4, 0x58, 0xe1, 0xba, 0xbe,
+	0xdf, 0xc0, 0x61, 0x90, 0x2f, 0x84, 0xa4, 0x71, 0xcc, 0xfe, 0xc6, 0xd0, 0x76, 0x6c, 0x6b, 0xc7,
+	0x81, 0x4d, 0x2f, 0x7d, 0xdf, 0xc2, 0x76, 0xdd, 0xc9, 0x0e, 0xe8, 0x3e, 0xb8, 0xef, 0x9a, 0x5e,
+	0x77, 0xab, 0x5e, 0x77, 0x5f, 0x57, 0x0a, 0x6f, 0x29, 0xee, 0x3f, 0x87, 0x07, 0xe7, 0xd7, 0x45,
+	0xde, 0xda, 0xf6, 0x2e, 0x38, 0x2b, 0xa6, 0xdb, 0x9a, 0xbf, 0x80, 0xa3, 0x6b, 0xf4, 0x65, 0xff,
+	0xfe, 0x0e, 0x64, 0xf5, 0x9d, 0xcb, 0x66, 0x7e, 0x72, 0xd3, 0xb7, 0xb3, 0x1a, 0xd7, 0x5b, 0xa9,
+	0x4c, 0xff, 0xbf, 0x0d, 0xe8, 0xad, 0x08, 0xc9, 0xeb, 0xfa, 0xfb, 0x98, 0xd3, 0x98, 0x85, 0x54,
+	0xf2, 0x5c, 0x38, 0x6b, 0xba, 0x19, 0x1e, 0xdf, 0xf4, 0x71, 0x6f, 0x2a, 0xa5, 0x87, 0x01, 0xcf,
+	0x43, 0x6f, 0xcf, 0x24, 0xd4, 0xb0, 0x50, 0xa9, 0x6f, 0x0b, 0x2c, 0x30, 0xb4, 0x53, 0xef, 0x7c,
+	0x64, 0xaa, 0x49, 0x68, 0xa6, 0xe2, 0x3b, 0x26, 0x9b, 0xa9, 0xeb, 0x1f, 0x99, 0x6a, 0x12, 0xac,
+	0x54, 0xd5, 0x65, 0x45, 0xae, 0xe7, 0x1c, 0x33, 0x1e, 0x44, 0xbe, 0x88, 0x8a, 0xe9, 0x34, 0x66,
+	0xe9, 0xcc, 0x69, 0x1d, 0xaf, 0x0f, 0x5a, 0xde, 0x41, 0x49, 0xff, 0xa0, 0xd8, 0x71, 0x45, 0xaa,
+	0xe1, 0x6e, 0xf8, 0x9c, 0x0d, 0x3d, 0xff, 0x1d, 0x5b, 0x4d, 0xbe, 0x82, 0x7b, 0x31, 0x15, 0xd2,
+	0xff, 0xab, 0x10, 0x92, 0x4d, 0x19, 0x86, 0xa5, 0x76, 0x53, 0x6b, 0x89, 0xe2, 0x7e, 0xae, 0xa8,
+	0xa6, 0x63, 0xca, 0x52, 0x6a, 0x5a, 0xc0, 0x38, 0xb6, 0x96, 0x8e, 0x97, 0x15, 0x65, 0x1c, 0x8f,
+	0x61, 0xb7, 0x3a, 0x48, 0xb8, 0x48, 0xa9, 0x90, 0x0b, 0x3d, 0x50, 0x2d, 0x6f, 0xa7, 0x84, 0x5f,
+	0x18, 0x94, 0x3c, 0x00, 0x48, 0xf1, 0x9d, 0xf4, 0xf5, 0xf4, 0xea, 0x11, 0x6a, 0x79, 0xdb, 0x0a,
+	0x19, 0x2b, 0x80, 0xb8, 0xb0, 0x5f, 0xe5, 0x04, 0x11, 0x06, 0x17, 0x7e, 0xc6, 0x59, 0x2a, 0xf5,
+	0x00, 0x75, 0xbc, 0x5e, 0x49, 0x9d, 0x2b, 0xe6, 0x95, 0x22, 0xc8, 0x23, 0xd8, 0x91, 0x5c, 0xd2,
+	0xd8, 0x0f, 0x31, 0xe3, 0x82, 0x49, 0xe1, 0xb4, 0x75, 0x64, 0x57, 0xa3, 0x2f, 0x4a, 0x90, 0x7c,
+	0x06, 0x9d, 0xf2, 0x58, 0xbe, 0x40, 0x0c, 0x9d, 0x8e, 0xce, 0x6b, 0x97, 0xd8, 0x18, 0x31, 0x24,
+	0x5f, 0xc3, 0xa1, 0x2d, 0xf1, 0x75, 0x01, 0x72, 0x14, 0x28, 0x9d, 0xae, 0x8e, 0xbc, 0x67, 0xa9,
+	0x7f, 0xa5, 0x42, 0x7a, 0x8a, 0x53, 0xeb, 0x69, 0xd4, 0xbc, 0x32, 0x3e, 0xb4, 0x9e, 0x2c, 0xf9,
+	0x6d, 0x13, 0xfa, 0x27, 0xec, 0x37, 0x94, 0xe5, 0x6c, 0xbe, 0x84, 0x8e, 0x7d, 0x77, 0x7d, 0x68,
+	0xc5, 0xd8, 0x11, 0x6d, 0xeb, 0x6e, 0xeb, 0xe7, 0xd0, 0xb6, 0x38, 0xd5, 0x80, 0xa6, 0x8e, 0xe6,
+	0xd2, 0xc6, 0x7c, 0x59, 0x50, 0xb3, 0xf6, 0x0e, 0x34, 0x3d, 0x2a, 0xd9, 0xba, 0xb0, 0x5f, 0x42,
+	0xaf, 0x76, 0x4c, 0x98, 0x9c, 0x32, 0x8c, 0x43, 0xbd, 0x84, 0x3a, 0xde, 0x5e, 0x45, 0x9c, 0x95,
+	0x78, 0xff, 0xdf, 0x35, 0xe8, 0x36, 0x2e, 0x6c, 0x72, 0x04, 0x77, 0xcd, 0x2a, 0x60, 0xa1, 0xfe,
+	0x9c, 0xae, 0xb7, 0xa5, 0x9f, 0x7f, 0x0a, 0xc9, 0x00, 0xf6, 0x0c, 0xa5, 0x17, 0xa3, 0xb9, 0x71,
+	0x4d, 0xf0, 0x8e, 0xc6, 0xeb, 0x9f, 0x03, 0xaa, 0x07, 0x04, 0x9b, 0xa5, 0xe6, 0x04, 0x7a, 0x6f,
+	0x99, 0x15, 0xd7, 0x35, 0x68, 0xb5, 0xb2, 0x4e, 0xa0, 0xdb, 0x5c, 0x53, 0x2d, 0xbd, 0xa6, 0x3a,
+	0xd4, 0xda, 0x4d, 0xfd, 0xff, 0xd7, 0x60, 0xf7, 0xca, 0xb8, 0xaa, 0x96, 0xcd, 0x8a, 0x49, 0xcc,
+	0x02, 0xff, 0x02, 0x17, 0x65, 0x39, 0xb6, 0x0d, 0xf2, 0x0b, 0x2e, 0xc8, 0x13, 0xd8, 0xbb, 0x64,
+	0x32, 0x0a, 0x73, 0x7a, 0x49, 0xe3, 0xb2, 0xaf, 0xcd, 0x1a, 0xde, 0x5d, 0xe2, 0xa6, 0xbb, 0x9f,
+	0x02, 0xb1, 0xa4, 0x34, 0x0c, 0x73, 0x14, 0xa2, 0x3c, 0x6d, 0x6f, 0xc9, 0x8c, 0x0c, 0xa1, 0x8a,
+	0x5b, 0xae, 0xee, 0x80, 0x27, 0x09, 0x93, 0x09, 0xa6, 0xb2, 0xdc, 0xc9, 0x7b, 0x86, 0x38, 0xaf,
+	0x71, 0xe2, 0xc0, 0xd6, 0x84, 0xc6, 0x34, 0x0d, 0xb0, 0xbc, 0x04, 0xaa, 0x47, 0x5d, 0x9f, 0x4b,
+	0x26, 0x83, 0xa8, 0x1e, 0x4d, 0x33, 0xf9, 0x5d, 0x83, 0x96, 0x93, 0x39, 0xd9, 0xd4, 0x6b, 0xe9,
+	0xf9, 0xfb, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7d, 0x02, 0xbd, 0x37, 0xce, 0x09, 0x00, 0x00,
 }
