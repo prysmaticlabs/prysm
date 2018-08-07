@@ -13,45 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/contracts"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	shardparams "github.com/prysmaticlabs/prysm/client/params"
-	"github.com/sirupsen/logrus"
 )
-
-// subscribeBlockHeaders checks incoming block headers and determines if
-// we are an eligible attester for collations. Then, it finds the pending tx's
-// from the running geth node and sorts them by descending order of gas price,
-// eliminates those that ask for too much gas, and routes them over
-// to the SMC to create a collation.
-func subscribeBlockHeaders(reader mainchain.Reader, caller mainchain.ContractCaller, account *accounts.Account) error {
-	headerChan := make(chan *gethTypes.Header, 16)
-
-	_, err := reader.SubscribeNewHead(context.Background(), headerChan)
-	if err != nil {
-		return fmt.Errorf("unable to subscribe to incoming headers. %v", err)
-	}
-
-	log.Info("Listening for new headers...")
-
-	for {
-		// TODO: Error handling for getting disconnected from the client.
-		head := <-headerChan
-		// Query the current state to see if we are an eligible attester.
-		log.WithFields(logrus.Fields{
-			"number": head.Number.String(),
-		}).Info("Received new header")
-
-		// Check if we are in the attester pool before checking if we are an eligible attester.
-		v, err := isAccountInAttesterPool(caller, account)
-		if err != nil {
-			return fmt.Errorf("unable to verify client in attester pool. %v", err)
-		}
-
-		if v {
-			if err := checkSMCForAttester(caller, account); err != nil {
-				return fmt.Errorf("unable to watch shards. %v", err)
-			}
-		}
-	}
-}
 
 // checkSMCForAttester checks if we are an eligible attester for
 // collation for the available shards in the SMC. The function calls

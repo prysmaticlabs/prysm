@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
-	"github.com/prysmaticlabs/prysm/client/txpool"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -34,12 +33,6 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 	}
 	server.Start()
 
-	pool, err := txpool.NewTXPool(server)
-	if err != nil {
-		t.Fatalf("Failed to start txpool %v", err)
-	}
-	pool.Start()
-
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 
 	db, err := database.NewDB(config)
@@ -52,7 +45,7 @@ func settingUpProposer(t *testing.T) (*Proposer, *internal.MockClient) {
 		t.Fatalf("Failed to start syncer %v", err)
 	}
 
-	fakeProposer, err := NewProposer(params.DefaultConfig(), node, server, pool, db, 1, fakeSyncer)
+	fakeProposer, err := NewProposer(params.DefaultConfig(), node, server, db, 1, fakeSyncer)
 	if err != nil {
 		t.Fatalf("Failed to create proposer %v", err)
 	}
@@ -88,7 +81,6 @@ func TestProposerRoundTrip(t *testing.T) {
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
 		fakeProposer.dbService.Close()
-		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
 	}()
 
@@ -118,7 +110,6 @@ func TestIncompleteCollation(t *testing.T) {
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
 		fakeProposer.dbService.Close()
-		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
 	}()
 
@@ -154,7 +145,6 @@ func TestCollationWitInDiffPeriod(t *testing.T) {
 	fakeProposer, node := settingUpProposer(t)
 	defer func() {
 		fakeProposer.dbService.Close()
-		fakeProposer.txpool.Stop()
 		fakeProposer.p2p.Stop()
 	}()
 
