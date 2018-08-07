@@ -49,7 +49,7 @@ func (s *Service) Start() {
 		server = grpc.WithTransportCredentials(creds)
 	} else {
 		server = grpc.WithInsecure()
-		log.Warnf("Your gRPC connection is insecure!")
+		log.Warn("You're on an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
 	conn, err := grpc.Dial(s.endpoint, server)
 	if err != nil {
