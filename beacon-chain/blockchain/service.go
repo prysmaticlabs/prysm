@@ -88,17 +88,17 @@ func (c *ChainService) HasStoredState() (bool, error) {
 	return true, nil
 }
 
-// ProcessedBlockHashes by the chain service.
+// ProcessedBlockHashes exposes a getter for the processed block hashes of the chain.
 func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
 }
 
-// ProcessedCrystallizedStateHashes by the chain service.
+// ProcessedCrystallizedStateHashes exposes a getter for the processed crystallized state hashes of the chain.
 func (c *ChainService) ProcessedCrystallizedStateHashes() [][32]byte {
 	return c.processedCrystallizedStateHashes
 }
 
-// ProcessedActiveStateHashes by the chain service.
+// ProcessedActiveStateHashes exposes a getter for the processed active state hashes of the chain.
 func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
 	return c.processedActiveStateHashes
 }
@@ -127,6 +127,7 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 }
 
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
+// TODO: Implement crystallized state verifier function and apply fork choice rules
 func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
 	h, err := state.Hash()
 	if err != nil {
@@ -134,12 +135,11 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
 
-	// TODO: Implement crystallized state verifier function and apply fork choice rules
-
 	return nil
 }
 
 // ProcessActiveState accepts a new active state object for inclusion in the chain.
+// TODO: Implement active state verifier function and apply fork choice rules
 func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 	h, err := state.Hash()
 	if err != nil {
@@ -147,27 +147,25 @@ func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received active state, processing validity conditions")
 
-	// TODO: Implement active state verifier function and apply fork choice rules
-
 	return nil
 }
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine
+// TODO implement function
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
-	// TODO
 	return false
 }
 
 // ContainsCrystallizedState checks if a crystallized state for the hash exists in the chain.
+// TODO implement function
 func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
-	// TODO
 	return false
 }
 
 // ContainsActiveState checks if a active state for the hash exists in the chain.
+// TODO implement function
 func (c *ChainService) ContainsActiveState(h [32]byte) bool {
-	// TODO
 	return false
 }
 
@@ -181,6 +179,8 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
+// run processes the changes needed every beacon chain block,
+// including epoch transition if needed.
 func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
@@ -191,7 +191,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 				log.Errorf("Compute active state failed: %v", err)
 			}
 
-			err = c.chain.MutateActiveState(activeState)
+			err = c.chain.SetActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}

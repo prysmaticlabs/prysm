@@ -9,7 +9,6 @@ import (
 
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
-// TODO: Change ActiveState to use proto
 type ActiveState struct {
 	data *pb.ActiveState
 }
