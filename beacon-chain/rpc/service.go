@@ -56,12 +56,10 @@ func (s *Service) Start() {
 
 	var grpcServer *grpc.Server
 	if s.withCert != "" && s.withKey != "" {
-		// Create the TLS credentials.
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
 			log.Errorf("could not load TLS keys: %s", err)
 		}
-		// Create the gRPC server with the credentials.
 		grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
 		log.Warn("You're on an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
