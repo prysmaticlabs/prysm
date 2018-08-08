@@ -1,3 +1,4 @@
+// Package beacon-chain defines all the utlities needed for the POS beacon-chain.
 package main
 
 import (

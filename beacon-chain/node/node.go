@@ -1,3 +1,4 @@
+// Package node defines the services that a PoS node would perform.
 package node
 
 import (

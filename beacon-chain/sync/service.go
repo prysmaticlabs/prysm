@@ -1,3 +1,4 @@
+// Package sync defines the utilities for the beacon-chain to sync with the network.
 package sync
 
 import (

@@ -1,3 +1,4 @@
+// Package blockchain defines the life-cycle and status of the beacon chain.
 package blockchain
 
 import (

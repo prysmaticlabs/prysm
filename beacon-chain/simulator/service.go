@@ -1,3 +1,4 @@
+// Package simulator defines the simulation utility to test the beacon-chain.
 package simulator
 
 import (

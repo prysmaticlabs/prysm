@@ -1,3 +1,4 @@
+// Package syncer defines a service that handles the requests/responses between nodes.
 package syncer
 
 import (

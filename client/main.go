@@ -1,3 +1,4 @@
+// Package client defines the required functionalities for the sharding client.
 package main
 
 import (

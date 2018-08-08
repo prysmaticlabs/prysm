@@ -1,3 +1,4 @@
+// Package cmd defiens the command line flags for the shared utlities.
 package cmd
 
 import (

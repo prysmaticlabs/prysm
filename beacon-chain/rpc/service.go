@@ -1,3 +1,4 @@
+// Package rpc defines the services that the beacon-chain would use for gRPC
 package rpc
 
 import (

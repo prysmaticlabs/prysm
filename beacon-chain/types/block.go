@@ -1,3 +1,4 @@
+// Package types defines the types used throughout the beacon-chain.
 package types
 
 import (

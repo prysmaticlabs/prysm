@@ -1,3 +1,4 @@
+// Package powchain defines the services that interact with the PoWChain of Ethereum.
 package powchain
 
 import (
