@@ -68,6 +68,25 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
+// persisted to the db.
+func (c *ChainService) HasStoredState() (bool, error) {
+
+	hasActive, err := c.beaconDB.DB().Has([]byte(activeStateLookupKey))
+	if err != nil {
+		return false, err
+	}
+	hasCrystallized, err := c.beaconDB.DB().Has([]byte(crystallizedStateLookupKey))
+	if err != nil {
+		return false, err
+	}
+	if !hasActive || !hasCrystallized {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // ProcessedBlockHashes by the chain service.
 func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
@@ -98,6 +117,12 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		c.latestBeaconBlock <- block
 	}
 	return nil
+}
+
+// SaveBlock is a mock which saves a block to the local db using the
+// blockhash as the key.
+func (c *ChainService) SaveBlock(block *types.Block) error {
+	return c.chain.saveBlock(block)
 }
 
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
@@ -179,7 +204,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 				}
 			}
 
-		case <-c.ctx.Done():
+		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 		}

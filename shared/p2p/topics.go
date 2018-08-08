@@ -9,18 +9,19 @@ import (
 
 // Mapping of message topic enums to protobuf types.
 var topicTypeMapping = map[shardpb.Topic]reflect.Type{
-	shardpb.Topic_BEACON_BLOCK_HASH_ANNOUNCE:       reflect.TypeOf(beaconpb.BeaconBlockHashAnnounce{}),
-	shardpb.Topic_BEACON_BLOCK_REQUEST:             reflect.TypeOf(beaconpb.BeaconBlockRequest{}),
-	shardpb.Topic_BEACON_BLOCK_RESPONSE:            reflect.TypeOf(beaconpb.BeaconBlockResponse{}),
-	shardpb.Topic_COLLATION_BODY_REQUEST:           reflect.TypeOf(shardpb.CollationBodyRequest{}),
-	shardpb.Topic_COLLATION_BODY_RESPONSE:          reflect.TypeOf(shardpb.CollationBodyResponse{}),
-	shardpb.Topic_TRANSACTIONS:                     reflect.TypeOf(shardpb.Transaction{}),
-	shardpb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE: reflect.TypeOf(beaconpb.CrystallizedStateHashAnnounce{}),
-	shardpb.Topic_CRYSTALLIZED_STATE_REQUEST:       reflect.TypeOf(beaconpb.CrystallizedStateRequest{}),
-	shardpb.Topic_CRYSTALLIZED_STATE_RESPONSE:      reflect.TypeOf(beaconpb.CrystallizedStateResponse{}),
-	shardpb.Topic_ACTIVE_STATE_HASH_ANNOUNCE:       reflect.TypeOf(beaconpb.ActiveStateHashAnnounce{}),
-	shardpb.Topic_ACTIVE_STATE_REQUEST:             reflect.TypeOf(beaconpb.ActiveStateRequest{}),
-	shardpb.Topic_ACTIVE_STATE_RESPONSE:            reflect.TypeOf(beaconpb.ActiveStateResponse{}),
+	shardpb.Topic_BEACON_BLOCK_HASH_ANNOUNCE:          reflect.TypeOf(beaconpb.BeaconBlockHashAnnounce{}),
+	shardpb.Topic_BEACON_BLOCK_REQUEST:                reflect.TypeOf(beaconpb.BeaconBlockRequest{}),
+	shardpb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: reflect.TypeOf(beaconpb.BeaconBlockRequestBySlotNumber{}),
+	shardpb.Topic_BEACON_BLOCK_RESPONSE:               reflect.TypeOf(beaconpb.BeaconBlockResponse{}),
+	shardpb.Topic_COLLATION_BODY_REQUEST:              reflect.TypeOf(shardpb.CollationBodyRequest{}),
+	shardpb.Topic_COLLATION_BODY_RESPONSE:             reflect.TypeOf(shardpb.CollationBodyResponse{}),
+	shardpb.Topic_TRANSACTIONS:                        reflect.TypeOf(shardpb.Transaction{}),
+	shardpb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE:    reflect.TypeOf(beaconpb.CrystallizedStateHashAnnounce{}),
+	shardpb.Topic_CRYSTALLIZED_STATE_REQUEST:          reflect.TypeOf(beaconpb.CrystallizedStateRequest{}),
+	shardpb.Topic_CRYSTALLIZED_STATE_RESPONSE:         reflect.TypeOf(beaconpb.CrystallizedStateResponse{}),
+	shardpb.Topic_ACTIVE_STATE_HASH_ANNOUNCE:          reflect.TypeOf(beaconpb.ActiveStateHashAnnounce{}),
+	shardpb.Topic_ACTIVE_STATE_REQUEST:                reflect.TypeOf(beaconpb.ActiveStateRequest{}),
+	shardpb.Topic_ACTIVE_STATE_RESPONSE:               reflect.TypeOf(beaconpb.ActiveStateResponse{}),
 }
 
 // Mapping of message types to topic enums.

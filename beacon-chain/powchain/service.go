@@ -33,8 +33,8 @@ type Web3Service struct {
 	endpoint            string
 	validatorRegistered bool
 	vrcAddress          common.Address
-	reader 		        types.Reader
-	logger 				types.Logger
+	reader              types.Reader
+	logger              types.Logger
 	blockNumber         *big.Int    // the latest PoW chain blocknumber.
 	blockHash           common.Hash // the latest PoW chain blockhash.
 }
@@ -110,7 +110,8 @@ func (w *Web3Service) run(done <-chan struct{}) {
 
 	for {
 		select {
-		case <-w.ctx.Done():
+		case <-done:
+			log.Debug("Powchain service context closed, exiting goroutine")
 			return
 		case <-headSub.Err():
 			log.Debug("Unsubscribed to head events, exiting goroutine")
