@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/rpcclient"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
-	"github.com/prysmaticlabs/prysm/client/utils"
+	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -72,12 +72,12 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
+	actorFlag := ctx.GlobalString(types.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
+	shardIDFlag := ctx.GlobalInt(types.ShardIDFlag.Name)
 	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
