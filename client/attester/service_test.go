@@ -57,14 +57,25 @@ func TestFetchBeaconBlocks(t *testing.T) {
 
 func TestFetchCrystallizedState(t *testing.T) {
 	// hook := logTest.NewGlobal()
-	// // Testing using a faulty client.
-	// at := NewAttester(context.Background(), &faultyClient{})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	// ctrl := gomock.NewController(t)
-	// defer ctrl.Finish()
-	// mockService := internal.NewMockBeaconServiceClient(ctrl)
+	at := NewAttester(context.Background(), &faultyClient{ctrl})
 
-	// at.fetchCrystallizedState(mockService)
+	// Create mock for the stream returned by LatestCrystallizedState.
+	stream := internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
 
-	// testutil.AssertLogsContain(t, hook, "Could not setup beacon chain block streaming client")
+	// Set expectation on receiving.
+	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
+
+	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestCrystallizedState(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+
+	at.fetchCrystallizedState(mockServiceClient)
+
+	// testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
 }
