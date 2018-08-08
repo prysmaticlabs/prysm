@@ -8,6 +8,7 @@ Before you begin, check out our [Contribution Guidelines](#contributing) and joi
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
+[Discord Join chat](https://discord.gg/KSA7rPr)
 
 Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
 
