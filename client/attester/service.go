@@ -59,6 +59,8 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 	}
 	for {
 		block, err := stream.Recv()
+
+		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
 			break
 		}
@@ -76,6 +78,8 @@ func (at *Attester) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 			log.Info("Assigned attestation height reached, performing attestation responsibility")
 			// Reset is height assigned.
 			at.isHeightAssigned = false
+
+			// TODO: perform attestation responsibility.
 		}
 	}
 }
@@ -88,6 +92,8 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 	}
 	for {
 		crystallizedState, err := stream.Recv()
+
+		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
 			break
 		}
@@ -100,21 +106,21 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		activeValidators := crystallizedState.GetActiveValidators()
 		validatorCount := len(activeValidators)
 
-		validatorIndexSet := false
+		isValidatorIndexSet := false
 
 		for i, val := range activeValidators {
 			// TODO: Check the public key instead of withdrawal address. This will
 			// use BLS.
-			if bytes.Equal(val.GetWithdrawalAddress(), []byte{}) {
+			if isZeroAddress(val.GetWithdrawalAddress()) {
 				at.validatorIndex = i
-				validatorIndexSet = true
+				isValidatorIndexSet = true
 				break
 			}
 		}
 
 		// If validator was not found in the validator set was not set, keep listening for
 		// crystallized states.
-		if !validatorIndexSet {
+		if !isValidatorIndexSet {
 			continue
 		}
 
@@ -150,4 +156,8 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		at.isHeightAssigned = true
 		at.assignedHeight = currentAssignedHeights[heightIndex]
 	}
+}
+
+func isZeroAddress(withdrawalAddress []byte) bool {
+	return bytes.Equal(withdrawalAddress, []byte{})
 }

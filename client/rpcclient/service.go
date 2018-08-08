@@ -43,7 +43,7 @@ func (s *Service) Start() {
 		log.Fatalf("Could not parse endpoint URL: %s, %v", s.endpoint, err)
 		return
 	}
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", endpointURL.Port()), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", endpointURL.Hostname(), endpointURL.Port()), grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Could not connect to beacon node via RPC endpoint: %s: %v", s.endpoint, err)
 		return

@@ -70,7 +70,9 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// ShuffleValidators shuffles the validators into attesters/proposers.
+// ShuffleValidators shuffles the validators into attesters/proposers. This function is not a stream but
+// rather an on-demand RPC method as an attester/proposer determines its time to
+// perform its responsibility within its respective event loop.
 func (s *Service) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
 	return nil, nil
 }
