@@ -161,25 +161,25 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 func (c *ChainService) updateChainState() {
 	for {
 		select {
-		case block := <-c.latestBeaconBlock:
+		case _ = <-c.latestBeaconBlock:
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
-
-			err = c.chain.MutateActiveState(activeState)
-			if err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-			}
-
-			// Entering epoch transitions.
-			transition := c.chain.IsEpochTransition(block.SlotNumber())
-			if transition {
-				if err := c.chain.calculateRewardsFFG(); err != nil {
-					log.Errorf("Error computing validator rewards and penalties %v", err)
-				}
-			}
+			//activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			//if err != nil {
+			//	log.Errorf("Compute active state failed: %v", err)
+			//}
+			//
+			//err = c.chain.MutateActiveState(activeState)
+			//if err != nil {
+			//	log.Errorf("Write active state to disk failed: %v", err)
+			//}
+			//
+			//// Entering epoch transitions.
+			//transition := c.chain.IsEpochTransition(block.SlotNumber())
+			//if transition {
+			//	if err := c.chain.calculateRewardsFFG(); err != nil {
+			//		log.Errorf("Error computing validator rewards and penalties %v", err)
+			//	}
+			//}
 
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")

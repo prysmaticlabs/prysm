@@ -4,18 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"reflect"
-	"testing"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"math"
+	"reflect"
+	"testing"
 )
 
 type faultyFetcher struct{}
@@ -368,54 +365,33 @@ func TestRotateValidatorSet(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	activeValidators := []*pb.ValidatorRecord{
-		{Balance: 10000, WithdrawalAddress: []byte{'A'}},
-		{Balance: 15000, WithdrawalAddress: []byte{'B'}},
-		{Balance: 20000, WithdrawalAddress: []byte{'C'}},
-		{Balance: 25000, WithdrawalAddress: []byte{'D'}},
-		{Balance: 30000, WithdrawalAddress: []byte{'E'}},
+	validators := []*pb.ValidatorRecord{
+		{Balance: 10000, StartDynasty: 0, EndDynasty: uint64(math.Inf(0))}, // half below default balance, should be moved to exit
+		{Balance: 15000, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // half below default balance, should be moved to exit
+		{Balance: 20000, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // stays in active
+		{Balance: 25000, StartDynasty: 3, EndDynasty: uint64(math.Inf(0))}, // stays in active
+		{Balance: 30000, StartDynasty: 4, EndDynasty: uint64(math.Inf(0))}, // stays in active
 	}
 
-	queuedValidators := []*pb.ValidatorRecord{
-		{Balance: params.DefaultBalance, WithdrawalAddress: []byte{'F'}},
-		{Balance: params.DefaultBalance, WithdrawalAddress: []byte{'G'}},
-		{Balance: params.DefaultBalance, WithdrawalAddress: []byte{'H'}},
-		{Balance: params.DefaultBalance, WithdrawalAddress: []byte{'I'}},
-		{Balance: params.DefaultBalance, WithdrawalAddress: []byte{'J'}},
+	data := &pb.CrystallizedState{
+		Validators:     validators,
+		CurrentDynasty: 10,
 	}
+	state := types.NewCrystallizedState(data)
+	beaconChain.MutateCrystallizedState(state)
 
-	exitedValidators := []*pb.ValidatorRecord{
-		{Balance: 99999, WithdrawalAddress: []byte{'K'}},
-		{Balance: 99999, WithdrawalAddress: []byte{'L'}},
-		{Balance: 99999, WithdrawalAddress: []byte{'M'}},
-		{Balance: 99999, WithdrawalAddress: []byte{'N'}},
-		{Balance: 99999, WithdrawalAddress: []byte{'O'}},
-	}
+	// rotate validator set and increment dynasty count by 1
+	beaconChain.rotateValidatorSet()
+	beaconChain.CrystallizedState().IncrementCurrentDynasty()
 
-	beaconChain.CrystallizedState().UpdateValidators(activeValidators)
-	beaconChain.CrystallizedState().UpdateQueuedValidators(queuedValidators)
-	beaconChain.CrystallizedState().UpdateExitedValidators(exitedValidators)
-
-	if beaconChain.CrystallizedState().ActiveValidatorsLength() != 5 {
-		t.Errorf("Get active validator count failed, wanted 5, got %v", beaconChain.CrystallizedState().ActiveValidatorsLength())
+	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(), []int{2, 3, 4}) {
+		t.Errorf("active validator indices should be [2,3,4], got: %v", beaconChain.activeValidatorIndices())
 	}
-	if beaconChain.CrystallizedState().QueuedValidatorsLength() != 5 {
-		t.Errorf("Get queued validator count failed, wanted 5, got %v", beaconChain.CrystallizedState().QueuedValidatorsLength())
+	if len(beaconChain.queuedValidatorIndices()) != 0 {
+		t.Errorf("queued validator indices should be [], got: %v", beaconChain.queuedValidatorIndices())
 	}
-	if beaconChain.CrystallizedState().ExitedValidatorsLength() != 5 {
-		t.Errorf("Get exited validator count failed, wanted 5, got %v", beaconChain.CrystallizedState().ExitedValidatorsLength())
-	}
-
-	newQueuedValidators, newActiveValidators, newExitedValidators := beaconChain.rotateValidatorSet()
-
-	if len(newActiveValidators) != 4 {
-		t.Errorf("Get active validator count failed, wanted 5, got %v", len(newActiveValidators))
-	}
-	if len(newQueuedValidators) != 4 {
-		t.Errorf("Get queued validator count failed, wanted 4, got %v", len(newQueuedValidators))
-	}
-	if len(newExitedValidators) != 7 {
-		t.Errorf("Get exited validator count failed, wanted 6, got %v", len(newExitedValidators))
+	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(), []int{0, 1}) {
+		t.Errorf("exited validator indices should be [0,1], got: %v", beaconChain.exitedValidatorIndices())
 	}
 }
 
@@ -612,6 +588,65 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 	if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfield(), make([]byte, 5)) {
 		t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfield())
+	}
+}
+
+func TestValidatorIndices(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	data := &pb.CrystallizedState{
+		Validators: []*pb.ValidatorRecord{
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // active
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 3},                   // active
+			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // queued
+		},
+		CurrentDynasty: 1,
+	}
+
+	crystallized := types.NewCrystallizedState(data)
+	if err := beaconChain.MutateCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+
+	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(), []int{0, 1, 2, 3, 4}) {
+		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", beaconChain.activeValidatorIndices())
+	}
+	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(), []int{5}) {
+		t.Errorf("queued validator indices should be [5], got: %v", beaconChain.queuedValidatorIndices())
+	}
+	if len(beaconChain.exitedValidatorIndices()) != 0 {
+		t.Errorf("exited validator indices to be empty, got: %v", beaconChain.exitedValidatorIndices())
+	}
+
+	data = &pb.CrystallizedState{
+		Validators: []*pb.ValidatorRecord{
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // active
+			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // active
+			{PublicKey: 0, StartDynasty: 6, EndDynasty: uint64(math.Inf(0))}, // queued
+			{PublicKey: 0, StartDynasty: 7, EndDynasty: uint64(math.Inf(0))}, // queued
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // exited
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: 3},                   // exited
+		},
+		CurrentDynasty: 5,
+	}
+
+	crystallized = types.NewCrystallizedState(data)
+	if err := beaconChain.MutateCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+
+	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(), []int{0, 1}) {
+		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", beaconChain.activeValidatorIndices())
+	}
+	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(), []int{2, 3}) {
+		t.Errorf("queued validator indices should be [3], got: %v", beaconChain.queuedValidatorIndices())
+	}
+	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(), []int{4, 5}) {
+		t.Errorf("exited validator indices should be [3], got: %v", beaconChain.exitedValidatorIndices())
 	}
 }
 

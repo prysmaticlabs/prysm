@@ -222,45 +222,36 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 	}), nil
 }
 
-// rotateValidatorSet is called every dynasty transition. It's primary function is
-// to go through queued validators and induct them to be active, and remove bad
-// active validator whose balance is below threshold to the exit set. It also cross checks
-// every validator's switch dynasty before induct or remove.
-func (b *BeaconChain) rotateValidatorSet() ([]*pb.ValidatorRecord, []*pb.ValidatorRecord, []*pb.ValidatorRecord) {
+// rotateValidatorSet is called every dynasty transition. The primary functions are:
+// 1.) Go through queued validator indices and induct them to be active by setting start
+// dynasty to current epoch.
+// 2.) Remove bad active validator whose balance is below threshold to the exit set by
+// setting end dynasty to current epoch.
+func (b *BeaconChain) rotateValidatorSet() {
 
-	var newExitedValidators = b.CrystallizedState().ExitedValidators()
-	var newActiveValidators []*pb.ValidatorRecord
-	upperbound := b.CrystallizedState().ActiveValidatorsLength()/30 + 1
-	exitCount := 0
+	validators := b.CrystallizedState().Validators()
+	upperbound := len(b.activeValidatorIndices())/30 + 1
 
-	// Loop through active validator set, remove validator whose balance is below 50% and switch dynasty > current dynasty.
-	for _, validator := range b.CrystallizedState().ActiveValidators() {
-		if validator.Balance < params.DefaultBalance/2 {
-			newExitedValidators = append(newExitedValidators, validator)
-		} else if validator.SwitchDynasty == b.CrystallizedState().CurrentDynasty()+1 && exitCount < upperbound {
-			newExitedValidators = append(newExitedValidators, validator)
-			exitCount++
-		} else {
-			newActiveValidators = append(newActiveValidators, validator)
+	// Loop through active validator set, remove validator whose balance is below 50%.
+	for _, index := range b.activeValidatorIndices() {
+		if validators[index].Balance < params.DefaultBalance/2 {
+			validators[index].EndDynasty = b.CrystallizedState().CurrentDynasty()
 		}
 	}
 	// Get the total number of validator we can induct.
 	inductNum := upperbound
-	if b.CrystallizedState().QueuedValidatorsLength() < inductNum {
-		inductNum = b.CrystallizedState().QueuedValidatorsLength()
+	if len(b.queuedValidatorIndices()) < inductNum {
+		inductNum = len(b.queuedValidatorIndices())
 	}
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
-	for i := 0; i < inductNum; i++ {
-		if b.CrystallizedState().QueuedValidators()[i].SwitchDynasty > b.CrystallizedState().CurrentDynasty()+1 {
-			inductNum = i
+	for _, index := range b.queuedValidatorIndices() {
+		validators[index].StartDynasty = b.CrystallizedState().CurrentDynasty()
+		inductNum--
+		if inductNum == 0 {
 			break
 		}
-		newActiveValidators = append(newActiveValidators, b.CrystallizedState().QueuedValidators()[i])
 	}
-	newQueuedValidators := b.CrystallizedState().QueuedValidators()[inductNum:]
-
-	return newQueuedValidators, newActiveValidators, newExitedValidators
 }
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
@@ -351,8 +342,9 @@ func (b *BeaconChain) resetAttesterBitfield(record *pb.AttestationRecord) {
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
 
-// validatorIndices selects the active validators and returns their indices in a list.
-func (b *BeaconChain) validatorIndices() []int {
+// activeValidatorIndices filters out active validators based on start and end dynasty
+// and returns their indices in a list.
+func (b *BeaconChain) activeValidatorIndices() []int {
 	var indices []int
 	validators := b.CrystallizedState().Validators()
 	dynasty := b.CrystallizedState().CurrentDynasty()
@@ -364,11 +356,39 @@ func (b *BeaconChain) validatorIndices() []int {
 	return indices
 }
 
+// exitedValidatorIndices filters out exited validators based on start and end dynasty
+// and returns their indices in a list.
+func (b *BeaconChain) exitedValidatorIndices() []int {
+	var indices []int
+	validators := b.CrystallizedState().Validators()
+	dynasty := b.CrystallizedState().CurrentDynasty()
+	for i := 0; i < len(validators); i++ {
+		if validators[i].StartDynasty < dynasty && validators[i].EndDynasty < dynasty {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
+// queuedValidatorIndices filters out queued validators based on start and end dynasty
+// and returns their indices in a list.
+func (b *BeaconChain) queuedValidatorIndices() []int {
+	var indices []int
+	validators := b.CrystallizedState().Validators()
+	dynasty := b.CrystallizedState().CurrentDynasty()
+	for i := 0; i < len(validators); i++ {
+		if !math.IsInf(float64(validators[i].StartDynasty), 0) && validators[i].StartDynasty > dynasty {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
 // validatorsByHeightShard splits a shuffled validator list by height and by shard,
 // it ensures there's enough validators per height and per shard, if not, it'll skip
 // some heights and shards.
 func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
-	indices := b.validatorIndices()
+	indices := b.activeValidatorIndices()
 	var committeesPerSlot int
 	var slotsPerCommittee int
 	var committees []*beaconCommittee

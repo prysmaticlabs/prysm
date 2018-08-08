@@ -166,6 +166,11 @@ func (c *CrystallizedState) CurrentDynasty() uint64 {
 	return c.data.CurrentDynasty
 }
 
+// IncrementCurrentDynasty increments current dynasty by one.
+func (c *CrystallizedState) IncrementCurrentDynasty() {
+	c.data.CurrentDynasty++
+}
+
 // TotalDeposits returns total balance of deposits.
 func (c *CrystallizedState) TotalDeposits() uint64 {
 	return c.data.TotalDeposits
