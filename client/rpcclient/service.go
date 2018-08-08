@@ -2,6 +2,7 @@ package rpcclient
 
 import (
 	"context"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
