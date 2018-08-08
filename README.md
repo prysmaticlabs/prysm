@@ -6,8 +6,7 @@ This is the main repository for the beacon chain and sharding implementation for
 
 Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Discord or Gitter below:
 
-[Discord Join chat](https://discord.gg/KSA7rPr)
-
+[![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
