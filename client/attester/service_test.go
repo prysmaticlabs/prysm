@@ -38,13 +38,8 @@ func TestFetchCrystallizedState(t *testing.T) {
 	// Create mock for the stream returned by LatestBeaconBlock.
 	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
 
-	// Set expectation on sending.
-	stream.EXPECT().Send(
-		gomock.Any(),
-	).Return(nil)
-
 	// Set expectation on receiving.
-	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{SlotNumber: 10}, nil).Times(3)
+	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{SlotNumber: 10}, nil)
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestBeaconBlock(
@@ -53,8 +48,6 @@ func TestFetchCrystallizedState(t *testing.T) {
 	).Return(stream, nil)
 
 	at.fetchBeaconBlocks(mockServiceClient)
-
-	stream.EXPECT().CloseSend().Return(nil)
 
 	testutil.AssertLogsContain(t, hook, "Could not setup beacon chain block streaming client")
 }
