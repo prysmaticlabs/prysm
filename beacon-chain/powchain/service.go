@@ -80,7 +80,7 @@ func (w *Web3Service) Start() {
 	}
 	w.client = ethclient.NewClient(rpcClient)
 	w.reader, w.logger = w.client, w.client
-	go w.runSubscriptions(w.ctx.Done())
+	go w.run(w.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -91,8 +91,8 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
-// runSubscriptions subscribes to all the services for the powchain.
-func (w *Web3Service) runSubscriptions(done <-chan struct{}) {
+// run subscribes to all the services for the powchain.
+func (w *Web3Service) run(done <-chan struct{}) {
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)

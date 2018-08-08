@@ -67,7 +67,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.runSubscriptions(delayChan, doneChan)
+		sim.run(delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -94,7 +94,7 @@ func TestBlockRequest(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.runSubscriptions(delayChan, doneChan)
+		sim.run(delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -137,7 +137,7 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 	sim.slotNum = 64
 
 	go func() {
-		sim.runSubscriptions(delayChan, doneChan)
+		sim.run(delayChan, doneChan)
 		<-exitRoutine
 	}()
 
@@ -164,7 +164,7 @@ func TestCrystallizedRequest(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.runSubscriptions(delayChan, doneChan)
+		sim.run(delayChan, doneChan)
 		<-exitRoutine
 	}()
 

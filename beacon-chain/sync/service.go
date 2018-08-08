@@ -123,7 +123,7 @@ func (ss *Service) Start() {
 		log.Info("Starting initial sync")
 		go ss.runInitialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
 	default:
-		go ss.runSubscriptions(ss.ctx.Done())
+		go ss.run(ss.ctx.Done())
 
 	}
 }
@@ -330,7 +330,7 @@ func (ss *Service) runInitialSync(delaychan <-chan time.Time, done <-chan struct
 		case <-delaychan:
 			if ss.highestObservedSlot == ss.currentSlotNumber {
 				log.Infof("Exiting initial sync and starting normal sync")
-				go ss.runSubscriptions(ss.ctx.Done())
+				go ss.run(ss.ctx.Done())
 				return
 			}
 		case msg := <-ss.blockBuf:
@@ -396,7 +396,7 @@ func (ss *Service) runInitialSync(delaychan <-chan time.Time, done <-chan struct
 	}
 }
 
-func (ss *Service) runSubscriptions(done <-chan struct{}) {
+func (ss *Service) run(done <-chan struct{}) {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
 	announceCrystallizedHashSub := ss.p2p.Subscribe(pb.CrystallizedStateHashAnnounce{}, ss.announceCrystallizedHashBuf)

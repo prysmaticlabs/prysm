@@ -113,7 +113,7 @@ func TestBadReader(t *testing.T) {
 	}
 	web3Service.reader = &badReader{}
 	web3Service.logger = &goodLogger{}
-	web3Service.runSubscriptions(web3Service.ctx.Done())
+	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
 	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
 	if msg != want {
@@ -134,7 +134,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.runSubscriptions(web3Service.ctx.Done())
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
@@ -163,7 +163,7 @@ func TestBadLogger(t *testing.T) {
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &badLogger{}
 
-	web3Service.runSubscriptions(web3Service.ctx.Done())
+	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
 	want := "Unable to query logs from VRC: subscription has failed"
 	if msg != want {
@@ -189,7 +189,7 @@ func TestGoodLogger(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.runSubscriptions(web3Service.ctx.Done())
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
@@ -232,7 +232,7 @@ func TestHeaderAfterValidation(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.runSubscriptions(web3Service.ctx.Done())
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 

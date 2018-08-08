@@ -15,7 +15,7 @@ import (
 )
 
 func startNode(ctx *cli.Context) error {
-	shardingNode, err := node.New(ctx)
+	shardingNode, err := node.NewShardInstance(ctx)
 	if err != nil {
 		return err
 	}

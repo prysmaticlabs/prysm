@@ -70,7 +70,7 @@ func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Ser
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	go sim.runSubscriptions(time.NewTicker(sim.delay).C, sim.ctx.Done())
+	go sim.run(time.NewTicker(sim.delay).C, sim.ctx.Done())
 }
 
 // Stop the sim.
@@ -80,7 +80,7 @@ func (sim *Simulator) Stop() error {
 	return nil
 }
 
-func (sim *Simulator) runSubscriptions(delayChan <-chan time.Time, done <-chan struct{}) {
+func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 	blockReqSub := sim.p2p.Subscribe(pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	crystallizedStateReqSub := sim.p2p.Subscribe(pb.CrystallizedStateRequest{}, sim.crystallizedStateRequestChan)
 	defer blockReqSub.Unsubscribe()
