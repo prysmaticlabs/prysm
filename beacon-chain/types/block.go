@@ -36,13 +36,17 @@ func NewBlock(data *pb.BeaconBlock) (*Block, error) {
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock() (*Block, error) {
-	genesisTime := time.Now()
-	protoGenesis, err := ptypes.TimestampProto(genesisTime)
+	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		return nil, err
 	}
 	// TODO: Add more default fields.
-	return &Block{data: &pb.BeaconBlockResponse{Timestamp: protoGenesis}}, nil
+	return &Block{
+		data: &pb.BeaconBlock{
+			Timestamp:  protoGenesis,
+			ParentHash: make([]byte, 32),
+		},
+	}, nil
 }
 
 // Proto returns the underlying protobuf data within a block primitive.

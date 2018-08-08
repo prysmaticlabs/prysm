@@ -77,7 +77,7 @@ func TestGetGenesisBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	block := &pb.BeaconBlockResponse{
+	block := &pb.BeaconBlock{
 		ParentHash: make([]byte, 32),
 		Timestamp: &timestamp.Timestamp{
 			Seconds: 13000000,

@@ -53,11 +53,8 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !hasActive && !hasCrystallized && !hasGenesis {
-		log.Info("No chainstate found on disk, initializing beacon from genesis")
-		active, crystallized := types.NewGenesisStates()
-		beaconChain.state.ActiveState = active
-		beaconChain.state.CrystallizedState = crystallized
+	if !hasGenesis {
+		log.Info("No genesis block found on disk, initializing genesis block")
 		genesisBlock, err := types.NewGenesisBlock()
 		if err != nil {
 			return nil, err
@@ -69,6 +66,13 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err := beaconChain.db.Put([]byte("genesis"), genesisMarshall); err != nil {
 			return nil, err
 		}
+	}
+	if !hasActive && !hasCrystallized {
+		log.Info("No chainstate found on disk, initializing beacon from genesis")
+		active, crystallized := types.NewGenesisStates()
+		beaconChain.state.ActiveState = active
+		beaconChain.state.CrystallizedState = crystallized
+
 		return beaconChain, nil
 	}
 	if hasActive {
@@ -109,11 +113,10 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		if err != nil {
 			return nil, err
 		}
-		block := &pb.BeaconBlockResponse{}
+		block := &pb.BeaconBlock{}
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
 		}
-		block.ParentHash = make([]byte, 32)
 		return types.NewBlock(block)
 	}
 	return types.NewGenesisBlock()
