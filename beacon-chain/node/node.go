@@ -39,9 +39,9 @@ type BeaconNode struct {
 	db       *database.DB
 }
 
-// New creates a new node instance, sets up configuration options, and registers
+// NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(ctx *cli.Context) (*BeaconNode, error) {
+func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{

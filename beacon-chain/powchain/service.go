@@ -48,7 +48,7 @@ type Web3ServiceConfig struct {
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
-// given a web3 endpoint as a string.
+// given a web3 endpoint as a string in the config.
 func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
