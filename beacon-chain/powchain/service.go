@@ -38,6 +38,7 @@ type Web3Service struct {
 	blockNumber         *big.Int    // the latest PoW chain blocknumber.
 	blockHash           common.Hash // the latest PoW chain blockhash.
 }
+
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
 	Endpoint string
