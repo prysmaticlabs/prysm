@@ -21,6 +21,8 @@ import (
 var activeStateLookupKey = "beacon-active-state"
 var crystallizedStateLookupKey = "beacon-crystallized-state"
 
+var clock utils.Clock = &utils.RealClock{}
+
 // BeaconChain represents the core PoS blockchain object containing
 // both a crystallized and active state.
 type BeaconChain struct {
@@ -202,7 +204,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if time.Now().Before(genesisTime.Add(slotDuration)) {
+	if clock.Now().Before(genesisTime.Add(slotDuration)) {
 		return false, nil
 	}
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -18,6 +19,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+// FakeClock represents an mocked clock for testing purposes.
+type fakeClock struct{}
+
+// Now represents the mocked functionality of a Clock.Now().
+func (fakeClock) Now() time.Time {
+	return time.Date(1970, 2, 1, 1, 0, 0, 0, time.UTC)
+}
 
 type faultyFetcher struct{}
 
@@ -206,6 +215,8 @@ func TestGetAttestersProposer(t *testing.T) {
 func TestCanProcessBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
+
+	clock = &fakeClock{}
 
 	// Initialize a parent block
 	parentBlock := NewBlock(t, &pb.BeaconBlock{
