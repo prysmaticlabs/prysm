@@ -200,3 +200,15 @@ func (m *MockBeaconService_LatestBeaconBlockClient) Trailer() metadata.MD {
 func (mr *MockBeaconService_LatestBeaconBlockClientMockRecorder) Trailer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconService_LatestBeaconBlockClient)(nil).Trailer))
 }
+
+// Send mocks base method
+func (_m *MockBeaconService_LatestBeaconBlockClient) Send(_param0 *v1.BeaconBlock) error {
+	ret := _m.ctrl.Call(_m, "Send", _param0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Send indicates an expected call of Send
+func (_mr *MockBeaconService_LatestBeaconBlockClientMockRecorder) Send(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Send", arg0)
+}

@@ -1,10 +1,15 @@
 package attester
 
 import (
+	"context"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/client/internal"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type faultyClient struct{}
@@ -23,17 +28,33 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestFetchCrystallizedState(t *testing.T) {
-	// hook := logTest.NewGlobal()
-	// // Testing using a faulty client.
-	// at := NewAttester(context.Background(), &faultyClient{})
+	hook := logTest.NewGlobal()
+	// Testing using a faulty client.
+	at := NewAttester(context.Background(), &faultyClient{})
 
-	// ctrl := gomock.NewController(t)
-	// defer ctrl.Finish()
-	// mockService := internal.NewMockBeaconServiceClient(ctrl)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	// at.fetchBeaconBlocks(mockService)
+	// Create mock for the stream returned by LatestBeaconBlock.
+	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
 
-	// testutil.AssertLogsContain(t, hook, "Could not setup beacon chain block streaming client")
+	// Set expectation on sending.
+	stream.EXPECT().Send(
+		gomock.Any(),
+	).Return(nil)
+
+	// Set expectation on receiving.
+	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, nil)
+
+	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestBeaconBlock(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+
+	at.fetchBeaconBlocks(mockServiceClient)
+
+	testutil.AssertLogsContain(t, hook, "Could not setup beacon chain block streaming client")
 }
 
 func TestFetchBeaconHashHeight(t *testing.T) {
