@@ -8,6 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var log = logrus.WithField("prefix", "rpc")
@@ -18,11 +19,15 @@ type Service struct {
 	cancel   context.CancelFunc
 	port     string
 	listener net.Listener
+	withCert string
+	withKey  string
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port string
+	Port     string
+	CertFlag string
+	KeyFlag  string
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -30,9 +35,11 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:    ctx,
-		cancel: cancel,
-		port:   cfg.Port,
+		ctx:      ctx,
+		cancel:   cancel,
+		port:     cfg.Port,
+		withCert: cfg.CertFlag,
+		withKey:  cfg.KeyFlag,
 	}
 }
 
@@ -47,7 +54,18 @@ func (s *Service) Start() {
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
 
-	grpcServer := grpc.NewServer()
+	var grpcServer *grpc.Server
+	if s.withCert != "" && s.withKey != "" {
+		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
+		if err != nil {
+			log.Errorf("could not load TLS keys: %s", err)
+		}
+		grpcServer = grpc.NewServer(grpc.Creds(creds))
+	} else {
+		log.Warn("You're on an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		grpcServer = grpc.NewServer()
+	}
+
 	pb.RegisterBeaconServiceServer(grpcServer, s)
 	go func() {
 		err = grpcServer.Serve(lis)
