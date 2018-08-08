@@ -1,4 +1,4 @@
-// Package params defines important configuration options to be used when instantiating objects within the beacon-chain package.
+// Package params defines important constants that are essential to the beacon chain.
 package params
 
 const (

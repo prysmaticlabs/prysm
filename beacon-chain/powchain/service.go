@@ -80,7 +80,7 @@ func (w *Web3Service) Start() {
 	}
 	w.client = ethclient.NewClient(rpcClient)
 	w.reader, w.logger = w.client, w.client
-	go w.run(w.ctx.Done())
+	go w.runSubscriptions(w.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -91,7 +91,8 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
-func (w *Web3Service) run(done <-chan struct{}) {
+// runSubscriptions subscribes to all the services for the powchain.
+func (w *Web3Service) runSubscriptions(done <-chan struct{}) {
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
@@ -142,22 +143,22 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	}
 }
 
-// LatestBlockNumber is a getter for blockNumber to make it read-only.
+// LatestBlockNumber exposes a getter for blockNumber.
 func (w *Web3Service) LatestBlockNumber() *big.Int {
 	return w.blockNumber
 }
 
-// LatestBlockHash is a getter for blockHash to make it read-only.
+// LatestBlockHash exposes a getter for blockHash.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// ValidatorRegistered is a getter for validatorRegistered to make it read-only.
+// ValidatorRegistered exposes a getter for validatorRegistered.
 func (w *Web3Service) ValidatorRegistered() bool {
 	return w.validatorRegistered
 }
 
-// Client returns the underlying web3 client.
+// Client exposes a getter for the underlying web3 client.
 func (w *Web3Service) Client() types.POWChainClient {
 	return w.client
 }

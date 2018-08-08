@@ -40,7 +40,7 @@ func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 
 // GetCutoffs is used to split up validators into groups at the start
 // of every epoch. It determines at what height validators can make
-// attestations and crosslinks. It returns lists of cutoff indices.
+// attestations and crosslinks. It returns a list of cutoff indices.
 func GetCutoffs(validatorCount int) []int {
 	var heightCutoff = []int{0}
 	var heights []int

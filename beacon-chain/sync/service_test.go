@@ -128,7 +128,7 @@ func TestProcessBlockHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -162,7 +162,7 @@ func TestProcessBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -209,7 +209,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -285,7 +285,7 @@ func TestProcessSameBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -337,7 +337,7 @@ func TestProcessCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -370,7 +370,7 @@ func TestProcessActiveHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -403,7 +403,7 @@ func TestProcessBadCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -437,7 +437,7 @@ func TestProcessBadActiveHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -471,7 +471,7 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -537,7 +537,7 @@ func TestProcessActiveStates(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -602,7 +602,7 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -655,7 +655,7 @@ func TestProcessSameActiveState(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.runSubscriptions(ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -708,7 +708,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	delayChan := make(chan time.Time)
 
 	go func() {
-		ss.initialSync(delayChan, ss.ctx.Done())
+		ss.runInitialSync(delayChan, ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -756,7 +756,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	delayChan := make(chan time.Time)
 
 	go func() {
-		ss.initialSync(delayChan, ss.ctx.Done())
+		ss.runInitialSync(delayChan, ss.ctx.Done())
 		exitRoutine <- true
 	}()
 
@@ -853,7 +853,7 @@ func TestDelayChan(t *testing.T) {
 	delayChan := make(chan time.Time)
 
 	go func() {
-		ss.initialSync(delayChan, ss.ctx.Done())
+		ss.runInitialSync(delayChan, ss.ctx.Done())
 		exitRoutine <- true
 	}()
 

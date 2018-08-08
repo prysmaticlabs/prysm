@@ -307,7 +307,7 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 		log.Info("Resetting total attester deposit to zero")
 		b.ActiveState().SetTotalAttesterDeposits(0)
 
-		b.CrystallizedState().UpdateActiveValidators(activeValidators)
+		b.CrystallizedState().SetActiveValidators(activeValidators)
 		err := b.PersistActiveState()
 		if err != nil {
 			return err
