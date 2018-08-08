@@ -5,7 +5,7 @@ import (
 	"runtime"
 
 	"github.com/prysmaticlabs/prysm/client/node"
-	"github.com/prysmaticlabs/prysm/client/utils"
+	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/sirupsen/logrus"
@@ -54,7 +54,7 @@ VERSION:
 	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
 	app.Action = startNode
-	app.Flags = []cli.Flag{utils.ActorFlag, utils.BeaconRPCProviderFlag, cmd.VerbosityFlag, cmd.DataDirFlag, cmd.PasswordFileFlag, cmd.NetworkIDFlag, cmd.IPCPathFlag, cmd.RPCProviderFlag, utils.DepositFlag, utils.ShardIDFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
+	app.Flags = []cli.Flag{types.ActorFlag, types.BeaconRPCProviderFlag, cmd.VerbosityFlag, cmd.DataDirFlag, cmd.PasswordFileFlag, cmd.NetworkIDFlag, cmd.IPCPathFlag, cmd.RPCProviderFlag, types.DepositFlag, types.ShardIDFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
