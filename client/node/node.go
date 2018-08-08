@@ -175,7 +175,7 @@ func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 		endpoint = ctx.GlobalString(cmd.IPCPathFlag.Name)
 	}
 	passwordFile := ctx.GlobalString(cmd.PasswordFileFlag.Name)
-	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
+	depositFlag := ctx.GlobalBool(types.DepositFlag.Name)
 
 	client, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
 	if err != nil {
@@ -265,7 +265,7 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 }
 
 func (s *ShardEthereum) registerBeaconRPCService(ctx *cli.Context) error {
-	endpoint := ctx.GlobalString(utils.BeaconRPCProviderFlag.Name)
+	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	rpcService := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{
 		Endpoint: endpoint,
 	})
