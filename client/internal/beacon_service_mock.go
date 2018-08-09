@@ -38,6 +38,24 @@ func (m *MockBeaconServiceClient) EXPECT() *MockBeaconServiceClientMockRecorder 
 	return m.recorder
 }
 
+// FetchShuffledValidatorIndices mocks base method
+func (m *MockBeaconServiceClient) FetchShuffledValidatorIndices(arg0 context.Context, arg1 *v10.ShuffleRequest, arg2 ...grpc.CallOption) (*v10.ShuffleResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FetchShuffledValidatorIndices", varargs...)
+	ret0, _ := ret[0].(*v10.ShuffleResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FetchShuffledValidatorIndices indicates an expected call of FetchShuffledValidatorIndices
+func (mr *MockBeaconServiceClientMockRecorder) FetchShuffledValidatorIndices(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchShuffledValidatorIndices", reflect.TypeOf((*MockBeaconServiceClient)(nil).FetchShuffledValidatorIndices), varargs...)
+}
+
 // LatestBeaconBlock mocks base method
 func (m *MockBeaconServiceClient) LatestBeaconBlock(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (v10.BeaconService_LatestBeaconBlockClient, error) {
 	varargs := []interface{}{arg0, arg1}
@@ -72,24 +90,6 @@ func (m *MockBeaconServiceClient) LatestCrystallizedState(arg0 context.Context, 
 func (mr *MockBeaconServiceClientMockRecorder) LatestCrystallizedState(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestCrystallizedState", reflect.TypeOf((*MockBeaconServiceClient)(nil).LatestCrystallizedState), varargs...)
-}
-
-// ShuffleValidators mocks base method
-func (m *MockBeaconServiceClient) ShuffleValidators(arg0 context.Context, arg1 *v10.ShuffleRequest, arg2 ...grpc.CallOption) (*v10.ShuffleResponse, error) {
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ShuffleValidators", varargs...)
-	ret0, _ := ret[0].(*v10.ShuffleResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ShuffleValidators indicates an expected call of ShuffleValidators
-func (mr *MockBeaconServiceClientMockRecorder) ShuffleValidators(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShuffleValidators", reflect.TypeOf((*MockBeaconServiceClient)(nil).ShuffleValidators), varargs...)
 }
 
 // MockBeaconService_LatestBeaconBlockClient is a mock of BeaconService_LatestBeaconBlockClient interface

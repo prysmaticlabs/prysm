@@ -34,3 +34,17 @@ func TestBadEndpoint(t *testing.T) {
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
+
+func TestInsecureEndpoint(t *testing.T) {
+	hook := logTest.NewGlobal()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"})
+
+	rpcService.Start()
+
+	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
+
+	rpcService.Stop()
+	testutil.AssertLogsContain(t, hook, "Stopping service")
+}

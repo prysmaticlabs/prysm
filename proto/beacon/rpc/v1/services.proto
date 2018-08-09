@@ -9,7 +9,7 @@ import "google/protobuf/empty.proto";
 service BeaconService {
     rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
-    rpc ShuffleValidators(ShuffleRequest) returns (ShuffleResponse);
+    rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
 }
 
 service AttesterService {
@@ -21,15 +21,13 @@ service ProposerService {
 }
 
 message ShuffleRequest {
-    uint64 validator_count = 1;
-    uint64 validator_index = 2;
+  bytes crystallized_state_hash = 1;
 }
 
 message ShuffleResponse {
-    repeated uint64 attester_indices = 1;
+    repeated uint64 shuffled_validator_indices = 1;
     repeated uint64 cutoff_indices = 2;
-    repeated uint64 proposer_indices = 3;
-    repeated uint64 assigned_attestation_heights = 4;
+    repeated uint64 assigned_attestation_heights = 3;
 }
 
 message ProposeRequest {

@@ -8,6 +8,8 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	blake2b "github.com/minio/blake2b-simd"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_gogo_protobuf/proto"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -102,10 +104,16 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			log.Errorf("Could not receive latest crystallized beacon state from stream: %v", err)
 			continue
 		}
-		// After receiving the crystallized state, get the number of active validators
-		// and this attester's index in the list.
+		// After receiving the crystallized state, get its hash, and
+		// this attester's index in the list.
+		stateData, err := proto.Marshal(crystallizedState)
+		if err != nil {
+			log.Errorf("Could not marshal crystallized state proto: %v", err)
+			continue
+		}
+		crystallizedStateHash := blake2b.Sum256(stateData)
+
 		activeValidators := crystallizedState.GetActiveValidators()
-		validatorCount := len(activeValidators)
 
 		isValidatorIndexSet := false
 
@@ -127,11 +135,10 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		}
 
 		req := &pb.ShuffleRequest{
-			ValidatorCount: uint64(validatorCount),
-			ValidatorIndex: uint64(at.validatorIndex),
+			CrystallizedStateHash: crystallizedStateHash[:],
 		}
 
-		res, err := client.ShuffleValidators(at.ctx, req)
+		res, err := client.FetchShuffledValidatorIndices(at.ctx, req)
 		if err != nil {
 			log.Errorf("Could not fetch shuffled validator indices: %v", err)
 			continue
@@ -157,7 +164,7 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		}
 		at.isHeightAssigned = true
 		at.assignedHeight = currentAssignedHeights[heightIndex]
-		log.Debug("Attestation height responsibility assigned based on crystallized state cutoffs")
+		log.Debug("Attestation height responsibility assigned based on cutoff indices")
 	}
 }
 

@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -66,7 +64,7 @@ func (s *Service) Start() {
 		}
 		grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
-		log.Warn("You're on an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection")
 		grpcServer = grpc.NewServer()
 	}
 
@@ -88,56 +86,37 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// ShuffleValidators shuffles the validators into attesters/proposers. This function is not a stream but
-// rather an on-demand RPC method as an attester/proposer determines its time to
-// perform its responsibility within its respective event loop.
-func (s *Service) ShuffleValidators(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
+// FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
+// assigned attestation heights at a given crystallized state hash.
+// This function can be called by clients to fetch a historical list of shuffled
+// validators ata point in time corresponding to a certain crystallized state.
+func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
+	// TODO: implement.
 	return nil, nil
 }
 
 // ProposeBlock is called by a proposer in a sharding client and a full beacon node
 // the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
+	// TODO: implement.
 	return nil, nil
 }
 
 // SignBlock is a function called by an attester in a sharding client to sign off
 // on a block.
 func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
+	// TODO: implement.
 	return nil, nil
 }
 
 // LatestBeaconBlock streams the latest beacon chain data.
 func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
-	delayChan := time.NewTicker(time.Second * 5).C
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case <-delayChan:
-			block, err := types.NewGenesisBlock()
-			if err != nil {
-				return fmt.Errorf("could not create block: %v", block)
-			}
-			if err := stream.Send(block.Proto()); err != nil {
-				return fmt.Errorf("could not send latest beacon block via stream: %v", err)
-			}
-		}
-	}
+	// TODO: implement.
+	return nil
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
-	delayChan := time.NewTicker(time.Second * 5).C
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case <-delayChan:
-			_, state := types.NewGenesisStates()
-			if err := stream.Send(state.Proto()); err != nil {
-				return fmt.Errorf("could not send latest crystallized state via stream: %v", err)
-			}
-		}
-	}
+	// TODO: implement.
+	return nil
 }

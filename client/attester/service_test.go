@@ -146,6 +146,21 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "recv error")
 
+	// Being unable to marshal the received crystallized state should log an error.
+	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
+	stream.EXPECT().Recv().Return(nil, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
+
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestCrystallizedState(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+
+	at.fetchCrystallizedState(mockServiceClient)
+
+	testutil.AssertLogsContain(t, hook, "Could not marshal crystallized state proto")
+
 	// If the current validator is not found within the active validators list, log a debug message.
 	validator := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x01")}
 	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
@@ -173,7 +188,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(stream, nil)
-	mockServiceClient.EXPECT().ShuffleValidators(
+	mockServiceClient.EXPECT().FetchShuffledValidatorIndices(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("something went wrong"))
@@ -195,7 +210,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(stream, nil)
-	mockServiceClient.EXPECT().ShuffleValidators(
+	mockServiceClient.EXPECT().FetchShuffledValidatorIndices(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&pb.ShuffleResponse{AssignedAttestationHeights: []uint64{0, 1, 2}, CutoffIndices: []uint64{0, 1, 2}}, nil)
