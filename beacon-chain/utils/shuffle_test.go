@@ -36,7 +36,7 @@ func TestShuffleIndices(t *testing.T) {
 func TestCutOffValidatorSet(t *testing.T) {
 	// Test scenario #1: Assume there's enough validators to fill in all the heights.
 	validatorCount := params.EpochLength * params.MinCommiteeSize
-	cutoffsValidators := GetCutoffs(validatorCount)
+	cutoffsValidators, _ := GetCutoffs(validatorCount)
 
 	// The length of cutoff list should be 65. Since there is 64 heights per epoch,
 	// it means during every height, a new set of 128 validators will form a committee.
@@ -57,7 +57,8 @@ func TestCutOffValidatorSet(t *testing.T) {
 
 	// Test scenario #2: Assume there's not enough validators to fill in all the heights.
 	validatorCount = 1000
-	cutoffsValidators = unique(GetCutoffs(validatorCount))
+	cutoffs2, _ := GetCutoffs(validatorCount)
+	cutoffsValidators = unique(cutoffs2)
 	// With 1000 validators, we can't attest every height. Given min committee size is 128,
 	// we can only attest 7 heights. round down 1000 / 128 equals to 7, means the length is 8.
 	expectedCount = int(math.Ceil(float64(validatorCount) / params.MinCommiteeSize))

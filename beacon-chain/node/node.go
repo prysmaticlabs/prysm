@@ -150,7 +150,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
