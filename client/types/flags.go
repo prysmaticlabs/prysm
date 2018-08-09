@@ -21,7 +21,7 @@ var (
 	// ShardIDFlag specifies which shard to listen to.
 	ShardIDFlag = cli.IntFlag{
 		Name:  "shardid",
-		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
+		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/attester duties`,
 	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = cli.StringFlag{
