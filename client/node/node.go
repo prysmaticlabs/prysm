@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/rpcclient"
 	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
-	"github.com/prysmaticlabs/prysm/client/utils"
+	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -72,12 +72,12 @@ func New(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	actorFlag := ctx.GlobalString(utils.ActorFlag.Name)
+	actorFlag := ctx.GlobalString(types.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
 		return nil, err
 	}
 
-	shardIDFlag := ctx.GlobalInt(utils.ShardIDFlag.Name)
+	shardIDFlag := ctx.GlobalInt(types.ShardIDFlag.Name)
 	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 		endpoint = ctx.GlobalString(cmd.IPCPathFlag.Name)
 	}
 	passwordFile := ctx.GlobalString(cmd.PasswordFileFlag.Name)
-	depositFlag := ctx.GlobalBool(utils.DepositFlag.Name)
+	depositFlag := ctx.GlobalBool(types.DepositFlag.Name)
 
 	client, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
 	if err != nil {
@@ -236,7 +236,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return err
 		}
 
-		prop, err := proposer.NewProposer(config, client, shardp2p, pool, s.db, shardID, sync)
+		prop, err := proposer.NewProposer(config, client, shardp2p, s.db, shardID, sync)
 		if err != nil {
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
@@ -267,7 +267,7 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 }
 
 func (s *ShardEthereum) registerBeaconRPCService(ctx *cli.Context) error {
-	endpoint := ctx.GlobalString(utils.BeaconRPCProviderFlag.Name)
+	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	rpcService := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{
 		Endpoint: endpoint,
 	})
