@@ -7,12 +7,12 @@ import (
 	"context"
 	"io"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
-	blake2b "github.com/minio/blake2b-simd"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_gogo_protobuf/proto"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "attester")

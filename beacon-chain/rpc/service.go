@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -92,31 +93,31 @@ func (s *Service) Stop() error {
 // validators ata point in time corresponding to a certain crystallized state.
 func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
 	// TODO: implement.
-	return nil, nil
+	return nil, errors.New("unimplemented")
 }
 
 // ProposeBlock is called by a proposer in a sharding client and a full beacon node
 // the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
 	// TODO: implement.
-	return nil, nil
+	return nil, errors.New("unimplemented")
 }
 
 // SignBlock is a function called by an attester in a sharding client to sign off
 // on a block.
 func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
 	// TODO: implement.
-	return nil, nil
+	return nil, errors.New("unimplemented")
 }
 
 // LatestBeaconBlock streams the latest beacon chain data.
 func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
 	// TODO: implement.
-	return nil
+	return errors.New("unimplemented")
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
 	// TODO: implement.
-	return nil
+	return errors.New("unimplemented")
 }

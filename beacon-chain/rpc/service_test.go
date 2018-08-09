@@ -48,3 +48,22 @@ func TestInsecureEndpoint(t *testing.T) {
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
+
+func TestRPCMethods(t *testing.T) {
+	s := &Service{}
+	if _, err := s.FetchShuffledValidatorIndices(context.Background(), nil); err == nil {
+		t.Error("Wanted error: unimplemented, received nil")
+	}
+	if _, err := s.ProposeBlock(context.Background(), nil); err == nil {
+		t.Error("Wanted error: unimplemented, received nil")
+	}
+	if _, err := s.SignBlock(context.Background(), nil); err == nil {
+		t.Error("Wanted error: unimplemented, received nil")
+	}
+	if err := s.LatestBeaconBlock(nil, nil); err == nil {
+		t.Error("Wanted error: unimplemented, received nil")
+	}
+	if err := s.LatestCrystallizedState(nil, nil); err == nil {
+		t.Error("Wanted error: unimplemented, received nil")
+	}
+}
