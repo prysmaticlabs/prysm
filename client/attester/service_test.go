@@ -2,6 +2,7 @@ package attester
 
 import (
 	"context"
+	"errors"
 	"io"
 	"testing"
 
@@ -40,9 +41,12 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	// Create mock for the stream returned by LatestBeaconBlock.
 	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
 
-	// Set expectation on receiving.
+	// If the block's slot number from the stream matches the assigned attestation height,
+	// trigger a log.
 	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{SlotNumber: 10}, nil)
 	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, io.EOF)
+	at.assignedHeight = 10
+	at.isHeightAssigned = true
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestBeaconBlock(
@@ -53,6 +57,32 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	at.fetchBeaconBlocks(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
+	testutil.AssertLogsContain(t, hook, "Assigned attestation height reached")
+
+	// Testing an error coming from the stream.
+	stream = internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
+	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, errors.New("stream error"))
+	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, io.EOF)
+
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestBeaconBlock(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+
+	at.fetchBeaconBlocks(mockServiceClient)
+
+	testutil.AssertLogsContain(t, hook, "stream error")
+
+	// Creating a faulty stream will trigger error.
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestBeaconBlock(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, errors.New("stream creation failed"))
+
+	at.fetchBeaconBlocks(mockServiceClient)
+	testutil.AssertLogsContain(t, hook, "stream creation failed")
 }
 
 func TestFetchCrystallizedState(t *testing.T) {
