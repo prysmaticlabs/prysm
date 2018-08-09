@@ -174,7 +174,38 @@ func TestRegisterTopic(t *testing.T) {
 
 	s.RegisterTopic(topic, TestMessage{})
 
-	// TODO: Publish a message on this topic and expect that it is received from a feed.
+	ch := make(chan Message)
+	sub := s.Subscribe(TestMessage{}, ch)
+	defer sub.Unsubscribe()
+
+	wait := make(chan struct{})
+	go (func() {
+		defer close(wait)
+		msg := <-ch
+		_ = msg
+	})()
+
+	if err := simulateIncomingMessage(s, topic, []byte{}); err != nil {
+		t.Errorf("Failed to send to topic %s", topic)
+	}
+
+	select {
+	case <-wait:
+		return // OK
+	case <-time.After(5 * time.Second):
+		t.Fatal("TestMessage not received within 5 seconds")
+	}
+}
+
+func simulateIncomingMessage(s *Server, topic string, b []byte) error {
+	// TODO
+	// Create a new host
+
+	// Connect to s.Host
+
+	// Use the new connection to Publish msg on topic
+
+	return nil
 }
 
 func TestRegisterTopic_WithAdapers(t *testing.T) {
