@@ -34,7 +34,7 @@ type beaconState struct {
 	CrystallizedState *types.CrystallizedState
 }
 
-// NewBeaconChain initializes an beacon chain using genesis state parameters if
+// NewBeaconChain initializes a beacon chain using genesis state parameters if
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	beaconChain := &BeaconChain{
@@ -88,19 +88,17 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
 }
 
-// ActiveState exposes a getter to external services. Active state is the
-// current state of attestations and changes every block.
+// ActiveState contains the current state of attestations and changes every block.
 func (b *BeaconChain) ActiveState() *types.ActiveState {
 	return b.state.ActiveState
 }
 
-// CrystallizedState exposes a getter to external services. Crystallized state
-// contains epoch dependent validator information, changes every epoch.
+// CrystallizedState contains epoch dependent validator information, changes every epoch.
 func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
 
-// SetActiveState allows external services to modify the active state.
+// SetActiveState is a convenience method which sets and persists the active state on the beacon chain.
 func (b *BeaconChain) SetActiveState(activeState *types.ActiveState) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -108,7 +106,7 @@ func (b *BeaconChain) SetActiveState(activeState *types.ActiveState) error {
 	return b.PersistActiveState()
 }
 
-// SetCrystallizedState allows external services to modify the crystallized state.
+// SetCrystallizedState is a convenience method which sets and persists the crystallized state on the beacon chain.
 func (b *BeaconChain) SetCrystallizedState(crystallizedState *types.CrystallizedState) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

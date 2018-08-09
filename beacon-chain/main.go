@@ -1,4 +1,4 @@
-// Package beacon-chain defines all the utlities needed for the POS beacon-chain.
+// Package beacon-chain defines all the utlities needed for a beacon chain node.
 package main
 
 import (

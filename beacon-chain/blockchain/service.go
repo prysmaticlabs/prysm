@@ -153,21 +153,21 @@ func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine
 //
-// TODO implement function
+// TODO: implement function
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
 // ContainsCrystallizedState checks if a crystallized state for the hash exists in the chain.
 //
-// TODO implement function
+// TODO: implement function
 func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
 	return false
 }
 
 // ContainsActiveState checks if a active state for the hash exists in the chain.
 //
-// TODO implement function
+// TODO: implement function
 func (c *ChainService) ContainsActiveState(h [32]byte) bool {
 	return false
 }

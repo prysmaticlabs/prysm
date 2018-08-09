@@ -1,4 +1,4 @@
-// Package node defines the services that a PoS node would perform.
+// Package node defines the services that a beacon chain node would perform.
 package node
 
 import (

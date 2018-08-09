@@ -111,7 +111,7 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg interface{}) {
-	// TODO https://github.com/prysmaticlabs/prysm/issues/176
+	// TODO: https://github.com/prysmaticlabs/prysm/issues/176
 	topic := topic(msg)
 	log.WithFields(logrus.Fields{
 		"topic": topic,

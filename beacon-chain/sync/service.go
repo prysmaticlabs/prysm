@@ -210,7 +210,7 @@ func (ss *Service) ReceiveCrystallizedState(data *pb.CrystallizedState) error {
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the active hash are requested if the local chain doesn't have the hash.
 //
-// TODO implement hash forwarding
+// TODO: implement hash forwarding
 func (ss *Service) ReceiveActiveStateHash(data *pb.ActiveStateHashAnnounce, peer p2p.Peer) {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
@@ -226,7 +226,7 @@ func (ss *Service) ReceiveActiveStateHash(data *pb.ActiveStateHashAnnounce, peer
 // ReceiveActiveState accepts a active state object to potentially be included in the local chain.
 // The service will filter active state objects that have not been requested (unimplemented).
 //
-// TODO implement filter for non requested state objects.
+// TODO: implement filter for non requested state objects.
 func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
 	state := types.NewActiveState(data)
 

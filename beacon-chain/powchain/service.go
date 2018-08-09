@@ -143,22 +143,22 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	}
 }
 
-// LatestBlockNumber exposes a getter for blockNumber.
+// LatestBlockNumber in the PoWChain.
 func (w *Web3Service) LatestBlockNumber() *big.Int {
 	return w.blockNumber
 }
 
-// LatestBlockHash exposes a getter for blockHash.
+// LatestBlockHash in the PoWChain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// ValidatorRegistered exposes a getter for validatorRegistered.
-func (w *Web3Service) ValidatorRegistered() bool {
+// IsValidatorRegistered in the PoWChain.
+func (w *Web3Service) IsValidatorRegistered() bool {
 	return w.validatorRegistered
 }
 
-// Client exposes a getter for the underlying web3 client.
+// Client for interacting with the PoWChain.
 func (w *Web3Service) Client() types.POWChainClient {
 	return w.client
 }
