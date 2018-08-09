@@ -10,12 +10,15 @@ import (
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcClientService := NewRPCClient(context.Background(), &Config{Endpoint: "merkle tries"})
-
+	rpcClientService := NewRPCClient(
+		context.Background(),
+		&Config{
+			Endpoint: "merkle tries",
+			CertFlag: "alice.crt",
+		},
+	)
 	rpcClientService.Start()
-
 	testutil.AssertLogsContain(t, hook, "Starting service")
-
 	rpcClientService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }

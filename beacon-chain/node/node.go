@@ -210,8 +210,12 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
+	cert := ctx.GlobalString(utils.CertFlag.Name)
+	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port: port,
+		Port:     port,
+		CertFlag: cert,
+		KeyFlag:  key,
 	})
 	return b.services.RegisterService(rpcService)
 }
