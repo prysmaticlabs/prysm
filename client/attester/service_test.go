@@ -52,6 +52,8 @@ func TestLifecycle(t *testing.T) {
 	defer ctrl.Finish()
 	at := NewAttester(context.Background(), &mockClient{ctrl})
 	at.Start()
+	// TODO: find a better way to test this. The problem is that start is nonblocking, and it ends
+	// before the for loops of its inner goroutines begin.
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	at.Stop()
