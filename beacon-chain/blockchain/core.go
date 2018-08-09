@@ -141,7 +141,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 // is greater than the current epoch.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	currentEpoch := b.state.CrystallizedState.EpochNumber()
-	return slotNumber >= currentEpoch*params.EpochLength
+	return slotNumber >= (currentEpoch+1)*params.EpochLength
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
@@ -258,7 +258,7 @@ func (b *BeaconChain) rotateValidatorSet() {
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.AttesterCount, float64(b.CrystallizedState().ValidatorsLength()))
 
-	indices, err := utils.ShuffleIndices(seed, b.CrystallizedState().ValidatorsLength())
+	indices, err := utils.ShuffleIndices(seed, b.activeValidatorIndices())
 	if err != nil {
 		return nil, -1, err
 	}
@@ -311,35 +311,6 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 		}
 	}
 	return nil
-}
-
-// voted checks if a validator has voted by comparing its bit field.
-func (b *BeaconChain) voted(index int) (bool, error) {
-	bitfield := b.state.ActiveState.AttesterBitfield()
-	attesterBlock := (index + 1) / 8
-	attesterFieldIndex := (index + 1) % 8
-	if attesterFieldIndex == 0 {
-		attesterFieldIndex = 8
-	} else {
-		attesterBlock++
-	}
-
-	if len(bitfield) < attesterBlock {
-		return false, errors.New("attester index does not exist")
-	}
-
-	field := bitfield[attesterBlock-1] >> (8 - uint(attesterFieldIndex))
-	if field%2 != 0 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-// resetAttesterBitfield resets the attester bit field of active state to zeros.
-func (b *BeaconChain) resetAttesterBitfield(record *pb.AttestationRecord) {
-	newbitfields := []byte{}
-	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
 
 // activeValidatorIndices filters out active validators based on start and end dynasty

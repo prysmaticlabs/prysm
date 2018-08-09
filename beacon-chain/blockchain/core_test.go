@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -68,8 +69,12 @@ func TestMutateActiveState(t *testing.T) {
 	defer db.Close()
 
 	data := &pb.ActiveState{
-		TotalAttesterDeposits: 4096,
-		AttesterBitfield:      []byte{'A', 'B', 'C'},
+		PendingAttestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardBlockHash: []byte{1}}, {Slot: 1, ShardBlockHash: []byte{2}},
+		},
+		RecentBlockHashes: [][]byte{
+			{'A'}, {'B'}, {'C'}, {'D'},
+		},
 	}
 	active := types.NewActiveState(data)
 
@@ -86,12 +91,14 @@ func TestMutateActiveState(t *testing.T) {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
 
-	// The active state should still be the one we mutated and persited earlier.
-	if active.TotalAttesterDeposits() != newBeaconChain.state.ActiveState.TotalAttesterDeposits() {
-		t.Errorf("active state height incorrect. wanted %v, got %v", active.TotalAttesterDeposits(), newBeaconChain.state.ActiveState.TotalAttesterDeposits())
+	// The active state should still be the one we mutated and persited earlier
+	for i, hash := range active.RecentBlockHashes() {
+		if hash.Hex() != newBeaconChain.ActiveState().RecentBlockHashes()[i].Hex() {
+			t.Errorf("active state block hash. wanted %v, got %v", hash.Hex(), newBeaconChain.ActiveState().RecentBlockHashes()[i].Hex())
+		}
 	}
-	if !bytes.Equal(active.AttesterBitfield(), newBeaconChain.state.ActiveState.AttesterBitfield()) {
-		t.Errorf("active state randao incorrect. wanted %v, got %v", active.AttesterBitfield(), newBeaconChain.state.ActiveState.AttesterBitfield())
+	if reflect.DeepEqual(active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes()) {
+		t.Errorf("active state pending attestation incorrect. wanted %v, got %v", active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes())
 	}
 }
 
@@ -134,12 +141,13 @@ func TestGetAttestersProposer(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	// Create 1000 validators in ActiveValidators.
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{WithdrawalAddress: []byte{'A'}, PublicKey: 0}
+		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
 	}
 
 	_, crystallized := types.NewGenesisStates()
 	crystallized.UpdateValidators(validators)
+	crystallized.IncrementCurrentDynasty()
 	beaconChain.MutateCrystallizedState(crystallized)
 
 	attesters, proposer, err := beaconChain.getAttestersProposer(common.Hash{'A'})
@@ -147,7 +155,9 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, len(validators))
+	activeValidators := beaconChain.activeValidatorIndices()
+
+	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
 	if err != nil {
 		t.Errorf("Shuffle function function failed: %v", err)
 	}
@@ -185,7 +195,7 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Initialize initial state
-	activeState := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -246,7 +256,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 
 	// Initialize state
-	active := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
@@ -266,7 +276,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	})
 
 	// Test negative scenario where active state hash is different than node's compute
-	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 9999})
+	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'B'}}})
 
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
@@ -293,7 +303,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	defer db.Close()
 
 	// If parent hash is non-existent, processing block should fail.
-	active := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
@@ -415,10 +425,13 @@ func TestHasVoted(t *testing.T) {
 	defer db.Close()
 
 	// Setting bit field to 11111111
-	beaconChain.ActiveState().SetAttesterBitfield([]byte{255})
+	pendingAttestation := &pb.AttestationRecord{
+		AttesterBitfield: []byte{255},
+	}
+	beaconChain.ActiveState().NewPendingAttestation(pendingAttestation)
 
-	for i := 0; i < len(beaconChain.ActiveState().AttesterBitfield()); i++ {
-		voted, err := beaconChain.voted(i)
+	for i := 0; i < len(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield); i++ {
+		voted, err := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
 		if err != nil {
 			t.Errorf("checking bitfield for vote failed: %v", err)
 		}
@@ -428,10 +441,13 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	// Setting bit field to 01010101
-	beaconChain.ActiveState().SetAttesterBitfield([]byte{85})
+	pendingAttestation = &pb.AttestationRecord{
+		AttesterBitfield: []byte{85},
+	}
+	beaconChain.ActiveState().NewPendingAttestation(pendingAttestation)
 
-	for i := 0; i < len(beaconChain.ActiveState().AttesterBitfield()); i++ {
-		voted, err := beaconChain.voted(i)
+	for i := 0; i < len(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield); i++ {
+		voted, err := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
 		if err != nil {
 			t.Errorf("checking bitfield for vote failed: %v", err)
 		}
@@ -444,7 +460,7 @@ func TestHasVoted(t *testing.T) {
 	}
 }
 
-func TestResetAttesterBitfields(t *testing.T) {
+func TestClearAttesterBitfields(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -457,41 +473,36 @@ func TestResetAttesterBitfields(t *testing.T) {
 			validators = append(validators, validator)
 		}
 
+		testAttesterBitfield := []byte{1, 2, 3, 4}
 		beaconChain.CrystallizedState().UpdateValidators(validators)
+		beaconChain.ActiveState().NewPendingAttestation(&pb.AttestationRecord{AttesterBitfield: testAttesterBitfield})
 
-		testAttesterBitfield := []byte{2, 4, 6, 9}
-		if err := beaconChain.MutateActiveState(types.NewActiveState(&pb.ActiveState{AttesterBitfield: testAttesterBitfield})); err != nil {
-			t.Fatal("unable to mutate active state")
-		}
+		beaconChain.ActiveState().ClearPendingAttestations()
 
-		beaconChain.resetAttesterBitfield()
-
-		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.AttesterBitfield()) {
+		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield) {
 			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
 		}
 
-		bitfieldLength := j / 8
-
-		if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfield(), make([]byte, bitfieldLength)) {
-			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfield())
+		if !bytes.Equal(beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield, []byte{}) {
+			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield)
 		}
 	}
 }
 
-func TestResetTotalAttesterDeposit(t *testing.T) {
+func TestClearRecentBlockHashes(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	active := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 10000})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}, {'B'}, {'C'}}})
 	if err := beaconChain.MutateActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
-	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(10000) {
-		t.Fatalf("attester deposit was not saved: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
+	if reflect.DeepEqual(beaconChain.state.ActiveState.RecentBlockHashes(), [][]byte{{'A'}, {'B'}, {'C'}}) {
+		t.Fatalf("recent block hash was not saved: %d", beaconChain.state.ActiveState.RecentBlockHashes())
 	}
-	beaconChain.ActiveState().SetTotalAttesterDeposits(0)
-	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(0) {
-		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
+	beaconChain.ActiveState().ClearRecentBlockHashes()
+	if reflect.DeepEqual(beaconChain.state.ActiveState.RecentBlockHashes(), [][]byte{}) {
+		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.RecentBlockHashes())
 	}
 }
 

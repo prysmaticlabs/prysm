@@ -82,9 +82,21 @@ func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
 	return a.data.PendingAttestations
 }
 
+// NewPendingAttestation inserts a new pending attestaton fields.
+func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
+	a.data.PendingAttestations = append(a.data.PendingAttestations, record)
+}
+
+// LatestPendingAttestation returns the latest pending attestaton fields.
+func (a *ActiveState) LatestPendingAttestation() *pb.AttestationRecord {
+	return a.data.PendingAttestations[len(a.data.PendingAttestations)-1]
+}
+
 // ClearPendingAttestations clears attestations that have not yet been processed.
 func (a *ActiveState) ClearPendingAttestations() {
-	a.data.PendingAttestations = []*pb.AttestationRecord{}
+	for i, _ := range a.data.PendingAttestations {
+		a.data.PendingAttestations[i] = &pb.AttestationRecord{}
+	}
 }
 
 // RecentBlockHashes returns the most recent 64 block hashes.
