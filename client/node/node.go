@@ -81,11 +81,11 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+	if err := shardEthereum.registerBeaconRPCService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconRPCService(ctx); err != nil {
+	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -221,13 +221,15 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
+	var rpcService *rpcclient.Service
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
+
 	switch actor {
 	case "attester":
-		not, err := attester.NewAttester(config, client, shardp2p, s.db)
-		if err != nil {
-			return fmt.Errorf("could not register attester service: %v", err)
-		}
-		return s.services.RegisterService(not)
+		att := attester.NewAttester(context.TODO(), rpcService)
+		return s.services.RegisterService(att)
 	case "proposer":
 		var pool *txpool.TXPool
 		if err := s.services.FetchService(&pool); err != nil {
