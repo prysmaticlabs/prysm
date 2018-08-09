@@ -127,18 +127,6 @@ bazel run //client -- \
 
 This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals on shard 0 (collation headers) to the SMC via the `addHeader` function.
 
-## Running an Observer Node
-
-```
-bazel run //client -- \
-   --datadir /path/to/your/datadir \
-   --password /path/to/your/password.txt \
-   --shardid 0 \
-   --networkid 12345
-```
-
-Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network on shard 0.
-
 ## Running via Docker
 
 To run the client within a docker container, use the `//client:image` target.

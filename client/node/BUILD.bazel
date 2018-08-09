@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//client/attester:go_default_library",
         "//client/mainchain:go_default_library",
-        "//client/observer:go_default_library",
         "//client/params:go_default_library",
         "//client/proposer:go_default_library",
         "//client/rpcclient:go_default_library",
