@@ -51,11 +51,11 @@ func (s *Service) Start() {
 		server = grpc.WithTransportCredentials(creds)
 	} else {
 		server = grpc.WithInsecure()
-		log.Warn("You're on an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
 	conn, err := grpc.Dial(s.endpoint, server)
 	if err != nil {
-		log.Fatalf("Could not parse endpoint URL: %s, %v", s.endpoint, err)
+		log.Errorf("Could not dial endpoint: %s, %v", s.endpoint, err)
 		return
 	}
 	s.conn = conn
