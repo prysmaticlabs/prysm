@@ -61,7 +61,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		activeData := &pb.ActiveStateResponse{}
+		activeData := &pb.ActiveState{}
 		err = proto.Unmarshal(enc, activeData)
 		if err != nil {
 			return nil, err
@@ -73,7 +73,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		crystallizedData := &pb.CrystallizedStateResponse{}
+		crystallizedData := &pb.CrystallizedState{}
 		err = proto.Unmarshal(enc, crystallizedData)
 		if err != nil {
 			return nil, err
@@ -212,7 +212,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 	// TODO: Verify randao reveal from validator's hash pre image.
 
-	return types.NewActiveState(&pb.ActiveStateResponse{
+	return types.NewActiveState(&pb.ActiveState{
 		TotalAttesterDeposits: 0,
 		AttesterBitfield:      []byte{},
 	}), nil
@@ -346,3 +346,19 @@ func (b *BeaconChain) resetAttesterBitfield() {
 	newbitfields := make([]byte, b.CrystallizedState().ActiveValidatorsLength()/8)
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
+
+func (b *BeaconChain) saveBlock(block *types.Block) error {
+	encodedState, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
+	return b.db.Put(hash[:], encodedState)
+}
+
+// Slashing Condtions
+// TODO: Implement all the conditions and add in the methods once the spec is updated

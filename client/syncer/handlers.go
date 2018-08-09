@@ -36,7 +36,6 @@ func RespondCollationBody(req p2p.Message, collationFetcher types.CollationFetch
 		copy(sig[:], msg.Signature[0:32])
 	}
 	header := types.NewCollationHeader(shardID, &chunkRoot, period, &proposer, sig)
-
 	// Fetch the collation by its header hash from the shardChainDB.
 	headerHash := header.Hash()
 	collation, err := collationFetcher.CollationByHeaderHash(&headerHash)

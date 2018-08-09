@@ -7,11 +7,9 @@ import (
 	"math/big"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/syncer"
-	"github.com/prysmaticlabs/prysm/client/txpool"
 	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -29,35 +27,31 @@ type Proposer struct {
 	config    *params.Config
 	client    mainchain.FullClient
 	p2p       *p2p.Server
-	txpool    *txpool.TXPool
-	txpoolSub event.Subscription
 	dbService *database.DB
 	shardID   int
 	shard     *types.Shard
 	ctx       context.Context
 	cancel    context.CancelFunc
 	sync      *syncer.Syncer
-	msgChan   chan p2p.Message
+	txChan    chan p2p.Message
 }
 
 // NewProposer creates a struct instance of a proposer service.
 // It will have access to a mainchain client, a p2p network,
 // and a shard transaction pool.
-func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Server, txpool *txpool.TXPool, dbService *database.DB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
+func NewProposer(config *params.Config, client mainchain.FullClient, shardp2p *p2p.Server, dbService *database.DB, shardID int, sync *syncer.Syncer) (*Proposer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Proposer{
 		config:    config,
 		client:    client,
-		p2p:       p2p,
-		txpool:    txpool,
-		txpoolSub: nil,
+		p2p:       shardp2p,
 		dbService: dbService,
 		shardID:   shardID,
 		shard:     nil,
 		ctx:       ctx,
 		cancel:    cancel,
 		sync:      sync,
-		msgChan:   nil,
+		txChan:    make(chan p2p.Message, 20),
 	}, nil
 }
 
@@ -65,9 +59,7 @@ func NewProposer(config *params.Config, client mainchain.FullClient, p2p *p2p.Se
 func (p *Proposer) Start() {
 	log.Info("Starting proposer service")
 	p.shard = types.NewShard(big.NewInt(int64(p.shardID)), p.dbService.DB())
-	p.msgChan = make(chan p2p.Message, 20)
-	p.txpoolSub = p.p2p.Subscribe(pb.Transaction{}, p.msgChan)
-	go p.proposeCollations()
+	go p.run(p.ctx.Done())
 }
 
 // Stop the main loop for proposing collations.
@@ -76,15 +68,10 @@ func (p *Proposer) Stop() error {
 		"shardID": p.shard.ShardID(),
 	}).Warn("Stopping proposer service")
 	defer p.cancel()
-	defer close(p.msgChan)
-	p.txpoolSub.Unsubscribe()
 	return nil
 }
 
-// proposeCollations listens to the transaction feed and submits collations over an interval.
-func (p *Proposer) proposeCollations() {
-	ch := make(chan p2p.Message, 20)
-	sub := p.p2p.Subscribe(pb.Transaction{}, ch)
+func (p *Proposer) run(done <-chan struct{}) {
 	collation := []*gethTypes.Transaction{}
 	sizeOfCollation := int64(0)
 	period, err := p.currentPeriod(p.ctx)
@@ -92,11 +79,13 @@ func (p *Proposer) proposeCollations() {
 		log.Errorf("Unable to get current period: %v", err)
 	}
 
-	defer sub.Unsubscribe()
-	defer close(ch)
+	txSub := p.p2p.Subscribe(pb.Transaction{}, p.txChan)
+
+	defer txSub.Unsubscribe()
 	for {
 		select {
-		case msg := <-ch:
+		// Listens to the transaction feed and submits collations over an interval.
+		case msg := <-p.txChan:
 			tx, ok := msg.Data.(*pb.Transaction)
 			if !ok {
 				log.Error("Received incorrect p2p message. Wanted a transaction broadcast message")
@@ -127,11 +116,8 @@ func (p *Proposer) proposeCollations() {
 
 			collation = append(collation, legacyutil.TransformTransaction(tx))
 			sizeOfCollation += int64(gethtx.Size())
-		case <-p.ctx.Done():
+		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
-			return
-		case <-p.txpoolSub.Err():
-			log.Debug("Subscriber closed")
 			return
 		}
 	}
