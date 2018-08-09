@@ -47,6 +47,7 @@ func (at *Attester) Start() {
 
 // Stop the main loop for notarizing collations.
 func (at *Attester) Stop() error {
+	defer at.cancel()
 	log.Info("Stopping service")
 	return nil
 }
@@ -121,6 +122,7 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		// If validator was not found in the validator set was not set, keep listening for
 		// crystallized states.
 		if !isValidatorIndexSet {
+			log.Debug("Validator index not found in latest crystallized state's active validator list")
 			continue
 		}
 
@@ -131,7 +133,7 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 
 		res, err := client.ShuffleValidators(at.ctx, req)
 		if err != nil {
-			log.Errorf("Could not shuffle validator list: %v", err)
+			log.Errorf("Could not fetch shuffled validator indices: %v", err)
 			continue
 		}
 		// Based on the cutoff and assigned heights, determine the beacon block
@@ -155,9 +157,11 @@ func (at *Attester) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		}
 		at.isHeightAssigned = true
 		at.assignedHeight = currentAssignedHeights[heightIndex]
+		log.Debug("Attestation height responsibility assigned based on crystallized state cutoffs")
 	}
 }
 
+// isZeroAddress compares a withdrawal address to an empty byte array.
 func isZeroAddress(withdrawalAddress []byte) bool {
 	return bytes.Equal(withdrawalAddress, []byte{})
 }
