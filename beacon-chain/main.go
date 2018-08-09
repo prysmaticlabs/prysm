@@ -1,3 +1,4 @@
+// Package beacon-chain defines all the utlities needed for a beacon chain node.
 package main
 
 import (
@@ -21,7 +22,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	beacon, err := node.New(ctx)
+	beacon, err := node.NewBeaconNode(ctx)
 	if err != nil {
 		return err
 	}

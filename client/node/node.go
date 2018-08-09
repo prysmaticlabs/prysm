@@ -48,9 +48,9 @@ type ShardEthereum struct {
 	db       *database.DB
 }
 
-// New creates a new sharding-enabled Ethereum instance. This is called in the main
+// NewShardInstance creates a new sharding-enabled Ethereum instance. This is called in the main
 // geth sharding entrypoint.
-func New(ctx *cli.Context) (*ShardEthereum, error) {
+func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 	registry := shared.NewServiceRegistry()
 	shardEthereum := &ShardEthereum{
 		services: registry,
@@ -159,6 +159,7 @@ func (s *ShardEthereum) registerP2P() error {
 	return s.services.RegisterService(shardp2p)
 }
 
+// registerMainchainClient registers the mainchain client to the shard services.
 func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
 	path := node.DefaultDataDir()
 	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
@@ -204,7 +205,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	return s.services.RegisterService(pool)
 }
 
-// Registers the actor according to CLI flags. Either attester/proposer/observer.
+// registerActorService registers the actor according to CLI flags. Either attester/proposer/observer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
@@ -249,6 +250,9 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return s.services.RegisterService(obs)
 	}
 }
+
+// registerSyncerService adds the p2p and mainchain services to the syncer and
+// registers the syncer to the shard.
 func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
@@ -266,6 +270,7 @@ func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int
 	return s.services.RegisterService(sync)
 }
 
+// registersBeaconRPCService registers a new RPC client for the shard.
 func (s *ShardEthereum) registerBeaconRPCService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	rpcService := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{

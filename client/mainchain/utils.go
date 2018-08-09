@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/client/params"
 )
 
-// dialRPC endpoint to node.
+// dialRPC dials the endpoint from the node.
 func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
 		endpoint = node.DefaultIPCEndpoint(ClientIdentifier)
@@ -30,6 +30,7 @@ func initSMC(s *SMCClient) (*contracts.SMC, error) {
 	}
 
 	// Deploy SMC for development only.
+	//
 	// TODO: Separate contract deployment from the sharding node. It would only need to be deployed
 	// once on the mainnet, so this code would not need to ship with the node.
 	if len(b) == 0 {

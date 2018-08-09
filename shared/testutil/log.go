@@ -1,3 +1,4 @@
+// Package testutil defines the testing utils such as asserting logs.
 package testutil
 
 import (
