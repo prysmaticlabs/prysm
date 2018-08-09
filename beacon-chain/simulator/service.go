@@ -1,3 +1,4 @@
+// Package simulator defines the simulation utility to test the beacon-chain.
 package simulator
 
 import (
@@ -104,7 +105,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				validators = append(validators, validator)
 			}
 
-			crystallizedState.UpdateActiveValidators(validators)
+			crystallizedState.SetActiveValidators(validators)
 
 			crystallizedStateHash, err := crystallizedState.Hash()
 			if err != nil {

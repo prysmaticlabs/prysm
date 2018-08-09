@@ -36,7 +36,6 @@ func checkSMCForAttester(caller mainchain.ContractCaller, account *accounts.Acco
 		if addr == account.Address {
 			log.Infof("Selected as attester on shard: %d", s)
 		}
-
 	}
 
 	return nil

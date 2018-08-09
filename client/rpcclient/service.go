@@ -1,3 +1,4 @@
+// Package rpcclient defines the services for the RPC connections of the client.
 package rpcclient
 
 import (

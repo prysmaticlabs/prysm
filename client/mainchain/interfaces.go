@@ -1,3 +1,4 @@
+// Package mainchain defines the interactions between the Ethereum mainchain and the client.
 package mainchain
 
 import (

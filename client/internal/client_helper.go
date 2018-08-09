@@ -1,3 +1,4 @@
+// Package internal provides a MockClient for testing.
 package internal
 
 import (
