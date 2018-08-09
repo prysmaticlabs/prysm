@@ -19,7 +19,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["shuffle_test.go"],
+    srcs = [
+        "clock_test.go",
+        "shuffle_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/params:go_default_library",
