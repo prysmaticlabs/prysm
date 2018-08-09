@@ -1,3 +1,4 @@
+// Package params defines important constants that are essential to the beacon chain.
 package params
 
 const (

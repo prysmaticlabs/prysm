@@ -1,3 +1,4 @@
+// Package types defines the essential types used throughout the beacon-chain.
 package types
 
 import (
@@ -35,13 +36,14 @@ func NewBlock(data *pb.BeaconBlock) (*Block, error) {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
+//
+// TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
 	genesisTime := time.Date(2018, time.July, 21, 12, 0, 0, 0, time.UTC)
 	protoGenesis, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Add more default fields.
 	return &Block{data: &pb.BeaconBlock{Timestamp: protoGenesis}}, nil
 }
 
@@ -88,14 +90,14 @@ func (b *Block) RandaoReveal() [32]byte {
 	return h
 }
 
-// ActiveStateHash blake2b value.
+// ActiveStateHash returns the active state hash.
 func (b *Block) ActiveStateHash() [32]byte {
 	var h [32]byte
 	copy(h[:], b.data.ActiveStateHash[:32])
 	return h
 }
 
-// CrystallizedStateHash blake2b value.
+// CrystallizedStateHash returns the crystallized state hash.
 func (b *Block) CrystallizedStateHash() [32]byte {
 	var h [32]byte
 	copy(h[:], b.data.CrystallizedStateHash[:32])

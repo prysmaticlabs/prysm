@@ -9,7 +9,6 @@ import (
 
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
-// TODO: Change ActiveState to use proto
 type ActiveState struct {
 	data *pb.ActiveState
 }
@@ -116,7 +115,7 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 	return blake2b.Sum256(data), nil
 }
 
-// ActiveValidators returns list of validator that are active.
+// ActiveValidators returns the list of active validators.
 func (c *CrystallizedState) ActiveValidators() []*pb.ValidatorRecord {
 	return c.data.ActiveValidators
 }
@@ -126,12 +125,12 @@ func (c *CrystallizedState) ActiveValidatorsLength() int {
 	return len(c.data.ActiveValidators)
 }
 
-// UpdateActiveValidators updates active validator set.
-func (c *CrystallizedState) UpdateActiveValidators(validators []*pb.ValidatorRecord) {
+// SetActiveValidators sets the active validator set.
+func (c *CrystallizedState) SetActiveValidators(validators []*pb.ValidatorRecord) {
 	c.data.ActiveValidators = validators
 }
 
-// QueuedValidators returns list of validator that are queued.
+// QueuedValidators returns the list of validators that are queued.
 func (c *CrystallizedState) QueuedValidators() []*pb.ValidatorRecord {
 	return c.data.QueuedValidators
 }
@@ -141,12 +140,12 @@ func (c *CrystallizedState) QueuedValidatorsLength() int {
 	return len(c.data.QueuedValidators)
 }
 
-// UpdateQueuedValidators updates queued validator set.
-func (c *CrystallizedState) UpdateQueuedValidators(validators []*pb.ValidatorRecord) {
+// SetQueuedValidators sets the queued validator set.
+func (c *CrystallizedState) SetQueuedValidators(validators []*pb.ValidatorRecord) {
 	c.data.QueuedValidators = validators
 }
 
-// ExitedValidators returns list of validator that have exited.
+// ExitedValidators returns the list of validators that have exited.
 func (c *CrystallizedState) ExitedValidators() []*pb.ValidatorRecord {
 	return c.data.ExitedValidators
 }
@@ -156,8 +155,8 @@ func (c *CrystallizedState) ExitedValidatorsLength() int {
 	return len(c.data.ExitedValidators)
 }
 
-// UpdateExitedValidators updates active validator set.
-func (c *CrystallizedState) UpdateExitedValidators(validators []*pb.ValidatorRecord) {
+// SetExitedValidators sets the exited validator set..
+func (c *CrystallizedState) SetExitedValidators(validators []*pb.ValidatorRecord) {
 	c.data.ExitedValidators = validators
 }
 
@@ -167,27 +166,27 @@ func (c *CrystallizedState) CurrentEpochShuffling() []uint64 {
 	return c.data.CurrentEpochShuffling
 }
 
-// CurrentEpoch of the beacon chain.
+// CurrentEpoch returns the current epoch of the beacon chain.
 func (c *CrystallizedState) CurrentEpoch() uint64 {
 	return c.data.CurrentEpoch
 }
 
-// IncrementEpoch increments epoch by one.
+// IncrementEpoch increments the epoch by one.
 func (c *CrystallizedState) IncrementEpoch() {
 	c.data.CurrentEpoch++
 }
 
-// LastJustifiedEpoch of the beacon chain.
+// LastJustifiedEpoch return the last justified epoch of the beacon chain.
 func (c *CrystallizedState) LastJustifiedEpoch() uint64 {
 	return c.data.LastJustifiedEpoch
 }
 
-// SetLastJustifiedEpoch sets last justified epoch of the beacon chain.
+// SetLastJustifiedEpoch sets the last justified epoch of the beacon chain.
 func (c *CrystallizedState) SetLastJustifiedEpoch(epoch uint64) {
 	c.data.LastJustifiedEpoch = epoch
 }
 
-// LastFinalizedEpoch of the beacon chain.
+// LastFinalizedEpoch returns the last finalized epoch of the beacon chain.
 func (c *CrystallizedState) LastFinalizedEpoch() uint64 {
 	return c.data.LastFinalizedEpoch
 }
@@ -197,32 +196,32 @@ func (c *CrystallizedState) SetLastFinalizedEpoch(epoch uint64) {
 	c.data.LastFinalizedEpoch = epoch
 }
 
-// CurrentDynasty of the beacon chain.
+// CurrentDynasty returns the current dynasty of the beacon chain.
 func (c *CrystallizedState) CurrentDynasty() uint64 {
 	return c.data.CurrentDynasty
 }
 
-// NextShard crosslink assignment will be coming from.
+// NextShard returns where the crosslink assignment will be coming from.
 func (c *CrystallizedState) NextShard() uint64 {
 	return c.data.NextShard
 }
 
-// CurrentCheckPoint for the FFG state.
+// CurrentCheckPoint returns the current checkpoint for the FFG state.
 func (c *CrystallizedState) CurrentCheckPoint() common.Hash {
 	return common.BytesToHash(c.data.CurrentCheckPoint)
 }
 
-// TotalDeposits is combined deposits of all the validators.
+// TotalDeposits returns the combined deposits of all the validators.
 func (c *CrystallizedState) TotalDeposits() uint64 {
 	return c.data.TotalDeposits
 }
 
-// DynastySeed is used to select the committee for each shard.
+// DynastySeed returns the seed used to select the committee for each shard.
 func (c *CrystallizedState) DynastySeed() common.Hash {
 	return common.BytesToHash(c.data.DynastySeed)
 }
 
-// DynastySeedLastReset is the last epoch the crosslink seed was reset.
+// DynastySeedLastReset is the last finalized epoch that the crosslink seed was reset.
 func (c *CrystallizedState) DynastySeedLastReset() uint64 {
 	return c.data.DynastySeedLastReset
 }
