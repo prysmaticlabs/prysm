@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/prysm/client/attester"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/observer"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/proposer"
 	"github.com/prysmaticlabs/prysm/client/rpcclient"
@@ -82,11 +81,11 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+	if err := shardEthereum.registerBeaconRPCService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconRPCService(ctx); err != nil {
+	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -205,7 +204,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	return s.services.RegisterService(pool)
 }
 
-// registerActorService registers the actor according to CLI flags. Either attester/proposer/observer.
+// registerActorService registers the actor according to CLI flags. Either attester/proposer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
@@ -222,13 +221,15 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		return err
 	}
 
+	var rpcService *rpcclient.Service
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
+
 	switch actor {
 	case "attester":
-		not, err := attester.NewAttester(config, client, shardp2p, s.db)
-		if err != nil {
-			return fmt.Errorf("could not register attester service: %v", err)
-		}
-		return s.services.RegisterService(not)
+		att := attester.NewAttester(context.TODO(), rpcService)
+		return s.services.RegisterService(att)
 	case "proposer":
 		var pool *txpool.TXPool
 		if err := s.services.FetchService(&pool); err != nil {
@@ -240,13 +241,8 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 			return fmt.Errorf("could not register proposer service: %v", err)
 		}
 		return s.services.RegisterService(prop)
-	default:
-		obs, err := observer.NewObserver(shardp2p, s.db, shardID, sync, client)
-		if err != nil {
-			return fmt.Errorf("could not register observer service: %v", err)
-		}
-		return s.services.RegisterService(obs)
 	}
+	return nil
 }
 
 // registerSyncerService adds the p2p and mainchain services to the syncer and

@@ -27,16 +27,28 @@ type ChainService struct {
 	processedCrystallizedStateHashes [][32]byte
 }
 
+// Config options for the service.
+type Config struct {
+	BeaconBlockBuf int
+}
+
+// DefaultConfig options.
+func DefaultConfig() *Config {
+	return &Config{
+		BeaconBlockBuf: 10,
+	}
+}
+
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                              ctx,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
-		latestBeaconBlock:                make(chan *types.Block),
+		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
 		processedCrystallizedStateHashes: [][32]byte{},
@@ -199,9 +211,9 @@ func (c *ChainService) run(done <-chan struct{}) {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			currentslot := block.SlotNumber()
+			currentSlot := block.SlotNumber()
 
-			transition := c.chain.IsEpochTransition(currentslot)
+			transition := c.chain.IsEpochTransition(currentSlot)
 			if transition {
 				if err := c.chain.calculateRewardsFFG(); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)

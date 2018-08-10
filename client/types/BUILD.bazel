@@ -12,6 +12,7 @@ go_library(
     visibility = ["//client:__subpackages__"],
     deps = [
         "//client/params:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",

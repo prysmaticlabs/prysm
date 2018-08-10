@@ -3,9 +3,11 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -47,6 +49,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Errorf("Could not listen to port :%s: %v", s.port, err)
@@ -63,7 +66,7 @@ func (s *Service) Start() {
 		}
 		grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
-		log.Warn("You're on an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection")
 		grpcServer = grpc.NewServer()
 	}
 
@@ -85,11 +88,13 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// ShuffleValidators shuffles the validators into attesters/proposers.
-//
-// TODO: needs to properly shuffle.
-func (s *Service) ShuffleValidators(req *pb.ShuffleRequest, stream pb.BeaconService_ShuffleValidatorsServer) error {
-	return stream.Send(&pb.ShuffleResponse{IsProposer: true, IsAttester: false})
+// FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
+// assigned attestation heights at a given crystallized state hash.
+// This function can be called by clients to fetch a historical list of shuffled
+// validators ata point in time corresponding to a certain crystallized state.
+func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
+	// TODO: implement.
+	return nil, errors.New("unimplemented")
 }
 
 // ProposeBlock is called by a proposer in a sharding client and a full beacon node
@@ -97,7 +102,8 @@ func (s *Service) ShuffleValidators(req *pb.ShuffleRequest, stream pb.BeaconServ
 //
 // TODO: needs implementation.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
-	return nil, nil
+	// TODO: implement.
+	return nil, errors.New("unimplemented")
 }
 
 // SignBlock is a function called by an attester in a sharding client to sign off
@@ -105,5 +111,18 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 //
 // TODO: needs implementation.
 func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
-	return nil, nil
+	// TODO: implement.
+	return nil, errors.New("unimplemented")
+}
+
+// LatestBeaconBlock streams the latest beacon chain data.
+func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
+	// TODO: implement.
+	return errors.New("unimplemented")
+}
+
+// LatestCrystallizedState streams the latest beacon crystallized state.
+func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
+	// TODO: implement.
+	return errors.New("unimplemented")
 }

@@ -184,11 +184,11 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 
 	// Check if the parentHash pointed by the beacon block is in the beaconDB.
 	parentHash := block.ParentHash()
-	val, err := b.db.Get(parentHash[:])
+	hasParent, err := b.db.Has(parentHash[:])
 	if err != nil {
 		return false, err
 	}
-	if val == nil {
+	if !hasParent {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 
