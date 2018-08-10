@@ -52,11 +52,11 @@ go_test(
 # by default gazelle tries to add all the test files to the  first
 # go_test; we need to exclude the tests that we want to configure
 # in a particular way
-# gazelle:exclude racy_test.go
+# gazelle:exclude service_norace_test.go
 
 go_test(
-    name = "go_racy_test",
-    srcs = ["racy_test.go"],
+    name = "go_norace_test",
+    srcs = ["service_norace_test.go"],
     embed = [":go_default_library"],
     race = "off",  # TODO(#377): fix issues with race detection testing.
     deps = [

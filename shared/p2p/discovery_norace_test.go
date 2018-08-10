@@ -10,7 +10,6 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = mdns.Notifee(&discovery{})
@@ -62,32 +61,4 @@ func TestStartDiscovery_HandlePeerFound(t *testing.T) {
 
 	expectPeers(t, a, 2)
 	expectPeers(t, b, 2)
-}
-
-func TestLifecycle(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	s, err := NewServer()
-	if err != nil {
-		t.Fatalf("Could not start a new server: %v", err)
-	}
-
-	s.Start()
-	msg := hook.Entries[0].Message
-	want := "Starting service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
-
-	s.Stop()
-	msg = hook.LastEntry().Message
-	want = "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
-
-	// The context should have been cancelled.
-	if s.ctx.Err() == nil {
-		t.Error("Context was not cancelled")
-	}
 }
