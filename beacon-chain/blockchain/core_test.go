@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"math"
+	"reflect"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -11,9 +15,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"math"
-	"reflect"
-	"testing"
 )
 
 type faultyFetcher struct{}
@@ -553,13 +554,13 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 1000, WithdrawalAddress: []byte{'A'}, PublicKey: 0}
+		validator := &pb.ValidatorRecord{Balance: 1000, StartDynasty: 1, EndDynasty: 10}
 		validators = append(validators, validator)
 	}
 
 	data := &pb.CrystallizedState{
 		Validators:         validators,
-		CurrentCheckPoint:  []byte("checkpoint"),
+		CurrentDynasty:     1,
 		TotalDeposits:      40000,
 		EpochNumber:        5,
 		LastJustifiedEpoch: 4,
@@ -571,9 +572,8 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	types.NewActiveState(&pb.ActiveState{AttesterBitfield: testAttesterBitfield})
-	ActiveState := types.NewActiveState(&pb.ActiveState{TotalAttesterDeposits: 40000, AttesterBitfield: testAttesterBitfield})
-	if err := beaconChain.MutateActiveState(ActiveState); err != nil {
+	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
+	if err := beaconChain.MutateActiveState(state); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 	if err := beaconChain.calculateRewardsFFG(); err != nil {
@@ -593,12 +593,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 	if beaconChain.CrystallizedState().Validators()[29].Balance != uint64(999) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
-	}
-	if beaconChain.state.ActiveState.TotalAttesterDeposits() != uint64(0) {
-		t.Fatalf("attester deposit was not able to be reset: %d", beaconChain.state.ActiveState.TotalAttesterDeposits())
-	}
-	if !bytes.Equal(beaconChain.state.ActiveState.AttesterBitfield(), make([]byte, 5)) {
-		t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.AttesterBitfield())
 	}
 }
 

@@ -24,3 +24,11 @@ func CheckBit(bitfield []byte, index int) (bool, error) {
 	}
 	return false, nil
 }
+
+// BitSetCount counts the number of 1s in a byte using the following algo:
+// https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+func BitSetCount(v byte) byte {
+	v = (v & 0x55) + ((v >> 1) & 0x55)
+	v = (v & 0x33) + ((v >> 2) & 0x33)
+	return (v + (v >> 4)) & 0xF
+}

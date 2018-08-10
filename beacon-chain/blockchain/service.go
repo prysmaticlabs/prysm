@@ -161,25 +161,32 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 func (c *ChainService) updateChainState() {
 	for {
 		select {
-		case _ = <-c.latestBeaconBlock:
+		case block := <-c.latestBeaconBlock:
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
-			//activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			//if err != nil {
-			//	log.Errorf("Compute active state failed: %v", err)
-			//}
-			//
-			//err = c.chain.MutateActiveState(activeState)
-			//if err != nil {
-			//	log.Errorf("Write active state to disk failed: %v", err)
-			//}
-			//
-			//// Entering epoch transitions.
-			//transition := c.chain.IsEpochTransition(block.SlotNumber())
-			//if transition {
-			//	if err := c.chain.calculateRewardsFFG(); err != nil {
-			//		log.Errorf("Error computing validator rewards and penalties %v", err)
-			//	}
-			//}
+			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			if err != nil {
+				log.Errorf("Compute active state failed: %v", err)
+			}
+
+			err = c.chain.MutateActiveState(activeState)
+			if err != nil {
+				log.Errorf("Write active state to disk failed: %v", err)
+			}
+
+			// TODO: Apply 2.1 fork choice logic using the following
+			validatorsByHeight, err := c.chain.validatorsByHeightShard()
+			if err != nil {
+				log.Errorf("Unable to get validators by height and by shard: %v", err)
+			}
+			log.Debugf("Received the following validators by height: %v", validatorsByHeight)
+
+			// Entering epoch transitions.
+			transition := c.chain.IsEpochTransition(block.SlotNumber())
+			if transition {
+				if err := c.chain.calculateRewardsFFG(); err != nil {
+					log.Errorf("Error computing validator rewards and penalties %v", err)
+				}
+			}
 
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")

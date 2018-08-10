@@ -2,12 +2,13 @@ package utils
 
 import (
 	"errors"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"golang.org/x/crypto/blake2b"
 )
 
-// validatorList returns a list of pseudorandomly sampled
+// ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
 func ShuffleIndices(seed common.Hash, validatorList []int) ([]int, error) {
 	if len(validatorList) > params.MaxValidators {

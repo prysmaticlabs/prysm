@@ -265,42 +265,56 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
+// getAttestersTotalDeposit returns the total deposit combined by attesters.
+// TODO: Consider slashing condition
+func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
+	var numOfBits int
+	for _, attestation := range b.ActiveState().PendingAttestations() {
+		for _, byte := range attestation.AttesterBitfield {
+			numOfBits += int(utils.BitSetCount(byte))
+		}
+	}
+	// Assume there's no slashing condition, the following logic will change later phase.
+	return uint64(numOfBits) * params.DefaultBalance, nil
+}
+
 // calculateRewardsFFG adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
 func (b *BeaconChain) calculateRewardsFFG() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	activeValidators := b.state.CrystallizedState.Validators()
-	attesterDeposits := b.state.ActiveState.TotalAttesterDeposits()
+	validators := b.CrystallizedState().Validators()
+	activeValidators := b.activeValidatorIndices()
+	attesterDeposits, err := b.getAttestersTotalDeposit()
+	if err != nil {
+		return err
+	}
 	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
-
 	if attesterFactor >= totalFactor {
 		log.Info("Setting justified epoch to current epoch: %v", b.CrystallizedState().EpochNumber())
 		b.state.CrystallizedState.UpdateJustifiedEpoch()
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
-		for i := range activeValidators {
-			voted, err := b.voted(i)
+
+		for i, attesterIndex := range activeValidators {
+			voted, err := utils.CheckBit(b.state.ActiveState.LatestPendingAttestation().AttesterBitfield, attesterIndex)
 			if err != nil {
 				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
 			}
 			if voted {
-				activeValidators[i].Balance += params.AttesterReward
+				validators[i].Balance += params.AttesterReward
 			} else {
-				activeValidators[i].Balance -= params.AttesterReward
+				validators[i].Balance -= params.AttesterReward
 			}
 		}
 
 		log.Info("Resetting attester bit field to all zeros")
-		b.resetAttesterBitfield()
+		b.ActiveState().ClearPendingAttestations()
 
-		log.Info("Resetting total attester deposit to zero")
-		b.ActiveState().SetTotalAttesterDeposits(0)
-
-		b.CrystallizedState().UpdateValidators(activeValidators)
+		b.CrystallizedState().UpdateValidators(validators)
 		err := b.PersistActiveState()
 		if err != nil {
 			return err
@@ -348,7 +362,7 @@ func (b *BeaconChain) queuedValidatorIndices() []int {
 	validators := b.CrystallizedState().Validators()
 	dynasty := b.CrystallizedState().CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
-		if !math.IsInf(float64(validators[i].StartDynasty), 0) && validators[i].StartDynasty > dynasty {
+		if validators[i].StartDynasty > dynasty {
 			indices = append(indices, i)
 		}
 	}

@@ -94,7 +94,7 @@ func (a *ActiveState) LatestPendingAttestation() *pb.AttestationRecord {
 
 // ClearPendingAttestations clears attestations that have not yet been processed.
 func (a *ActiveState) ClearPendingAttestations() {
-	for i, _ := range a.data.PendingAttestations {
+	for i := range a.data.PendingAttestations {
 		a.data.PendingAttestations[i] = &pb.AttestationRecord{}
 	}
 }
