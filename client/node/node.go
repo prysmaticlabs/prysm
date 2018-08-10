@@ -232,15 +232,7 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 		att := attester.NewAttester(context.TODO(), rpcService)
 		return s.services.RegisterService(att)
 	case "proposer":
-		var pool *txpool.TXPool
-		if err := s.services.FetchService(&pool); err != nil {
-			return err
-		}
-
-		prop, err := proposer.NewProposer(config, client, shardp2p, s.db, shardID, sync)
-		if err != nil {
-			return fmt.Errorf("could not register proposer service: %v", err)
-		}
+		prop := proposer.NewProposer(context.TODO(), rpcService)
 		return s.services.RegisterService(prop)
 	default:
 		obs, err := observer.NewObserver(shardp2p, s.db, shardID, sync, client)
