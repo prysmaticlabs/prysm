@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/prysm/client/attester"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/observer"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/proposer"
 	"github.com/prysmaticlabs/prysm/client/rpcclient"
@@ -205,7 +204,7 @@ func (s *ShardEthereum) registerTXPool(actor string) error {
 	return s.services.RegisterService(pool)
 }
 
-// registerActorService registers the actor according to CLI flags. Either attester/proposer/observer.
+// registerActorService registers the actor according to CLI flags. Either attester/proposer.
 func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
@@ -234,13 +233,8 @@ func (s *ShardEthereum) registerActorService(config *params.Config, actor string
 	case "proposer":
 		prop := proposer.NewProposer(context.TODO(), rpcService)
 		return s.services.RegisterService(prop)
-	default:
-		obs, err := observer.NewObserver(shardp2p, s.db, shardID, sync, client)
-		if err != nil {
-			return fmt.Errorf("could not register observer service: %v", err)
-		}
-		return s.services.RegisterService(obs)
 	}
+	return nil
 }
 
 // registerSyncerService adds the p2p and mainchain services to the syncer and
