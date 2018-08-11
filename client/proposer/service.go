@@ -1,5 +1,5 @@
 // Package proposer defines all relevant functionality for a Proposer actor
-// within the minimal sharding protocol.
+// within Ethereum 2.0.
 package proposer
 
 import (
@@ -11,32 +11,46 @@ import (
 
 var log = logrus.WithField("prefix", "proposer")
 
-// Proposer holds functionality required to run a proposer actor defined
-// in the beacon chain spec v2.1.
+// Proposer holds functionality required to run a block proposer
+// in Ethereum 2.0. Must satisfy the Service interface defined in
+// sharding/service.go.
 type Proposer struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
-	clientService types.RPCClient
+	beaconService types.BeaconClient
 }
 
-// NewProposer creates a struct instance of a proposer service.
-func NewProposer(ctx context.Context, clientService types.RPCClient) *Proposer {
+// NewProposer creates a new attester instance.
+func NewProposer(ctx context.Context, beaconService types.BeaconClient) *Proposer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
 		ctx:           ctx,
 		cancel:        cancel,
-		clientService: clientService,
+		beaconService: beaconService,
 	}
 }
 
-// Start the main loop for proposing.
+// Start the main routine for a proposer.
 func (p *Proposer) Start() {
 	log.Info("Starting service")
+	go p.run(p.ctx.Done())
 }
 
-// Stop the main loop for proposing.
+// Stop the main loop.
 func (p *Proposer) Stop() error {
 	defer p.cancel()
 	log.Info("Stopping service")
 	return nil
+}
+
+// run the main event loop that listens for a proposer assignment.
+func (p *Proposer) run(done <-chan struct{}) {
+	for {
+		select {
+		case <-done:
+			log.Debug("Proposer context closed, exiting goroutine")
+		case <-p.beaconService.ProposerAssignment():
+			log.Info("Performing proposal responsibility")
+		}
+	}
 }

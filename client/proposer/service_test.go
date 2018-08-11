@@ -5,25 +5,25 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/client/internal"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-type mockClient struct {
-	ctrl *gomock.Controller
+type mockBeaconService struct{}
+
+func (m *mockBeaconService) AttesterAssignment() <-chan bool {
+	return make(chan bool, 0)
 }
 
-func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
-	return internal.NewMockBeaconServiceClient(fc.ctrl)
+func (m *mockBeaconService) ProposerAssignment() <-chan bool {
+	return make(chan bool, 0)
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	prop := NewProposer(context.Background(), &mockClient{ctrl})
+	prop := NewProposer(context.Background(), &mockBeaconService{})
 	prop.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	prop.Stop()
