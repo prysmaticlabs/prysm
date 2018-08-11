@@ -6,9 +6,14 @@ package ethereum_beacon_rpc_v1
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/golang/protobuf/ptypes/empty"
-import _ "proto/beacon/p2p/v1"
-import v1 "proto/sharding/p2p/v1"
+import empty "github.com/golang/protobuf/ptypes/empty"
+import v11 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import v1 "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -296,6 +301,327 @@ func init() {
 	proto.RegisterType((*ProposeResponse)(nil), "ethereum.beacon.rpc.v1.ProposeResponse")
 	proto.RegisterType((*SignRequest)(nil), "ethereum.beacon.rpc.v1.SignRequest")
 	proto.RegisterType((*SignResponse)(nil), "ethereum.beacon.rpc.v1.SignResponse")
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// BeaconServiceClient is the client API for BeaconService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type BeaconServiceClient interface {
+	LatestBeaconBlock(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestBeaconBlockClient, error)
+	LatestCrystallizedState(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestCrystallizedStateClient, error)
+	FetchShuffledValidatorIndices(ctx context.Context, in *ShuffleRequest, opts ...grpc.CallOption) (*ShuffleResponse, error)
+}
+
+type beaconServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewBeaconServiceClient(cc *grpc.ClientConn) BeaconServiceClient {
+	return &beaconServiceClient{cc}
+}
+
+func (c *beaconServiceClient) LatestBeaconBlock(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestBeaconBlockClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.BeaconService/LatestBeaconBlock", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &beaconServiceLatestBeaconBlockClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type BeaconService_LatestBeaconBlockClient interface {
+	Recv() (*v11.BeaconBlock, error)
+	grpc.ClientStream
+}
+
+type beaconServiceLatestBeaconBlockClient struct {
+	grpc.ClientStream
+}
+
+func (x *beaconServiceLatestBeaconBlockClient) Recv() (*v11.BeaconBlock, error) {
+	m := new(v11.BeaconBlock)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *beaconServiceClient) LatestCrystallizedState(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestCrystallizedStateClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[1], "/ethereum.beacon.rpc.v1.BeaconService/LatestCrystallizedState", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &beaconServiceLatestCrystallizedStateClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type BeaconService_LatestCrystallizedStateClient interface {
+	Recv() (*v11.CrystallizedState, error)
+	grpc.ClientStream
+}
+
+type beaconServiceLatestCrystallizedStateClient struct {
+	grpc.ClientStream
+}
+
+func (x *beaconServiceLatestCrystallizedStateClient) Recv() (*v11.CrystallizedState, error) {
+	m := new(v11.CrystallizedState)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *beaconServiceClient) FetchShuffledValidatorIndices(ctx context.Context, in *ShuffleRequest, opts ...grpc.CallOption) (*ShuffleResponse, error) {
+	out := new(ShuffleResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.BeaconService/FetchShuffledValidatorIndices", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// BeaconServiceServer is the server API for BeaconService service.
+type BeaconServiceServer interface {
+	LatestBeaconBlock(*empty.Empty, BeaconService_LatestBeaconBlockServer) error
+	LatestCrystallizedState(*empty.Empty, BeaconService_LatestCrystallizedStateServer) error
+	FetchShuffledValidatorIndices(context.Context, *ShuffleRequest) (*ShuffleResponse, error)
+}
+
+func RegisterBeaconServiceServer(s *grpc.Server, srv BeaconServiceServer) {
+	s.RegisterService(&_BeaconService_serviceDesc, srv)
+}
+
+func _BeaconService_LatestBeaconBlock_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(empty.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BeaconServiceServer).LatestBeaconBlock(m, &beaconServiceLatestBeaconBlockServer{stream})
+}
+
+type BeaconService_LatestBeaconBlockServer interface {
+	Send(*v11.BeaconBlock) error
+	grpc.ServerStream
+}
+
+type beaconServiceLatestBeaconBlockServer struct {
+	grpc.ServerStream
+}
+
+func (x *beaconServiceLatestBeaconBlockServer) Send(m *v11.BeaconBlock) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _BeaconService_LatestCrystallizedState_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(empty.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BeaconServiceServer).LatestCrystallizedState(m, &beaconServiceLatestCrystallizedStateServer{stream})
+}
+
+type BeaconService_LatestCrystallizedStateServer interface {
+	Send(*v11.CrystallizedState) error
+	grpc.ServerStream
+}
+
+type beaconServiceLatestCrystallizedStateServer struct {
+	grpc.ServerStream
+}
+
+func (x *beaconServiceLatestCrystallizedStateServer) Send(m *v11.CrystallizedState) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _BeaconService_FetchShuffledValidatorIndices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShuffleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeaconServiceServer).FetchShuffledValidatorIndices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.BeaconService/FetchShuffledValidatorIndices",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconServiceServer).FetchShuffledValidatorIndices(ctx, req.(*ShuffleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _BeaconService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.BeaconService",
+	HandlerType: (*BeaconServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "FetchShuffledValidatorIndices",
+			Handler:    _BeaconService_FetchShuffledValidatorIndices_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "LatestBeaconBlock",
+			Handler:       _BeaconService_LatestBeaconBlock_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "LatestCrystallizedState",
+			Handler:       _BeaconService_LatestCrystallizedState_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
+}
+
+// AttesterServiceClient is the client API for AttesterService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type AttesterServiceClient interface {
+	SignBlock(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error)
+}
+
+type attesterServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewAttesterServiceClient(cc *grpc.ClientConn) AttesterServiceClient {
+	return &attesterServiceClient{cc}
+}
+
+func (c *attesterServiceClient) SignBlock(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error) {
+	out := new(SignResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.AttesterService/SignBlock", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AttesterServiceServer is the server API for AttesterService service.
+type AttesterServiceServer interface {
+	SignBlock(context.Context, *SignRequest) (*SignResponse, error)
+}
+
+func RegisterAttesterServiceServer(s *grpc.Server, srv AttesterServiceServer) {
+	s.RegisterService(&_AttesterService_serviceDesc, srv)
+}
+
+func _AttesterService_SignBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttesterServiceServer).SignBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.AttesterService/SignBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttesterServiceServer).SignBlock(ctx, req.(*SignRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _AttesterService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.AttesterService",
+	HandlerType: (*AttesterServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SignBlock",
+			Handler:    _AttesterService_SignBlock_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
+}
+
+// ProposerServiceClient is the client API for ProposerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type ProposerServiceClient interface {
+	ProposeBlock(ctx context.Context, in *ProposeRequest, opts ...grpc.CallOption) (*ProposeResponse, error)
+}
+
+type proposerServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewProposerServiceClient(cc *grpc.ClientConn) ProposerServiceClient {
+	return &proposerServiceClient{cc}
+}
+
+func (c *proposerServiceClient) ProposeBlock(ctx context.Context, in *ProposeRequest, opts ...grpc.CallOption) (*ProposeResponse, error) {
+	out := new(ProposeResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ProposerService/ProposeBlock", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ProposerServiceServer is the server API for ProposerService service.
+type ProposerServiceServer interface {
+	ProposeBlock(context.Context, *ProposeRequest) (*ProposeResponse, error)
+}
+
+func RegisterProposerServiceServer(s *grpc.Server, srv ProposerServiceServer) {
+	s.RegisterService(&_ProposerService_serviceDesc, srv)
+}
+
+func _ProposerService_ProposeBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProposeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProposerServiceServer).ProposeBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.ProposerService/ProposeBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProposerServiceServer).ProposeBlock(ctx, req.(*ProposeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _ProposerService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.ProposerService",
+	HandlerType: (*ProposerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ProposeBlock",
+			Handler:    _ProposerService_ProposeBlock_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
 }
 
 func init() {
