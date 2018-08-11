@@ -90,7 +90,7 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerActorService(shardEthereum.shardConfig, actorFlag, shardIDFlag); err != nil {
+	if err := shardEthereum.registerActorService(actorFlag); err != nil {
 		return nil, err
 	}
 
@@ -221,7 +221,7 @@ func (s *ShardEthereum) registerBeaconService() error {
 }
 
 // registerActorService registers the actor according to CLI flags. Either attester/proposer.
-func (s *ShardEthereum) registerActorService(config *params.Config, actor string, shardID int) error {
+func (s *ShardEthereum) registerActorService(actor string) error {
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err

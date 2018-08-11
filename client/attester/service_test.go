@@ -12,11 +12,11 @@ import (
 type mockBeaconService struct{}
 
 func (m *mockBeaconService) AttesterAssignment() <-chan bool {
-	return make(chan bool, 0)
+	return make(chan bool)
 }
 
 func (m *mockBeaconService) ProposerAssignment() <-chan bool {
-	return make(chan bool, 0)
+	return make(chan bool)
 }
 
 func TestLifecycle(t *testing.T) {
