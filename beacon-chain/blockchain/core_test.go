@@ -65,7 +65,7 @@ func TestNewBeaconChain(t *testing.T) {
 	}
 }
 
-func TestMutateActiveState(t *testing.T) {
+func TestSetActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -79,7 +79,7 @@ func TestMutateActiveState(t *testing.T) {
 	}
 	active := types.NewActiveState(data)
 
-	if err := beaconChain.MutateActiveState(active); err != nil {
+	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
 	if !reflect.DeepEqual(beaconChain.state.ActiveState, active) {
@@ -103,7 +103,7 @@ func TestMutateActiveState(t *testing.T) {
 	}
 }
 
-func TestMutateCrystallizedState(t *testing.T) {
+func TestSetCrystallizedState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -113,7 +113,7 @@ func TestMutateCrystallizedState(t *testing.T) {
 	}
 	crystallized := types.NewCrystallizedState(data)
 
-	if err := beaconChain.MutateCrystallizedState(crystallized); err != nil {
+	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
 	if !reflect.DeepEqual(beaconChain.state.CrystallizedState, crystallized) {
@@ -147,9 +147,9 @@ func TestGetAttestersProposer(t *testing.T) {
 	}
 
 	_, crystallized := types.NewGenesisStates()
-	crystallized.UpdateValidators(validators)
+	crystallized.SetValidators(validators)
 	crystallized.IncrementCurrentDynasty()
-	beaconChain.MutateCrystallizedState(crystallized)
+	beaconChain.SetCrystallizedState(crystallized)
 
 	attesters, proposer, err := beaconChain.getAttestersProposer(common.Hash{'A'})
 	if err != nil {
@@ -389,7 +389,7 @@ func TestRotateValidatorSet(t *testing.T) {
 		CurrentDynasty: 10,
 	}
 	state := types.NewCrystallizedState(data)
-	beaconChain.MutateCrystallizedState(state)
+	beaconChain.SetCrystallizedState(state)
 
 	// rotate validator set and increment dynasty count by 1
 	beaconChain.rotateValidatorSet()
@@ -410,7 +410,7 @@ func TestIsEpochTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 1})); err != nil {
+	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 1})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 	if !beaconChain.IsEpochTransition(128) {
@@ -475,9 +475,8 @@ func TestClearAttesterBitfields(t *testing.T) {
 		}
 
 		testAttesterBitfield := []byte{1, 2, 3, 4}
-		beaconChain.CrystallizedState().UpdateValidators(validators)
+		beaconChain.CrystallizedState().SetValidators(validators)
 		beaconChain.ActiveState().NewPendingAttestation(&pb.AttestationRecord{AttesterBitfield: testAttesterBitfield})
-
 		beaconChain.ActiveState().ClearPendingAttestations()
 
 		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield) {
@@ -495,7 +494,7 @@ func TestClearRecentBlockHashes(t *testing.T) {
 	defer db.Close()
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}, {'B'}, {'C'}}})
-	if err := beaconChain.MutateActiveState(active); err != nil {
+	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 	if reflect.DeepEqual(beaconChain.state.ActiveState.RecentBlockHashes(), [][]byte{{'A'}, {'B'}, {'C'}}) {
@@ -512,8 +511,7 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 	defer db.Close()
 
 	data := &pb.CrystallizedState{EpochNumber: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
-	beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data))
-
+	beaconChain.SetCrystallizedState(types.NewCrystallizedState(data))
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
 		beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(4) ||
 		beaconChain.state.CrystallizedState.EpochNumber() != uint64(5) {
@@ -530,7 +528,7 @@ func TestUpdateJustifiedEpoch(t *testing.T) {
 	}
 
 	data = &pb.CrystallizedState{EpochNumber: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
-	beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data))
+	beaconChain.SetCrystallizedState(types.NewCrystallizedState(data))
 
 	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
 		beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(4) ||
@@ -566,14 +564,14 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		LastJustifiedEpoch: 4,
 		LastFinalizedEpoch: 3,
 	}
-	if err := beaconChain.MutateCrystallizedState(types.NewCrystallizedState(data)); err != nil {
+	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(data)); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 
 	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
 	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
-	if err := beaconChain.MutateActiveState(state); err != nil {
+	if err := beaconChain.SetActiveState(state); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 	if err := beaconChain.calculateRewardsFFG(); err != nil {
@@ -613,7 +611,7 @@ func TestValidatorIndices(t *testing.T) {
 	}
 
 	crystallized := types.NewCrystallizedState(data)
-	if err := beaconChain.MutateCrystallizedState(crystallized); err != nil {
+	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
 
@@ -640,7 +638,7 @@ func TestValidatorIndices(t *testing.T) {
 	}
 
 	crystallized = types.NewCrystallizedState(data)
-	if err := beaconChain.MutateCrystallizedState(crystallized); err != nil {
+	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
 

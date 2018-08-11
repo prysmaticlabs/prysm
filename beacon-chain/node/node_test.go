@@ -19,7 +19,7 @@ func TestNode_Builds(t *testing.T) {
 
 	context := cli.NewContext(app, set, nil)
 
-	_, err := New(context)
+	_, err := NewBeaconNode(context)
 	if err != nil {
 		t.Fatalf("Failed to create BeaconNode: %v", err)
 	}

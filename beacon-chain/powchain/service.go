@@ -1,3 +1,4 @@
+// Package powchain defines the services that interact with the PoWChain of Ethereum.
 package powchain
 
 import (
@@ -33,6 +34,8 @@ type Web3Service struct {
 	endpoint            string
 	validatorRegistered bool
 	vrcAddress          common.Address
+	reader              types.Reader
+	logger              types.Logger
 	blockNumber         *big.Int    // the latest PoW chain blocknumber.
 	blockHash           common.Hash // the latest PoW chain blockhash.
 }
@@ -45,7 +48,7 @@ type Web3ServiceConfig struct {
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
-// given a web3 endpoint as a string.
+// given a web3 endpoint as a string in the config.
 func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
@@ -76,7 +79,8 @@ func (w *Web3Service) Start() {
 		return
 	}
 	w.client = ethclient.NewClient(rpcClient)
-	go w.fetchChainInfo(w.client, w.client)
+	w.reader, w.logger = w.client, w.client
+	go w.run(w.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -87,8 +91,9 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
-func (w *Web3Service) fetchChainInfo(reader types.Reader, logger types.Logger) {
-	headSub, err := reader.SubscribeNewHead(w.ctx, w.headerChan)
+// run subscribes to all the services for the powchain.
+func (w *Web3Service) run(done <-chan struct{}) {
+	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
 		return
@@ -98,16 +103,18 @@ func (w *Web3Service) fetchChainInfo(reader types.Reader, logger types.Logger) {
 			w.vrcAddress,
 		},
 	}
-	logSub, err := logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
+	logSub, err := w.logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
 	if err != nil {
 		log.Errorf("Unable to query logs from VRC: %v", err)
 		return
 	}
 	defer logSub.Unsubscribe()
 	defer headSub.Unsubscribe()
+
 	for {
 		select {
-		case <-w.ctx.Done():
+		case <-done:
+			log.Debug("Powchain service context closed, exiting goroutine")
 			return
 		case <-headSub.Err():
 			log.Debug("Unsubscribed to head events, exiting goroutine")
@@ -136,22 +143,22 @@ func (w *Web3Service) fetchChainInfo(reader types.Reader, logger types.Logger) {
 	}
 }
 
-// LatestBlockNumber is a getter for blockNumber to make it read-only.
+// LatestBlockNumber in the PoWChain.
 func (w *Web3Service) LatestBlockNumber() *big.Int {
 	return w.blockNumber
 }
 
-// LatestBlockHash is a getter for blockHash to make it read-only.
+// LatestBlockHash in the PoWChain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// ValidatorRegistered is a getter for validatorRegistered to make it read-only.
-func (w *Web3Service) ValidatorRegistered() bool {
+// IsValidatorRegistered in the PoWChain.
+func (w *Web3Service) IsValidatorRegistered() bool {
 	return w.validatorRegistered
 }
 
-// Client returns the underlying web3 client.
+// Client for interacting with the PoWChain.
 func (w *Web3Service) Client() types.POWChainClient {
 	return w.client
 }

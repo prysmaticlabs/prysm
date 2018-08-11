@@ -14,7 +14,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("datadir", "/tmp/datadir", "the node data directory")
 	context := cli.NewContext(app, set, nil)
 
-	_, err := New(context)
+	_, err := NewShardInstance(context)
 	if err != nil {
 		t.Fatalf("Failed to create ShardEthereum: %v", err)
 	}

@@ -9,7 +9,6 @@ import (
 
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
-// TODO: Change ActiveState to use proto
 type ActiveState struct {
 	data *pb.ActiveState
 }
@@ -153,17 +152,17 @@ func (c *CrystallizedState) CrosslinkingStartShard() uint64 {
 	return c.data.CrosslinkingStartShard
 }
 
-// LastJustifiedEpoch of the beacon chain.
+// LastJustifiedEpoch return the last justified epoch of the beacon chain.
 func (c *CrystallizedState) LastJustifiedEpoch() uint64 {
 	return c.data.LastJustifiedEpoch
 }
 
-// SetLastJustifiedEpoch sets last justified epoch of the beacon chain.
+// SetLastJustifiedEpoch sets the last justified epoch of the beacon chain.
 func (c *CrystallizedState) SetLastJustifiedEpoch(epoch uint64) {
 	c.data.LastJustifiedEpoch = epoch
 }
 
-// LastFinalizedEpoch of the beacon chain.
+// LastFinalizedEpoch returns the last finalized epoch of the beacon chain.
 func (c *CrystallizedState) LastFinalizedEpoch() uint64 {
 	return c.data.LastFinalizedEpoch
 }
@@ -173,7 +172,7 @@ func (c *CrystallizedState) SetLastFinalizedEpoch(epoch uint64) {
 	c.data.LastFinalizedEpoch = epoch
 }
 
-// CurrentDynasty of the beacon chain.
+// CurrentDynasty returns the current dynasty of the beacon chain.
 func (c *CrystallizedState) CurrentDynasty() uint64 {
 	return c.data.CurrentDynasty
 }
@@ -193,7 +192,7 @@ func (c *CrystallizedState) SetTotalDeposits(total uint64) {
 	c.data.TotalDeposits = total
 }
 
-// CurrentCheckPoint for the FFG state.
+// CurrentCheckPoint returns the current checkpoint for the FFG state.
 func (c *CrystallizedState) CurrentCheckPoint() common.Hash {
 	return common.BytesToHash(c.data.CurrentCheckPoint)
 }
@@ -203,7 +202,7 @@ func (c *CrystallizedState) DynastySeed() common.Hash {
 	return common.BytesToHash(c.data.DynastySeed)
 }
 
-// DynastySeedLastReset is the last epoch the crosslink seed was reset.
+// DynastySeedLastReset is the last finalized epoch that the crosslink seed was reset.
 func (c *CrystallizedState) DynastySeedLastReset() uint64 {
 	return c.data.DynastySeedLastReset
 }
@@ -218,8 +217,8 @@ func (c *CrystallizedState) ValidatorsLength() int {
 	return len(c.data.Validators)
 }
 
-// UpdateValidators updates the validator set.
-func (c *CrystallizedState) UpdateValidators(validators []*pb.ValidatorRecord) {
+// SetValidators sets the validator set.
+func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 	c.data.Validators = validators
 }
 

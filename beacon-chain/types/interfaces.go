@@ -29,6 +29,8 @@ type BlockChainService interface {
 	ProcessedBlockHashes() [][32]byte
 	ProcessBlock(b *Block) error
 	ContainsBlock(h [32]byte) bool
+	HasStoredState() (bool, error)
+	SaveBlock(block *Block) error
 }
 
 // CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.
@@ -66,7 +68,7 @@ type POWBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
-// Logger subscribe filtered log on the PoW chain
+// Logger defines a struct that subscribes to filtered logs on the PoW chain.
 type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
 }
