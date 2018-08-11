@@ -17,15 +17,14 @@ var log = logrus.WithField("prefix", "beacon-client")
 
 // Service that interacts with a beacon node via RPC.
 type Service struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	rpcClient        types.RPCClient
-	validatorIndex   int
-	assignedHeight   uint64
-	isHeightAssigned bool
-	responsibility   string
-	attesterChan     chan bool
-	proposerChan     chan bool
+	ctx            context.Context
+	cancel         context.CancelFunc
+	rpcClient      types.RPCClient
+	validatorIndex int
+	assignedHeight uint64
+	responsibility string
+	attesterChan   chan bool
+	proposerChan   chan bool
 }
 
 // Config options for the beacon service.
