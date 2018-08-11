@@ -411,7 +411,7 @@ func TestIsSlotTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: params.EpochLength})); err != nil {
+	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: params.CycleLength})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 	if !beaconChain.IsEpochTransition(128) {
@@ -511,7 +511,7 @@ func TestUpdateJustifiedSlot(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	data := &pb.CrystallizedState{LastStateRecalc: 5 * params.EpochLength, LastJustifiedSlot: 4, LastFinalizedSlot: 3}
+	data := &pb.CrystallizedState{LastStateRecalc: 5 * params.CycleLength, LastJustifiedSlot: 4, LastFinalizedSlot: 3}
 	beaconChain.SetCrystallizedState(types.NewCrystallizedState(data))
 	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(3) ||
 		beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(4) {
@@ -527,7 +527,7 @@ func TestUpdateJustifiedSlot(t *testing.T) {
 		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
 	}
 
-	data = &pb.CrystallizedState{LastStateRecalc: 8 * params.EpochLength, LastJustifiedSlot: 4, LastFinalizedSlot: 3}
+	data = &pb.CrystallizedState{LastStateRecalc: 8 * params.CycleLength, LastJustifiedSlot: 4, LastFinalizedSlot: 3}
 	beaconChain.SetCrystallizedState(types.NewCrystallizedState(data))
 
 	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(3) ||

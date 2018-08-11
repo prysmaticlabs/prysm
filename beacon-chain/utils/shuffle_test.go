@@ -53,14 +53,14 @@ func TestSplitIndices(t *testing.T) {
 	for i := 0; i < validators; i++ {
 		l = append(l, i)
 	}
-	split := SplitIndices(l, params.EpochLength)
-	if len(split) != params.EpochLength {
-		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.EpochLength, len(split))
+	split := SplitIndices(l, params.CycleLength)
+	if len(split) != params.CycleLength {
+		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.CycleLength, len(split))
 	}
 
 	for _, s := range split {
-		if len(s) != validators/params.EpochLength {
-			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/params.EpochLength, len(s))
+		if len(s) != validators/params.CycleLength {
+			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/params.CycleLength, len(s))
 		}
 	}
 }

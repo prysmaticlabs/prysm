@@ -139,7 +139,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 
 // IsEpochTransition checks if it's epoch transition time.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
-	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.EpochLength
+	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
@@ -254,7 +254,7 @@ func (b *BeaconChain) rotateValidatorSet() {
 
 // getAttestersProposer returns lists of random sampled attesters and proposer indices.
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
-	attesterCount := math.Min(params.AttesterCount, float64(b.CrystallizedState().ValidatorsLength()))
+	attesterCount := math.Min(params.MinCommiteeSize, float64(b.CrystallizedState().ValidatorsLength()))
 
 	indices, err := utils.ShuffleIndices(seed, b.activeValidatorIndices())
 	if err != nil {
@@ -376,13 +376,13 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 	var slotsPerCommittee int
 	var committees []*beaconCommittee
 
-	if len(indices) >= params.EpochLength*params.MinCommiteeSize {
-		committeesPerSlot = len(indices)/params.EpochLength/(params.MinCommiteeSize*2) + 1
+	if len(indices) >= params.CycleLength*params.MinCommiteeSize {
+		committeesPerSlot = len(indices)/params.CycleLength/(params.MinCommiteeSize*2) + 1
 		slotsPerCommittee = 1
 	} else {
 		committeesPerSlot = 1
 		slotsPerCommittee = 1
-		for len(indices)*slotsPerCommittee < params.MinCommiteeSize && slotsPerCommittee < params.EpochLength {
+		for len(indices)*slotsPerCommittee < params.MinCommiteeSize && slotsPerCommittee < params.CycleLength {
 			slotsPerCommittee *= 2
 		}
 	}
@@ -393,7 +393,7 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 		return nil, err
 	}
 
-	heightList := utils.SplitIndices(shuffledList, params.EpochLength)
+	heightList := utils.SplitIndices(shuffledList, params.CycleLength)
 
 	// split the shuffled height list for shards
 	for i, subList := range heightList {
