@@ -34,7 +34,6 @@ message ProposeRequest {
   bytes randao_reveal = 1;
   bytes attestation_bitmask = 2;
   repeated uint32 attestation_aggregate_sig = 3;
-  repeated ethereum.beacon.p2p.v1.AggregateVote shard_aggregate_votes = 5;
 }
 
 message ProposeResponse {

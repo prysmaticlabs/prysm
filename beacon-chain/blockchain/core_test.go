@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -108,8 +109,8 @@ func TestSetCrystallizedState(t *testing.T) {
 	defer db.Close()
 
 	data := &pb.CrystallizedState{
-		CurrentDynasty:    3,
-		CurrentCheckPoint: []byte("checkpoint"),
+		CurrentDynasty: 3,
+		DynastySeed:    []byte("seed"),
 	}
 	crystallized := types.NewCrystallizedState(data)
 
@@ -130,8 +131,8 @@ func TestSetCrystallizedState(t *testing.T) {
 	if crystallized.CurrentDynasty() != newBeaconChain.state.CrystallizedState.CurrentDynasty() {
 		t.Errorf("crystallized state dynasty incorrect. wanted %v, got %v", crystallized.CurrentDynasty(), newBeaconChain.state.CrystallizedState.CurrentDynasty())
 	}
-	if crystallized.CurrentCheckPoint().Hex() != newBeaconChain.state.CrystallizedState.CurrentCheckPoint().Hex() {
-		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.CurrentCheckPoint().Hex(), newBeaconChain.state.CrystallizedState.CurrentCheckPoint().Hex())
+	if crystallized.DynastySeed().Hex() != newBeaconChain.state.CrystallizedState.DynastySeed().Hex() {
+		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.DynastySeed().Hex(), newBeaconChain.state.CrystallizedState.DynastySeed().Hex())
 	}
 }
 
@@ -203,7 +204,7 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 5})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{})
 	beaconChain.state.CrystallizedState = crystallized
 	crystallizedHash, err := crystallized.Hash()
 	if err != nil {
@@ -263,7 +264,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 10000})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 10000})
 	crystallizedStateHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
@@ -288,7 +289,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	}
 
 	// Test negative scenario where crystallized state hash is different than node's compute
-	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 9999})
+	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 9999})
 
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err == nil {
@@ -311,7 +312,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	}
 	beaconChain.state.ActiveState = active
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 10000})
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 10000})
 	crystallizedStateHash, err := crystallized.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash crystallized state: %v", err)
@@ -406,18 +407,18 @@ func TestRotateValidatorSet(t *testing.T) {
 	}
 }
 
-func TestIsEpochTransition(t *testing.T) {
+func TestIsSlotTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{EpochNumber: 1})); err != nil {
+	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: params.EpochLength})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 	if !beaconChain.IsEpochTransition(128) {
-		t.Errorf("there was supposed to be an epoch transition but there isn't one now")
+		t.Errorf("there was supposed to be an Slot transition but there isn't one now")
 	}
 	if beaconChain.IsEpochTransition(80) {
-		t.Errorf("there is not supposed to be an epoch transition but there is one now")
+		t.Errorf("there is not supposed to be an Slot transition but there is one now")
 	}
 }
 
@@ -506,43 +507,41 @@ func TestClearRecentBlockHashes(t *testing.T) {
 	}
 }
 
-func TestUpdateJustifiedEpoch(t *testing.T) {
+func TestUpdateJustifiedSlot(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	data := &pb.CrystallizedState{EpochNumber: 5, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	data := &pb.CrystallizedState{LastStateRecalc: 5 * params.EpochLength, LastJustifiedSlot: 4, LastFinalizedSlot: 3}
 	beaconChain.SetCrystallizedState(types.NewCrystallizedState(data))
-	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
-		beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(4) ||
-		beaconChain.state.CrystallizedState.EpochNumber() != uint64(5) {
+	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(3) ||
+		beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(4) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	beaconChain.state.CrystallizedState.UpdateJustifiedEpoch()
+	beaconChain.state.CrystallizedState.UpdateJustifiedSlot(5)
 
-	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(5) {
-		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
+	if beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(5) {
+		t.Fatalf("unable to update last justified Slot: %d", beaconChain.state.CrystallizedState.LastJustifiedSlot())
 	}
-	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(4) {
-		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
+	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(4) {
+		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
 	}
 
-	data = &pb.CrystallizedState{EpochNumber: 8, LastJustifiedEpoch: 4, LastFinalizedEpoch: 3}
+	data = &pb.CrystallizedState{LastStateRecalc: 8 * params.EpochLength, LastJustifiedSlot: 4, LastFinalizedSlot: 3}
 	beaconChain.SetCrystallizedState(types.NewCrystallizedState(data))
 
-	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) ||
-		beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(4) ||
-		beaconChain.state.CrystallizedState.EpochNumber() != uint64(8) {
+	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(3) ||
+		beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(4) {
 		t.Fatal("crystallized state unable to be saved")
 	}
 
-	beaconChain.state.CrystallizedState.UpdateJustifiedEpoch()
+	beaconChain.state.CrystallizedState.UpdateJustifiedSlot(8)
 
-	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(8) {
-		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
+	if beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(8) {
+		t.Fatalf("unable to update last justified Slot: %d", beaconChain.state.CrystallizedState.LastJustifiedSlot())
 	}
-	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(3) {
-		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
+	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(3) {
+		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
 	}
 }
 
@@ -556,13 +555,16 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 5,
+	})
+
 	data := &pb.CrystallizedState{
-		Validators:         validators,
-		CurrentDynasty:     1,
-		TotalDeposits:      40000,
-		EpochNumber:        5,
-		LastJustifiedEpoch: 4,
-		LastFinalizedEpoch: 3,
+		Validators:        validators,
+		CurrentDynasty:    1,
+		TotalDeposits:     40000,
+		LastJustifiedSlot: 4,
+		LastFinalizedSlot: 3,
 	}
 	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(data)); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
@@ -574,14 +576,14 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	if err := beaconChain.SetActiveState(state); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
-	if err := beaconChain.calculateRewardsFFG(); err != nil {
+	if err := beaconChain.calculateRewardsFFG(block); err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
-	if beaconChain.state.CrystallizedState.LastJustifiedEpoch() != uint64(5) {
-		t.Fatalf("unable to update last justified epoch: %d", beaconChain.state.CrystallizedState.LastJustifiedEpoch())
+	if beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(5) {
+		t.Fatalf("unable to update last justified Slot: %d", beaconChain.state.CrystallizedState.LastJustifiedSlot())
 	}
-	if beaconChain.state.CrystallizedState.LastFinalizedEpoch() != uint64(4) {
-		t.Fatalf("unable to update last finalized epoch: %d", beaconChain.state.CrystallizedState.LastFinalizedEpoch())
+	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(4) {
+		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
 	}
 	if beaconChain.CrystallizedState().Validators()[0].Balance != uint64(1001) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)

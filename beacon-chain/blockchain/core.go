@@ -137,11 +137,9 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	return b.db.Put([]byte(crystallizedStateLookupKey), encodedState)
 }
 
-// IsEpochTransition checks if the current slotNumber divided
-// by the epoch length (64 slots) is greater than the current epoch.
+// IsEpochTransition checks if it's epoch transition time.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
-	currentEpoch := b.state.CrystallizedState.EpochNumber()
-	return slotNumber >= (currentEpoch+1)*params.EpochLength
+	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.EpochLength
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
@@ -280,7 +278,7 @@ func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
 
 // calculateRewardsFFG adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
-func (b *BeaconChain) calculateRewardsFFG() error {
+func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	validators := b.CrystallizedState().Validators()
@@ -294,8 +292,8 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
 	if attesterFactor >= totalFactor {
-		log.Info("Setting justified epoch to current epoch: %v", b.CrystallizedState().EpochNumber())
-		b.state.CrystallizedState.UpdateJustifiedEpoch()
+		log.Info("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		b.state.CrystallizedState.UpdateJustifiedSlot(block.SlotNumber())
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
 

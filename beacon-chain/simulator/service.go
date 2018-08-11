@@ -128,11 +128,11 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.WithField("currentSlot", block.SlotNumber()).Info("Current slot")
 
 			// Is it epoch transition time?
-			if block.SlotNumber()/params.EpochLength > crystallizedState.EpochNumber() {
-				crystallizedState.SetLastJustifiedEpoch(crystallizedState.EpochNumber() + 1)
-				crystallizedState.UpdateJustifiedEpoch()
-				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedEpoch()).Info("Last justified epoch")
-				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedEpoch()).Info("Last finalized epoch")
+			if block.SlotNumber() >= crystallizedState.LastStateRecalc()+params.EpochLength {
+				crystallizedState.SetLastJustifiedSlot(block.SlotNumber())
+				crystallizedState.UpdateJustifiedSlot(block.SlotNumber())
+				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedSlot()).Info("Last justified epoch")
+				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedSlot()).Info("Last finalized epoch")
 
 				h, err := crystallizedState.Hash()
 				if err != nil {

@@ -476,12 +476,12 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	}()
 
 	data1 := &pb.CrystallizedState{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 99,
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 99,
 	}
 	data2 := &pb.CrystallizedState{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 98,
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 98,
 	}
 
 	responseState1 := &pb.CrystallizedStateResponse{
@@ -607,8 +607,8 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	}()
 
 	data := &pb.CrystallizedState{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 99,
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 99,
 	}
 
 	responseState := &pb.CrystallizedStateResponse{
@@ -764,7 +764,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	generichash[0] = 'a'
 
 	crystallizedState := &pb.CrystallizedState{
-		LastFinalizedEpoch: 99,
+		LastFinalizedSlot: 99,
 	}
 
 	stateResponse := &pb.CrystallizedStateResponse{
@@ -772,8 +772,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.CrystallizedState{
-		LastFinalizedEpoch: 9,
-		LastJustifiedEpoch: 20,
+		LastFinalizedSlot: 9,
+		LastJustifiedSlot: 20,
 	}
 
 	incorrectStateResponse := &pb.CrystallizedStateResponse{
@@ -809,7 +809,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.blockBuf <- msg1
 	ss.crystallizedStateBuf <- msg2
 
-	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedEpoch {
+	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
 		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
 	}
 
@@ -825,8 +825,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	msg1.Data = blockResponse
 	ss.blockBuf <- msg1
 
-	if stateResponse.CrystallizedState.GetLastFinalizedEpoch() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedEpoch())
+	if stateResponse.CrystallizedState.GetLastFinalizedSlot() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedSlot())
 	}
 
 	blockResponse.Block.SlotNumber = 100
@@ -861,7 +861,7 @@ func TestDelayChan(t *testing.T) {
 	generichash[0] = 'a'
 
 	crystallizedstate := &pb.CrystallizedState{
-		LastFinalizedEpoch: 99,
+		LastFinalizedSlot: 99,
 	}
 
 	stateResponse := &pb.CrystallizedStateResponse{

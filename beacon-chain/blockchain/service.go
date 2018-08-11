@@ -221,7 +221,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
 			if transition {
-				if err := c.chain.calculateRewardsFFG(); err != nil {
+				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
 				}
 			}

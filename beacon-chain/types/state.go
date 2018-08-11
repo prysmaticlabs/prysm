@@ -13,8 +13,8 @@ type ActiveState struct {
 	data *pb.ActiveState
 }
 
-// CrystallizedState contains fields of every epoch state,
-// it changes every epoch.
+// CrystallizedState contains fields of every Slot state,
+// it changes every Slot.
 type CrystallizedState struct {
 	data *pb.CrystallizedState
 }
@@ -39,18 +39,18 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	}
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedState{
-			EpochNumber:            0,
+			LastStateRecalc:        0,
 			JustifiedStreak:        0,
-			LastJustifiedEpoch:     0,
-			LastFinalizedEpoch:     0,
+			LastJustifiedSlot:      0,
+			LastFinalizedSlot:      0,
 			CurrentDynasty:         0,
 			CrosslinkingStartShard: 0,
-			CurrentCheckPoint:      []byte{},
 			TotalDeposits:          0,
 			DynastySeed:            []byte{},
 			DynastySeedLastReset:   0,
+			CrosslinkRecords:       []*pb.CrosslinkRecord{},
 			Validators:             []*pb.ValidatorRecord{},
-			IndicesForHeights:      []*pb.ArrayShardAndIndices{},
+			IndicesForHeights:      []*pb.ShardAndCommitteeArray{},
 		},
 	}
 	return active, crystallized
@@ -132,9 +132,9 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 	return blake2b.Sum256(data), nil
 }
 
-// EpochNumber returns current epoch number.
-func (c *CrystallizedState) EpochNumber() uint64 {
-	return c.data.EpochNumber
+// LastStateRecalc returns when the last time crystallized state recalculated.
+func (c *CrystallizedState) LastStateRecalc() uint64 {
+	return c.data.LastStateRecalc
 }
 
 // JustifiedStreak returns number of consecutive justified slots ending at head.
@@ -152,24 +152,24 @@ func (c *CrystallizedState) CrosslinkingStartShard() uint64 {
 	return c.data.CrosslinkingStartShard
 }
 
-// LastJustifiedEpoch return the last justified epoch of the beacon chain.
-func (c *CrystallizedState) LastJustifiedEpoch() uint64 {
-	return c.data.LastJustifiedEpoch
+// LastJustifiedSlot return the last justified slot of the beacon chain.
+func (c *CrystallizedState) LastJustifiedSlot() uint64 {
+	return c.data.LastJustifiedSlot
 }
 
-// SetLastJustifiedEpoch sets the last justified epoch of the beacon chain.
-func (c *CrystallizedState) SetLastJustifiedEpoch(epoch uint64) {
-	c.data.LastJustifiedEpoch = epoch
+// SetLastJustifiedSlot sets the last justified Slot of the beacon chain.
+func (c *CrystallizedState) SetLastJustifiedSlot(Slot uint64) {
+	c.data.LastJustifiedSlot = Slot
 }
 
-// LastFinalizedEpoch returns the last finalized epoch of the beacon chain.
-func (c *CrystallizedState) LastFinalizedEpoch() uint64 {
-	return c.data.LastFinalizedEpoch
+// LastFinalizedSlot returns the last finalized Slot of the beacon chain.
+func (c *CrystallizedState) LastFinalizedSlot() uint64 {
+	return c.data.LastFinalizedSlot
 }
 
-// SetLastFinalizedEpoch sets last justified epoch of the beacon chain.
-func (c *CrystallizedState) SetLastFinalizedEpoch(epoch uint64) {
-	c.data.LastFinalizedEpoch = epoch
+// SetLastFinalizedSlot sets last justified Slot of the beacon chain.
+func (c *CrystallizedState) SetLastFinalizedSlot(Slot uint64) {
+	c.data.LastFinalizedSlot = Slot
 }
 
 // CurrentDynasty returns the current dynasty of the beacon chain.
@@ -192,17 +192,12 @@ func (c *CrystallizedState) SetTotalDeposits(total uint64) {
 	c.data.TotalDeposits = total
 }
 
-// CurrentCheckPoint returns the current checkpoint for the FFG state.
-func (c *CrystallizedState) CurrentCheckPoint() common.Hash {
-	return common.BytesToHash(c.data.CurrentCheckPoint)
-}
-
 // DynastySeed is used to select the committee for each shard.
 func (c *CrystallizedState) DynastySeed() common.Hash {
 	return common.BytesToHash(c.data.DynastySeed)
 }
 
-// DynastySeedLastReset is the last finalized epoch that the crosslink seed was reset.
+// DynastySeedLastReset is the last finalized Slot that the crosslink seed was reset.
 func (c *CrystallizedState) DynastySeedLastReset() uint64 {
 	return c.data.DynastySeedLastReset
 }
@@ -224,21 +219,26 @@ func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 
 // IndicesForHeights returns what active validators are part of the attester set
 // at what height, and in what shard.
-func (c *CrystallizedState) IndicesForHeights() []*pb.ArrayShardAndIndices {
+func (c *CrystallizedState) IndicesForHeights() []*pb.ShardAndCommitteeArray {
 	return c.data.IndicesForHeights
 }
 
 // ClearIndicesForHeights clears the IndicesForHeights set.
 func (c *CrystallizedState) ClearIndicesForHeights() {
-	c.data.IndicesForHeights = []*pb.ArrayShardAndIndices{}
+	c.data.IndicesForHeights = []*pb.ShardAndCommitteeArray{}
 }
 
-// UpdateJustifiedEpoch updates the justified epoch during an epoch transition.
-func (c *CrystallizedState) UpdateJustifiedEpoch() {
-	epoch := c.LastJustifiedEpoch()
-	c.SetLastJustifiedEpoch(c.EpochNumber())
+// CrosslinkRecords returns records about the most recent cross link or each shard.
+func (c *CrystallizedState) CrosslinkRecords() []*pb.CrosslinkRecord {
+	return c.data.CrosslinkRecords
+}
 
-	if c.EpochNumber() == (epoch + 1) {
-		c.SetLastFinalizedEpoch(epoch)
+// UpdateJustifiedSlot updates the justified and finalized Slot during an epoch transition.
+func (c *CrystallizedState) UpdateJustifiedSlot(currentSlot uint64) {
+	slot := c.LastJustifiedSlot()
+	c.SetLastJustifiedSlot(currentSlot)
+
+	if currentSlot == (slot + 1) {
+		c.SetLastFinalizedSlot(slot)
 	}
 }

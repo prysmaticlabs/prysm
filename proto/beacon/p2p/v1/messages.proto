@@ -44,22 +44,22 @@ message CrystallizedStateResponse {
 }
 
 message CrystallizedState {
-  uint64 epoch_number = 1;
+  uint64 last_state_recalc = 1;
   uint64 justified_streak = 2;
-  uint64 last_justified_epoch = 3;
-  uint64 last_finalized_epoch = 4;
+  uint64 last_justified_slot = 3;
+  uint64 last_finalized_slot = 4;
   uint64 current_dynasty = 5;
   uint64 crosslinking_start_shard = 6;
-  bytes current_check_point = 7;
-  uint64 total_deposits = 8;
-  bytes dynasty_seed = 9;
-  uint64 dynasty_seed_last_reset = 10;
+  uint64 total_deposits = 7;
+  bytes dynasty_seed = 8;
+  uint64 dynasty_seed_last_reset = 9;
+  repeated CrosslinkRecord crosslink_records = 10;
   repeated ValidatorRecord validators = 11;
-  repeated ArrayShardAndIndices indices_for_heights = 12;
+  repeated ShardAndCommitteeArray indices_for_heights = 12;
 }
 
-message ArrayShardAndIndices {
-  repeated ShardAndIndices array_shard_and_indices = 1;
+message ShardAndCommitteeArray {
+  repeated ShardAndCommittee array_shard_and_committee = 1;
 }
 
 message ActiveStateHashAnnounce {
@@ -70,9 +70,9 @@ message ActiveStateRequest {
   bytes hash = 1;
 }
 
-message ShardAndIndices {
+message ShardAndCommittee {
   uint64 shard_id = 1;
-  repeated uint32 validators = 2;
+  repeated uint32 committee = 2;
 }
 
 message ActiveStateResponse {
@@ -82,13 +82,6 @@ message ActiveStateResponse {
 message ActiveState {
   repeated AttestationRecord pending_attestations = 1;
   repeated bytes recent_block_hashes = 2;
-}
-
-message AggregateVote {
-  uint32 shard_id = 1;
-  bytes shard_block_hash = 2;
-  bytes signer_bitmask = 3;
-  repeated uint32 aggregate_sig = 4;
 }
 
 message ValidatorRecord {
@@ -108,4 +101,9 @@ message AttestationRecord {
   bytes attester_bitfield = 4;
   repeated bytes oblique_parent_hashes = 5;
   repeated uint64 aggregate_sig = 6;
+}
+
+message CrosslinkRecord {
+  uint64 dynasty = 1;
+  bytes blockhash = 2;
 }
