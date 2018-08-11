@@ -1,5 +1,4 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-load("@com_github_jmhodges_bazel_gomock//:gomock.bzl", "gomock")
 
 go_library(
     name = "go_default_library",
@@ -14,10 +13,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "mock_beacon_service_test.go",
-        "service_test.go",
-    ],
+    srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",  #keep
@@ -27,15 +23,4 @@ go_test(
         "@org_golang_google_grpc//:go_default_library",  #keep
         "@org_golang_google_grpc//metadata:go_default_library",  #keep
     ],
-)
-
-gomock(
-    name = "mock_beacon_service_test",
-    out = "mock_beacon_service_test.go",
-    interfaces = [
-        "BeaconServiceClient",
-        "BeaconService_LatestBeaconBlockClient",
-    ],
-    library = "//proto/beacon/rpc/v1:go_default_library",
-    package = "attester",
 )
