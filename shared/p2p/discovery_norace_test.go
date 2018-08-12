@@ -24,6 +24,18 @@ func (f *fakeTopicPeerLister) ListPeers(topic string) []peer.ID {
 	return nil
 }
 
+func expectPeers(t *testing.T, h *bhost.BasicHost, n int) {
+	if len(h.Peerstore().Peers()) != n {
+		t.Errorf(
+			"Expected %d peer for host %v, but has %d peers. They are: %v.",
+			n,
+			h.ID(),
+			len(h.Peerstore().Peers()),
+			h.Peerstore().Peers(),
+		)
+	}
+}
+
 func TestStartDiscovery_HandlePeerFound(t *testing.T) {
 	discoveryInterval = 50 * time.Millisecond // Short interval for testing.
 
@@ -49,16 +61,4 @@ func TestStartDiscovery_HandlePeerFound(t *testing.T) {
 
 	expectPeers(t, a, 2)
 	expectPeers(t, b, 2)
-}
-
-func expectPeers(t *testing.T, h *bhost.BasicHost, n int) {
-	if len(h.Peerstore().Peers()) != n {
-		t.Errorf(
-			"Expected %d peer for host %v, but has %d peers. They are: %v.",
-			n,
-			h.ID(),
-			len(h.Peerstore().Peers()),
-			h.Peerstore().Peers(),
-		)
-	}
 }
