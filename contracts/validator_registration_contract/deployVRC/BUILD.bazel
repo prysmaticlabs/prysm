@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["deployVRC.go"],
-    importpath = "github.com/prysmaticlabs/prysm/contracts/deployVRC",
+    importpath = "github.com/prysmaticlabs/prysm/contracts/validator_registration_contract/deployVRC",
     visibility = ["//visibility:private"],
     deps = [
         "//contracts:go_default_library",
