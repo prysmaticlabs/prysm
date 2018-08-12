@@ -1,4 +1,4 @@
-package contracts
+package vrc
 
 import (
 	"crypto/ecdsa"
