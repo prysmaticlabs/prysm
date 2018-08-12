@@ -19,7 +19,22 @@ type Block struct {
 }
 
 // NewBlock explicitly sets the data field of a block.
+// Return block with default fields if data is nil.
 func NewBlock(data *pb.BeaconBlock) (*Block, error) {
+	if data == nil {
+		return &Block{
+			data: &pb.BeaconBlock{
+				ParentHash:            []byte{0},
+				SlotNumber:            0,
+				RandaoReveal:          []byte{0},
+				Attestations:          []*pb.AttestationRecord{},
+				PowChainRef:           []byte{0},
+				ActiveStateHash:       []byte{0},
+				CrystallizedStateHash: []byte{0},
+			},
+		}, nil
+	}
+
 	if len(data.ParentHash) != 32 {
 		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
 	}
@@ -78,22 +93,27 @@ func (b *Block) PowChainRef() common.Hash {
 // RandaoReveal returns the blake2b randao hash.
 func (b *Block) RandaoReveal() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.RandaoReveal[:32])
+	copy(h[:], b.data.RandaoReveal)
 	return h
 }
 
 // ActiveStateHash returns the active state hash.
 func (b *Block) ActiveStateHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ActiveStateHash[:32])
+	copy(h[:], b.data.ActiveStateHash)
 	return h
 }
 
 // CrystallizedStateHash returns the crystallized state hash.
 func (b *Block) CrystallizedStateHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.CrystallizedStateHash[:32])
+	copy(h[:], b.data.CrystallizedStateHash)
 	return h
+}
+
+// AttestationCount returns the number of attestations.
+func (b *Block) AttestationCount() int {
+	return len(b.data.Attestations)
 }
 
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.

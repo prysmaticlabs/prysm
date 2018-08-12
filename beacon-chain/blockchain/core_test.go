@@ -110,7 +110,7 @@ func TestSetCrystallizedState(t *testing.T) {
 
 	data := &pb.CrystallizedState{
 		CurrentDynasty: 3,
-		DynastySeed:    []byte("seed"),
+		DynastySeed:    []byte{'A'},
 	}
 	crystallized := types.NewCrystallizedState(data)
 
@@ -131,8 +131,8 @@ func TestSetCrystallizedState(t *testing.T) {
 	if crystallized.CurrentDynasty() != newBeaconChain.state.CrystallizedState.CurrentDynasty() {
 		t.Errorf("crystallized state dynasty incorrect. wanted %v, got %v", crystallized.CurrentDynasty(), newBeaconChain.state.CrystallizedState.CurrentDynasty())
 	}
-	if crystallized.DynastySeed().Hex() != newBeaconChain.state.CrystallizedState.DynastySeed().Hex() {
-		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.DynastySeed().Hex(), newBeaconChain.state.CrystallizedState.DynastySeed().Hex())
+	if crystallized.DynastySeed() != newBeaconChain.state.CrystallizedState.DynastySeed() {
+		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.DynastySeed(), newBeaconChain.state.CrystallizedState.DynastySeed())
 	}
 }
 

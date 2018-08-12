@@ -56,6 +56,18 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	return active, crystallized
 }
 
+// NewAttestationRecord initializes an attestation record with default parameters.
+func NewAttestationRecord() *pb.AttestationRecord {
+	return &pb.AttestationRecord{
+		Slot:                0,
+		ShardId:             0,
+		ObliqueParentHashes: [][]byte{},
+		ShardBlockHash:      []byte{0},
+		AttesterBitfield:    nil,
+		AggregateSig:        []uint64{0, 0},
+	}
+}
+
 // Proto returns the underlying protobuf data within a state primitive.
 func (a *ActiveState) Proto() *pb.ActiveState {
 	return a.data
@@ -98,7 +110,7 @@ func (a *ActiveState) ClearPendingAttestations() {
 	}
 }
 
-// RecentBlockHashes returns the most recent 64 block hashes.
+// RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
 func (a *ActiveState) RecentBlockHashes() []common.Hash {
 	var blockhashes []common.Hash
 	for _, hash := range a.data.RecentBlockHashes {
@@ -193,8 +205,10 @@ func (c *CrystallizedState) SetTotalDeposits(total uint64) {
 }
 
 // DynastySeed is used to select the committee for each shard.
-func (c *CrystallizedState) DynastySeed() common.Hash {
-	return common.BytesToHash(c.data.DynastySeed)
+func (c *CrystallizedState) DynastySeed() [32]byte {
+	var h [32]byte
+	copy(h[:], c.data.DynastySeed)
+	return h
 }
 
 // DynastySeedLastReset is the last finalized Slot that the crosslink seed was reset.
@@ -233,7 +247,7 @@ func (c *CrystallizedState) CrosslinkRecords() []*pb.CrosslinkRecord {
 	return c.data.CrosslinkRecords
 }
 
-// UpdateJustifiedSlot updates the justified and finalized Slot during an epoch transition.
+// UpdateJustifiedSlot updates the justified and finalized Slot during a dynasty transition.
 func (c *CrystallizedState) UpdateJustifiedSlot(currentSlot uint64) {
 	slot := c.LastJustifiedSlot()
 	c.SetLastJustifiedSlot(currentSlot)
