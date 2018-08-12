@@ -785,21 +785,25 @@ func TestSavingBlocksInSync(t *testing.T) {
 		t.Fatalf("unable to get hash of crystallized state: %v", err)
 	}
 
-	block := &pb.BeaconBlock{
-		MainChainRef:          []byte{1, 2, 3},
-		ParentHash:            generichash,
-		SlotNumber:            uint64(20),
-		CrystallizedStateHash: crystallizedStateHash[:],
+	getBlockResponseMsg := func(slotNumber uint64) p2p.Message {
+		block := &pb.BeaconBlock{
+			MainChainRef:          []byte{1, 2, 3},
+			ParentHash:            generichash,
+			SlotNumber:            slotNumber,
+			CrystallizedStateHash: crystallizedStateHash[:],
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: block,
+		}
+
+		return p2p.Message{
+			Peer: p2p.Peer{},
+			Data: blockResponse,
+		}
 	}
 
-	blockResponse := &pb.BeaconBlockResponse{
-		Block: block,
-	}
-
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse,
-	}
+	msg1 := getBlockResponseMsg(0)
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
@@ -818,24 +822,25 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.crystallizedStateBuf <- msg2
 
 	if crystallizedStateHash != ss.initialCrystallizedStateHash {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
+		br := msg1.Data.(*pb.BeaconBlockResponse)
+		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateHash)
 	}
 
-	blockResponse.Block.SlotNumber = 30
-	msg1.Data = blockResponse
+	msg1 = getBlockResponseMsg(30)
 	ss.blockBuf <- msg1
 
 	if stateResponse.CrystallizedState.GetLastFinalizedEpoch() != ss.currentSlotNumber {
 		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedEpoch())
 	}
 
-	blockResponse.Block.SlotNumber = 100
+	msg1 = getBlockResponseMsg(100)
 	ss.blockBuf <- msg1
 
 	ss.cancel()
 	<-exitRoutine
 
-	if blockResponse.Block.GetSlotNumber() != ss.currentSlotNumber {
+	br := msg1.Data.(*pb.BeaconBlockResponse)
+	if br.Block.GetSlotNumber() != ss.currentSlotNumber {
 		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", ss.currentSlotNumber)
 	}
 
