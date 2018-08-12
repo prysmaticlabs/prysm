@@ -34,7 +34,7 @@ type beaconState struct {
 	CrystallizedState *types.CrystallizedState
 }
 
-// NewBeaconChain initializes an instance using genesis state parameters if
+// NewBeaconChain initializes a beacon chain using genesis state parameters if
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	beaconChain := &BeaconChain{
@@ -88,33 +88,33 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock()
 }
 
-// ActiveState exposes a getter to external services.
+// ActiveState contains the current state of attestations and changes every block.
 func (b *BeaconChain) ActiveState() *types.ActiveState {
 	return b.state.ActiveState
 }
 
-// CrystallizedState exposes a getter to external services.
+// CrystallizedState contains epoch dependent validator information, changes every epoch.
 func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
 
-// MutateActiveState allows external services to modify the active state.
-func (b *BeaconChain) MutateActiveState(activeState *types.ActiveState) error {
+// SetActiveState is a convenience method which sets and persists the active state on the beacon chain.
+func (b *BeaconChain) SetActiveState(activeState *types.ActiveState) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.state.ActiveState = activeState
 	return b.PersistActiveState()
 }
 
-// MutateCrystallizedState allows external services to modify the crystallized state.
-func (b *BeaconChain) MutateCrystallizedState(crystallizedState *types.CrystallizedState) error {
+// SetCrystallizedState is a convenience method which sets and persists the crystallized state on the beacon chain.
+func (b *BeaconChain) SetCrystallizedState(crystallizedState *types.CrystallizedState) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.state.CrystallizedState = crystallizedState
 	return b.PersistCrystallizedState()
 }
 
-// PersistActiveState stores proto encoding of the latest beacon chain active state into the db.
+// PersistActiveState stores proto encoding of the current beacon chain active state into the db.
 func (b *BeaconChain) PersistActiveState() error {
 	encodedState, err := b.ActiveState().Marshal()
 	if err != nil {
@@ -123,7 +123,7 @@ func (b *BeaconChain) PersistActiveState() error {
 	return b.db.Put([]byte(activeStateLookupKey), encodedState)
 }
 
-// PersistCrystallizedState stores proto encoding of the latest beacon chain crystallized state into the db.
+// PersistCrystallizedState stores proto encoding of the current beacon chain crystallized state into the db.
 func (b *BeaconChain) PersistCrystallizedState() error {
 	encodedState, err := b.CrystallizedState().Marshal()
 	if err != nil {
@@ -132,8 +132,8 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	return b.db.Put([]byte(crystallizedStateLookupKey), encodedState)
 }
 
-// IsEpochTransition checks if the current slotNumber divided by the epoch length(64 slots)
-// is greater than the current epoch.
+// IsEpochTransition checks if the current slotNumber divided
+// by the epoch length (64 slots) is greater than the current epoch.
 func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	currentEpoch := b.state.CrystallizedState.CurrentEpoch()
 	isTransition := (slotNumber / params.EpochLength) > currentEpoch
@@ -148,11 +148,11 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 
 	// Check if the parentHash pointed by the beacon block is in the beaconDB.
 	parentHash := block.ParentHash()
-	val, err := b.db.Get(parentHash[:])
+	hasParent, err := b.db.Has(parentHash[:])
 	if err != nil {
 		return false, err
 	}
-	if val == nil {
+	if !hasParent {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 
@@ -288,7 +288,7 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
 		for i := range activeValidators {
-			voted, err := b.voted(i)
+			voted, err := b.hasAttesterAtIndexVoted(i)
 			if err != nil {
 				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
 			}
@@ -305,7 +305,7 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 		log.Info("Resetting total attester deposit to zero")
 		b.ActiveState().SetTotalAttesterDeposits(0)
 
-		b.CrystallizedState().UpdateActiveValidators(activeValidators)
+		b.CrystallizedState().SetActiveValidators(activeValidators)
 		err := b.PersistActiveState()
 		if err != nil {
 			return err
@@ -318,8 +318,8 @@ func (b *BeaconChain) calculateRewardsFFG() error {
 	return nil
 }
 
-// voted checks if a validator has voted by comparing its bit field.
-func (b *BeaconChain) voted(index int) (bool, error) {
+// hasAttesterAtIndexVoted checks if the attester at the passed index has voted by comparing its bit field.
+func (b *BeaconChain) hasAttesterAtIndexVoted(index int) (bool, error) {
 	bitfield := b.state.ActiveState.AttesterBitfield()
 	attesterBlock := (index + 1) / 8
 	attesterFieldIndex := (index + 1) % 8
@@ -347,6 +347,7 @@ func (b *BeaconChain) resetAttesterBitfield() {
 	b.state.ActiveState.SetAttesterBitfield(newbitfields)
 }
 
+// saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
 	encodedState, err := block.Marshal()
 	if err != nil {

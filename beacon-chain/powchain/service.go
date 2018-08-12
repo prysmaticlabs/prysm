@@ -1,3 +1,4 @@
+// Package powchain defines the services that interact with the PoWChain of Ethereum.
 package powchain
 
 import (
@@ -46,7 +47,7 @@ type Web3ServiceConfig struct {
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
-// given a web3 endpoint as a string.
+// given a web3 endpoint as a string in the config.
 func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
@@ -89,6 +90,7 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
+// run subscribes to all the services for the powchain.
 func (w *Web3Service) run(done <-chan struct{}) {
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
@@ -140,22 +142,22 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	}
 }
 
-// LatestBlockNumber is a getter for blockNumber to make it read-only.
+// LatestBlockNumber in the PoWChain.
 func (w *Web3Service) LatestBlockNumber() *big.Int {
 	return w.blockNumber
 }
 
-// LatestBlockHash is a getter for blockHash to make it read-only.
+// LatestBlockHash in the PoWChain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// ValidatorRegistered is a getter for validatorRegistered to make it read-only.
-func (w *Web3Service) ValidatorRegistered() bool {
+// IsValidatorRegistered in the PoWChain.
+func (w *Web3Service) IsValidatorRegistered() bool {
 	return w.validatorRegistered
 }
 
-// Client returns the underlying web3 client.
+// Client for interacting with the PoWChain.
 func (w *Web3Service) Client() types.POWChainClient {
 	return w.client
 }

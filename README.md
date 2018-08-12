@@ -4,10 +4,10 @@
 
 This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
 
-Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Gitter below:
+Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Discord or Gitter below:
 
+[![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
 
 Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
 
@@ -126,18 +126,6 @@ bazel run //client -- \
 ```
 
 This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals on shard 0 (collation headers) to the SMC via the `addHeader` function.
-
-## Running an Observer Node
-
-```
-bazel run //client -- \
-   --datadir /path/to/your/datadir \
-   --password /path/to/your/password.txt \
-   --shardid 0 \
-   --networkid 12345
-```
-
-Omitting the `--actor` flag will launch a simple observer service attached to the sharding client that is able to listen to changes happening throughout the sharded Ethereum network on shard 0.
 
 ## Running via Docker
 

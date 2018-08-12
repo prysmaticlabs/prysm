@@ -1,3 +1,4 @@
+// Package node defines the services that a beacon chain node would perform.
 package node
 
 import (
@@ -38,9 +39,9 @@ type BeaconNode struct {
 	db       *database.DB
 }
 
-// New creates a new node instance, sets up configuration options, and registers
+// NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(ctx *cli.Context) (*BeaconNode, error) {
+func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -149,7 +150,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
@@ -209,8 +210,12 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
+	cert := ctx.GlobalString(utils.CertFlag.Name)
+	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port: port,
+		Port:     port,
+		CertFlag: cert,
+		KeyFlag:  key,
 	})
 	return b.services.RegisterService(rpcService)
 }

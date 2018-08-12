@@ -1,3 +1,4 @@
+// Package sync defines the utilities for the beacon-chain to sync with the network.
 package sync
 
 import (
@@ -120,7 +121,7 @@ func (ss *Service) Start() {
 	switch ss.syncMode {
 	case 0:
 		log.Info("Starting initial sync")
-		go ss.initialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
+		go ss.runInitialSync(time.NewTicker(ss.syncPollingInterval).C, ss.ctx.Done())
 	default:
 		go ss.run(ss.ctx.Done())
 
@@ -208,6 +209,8 @@ func (ss *Service) ReceiveCrystallizedState(data *pb.CrystallizedState) error {
 // ReceiveActiveStateHash accepts a active state hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the active hash are requested if the local chain doesn't have the hash.
+//
+// TODO: implement hash forwarding
 func (ss *Service) ReceiveActiveStateHash(data *pb.ActiveStateHashAnnounce, peer p2p.Peer) {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
@@ -222,6 +225,8 @@ func (ss *Service) ReceiveActiveStateHash(data *pb.ActiveStateHashAnnounce, peer
 
 // ReceiveActiveState accepts a active state object to potentially be included in the local chain.
 // The service will filter active state objects that have not been requested (unimplemented).
+//
+// TODO: implement filter for non requested state objects.
 func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
 	state := types.NewActiveState(data)
 
@@ -311,7 +316,7 @@ func (ss *Service) writeBlockToDB(block *types.Block) error {
 	return ss.chainService.SaveBlock(block)
 }
 
-func (ss *Service) initialSync(delaychan <-chan time.Time, done <-chan struct{}) {
+func (ss *Service) runInitialSync(delaychan <-chan time.Time, done <-chan struct{}) {
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
 	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
 
