@@ -12,14 +12,11 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/prysm/client/attester"
 	"github.com/prysmaticlabs/prysm/client/beacon"
-	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/proposer"
 	"github.com/prysmaticlabs/prysm/client/rpcclient"
-	"github.com/prysmaticlabs/prysm/client/syncer"
 	"github.com/prysmaticlabs/prysm/client/txpool"
 	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -68,17 +65,8 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerMainchainClient(ctx); err != nil {
-		return nil, err
-	}
-
 	actorFlag := ctx.GlobalString(types.ActorFlag.Name)
 	if err := shardEthereum.registerTXPool(actorFlag); err != nil {
-		return nil, err
-	}
-
-	shardIDFlag := ctx.GlobalInt(types.ShardIDFlag.Name)
-	if err := shardEthereum.registerSyncerService(shardEthereum.shardConfig, shardIDFlag); err != nil {
 		return nil, err
 	}
 
@@ -163,34 +151,8 @@ func (s *ShardEthereum) registerP2P() error {
 	return s.services.RegisterService(shardp2p)
 }
 
-// registerMainchainClient registers the mainchain client to the shard services.
-func (s *ShardEthereum) registerMainchainClient(ctx *cli.Context) error {
-	path := node.DefaultDataDir()
-	if ctx.GlobalIsSet(cmd.DataDirFlag.Name) {
-		path = ctx.GlobalString(cmd.DataDirFlag.Name)
-	}
-
-	endpoint := ctx.Args().First()
-	if endpoint == "" {
-		endpoint = fmt.Sprintf("%s/%s.ipc", path, mainchain.ClientIdentifier)
-	}
-	if ctx.GlobalIsSet(cmd.RPCProviderFlag.Name) {
-		endpoint = ctx.GlobalString(cmd.RPCProviderFlag.Name)
-	} else if ctx.GlobalIsSet(cmd.IPCPathFlag.Name) {
-		endpoint = ctx.GlobalString(cmd.IPCPathFlag.Name)
-	}
-	passwordFile := ctx.GlobalString(cmd.PasswordFileFlag.Name)
-	depositFlag := ctx.GlobalBool(types.DepositFlag.Name)
-
-	client, err := mainchain.NewSMCClient(endpoint, path, depositFlag, passwordFile)
-	if err != nil {
-		return fmt.Errorf("could not register smc client service: %v", err)
-	}
-	return s.services.RegisterService(client)
-}
-
-// registerTXPool is only relevant to proposers in the sharded system. It will
-// spin up a transaction pool that will relay incoming transactions via an
+// registerTXPool creates a service that
+// can spin up a transaction pool that will relay incoming transactions via an
 // event feed. For our first releases, this can just relay test/fake transaction data
 // the proposer can serialize into collation blobs.
 // TODO: design this txpool system for our first release.
@@ -236,25 +198,6 @@ func (s *ShardEthereum) registerActorService(actor string) error {
 		return s.services.RegisterService(prop)
 	}
 	return nil
-}
-
-// registerSyncerService adds the p2p and mainchain services to the syncer and
-// registers the syncer to the shard.
-func (s *ShardEthereum) registerSyncerService(config *params.Config, shardID int) error {
-	var shardp2p *p2p.Server
-	if err := s.services.FetchService(&shardp2p); err != nil {
-		return err
-	}
-	var client *mainchain.SMCClient
-	if err := s.services.FetchService(&client); err != nil {
-		return err
-	}
-
-	sync, err := syncer.NewSyncer(config, client, shardp2p, s.db, shardID)
-	if err != nil {
-		return fmt.Errorf("could not register syncer service: %v", err)
-	}
-	return s.services.RegisterService(sync)
 }
 
 // registerRPCClientService registers a new RPC client that connects to a beacon node.
