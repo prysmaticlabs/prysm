@@ -175,7 +175,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 			log.Infof("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{BeaconBlock: block.Proto()}
+			res := &pb.BeaconBlockResponse{Block: block.Proto()}
 			sim.p2p.Send(res, msg.Peer)
 
 		case msg := <-sim.crystallizedStateRequestChan:
