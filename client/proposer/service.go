@@ -49,8 +49,10 @@ func (p *Proposer) run(done <-chan struct{}) {
 		select {
 		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
+			return
 		case <-p.beaconService.ProposerAssignment():
-			log.Info("Performing proposal responsibility")
+			log.Info("Performing proposer responsibility")
+			continue
 		}
 	}
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/prysmaticlabs/prysm/client/attester"
-	beacon "github.com/prysmaticlabs/prysm/client/beacon-client"
+	"github.com/prysmaticlabs/prysm/client/beacon"
 	"github.com/prysmaticlabs/prysm/client/mainchain"
 	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/client/proposer"

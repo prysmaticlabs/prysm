@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var log = logrus.WithField("prefix", "beacon-client")
+var log = logrus.WithField("prefix", "beacon")
 
 // Service that interacts with a beacon node via RPC.
 type Service struct {

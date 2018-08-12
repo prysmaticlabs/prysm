@@ -49,8 +49,10 @@ func (at *Attester) run(done <-chan struct{}) {
 		select {
 		case <-done:
 			log.Debug("Attester context closed, exiting goroutine")
+			return
 		case <-at.beaconService.AttesterAssignment():
 			log.Info("Performing attestation responsibility")
+			continue
 		}
 	}
 }
