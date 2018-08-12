@@ -17,7 +17,6 @@ import (
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Ensure that server implements service.
@@ -26,34 +25,6 @@ var _ = shared.Service(&Server{})
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-}
-
-func TestLifecycle(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	s, err := NewServer()
-	if err != nil {
-		t.Fatalf("Could not start a new server: %v", err)
-	}
-
-	s.Start()
-	msg := hook.Entries[0].Message
-	want := "Starting service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
-
-	s.Stop()
-	msg = hook.LastEntry().Message
-	want = "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
-
-	// The context should have been cancelled.
-	if s.ctx.Err() == nil {
-		t.Error("Context was not cancelled")
-	}
 }
 
 func TestBroadcast(t *testing.T) {
