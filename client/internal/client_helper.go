@@ -5,9 +5,8 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -60,7 +59,7 @@ func (m *MockClient) SMCFilterer() *contracts.SMCFilterer {
 }
 
 // WaitForTransaction waits for a transaction.
-func (m *MockClient) WaitForTransaction(ctx context.Context, hash common.Hash, durationInSeconds time.Duration) error {
+func (m *MockClient) WaitForTransaction() error {
 	m.CommitWithBlock()
 	m.FastForward(1)
 	return nil
@@ -117,7 +116,7 @@ func (m *MockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 }
 
 // BlockByNumber creates a block with a given number.
-func (m *MockClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+func (m *MockClient) BlockByNumber() (*gethTypes.Block, error) {
 	return gethTypes.NewBlockWithHeader(&gethTypes.Header{Number: big.NewInt(m.BlockNumber)}), nil
 }
 

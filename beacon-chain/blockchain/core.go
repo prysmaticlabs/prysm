@@ -424,6 +424,3 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 
 	return b.db.Put(hash[:], encodedState)
 }
-
-// Slashing Condtions
-// TODO: Implement all the conditions and add in the methods once the spec is updated
