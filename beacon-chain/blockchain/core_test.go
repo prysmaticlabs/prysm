@@ -378,11 +378,11 @@ func TestRotateValidatorSet(t *testing.T) {
 	defer db.Close()
 
 	validators := []*pb.ValidatorRecord{
-		{Balance: 10000, StartDynasty: 0, EndDynasty: uint64(math.Inf(0))}, // half below default balance, should be moved to exit
-		{Balance: 15000, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // half below default balance, should be moved to exit
-		{Balance: 20000, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // stays in active
-		{Balance: 25000, StartDynasty: 3, EndDynasty: uint64(math.Inf(0))}, // stays in active
-		{Balance: 30000, StartDynasty: 4, EndDynasty: uint64(math.Inf(0))}, // stays in active
+		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit
+		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit
+		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active
+		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active
+		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active
 	}
 
 	data := &pb.CrystallizedState{
@@ -551,7 +551,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 1000, StartDynasty: 1, EndDynasty: 10}
+		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
 		validators = append(validators, validator)
 	}
 
@@ -562,7 +562,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	data := &pb.CrystallizedState{
 		Validators:        validators,
 		CurrentDynasty:    1,
-		TotalDeposits:     40000,
+		TotalDeposits:     100,
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}
@@ -585,13 +585,13 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(4) {
 		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
 	}
-	if beaconChain.CrystallizedState().Validators()[0].Balance != uint64(1001) {
+	if beaconChain.CrystallizedState().Validators()[0].Balance != uint64(33) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
 	}
-	if beaconChain.CrystallizedState().Validators()[7].Balance != uint64(999) {
+	if beaconChain.CrystallizedState().Validators()[7].Balance != uint64(31) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
 	}
-	if beaconChain.CrystallizedState().Validators()[29].Balance != uint64(999) {
+	if beaconChain.CrystallizedState().Validators()[29].Balance != uint64(31) {
 		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
 	}
 }
