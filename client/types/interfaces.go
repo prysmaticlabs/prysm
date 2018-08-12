@@ -14,6 +14,13 @@ type Node interface {
 	Close()
 }
 
+// BeaconClient defines a service that interacts with a beacon node via RPC to determine
+// attestation/proposal responsibilities.
+type BeaconClient interface {
+	AttesterAssignment() <-chan bool
+	ProposerAssignment() <-chan bool
+}
+
 // Actor refers to either a attester, proposer in the sharding spec.
 type Actor interface {
 	shared.Service
