@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/prysm/client/params"
 )
 
 type smcTestHelper struct {
@@ -33,6 +32,8 @@ var (
 	attesterDepositInsufficient, _ = new(big.Int).SetString("999000000000000000000", 10)
 	attesterDeposit, _             = new(big.Int).SetString("1000000000000000000000", 10)
 	ctx                            = context.Background()
+	periodLength                   = 5
+	attesterLockupLength           = 16128
 )
 
 // newSMCTestHelper is a helper function to initialize backend with the n test accounts,
@@ -67,7 +68,7 @@ func deploySMCContract(backend *backends.SimulatedBackend, key *ecdsa.PrivateKey
 
 // fastForward is a helper function to skip through n period.
 func (s *smcTestHelper) fastForward(p int) {
-	for i := 0; i < p*int(params.DefaultPeriodLength); i++ {
+	for i := 0; i < p*int(periodLength); i++ {
 		s.backend.Commit()
 	}
 }
@@ -171,7 +172,7 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 
 	// Filter SMC logs by headerAdded.
 	shardIndex := []*big.Int{shard}
-	logPeriod := uint64(period.Int64() * params.DefaultPeriodLength)
+	logPeriod := uint64(period.Int64() * int64(periodLength))
 	log, err := s.smc.FilterHeaderAdded(&bind.FilterOpts{Start: logPeriod}, shardIndex)
 	if err != nil {
 		return err
@@ -203,7 +204,7 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 	}
 	// Filter SMC logs by submitVote.
 	shardIndex := []*big.Int{shard}
-	logPeriod := uint64(period.Int64() * params.DefaultPeriodLength)
+	logPeriod := uint64(period.Int64() * int64(periodLength))
 	log, err := s.smc.FilterVoteSubmitted(&bind.FilterOpts{Start: logPeriod}, shardIndex)
 	if err != nil {
 		return err
@@ -383,7 +384,7 @@ func TestAttesterRelease(t *testing.T) {
 	}
 
 	// Fast forward until lockup ends.
-	s.fastForward(int(params.DefaultAttesterLockupLength + 1))
+	s.fastForward(int(attesterLockupLength + 1))
 
 	// Attester 0 releases.
 	_, err = s.smc.ReleaseAttester(s.testAccounts[0].txOpts)

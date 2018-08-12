@@ -3,6 +3,9 @@ package internal
 
 import (
 	"context"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -11,8 +14,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	shardparams "github.com/prysmaticlabs/prysm/client/params"
-	"math/big"
-	"testing"
 )
 
 var (
