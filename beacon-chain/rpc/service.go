@@ -8,6 +8,7 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -18,12 +19,13 @@ var log = logrus.WithField("prefix", "rpc")
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
-	port     string
-	listener net.Listener
-	withCert string
-	withKey  string
+	ctx       context.Context
+	cancel    context.CancelFunc
+	announcer types.CanonicalEventAnnouncer
+	port      string
+	listener  net.Listener
+	withCert  string
+	withKey   string
 }
 
 // Config options for the beacon node RPC server.
@@ -35,14 +37,15 @@ type Config struct {
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config) *Service {
+func NewRPCService(ctx context.Context, cfg *Config, announcer types.CanonicalEventAnnouncer) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:      ctx,
-		cancel:   cancel,
-		port:     cfg.Port,
-		withCert: cfg.CertFlag,
-		withKey:  cfg.KeyFlag,
+		ctx:       ctx,
+		cancel:    cancel,
+		announcer: announcer,
+		port:      cfg.Port,
+		withCert:  cfg.CertFlag,
+		withKey:   cfg.KeyFlag,
 	}
 }
 
@@ -117,12 +120,33 @@ func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignR
 
 // LatestBeaconBlock streams the latest beacon chain data.
 func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
-	// TODO: implement.
-	return errors.New("unimplemented")
+	// Right now, this streams every announced block received via p2p. It should only stream
+	// finalized blocks that are canonical in the beacon node after applying the fork choice
+	// rule.
+	for {
+		select {
+		case block := <-s.announcer.CanonicalBlockAnnouncement():
+			if err := stream.Send(block.Proto()); err != nil {
+				return err
+			}
+		case <-s.ctx.Done():
+			return nil
+		}
+	}
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
-	// TODO: implement.
-	return errors.New("unimplemented")
+	// Right now, this streams every newly created crystallized state but should only
+	// stream canonical states.
+	for {
+		select {
+		case state := <-s.announcer.CanonicalCrystallizedStateAnnouncement():
+			if err := stream.Send(state.Proto()); err != nil {
+				return err
+			}
+		case <-s.ctx.Done():
+			return nil
+		}
+	}
 }

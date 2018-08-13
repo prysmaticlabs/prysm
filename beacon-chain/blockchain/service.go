@@ -194,6 +194,18 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
+// CanonicalBlockAnnouncement returns a channel that is written to
+// whenever a new block is determined to be canonical in the chain.
+func (c *ChainService) CanonicalBlockAnnouncement() <-chan *types.Block {
+	return make(chan *types.Block)
+}
+
+// CanonicalCrystallizedStateAnnouncement returns a channel that is written to
+// whenever a new crystallized state is determined to be canonical in the chain.
+func (c *ChainService) CanonicalCrystallizedStateAnnouncement() <-chan *types.CrystallizedState {
+	return make(chan *types.CrystallizedState)
+}
+
 // run processes the changes needed every beacon chain block,
 // including epoch transition if needed.
 func (c *ChainService) run(done <-chan struct{}) {

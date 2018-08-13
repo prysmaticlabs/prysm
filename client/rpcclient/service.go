@@ -53,7 +53,7 @@ func (s *Service) Start() {
 		server = grpc.WithInsecure()
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
-	conn, err := grpc.Dial(s.endpoint, server)
+	conn, err := grpc.Dial("[127.0.0.1]:5000", server)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", s.endpoint, err)
 		return

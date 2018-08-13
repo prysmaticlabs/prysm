@@ -5,13 +5,24 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+type mockAnnouncer struct{}
+
+func (m *mockAnnouncer) CanonicalBlockAnnouncement() <-chan *types.Block {
+	return make(chan *types.Block)
+}
+
+func (m *mockAnnouncer) CanonicalCrystallizedStateAnnouncement() <-chan *types.CrystallizedState {
+	return make(chan *types.CrystallizedState)
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999", CertFlag: "alice.crt", KeyFlag: "alice.key"})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "9999", CertFlag: "alice.crt", KeyFlag: "alice.key"}, &mockAnnouncer{})
 
 	rpcService.Start()
 
@@ -24,7 +35,7 @@ func TestLifecycle(t *testing.T) {
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"}, &mockAnnouncer{})
 
 	rpcService.Start()
 
@@ -37,7 +48,7 @@ func TestBadEndpoint(t *testing.T) {
 
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
 
 	rpcService.Start()
 

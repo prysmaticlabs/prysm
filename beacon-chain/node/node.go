@@ -209,6 +209,11 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
@@ -216,6 +221,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		Port:     port,
 		CertFlag: cert,
 		KeyFlag:  key,
-	})
+	}, chainService)
 	return b.services.RegisterService(rpcService)
 }
