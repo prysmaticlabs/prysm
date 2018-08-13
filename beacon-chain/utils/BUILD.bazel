@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "checkbit.go",
+        "clock.go",
         "flags.go",
         "shuffle.go",
     ],
@@ -21,6 +22,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "checkbit_test.go",
+        "clock_test.go",
         "shuffle_test.go",
     ],
     embed = [":go_default_library"],

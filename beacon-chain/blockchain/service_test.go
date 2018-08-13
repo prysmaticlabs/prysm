@@ -50,18 +50,24 @@ func TestStartStop(t *testing.T) {
 	}
 
 	msg = hook.AllEntries()[1].Message
-	want = "No chainstate found on disk, initializing beacon from genesis"
+	want = "No genesis block found on disk, initializing genesis block"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	msg = hook.AllEntries()[2].Message
-	want = "Stopping service"
+	want = "No chainstate found on disk, initializing beacon from genesis"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	msg = hook.AllEntries()[3].Message
+	want = "Stopping service"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	msg = hook.AllEntries()[4].Message
 	want = "Persisting current active and crystallized states before closing"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
