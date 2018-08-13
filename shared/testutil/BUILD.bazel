@@ -1,8 +1,13 @@
+# The testutils package contains utilities meant to be imported from test files,
+# by default gazelle tries to generate a go_test target that is not directly
+# importable, so we disable it for this file.
+# gazelle:ignore
+
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["log.go"],
+    srcs = ["log_test.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
     visibility = ["//visibility:public"],
     deps = ["@com_github_sirupsen_logrus//hooks/test:go_default_library"],
