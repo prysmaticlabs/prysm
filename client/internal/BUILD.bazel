@@ -10,11 +10,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/client/internal",
     visibility = ["//client:__subpackages__"],
     deps = [
-        "//client/params:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
-        "@com_github_ethereum_go_ethereum//:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
