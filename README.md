@@ -72,8 +72,10 @@ The `alloc` portion specifies account addresses with prefunded ETH when the Ethe
 
 Then, you can build and init a new instance of a local, Ethereum blockchain as follows:
 
-    $ geth init /path/to/genesis.json -datadir /path/to/your/datadir
-    $ geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
+```
+geth init /path/to/genesis.json -datadir /path/to/your/datadir
+geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
+````
 
 It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
 
@@ -86,46 +88,49 @@ Then, the geth console can start up and you can start a miner as follows:
 Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
 
 
-# Sharding Minimal Protocol
+# Running Ethereum 2.0
 
-**NOTE**: This section is in flux: will be deprecated in favor of a beacon chain)
+**NOTE**: This section is in flux, much of this will likely change as the beacon chain spec evolves.
 
 Build our system first
 
 ```
-$ bazel build //client/...
+bazel build //...
 ```
 
-## Becoming a Attester
+## Step 1: Deploy a Validator Registation Contract
 
+Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/deployVRC/README.md).
 
-Make sure a geth node is running as a separate process. Then, to deposit ETH and join as a attester in the Sharding Manager Contract, run the following command:
+## Step 2: Running a Beacon Node
 
-```
-bazel run //client -- \
-   --actor "attester" \
-   --deposit \
-   --datadir /path/to/your/datadir \
-   --password /path/to/your/password.txt \
-   --networkid 12345
-```
-
-This will extract 1000ETH from your account balance and insert you into the SMC's attesters. Then, the program will listen for incoming block headers and notify you when you have been selected as to vote on proposals for a certain shard in a given period. Once you are selected, your sharding node will download collation information to check for data availability on vote on proposals that have been submitted via the `addHeader` function on the SMC.
-
-Concurrently, you will need to run another service that is tasked with processing transactions into collations and submitting them to the SMC via the `addHeader` function.
-
-## Running a Collation Proposal Node
+Make sure a geth node is running as a separate process according to the instructions from the previous section. Then, you can run a full beacon node as follows:
 
 ```
-bazel run //client -- \
-   --actor "proposer" \
-   --datadir /path/to/your/datadir \
-   --password /path/to/your/password.txt \
-   --shardid 0 \
-   --networkid 12345
+./bazel-bin/beacon-chain/YOUR-ARCHITECTURE/beacon-chain --web3provider ws://127.0.0.1:8546 --datadir /path/to/your/datadir --rpc-port 5000
 ```
 
-This node is tasked with processing pending transactions into blobs within collations by serializing data into collation bodies. It is responsible for submitting proposals on shard 0 (collation headers) to the SMC via the `addHeader` function.
+This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding clients to connect to it, and begins listening for p2p events.
+
+To try out the beacon node in development by simulating incoming blocks, run the same command above but enable the `--simulator` and a debug level, log verbosity with `--verbosity debug` to see everything happening underneath the hood.
+
+```
+./bazel-bin/beacon-chain/YOUR-ARCHITECTURE/beacon-chain --web3provider ws://127.0.0.1:8546 --datadir /path/to/your/datadir --rpc-port 5000 --simulator --verbosity debug
+```
+
+Now, deposit ETH to become a validator in the contract. TODO: Add instructions for this.
+
+## Step 3: Running a Sharding Client
+
+Once your beacon node is up, you'll need to attach a sharding client as a separate process. This client is in charge of running attester/proposer responsibilities and handling shards (shards to be designed in phase 2). This client will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
+
+Run as follows:
+
+```
+./bazel-bin/client/YOUR-ARCHITECTURE/client --beacon-rpc-provider http://localhost:4000 --verbosity debug
+```
+
+Then, the beacon node will update this client with new blocks + crystallized states in order for the client to act as an attester or proposer.
 
 ## Running via Docker
 
@@ -154,28 +159,18 @@ targets for the container images such that they can be pulled from GCR or
 dockerhub. 
 
 
-# Making Changes
-
-## Rebuilding the Sharding Manager Contract Bindings
-
-The Sharding Manager Contract is built in Solidity and deployed to a running geth node upon launch of the sharding node if it does not exist in the network at a specified address. If there are any changes to the SMC's code, the Golang bindigs must be rebuilt with the following command.
-
-    go generate github.com/prysmaticlabs/prysm/client/contracts
-    # OR
-    cd client/contracts && go generate
-
 # Testing
 
 To run the unit tests of our system do:
 
 ```
-$ bazel test //...
+bazel test //...
 ```
 
 To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run
 
 ```
-$ gometalinter ./...
+gometalinter ./...
 ```
 
 # Contributing
