@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -13,7 +14,14 @@ type Node interface {
 	Close()
 }
 
-// Actor refers to either a attester, proposer, or observer in the sharding spec.
+// BeaconClient defines a service that interacts with a beacon node via RPC to determine
+// attestation/proposal responsibilities.
+type BeaconClient interface {
+	AttesterAssignment() <-chan bool
+	ProposerAssignment() <-chan bool
+}
+
+// Actor refers to either a attester, proposer in the sharding spec.
 type Actor interface {
 	shared.Service
 	// TODO: will actors have actor-specific methods? To be decided.
@@ -23,4 +31,9 @@ type Actor interface {
 // respond with collation information to the caller. Shard implements this interface.
 type CollationFetcher interface {
 	CollationByHeaderHash(headerHash *common.Hash) (*Collation, error)
+}
+
+// RPCClient defines a struct that opens up RPC client services via gRPC.
+type RPCClient interface {
+	BeaconServiceClient() pb.BeaconServiceClient
 }

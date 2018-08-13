@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package ethereum.beacon.p2p.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message BeaconBlockHashAnnounce {
+  bytes hash = 1;
+}
+
+message BeaconBlockRequest {
+  bytes hash = 1;
+}
+
+message BeaconBlockRequestBySlotNumber{
+  uint64 slot_number = 1;
+}
+
+message BeaconBlockResponse {
+  BeaconBlock block = 1;
+}
+
+message BeaconBlock {
+  bytes parent_hash = 1;
+  uint64 slot_number = 2;
+  bytes randao_reveal = 3;
+  bytes attestation_bitmask = 4;
+  repeated uint32 attestation_aggregate_sig = 5;
+  repeated AggregateVote shard_aggregate_votes = 6;
+  bytes main_chain_ref = 7;
+  bytes active_state_hash = 8;
+  bytes crystallized_state_hash = 9;
+  google.protobuf.Timestamp timestamp = 10;
+}
+
+message CrystallizedStateHashAnnounce {
+  bytes hash = 1;
+}
+
+message CrystallizedStateRequest {
+  bytes hash = 1;
+}
+
+message CrystallizedStateResponse {
+  CrystallizedState crystallized_state = 1;
+}
+
+message CrystallizedState {
+  repeated ValidatorRecord active_validators = 1;
+  repeated ValidatorRecord queued_validators = 2;
+  repeated ValidatorRecord exited_validators = 3;
+  repeated uint64 current_epoch_shuffling = 4;
+  uint64 current_epoch = 5;
+  uint64 last_justified_epoch = 6;
+  uint64 last_finalized_epoch = 7;
+  uint64 current_dynasty = 8;
+  uint64 next_shard = 9;
+  bytes current_check_point = 10;
+  uint64 total_deposits = 11;
+  bytes dynasty_seed = 12;
+  uint64 dynasty_seed_last_reset = 13;
+}
+
+message ActiveStateHashAnnounce {
+  bytes hash = 1;
+}
+
+message ActiveStateRequest {
+  bytes hash = 1;
+}
+
+message ActiveStateResponse {
+  ActiveState active_state = 1;
+}
+
+message ActiveState {
+  uint64 total_attester_deposits = 1;
+  bytes attester_bitfield = 2;
+}
+
+message AggregateVote {
+  uint32 shard_id = 1;
+  bytes shard_block_hash = 2;
+  bytes signer_bitmask = 3;
+  repeated uint32 aggregate_sig = 4;
+}
+
+message ValidatorRecord {
+  uint64 public_key = 1;
+  uint64 withdrawal_shard = 2;
+  bytes withdrawal_address = 3;
+  bytes randao_commitment = 4;
+  uint64 balance = 5;
+  uint64 switch_dynasty = 6;
+}

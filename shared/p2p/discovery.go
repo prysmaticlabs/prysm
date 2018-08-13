@@ -8,7 +8,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -73,8 +73,8 @@ func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 
 // topicPeerMap helper function for inspecting which peers are available for
 // the p2p topics.
-func (d *discovery) topicPeerMap() map[pb.Topic][]peer.ID {
-	m := make(map[pb.Topic][]peer.ID)
+func (d *discovery) topicPeerMap() map[shardpb.Topic][]peer.ID {
+	m := make(map[shardpb.Topic][]peer.ID)
 	for topic := range topicTypeMapping {
 		peers := d.gsub.ListPeers(topic.String())
 		m[topic] = peers

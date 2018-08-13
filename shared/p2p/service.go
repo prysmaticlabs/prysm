@@ -21,7 +21,7 @@ import (
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -111,13 +111,13 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg interface{}) {
-	// TODO https://github.com/prysmaticlabs/prysm/issues/176
+	// TODO: https://github.com/prysmaticlabs/prysm/issues/176
 	topic := topic(msg)
 	log.WithFields(logrus.Fields{
 		"topic": topic,
 	}).Debugf("Broadcasting msg %T", msg)
 
-	if topic == pb.Topic_UNKNOWN {
+	if topic == shardpb.Topic_UNKNOWN {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
 	}
 
@@ -138,7 +138,7 @@ func (s *Server) Broadcast(msg interface{}) {
 	}
 }
 
-func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
+func (s *Server) subscribeToTopic(topic shardpb.Topic, msgType reflect.Type) {
 	sub, err := s.gsub.Subscribe(topic.String())
 	if err != nil {
 		log.Errorf("Failed to subscribe to topic: %v", err)
@@ -174,6 +174,6 @@ func (s *Server) subscribeToTopic(topic pb.Topic, msgType reflect.Type) {
 		i := feed.Send(Message{Data: d})
 		log.WithFields(logrus.Fields{
 			"numSubs": i,
-		}).Debug("Send a request to subs")
+		}).Debug("Sent a request to subs")
 	}
 }

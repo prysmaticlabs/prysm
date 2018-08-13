@@ -1,19 +1,21 @@
+// Package types defines the essential types used throughout the beacon-chain.
 package types
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
 
 // Block defines a beacon chain core primitive.
 type Block struct {
-	data *pb.BeaconBlockResponse
+	data *pb.BeaconBlock
 }
 
 // AggregateVote contains the fields of aggregate vote in individual shard.
@@ -25,19 +27,38 @@ type AggregateVote struct {
 }
 
 // NewBlock explicitly sets the data field of a block.
-func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
-	return &Block{data}, nil
+func NewBlock(data *pb.BeaconBlock) (*Block, error) {
+	if len(data.ParentHash) != 32 {
+		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
+	}
+
+	return &Block{data: data}, nil
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
+//
+// TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
-	genesisTime := time.Date(2018, time.July, 21, 12, 0, 0, 0, time.UTC)
-	protoGenesis, err := ptypes.TimestampProto(genesisTime)
+	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Add more default fields.
-	return &Block{data: &pb.BeaconBlockResponse{Timestamp: protoGenesis}}, nil
+	return &Block{
+		data: &pb.BeaconBlock{
+			Timestamp:  protoGenesis,
+			ParentHash: make([]byte, 32),
+		},
+	}, nil
+}
+
+// Proto returns the underlying protobuf data within a block primitive.
+func (b *Block) Proto() *pb.BeaconBlock {
+	return b.data
+}
+
+// Marshal encodes block object into the wire format.
+func (b *Block) Marshal() ([]byte, error) {
+	return proto.Marshal(b.data)
 }
 
 // Hash generates the blake2b hash of the block
@@ -73,14 +94,14 @@ func (b *Block) RandaoReveal() [32]byte {
 	return h
 }
 
-// ActiveStateHash blake2b value.
+// ActiveStateHash returns the active state hash.
 func (b *Block) ActiveStateHash() [32]byte {
 	var h [32]byte
 	copy(h[:], b.data.ActiveStateHash[:32])
 	return h
 }
 
-// CrystallizedStateHash blake2b value.
+// CrystallizedStateHash returns the crystallized state hash.
 func (b *Block) CrystallizedStateHash() [32]byte {
 	var h [32]byte
 	copy(h[:], b.data.CrystallizedStateHash[:32])

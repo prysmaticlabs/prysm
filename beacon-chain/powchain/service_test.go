@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -23,7 +24,7 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 type goodReader struct{}
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return nil, nil
+	return new(event.Feed).Subscribe(ch), nil
 }
 
 type badLogger struct{}
@@ -35,7 +36,7 @@ func (b *badLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQu
 type goodLogger struct{}
 
 func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return nil, nil
+	return new(event.Feed).Subscribe(ch), nil
 }
 
 func TestNewWeb3Service(t *testing.T) {
@@ -110,7 +111,9 @@ func TestBadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.fetchChainInfo(web3Service.ctx, &badReader{}, &goodLogger{})
+	web3Service.reader = &badReader{}
+	web3Service.logger = &goodLogger{}
+	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
 	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
 	if msg != want {
@@ -125,19 +128,20 @@ func TestLatestMainchainInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &goodLogger{}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
 	header := &gethTypes.Header{Number: big.NewInt(42)}
 
 	web3Service.headerChan <- header
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	if web3Service.blockNumber.Cmp(header.Number) != 0 {
@@ -156,7 +160,10 @@ func TestBadLogger(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
-	web3Service.fetchChainInfo(web3Service.ctx, &goodReader{}, &badLogger{})
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &badLogger{}
+
+	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
 	want := "Unable to query logs from VRC: subscription has failed"
 	if msg != want {
@@ -176,17 +183,19 @@ func TestGoodLogger(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &goodLogger{}
+
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
 	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
 	web3Service.logChan <- log
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	lastEntry := hook.LastEntry()
@@ -217,11 +226,13 @@ func TestHeaderAfterValidation(t *testing.T) {
 	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	web3Service.reader = &goodReader{}
+	web3Service.logger = &goodLogger{}
+
 	exitRoutine := make(chan bool)
 
 	go func() {
-		web3Service.fetchChainInfo(ctx, &goodReader{}, &goodLogger{})
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
@@ -231,7 +242,7 @@ func TestHeaderAfterValidation(t *testing.T) {
 	header := &gethTypes.Header{Number: big.NewInt(42)}
 	web3Service.headerChan <- header
 
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")

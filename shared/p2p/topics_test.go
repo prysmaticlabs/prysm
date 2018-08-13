@@ -4,22 +4,22 @@ import (
 	"reflect"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 )
 
 type testStruct struct{}
 
 func TestReverseMapping(t *testing.T) {
 	tests := []struct {
-		input map[pb.Topic]reflect.Type
-		want  map[reflect.Type]pb.Topic
+		input map[shardpb.Topic]reflect.Type
+		want  map[reflect.Type]shardpb.Topic
 	}{
 		{
-			input: map[pb.Topic]reflect.Type{
-				pb.Topic_UNKNOWN: reflect.TypeOf(testStruct{}),
+			input: map[shardpb.Topic]reflect.Type{
+				shardpb.Topic_UNKNOWN: reflect.TypeOf(testStruct{}),
 			},
-			want: map[reflect.Type]pb.Topic{
-				reflect.TypeOf(testStruct{}): pb.Topic_UNKNOWN,
+			want: map[reflect.Type]shardpb.Topic{
+				reflect.TypeOf(testStruct{}): shardpb.Topic_UNKNOWN,
 			},
 		},
 	}
@@ -37,19 +37,19 @@ func TestTopic(t *testing.T) {
 
 	tests := []struct {
 		input interface{}
-		want  pb.Topic
+		want  shardpb.Topic
 	}{
 		{
-			input: pb.CollationBodyRequest{},
-			want:  pb.Topic_COLLATION_BODY_REQUEST,
+			input: shardpb.CollationBodyRequest{},
+			want:  shardpb.Topic_COLLATION_BODY_REQUEST,
 		},
 		{
-			input: &pb.CollationBodyRequest{},
-			want:  pb.Topic_COLLATION_BODY_REQUEST,
+			input: &shardpb.CollationBodyRequest{},
+			want:  shardpb.Topic_COLLATION_BODY_REQUEST,
 		},
 		{
 			input: CustomStruct{},
-			want:  pb.Topic_UNKNOWN,
+			want:  shardpb.Topic_UNKNOWN,
 		},
 	}
 

@@ -1,59 +1,58 @@
 // Package attester defines all relevant functionality for a Attester actor
-// within a sharded Ethereum blockchain.
+// within Ethereum 2.0.
 package attester
 
 import (
-	"github.com/prysmaticlabs/prysm/client/mainchain"
-	"github.com/prysmaticlabs/prysm/client/params"
-	"github.com/prysmaticlabs/prysm/shared/database"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"context"
+
+	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "attester")
 
-// Attester holds functionality required to run a collation attester
-// in a sharded system. Must satisfy the Service interface defined in
+// Attester holds functionality required to run an attester
+// as defined in Ethereum 2.0. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Attester struct {
-	config    *params.Config
-	smcClient *mainchain.SMCClient
-	p2p       *p2p.Server
-	dbService *database.DB
+	ctx           context.Context
+	cancel        context.CancelFunc
+	beaconService types.BeaconClient
 }
 
 // NewAttester creates a new attester instance.
-func NewAttester(config *params.Config, smcClient *mainchain.SMCClient, p2p *p2p.Server, dbService *database.DB) (*Attester, error) {
-	return &Attester{config, smcClient, p2p, dbService}, nil
+func NewAttester(ctx context.Context, beaconService types.BeaconClient) *Attester {
+	ctx, cancel := context.WithCancel(ctx)
+	return &Attester{
+		ctx:           ctx,
+		cancel:        cancel,
+		beaconService: beaconService,
+	}
 }
 
 // Start the main routine for a attester.
-func (n *Attester) Start() {
-	log.Info("Starting attester service")
-	go n.notarizeCollations()
+func (at *Attester) Start() {
+	log.Info("Starting service")
+	go at.run(at.ctx.Done())
 }
 
-// Stop the main loop for notarizing collations.
-func (n *Attester) Stop() error {
-	log.Info("Stopping attester service")
+// Stop the main loop.
+func (at *Attester) Stop() error {
+	defer at.cancel()
+	log.Info("Stopping service")
 	return nil
 }
 
-// notarizeCollations checks incoming block headers and determines if
-// we are an eligible attester for collations.
-func (n *Attester) notarizeCollations() {
-
-	// TODO: handle this better through goroutines. Right now, these methods
-	// are blocking.
-	if n.smcClient.DepositFlag() {
-		if err := joinAttesterPool(n.smcClient, n.smcClient); err != nil {
-			log.Errorf("Could not fetch current block number: %v", err)
+// run the main event loop that listens for an attestation assignment.
+func (at *Attester) run(done <-chan struct{}) {
+	for {
+		select {
+		case <-done:
+			log.Debug("Attester context closed, exiting goroutine")
 			return
+		case <-at.beaconService.AttesterAssignment():
+			log.Info("Performing attestation responsibility")
+			continue
 		}
-	}
-
-	if err := subscribeBlockHeaders(n.smcClient.ChainReader(), n.smcClient, n.smcClient.Account()); err != nil {
-		log.Errorf("Could not fetch current block number: %v", err)
-		return
 	}
 }

@@ -16,6 +16,8 @@ func TestStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	defer os.RemoveAll(tmp)
+
 	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
 	db, err := database.NewDB(config)
 	if err != nil {
@@ -27,7 +29,10 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	chainService, err := NewChainService(ctx, db, web3Service)
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+	}
+	chainService, err := NewChainService(ctx, cfg, db, web3Service)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -45,13 +50,25 @@ func TestStartStop(t *testing.T) {
 	}
 
 	msg = hook.AllEntries()[1].Message
-	want = "No chainstate found on disk, initializing beacon from genesis"
+	want = "No genesis block found on disk, initializing genesis block"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
 	msg = hook.AllEntries()[2].Message
+	want = "No chainstate found on disk, initializing beacon from genesis"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	msg = hook.AllEntries()[3].Message
 	want = "Stopping service"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	msg = hook.AllEntries()[4].Message
+	want = "Persisting current active and crystallized states before closing"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}

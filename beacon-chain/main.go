@@ -1,3 +1,4 @@
+// Package beacon-chain defines all the utlities needed for a beacon chain node.
 package main
 
 import (
@@ -21,7 +22,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	beacon, err := node.New(ctx)
+	beacon, err := node.NewBeaconNode(ctx)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,23 @@ VERSION:
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
 
-	app.Flags = []cli.Flag{cmd.DataDirFlag, utils.VrcContractFlag, utils.PubKeyFlag, utils.Web3ProviderFlag, cmd.VerbosityFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
+	app.Flags = []cli.Flag{
+		utils.SimulatorFlag,
+		utils.VrcContractFlag,
+		utils.PubKeyFlag,
+		utils.Web3ProviderFlag,
+		utils.RPCPort,
+		utils.CertFlag,
+		utils.KeyFlag,
+		cmd.DataDirFlag,
+		cmd.VerbosityFlag,
+		debug.PProfFlag,
+		debug.PProfAddrFlag,
+		debug.PProfPortFlag,
+		debug.MemProfileRateFlag,
+		debug.CPUProfileFlag,
+		debug.TraceFlag,
+	}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

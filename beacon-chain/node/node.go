@@ -1,3 +1,4 @@
+// Package node defines the services that a beacon chain node would perform.
 package node
 
 import (
@@ -11,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -36,9 +39,9 @@ type BeaconNode struct {
 	db       *database.DB
 }
 
-// New creates a new node instance, sets up configuration options, and registers
+// NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(ctx *cli.Context) (*BeaconNode, error) {
+func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -63,7 +66,15 @@ func New(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerSimulatorService(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerSyncService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerRPCService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -107,9 +118,9 @@ func (b *BeaconNode) Close() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.db.Close()
-	b.services.StopAll()
 	log.Info("Stopping beacon node")
+	b.services.StopAll()
+	b.db.Close()
 	close(b.stop)
 }
 
@@ -139,7 +150,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
@@ -171,4 +182,40 @@ func (b *BeaconNode) registerSyncService() error {
 
 	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)
+}
+
+func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
+	if !ctx.GlobalBool(utils.SimulatorFlag.Name) {
+		return nil
+	}
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
+	var web3Service *powchain.Web3Service
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
+	}
+
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	cfg := simulator.DefaultConfig()
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service, chainService)
+	return b.services.RegisterService(simulatorService)
+}
+
+func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
+	port := ctx.GlobalString(utils.RPCPort.Name)
+	cert := ctx.GlobalString(utils.CertFlag.Name)
+	key := ctx.GlobalString(utils.KeyFlag.Name)
+	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
+		Port:     port,
+		CertFlag: cert,
+		KeyFlag:  key,
+	})
+	return b.services.RegisterService(rpcService)
 }

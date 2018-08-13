@@ -15,9 +15,8 @@ import (
 	floodsub "github.com/libp2p/go-floodsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/v1"
+	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Ensure that server implements service.
@@ -28,41 +27,13 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-func TestLifecycle(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	s, err := NewServer()
-	if err != nil {
-		t.Fatalf("Could not start a new server: %v", err)
-	}
-
-	s.Start()
-	msg := hook.Entries[0].Message
-	want := "Starting service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
-
-	s.Stop()
-	msg = hook.LastEntry().Message
-	want = "Stopping service"
-	if msg != want {
-		t.Errorf("incorrect log. wanted: %s. got: %v", want, msg)
-	}
-
-	// The context should have been cancelled.
-	if s.ctx.Err() == nil {
-		t.Error("Context was not cancelled")
-	}
-}
-
 func TestBroadcast(t *testing.T) {
 	s, err := NewServer()
 	if err != nil {
 		t.Fatalf("Could not start a new server: %v", err)
 	}
 
-	msg := &pb.CollationBodyRequest{}
+	msg := &shardpb.CollationBodyRequest{}
 	s.Broadcast(msg)
 
 	// TODO: test that topic was published
@@ -86,7 +57,7 @@ func TestSubscribeToTopic(t *testing.T) {
 		mutex: &sync.Mutex{},
 	}
 
-	feed := s.Feed(pb.CollationBodyRequest{})
+	feed := s.Feed(shardpb.CollationBodyRequest{})
 	ch := make(chan Message)
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
@@ -113,14 +84,14 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	ch := make(chan Message)
-	sub := s.Subscribe(pb.CollationBodyRequest{}, ch)
+	sub := s.Subscribe(shardpb.CollationBodyRequest{}, ch)
 	defer sub.Unsubscribe()
 
 	testSubscribe(ctx, t, s, gsub, ch)
 }
 
 func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
-	topic := pb.Topic_COLLATION_BODY_REQUEST
+	topic := shardpb.Topic_COLLATION_BODY_REQUEST
 	msgType := topicTypeMapping[topic]
 	go s.subscribeToTopic(topic, msgType)
 
@@ -133,7 +104,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 		t.Errorf("Unexpected subscribed topics: %v. Wanted %s", topics, topic)
 	}
 
-	pbMsg := &pb.CollationBodyRequest{ShardId: 5}
+	pbMsg := &shardpb.CollationBodyRequest{ShardId: 5}
 
 	done := make(chan bool)
 	go func() {
