@@ -6,10 +6,12 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -17,6 +19,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+// FakeClock represents an mocked clock for testing purposes.
+type fakeClock struct{}
+
+// Now represents the mocked functionality of a Clock.Now().
+func (fakeClock) Now() time.Time {
+	return time.Date(1970, 2, 1, 1, 0, 0, 0, time.UTC)
+}
 
 type faultyFetcher struct{}
 
@@ -58,11 +68,50 @@ func TestNewBeaconChain(t *testing.T) {
 
 	hook.Reset()
 	active, crystallized := types.NewGenesisStates()
+	if _, err := types.NewGenesisBlock(); err != nil {
+		t.Errorf("Creating a new genesis block failed %v", err)
+	}
 	if !reflect.DeepEqual(beaconChain.ActiveState(), active) {
 		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), active)
 	}
 	if !reflect.DeepEqual(beaconChain.CrystallizedState(), crystallized) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), crystallized)
+	}
+	if _, err := beaconChain.GenesisBlock(); err != nil {
+		t.Errorf("Getting new beaconchain genesis failed: %v", err)
+	}
+}
+
+func TestGetGenesisBlock(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := &pb.BeaconBlock{
+		ParentHash: make([]byte, 32),
+		Timestamp: &timestamp.Timestamp{
+			Seconds: 13000000,
+		},
+	}
+	bytes, err := proto.Marshal(block)
+	if err != nil {
+		t.Errorf("unable to Marshal genesis block: %v", err)
+	}
+
+	if err := db.DB().Put([]byte("genesis"), bytes); err != nil {
+		t.Errorf("unable to save key value of genesis: %v", err)
+	}
+
+	genesisBlock, err := beaconChain.GenesisBlock()
+	if err != nil {
+		t.Errorf("unable to get key value of genesis: %v", err)
+	}
+
+	time, err := genesisBlock.Timestamp()
+	if err != nil {
+		t.Errorf("Timestamp could not be retrieved: %v", err)
+	}
+	if time.Second() != 40 {
+		t.Errorf("Timestamp was not saved properly: %v", time.Second())
 	}
 }
 
@@ -166,6 +215,8 @@ func TestGetAttestersProposer(t *testing.T) {
 func TestCanProcessBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
+
+	clock = &fakeClock{}
 
 	// Initialize a parent block
 	parentBlock := NewBlock(t, &pb.BeaconBlock{
