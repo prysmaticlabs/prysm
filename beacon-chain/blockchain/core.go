@@ -21,6 +21,8 @@ import (
 var activeStateLookupKey = "beacon-active-state"
 var crystallizedStateLookupKey = "beacon-crystallized-state"
 
+var clock utils.Clock = &utils.RealClock{}
+
 // BeaconChain represents the core PoS blockchain object containing
 // both a crystallized and active state.
 type BeaconChain struct {
@@ -49,11 +51,30 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	if err != nil {
 		return nil, err
 	}
+	hasGenesis, err := db.Has([]byte("genesis"))
+	if err != nil {
+		return nil, err
+	}
+	if !hasGenesis {
+		log.Info("No genesis block found on disk, initializing genesis block")
+		genesisBlock, err := types.NewGenesisBlock()
+		if err != nil {
+			return nil, err
+		}
+		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
+		if err != nil {
+			return nil, err
+		}
+		if err := beaconChain.db.Put([]byte("genesis"), genesisMarshall); err != nil {
+			return nil, err
+		}
+	}
 	if !hasActive && !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		active, crystallized := types.NewGenesisStates()
 		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
+
 		return beaconChain, nil
 	}
 	if hasActive {
@@ -85,6 +106,21 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
+	genesisExists, err := b.db.Has([]byte("genesis"))
+	if err != nil {
+		return nil, err
+	}
+	if genesisExists {
+		bytes, err := b.db.Get([]byte("genesis"))
+		if err != nil {
+			return nil, err
+		}
+		block := &pb.BeaconBlock{}
+		if err := proto.Unmarshal(bytes, block); err != nil {
+			return nil, err
+		}
+		return types.NewBlock(block)
+	}
 	return types.NewGenesisBlock()
 }
 
@@ -168,7 +204,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, err
 	}
 
-	if time.Now().Before(genesisTime.Add(slotDuration)) {
+	if clock.Now().Before(genesisTime.Add(slotDuration)) {
 		return false, nil
 	}
 
