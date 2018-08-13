@@ -32,7 +32,12 @@ type BeaconChain struct {
 }
 
 type beaconState struct {
-	ActiveState       *types.ActiveState
+	// ActiveState captures the beacon state at block processing level,
+	// it focuses on verifying aggregated signatures and pending attestations.
+	ActiveState *types.ActiveState
+	// CrystallizedState captures the beacon state at epoch transition level,
+	// it focuses on changes to the validator set, processing cross links and
+	// setting up FFG checkpoints.
 	CrystallizedState *types.CrystallizedState
 }
 
@@ -300,7 +305,7 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 }
 
 // getAttestersTotalDeposit returns the total deposit combined by attesters.
-// TODO: Consider slashing condition
+// TODO: Consider slashing condition.
 func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
 	var numOfBits int
 	for _, attestation := range b.ActiveState().PendingAttestations() {
@@ -425,7 +430,7 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 		}
 	}
 
-	// split the shuffled list for heights
+	// split the shuffled list for heights.
 	shuffledList, err := utils.ShuffleIndices(b.state.CrystallizedState.DynastySeed(), indices)
 	if err != nil {
 		return nil, err
