@@ -1,5 +1,5 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata:
   name: miner
   labels:
@@ -7,6 +7,7 @@ metadata:
     component: miner
 spec:
   replicas: 1
+  serviceName: "miners"
   selector: 
     matchLabels:
       universe: geth
@@ -41,11 +42,11 @@ spec:
             - >
               geth
               --networkid=1337
-              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):30301
-              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):3000
+              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_BOOTNODE_UDP)
+              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0
-              --rpccorsdomain=\"*\"
+              --rpccorsdomain="*"
               --ws
               --datadir=/ethereum
               --debug
@@ -55,13 +56,16 @@ spec:
               --etherbase=0x717c3a6e4cbd476c2312612155eb233bf498dd5b
               --extradata=$HOSTNAME
               --ethash.dagsinmem=1
-              --ethash.dagsondisk=1
+              --ethash.dagsondisk=2
+              --ethash.dagdir="/dag"
               --nousb
               --cache=1024
               --gasprice=0
           volumeMounts:
             - name: chaindata
               mountPath: "/ethereum"
+            - name: dag
+              mountPath: "/dag"
           env:
             - name: ETHSTATS_WS_SECRET
               valueFrom:
@@ -78,7 +82,7 @@ spec:
               memory: "2Gi"
               cpu: "500m"
             limits:
-              memory: "2Gi"
+              memory: "2.5Gi"
               cpu: "500m"
       initContainers:
         - name: genesis
@@ -100,3 +104,11 @@ spec:
             items:
               - key: json
                 path: genesis.json
+  volumeClaimTemplates:
+    - metadata:
+        name: dag
+      spec: 
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 2Gi

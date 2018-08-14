@@ -8,6 +8,7 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
 var port int32 = 9000
@@ -24,7 +25,12 @@ func buildOptions() []libp2p.Option {
 		log.Errorf("Failed to generate crypto key pair: %v", err)
 	}
 
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", port+(rand.Int31n(portRange))))
+	ip, err := iputils.ExternalIPv4()
+	if err != nil {
+		log.Errorf("Could not get IPv4 address: %v", err)
+	}
+
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, port+(rand.Int31n(portRange))))
 	if err != nil {
 		log.Errorf("Failed to p2p listen: %v", err)
 	}
