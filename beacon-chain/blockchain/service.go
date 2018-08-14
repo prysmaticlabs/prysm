@@ -16,15 +16,17 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx                              context.Context
-	cancel                           context.CancelFunc
-	beaconDB                         *database.DB
-	chain                            *BeaconChain
-	web3Service                      *powchain.Web3Service
-	latestBeaconBlock                chan *types.Block
-	processedBlockHashes             [][32]byte
-	processedActiveStateHashes       [][32]byte
-	processedCrystallizedStateHashes [][32]byte
+	ctx                                    context.Context
+	cancel                                 context.CancelFunc
+	beaconDB                               *database.DB
+	chain                                  *BeaconChain
+	web3Service                            *powchain.Web3Service
+	canonicalBlockAnnouncement             chan *types.Block
+	canonicalCrystallizedStateAnnouncement chan *types.CrystallizedState
+	latestBeaconBlock                      chan *types.Block
+	processedBlockHashes                   [][32]byte
+	processedActiveStateHashes             [][32]byte
+	processedCrystallizedStateHashes       [][32]byte
 }
 
 // Config options for the service.
@@ -44,14 +46,16 @@ func DefaultConfig() *Config {
 func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
-		ctx:                              ctx,
-		cancel:                           cancel,
-		beaconDB:                         beaconDB,
-		web3Service:                      web3Service,
-		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
-		processedBlockHashes:             [][32]byte{},
-		processedActiveStateHashes:       [][32]byte{},
-		processedCrystallizedStateHashes: [][32]byte{},
+		ctx:                                    ctx,
+		cancel:                                 cancel,
+		beaconDB:                               beaconDB,
+		web3Service:                            web3Service,
+		latestBeaconBlock:                      make(chan *types.Block, cfg.BeaconBlockBuf),
+		canonicalBlockAnnouncement:             make(chan *types.Block, 10),
+		canonicalCrystallizedStateAnnouncement: make(chan *types.CrystallizedState, 10),
+		processedBlockHashes:                   [][32]byte{},
+		processedActiveStateHashes:             [][32]byte{},
+		processedCrystallizedStateHashes:       [][32]byte{},
 	}, nil
 }
 
@@ -129,6 +133,10 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	if canProcess {
 		c.latestBeaconBlock <- block
 	}
+	// For now, broadcast all incoming blocks to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical blocks over the channel.
+	c.canonicalBlockAnnouncement <- block
 	return nil
 }
 
@@ -146,7 +154,10 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
-
+	// For now, broadcast all incoming crystallized states to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical crystallized states over the channel.
+	c.canonicalCrystallizedStateAnnouncement <- state
 	return nil
 }
 
@@ -197,13 +208,13 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 // CanonicalBlockAnnouncement returns a channel that is written to
 // whenever a new block is determined to be canonical in the chain.
 func (c *ChainService) CanonicalBlockAnnouncement() <-chan *types.Block {
-	return make(chan *types.Block)
+	return c.canonicalBlockAnnouncement
 }
 
 // CanonicalCrystallizedStateAnnouncement returns a channel that is written to
 // whenever a new crystallized state is determined to be canonical in the chain.
 func (c *ChainService) CanonicalCrystallizedStateAnnouncement() <-chan *types.CrystallizedState {
-	return make(chan *types.CrystallizedState)
+	return c.canonicalCrystallizedStateAnnouncement
 }
 
 // run processes the changes needed every beacon chain block,

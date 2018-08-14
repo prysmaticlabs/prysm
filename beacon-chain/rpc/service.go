@@ -77,7 +77,7 @@ func (s *Service) Start() {
 	go func() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
-			log.Errorf("Could not serve gRPC: %v", err)
+			log.Debugf("Could not serve gRPC: %v", err)
 		}
 	}()
 }
@@ -96,8 +96,12 @@ func (s *Service) Stop() error {
 // This function can be called by clients to fetch a historical list of shuffled
 // validators ata point in time corresponding to a certain crystallized state.
 func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
-	// TODO: implement.
-	return nil, errors.New("unimplemented")
+	shuffleRes := &pb.ShuffleResponse{
+		ShuffledValidatorIndices:   []uint64{2, 1, 0},
+		CutoffIndices:              []uint64{},
+		AssignedAttestationHeights: []uint64{},
+	}
+	return shuffleRes, nil
 }
 
 // ProposeBlock is called by a proposer in a sharding client and a full beacon node
