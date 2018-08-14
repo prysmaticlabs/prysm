@@ -389,7 +389,7 @@ func (ss *Service) runInitialSync(delaychan <-chan time.Time, done <-chan struct
 				continue
 			}
 
-			ss.currentSlotNumber = crystallizedState.LastFinalizedEpoch()
+			ss.currentSlotNumber = crystallizedState.LastFinalizedSlot()
 			ss.requestNextBlock()
 			crystallizedStateSub.Unsubscribe()
 		}
