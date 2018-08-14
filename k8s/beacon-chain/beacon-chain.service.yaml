@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: beacon-chain
+spec:
+  selector:
+    component: beacon-chain
+    universe: beacon-chain
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: grpc
+  type: LoadBalancer
