@@ -432,7 +432,7 @@ func (ss *Service) run(done <-chan struct{}) {
 				continue
 			}
 			if err := ss.ReceiveBlock(response.Block); err != nil {
-				log.Errorf("Could not receive block: %v", err)
+				log.Errorf("Could not process received block: %v", err)
 			}
 		case msg := <-ss.announceCrystallizedHashBuf:
 			data, ok := msg.Data.(*pb.CrystallizedStateHashAnnounce)
@@ -450,7 +450,7 @@ func (ss *Service) run(done <-chan struct{}) {
 				continue
 			}
 			if err := ss.ReceiveCrystallizedState(response.CrystallizedState); err != nil {
-				log.Errorf("Could not receive crystallized state: %v", err)
+				log.Errorf("Could not process received crystallized state: %v", err)
 			}
 		case msg := <-ss.announceActiveHashBuf:
 			data, ok := msg.Data.(*pb.ActiveStateHashAnnounce)
@@ -468,7 +468,7 @@ func (ss *Service) run(done <-chan struct{}) {
 				continue
 			}
 			if err := ss.ReceiveActiveState(response.ActiveState); err != nil {
-				log.Errorf("Could not receive active state: %v", err)
+				log.Errorf("Could not process received active state: %v", err)
 			}
 		}
 	}

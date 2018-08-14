@@ -121,6 +121,11 @@ func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
 
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(block *types.Block) error {
+	// For now, broadcast all incoming blocks to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical blocks over the channel.
+	c.canonicalBlockAnnouncement <- block
+
 	h, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
@@ -133,10 +138,6 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	if canProcess {
 		c.latestBeaconBlock <- block
 	}
-	// For now, broadcast all incoming blocks to the following channel
-	// for gRPC clients to receive then. TODO: change this to actually send
-	// canonical blocks over the channel.
-	c.canonicalBlockAnnouncement <- block
 	return nil
 }
 
@@ -149,15 +150,15 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
 // TODO: Implement crystallized state verifier function and apply fork choice rules
 func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
+	// For now, broadcast all incoming crystallized states to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical crystallized states over the channel.
+	c.canonicalCrystallizedStateAnnouncement <- state
 	h, err := state.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
-	// For now, broadcast all incoming crystallized states to the following channel
-	// for gRPC clients to receive then. TODO: change this to actually send
-	// canonical crystallized states over the channel.
-	c.canonicalCrystallizedStateAnnouncement <- state
 	return nil
 }
 
@@ -244,6 +245,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
 			if transition {
+				c.chain.CrystallizedState().SetStateRecalc(block.SlotNumber())
 				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
 				}

@@ -96,10 +96,17 @@ func (s *Service) Stop() error {
 // This function can be called by clients to fetch a historical list of shuffled
 // validators ata point in time corresponding to a certain crystallized state.
 func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
+	var shuffledIndices []uint64
+	// Simulator always pushes out a validator list of length 100. By having index 0
+	// as the last index, the validator will always be a proposer in the client code.
+	// TODO: Implement the real method by fetching the crystallized state in the request
+	// from persistent disk storage and shuffling the indices appropriately.
+	for i := 99; i >= 0; i-- {
+		shuffledIndices = append(shuffledIndices, uint64(i))
+	}
+	// For now, this will cause clients to always pick the validator as a proposer.
 	shuffleRes := &pb.ShuffleResponse{
-		ShuffledValidatorIndices:   []uint64{2, 1, 0},
-		CutoffIndices:              []uint64{},
-		AssignedAttestationHeights: []uint64{},
+		ShuffledValidatorIndices: shuffledIndices,
 	}
 	return shuffleRes, nil
 }
@@ -130,6 +137,7 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 	for {
 		select {
 		case block := <-s.announcer.CanonicalBlockAnnouncement():
+			log.Info("Sending block to RPC clients")
 			if err := stream.Send(block.Proto()); err != nil {
 				return err
 			}
@@ -146,6 +154,7 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 	for {
 		select {
 		case state := <-s.announcer.CanonicalCrystallizedStateAnnouncement():
+			log.Info("Sending state to RPC clients")
 			if err := stream.Send(state.Proto()); err != nil {
 				return err
 			}

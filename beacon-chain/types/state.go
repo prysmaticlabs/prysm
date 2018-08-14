@@ -149,6 +149,11 @@ func (c *CrystallizedState) LastStateRecalc() uint64 {
 	return c.data.LastStateRecalc
 }
 
+// SetStateRecalc sets last state recalc.
+func (c *CrystallizedState) SetStateRecalc(slot uint64) {
+	c.data.LastStateRecalc = slot
+}
+
 // JustifiedStreak returns number of consecutive justified slots ending at head.
 func (c *CrystallizedState) JustifiedStreak() uint64 {
 	return c.data.JustifiedStreak

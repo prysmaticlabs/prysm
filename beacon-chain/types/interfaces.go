@@ -38,7 +38,7 @@ type BlockChainService interface {
 	ProcessBlock(b *Block) error
 	ContainsBlock(h [32]byte) bool
 	HasStoredState() (bool, error)
-	SaveBlock(block *Block) error
+	SaveBlock(b *Block) error
 }
 
 // CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.

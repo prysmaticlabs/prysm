@@ -43,7 +43,7 @@ type Config struct {
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		Delay:                       time.Second * 8,
+		Delay:                       time.Second * 5,
 		BlockRequestBuf:             100,
 		CrystallizedStateRequestBuf: 100,
 	}
@@ -101,7 +101,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			var validators []*pb.ValidatorRecord
 			for i := 0; i < 100; i++ {
-				validator := &pb.ValidatorRecord{Balance: 1000, WithdrawalAddress: []byte{'A'}, PublicKey: 0}
+				validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 100, Balance: 1000, WithdrawalAddress: []byte{}, PublicKey: 0}
 				validators = append(validators, validator)
 			}
 
@@ -129,6 +129,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			// Is it epoch transition time?
 			if block.SlotNumber() >= crystallizedState.LastStateRecalc()+params.CycleLength {
+				crystallizedState.SetStateRecalc(block.SlotNumber())
 				crystallizedState.SetLastJustifiedSlot(block.SlotNumber())
 				crystallizedState.UpdateJustifiedSlot(block.SlotNumber())
 				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedSlot()).Info("Last justified epoch")
@@ -194,7 +195,8 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				log.Errorf("Could not hash state: %v", err)
 			}
 			log.Infof("Responding to crystallized state request for hash: 0x%x", h)
-			sim.p2p.Send(state.Proto(), msg.Peer)
+			res := &pb.CrystallizedStateResponse{CrystallizedState: state.Proto()}
+			sim.p2p.Send(res, msg.Peer)
 		}
 	}
 }

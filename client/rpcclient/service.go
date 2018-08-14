@@ -1,8 +1,10 @@
-// Package rpcclient defines the services for the RPC connections of the client.
+// Package rpcclient defines a gRPC connection to a beacon node.
 package rpcclient
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -53,7 +55,11 @@ func (s *Service) Start() {
 		server = grpc.WithInsecure()
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
-	conn, err := grpc.Dial("[127.0.0.1]:5000", server)
+	providerURL, err := url.Parse(s.endpoint)
+	if err != nil {
+		log.Fatalf("Unable to parse beacon RPC provider endpoint url: %v", err)
+	}
+	conn, err := grpc.Dial(fmt.Sprintf("[%s]:%s", providerURL.Hostname(), providerURL.Port()), server)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", s.endpoint, err)
 		return

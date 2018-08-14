@@ -62,19 +62,10 @@ func TestInsecureEndpoint(t *testing.T) {
 
 func TestRPCMethods(t *testing.T) {
 	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
-	if _, err := rpcService.FetchShuffledValidatorIndices(context.Background(), nil); err == nil {
-		t.Error("Wanted error: unimplemented, received nil")
-	}
 	if _, err := rpcService.ProposeBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
 	}
 	if _, err := rpcService.SignBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
 	}
-	//if err := rpcService.LatestBeaconBlock(nil, nil); err == nil {
-	//t.Error("Wanted error: unimplemented, received nil")
-	//}
-	//if err := rpcService.LatestCrystallizedState(nil, nil); err == nil {
-	//t.Error("Wanted error: unimplemented, received nil")
-	//}
 }

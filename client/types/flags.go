@@ -5,11 +5,6 @@ import (
 )
 
 var (
-	// ActorFlag defines the role of the sharding client. Either proposer, attester, or simulator.
-	ActorFlag = cli.StringFlag{
-		Name:  "actor",
-		Usage: `use the --actor attester or --actor proposer to start a attester or proposer service in the sharding node`,
-	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = cli.StringFlag{
 		Name:  "beacon-rpc-provider",
