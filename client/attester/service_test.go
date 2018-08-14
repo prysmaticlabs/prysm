@@ -47,6 +47,7 @@ func TestAttesterLoop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
 	b := &mockBeaconService{
 		attesterChan: make(chan bool),
 	}

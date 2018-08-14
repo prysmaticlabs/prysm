@@ -3,7 +3,6 @@ package utils
 
 import (
 	"errors"
-	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -12,18 +11,13 @@ import (
 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
-func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
-	if validatorCount > params.MaxValidators {
+func ShuffleIndices(seed common.Hash, validatorList []int) ([]int, error) {
+	if len(validatorList) > params.MaxValidators {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}
 
-	// construct a list of indices up to MaxValidators.
-	validatorList := make([]int, validatorCount)
-	for i := range validatorList {
-		validatorList[i] = i
-	}
-
 	hashSeed := blake2b.Sum256(seed[:])
+	validatorCount := len(validatorList)
 
 	// shuffle stops at the second to last index.
 	for i := 0; i < validatorCount-1; i++ {
@@ -38,48 +32,13 @@ func ShuffleIndices(seed common.Hash, validatorCount int) ([]int, error) {
 	return validatorList, nil
 }
 
-// GetCutoffs is used to split up validators into groups at the start
-// of every epoch. It determines at what height validators can make
-// attestations and crosslinks. It returns lists of cutoff indices and heights.
-func GetCutoffs(validatorCount int) ([]int, []int) {
-	var heightCutoff = []int{0}
-	var heights []int
-	var heightCount float64
-
-	// Skip heights if there's not enough validators to fill in a min sized committee.
-	if validatorCount < params.EpochLength*params.MinCommiteeSize {
-		heightCount = math.Floor(float64(validatorCount) / params.MinCommiteeSize)
-		for i := 0; i < int(heightCount); i++ {
-			heights = append(heights, (i*params.Cofactor)%params.EpochLength)
-		}
-		// Enough validators, fill in all the heights.
-	} else {
-		heightCount = params.EpochLength
-		for i := 0; i < int(heightCount); i++ {
-			heights = append(heights, i)
-		}
+// SplitIndices splits a list into n pieces.
+func SplitIndices(l []int, n int) [][]int {
+	var divided [][]int
+	for i := 0; i < n; i++ {
+		start := len(l) * i / n
+		end := len(l) * (i + 1) / n
+		divided = append(divided, l[start:end])
 	}
-
-	filled := 0
-	appendHeight := false
-	for i := 0; i < params.EpochLength-1; i++ {
-		appendHeight = false
-		for _, height := range heights {
-			if i == height {
-				appendHeight = true
-			}
-		}
-		if appendHeight {
-			filled++
-			heightCutoff = append(heightCutoff, filled*validatorCount/int(heightCount))
-		} else {
-			heightCutoff = append(heightCutoff, heightCutoff[len(heightCutoff)-1])
-		}
-	}
-	heightCutoff = append(heightCutoff, validatorCount)
-
-	// TODO: For the validators assigned to each height, split them up into
-	// committees for different shards. Do not assign the last END_EPOCH_GRACE_PERIOD
-	// heights in a epoch to any shards.
-	return heightCutoff, heights
+	return divided
 }

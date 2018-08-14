@@ -54,15 +54,80 @@ cat /tmp/genesis.json | json-minify | base64
 
 ### Deploying Geth Mainchain
 
+First, launch the bootnode so that geth nodes can discover each other.
+
+```bash
+bazel run //k8s/geth:bootnode.deploy.apply
+```
+
+Then launch everything else.
+
 ```bash
 bazel run //k8s:everything.apply
 ```
 
 This creates a few nodes and one miner with CPU restrictions. After ~30 
-minutes, the miner has generated the DAG and begins mining. This seems iterate
-over 2 DAG epochs dispite the flags set for 1 DAG in memory and in disk. 
+minutes, the miner has generated the DAG and begins mining. The miners have a
+stateful volume for their DAGs so that they do not have to regenerate them on
+restart. 
 
-Note: This can be improved by giving the miner more CPU.
+Note: DAG generation time can be improved by giving the miner more CPU in the 
+deployment yaml.
+
+### Bootstrapping the Beacon Chain
+
+TODO: This process is currently manual and needs to be improved!
+
+Using the private key above and the deployVRC tool, deploy the validator
+registration contract.
+
+```bash
+# get the address the node service
+minikube service geth-nodes --url
+```
+
+Example response:
+
+```bash
+http://192.168.99.100:30051
+http://192.168.99.100:31745
+```
+
+Using the first port provided (RPC). Run the deploy VRC tool
+
+```
+bazel run //contracts/validator-registration-contract/deployVRC --\
+  --privKey=783da8ef5343c3019748506305d400bca8c324a5819f3a7f7fbf0c0a0d799b09 \
+  --httpPath=http://192.168.99.100:30051
+```
+
+Example output:
+
+```
+INFO main: New contract deployed address=0x541AfaC5266c534de039B4A1a53519e76ea82846
+```
+
+Set this value for the vrcaddr flag in 
+k8s/beacon-chain/beacon-chain.deploy.yaml.
+
+Ensure that the beacon-chain and client docker images are up to date. 
+
+```bash
+bazel run //beacon-chain:push_image
+bazel run //client:push_image
+```
+
+Start the beacon chain nodes
+
+```bash
+bazel run //k8s/beacon-chain:everything.apply
+```
+
+Start the clients
+
+```bash
+bazel run //k8s/client:everything.apply
+```
 
 ### Accessing Geth Services
 
@@ -90,3 +155,4 @@ So we can use these values locally to connect to our local cluster.
 ```bash
 bazel run //beacon-chain -- --web3provider=ws://192.168.99.100:32164
 ```
+

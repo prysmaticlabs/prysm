@@ -105,7 +105,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				validators = append(validators, validator)
 			}
 
-			crystallizedState.SetActiveValidators(validators)
+			crystallizedState.SetValidators(validators)
 
 			crystallizedStateHash, err := crystallizedState.Hash()
 			if err != nil {
@@ -115,7 +115,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			block, err := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
 				Timestamp:             ptypes.TimestampNow(),
-				MainChainRef:          sim.web3Service.LatestBlockHash().Bytes(),
+				PowChainRef:           sim.web3Service.LatestBlockHash().Bytes(),
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            make([]byte, 32),
@@ -128,11 +128,11 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.WithField("currentSlot", block.SlotNumber()).Info("Current slot")
 
 			// Is it epoch transition time?
-			if block.SlotNumber()/params.EpochLength > crystallizedState.CurrentEpoch() {
-				crystallizedState.IncrementEpoch()
-				crystallizedState.UpdateJustifiedEpoch()
-				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedEpoch()).Info("Last justified epoch")
-				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedEpoch()).Info("Last finalized epoch")
+			if block.SlotNumber() >= crystallizedState.LastStateRecalc()+params.CycleLength {
+				crystallizedState.SetLastJustifiedSlot(block.SlotNumber())
+				crystallizedState.UpdateJustifiedSlot(block.SlotNumber())
+				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedSlot()).Info("Last justified epoch")
+				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedSlot()).Info("Last finalized epoch")
 
 				h, err := crystallizedState.Hash()
 				if err != nil {

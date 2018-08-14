@@ -163,23 +163,23 @@ func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 }
 
 // ContainsBlock checks if a block for the hash exists in the chain.
-// This method must be safe to call from a goroutine
+// This method must be safe to call from a goroutine.
 //
-// TODO: implement function
+// TODO: implement function.
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
 // ContainsCrystallizedState checks if a crystallized state for the hash exists in the chain.
 //
-// TODO: implement function
+// TODO: implement function.
 func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
 	return false
 }
 
 // ContainsActiveState checks if a active state for the hash exists in the chain.
 //
-// TODO: implement function
+// TODO: implement function.
 func (c *ChainService) ContainsActiveState(h [32]byte) bool {
 	return false
 }
@@ -212,7 +212,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
+			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
@@ -223,11 +223,17 @@ func (c *ChainService) run(done <-chan struct{}) {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			currentSlot := block.SlotNumber()
+			// TODO: Apply 2.1 fork choice logic using the following.
+			validatorsByHeight, err := c.chain.validatorsByHeightShard()
+			if err != nil {
+				log.Errorf("Unable to get validators by height and by shard: %v", err)
+			}
+			log.Debugf("Received the following validators by height: %v", validatorsByHeight)
 
-			transition := c.chain.IsEpochTransition(currentSlot)
+			// Entering epoch transitions.
+			transition := c.chain.IsEpochTransition(block.SlotNumber())
 			if transition {
-				if err := c.chain.calculateRewardsFFG(); err != nil {
+				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
 				}
 			}
