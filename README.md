@@ -107,7 +107,10 @@ Deploy the Validator Registration Contract into the chain of the running geth no
 Make sure a geth node is running as a separate process according to the instructions from the previous section. Then, you can run a full beacon node as follows:
 
 ```
-./bazel-bin/beacon-chain/YOUR-ARCHITECTURE/beacon-chain --web3provider ws://127.0.0.1:8546 --datadir /path/to/your/datadir --rpc-port 5000
+bazel run //beacon-chain --\
+  --web3provider  ws://127.0.0.1:8546 \
+  --datadir /path/to/your/datadir \
+  --rpc-port 5000
 ```
 
 This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding clients to connect to it, and begins listening for p2p events.
@@ -115,10 +118,15 @@ This will spin up a full beacon node that connects to your running geth node, op
 To try out the beacon node in development by simulating incoming blocks, run the same command above but enable the `--simulator` and a debug level, log verbosity with `--verbosity debug` to see everything happening underneath the hood.
 
 ```
-./bazel-bin/beacon-chain/YOUR-ARCHITECTURE/beacon-chain --web3provider ws://127.0.0.1:8546 --datadir /path/to/your/datadir --rpc-port 5000 --simulator --verbosity debug
+bazel run //beacon-chain --\
+  --web3provider  ws://127.0.0.1:8546 \
+  --datadir /path/to/your/datadir \
+  --rpc-port 5000 \
+  --simulator \
+  --verbosity debug
 ```
 
-Now, deposit ETH to become a validator in the contract. TODO: Add instructions for this.
+Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/beacon-chain/VALIDATOR_REGISTER.md)
 
 ## Step 3: Running a Sharding Client
 
@@ -127,7 +135,9 @@ Once your beacon node is up, you'll need to attach a sharding client as a separa
 Run as follows:
 
 ```
-./bazel-bin/client/YOUR-ARCHITECTURE/client --beacon-rpc-provider http://localhost:4000 --verbosity debug
+bazel run //client --\
+  --beacon-rpc-provider http://localhost:4000 \
+  --verbosity debug
 ```
 
 Then, the beacon node will update this client with new blocks + crystallized states in order for the client to act as an attester or proposer.
