@@ -19,8 +19,8 @@ spec:
         - name: sharding-client
           image: gcr.io/prysmaticlabs/prysm/client:latest
           args: 
-            - "--rpc=http://$(GETH_NODES_SERVICE_HOST):$(GETH_NODES_SERVICE_PORT_RPC)"
             - "--actor=proposer"
+            - "--beacon-rpc-provider=$(BEACON_CHAIN_SERVICE_HOST):$(BEACON_CHAIN_SERVICE_PORT_GRPC)"
           resources:
             requests:
               memory: "100Mi"

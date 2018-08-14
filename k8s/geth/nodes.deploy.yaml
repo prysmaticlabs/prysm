@@ -41,7 +41,7 @@ spec:
             - >
               geth
               --networkid=1337
-              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_DISCOVERY_TCP)
+              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0

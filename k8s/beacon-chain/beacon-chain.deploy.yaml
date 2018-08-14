@@ -21,6 +21,9 @@ spec:
           args: 
             - "--web3provider=ws://$(GETH_NODES_SERVICE_HOST):$(GETH_NODES_SERVICE_PORT_WS)"
             - "--verbosity=debug"
+            - "--vrcaddr=0x541AfaC5266c534de039B4A1a53519e76ea82846"
+            - "--rpc-port=4000"
+            - "--simulator=false"
           resources:
             requests:
               memory: "100Mi"
@@ -28,3 +31,6 @@ spec:
             limits:
               memory: "250Mi"
               cpu: "100m"
+          ports:
+            - containerPort: 4000
+              name: grpc
