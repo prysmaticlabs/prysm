@@ -111,6 +111,7 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 }
 
 func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
+	var activeValidatorIndices []int
 	stream, err := client.LatestCrystallizedState(s.ctx, &empty.Empty{})
 	if err != nil {
 		log.Errorf("Could not setup crystallized beacon state streaming client: %v", err)
@@ -135,16 +136,19 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			continue
 		}
 		crystallizedStateHash := blake2b.Sum256(stateData)
+		dynasty := crystallizedState.GetCurrentDynasty()
 
-		activeValidators := crystallizedState.GetActiveValidators()
-
+		for i, validator := range crystallizedState.GetValidators() {
+			if validator.StartDynasty <= dynasty && dynasty < validator.EndDynasty {
+				activeValidatorIndices = append(activeValidatorIndices, i)
+			}
+		}
 		isValidatorIndexSet := false
 
-		for i, val := range activeValidators {
-			// TODO: Check the public key instead of withdrawal address. This will
-			// use BLS.
-			if isZeroAddress(val.GetWithdrawalAddress()) {
-				s.validatorIndex = i
+		for _, val := range activeValidatorIndices {
+			// TODO: Check the public key instead of withdrawal address. This will use BLS.
+			if isZeroAddress(crystallizedState.Validators[val].WithdrawalAddress) {
+				s.validatorIndex = val
 				isValidatorIndexSet = true
 				break
 			}

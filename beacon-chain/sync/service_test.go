@@ -167,8 +167,8 @@ func TestProcessBlock(t *testing.T) {
 	}()
 
 	data := &pb.BeaconBlock{
-		MainChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:   make([]byte, 32),
+		PowChainRef: []byte{1, 2, 3, 4, 5},
+		ParentHash:  make([]byte, 32),
 	}
 
 	responseBlock := &pb.BeaconBlockResponse{
@@ -214,8 +214,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}()
 
 	data1 := &pb.BeaconBlock{
-		MainChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:   make([]byte, 32),
+		PowChainRef: []byte{1, 2, 3, 4, 5},
+		ParentHash:  make([]byte, 32),
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -228,8 +228,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		MainChainRef: []byte{6, 7, 8, 9, 10},
-		ParentHash:   make([]byte, 32),
+		PowChainRef: []byte{6, 7, 8, 9, 10},
+		ParentHash:  make([]byte, 32),
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -290,8 +290,8 @@ func TestProcessSameBlock(t *testing.T) {
 	}()
 
 	data := &pb.BeaconBlock{
-		MainChainRef: []byte{1, 2, 3},
-		ParentHash:   make([]byte, 32),
+		PowChainRef: []byte{1, 2, 3},
+		ParentHash:  make([]byte, 32),
 	}
 
 	responseBlock := &pb.BeaconBlockResponse{
@@ -476,12 +476,12 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	}()
 
 	data1 := &pb.CrystallizedState{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 99,
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 99,
 	}
 	data2 := &pb.CrystallizedState{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 98,
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 98,
 	}
 
 	responseState1 := &pb.CrystallizedStateResponse{
@@ -542,10 +542,10 @@ func TestProcessActiveStates(t *testing.T) {
 	}()
 
 	state1 := &pb.ActiveState{
-		TotalAttesterDeposits: 10000,
+		RecentBlockHashes: [][]byte{{'A'}, {'B'}, {'C'}},
 	}
 	state2 := &pb.ActiveState{
-		TotalAttesterDeposits: 10001,
+		RecentBlockHashes: [][]byte{{1}, {2}, {3}},
 	}
 
 	responseState1 := &pb.ActiveStateResponse{
@@ -607,8 +607,8 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	}()
 
 	data := &pb.CrystallizedState{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 99,
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 99,
 	}
 
 	responseState := &pb.CrystallizedStateResponse{
@@ -660,7 +660,7 @@ func TestProcessSameActiveState(t *testing.T) {
 	}()
 
 	data := &pb.ActiveState{
-		TotalAttesterDeposits: 100,
+		RecentBlockHashes: [][]byte{{'A'}, {'B'}, {'C'}},
 	}
 
 	responseState1 := &pb.ActiveStateResponse{
@@ -716,7 +716,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	generichash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		MainChainRef:          []byte{1, 2, 3},
+		PowChainRef:           []byte{1, 2, 3},
 		ParentHash:            generichash,
 		SlotNumber:            uint64(20),
 		CrystallizedStateHash: generichash,
@@ -764,7 +764,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	generichash[0] = 'a'
 
 	crystallizedState := &pb.CrystallizedState{
-		LastFinalizedEpoch: 99,
+		LastFinalizedSlot: 99,
 	}
 
 	stateResponse := &pb.CrystallizedStateResponse{
@@ -772,8 +772,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.CrystallizedState{
-		LastFinalizedEpoch: 9,
-		LastJustifiedEpoch: 20,
+		LastFinalizedSlot: 9,
+		LastJustifiedSlot: 20,
 	}
 
 	incorrectStateResponse := &pb.CrystallizedStateResponse{
@@ -787,7 +787,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	getBlockResponseMsg := func(slotNumber uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			MainChainRef:          []byte{1, 2, 3},
+			PowChainRef:           []byte{1, 2, 3},
 			ParentHash:            generichash,
 			SlotNumber:            slotNumber,
 			CrystallizedStateHash: crystallizedStateHash[:],
@@ -813,7 +813,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.blockBuf <- msg1
 	ss.crystallizedStateBuf <- msg2
 
-	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedEpoch {
+	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
 		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
 	}
 
@@ -829,8 +829,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	msg1 = getBlockResponseMsg(30)
 	ss.blockBuf <- msg1
 
-	if stateResponse.CrystallizedState.GetLastFinalizedEpoch() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedEpoch())
+	if stateResponse.CrystallizedState.GetLastFinalizedSlot() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedSlot())
 	}
 
 	msg1 = getBlockResponseMsg(100)
@@ -866,7 +866,7 @@ func TestDelayChan(t *testing.T) {
 	generichash[0] = 'a'
 
 	crystallizedstate := &pb.CrystallizedState{
-		LastFinalizedEpoch: 99,
+		LastFinalizedSlot: 99,
 	}
 
 	stateResponse := &pb.CrystallizedStateResponse{
@@ -879,7 +879,7 @@ func TestDelayChan(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		MainChainRef:          []byte{1, 2, 3},
+		PowChainRef:           []byte{1, 2, 3},
 		ParentHash:            generichash,
 		SlotNumber:            uint64(20),
 		CrystallizedStateHash: crystallizedStateHash[:],
