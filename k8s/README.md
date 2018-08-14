@@ -156,22 +156,3 @@ So we can use these values locally to connect to our local cluster.
 bazel run //beacon-chain -- --web3provider=ws://192.168.99.100:32164
 ```
 
-### Instructions for accessing private GCR images
-
-Based on these 
-[instructions](https://ryaneschinger.com/blog/using-google-container-registry-gcr-with-minikube/).
-Be sure to read those instructions prior to proceeding.
-
-```bash
-# Create the secret
-
-kubectl create secret docker-registry gcr-json-key \
-          --docker-server=https://gcr.io \
-          --docker-username=_json_key \
-          --docker-password="$(cat ~/Downloads/prysmaticlabs-dfb1460368ad.json)" \
-          --docker-email=preston-minikube@prysmaticlabs.iam.gserviceaccount.com
-
-# Create the service account
-kubectl patch serviceaccount default \
-          -p '{"imagePullSecrets": [{"name": "gcr-json-key"}]}'
-```
