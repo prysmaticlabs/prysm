@@ -165,8 +165,10 @@ func (b *BeaconNode) registerBlockchainService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService() error {
-
-	rpcClient, _ := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
+	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
+	if err != nil {
+		log.Errorf("Unable to connect to Geth node: %v", err)
+	}
 	powClient := ethclient.NewClient(rpcClient)
 
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
