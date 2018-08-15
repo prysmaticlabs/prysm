@@ -742,6 +742,80 @@ func TestValidatorIndices(t *testing.T) {
 	}
 }
 
+func TestGetIndicesForHeight(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	state := types.NewCrystallizedState(&pb.CrystallizedState{
+		LastStateRecalc: 1,
+		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
+				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 3, Committee: []uint32{0, 1, 2, 3, 4}},
+				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+		}})
+	if err := beaconChain.SetCrystallizedState(state); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+	_, err := beaconChain.getIndicesForHeight(1000)
+	if err == nil {
+		t.Error("getIndicesForHeight should have failed with invalid height")
+	}
+	committee, err := beaconChain.getIndicesForHeight(1)
+	if err != nil {
+		t.Errorf("getIndicesForHeight failed: %v", err)
+	}
+	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
+		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+	committee, _ = beaconChain.getIndicesForHeight(2)
+	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
+		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+}
+
+func TestGetBlockHash(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	state := types.NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: [][]byte{
+			{'A'},
+			{'B'},
+			{'C'},
+			{'D'},
+			{'E'},
+			{'F'},
+		},
+	})
+	if err := beaconChain.SetActiveState(state); err != nil {
+		t.Fatalf("unable to mutate active state: %v", err)
+	}
+
+	_, err := beaconChain.getBlockHash(200, 250)
+	if err == nil {
+		t.Error("getBlockHash should have failed with invalid height")
+	}
+	hash, err := beaconChain.getBlockHash(2*params.CycleLength, 0)
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if bytes.Equal(hash, []byte{'A'}) {
+		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
+	}
+	hash, err = beaconChain.getBlockHash(2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if bytes.Equal(hash, []byte{'F'}) {
+		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
+	}
+}
+
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
