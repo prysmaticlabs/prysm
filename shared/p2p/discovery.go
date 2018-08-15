@@ -52,6 +52,11 @@ type discovery struct {
 
 // HandlePeerFound registers the peer with the host.
 func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
+	log.WithFields(logrus.Fields{
+		"peer addrs": pi.Addrs,
+		"peer id":    pi.ID,
+	}).Debug("Attempting to connect to a peer")
+
 	d.host.Peerstore().AddAddrs(pi.ID, pi.Addrs, ps.PermanentAddrTTL)
 	if err := d.host.Connect(d.ctx, pi); err != nil {
 		log.Warnf("Failed to connect to peer: %v", err)
