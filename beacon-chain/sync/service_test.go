@@ -695,3 +695,73 @@ func TestProcessSameActiveState(t *testing.T) {
 
 	hook.Reset()
 }
+
+type mockEmptyChainService struct {
+	hasStoredState bool
+}
+
+func (ms *mockEmptyChainService) ProcessBlock(b *types.Block) error {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) bool {
+	return false
+}
+
+func (ms *mockEmptyChainService) ProcessedBlockHashes() [][32]byte {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ProcessActiveState(a *types.ActiveState) error {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ContainsActiveState(h [32]byte) bool {
+	return false
+}
+
+func (ms *mockEmptyChainService) ProcessedActiveStateHashes() [][32]byte {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ProcessCrystallizedState(c *types.CrystallizedState) error {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ContainsCrystallizedState(h [32]byte) bool {
+	return false
+}
+
+func (ms *mockEmptyChainService) ProcessedCrystallizedStateHashes() [][32]byte {
+	return nil
+}
+
+func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
+	return ms.hasStoredState, nil
+}
+
+func (ms *mockEmptyChainService) setState(flag bool) {
+	ms.hasStoredState = flag
+}
+
+func (ms *mockEmptyChainService) SaveBlock(block *types.Block) error {
+	return nil
+}
+
+func TestStartEmptyState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := DefaultConfig()
+	ms := &mockEmptyChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	ss.Start()
+	testutil.AssertLogsContain(t, hook, "empty chain state, exiting sync")
+
+	hook.Reset()
+	ms.setState(true)
+
+	ss.Start()
+	testutil.AssertLogsDoNotContain(t, hook, "empty chain state, exiting sync")
+
+	ss.cancel()
+}

@@ -30,7 +30,6 @@ type Service struct {
 	cancel                      context.CancelFunc
 	p2p                         types.P2P
 	chainService                types.ChainService
-	synced                      bool
 	announceBlockHashBuf        chan p2p.Message
 	blockBuf                    chan p2p.Message
 	announceCrystallizedHashBuf chan p2p.Message
@@ -64,17 +63,11 @@ func DefaultConfig() Config {
 // NewSyncService accepts a context and returns a new Service.
 func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
-	stored, err := cs.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-	}
-
 	return &Service{
 		ctx:                         ctx,
 		cancel:                      cancel,
 		p2p:                         beaconp2p,
 		chainService:                cs,
-		synced:                      !stored,
 		announceBlockHashBuf:        make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:                    make(chan p2p.Message, cfg.BlockBufferSize),
 		announceCrystallizedHashBuf: make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
@@ -94,6 +87,7 @@ func (ss *Service) Start() {
 
 	if !stored {
 		// TODO: Support initial sync when the chain is partially synced with the network.
+		log.Errorf("empty chain state, exiting sync")
 		return
 	}
 
@@ -226,12 +220,14 @@ func (ss *Service) run(done <-chan struct{}) {
 	announceActiveHashSub := ss.p2p.Subscribe(pb.ActiveStateHashAnnounce{}, ss.announceActiveHashBuf)
 	activeStateSub := ss.p2p.Subscribe(pb.ActiveStateResponse{}, ss.activeStateBuf)
 
-	defer announceBlockHashSub.Unsubscribe()
-	defer blockSub.Unsubscribe()
-	defer announceCrystallizedHashSub.Unsubscribe()
-	defer crystallizedStateSub.Unsubscribe()
-	defer announceActiveHashSub.Unsubscribe()
-	defer activeStateSub.Unsubscribe()
+	func() {
+		announceBlockHashSub.Unsubscribe()
+		blockSub.Unsubscribe()
+		announceCrystallizedHashSub.Unsubscribe()
+		crystallizedStateSub.Unsubscribe()
+		announceActiveHashSub.Unsubscribe()
+		activeStateSub.Unsubscribe()
+	}()
 
 	for {
 		select {

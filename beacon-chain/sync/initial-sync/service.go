@@ -85,8 +85,10 @@ func (s *InitialSyncService) Start() {
 		return
 	}
 
+	log.Infof("stored: %v", stored)
 	if stored {
 		// TODO: Bail out of the sync service if the chain is only partially synced
+		log.Infof("chain state detected, exiting initial sync")
 		return
 	}
 
