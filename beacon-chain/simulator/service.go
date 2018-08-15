@@ -137,7 +137,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 
 			var parentHash []byte
-			// If we haven not broadcast a simulated block yet, we set parent hash
+			// If we have not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
 			if len(sim.broadcastedBlockHashes) == 0 {
 				parentHash = []byte("genesis")
