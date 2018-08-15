@@ -223,20 +223,21 @@ func (c *ChainService) run(done <-chan struct{}) {
 			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
 			// protocol. For the first few blocks after genesis, the current approach below
 			// will panic as there are no registered validators.
-			// activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			// if err != nil {
-			//  log.Errorf("Compute active state failed: %v", err)
-			// }
+			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			if err != nil {
+				log.Errorf("Compute active state failed: %v", err)
+			}
 
-			// err = c.chain.SetActiveState(activeState)
-			// if err != nil {
-			//   log.Errorf("Write active state to disk failed: %v", err)
-			// }
+			err = c.chain.SetActiveState(activeState)
+			if err != nil {
+				log.Errorf("Write active state to disk failed: %v", err)
+			}
 
 			// TODO: Apply 2.1 fork choice logic using the following.
 			validatorsByHeight, err := c.chain.validatorsByHeightShard()
 			if err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
+				continue
 			}
 			log.Debugf("Received the following number of validators by height: %v", len(validatorsByHeight))
 
@@ -246,6 +247,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 				c.chain.CrystallizedState().SetStateRecalc(block.SlotNumber())
 				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
+					continue
 				}
 			}
 			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
@@ -254,7 +256,9 @@ func (c *ChainService) run(done <-chan struct{}) {
 
 			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
 			// save the fork choice rule).
-			c.SaveBlock(block)
+			if err := c.SaveBlock(block); err != nil {
+				log.Errorf("Unable to save block to db: %v", err)
+			}
 
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")

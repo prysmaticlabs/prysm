@@ -37,6 +37,11 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 			RecentBlockHashes:   [][]byte{},
 		},
 	}
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 100; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 100, Balance: 1000, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validators = append(validators, validator)
+	}
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedState{
 			LastStateRecalc:        0,
@@ -49,7 +54,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 			DynastySeed:            []byte{},
 			DynastySeedLastReset:   0,
 			CrosslinkRecords:       []*pb.CrosslinkRecord{},
-			Validators:             []*pb.ValidatorRecord{},
+			Validators:             validators,
 			IndicesForHeights:      []*pb.ShardAndCommitteeArray{},
 		},
 	}
