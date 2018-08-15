@@ -15,7 +15,7 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 # Table of Contents
 
 -   [Installation](#installation)
--   [Sharding Instructions](#sharding-instructions)
+-   [Instructions](#instructions)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -44,7 +44,7 @@ bazel version
 
 Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm.
 
-# Sharding Instructions
+# Instructions
 
 To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin running our system
 
