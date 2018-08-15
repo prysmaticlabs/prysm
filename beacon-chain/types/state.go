@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -39,7 +40,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	}
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 100; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalanc, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
 		validators = append(validators, validator)
 	}
 	crystallized := &CrystallizedState{
