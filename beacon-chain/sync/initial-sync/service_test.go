@@ -43,17 +43,13 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
-	blockBuf := make(chan p2p.Message)
-	crystallizedStateBuf := make(chan p2p.Message)
 	defer func() {
 		close(exitRoutine)
 		close(delayChan)
-		close(blockBuf)
-		close(crystallizedStateBuf)
 	}()
 
 	go func() {
-		ss.run(delayChan, blockBuf, crystallizedStateBuf)
+		ss.run(delayChan)
 		exitRoutine <- true
 	}()
 
@@ -74,7 +70,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 		Data: blockResponse,
 	}
 
-	blockBuf <- msg1
+	ss.blockBuf <- msg1
 
 	ss.cancel()
 	<-exitRoutine
@@ -96,18 +92,14 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
-	blockBuf := make(chan p2p.Message)
-	crystallizedStateBuf := make(chan p2p.Message)
 
 	defer func() {
 		close(exitRoutine)
 		close(delayChan)
-		close(blockBuf)
-		close(crystallizedStateBuf)
 	}()
 
 	go func() {
-		ss.run(delayChan, blockBuf, crystallizedStateBuf)
+		ss.run(delayChan)
 		exitRoutine <- true
 	}()
 
@@ -161,8 +153,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 		Data: incorrectStateResponse,
 	}
 
-	blockBuf <- msg1
-	crystallizedStateBuf <- msg2
+	ss.blockBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
 
 	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
 		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
@@ -170,7 +162,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	msg2.Data = stateResponse
 
-	crystallizedStateBuf <- msg2
+	ss.crystallizedStateBuf <- msg2
 
 	if crystallizedStateHash != ss.initialCrystallizedStateHash {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
@@ -178,14 +170,14 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	msg1 = getBlockResponseMsg(30)
-	blockBuf <- msg1
+	ss.blockBuf <- msg1
 
 	if stateResponse.CrystallizedState.GetLastFinalizedSlot() != ss.currentSlotNumber {
 		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedSlot())
 	}
 
 	msg1 = getBlockResponseMsg(100)
-	blockBuf <- msg1
+	ss.blockBuf <- msg1
 
 	ss.cancel()
 	<-exitRoutine
@@ -204,18 +196,14 @@ func TestDelayChan(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
-	blockBuf := make(chan p2p.Message)
-	crystallizedStateBuf := make(chan p2p.Message)
 
 	defer func() {
 		close(exitRoutine)
 		close(delayChan)
-		close(blockBuf)
-		close(crystallizedStateBuf)
 	}()
 
 	go func() {
-		ss.run(delayChan, blockBuf, crystallizedStateBuf)
+		ss.run(delayChan)
 		exitRoutine <- true
 	}()
 
@@ -256,14 +244,14 @@ func TestDelayChan(t *testing.T) {
 		Data: stateResponse,
 	}
 
-	blockBuf <- msg1
+	ss.blockBuf <- msg1
 
-	crystallizedStateBuf <- msg2
+	ss.crystallizedStateBuf <- msg2
 
 	blockResponse.Block.SlotNumber = 100
 	msg1.Data = blockResponse
 
-	blockBuf <- msg1
+	ss.blockBuf <- msg1
 
 	delayChan <- time.Time{}
 

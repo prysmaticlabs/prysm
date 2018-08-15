@@ -30,6 +30,7 @@ type Service struct {
 	cancel                       context.CancelFunc
 	p2p                          types.P2P
 	chainService                 types.ChainService
+	synced                       bool
 	announceBlockHashBuf         chan p2p.Message
 	blockBuf                     chan p2p.Message
 	announceCrystallizedHashBuf  chan p2p.Message
@@ -63,12 +64,17 @@ func DefaultConfig() Config {
 // NewSyncService accepts a context and returns a new Service.
 func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
+	stored, err := cs.HasStoredState()
+	if err != nil {
+		log.Errorf("error retrieving stored state: %v", err)
+	}
 
 	return &Service{
 		ctx:                          ctx,
 		cancel:                       cancel,
 		p2p:                          beaconp2p,
 		chainService:                 cs,
+		synced:                       !stored,
 		announceBlockHashBuf:         make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:                     make(chan p2p.Message, cfg.BlockBufferSize),
 		announceCrystallizedHashBuf:  make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
@@ -80,6 +86,17 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
+	stored, err := ss.chainService.HasStoredState()
+	if err != nil {
+		log.Errorf("error retrieving stored state: %v", err)
+		return
+	}
+
+	if !stored {
+		// TODO: Support initial sync when the chain is partially synced with the network.
+		return
+	}
+
 	go ss.run(ss.ctx.Done())
 }
 

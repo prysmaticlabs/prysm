@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -71,6 +72,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerSyncService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerInitialSyncService(); err != nil {
 		return nil, err
 	}
 
@@ -182,6 +187,26 @@ func (b *BeaconNode) registerSyncService() error {
 
 	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
 	return b.services.RegisterService(syncService)
+}
+
+func (b *BeaconNode) registerInitialSyncService() error {
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	var syncService *rbcsync.Service
+	if err := b.services.FetchService(&syncService); err != nil {
+		return err
+	}
+
+	initialSyncService := initialsync.NewInitialSyncService(context.Background(), initialsync.DefaultConfig(), p2pService, chainService, syncService)
+	return b.services.RegisterService(initialSyncService)
 }
 
 func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {

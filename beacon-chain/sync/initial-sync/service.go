@@ -13,18 +13,8 @@ import (
 
 var log = logrus.WithField("prefix", "sync")
 
-// Mode refers to the type for the sync mode of the client.
-type Mode int
-
-// This specifies the different sync modes.
-const (
-	SyncModeInitial Mode = 0
-	SyncModeDefault Mode = 1
-)
-
 // Config allows the channel's buffer sizes to be changed.
 type Config struct {
-	SyncMode            Mode
 	CurrentSlotNumber   uint64
 	SyncPollingInterval time.Duration
 }
@@ -32,67 +22,100 @@ type Config struct {
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
 	return Config{
-		SyncMode:            SyncModeDefault,
 		CurrentSlotNumber:   0,
 		SyncPollingInterval: time.Second,
 	}
 }
 
+// ChainService is the interface for the blockchain package's ChainService struct
 type ChainService interface {
 	HasStoredState() (bool, error)
 	SaveBlock(*types.Block) error
 }
 
-type Service struct {
+// SyncService is the interface for the Sync service
+type SyncService interface {
+	Start()
+}
+
+// InitialSyncService initiates synchronization when the database is empty
+type InitialSyncService struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
 	p2p                          types.P2P
 	chainService                 ChainService
+	syncService                  SyncService
+	blockBuf                     chan p2p.Message
+	crystallizedStateBuf         chan p2p.Message
 	currentSlotNumber            uint64
 	syncPollingInterval          time.Duration
 	initialCrystallizedStateHash [32]byte
 }
 
-func NewInitialSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs ChainService) *Service {
+// NewInitialSyncService constructs a new InitialSyncService.
+// This method is normally called by the main node.
+func NewInitialSyncService(ctx context.Context,
+	cfg          Config,
+	beaconp2p    types.P2P,
+	chainService ChainService,
+	syncService  SyncService,
+) *InitialSyncService {
 	ctx, cancel := context.WithCancel(ctx)
-	stored, err := cs.HasStoredState()
 
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-	}
+	blockBuf := make(chan p2p.Message)
+	crystallizedStateBuf := make(chan p2p.Message)
 
-	if !stored {
-		cfg.SyncMode = SyncModeInitial
-	}
-
-	return &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		p2p:                 beaconp2p,
-		chainService:        cs,
-		syncPollingInterval: cfg.SyncPollingInterval,
+	return &InitialSyncService{
+		ctx:                  ctx,
+		cancel:               cancel,
+		p2p:                  beaconp2p,
+		chainService:         chainService,
+		syncService:          syncService,
+		blockBuf:             blockBuf,
+		crystallizedStateBuf: crystallizedStateBuf,
+		syncPollingInterval:  cfg.SyncPollingInterval,
 	}
 }
 
-func (s *Service) Start() {
+// Start begins the goroutine
+func (s *InitialSyncService) Start() {
+	stored, err := s.chainService.HasStoredState()
+	if err != nil {
+		log.Errorf("error retrieving stored state: %v", err)
+		return
+	}
+
+	if stored {
+		// TODO: Bail out of the sync service if the chain is only partially synced
+		return
+	}
+
 	go func() {
 		ticker := time.NewTicker(s.syncPollingInterval)
-		blockBuf := make(chan p2p.Message)
-		crystallizedStateBuf := make(chan p2p.Message)
-		s.run(ticker.C, make(chan p2p.Message), make(chan p2p.Message))
-		close(crystallizedStateBuf)
-		close(blockBuf)
+		s.run(ticker.C)
 		ticker.Stop()
 	}()
 }
 
-// run is the main goroutine for the intial sync service
-// delayChan is explicitly passed into this function to facilitate tests that don't require a timeout
-func (s *Service) run(delaychan <-chan time.Time, blockBuf chan p2p.Message, crystallizedStateBuf chan p2p.Message) {
-	blockSub := s.p2p.Subscribe(pb.BeaconBlockResponse{}, blockBuf)
-	crystallizedStateSub := s.p2p.Subscribe(pb.CrystallizedStateResponse{}, crystallizedStateBuf)
-	defer blockSub.Unsubscribe()
-	defer blockSub.Unsubscribe()
+// Stop kills the initial sync goroutine.
+func (s *InitialSyncService) Stop() error {
+	log.Info("Stopping service")
+	s.cancel()
+	return nil
+}
+
+// run is the main goroutine for the intial sync service.
+// delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
+// It is assumed that the goroutine `run` is only called once per instance
+func (s *InitialSyncService) run(delaychan <-chan time.Time) {
+	blockSub := s.p2p.Subscribe(pb.BeaconBlockResponse{}, s.blockBuf)
+	crystallizedStateSub := s.p2p.Subscribe(pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
+	defer func() {
+		blockSub.Unsubscribe()
+		crystallizedStateSub.Unsubscribe()
+		close(s.blockBuf)
+		close(s.crystallizedStateBuf)
+	}()
 
 	highestObservedSlot := uint64(0)
 
@@ -104,10 +127,10 @@ func (s *Service) run(delaychan <-chan time.Time, blockBuf chan p2p.Message, cry
 		case <-delaychan:
 			if highestObservedSlot == s.currentSlotNumber {
 				log.Infof("Exiting initial sync and starting normal sync")
-				// TODO: Start normal sync
+				s.syncService.Start()
 				return
 			}
-		case msg := <-blockBuf:
+		case msg := <-s.blockBuf:
 			data, ok := msg.Data.(*pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
@@ -123,10 +146,10 @@ func (s *Service) run(delaychan <-chan time.Time, blockBuf chan p2p.Message, cry
 				if s.initialCrystallizedStateHash != [32]byte{} {
 					continue
 				}
-				if err := s.SetBlockForInitialSync(data); err != nil {
+				if err := s.setBlockForInitialSync(data); err != nil {
 					log.Errorf("Could not set block for initial sync: %v", err)
 				}
-				if err := s.RequestCrystallizedStateFromPeer(data, msg.Peer); err != nil {
+				if err := s.requestCrystallizedStateFromPeer(data, msg.Peer); err != nil {
 					log.Errorf("Could not request crystallized state from peer: %v", err)
 				}
 
@@ -141,7 +164,7 @@ func (s *Service) run(delaychan <-chan time.Time, blockBuf chan p2p.Message, cry
 				log.Errorf("Unable to save block: %v", err)
 			}
 			s.requestNextBlock()
-		case msg := <-crystallizedStateBuf:
+		case msg := <-s.crystallizedStateBuf:
 			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
@@ -170,9 +193,9 @@ func (s *Service) run(delaychan <-chan time.Time, blockBuf chan p2p.Message, cry
 	}
 }
 
-// RequestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
+// requestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
 // for a beacon block.
-func (s *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
+func (s *InitialSyncService) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -183,9 +206,9 @@ func (s *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse,
 	return nil
 }
 
-// SetBlockForInitialSync sets the first received block as the base finalized
+// setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
-func (s *Service) SetBlockForInitialSync(data *pb.BeaconBlockResponse) error {
+func (s *InitialSyncService) setBlockForInitialSync(data *pb.BeaconBlockResponse) error {
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -208,13 +231,13 @@ func (s *Service) SetBlockForInitialSync(data *pb.BeaconBlockResponse) error {
 }
 
 // requestNextBlock broadcasts a request for a block with the next slotnumber.
-func (s *Service) requestNextBlock() {
+func (s *InitialSyncService) requestNextBlock() {
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlotNumber + 1)})
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
-func (s *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
+func (s *InitialSyncService) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -235,6 +258,6 @@ func (s *Service) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 }
 
 // writeBlockToDB saves the corresponding block to the local DB.
-func (s *Service) writeBlockToDB(block *types.Block) error {
+func (s *InitialSyncService) writeBlockToDB(block *types.Block) error {
 	return s.chainService.SaveBlock(block)
 }
