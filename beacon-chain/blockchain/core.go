@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -191,11 +192,14 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 
 	// Check if the parentHash pointed by the beacon block is in the beaconDB.
 	parentHash := block.ParentHash()
+	var genesisHash [32]byte
+	copy(genesisHash[:], []byte("genesis"))
+
 	hasParent, err := b.db.Has(parentHash[:])
 	if err != nil {
 		return false, err
 	}
-	if !hasParent {
+	if !hasParent && !bytes.Equal(parentHash[:], genesisHash[:]) {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 
@@ -225,6 +229,9 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash(), hash)
 	}
 
+	// TODO: Simulator's crystallized state needs to match the local chain's current crystallized
+	// state in order to pass the following condition. This requires certain updates in
+	// the blockchain/core.go logic.
 	hash, err = b.CrystallizedState().Hash()
 	if err != nil {
 		return false, err

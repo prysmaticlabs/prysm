@@ -145,15 +145,15 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
 // TODO: Implement crystallized state verifier function and apply fork choice rules
 func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
-	// For now, broadcast all incoming crystallized states to the following channel
-	// for gRPC clients to receive then. TODO: change this to actually send
-	// canonical crystallized states over the channel.
-	c.canonicalCrystallizedStateAnnouncement <- state
 	h, err := state.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
+	// For now, broadcast all incoming crystallized states to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical crystallized states over the channel.
+	c.canonicalCrystallizedStateAnnouncement <- state
 	return nil
 }
 
@@ -220,22 +220,25 @@ func (c *ChainService) run(done <-chan struct{}) {
 		select {
 		case block := <-c.latestBeaconBlock:
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
+			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
+			// protocol. For the first few blocks after genesis, the current approach below
+			// will panic as there are no registered validators.
+			// activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			// if err != nil {
+			//  log.Errorf("Compute active state failed: %v", err)
+			// }
 
-			err = c.chain.SetActiveState(activeState)
-			if err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-			}
+			// err = c.chain.SetActiveState(activeState)
+			// if err != nil {
+			//   log.Errorf("Write active state to disk failed: %v", err)
+			// }
 
 			// TODO: Apply 2.1 fork choice logic using the following.
 			validatorsByHeight, err := c.chain.validatorsByHeightShard()
 			if err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
 			}
-			log.Debugf("Received the following validators by height: %v", validatorsByHeight)
+			log.Debugf("Received the following number of validators by height: %v", len(validatorsByHeight))
 
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
@@ -248,6 +251,10 @@ func (c *ChainService) run(done <-chan struct{}) {
 			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
 			// occurred successfully).
 			c.canonicalBlockAnnouncement <- block
+
+			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
+			// save the fork choice rule).
+			c.SaveBlock(block)
 
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")

@@ -102,28 +102,51 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				continue
 			}
 
-			var validators []*pb.ValidatorRecord
-			for i := 0; i < 100; i++ {
-				validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 100, Balance: 1000, WithdrawalAddress: []byte{}, PublicKey: 0}
-				validators = append(validators, validator)
-			}
-
-			crystallizedState.SetValidators(validators)
-
 			crystallizedStateHash, err := crystallizedState.Hash()
 			if err != nil {
 				log.Errorf("Could not fetch crystallized state hash: %v", err)
 				continue
 			}
 
+			// Is it epoch transition time?
+			if sim.slotNum >= crystallizedState.LastStateRecalc()+params.CycleLength {
+				var validators []*pb.ValidatorRecord
+				for i := 0; i < 100; i++ {
+					validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 100, Balance: 1000, WithdrawalAddress: []byte{}, PublicKey: 0}
+					validators = append(validators, validator)
+				}
+
+				crystallizedState.SetValidators(validators)
+				crystallizedState.SetStateRecalc(sim.slotNum)
+				crystallizedState.SetLastJustifiedSlot(sim.slotNum)
+				crystallizedState.UpdateJustifiedSlot(sim.slotNum)
+				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedSlot()).Info("Last justified epoch")
+				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedSlot()).Info("Last finalized epoch")
+
+				cHash, err := crystallizedState.Hash()
+				if err != nil {
+					log.Errorf("Could not hash simulated crystallized state: %v", err)
+					continue
+				}
+				crystallizedStateHash = cHash
+				log.WithField("announcedStateHash", fmt.Sprintf("0x%x", crystallizedStateHash)).Info("Announcing crystallized state hash")
+				sim.p2p.Broadcast(&pb.CrystallizedStateHashAnnounce{
+					Hash: crystallizedStateHash[:],
+				})
+				sim.broadcastedCrystallizedStates[crystallizedStateHash] = crystallizedState
+			}
+
 			var parentHash []byte
 			// If we haven not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
 			if len(sim.broadcastedBlockHashes) == 0 {
+				log.Info("Unbroadcast")
 				parentHash = []byte("genesis")
 			} else {
 				parentHash = sim.broadcastedBlockHashes[sim.slotNum-1][:]
 			}
+
+			log.WithField("currentSlot", sim.slotNum).Info("Current slot")
 
 			block := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
@@ -135,28 +158,6 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			})
 
 			sim.slotNum++
-
-			log.WithField("currentSlot", block.SlotNumber()).Info("Current slot")
-
-			// Is it epoch transition time?
-			if block.SlotNumber() >= crystallizedState.LastStateRecalc()+params.CycleLength {
-				crystallizedState.SetStateRecalc(block.SlotNumber())
-				crystallizedState.SetLastJustifiedSlot(block.SlotNumber())
-				crystallizedState.UpdateJustifiedSlot(block.SlotNumber())
-				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedSlot()).Info("Last justified epoch")
-				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedSlot()).Info("Last finalized epoch")
-
-				h, err := crystallizedState.Hash()
-				if err != nil {
-					log.Errorf("Could not hash simulated crystallized state: %v", err)
-					continue
-				}
-				log.WithField("announcedStateHash", fmt.Sprintf("0x%x", h)).Info("Announcing crystallized state hash")
-				sim.p2p.Broadcast(&pb.CrystallizedStateHashAnnounce{
-					Hash: h[:],
-				})
-				sim.broadcastedCrystallizedStates[h] = crystallizedState
-			}
 
 			h, err := block.Hash()
 			if err != nil {

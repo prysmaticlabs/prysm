@@ -163,7 +163,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
 	if err := ss.chainService.ProcessBlock(block); err != nil {
 		return fmt.Errorf("could not process block: %v", err)
 	}
-	log.Debugf("Successfully processed incoming block with hash: %x", h)
+	log.WithField("slotNumber", block.SlotNumber()).Debugf("Successfully processed incoming block with hash: %x", h)
 	return nil
 }
 
