@@ -39,7 +39,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	}
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 100; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 100, Balance: 1000, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalanc, WithdrawalAddress: []byte{}, PublicKey: 0}
 		validators = append(validators, validator)
 	}
 	crystallized := &CrystallizedState{
