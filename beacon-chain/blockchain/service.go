@@ -49,6 +49,7 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                                    ctx,
+		chain:                                  beaconChain,
 		cancel:                                 cancel,
 		beaconDB:                               beaconDB,
 		web3Service:                            web3Service,
@@ -216,20 +217,6 @@ func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
-			// protocol. For the first few blocks after genesis, the current approach below
-			// will panic as there are no registered validators.
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
-
-			err = c.chain.SetActiveState(activeState)
-			if err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-			}
-
 			// TODO: Apply 2.1 fork choice logic using the following.
 			validatorsByHeight, err := c.chain.validatorsByHeightShard()
 			if err != nil {
@@ -247,6 +234,21 @@ func (c *ChainService) run(done <-chan struct{}) {
 					continue
 				}
 			}
+
+			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
+			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
+			// protocol. For the first few blocks after genesis, the current approach below
+			// will panic as there are no registered validators.
+			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			if err != nil {
+				log.Errorf("Compute active state failed: %v", err)
+			}
+
+			err = c.chain.SetActiveState(activeState)
+			if err != nil {
+				log.Errorf("Write active state to disk failed: %v", err)
+			}
+
 			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
 			// occurred successfully).
 			c.canonicalBlockAnnouncement <- block

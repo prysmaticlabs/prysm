@@ -87,7 +87,7 @@ func TestStartStop(t *testing.T) {
 	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 0 {
 		t.Errorf("incorrect recent block hashes")
 	}
-	if len(chainService.CurrentCrystallizedState().Validators()) != 0 {
+	if len(chainService.CurrentCrystallizedState().Validators()) != 100 {
 		t.Errorf("incorrect default validator size")
 	}
 	if chainService.ContainsBlock([32]byte{}) {
@@ -229,7 +229,7 @@ func TestProcessingStates(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
-
+	chainService.canonicalCrystallizedStateAnnouncement = make(chan *types.CrystallizedState, 1)
 	if err := chainService.ProcessCrystallizedState(types.NewCrystallizedState(nil)); err == nil {
 		t.Errorf("processing crystallized state should have failed")
 	}
@@ -239,6 +239,7 @@ func TestProcessingStates(t *testing.T) {
 	}
 
 	chainService.ProcessCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{}))
+	<-chainService.canonicalCrystallizedStateAnnouncement
 	chainService.ProcessActiveState(types.NewActiveState(&pb.ActiveState{}))
 }
 
@@ -315,12 +316,26 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
 	cfg := &Config{
-		BeaconBlockBuf: 0,
+		BeaconBlockBuf:  0,
+		AnnouncementBuf: 1,
 	}
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
+
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 40; i++ {
+		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
+		validators = append(validators, validator)
+	}
+
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
+	crystallizedStateHash, err := crystallized.Hash()
+	if err != nil {
+		t.Fatalf("Cannot hash crystallized state: %v", err)
+	}
+
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
 	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
 	if err := beaconChain.SetActiveState(state); err != nil {
@@ -328,6 +343,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService.chain.SetCrystallizedState(crystallized)
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -343,19 +359,6 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
-	}
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-	chainService.chain.SetCrystallizedState(crystallized)
-
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            65,
 		ActiveStateHash:       activeStateHash[:],
@@ -366,5 +369,6 @@ func TestRunningChainService(t *testing.T) {
 
 	chainService.latestBeaconBlock <- block
 	chainService.cancel()
+	<-chainService.canonicalBlockAnnouncement
 	exitRoutine <- true
 }

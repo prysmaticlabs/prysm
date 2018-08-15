@@ -337,7 +337,7 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
 	if attesterFactor >= totalFactor {
-		log.Info("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		log.Infof("Setting justified epoch to current slot number: %v", block.SlotNumber())
 		b.state.CrystallizedState.UpdateJustifiedSlot(block.SlotNumber())
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
