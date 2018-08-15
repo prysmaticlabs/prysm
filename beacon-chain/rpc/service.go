@@ -142,6 +142,7 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 				return err
 			}
 		case <-s.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
 			return nil
 		}
 	}
@@ -159,6 +160,7 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 				return err
 			}
 		case <-s.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
 			return nil
 		}
 	}
