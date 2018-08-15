@@ -5,7 +5,7 @@ const (
 	// AttesterReward determines how much ETH attesters get for performing their duty.
 	AttesterReward = 1
 	// CycleLength is the beacon chain epoch length in slots.
-	CycleLength = 10
+	CycleLength = 64
 	// ShardCount is a fixed number.
 	ShardCount = 1024
 	// DefaultBalance of a validator in ETH.
