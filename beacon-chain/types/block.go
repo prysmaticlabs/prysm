@@ -2,7 +2,6 @@
 package types
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -20,7 +19,7 @@ type Block struct {
 
 // NewBlock explicitly sets the data field of a block.
 // Return block with default fields if data is nil.
-func NewBlock(data *pb.BeaconBlock) (*Block, error) {
+func NewBlock(data *pb.BeaconBlock) *Block {
 	if data == nil {
 		return &Block{
 			data: &pb.BeaconBlock{
@@ -32,14 +31,10 @@ func NewBlock(data *pb.BeaconBlock) (*Block, error) {
 				ActiveStateHash:       []byte{0},
 				CrystallizedStateHash: []byte{0},
 			},
-		}, nil
+		}
 	}
 
-	if len(data.ParentHash) != 32 {
-		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
-	}
-
-	return &Block{data: data}, nil
+	return &Block{data: data}
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
@@ -53,7 +48,7 @@ func NewGenesisBlock() (*Block, error) {
 	return &Block{
 		data: &pb.BeaconBlock{
 			Timestamp:  protoGenesis,
-			ParentHash: make([]byte, 32),
+			ParentHash: []byte{},
 		},
 	}, nil
 }

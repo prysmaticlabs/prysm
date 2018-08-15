@@ -98,10 +98,7 @@ func TestBlockRequest(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	block, err := types.NewBlock(&pb.BeaconBlock{ParentHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(&pb.BeaconBlock{ParentHash: make([]byte, 32)})
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +113,7 @@ func TestBlockRequest(t *testing.T) {
 		Data: data,
 	}
 
-	sim.broadcastedBlockHashes[h] = block
+	sim.broadcastedBlocks[h] = block
 
 	sim.blockRequestChan <- msg
 	doneChan <- struct{}{}
@@ -148,7 +145,7 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 
 	exitRoutine <- true
 
-	if len(sim.broadcastedCrystallizedHashes) != 1 {
+	if len(sim.broadcastedCrystallizedStates) != 1 {
 		t.Error("Did not store the broadcasted state hash")
 	}
 	hook.Reset()
@@ -184,7 +181,7 @@ func TestCrystallizedRequest(t *testing.T) {
 		Data: data,
 	}
 
-	sim.broadcastedCrystallizedHashes[h] = state
+	sim.broadcastedCrystallizedStates[h] = state
 
 	sim.crystallizedStateRequestChan <- msg
 	doneChan <- struct{}{}

@@ -129,7 +129,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
 		}
-		return types.NewBlock(block)
+		return types.NewBlock(block), nil
 	}
 	return types.NewGenesisBlock()
 }

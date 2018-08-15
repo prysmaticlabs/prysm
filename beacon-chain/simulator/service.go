@@ -27,9 +27,10 @@ type Simulator struct {
 	chainService                  types.StateFetcher
 	delay                         time.Duration
 	slotNum                       uint64
-	broadcastedBlockHashes        map[[32]byte]*types.Block
+	broadcastedBlocks             map[[32]byte]*types.Block
+	broadcastedBlockHashes        [][32]byte
 	blockRequestChan              chan p2p.Message
-	broadcastedCrystallizedHashes map[[32]byte]*types.CrystallizedState
+	broadcastedCrystallizedStates map[[32]byte]*types.CrystallizedState
 	crystallizedStateRequestChan  chan p2p.Message
 }
 
@@ -60,9 +61,10 @@ func NewSimulator(ctx context.Context, cfg *Config, beaconp2p types.P2P, web3Ser
 		chainService:                  chainService,
 		delay:                         cfg.Delay,
 		slotNum:                       0,
-		broadcastedBlockHashes:        make(map[[32]byte]*types.Block),
+		broadcastedBlocks:             make(map[[32]byte]*types.Block),
+		broadcastedBlockHashes:        [][32]byte{},
 		blockRequestChan:              make(chan p2p.Message, cfg.BlockRequestBuf),
-		broadcastedCrystallizedHashes: make(map[[32]byte]*types.CrystallizedState),
+		broadcastedCrystallizedStates: make(map[[32]byte]*types.CrystallizedState),
 		crystallizedStateRequestChan:  make(chan p2p.Message, cfg.CrystallizedStateRequestBuf),
 	}
 }
@@ -97,6 +99,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			activeStateHash, err := sim.chainService.CurrentActiveState().Hash()
 			if err != nil {
 				log.Errorf("Could not fetch active state hash: %v", err)
+				continue
 			}
 
 			var validators []*pb.ValidatorRecord
@@ -110,21 +113,29 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			crystallizedStateHash, err := crystallizedState.Hash()
 			if err != nil {
 				log.Errorf("Could not fetch crystallized state hash: %v", err)
+				continue
 			}
 
-			block, err := types.NewBlock(&pb.BeaconBlock{
+			var parentHash []byte
+			// If we haven not broadcast a simulated block yet, we set parent hash
+			// to the genesis block.
+			if len(sim.broadcastedBlockHashes) == 0 {
+				parentHash = []byte("genesis")
+			} else {
+				parentHash = sim.broadcastedBlockHashes[sim.slotNum-1][:]
+			}
+
+			block := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           sim.web3Service.LatestBlockHash().Bytes(),
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
-				ParentHash:            make([]byte, 32),
+				ParentHash:            parentHash,
 			})
+
 			sim.slotNum++
 
-			if err != nil {
-				log.Errorf("Could not create simulated block: %v", err)
-			}
 			log.WithField("currentSlot", block.SlotNumber()).Info("Current slot")
 
 			// Is it epoch transition time?
@@ -138,17 +149,19 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				h, err := crystallizedState.Hash()
 				if err != nil {
 					log.Errorf("Could not hash simulated crystallized state: %v", err)
+					continue
 				}
 				log.WithField("announcedStateHash", fmt.Sprintf("0x%x", h)).Info("Announcing crystallized state hash")
 				sim.p2p.Broadcast(&pb.CrystallizedStateHashAnnounce{
 					Hash: h[:],
 				})
-				sim.broadcastedCrystallizedHashes[h] = crystallizedState
+				sim.broadcastedCrystallizedStates[h] = crystallizedState
 			}
 
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash simulated block: %v", err)
+				continue
 			}
 
 			log.WithField("announcedBlockHash", fmt.Sprintf("0x%x", h)).Info("Announcing block hash")
@@ -157,7 +170,8 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			})
 			// We then store the block in a map for later retrieval upon a request for its full
 			// data being sent back.
-			sim.broadcastedBlockHashes[h] = block
+			sim.broadcastedBlocks[h] = block
+			sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, h)
 
 		case msg := <-sim.blockRequestChan:
 			data, ok := msg.Data.(*pb.BeaconBlockRequest)
@@ -169,10 +183,11 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			var h [32]byte
 			copy(h[:], data.Hash[:32])
 
-			block := sim.broadcastedBlockHashes[h]
+			block := sim.broadcastedBlocks[h]
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash block: %v", err)
+				continue
 			}
 			log.Infof("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
@@ -189,10 +204,11 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			var h [32]byte
 			copy(h[:], data.Hash[:32])
 
-			state := sim.broadcastedCrystallizedHashes[h]
+			state := sim.broadcastedCrystallizedStates[h]
 			h, err := state.Hash()
 			if err != nil {
 				log.Errorf("Could not hash state: %v", err)
+				continue
 			}
 			log.Infof("Responding to crystallized state request for hash: 0x%x", h)
 			res := &pb.CrystallizedStateResponse{CrystallizedState: state.Proto()}

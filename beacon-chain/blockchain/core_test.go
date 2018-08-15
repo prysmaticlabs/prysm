@@ -723,9 +723,5 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 		b.ParentHash = make([]byte, 32)
 	}
 
-	blk, err := types.NewBlock(b)
-	if err != nil {
-		t.Fatalf("failed to instantiate block with slot number: %v", err)
-	}
-	return blk
+	return types.NewBlock(b)
 }
