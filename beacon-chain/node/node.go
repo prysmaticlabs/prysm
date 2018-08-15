@@ -10,6 +10,8 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -150,7 +152,12 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), b.db, web3Service)
+	beaconChain, err := blockchain.NewBeaconChain(b.db.DB())
+	if err != nil {
+		return fmt.Errorf("could not register blockchain service: %v", err)
+	}
+
+	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), beaconChain, b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
@@ -158,11 +165,15 @@ func (b *BeaconNode) registerBlockchainService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService() error {
+
+	rpcClient, _ := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
+	powClient := ethclient.NewClient(rpcClient)
+
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
 		Endpoint: b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
 		Pubkey:   b.ctx.GlobalString(utils.PubKeyFlag.Name),
 		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
-	})
+	}, powClient, powClient, powClient)
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
 	}

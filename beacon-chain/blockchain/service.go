@@ -41,10 +41,11 @@ func DefaultConfig() *Config {
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                              ctx,
+		chain:                            beaconChain,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
@@ -59,11 +60,6 @@ func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, we
 func (c *ChainService) Start() {
 	log.Infof("Starting service")
 
-	beaconChain, err := NewBeaconChain(c.beaconDB.DB())
-	if err != nil {
-		log.Errorf("Unable to setup blockchain: %v", err)
-	}
-	c.chain = beaconChain
 	go c.run(c.ctx.Done())
 }
 
@@ -200,17 +196,6 @@ func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
-
-			err = c.chain.SetActiveState(activeState)
-			if err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-			}
-
 			// TODO: Apply 2.1 fork choice logic using the following.
 			validatorsByHeight, err := c.chain.validatorsByHeightShard()
 			if err != nil {
@@ -224,6 +209,16 @@ func (c *ChainService) run(done <-chan struct{}) {
 				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
 				}
+			}
+
+			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
+			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			if err != nil {
+				log.Errorf("Compute active state failed: %v", err)
+			}
+			err = c.chain.SetActiveState(activeState)
+			if err != nil {
+				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
 		case <-done:
