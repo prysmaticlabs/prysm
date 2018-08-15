@@ -26,17 +26,17 @@ var log = logrus.WithField("prefix", "sync")
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type Service struct {
-	ctx                          context.Context
-	cancel                       context.CancelFunc
-	p2p                          types.P2P
-	chainService                 types.ChainService
-	synced                       bool
-	announceBlockHashBuf         chan p2p.Message
-	blockBuf                     chan p2p.Message
-	announceCrystallizedHashBuf  chan p2p.Message
-	crystallizedStateBuf         chan p2p.Message
-	announceActiveHashBuf        chan p2p.Message
-	activeStateBuf               chan p2p.Message
+	ctx                         context.Context
+	cancel                      context.CancelFunc
+	p2p                         types.P2P
+	chainService                types.ChainService
+	synced                      bool
+	announceBlockHashBuf        chan p2p.Message
+	blockBuf                    chan p2p.Message
+	announceCrystallizedHashBuf chan p2p.Message
+	crystallizedStateBuf        chan p2p.Message
+	announceActiveHashBuf       chan p2p.Message
+	activeStateBuf              chan p2p.Message
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -70,17 +70,17 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 	}
 
 	return &Service{
-		ctx:                          ctx,
-		cancel:                       cancel,
-		p2p:                          beaconp2p,
-		chainService:                 cs,
-		synced:                       !stored,
-		announceBlockHashBuf:         make(chan p2p.Message, cfg.BlockHashBufferSize),
-		blockBuf:                     make(chan p2p.Message, cfg.BlockBufferSize),
-		announceCrystallizedHashBuf:  make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
-		crystallizedStateBuf:         make(chan p2p.Message, cfg.ActiveStateBufferSize),
-		announceActiveHashBuf:        make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
-		activeStateBuf:               make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
+		ctx:                         ctx,
+		cancel:                      cancel,
+		p2p:                         beaconp2p,
+		chainService:                cs,
+		synced:                      !stored,
+		announceBlockHashBuf:        make(chan p2p.Message, cfg.BlockHashBufferSize),
+		blockBuf:                    make(chan p2p.Message, cfg.BlockBufferSize),
+		announceCrystallizedHashBuf: make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
+		crystallizedStateBuf:        make(chan p2p.Message, cfg.ActiveStateBufferSize),
+		announceActiveHashBuf:       make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
+		activeStateBuf:              make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
 	}
 }
 
@@ -217,7 +217,6 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
 	log.Debugf("Successfully received incoming active state with hash: %x", h)
 	return nil
 }
-
 
 func (ss *Service) run(done <-chan struct{}) {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)

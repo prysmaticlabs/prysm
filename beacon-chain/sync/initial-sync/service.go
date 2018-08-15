@@ -55,10 +55,10 @@ type InitialSyncService struct {
 // NewInitialSyncService constructs a new InitialSyncService.
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
-	cfg          Config,
-	beaconp2p    types.P2P,
+	cfg Config,
+	beaconp2p types.P2P,
 	chainService ChainService,
-	syncService  SyncService,
+	syncService SyncService,
 ) *InitialSyncService {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -104,7 +104,7 @@ func (s *InitialSyncService) Stop() error {
 	return nil
 }
 
-// run is the main goroutine for the intial sync service.
+// run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance
 func (s *InitialSyncService) run(delaychan <-chan time.Time) {
