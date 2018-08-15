@@ -13,8 +13,8 @@ type ActiveState struct {
 	data *pb.ActiveState
 }
 
-// CrystallizedState contains fields of every epoch state,
-// it changes every epoch.
+// CrystallizedState contains fields of every Slot state,
+// it changes every Slot.
 type CrystallizedState struct {
 	data *pb.CrystallizedState
 }
@@ -33,26 +33,39 @@ func NewActiveState(data *pb.ActiveState) *ActiveState {
 func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 	active := &ActiveState{
 		data: &pb.ActiveState{
-			TotalAttesterDeposits: 0,
-			AttesterBitfield:      []byte{},
+			PendingAttestations: []*pb.AttestationRecord{},
+			RecentBlockHashes:   [][]byte{},
 		},
 	}
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedState{
-			ActiveValidators:      []*pb.ValidatorRecord{},
-			QueuedValidators:      []*pb.ValidatorRecord{},
-			ExitedValidators:      []*pb.ValidatorRecord{},
-			CurrentEpochShuffling: []uint64{},
-			CurrentEpoch:          0,
-			LastJustifiedEpoch:    0,
-			LastFinalizedEpoch:    0,
-			CurrentDynasty:        0,
-			TotalDeposits:         0,
-			DynastySeed:           []byte{},
-			DynastySeedLastReset:  0,
+			LastStateRecalc:        0,
+			JustifiedStreak:        0,
+			LastJustifiedSlot:      0,
+			LastFinalizedSlot:      0,
+			CurrentDynasty:         0,
+			CrosslinkingStartShard: 0,
+			TotalDeposits:          0,
+			DynastySeed:            []byte{},
+			DynastySeedLastReset:   0,
+			CrosslinkRecords:       []*pb.CrosslinkRecord{},
+			Validators:             []*pb.ValidatorRecord{},
+			IndicesForHeights:      []*pb.ShardAndCommitteeArray{},
 		},
 	}
 	return active, crystallized
+}
+
+// NewAttestationRecord initializes an attestation record with default parameters.
+func NewAttestationRecord() *pb.AttestationRecord {
+	return &pb.AttestationRecord{
+		Slot:                0,
+		ShardId:             0,
+		ObliqueParentHashes: [][]byte{},
+		ShardBlockHash:      []byte{0},
+		AttesterBitfield:    nil,
+		AggregateSig:        []uint64{0, 0},
+	}
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
@@ -75,24 +88,40 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	return blake2b.Sum256(data), nil
 }
 
-// TotalAttesterDeposits returns total quantity of wei that attested for the most recent checkpoint.
-func (a *ActiveState) TotalAttesterDeposits() uint64 {
-	return a.data.TotalAttesterDeposits
+// PendingAttestations returns attestations that have not yet been processed.
+func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
+	return a.data.PendingAttestations
 }
 
-// SetTotalAttesterDeposits sets total quantity of wei that attested for the most recent checkpoint.
-func (a *ActiveState) SetTotalAttesterDeposits(deposit uint64) {
-	a.data.TotalAttesterDeposits = deposit
+// NewPendingAttestation inserts a new pending attestaton fields.
+func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
+	a.data.PendingAttestations = append(a.data.PendingAttestations, record)
 }
 
-// AttesterBitfield returns a bitfield for seeing which attester has attested.
-func (a *ActiveState) AttesterBitfield() []byte {
-	return a.data.AttesterBitfield
+// LatestPendingAttestation returns the latest pending attestaton fields.
+func (a *ActiveState) LatestPendingAttestation() *pb.AttestationRecord {
+	return a.data.PendingAttestations[len(a.data.PendingAttestations)-1]
 }
 
-// SetAttesterBitfield sets attester bitfield.
-func (a *ActiveState) SetAttesterBitfield(bitfield []byte) {
-	a.data.AttesterBitfield = bitfield
+// ClearPendingAttestations clears attestations that have not yet been processed.
+func (a *ActiveState) ClearPendingAttestations() {
+	for i := range a.data.PendingAttestations {
+		a.data.PendingAttestations[i] = &pb.AttestationRecord{}
+	}
+}
+
+// RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
+func (a *ActiveState) RecentBlockHashes() []common.Hash {
+	var blockhashes []common.Hash
+	for _, hash := range a.data.RecentBlockHashes {
+		blockhashes = append(blockhashes, common.BytesToHash(hash))
+	}
+	return blockhashes
+}
+
+// ClearRecentBlockHashes resets the most recent 64 block hashes.
+func (a *ActiveState) ClearRecentBlockHashes() {
+	a.data.RecentBlockHashes = [][]byte{}
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
@@ -115,85 +144,44 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 	return blake2b.Sum256(data), nil
 }
 
-// ActiveValidators returns the list of active validators.
-func (c *CrystallizedState) ActiveValidators() []*pb.ValidatorRecord {
-	return c.data.ActiveValidators
+// LastStateRecalc returns when the last time crystallized state recalculated.
+func (c *CrystallizedState) LastStateRecalc() uint64 {
+	return c.data.LastStateRecalc
 }
 
-// ActiveValidatorsLength returns the number of total active validators.
-func (c *CrystallizedState) ActiveValidatorsLength() int {
-	return len(c.data.ActiveValidators)
+// JustifiedStreak returns number of consecutive justified slots ending at head.
+func (c *CrystallizedState) JustifiedStreak() uint64 {
+	return c.data.JustifiedStreak
 }
 
-// SetActiveValidators sets the active validator set.
-func (c *CrystallizedState) SetActiveValidators(validators []*pb.ValidatorRecord) {
-	c.data.ActiveValidators = validators
+// ClearJustifiedStreak clears the number of consecutive justified slots.
+func (c *CrystallizedState) ClearJustifiedStreak() {
+	c.data.JustifiedStreak = 0
 }
 
-// QueuedValidators returns the list of validators that are queued.
-func (c *CrystallizedState) QueuedValidators() []*pb.ValidatorRecord {
-	return c.data.QueuedValidators
+// CrosslinkingStartShard returns next shard that crosslinking assignment will start from.
+func (c *CrystallizedState) CrosslinkingStartShard() uint64 {
+	return c.data.CrosslinkingStartShard
 }
 
-// QueuedValidatorsLength returns the number of total queued validators.
-func (c *CrystallizedState) QueuedValidatorsLength() int {
-	return len(c.data.QueuedValidators)
+// LastJustifiedSlot return the last justified slot of the beacon chain.
+func (c *CrystallizedState) LastJustifiedSlot() uint64 {
+	return c.data.LastJustifiedSlot
 }
 
-// SetQueuedValidators sets the queued validator set.
-func (c *CrystallizedState) SetQueuedValidators(validators []*pb.ValidatorRecord) {
-	c.data.QueuedValidators = validators
+// SetLastJustifiedSlot sets the last justified Slot of the beacon chain.
+func (c *CrystallizedState) SetLastJustifiedSlot(Slot uint64) {
+	c.data.LastJustifiedSlot = Slot
 }
 
-// ExitedValidators returns the list of validators that have exited.
-func (c *CrystallizedState) ExitedValidators() []*pb.ValidatorRecord {
-	return c.data.ExitedValidators
+// LastFinalizedSlot returns the last finalized Slot of the beacon chain.
+func (c *CrystallizedState) LastFinalizedSlot() uint64 {
+	return c.data.LastFinalizedSlot
 }
 
-// ExitedValidatorsLength returns the number of total exited validators.
-func (c *CrystallizedState) ExitedValidatorsLength() int {
-	return len(c.data.ExitedValidators)
-}
-
-// SetExitedValidators sets the exited validator set..
-func (c *CrystallizedState) SetExitedValidators(validators []*pb.ValidatorRecord) {
-	c.data.ExitedValidators = validators
-}
-
-// CurrentEpochShuffling is the permutation of validators that determines
-// who participates in what committee and at what height.
-func (c *CrystallizedState) CurrentEpochShuffling() []uint64 {
-	return c.data.CurrentEpochShuffling
-}
-
-// CurrentEpoch returns the current epoch of the beacon chain.
-func (c *CrystallizedState) CurrentEpoch() uint64 {
-	return c.data.CurrentEpoch
-}
-
-// IncrementEpoch increments the epoch by one.
-func (c *CrystallizedState) IncrementEpoch() {
-	c.data.CurrentEpoch++
-}
-
-// LastJustifiedEpoch return the last justified epoch of the beacon chain.
-func (c *CrystallizedState) LastJustifiedEpoch() uint64 {
-	return c.data.LastJustifiedEpoch
-}
-
-// SetLastJustifiedEpoch sets the last justified epoch of the beacon chain.
-func (c *CrystallizedState) SetLastJustifiedEpoch(epoch uint64) {
-	c.data.LastJustifiedEpoch = epoch
-}
-
-// LastFinalizedEpoch returns the last finalized epoch of the beacon chain.
-func (c *CrystallizedState) LastFinalizedEpoch() uint64 {
-	return c.data.LastFinalizedEpoch
-}
-
-// SetLastFinalizedEpoch sets last justified epoch of the beacon chain.
-func (c *CrystallizedState) SetLastFinalizedEpoch(epoch uint64) {
-	c.data.LastFinalizedEpoch = epoch
+// SetLastFinalizedSlot sets last justified Slot of the beacon chain.
+func (c *CrystallizedState) SetLastFinalizedSlot(Slot uint64) {
+	c.data.LastFinalizedSlot = Slot
 }
 
 // CurrentDynasty returns the current dynasty of the beacon chain.
@@ -201,37 +189,70 @@ func (c *CrystallizedState) CurrentDynasty() uint64 {
 	return c.data.CurrentDynasty
 }
 
-// NextShard returns where the crosslink assignment will be coming from.
-func (c *CrystallizedState) NextShard() uint64 {
-	return c.data.NextShard
+// IncrementCurrentDynasty increments current dynasty by one.
+func (c *CrystallizedState) IncrementCurrentDynasty() {
+	c.data.CurrentDynasty++
 }
 
-// CurrentCheckPoint returns the current checkpoint for the FFG state.
-func (c *CrystallizedState) CurrentCheckPoint() common.Hash {
-	return common.BytesToHash(c.data.CurrentCheckPoint)
-}
-
-// TotalDeposits returns the combined deposits of all the validators.
+// TotalDeposits returns total balance of deposits.
 func (c *CrystallizedState) TotalDeposits() uint64 {
 	return c.data.TotalDeposits
 }
 
-// DynastySeed returns the seed used to select the committee for each shard.
-func (c *CrystallizedState) DynastySeed() common.Hash {
-	return common.BytesToHash(c.data.DynastySeed)
+// SetTotalDeposits sets total balance of deposits.
+func (c *CrystallizedState) SetTotalDeposits(total uint64) {
+	c.data.TotalDeposits = total
 }
 
-// DynastySeedLastReset is the last finalized epoch that the crosslink seed was reset.
+// DynastySeed is used to select the committee for each shard.
+func (c *CrystallizedState) DynastySeed() [32]byte {
+	var h [32]byte
+	copy(h[:], c.data.DynastySeed)
+	return h
+}
+
+// DynastySeedLastReset is the last finalized Slot that the crosslink seed was reset.
 func (c *CrystallizedState) DynastySeedLastReset() uint64 {
 	return c.data.DynastySeedLastReset
 }
 
-// UpdateJustifiedEpoch updates the justified epoch during an epoch transition.
-func (c *CrystallizedState) UpdateJustifiedEpoch() {
-	epoch := c.LastJustifiedEpoch()
-	c.SetLastJustifiedEpoch(c.CurrentEpoch())
+// Validators returns list of validators.
+func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
+	return c.data.Validators
+}
 
-	if c.CurrentEpoch() == (epoch + 1) {
-		c.SetLastFinalizedEpoch(epoch)
+// ValidatorsLength returns the number of total validators.
+func (c *CrystallizedState) ValidatorsLength() int {
+	return len(c.data.Validators)
+}
+
+// SetValidators sets the validator set.
+func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
+	c.data.Validators = validators
+}
+
+// IndicesForHeights returns what active validators are part of the attester set
+// at what height, and in what shard.
+func (c *CrystallizedState) IndicesForHeights() []*pb.ShardAndCommitteeArray {
+	return c.data.IndicesForHeights
+}
+
+// ClearIndicesForHeights clears the IndicesForHeights set.
+func (c *CrystallizedState) ClearIndicesForHeights() {
+	c.data.IndicesForHeights = []*pb.ShardAndCommitteeArray{}
+}
+
+// CrosslinkRecords returns records about the most recent cross link or each shard.
+func (c *CrystallizedState) CrosslinkRecords() []*pb.CrosslinkRecord {
+	return c.data.CrosslinkRecords
+}
+
+// UpdateJustifiedSlot updates the justified and finalized Slot during a dynasty transition.
+func (c *CrystallizedState) UpdateJustifiedSlot(currentSlot uint64) {
+	slot := c.LastJustifiedSlot()
+	c.SetLastJustifiedSlot(currentSlot)
+
+	if currentSlot == (slot + 1) {
+		c.SetLastFinalizedSlot(slot)
 	}
 }
