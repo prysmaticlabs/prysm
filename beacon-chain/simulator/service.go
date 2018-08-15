@@ -112,7 +112,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			if sim.slotNum >= crystallizedState.LastStateRecalc()+params.CycleLength {
 				var validators []*pb.ValidatorRecord
 				for i := 0; i < 100; i++ {
-					validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 100, Balance: 1000, WithdrawalAddress: []byte{}, PublicKey: 0}
+					validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
 					validators = append(validators, validator)
 				}
 
@@ -140,7 +140,6 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			// If we haven not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
 			if len(sim.broadcastedBlockHashes) == 0 {
-				log.Info("Unbroadcast")
 				parentHash = []byte("genesis")
 			} else {
 				parentHash = sim.broadcastedBlockHashes[sim.slotNum-1][:]

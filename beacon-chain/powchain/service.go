@@ -10,8 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
 )
@@ -27,7 +25,7 @@ var log = logrus.WithField("prefix", "powchain")
 type Web3Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	client              *ethclient.Client
+	client              types.POWChainClient
 	headerChan          chan *gethTypes.Header
 	logChan             chan gethTypes.Log
 	pubKey              string
@@ -49,7 +47,7 @@ type Web3ServiceConfig struct {
 
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
+func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client types.POWChainClient, reader types.Reader, logger types.Logger) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
 	}
@@ -65,6 +63,9 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		blockNumber:         nil,
 		blockHash:           common.BytesToHash([]byte{}),
 		vrcAddress:          config.VrcAddr,
+		client:              client,
+		reader:              reader,
+		logger:              logger,
 	}, nil
 }
 
@@ -73,13 +74,6 @@ func (w *Web3Service) Start() {
 	log.WithFields(logrus.Fields{
 		"endpoint": w.endpoint,
 	}).Info("Starting service")
-	rpcClient, err := rpc.Dial(w.endpoint)
-	if err != nil {
-		log.Errorf("Cannot connect to PoW chain RPC client: %v", err)
-		return
-	}
-	w.client = ethclient.NewClient(rpcClient)
-	w.reader, w.logger = w.client, w.client
 	go w.run(w.ctx.Done())
 }
 

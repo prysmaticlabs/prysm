@@ -189,15 +189,42 @@ func TestSetCrystallizedState(t *testing.T) {
 func TestGetAttestersProposer(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
-
+	// Create validators more than params.MaxValidators, this should fail.
 	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.MaxValidators+1; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, validator)
+	}
+	_, crystallized := types.NewGenesisStates()
+	crystallized.SetValidators(validators)
+	crystallized.IncrementCurrentDynasty()
+	beaconChain.SetCrystallizedState(crystallized)
+
+	_, _, err := beaconChain.getAttestersProposer(common.Hash{'A'})
+	if err == nil {
+		t.Errorf("GetAttestersProposer should have failed")
+	}
+
+	// computeNewActiveState should fail the same.
+	_, err = beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'}))
+	if err == nil {
+		t.Errorf("computeNewActiveState should have failed")
+	}
+
+	// validatorsByHeightShard should fail the same.
+	_, err = beaconChain.validatorsByHeightShard()
+	if err == nil {
+		t.Errorf("validatorsByHeightShard should have failed")
+	}
+
 	// Create 1000 validators in ActiveValidators.
+	validators = validators[:0]
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
 	}
 
-	_, crystallized := types.NewGenesisStates()
+	_, crystallized = types.NewGenesisStates()
 	crystallized.SetValidators(validators)
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
@@ -220,6 +247,14 @@ func TestGetAttestersProposer(t *testing.T) {
 	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
+
+	indices, err := beaconChain.validatorsByHeightShard()
+	if err != nil {
+		t.Errorf("validatorsByHeightShard failed with %v:", err)
+	}
+	if len(indices) != 8192 {
+		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
+	}
 }
 
 func TestCanProcessBlock(t *testing.T) {
@@ -228,7 +263,7 @@ func TestCanProcessBlock(t *testing.T) {
 
 	clock = &fakeClock{}
 
-	// Initialize a parent block
+	// Initialize a parent block.
 	parentBlock := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 1,
 	})
@@ -248,7 +283,7 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Error("Using a faulty fetcher should throw an error, received nil")
 	}
 
-	// Initialize initial state
+	// Initialize initial state.
 	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
@@ -270,7 +305,7 @@ func TestCanProcessBlock(t *testing.T) {
 		ParentHash:            parentHash[:],
 	})
 
-	// A properly initialize block should not fail
+	// A properly initialize block should not fail.
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
@@ -279,7 +314,7 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Error("Should be able to process block, could not")
 	}
 
-	// Test timestamp validity condition
+	// Test timestamp validity condition.
 	block = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            1000000,
 		ActiveStateHash:       activeHash[:],
@@ -299,7 +334,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	// Test negative scenario where active state hash is different than node's compute
+	// Test negative scenario where active state hash is different than node's compute.
 	parentBlock := NewBlock(t, nil)
 	parentHash, err := parentBlock.Hash()
 	if err != nil {
@@ -309,7 +344,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
 
-	// Initialize state
+	// Initialize state.
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()
 	if err != nil {
@@ -329,7 +364,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 		ParentHash:            parentHash[:],
 	})
 
-	// Test negative scenario where active state hash is different than node's compute
+	// Test negative scenario where active state hash is different than node's compute.
 	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'B'}}})
 
 	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
@@ -340,7 +375,7 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 		t.Error("CanProcessBlocks should have returned false")
 	}
 
-	// Test negative scenario where crystallized state hash is different than node's compute
+	// Test negative scenario where crystallized state hash is different than node's compute.
 	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 9999})
 
 	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
@@ -371,7 +406,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	}
 	beaconChain.state.CrystallizedState = crystallized
 
-	// Test that block processing is invalid without a parent hash
+	// Test that block processing is invalid without a parent hash.
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            2,
 		ActiveStateHash:       activeStateHash[:],
@@ -430,11 +465,11 @@ func TestRotateValidatorSet(t *testing.T) {
 	defer db.Close()
 
 	validators := []*pb.ValidatorRecord{
-		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit
-		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit
-		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active
-		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active
-		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active
+		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
+		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
+		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active.
+		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active.
+		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active.
 	}
 
 	data := &pb.CrystallizedState{
@@ -444,7 +479,7 @@ func TestRotateValidatorSet(t *testing.T) {
 	state := types.NewCrystallizedState(data)
 	beaconChain.SetCrystallizedState(state)
 
-	// rotate validator set and increment dynasty count by 1
+	// rotate validator set and increment dynasty count by 1.
 	beaconChain.rotateValidatorSet()
 	beaconChain.CrystallizedState().IncrementCurrentDynasty()
 
@@ -478,7 +513,7 @@ func TestHasVoted(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	// Setting bit field to 11111111
+	// Setting bit field to 11111111.
 	pendingAttestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{255},
 	}
@@ -494,7 +529,7 @@ func TestHasVoted(t *testing.T) {
 		}
 	}
 
-	// Setting bit field to 01010101
+	// Setting bit field to 01010101.
 	pendingAttestation = &pb.AttestationRecord{
 		AttesterBitfield: []byte{85},
 	}
@@ -654,12 +689,12 @@ func TestValidatorIndices(t *testing.T) {
 
 	data := &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // active
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 3},                   // active
-			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // queued
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // active.
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
+			{PublicKey: 0, StartDynasty: 0, EndDynasty: 3},                   // active.
+			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // queued.
 		},
 		CurrentDynasty: 1,
 	}
@@ -681,12 +716,12 @@ func TestValidatorIndices(t *testing.T) {
 
 	data = &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // active
-			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // active
-			{PublicKey: 0, StartDynasty: 6, EndDynasty: uint64(math.Inf(0))}, // queued
-			{PublicKey: 0, StartDynasty: 7, EndDynasty: uint64(math.Inf(0))}, // queued
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // exited
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 3},                   // exited
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // active.
+			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // active.
+			{PublicKey: 0, StartDynasty: 6, EndDynasty: uint64(math.Inf(0))}, // queued.
+			{PublicKey: 0, StartDynasty: 7, EndDynasty: uint64(math.Inf(0))}, // queued.
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // exited.
+			{PublicKey: 0, StartDynasty: 1, EndDynasty: 3},                   // exited.
 		},
 		CurrentDynasty: 5,
 	}
@@ -708,7 +743,7 @@ func TestValidatorIndices(t *testing.T) {
 }
 
 // NewBlock is a helper method to create blocks with valid defaults.
-// For a generic block, use NewBlock(t, nil)
+// For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	if b == nil {
 		b = &pb.BeaconBlock{}

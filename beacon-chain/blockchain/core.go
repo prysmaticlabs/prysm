@@ -313,7 +313,7 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 
 // getAttestersTotalDeposit returns the total deposit combined by attesters.
 // TODO: Consider slashing condition.
-func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
+func (b *BeaconChain) getAttestersTotalDeposit() uint64 {
 	var numOfBits int
 	for _, attestation := range b.ActiveState().PendingAttestations() {
 		for _, byte := range attestation.AttesterBitfield {
@@ -321,7 +321,7 @@ func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
 		}
 	}
 	// Assume there's no slashing condition, the following logic will change later phase.
-	return uint64(numOfBits) * params.DefaultBalance, nil
+	return uint64(numOfBits) * params.DefaultBalance
 }
 
 // calculateRewardsFFG adjusts validators balances by applying rewards or penalties
@@ -331,10 +331,7 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 	defer b.lock.Unlock()
 	validators := b.CrystallizedState().Validators()
 	activeValidators := b.activeValidatorIndices()
-	attesterDeposits, err := b.getAttestersTotalDeposit()
-	if err != nil {
-		return err
-	}
+	attesterDeposits := b.getAttestersTotalDeposit()
 	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
 	attesterFactor := attesterDeposits * 3

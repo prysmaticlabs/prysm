@@ -31,19 +31,21 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf int
+	BeaconBlockBuf  int
+	AnnouncementBuf int
 }
 
 // DefaultConfig options.
 func DefaultConfig() *Config {
 	return &Config{
-		BeaconBlockBuf: 10,
+		BeaconBlockBuf:  10,
+		AnnouncementBuf: 10,
 	}
 }
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                                    ctx,
@@ -51,8 +53,8 @@ func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, we
 		beaconDB:                               beaconDB,
 		web3Service:                            web3Service,
 		latestBeaconBlock:                      make(chan *types.Block, cfg.BeaconBlockBuf),
-		canonicalBlockAnnouncement:             make(chan *types.Block, 10),
-		canonicalCrystallizedStateAnnouncement: make(chan *types.CrystallizedState, 10),
+		canonicalBlockAnnouncement:             make(chan *types.Block, cfg.AnnouncementBuf),
+		canonicalCrystallizedStateAnnouncement: make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
 		processedBlockHashes:                   [][32]byte{},
 		processedActiveStateHashes:             [][32]byte{},
 		processedCrystallizedStateHashes:       [][32]byte{},
@@ -63,11 +65,6 @@ func NewChainService(ctx context.Context, cfg *Config, beaconDB *database.DB, we
 func (c *ChainService) Start() {
 	log.Infof("Starting service")
 
-	beaconChain, err := NewBeaconChain(c.beaconDB.DB())
-	if err != nil {
-		log.Errorf("Unable to setup blockchain: %v", err)
-	}
-	c.chain = beaconChain
 	go c.run(c.ctx.Done())
 }
 
@@ -259,7 +256,6 @@ func (c *ChainService) run(done <-chan struct{}) {
 			if err := c.SaveBlock(block); err != nil {
 				log.Errorf("Unable to save block to db: %v", err)
 			}
-
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
