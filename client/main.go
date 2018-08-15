@@ -1,4 +1,3 @@
-// Package client defines the required functionalities for the sharding client.
 package main
 
 import (
@@ -15,6 +14,13 @@ import (
 )
 
 func startNode(ctx *cli.Context) error {
+	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	level, err := logrus.ParseLevel(verbosity)
+	if err != nil {
+		return err
+	}
+	logrus.SetLevel(level)
+
 	shardingNode, err := node.NewShardInstance(ctx)
 	if err != nil {
 		return err
@@ -55,7 +61,17 @@ VERSION:
 	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
 	app.Action = startNode
-	app.Flags = []cli.Flag{types.ActorFlag, types.BeaconRPCProviderFlag, cmd.VerbosityFlag, cmd.DataDirFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
+	app.Flags = []cli.Flag{
+		types.BeaconRPCProviderFlag,
+		cmd.VerbosityFlag,
+		cmd.DataDirFlag,
+		debug.PProfFlag,
+		debug.PProfAddrFlag,
+		debug.PProfPortFlag,
+		debug.MemProfileRateFlag,
+		debug.CPUProfileFlag,
+		debug.TraceFlag,
+	}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
