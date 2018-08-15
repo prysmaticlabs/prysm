@@ -19,13 +19,14 @@ var log = logrus.WithField("prefix", "rpc")
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
-	announcer types.CanonicalEventAnnouncer
-	port      string
-	listener  net.Listener
-	withCert  string
-	withKey   string
+	ctx        context.Context
+	cancel     context.CancelFunc
+	announcer  types.CanonicalEventAnnouncer
+	port       string
+	listener   net.Listener
+	withCert   string
+	withKey    string
+	grpcServer *grpc.Server
 }
 
 // Config options for the beacon node RPC server.
@@ -61,23 +62,22 @@ func (s *Service) Start() {
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
 
-	var grpcServer *grpc.Server
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
 			log.Errorf("could not load TLS keys: %s", err)
 		}
-		grpcServer = grpc.NewServer(grpc.Creds(creds))
+		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection")
-		grpcServer = grpc.NewServer()
+		s.grpcServer = grpc.NewServer()
 	}
 
-	pb.RegisterBeaconServiceServer(grpcServer, s)
+	pb.RegisterBeaconServiceServer(s.grpcServer, s)
 	go func() {
-		err = grpcServer.Serve(lis)
+		err = s.grpcServer.Serve(lis)
 		if err != nil {
-			log.Debugf("Could not serve gRPC: %v", err)
+			log.Errorf("Could not serve gRPC: %v", err)
 		}
 	}()
 }
@@ -85,8 +85,10 @@ func (s *Service) Start() {
 // Stop the service.
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
+	s.cancel()
 	if s.listener != nil {
-		return s.listener.Close()
+		s.grpcServer.GracefulStop()
+		log.Debug("Initiated graceful stop of gRPC server")
 	}
 	return nil
 }
