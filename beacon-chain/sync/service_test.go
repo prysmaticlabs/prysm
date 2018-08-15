@@ -127,7 +127,7 @@ func TestProcessBlockHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -161,7 +161,7 @@ func TestProcessBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -208,7 +208,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -284,7 +284,7 @@ func TestProcessSameBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -336,7 +336,7 @@ func TestProcessCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -369,7 +369,7 @@ func TestProcessActiveHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -402,7 +402,7 @@ func TestProcessBadCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -436,7 +436,7 @@ func TestProcessBadActiveHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -470,7 +470,7 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -536,7 +536,7 @@ func TestProcessActiveStates(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -601,7 +601,7 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -654,7 +654,7 @@ func TestProcessSameActiveState(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 

@@ -91,7 +91,7 @@ func (ss *Service) Start() {
 		return
 	}
 
-	go ss.run(ss.ctx.Done())
+	go ss.run()
 }
 
 // Stop kills the block processing goroutine, but does not wait until the goroutine exits.
@@ -212,7 +212,7 @@ func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
 	return nil
 }
 
-func (ss *Service) run(done <-chan struct{}) {
+func (ss *Service) run() {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
 	announceCrystallizedHashSub := ss.p2p.Subscribe(pb.CrystallizedStateHashAnnounce{}, ss.announceCrystallizedHashBuf)
@@ -231,7 +231,7 @@ func (ss *Service) run(done <-chan struct{}) {
 
 	for {
 		select {
-		case <-done:
+		case <-ss.ctx.Done():
 			log.Infof("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
