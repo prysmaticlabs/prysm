@@ -10,5 +10,6 @@ build --local_resources=1536,1.5,0.5
 build --noshow_progress
 build --verbose_failures
 build --sandbox_debug
-build --test_output=all
+build --test_output=errors
 build --flaky_test_attempts=5
+build --features=race
