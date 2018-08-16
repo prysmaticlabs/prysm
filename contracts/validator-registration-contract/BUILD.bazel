@@ -1,4 +1,11 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("//contracts:rules/sol2go.bzl", "sol2go")
+
+sol2go(
+    name = "contract_go",
+    src = "validator_registration.sol",
+    pkg = "vrc",
+)
 
 go_library(
     name = "go_default_library",
