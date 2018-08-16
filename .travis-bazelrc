@@ -12,4 +12,3 @@ build --verbose_failures
 build --sandbox_debug
 build --test_output=all
 build --flaky_test_attempts=5
-build --features=race
