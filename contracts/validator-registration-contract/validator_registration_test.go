@@ -47,7 +47,7 @@ func setup() (*testAccount, error) {
 	txOpts := bind.NewKeyedTransactor(privKey)
 	startingBalance, _ := new(big.Int).SetString("100000000000000000000", 10)
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis)
+	backend := backends.NewSimulatedBackend(genesis, 10000000 /*gasLimit*/)
 
 	_, _, contract, err := DeployValidatorRegistration(txOpts, backend)
 	if err != nil {
