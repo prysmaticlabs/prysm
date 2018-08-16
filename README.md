@@ -110,7 +110,7 @@ Make sure a geth node is running as a separate process according to the instruct
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
-  --rpc-port 5000
+  --rpc-port 4000
 ```
 
 This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding clients to connect to it, and begins listening for p2p events.
@@ -121,7 +121,7 @@ To try out the beacon node in development by simulating incoming blocks, run the
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
-  --rpc-port 5000 \
+  --rpc-port 4000 \
   --simulator \
   --verbosity debug
 ```
