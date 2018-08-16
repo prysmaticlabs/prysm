@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -192,14 +191,11 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 
 	// Check if the parentHash pointed by the beacon block is in the beaconDB.
 	parentHash := block.ParentHash()
-	var genesisHash [32]byte
-	copy(genesisHash[:], []byte("genesis"))
-
 	hasParent, err := b.db.Has(parentHash[:])
 	if err != nil {
 		return false, err
 	}
-	if !hasParent && !bytes.Equal(parentHash[:], genesisHash[:]) {
+	if !hasParent && block.SlotNumber() != 1 {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 
