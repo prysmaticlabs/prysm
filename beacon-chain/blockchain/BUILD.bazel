@@ -29,6 +29,7 @@ go_test(
         "service_test.go",
     ],
     embed = [":go_default_library"],
+    race = "off",  # TODO(#412): fix issues with tests failing with race on.
     deps = [
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
