@@ -128,7 +128,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case <-delaychan:
 			if highestObservedSlot == s.currentSlotNumber {
 				log.Infof("Exiting initial sync and starting normal sync")
-				// TODO: Resume sync after completion of intial sync.
+				// TODO: Resume sync after completion of initial sync.
 				// See comment in Sync service's Start function for explanation.
 				return
 			}

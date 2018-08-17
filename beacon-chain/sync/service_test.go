@@ -755,13 +755,13 @@ func TestStartEmptyState(t *testing.T) {
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	ss.Start()
-	testutil.AssertLogsContain(t, hook, "empty chain state, exiting sync")
+	testutil.AssertLogsContain(t, hook, "empty chain state, but continue sync")
 
 	hook.Reset()
 	ms.setState(true)
 
 	ss.Start()
-	testutil.AssertLogsDoNotContain(t, hook, "empty chain state, exiting sync")
+	testutil.AssertLogsDoNotContain(t, hook, "empty chain state, but continue sync")
 
 	ss.cancel()
 }
