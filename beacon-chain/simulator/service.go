@@ -110,8 +110,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			// Is it epoch transition time?
 			if sim.slotNum >= crystallizedState.LastStateRecalc()+params.CycleLength {
+				// We populate the validators in the crystallized state with some fake
+				// set of validators for simulation purposes.
 				var validators []*pb.ValidatorRecord
-				for i := 0; i < 100; i++ {
+				for i := 0; i < params.BootstrappedValidatorsCount; i++ {
 					validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
 					validators = append(validators, validator)
 				}

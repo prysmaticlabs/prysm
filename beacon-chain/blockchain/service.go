@@ -16,17 +16,17 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx                                    context.Context
-	cancel                                 context.CancelFunc
-	beaconDB                               *database.DB
-	chain                                  *BeaconChain
-	web3Service                            *powchain.Web3Service
-	canonicalBlockAnnouncement             chan *types.Block
-	canonicalCrystallizedStateAnnouncement chan *types.CrystallizedState
-	latestBeaconBlock                      chan *types.Block
-	processedBlockHashes                   [][32]byte
-	processedActiveStateHashes             [][32]byte
-	processedCrystallizedStateHashes       [][32]byte
+	ctx                              context.Context
+	cancel                           context.CancelFunc
+	beaconDB                         *database.DB
+	chain                            *BeaconChain
+	web3Service                      *powchain.Web3Service
+	canonicalBlockEvent              chan *types.Block
+	canonicalCrystallizedStateEvent  chan *types.CrystallizedState
+	latestBeaconBlock                chan *types.Block
+	processedBlockHashes             [][32]byte
+	processedActiveStateHashes       [][32]byte
+	processedCrystallizedStateHashes [][32]byte
 }
 
 // Config options for the service.
@@ -48,17 +48,17 @@ func DefaultConfig() *Config {
 func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
-		ctx:                                    ctx,
-		chain:                                  beaconChain,
-		cancel:                                 cancel,
-		beaconDB:                               beaconDB,
-		web3Service:                            web3Service,
-		latestBeaconBlock:                      make(chan *types.Block, cfg.BeaconBlockBuf),
-		canonicalBlockAnnouncement:             make(chan *types.Block, cfg.AnnouncementBuf),
-		canonicalCrystallizedStateAnnouncement: make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
-		processedBlockHashes:                   [][32]byte{},
-		processedActiveStateHashes:             [][32]byte{},
-		processedCrystallizedStateHashes:       [][32]byte{},
+		ctx:                              ctx,
+		chain:                            beaconChain,
+		cancel:                           cancel,
+		beaconDB:                         beaconDB,
+		web3Service:                      web3Service,
+		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
+		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
+		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
+		processedBlockHashes:             [][32]byte{},
+		processedActiveStateHashes:       [][32]byte{},
+		processedCrystallizedStateHashes: [][32]byte{},
 	}, nil
 }
 
@@ -126,7 +126,10 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
 	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
 	if err != nil {
-		return err
+		// We might receive a lot of blocks that fail validity conditions,
+		// so we create a debug level log instead of an error log.
+		log.Debugf("Incoming block failed validity conditions: %v", err)
+		return nil
 	}
 	if canProcess {
 		c.latestBeaconBlock <- block
@@ -151,7 +154,7 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 	// For now, broadcast all incoming crystallized states to the following channel
 	// for gRPC clients to receive then. TODO: change this to actually send
 	// canonical crystallized states over the channel.
-	c.canonicalCrystallizedStateAnnouncement <- state
+	c.canonicalCrystallizedStateEvent <- state
 	return nil
 }
 
@@ -199,16 +202,16 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
-// CanonicalBlockAnnouncement returns a channel that is written to
+// CanonicalBlockEvent returns a channel that is written to
 // whenever a new block is determined to be canonical in the chain.
-func (c *ChainService) CanonicalBlockAnnouncement() <-chan *types.Block {
-	return c.canonicalBlockAnnouncement
+func (c *ChainService) CanonicalBlockEvent() <-chan *types.Block {
+	return c.canonicalBlockEvent
 }
 
-// CanonicalCrystallizedStateAnnouncement returns a channel that is written to
+// CanonicalCrystallizedStateEvent returns a channel that is written to
 // whenever a new crystallized state is determined to be canonical in the chain.
-func (c *ChainService) CanonicalCrystallizedStateAnnouncement() <-chan *types.CrystallizedState {
-	return c.canonicalCrystallizedStateAnnouncement
+func (c *ChainService) CanonicalCrystallizedStateEvent() <-chan *types.CrystallizedState {
+	return c.canonicalCrystallizedStateEvent
 }
 
 // run processes the changes needed every beacon chain block,
@@ -218,12 +221,10 @@ func (c *ChainService) run(done <-chan struct{}) {
 		select {
 		case block := <-c.latestBeaconBlock:
 			// TODO: Apply 2.1 fork choice logic using the following.
-			validatorsByHeight, err := c.chain.validatorsByHeightShard()
-			if err != nil {
+			if _, err := c.chain.validatorsByHeightShard(); err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
 				continue
 			}
-			log.Debugf("Received the following number of validators by height: %v", len(validatorsByHeight))
 
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
@@ -251,7 +252,7 @@ func (c *ChainService) run(done <-chan struct{}) {
 
 			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
 			// occurred successfully).
-			c.canonicalBlockAnnouncement <- block
+			c.canonicalBlockEvent <- block
 
 			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
 			// save the fork choice rule).

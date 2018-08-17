@@ -229,7 +229,7 @@ func TestProcessingStates(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
-	chainService.canonicalCrystallizedStateAnnouncement = make(chan *types.CrystallizedState, 1)
+	chainService.canonicalCrystallizedStateEvent = make(chan *types.CrystallizedState, 1)
 	if err := chainService.ProcessCrystallizedState(types.NewCrystallizedState(nil)); err == nil {
 		t.Errorf("processing crystallized state should have failed")
 	}
@@ -239,7 +239,7 @@ func TestProcessingStates(t *testing.T) {
 	}
 
 	chainService.ProcessCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{}))
-	<-chainService.canonicalCrystallizedStateAnnouncement
+	<-chainService.canonicalCrystallizedStateEvent
 	chainService.ProcessActiveState(types.NewActiveState(&pb.ActiveState{}))
 }
 
@@ -369,6 +369,6 @@ func TestRunningChainService(t *testing.T) {
 
 	chainService.latestBeaconBlock <- block
 	chainService.cancel()
-	<-chainService.canonicalBlockAnnouncement
+	<-chainService.canonicalBlockEvent
 	exitRoutine <- true
 }

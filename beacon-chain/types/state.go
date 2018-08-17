@@ -38,8 +38,11 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 			RecentBlockHashes:   [][]byte{},
 		},
 	}
+	// We seed the genesis crystallized state with a bunch of validators to
+	// bootstrap the system.
+	// TODO: Perform this task from some sort of genesis state json config instead.
 	var validators []*pb.ValidatorRecord
-	for i := 0; i < 100; i++ {
+	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
 		validators = append(validators, validator)
 	}

@@ -35,11 +35,11 @@ func newMockAnnouncer() *mockAnnouncer {
 	}
 }
 
-func (m *mockAnnouncer) CanonicalBlockAnnouncement() <-chan *types.Block {
+func (m *mockAnnouncer) CanonicalBlockEvent() <-chan *types.Block {
 	return m.blockChan
 }
 
-func (m *mockAnnouncer) CanonicalCrystallizedStateAnnouncement() <-chan *types.CrystallizedState {
+func (m *mockAnnouncer) CanonicalCrystallizedStateEvent() <-chan *types.CrystallizedState {
 	return m.crystallizedStateChan
 }
 

@@ -138,7 +138,7 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 	// rule.
 	for {
 		select {
-		case block := <-s.announcer.CanonicalBlockAnnouncement():
+		case block := <-s.announcer.CanonicalBlockEvent():
 			log.Info("Sending latest canonical block to RPC clients")
 			if err := stream.Send(block.Proto()); err != nil {
 				return err
@@ -156,7 +156,7 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 	// stream canonical states.
 	for {
 		select {
-		case state := <-s.announcer.CanonicalCrystallizedStateAnnouncement():
+		case state := <-s.announcer.CanonicalCrystallizedStateEvent():
 			log.Info("Sending crystallized state to RPC clients")
 			if err := stream.Send(state.Proto()); err != nil {
 				return err
