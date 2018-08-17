@@ -87,7 +87,7 @@ func (ss *Service) Start() {
 
 	if !stored {
 		// TODO: Support initial sync when the chain is partially synced with the network.
-		log.Errorf("empty chain state, exiting sync")
+		log.Infof("empty chain state, exiting sync")
 		return
 	}
 
