@@ -4,7 +4,9 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -16,6 +18,7 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
+	validator                        bool
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	beaconDB                         *database.DB
@@ -58,8 +61,13 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Infof("Starting service")
-
+	if c.web3Service == nil {
+		c.validator = false
+		log.Infof("Starting service as observer")
+	} else {
+		c.validator = true
+		log.Infof("Starting service as validator")
+	}
 	go c.run(c.ctx.Done())
 }
 
@@ -113,12 +121,20 @@ func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
 
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(block *types.Block) error {
+	var canProcess bool
+	var err error
 	h, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+
+	// Process block as a validator if beacon node has registered, else process block as an observer.
+	if c.validator {
+		canProcess, err = c.chain.CanProcessBlockValidator(c.web3Service.Client(), block)
+	} else {
+		canProcess, err = c.chain.CanProcessBlockObserver(block)
+	}
 	if err != nil {
 		return err
 	}
@@ -211,8 +227,9 @@ func (c *ChainService) run(done <-chan struct{}) {
 				}
 			}
 
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			// TODO: Using random hash based on time stamp for seed, this will eventually be replaced by VDF or RNG.
+			timestamp := time.Now().Unix()
+			activeState, err := c.chain.computeNewActiveState(common.BytesToHash([]byte(string(timestamp))))
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}

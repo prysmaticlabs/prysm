@@ -61,6 +61,7 @@ VERSION:
 
 	app.Flags = []cli.Flag{
 		utils.SimulatorFlag,
+		utils.ValidatorFlag,
 		utils.VrcContractFlag,
 		utils.PubKeyFlag,
 		utils.Web3ProviderFlag,

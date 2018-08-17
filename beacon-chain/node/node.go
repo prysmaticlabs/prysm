@@ -60,11 +60,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerPOWChainService(); err != nil {
+	if err := beacon.registerPOWChainService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerBlockchainService(); err != nil {
+	if err := beacon.registerBlockchainService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -146,10 +146,13 @@ func (b *BeaconNode) registerP2P() error {
 	return b.services.RegisterService(beaconp2p)
 }
 
-func (b *BeaconNode) registerBlockchainService() error {
+func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-	if err := b.services.FetchService(&web3Service); err != nil {
-		return err
+
+	if ctx.GlobalBool(utils.ValidatorFlag.Name) {
+		if err := b.services.FetchService(&web3Service); err != nil {
+			return err
+		}
 	}
 
 	beaconChain, err := blockchain.NewBeaconChain(b.db.DB())
@@ -164,10 +167,14 @@ func (b *BeaconNode) registerBlockchainService() error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerPOWChainService() error {
+func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
+	if !ctx.GlobalBool(utils.ValidatorFlag.Name) {
+		return nil
+	}
+
 	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
 	if err != nil {
-		log.Errorf("Unable to connect to Geth node: %v", err)
+		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
