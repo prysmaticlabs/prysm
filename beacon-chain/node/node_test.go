@@ -3,10 +3,8 @@ package node
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/urfave/cli"
@@ -48,16 +46,8 @@ func TestNodeValidator_Builds(t *testing.T) {
 	// Start a subprocess to test beacon node crashes.
 	cmd := exec.Command(os.Args[0], "-test.run=TestNodeValidator_Builds")
 	cmd.Env = append(os.Environ(), "TEST_NODE_PANIC=1")
-	stdout, _ := cmd.StderrPipe()
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
-	}
-
-	// Check the fatal log message is what we expected.
-	fatalLog, _ := ioutil.ReadAll(stdout)
-	want := "Access to PoW chain is required for validator. Unable to connect to Geth node"
-	if !strings.Contains(string(fatalLog), want) {
-		t.Errorf("Did not receive fatal log: %s", want)
 	}
 
 	// Check beacon node program exited.
