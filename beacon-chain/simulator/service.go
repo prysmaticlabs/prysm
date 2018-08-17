@@ -194,7 +194,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			if sim.slotNum == 0 {
 				parentHash = []byte("genesis")
 			} else {
-				parentHash = sim.broadcastedBlockHashes[sim.slotNum-1][:]
+				parentHash = sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1][:]
 			}
 
 			log.WithField("currentSlot", sim.slotNum).Info("Current slot")
