@@ -73,8 +73,8 @@ The `alloc` portion specifies account addresses with prefunded ETH when the Ethe
 Then, you can build and init a new instance of a local, Ethereum blockchain as follows:
 
 ```
-geth init /path/to/genesis.json -datadir /path/to/your/datadir
-geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345
+geth init /path/to/genesis.json --datadir /path/to/your/datadir
+geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*"
 ````
 
 It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
@@ -110,7 +110,7 @@ Make sure a geth node is running as a separate process according to the instruct
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
-  --rpc-port 5000
+  --rpc-port 4000
 ```
 
 This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding clients to connect to it, and begins listening for p2p events.
@@ -121,7 +121,7 @@ To try out the beacon node in development by simulating incoming blocks, run the
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
-  --rpc-port 5000 \
+  --rpc-port 4000 \
   --simulator \
   --verbosity debug
 ```
