@@ -51,7 +51,7 @@ func newSMCTestHelper(n int) (*smcTestHelper, error) {
 			Balance: accountBalance2000Eth,
 		}
 	}
-	backend := backends.NewSimulatedBackend(genesis)
+	backend := backends.NewSimulatedBackend(genesis, 2100000)
 	_, _, smc, err := deploySMCContract(backend, testAccounts[0].privKey)
 	if err != nil {
 		return nil, err
