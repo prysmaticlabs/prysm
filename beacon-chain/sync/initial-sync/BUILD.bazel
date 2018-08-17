@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["service.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

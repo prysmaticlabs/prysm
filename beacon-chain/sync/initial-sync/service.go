@@ -38,8 +38,8 @@ type SyncService interface {
 	Start()
 }
 
-// InitialSyncService initiates synchronization when the database is empty
-type InitialSyncService struct {
+// InitialSync initiates synchronization when the database is empty
+type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
 	p2p                          types.P2P
@@ -59,13 +59,13 @@ func NewInitialSyncService(ctx context.Context,
 	beaconp2p types.P2P,
 	chainService ChainService,
 	syncService SyncService,
-) *InitialSyncService {
+) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
 	blockBuf := make(chan p2p.Message)
 	crystallizedStateBuf := make(chan p2p.Message)
 
-	return &InitialSyncService{
+	return &InitialSync{
 		ctx:                  ctx,
 		cancel:               cancel,
 		p2p:                  beaconp2p,
@@ -78,7 +78,7 @@ func NewInitialSyncService(ctx context.Context,
 }
 
 // Start begins the goroutine
-func (s *InitialSyncService) Start() {
+func (s *InitialSync) Start() {
 	stored, err := s.chainService.HasStoredState()
 	if err != nil {
 		log.Errorf("error retrieving stored state: %v", err)
@@ -99,7 +99,7 @@ func (s *InitialSyncService) Start() {
 }
 
 // Stop kills the initial sync goroutine.
-func (s *InitialSyncService) Stop() error {
+func (s *InitialSync) Stop() error {
 	log.Info("Stopping service")
 	s.cancel()
 	return nil
@@ -108,7 +108,7 @@ func (s *InitialSyncService) Stop() error {
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance
-func (s *InitialSyncService) run(delaychan <-chan time.Time) {
+func (s *InitialSync) run(delaychan <-chan time.Time) {
 	blockSub := s.p2p.Subscribe(pb.BeaconBlockResponse{}, s.blockBuf)
 	crystallizedStateSub := s.p2p.Subscribe(pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
 	defer func() {
@@ -196,7 +196,7 @@ func (s *InitialSyncService) run(delaychan <-chan time.Time) {
 
 // requestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
 // for a beacon block.
-func (s *InitialSyncService) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
+func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -209,7 +209,7 @@ func (s *InitialSyncService) requestCrystallizedStateFromPeer(data *pb.BeaconBlo
 
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
-func (s *InitialSyncService) setBlockForInitialSync(data *pb.BeaconBlockResponse) error {
+func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error {
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -232,13 +232,13 @@ func (s *InitialSyncService) setBlockForInitialSync(data *pb.BeaconBlockResponse
 }
 
 // requestNextBlock broadcasts a request for a block with the next slotnumber.
-func (s *InitialSyncService) requestNextBlock() {
+func (s *InitialSync) requestNextBlock() {
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlotNumber + 1)})
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
-func (s *InitialSyncService) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
+func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 	block, err := types.NewBlock(data.Block)
 	if err != nil {
 		return fmt.Errorf("could not instantiate new block from proto: %v", err)
@@ -259,6 +259,6 @@ func (s *InitialSyncService) validateAndSaveNextBlock(data *pb.BeaconBlockRespon
 }
 
 // writeBlockToDB saves the corresponding block to the local DB.
-func (s *InitialSyncService) writeBlockToDB(block *types.Block) error {
+func (s *InitialSync) writeBlockToDB(block *types.Block) error {
 	return s.chainService.SaveBlock(block)
 }
