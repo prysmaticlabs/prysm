@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -14,8 +15,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 type mockClient struct{}
 
@@ -42,7 +50,6 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	defer os.RemoveAll(tmp)
@@ -152,11 +159,9 @@ func TestStartStop(t *testing.T) {
 	if chainService.ctx.Err() == nil {
 		t.Error("context was not canceled")
 	}
-	hook.Reset()
 }
 
 func TestFaultyStop(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	defer os.RemoveAll(tmp)
@@ -201,7 +206,6 @@ func TestFaultyStop(t *testing.T) {
 	if err == nil {
 		t.Errorf("chain stop should have failed with persist crystallized state")
 	}
-	hook.Reset()
 }
 
 func TestProcessingStates(t *testing.T) {
@@ -244,11 +248,12 @@ func TestProcessingStates(t *testing.T) {
 }
 
 func TestProcessingBadBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	defer os.RemoveAll(tmp)
 
-	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	config := &database.DBConfig{DataDir: tmp, Name: "badblockdata", InMemory: false}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
@@ -294,9 +299,11 @@ func TestProcessingBadBlock(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	if err = chainService.ProcessBlock(block); err == nil {
-		t.Error("process block should have failed with parent hash points to nil")
+	if err = chainService.ProcessBlock(block); err != nil {
+		t.Fatalf("Could not setup processing block function")
 	}
+	testutil.AssertLogsContain(t, hook, "parent hash points to nil")
+	hook.Reset()
 }
 
 func TestRunningChainService(t *testing.T) {
