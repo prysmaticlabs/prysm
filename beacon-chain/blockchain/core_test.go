@@ -200,20 +200,17 @@ func TestGetAttestersProposer(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	_, _, err := beaconChain.getAttestersProposer(common.Hash{'A'})
-	if err == nil {
+	if _, _, err := beaconChain.getAttestersProposer(common.Hash{'A'}); err == nil {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
 	// computeNewActiveState should fail the same.
-	_, err = beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'}))
-	if err == nil {
+	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'})); err == nil {
 		t.Errorf("computeNewActiveState should have failed")
 	}
 
 	// validatorsByHeightShard should fail the same.
-	_, err = beaconChain.validatorsByHeightShard()
-	if err == nil {
+	if _, err := beaconChain.validatorsByHeightShard(); err == nil {
 		t.Errorf("validatorsByHeightShard should have failed")
 	}
 
@@ -438,8 +435,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	if err = db.DB().Put(parentHash[:], nil); err != nil {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
-	_, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
-	if err == nil {
+	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing block should fail when parent hash points to nil in db")
 	}
 	want := "parent hash points to nil in beaconDB"
@@ -761,8 +757,7 @@ func TestGetIndicesForHeight(t *testing.T) {
 	if err := beaconChain.SetCrystallizedState(state); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
-	_, err := beaconChain.getIndicesForHeight(1000)
-	if err == nil {
+	if _, err := beaconChain.getIndicesForHeight(1000); err == nil {
 		t.Error("getIndicesForHeight should have failed with invalid height")
 	}
 	committee, err := beaconChain.getIndicesForHeight(1)
@@ -796,8 +791,7 @@ func TestGetBlockHash(t *testing.T) {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
 
-	_, err := beaconChain.getBlockHash(200, 250)
-	if err == nil {
+	if _, err := beaconChain.getBlockHash(200, 250); err == nil {
 		t.Error("getBlockHash should have failed with invalid height")
 	}
 	hash, err := beaconChain.getBlockHash(2*params.CycleLength, 0)
