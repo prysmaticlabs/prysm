@@ -217,7 +217,7 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	}
 
 	cfg := simulator.DefaultConfig()
-	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service, chainService)
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg, b.db.DB(), p2pService, web3Service, chainService)
 	return b.services.RegisterService(simulatorService)
 }
 

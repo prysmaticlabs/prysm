@@ -58,8 +58,8 @@ func TestStartStop(t *testing.T) {
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
-
 	}
+
 	endpoint := "ws://127.0.0.1"
 	client := &mockClient{}
 	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
