@@ -137,6 +137,8 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	sim.slotNum = 64
+	sim.broadcastedBlockHashes = [][32]byte{}
+	sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, [32]byte{1})
 
 	go func() {
 		sim.run(delayChan, doneChan)
@@ -194,4 +196,16 @@ func TestCrystallizedRequest(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to crystallized state request for hash: 0x%x", h))
+}
+
+func TestLastSimulatedSession(t *testing.T) {
+	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
+	db := database.NewKVStore()
+	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {
+		t.Fatalf("Could not store last simulated block: %v", err)
+	}
+	if _, err := sim.lastSimulatedSessionBlock(); err != nil {
+		t.Errorf("could not fetch last simulated session block: %v", err)
+	}
 }
