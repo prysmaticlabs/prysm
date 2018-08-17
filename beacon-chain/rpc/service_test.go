@@ -45,7 +45,7 @@ func (m *mockAnnouncer) CanonicalCrystallizedStateEvent() <-chan *types.Crystall
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999", CertFlag: "alice.crt", KeyFlag: "alice.key"}, &mockAnnouncer{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7348", CertFlag: "alice.crt", KeyFlag: "alice.key"}, &mockAnnouncer{})
 
 	rpcService.Start()
 
@@ -71,7 +71,7 @@ func TestBadEndpoint(t *testing.T) {
 
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7777"}, &mockAnnouncer{})
 
 	rpcService.Start()
 
@@ -84,7 +84,7 @@ func TestInsecureEndpoint(t *testing.T) {
 }
 
 func TestRPCMethods(t *testing.T) {
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7362"}, &mockAnnouncer{})
 	if _, err := rpcService.ProposeBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
 	}
@@ -94,7 +94,7 @@ func TestRPCMethods(t *testing.T) {
 }
 
 func TestFetchShuffledValidatorIndices(t *testing.T) {
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "6372"}, &mockAnnouncer{})
 	res, err := rpcService.FetchShuffledValidatorIndices(context.Background(), &pb.ShuffleRequest{})
 	if err != nil {
 		t.Fatalf("Could not call RPC method: %v", err)
@@ -106,7 +106,7 @@ func TestFetchShuffledValidatorIndices(t *testing.T) {
 
 func TestLatestBeaconBlockContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "6663"}, &mockAnnouncer{})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -125,7 +125,7 @@ func TestLatestBeaconBlockContextClosed(t *testing.T) {
 func TestLatestBeaconBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, announcer)
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7771"}, announcer)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -155,7 +155,7 @@ func TestLatestBeaconBlock(t *testing.T) {
 
 func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, &mockAnnouncer{})
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8777"}, &mockAnnouncer{})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -174,7 +174,7 @@ func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 func TestLatestCrystallizedState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "9999"}, announcer)
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8773"}, announcer)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
