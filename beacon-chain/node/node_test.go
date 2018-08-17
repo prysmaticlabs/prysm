@@ -3,12 +3,12 @@ package node
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/io/ioutil"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/os/exec"
 	"github.com/urfave/cli"
 )
 
