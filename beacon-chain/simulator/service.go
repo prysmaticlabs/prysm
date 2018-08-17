@@ -136,7 +136,6 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 		if err != nil {
 			log.Errorf("Could not hash last simulated session's block: %v", err)
 		}
-		parentHash = h[:]
 		sim.slotNum = lastSimulatedBlock.SlotNumber()
 		sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, h)
 	}
