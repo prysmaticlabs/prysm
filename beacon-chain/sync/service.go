@@ -86,9 +86,10 @@ func (ss *Service) Start() {
 	}
 
 	if !stored {
-		// TODO: Support initial sync when the chain is partially synced with the network.
-		log.Infof("empty chain state, exiting sync")
-		return
+		// TODO: Resume sync after completion of initial sync.
+		// Currently, `Simulator` only supports sync from genesis block, therefore
+		// new nodes with a fresh database must skip InitialSync and immediately run the Sync goroutine.
+		log.Infof("empty chain state, but continue sync")
 	}
 
 	go ss.run()
