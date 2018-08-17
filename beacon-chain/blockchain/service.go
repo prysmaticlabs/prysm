@@ -221,10 +221,12 @@ func (c *ChainService) run(done <-chan struct{}) {
 		select {
 		case block := <-c.latestBeaconBlock:
 			// TODO: Apply 2.1 fork choice logic using the following.
-			if _, err := c.chain.validatorsByHeightShard(); err != nil {
+			vals, err := c.chain.validatorsByHeightShard()
+			if err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
 				continue
 			}
+			log.Debugf("Received %d validators by height", vals)
 
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())

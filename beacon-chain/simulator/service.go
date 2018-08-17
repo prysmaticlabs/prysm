@@ -100,7 +100,7 @@ func (sim *Simulator) Stop() error {
 func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
 	hasSimulated, err := sim.beaconDB.Has([]byte("last-simulated-block"))
 	if err != nil {
-		return nil, fmt.Errorf("Could not determine if a previous simulation occured: %v", err)
+		return nil, fmt.Errorf("Could not determine if a previous simulation occurred: %v", err)
 	}
 	if !hasSimulated {
 		return nil, nil
