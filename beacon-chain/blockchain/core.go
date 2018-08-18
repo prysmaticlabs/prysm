@@ -129,7 +129,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
 		}
-		return types.NewBlock(block)
+		return types.NewBlock(block), nil
 	}
 	return types.NewGenesisBlock()
 }
@@ -183,12 +183,14 @@ func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
 
-// CanProcessBlockValidator decides if an incoming p2p block can be processed into the chain's block trie,
+// CanProcessBlockValidator is called by a validator to decide
+// if an incoming p2p block can be processed into the chain's block trie,
 // it checks time stamp, beacon chain parent block hash, and pow chain reference hash.
 func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
 	if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
 		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 	}
+
 	canProcess, err := b.verifyBlockParentHash(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -197,6 +199,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		log.Debug("parent block verification for beacon block %v failed", block.SlotNumber())
 		return false, nil
 	}
+
 	canProcess, err = b.verifyBlockTimeStamp(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -205,6 +208,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		log.Debug("time stamp verification for beacon block %v failed", block.SlotNumber())
 		return false, nil
 	}
+
 	canProcess, err = b.verifyBlockActiveHash(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -213,6 +217,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		log.Debug("active state verification for beacon block %v failed", block.SlotNumber())
 		return false, nil
 	}
+
 	canProcess, err = b.verifyBlockCrystallizedHash(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -224,7 +229,8 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 	return canProcess, nil
 }
 
-// CanProcessBlockObserver decides if an incoming p2p block can be processed into the chain's block trie,
+// CanProcessBlockObserver is called by an observer to decide
+// if an incoming p2p block can be processed into the chain's block trie,
 // it checks time stamp, beacon chain parent block hash, and pow chain reference hash.
 func (b *BeaconChain) CanProcessBlockObserver(block *types.Block) (bool, error) {
 	canProcess, err := b.verifyBlockParentHash(block)
@@ -235,6 +241,7 @@ func (b *BeaconChain) CanProcessBlockObserver(block *types.Block) (bool, error) 
 		log.Debug("parent block verification for beacon block %v failed", block.SlotNumber())
 		return false, nil
 	}
+
 	canProcess, err = b.verifyBlockTimeStamp(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -243,6 +250,7 @@ func (b *BeaconChain) CanProcessBlockObserver(block *types.Block) (bool, error) 
 		log.Debug("time stamp verification for beacon block %v failed", block.SlotNumber())
 		return false, nil
 	}
+
 	canProcess, err = b.verifyBlockActiveHash(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -251,6 +259,7 @@ func (b *BeaconChain) CanProcessBlockObserver(block *types.Block) (bool, error) 
 		log.Debug("active state verification for beacon block %v failed", block.SlotNumber())
 		return false, nil
 	}
+
 	canProcess, err = b.verifyBlockCrystallizedHash(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
@@ -288,7 +297,7 @@ func (b *BeaconChain) verifyBlockActiveHash(block *types.Block) (bool, error) {
 		return false, err
 	}
 	if block.ActiveStateHash() != hash {
-		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash(), hash)
+		return false, nil
 	}
 	return true, nil
 }
@@ -313,7 +322,7 @@ func (b *BeaconChain) verifyBlockParentHash(block *types.Block) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !hasParent {
+	if !hasParent && block.SlotNumber() != 1 {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 	return true, nil
@@ -412,7 +421,7 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
 	if attesterFactor >= totalFactor {
-		log.Info("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		log.Infof("Setting justified epoch to current slot number: %v", block.SlotNumber())
 		b.state.CrystallizedState.UpdateJustifiedSlot(block.SlotNumber())
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
@@ -527,6 +536,24 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 		}
 	}
 	return committees, nil
+}
+
+// GetIndicesForHeight returns the attester set of a given height.
+func (b *BeaconChain) GetIndicesForHeight(height uint64) (*pb.ShardAndCommitteeArray, error) {
+	lcs := b.CrystallizedState().LastStateRecalc()
+	if !(lcs <= height && height < lcs+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, lcs, lcs+params.CycleLength*2)
+	}
+	return b.CrystallizedState().IndicesForHeights()[height-lcs], nil
+}
+
+// GetBlockHash returns the block hash of a given height.
+func (b *BeaconChain) GetBlockHash(slot, height uint64) ([]byte, error) {
+	sback := slot - params.CycleLength*2
+	if !(sback <= height && height < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, sback, sback+params.CycleLength*2)
+	}
+	return b.ActiveState().RecentBlockHashes()[height-sback].Bytes(), nil
 }
 
 // saveBlock puts the passed block into the beacon chain db.

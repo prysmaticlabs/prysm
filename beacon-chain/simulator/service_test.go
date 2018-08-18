@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -43,8 +44,16 @@ func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState 
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	db := database.NewKVStore()
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	sim.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -59,8 +68,16 @@ func TestLifecycle(t *testing.T) {
 
 func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	db := database.NewKVStore()
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -86,8 +103,16 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	db := database.NewKVStore()
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -98,10 +123,7 @@ func TestBlockRequest(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	block, err := types.NewBlock(&pb.BeaconBlock{ParentHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(&pb.BeaconBlock{ParentHash: make([]byte, 32)})
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +138,7 @@ func TestBlockRequest(t *testing.T) {
 		Data: data,
 	}
 
-	sim.broadcastedBlockHashes[h] = block
+	sim.broadcastedBlocks[h] = block
 
 	sim.blockRequestChan <- msg
 	doneChan <- struct{}{}
@@ -127,14 +149,24 @@ func TestBlockRequest(t *testing.T) {
 
 func TestBroadcastCrystallizedHash(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	db := database.NewKVStore()
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	sim.slotNum = 64
+	sim.broadcastedBlockHashes = [][32]byte{}
+	sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, [32]byte{1})
 
 	go func() {
 		sim.run(delayChan, doneChan)
@@ -148,7 +180,7 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 
 	exitRoutine <- true
 
-	if len(sim.broadcastedCrystallizedHashes) != 1 {
+	if len(sim.broadcastedCrystallizedStates) != 1 {
 		t.Error("Did not store the broadcasted state hash")
 	}
 	hook.Reset()
@@ -156,8 +188,16 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 
 func TestCrystallizedRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
-	sim := NewSimulator(context.Background(), cfg, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	db := database.NewKVStore()
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -184,11 +224,30 @@ func TestCrystallizedRequest(t *testing.T) {
 		Data: data,
 	}
 
-	sim.broadcastedCrystallizedHashes[h] = state
+	sim.broadcastedCrystallizedStates[h] = state
 
 	sim.crystallizedStateRequestChan <- msg
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to crystallized state request for hash: 0x%x", h))
+}
+
+func TestLastSimulatedSession(t *testing.T) {
+	db := database.NewKVStore()
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
+	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {
+		t.Fatalf("Could not store last simulated block: %v", err)
+	}
+	if _, err := sim.lastSimulatedSessionBlock(); err != nil {
+		t.Errorf("could not fetch last simulated session block: %v", err)
+	}
 }
