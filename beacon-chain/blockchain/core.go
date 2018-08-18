@@ -129,7 +129,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
 		}
-		return types.NewBlock(block)
+		return types.NewBlock(block), nil
 	}
 	return types.NewGenesisBlock()
 }
@@ -195,7 +195,9 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	if err != nil {
 		return false, err
 	}
-	if !hasParent {
+	// If the block does not have a parent in the database and if that parent is not the genesis block,
+	// then it fails the validity conditions.
+	if !hasParent && block.SlotNumber() != 1 {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 
@@ -215,7 +217,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, nil
 	}
 
-	// Verify state hashes from the block are correct
+	// Verify state hashes from the block are correct.
 	hash, err := b.ActiveState().Hash()
 	if err != nil {
 		return false, err
@@ -329,10 +331,8 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
-	println(attesterFactor)
-	println(totalFactor)
 	if attesterFactor >= totalFactor {
-		log.Info("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		log.Infof("Setting justified epoch to current slot number: %v", block.SlotNumber())
 		b.state.CrystallizedState.UpdateJustifiedSlot(block.SlotNumber())
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")

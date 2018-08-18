@@ -216,12 +216,26 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 		return err
 	}
 
-	cfg := simulator.DefaultConfig()
-	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service, chainService)
+	defaultConf := simulator.DefaultConfig()
+	cfg := &simulator.Config{
+		Delay:                       defaultConf.Delay,
+		BlockRequestBuf:             defaultConf.BlockRequestBuf,
+		CrystallizedStateRequestBuf: defaultConf.CrystallizedStateRequestBuf,
+		BeaconDB:                    b.db.DB(),
+		P2P:                         p2pService,
+		Web3Service:                 web3Service,
+		ChainService:                chainService,
+	}
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
@@ -229,6 +243,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		Port:     port,
 		CertFlag: cert,
 		KeyFlag:  key,
-	})
+	}, chainService)
 	return b.services.RegisterService(rpcService)
 }

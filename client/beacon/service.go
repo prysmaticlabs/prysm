@@ -99,13 +99,14 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		// Based on the height determined from the latest crystallized state, check if
 		// it matches the latest received beacon height.
 		if s.responsibility == "proposer" {
-			log.Info("Assigned proposal slot number reached")
+			log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
+			s.responsibility = ""
 			s.proposerChan <- true
-			s.responsibility = ""
 		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedHeight {
+			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
 			log.Info("Assigned attestation slot number reached")
-			s.attesterChan <- true
 			s.responsibility = ""
+			s.attesterChan <- true
 		}
 	}
 }
@@ -144,7 +145,6 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			}
 		}
 		isValidatorIndexSet := false
-
 		for _, val := range activeValidatorIndices {
 			// TODO: Check the public key instead of withdrawal address. This will use BLS.
 			if isZeroAddress(crystallizedState.Validators[val].WithdrawalAddress) {

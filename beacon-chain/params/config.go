@@ -20,4 +20,7 @@ const (
 	MinCommiteeSize = 128
 	// DefaultEndDynasty is the upper bound of dynasty. We use it to track queued and exited validators.
 	DefaultEndDynasty = 9999999999999999999
+	// BootstrappedValidatorsCount is the number of validators we seed the first crystallized
+	// state with. This number has yet to be decided by research and is arbitrary for now.
+	BootstrappedValidatorsCount = 100
 )
