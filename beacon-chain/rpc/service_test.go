@@ -111,9 +111,9 @@ func TestLatestBeaconBlockContextClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
-	go func(t *testing.T) {
+	go func(tt *testing.T) {
 		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err != nil {
-			t.Fatalf("Could not call RPC method: %v", err)
+			tt.Fatalf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
 	}(t)
@@ -132,9 +132,9 @@ func TestLatestBeaconBlock(t *testing.T) {
 	mockStream := internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.BeaconBlock{}).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
-	go func(t *testing.T) {
+	go func(tt *testing.T) {
 		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
-			t.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
+			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 	}(t)
 	announcer.blockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
@@ -143,9 +143,9 @@ func TestLatestBeaconBlock(t *testing.T) {
 	mockStream.EXPECT().Send(&pbp2p.BeaconBlock{}).Return(nil)
 
 	// Tests a good stream.
-	go func(t *testing.T) {
+	go func(tt *testing.T) {
 		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err != nil {
-			t.Fatalf("Could not call RPC method: %v", err)
+			tt.Fatalf("Could not call RPC method: %v", err)
 		}
 	}(t)
 	announcer.blockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
@@ -160,9 +160,9 @@ func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	go func(t *testing.T) {
+	go func(tt *testing.T) {
 		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
-			t.Fatalf("Could not call RPC method: %v", err)
+			tt.Fatalf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
 	}(t)
@@ -181,9 +181,9 @@ func TestLatestCrystallizedState(t *testing.T) {
 	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
-	go func(t *testing.T) {
+	go func(tt *testing.T) {
 		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
-			t.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
+			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 	}(t)
 	announcer.crystallizedStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
@@ -192,9 +192,9 @@ func TestLatestCrystallizedState(t *testing.T) {
 	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(nil)
 
 	// Tests a good stream.
-	go func(t *testing.T) {
+	go func(tt *testing.T) {
 		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
-			t.Fatalf("Could not call RPC method: %v", err)
+			tt.Fatalf("Could not call RPC method: %v", err)
 		}
 	}(t)
 	announcer.crystallizedStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
