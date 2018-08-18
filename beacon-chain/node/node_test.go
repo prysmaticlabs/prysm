@@ -7,7 +7,9 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/urfave/cli"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Test that the beacon chain observer node can build with default flag values.
@@ -55,4 +57,26 @@ func TestNodeValidator_Builds(t *testing.T) {
 	if e, ok := err.(*exec.ExitError); !ok || e.Success() {
 		t.Fatalf("Process ran with err %v, want exit status 1", err)
 	}
+}
+
+func TestNodeClose(t *testing.T) {
+	hook := logTest.NewGlobal()
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
+	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	set.String("datadir", tmp, "node data directory")
+
+	context := cli.NewContext(app, set, nil)
+
+	node, err := NewBeaconNode(context)
+	if err != nil {
+		t.Fatalf("Failed to create BeaconNode: %v", err)
+	}
+
+	node.Close()
+
+	testutil.AssertLogsContain(t, hook, "Stopping beacon node")
+
+	os.RemoveAll(tmp)
 }

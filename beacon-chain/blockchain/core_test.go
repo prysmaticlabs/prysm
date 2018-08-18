@@ -760,11 +760,6 @@ func TestCanProcessBlockObserver(t *testing.T) {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
 
-	// Using a faulty fetcher should throw an error.
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber: 2,
-	})
-
 	// Initialize initial state.
 	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	beaconChain.state.ActiveState = activeState
@@ -780,7 +775,7 @@ func TestCanProcessBlockObserver(t *testing.T) {
 		t.Fatalf("Compute crystallized state hash failed: %v", err)
 	}
 
-	block = NewBlock(t, &pb.BeaconBlock{
+	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            2,
 		ActiveStateHash:       activeHash[:],
 		CrystallizedStateHash: crystallizedHash[:],
