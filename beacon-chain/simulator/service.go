@@ -42,6 +42,10 @@ type Config struct {
 	Delay                       time.Duration
 	BlockRequestBuf             int
 	CrystallizedStateRequestBuf int
+	P2P                         types.P2P
+	Web3Service                 types.POWChainService
+	ChainService                types.StateFetcher
+	BeaconDB                    ethdb.Database
 }
 
 // DefaultConfig options for the simulator.
@@ -54,15 +58,15 @@ func DefaultConfig() *Config {
 }
 
 // NewSimulator creates a simulator instance for a syncer to consume fake, generated blocks.
-func NewSimulator(ctx context.Context, cfg *Config, beaconDB ethdb.Database, beaconp2p types.P2P, web3Service types.POWChainService, chainService types.StateFetcher) *Simulator {
+func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
 		ctx:                           ctx,
 		cancel:                        cancel,
-		p2p:                           beaconp2p,
-		web3Service:                   web3Service,
-		chainService:                  chainService,
-		beaconDB:                      beaconDB,
+		p2p:                           cfg.P2P,
+		web3Service:                   cfg.Web3Service,
+		chainService:                  cfg.ChainService,
+		beaconDB:                      cfg.BeaconDB,
 		delay:                         cfg.Delay,
 		slotNum:                       0,
 		broadcastedBlocks:             make(map[[32]byte]*types.Block),

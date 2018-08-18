@@ -44,9 +44,16 @@ func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState 
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	db := database.NewKVStore()
-	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	sim.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -61,9 +68,16 @@ func TestLifecycle(t *testing.T) {
 
 func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	db := database.NewKVStore()
-	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -89,9 +103,16 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	db := database.NewKVStore()
-	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -128,9 +149,16 @@ func TestBlockRequest(t *testing.T) {
 
 func TestBroadcastCrystallizedHash(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	db := database.NewKVStore()
-	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -160,9 +188,16 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 
 func TestCrystallizedRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	db := database.NewKVStore()
-	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 
 	delayChan := make(chan time.Time)
 	doneChan := make(chan struct{})
@@ -199,9 +234,16 @@ func TestCrystallizedRequest(t *testing.T) {
 }
 
 func TestLastSimulatedSession(t *testing.T) {
-	cfg := &Config{Delay: time.Second, BlockRequestBuf: 0}
 	db := database.NewKVStore()
-	sim := NewSimulator(context.Background(), cfg, db, &mockP2P{}, &mockPOWChainService{}, &mockChainService{})
+	cfg := &Config{
+		Delay:           time.Second,
+		BlockRequestBuf: 0,
+		P2P:             &mockP2P{},
+		Web3Service:     &mockPOWChainService{},
+		ChainService:    &mockChainService{},
+		BeaconDB:        db,
+	}
+	sim := NewSimulator(context.Background(), cfg)
 	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {
 		t.Fatalf("Could not store last simulated block: %v", err)
 	}
