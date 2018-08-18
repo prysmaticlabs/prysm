@@ -200,20 +200,17 @@ func TestGetAttestersProposer(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	_, _, err := beaconChain.getAttestersProposer(common.Hash{'A'})
-	if err == nil {
+	if _, _, err := beaconChain.getAttestersProposer(common.Hash{'A'}); err == nil {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
 	// computeNewActiveState should fail the same.
-	_, err = beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'}))
-	if err == nil {
+	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'})); err == nil {
 		t.Errorf("computeNewActiveState should have failed")
 	}
 
 	// validatorsByHeightShard should fail the same.
-	_, err = beaconChain.validatorsByHeightShard()
-	if err == nil {
+	if _, err := beaconChain.validatorsByHeightShard(); err == nil {
 		t.Errorf("validatorsByHeightShard should have failed")
 	}
 
@@ -438,8 +435,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	if err = db.DB().Put(parentHash[:], nil); err != nil {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
-	_, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
-	if err == nil {
+	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing block should fail when parent hash points to nil in db")
 	}
 	want := "parent hash points to nil in beaconDB"
@@ -739,6 +735,78 @@ func TestValidatorIndices(t *testing.T) {
 	}
 	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(), []int{4, 5}) {
 		t.Errorf("exited validator indices should be [3], got: %v", beaconChain.exitedValidatorIndices())
+	}
+}
+
+func TestGetIndicesForHeight(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	state := types.NewCrystallizedState(&pb.CrystallizedState{
+		LastStateRecalc: 1,
+		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
+				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 3, Committee: []uint32{0, 1, 2, 3, 4}},
+				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+		}})
+	if err := beaconChain.SetCrystallizedState(state); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+	if _, err := beaconChain.getIndicesForHeight(1000); err == nil {
+		t.Error("getIndicesForHeight should have failed with invalid height")
+	}
+	committee, err := beaconChain.getIndicesForHeight(1)
+	if err != nil {
+		t.Errorf("getIndicesForHeight failed: %v", err)
+	}
+	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
+		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+	committee, _ = beaconChain.getIndicesForHeight(2)
+	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
+		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+}
+
+func TestGetBlockHash(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	state := types.NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: [][]byte{
+			{'A'},
+			{'B'},
+			{'C'},
+			{'D'},
+			{'E'},
+			{'F'},
+		},
+	})
+	if err := beaconChain.SetActiveState(state); err != nil {
+		t.Fatalf("unable to mutate active state: %v", err)
+	}
+
+	if _, err := beaconChain.getBlockHash(200, 250); err == nil {
+		t.Error("getBlockHash should have failed with invalid height")
+	}
+	hash, err := beaconChain.getBlockHash(2*params.CycleLength, 0)
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if bytes.Equal(hash, []byte{'A'}) {
+		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
+	}
+	hash, err = beaconChain.getBlockHash(2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if bytes.Equal(hash, []byte{'F'}) {
+		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
 	}
 }
 
