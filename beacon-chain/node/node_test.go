@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/urfave/cli"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli"
 )
 
 // Test that the beacon chain observer node can build with default flag values.
