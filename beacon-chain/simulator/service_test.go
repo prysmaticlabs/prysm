@@ -52,7 +52,7 @@ func TestLifecycle(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		Validator:       true,
+		Validator:       false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -77,7 +77,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		Validator:       true,
+		Validator:       false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -255,5 +255,17 @@ func TestLastSimulatedSession(t *testing.T) {
 	}
 	if _, err := sim.lastSimulatedSessionBlock(); err != nil {
 		t.Errorf("could not fetch last simulated session block: %v", err)
+	}
+}
+
+func TestDefaultConfig (t *testing.T) {
+	if DefaultConfig().BlockRequestBuf != 100 {
+		t.Errorf("incorrect default config for block request buffer")
+	}
+	if DefaultConfig().CrystallizedStateRequestBuf != 100 {
+		t.Errorf("incorrect default config for crystallized state request buffer")
+	}
+	if DefaultConfig().Delay != time.Second * 5 {
+		t.Errorf("incorrect default config for delay")
 	}
 }
