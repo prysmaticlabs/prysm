@@ -52,6 +52,7 @@ func TestLifecycle(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
+		Validator:       true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -76,6 +77,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
+		Validator:       true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -111,6 +113,7 @@ func TestBlockRequest(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
+		Validator:       true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -157,6 +160,7 @@ func TestBroadcastCrystallizedHash(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
+		Validator:       true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -196,6 +200,7 @@ func TestCrystallizedRequest(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
+		Validator:       true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -242,6 +247,7 @@ func TestLastSimulatedSession(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
+		Validator:       true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {

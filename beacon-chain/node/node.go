@@ -214,8 +214,11 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	if err := b.services.FetchService(&web3Service); err != nil {
-		return err
+	var isValidator = ctx.GlobalBool(utils.ValidatorFlag.Name)
+	if isValidator {
+		if err := b.services.FetchService(&web3Service); err != nil {
+			return err
+		}
 	}
 
 	var chainService *blockchain.ChainService
@@ -232,6 +235,7 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 		P2P:                         p2pService,
 		Web3Service:                 web3Service,
 		ChainService:                chainService,
+		Validator:                   isValidator,
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
