@@ -29,7 +29,7 @@ spec:
         command: ["bootnode"]
         args:
           - "--nodekey=/data/private_key"
-          - "--verbosity=9"
+          - "--verbosity=4"
         volumeMounts:
           - name: secrets
             mountPath: "/data/"

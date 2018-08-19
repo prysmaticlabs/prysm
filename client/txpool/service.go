@@ -15,7 +15,7 @@ type TXPool struct {
 	transactionsFeed *event.Feed
 }
 
-// NewTXPool creates a new observer instance.
+// NewTXPool creates a new txpool instance.
 func NewTXPool(p2p *p2p.Server) (*TXPool, error) {
 	return &TXPool{
 		p2p:              p2p,

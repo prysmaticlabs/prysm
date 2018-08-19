@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -13,7 +14,8 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-type mockP2P struct{}
+type mockP2P struct {
+}
 
 func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
@@ -21,7 +23,8 @@ func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscri
 
 func (mp *mockP2P) Broadcast(msg interface{}) {}
 
-func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
+func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
+}
 
 type mockChainService struct {
 	processedBlockHashes        [][32]byte
@@ -107,6 +110,14 @@ func (ms *mockChainService) ProcessedCrystallizedStateHashes() [][32]byte {
 	return ms.processedCrystallizedHashes
 }
 
+func (ms *mockChainService) HasStoredState() (bool, error) {
+	return false, nil
+}
+
+func (ms *mockChainService) SaveBlock(block *types.Block) error {
+	return nil
+}
+
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -155,24 +166,25 @@ func TestProcessBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:   make([]byte, 32),
+	data := &pb.BeaconBlock{
+		PowChainRef: []byte{1, 2, 3, 4, 5},
+		ParentHash:  make([]byte, 32),
+	}
+
+	responseBlock := &pb.BeaconBlockResponse{
+		Block: data,
 	}
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse,
+		Data: responseBlock,
 	}
 
 	ss.blockBuf <- msg
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(blockResponse)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -198,24 +210,32 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse1 := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:   make([]byte, 32),
+	data1 := &pb.BeaconBlock{
+		PowChainRef: []byte{1, 2, 3, 4, 5},
+		ParentHash:  make([]byte, 32),
+	}
+
+	responseBlock1 := &pb.BeaconBlockResponse{
+		Block: data1,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse1,
+		Data: responseBlock1,
 	}
 
-	blockResponse2 := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{6, 7, 8, 9, 10},
-		ParentHash:   make([]byte, 32),
+	data2 := &pb.BeaconBlock{
+		PowChainRef: []byte{6, 7, 8, 9, 10},
+		ParentHash:  make([]byte, 32),
+	}
+
+	responseBlock2 := &pb.BeaconBlockResponse{
+		Block: data2,
 	}
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse2,
+		Data: responseBlock2,
 	}
 
 	ss.blockBuf <- msg1
@@ -223,19 +243,13 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block1, err := types.NewBlock(blockResponse1)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block1 := types.NewBlock(data1)
 	h1, err := block1.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	block2, err := types.NewBlock(blockResponse2)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block2 := types.NewBlock(data2)
 	h2, err := block2.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -266,24 +280,25 @@ func TestProcessSameBlock(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	blockResponse := &pb.BeaconBlockResponse{
-		MainChainRef: []byte{1, 2, 3},
-		ParentHash:   make([]byte, 32),
+	data := &pb.BeaconBlock{
+		PowChainRef: []byte{1, 2, 3},
+		ParentHash:  make([]byte, 32),
+	}
+
+	responseBlock := &pb.BeaconBlockResponse{
+		Block: data,
 	}
 
 	msg := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: blockResponse,
+		Data: responseBlock,
 	}
 	ss.blockBuf <- msg
 	ss.blockBuf <- msg
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(blockResponse)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -448,22 +463,29 @@ func TestProcessCrystallizedStates(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse1 := &pb.CrystallizedStateResponse{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 99,
+	data1 := &pb.CrystallizedState{
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 99,
 	}
-	stateResponse2 := &pb.CrystallizedStateResponse{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 98,
+	data2 := &pb.CrystallizedState{
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 98,
+	}
+
+	responseState1 := &pb.CrystallizedStateResponse{
+		CrystallizedState: data1,
+	}
+	responseState2 := &pb.CrystallizedStateResponse{
+		CrystallizedState: data2,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse1,
+		Data: responseState1,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse2,
+		Data: responseState2,
 	}
 
 	ss.crystallizedStateBuf <- msg1
@@ -471,8 +493,8 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state1 := types.NewCrystallizedState(stateResponse1)
-	state2 := types.NewCrystallizedState(stateResponse2)
+	state1 := types.NewCrystallizedState(data1)
+	state2 := types.NewCrystallizedState(data2)
 
 	h, err := state1.Hash()
 	if err != nil {
@@ -507,20 +529,27 @@ func TestProcessActiveStates(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse1 := &pb.ActiveStateResponse{
-		TotalAttesterDeposits: 10000,
+	state1 := &pb.ActiveState{
+		RecentBlockHashes: [][]byte{{'A'}, {'B'}, {'C'}},
 	}
-	stateResponse2 := &pb.ActiveStateResponse{
-		TotalAttesterDeposits: 10001,
+	state2 := &pb.ActiveState{
+		RecentBlockHashes: [][]byte{{1}, {2}, {3}},
+	}
+
+	responseState1 := &pb.ActiveStateResponse{
+		ActiveState: state1,
+	}
+	responseState2 := &pb.ActiveStateResponse{
+		ActiveState: state2,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse1,
+		Data: responseState1,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse2,
+		Data: responseState2,
 	}
 
 	ss.activeStateBuf <- msg1
@@ -528,7 +557,7 @@ func TestProcessActiveStates(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state := types.NewActiveState(stateResponse1)
+	state := types.NewActiveState(state1)
 	h, err := state.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -538,7 +567,7 @@ func TestProcessActiveStates(t *testing.T) {
 		t.Errorf("Expected processed hash to be equal to state hash. wanted=%x, got=%x", h, ms.processedActiveHashes[0])
 	}
 
-	state = types.NewActiveState(stateResponse2)
+	state = types.NewActiveState(state2)
 	h, err = state.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -565,18 +594,22 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse := &pb.CrystallizedStateResponse{
-		LastJustifiedEpoch: 100,
-		LastFinalizedEpoch: 99,
+	data := &pb.CrystallizedState{
+		LastJustifiedSlot: 100,
+		LastFinalizedSlot: 99,
+	}
+
+	responseState := &pb.CrystallizedStateResponse{
+		CrystallizedState: data,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState,
 	}
 
 	ss.crystallizedStateBuf <- msg1
@@ -584,7 +617,7 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state := types.NewCrystallizedState(stateResponse)
+	state := types.NewCrystallizedState(data)
 
 	h, err := state.Hash()
 	if err != nil {
@@ -614,17 +647,21 @@ func TestProcessSameActiveState(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	stateResponse := &pb.ActiveStateResponse{
-		TotalAttesterDeposits: 100,
+	data := &pb.ActiveState{
+		RecentBlockHashes: [][]byte{{'A'}, {'B'}, {'C'}},
+	}
+
+	responseState1 := &pb.ActiveStateResponse{
+		ActiveState: data,
 	}
 
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState1,
 	}
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
-		Data: stateResponse,
+		Data: responseState1,
 	}
 
 	ss.activeStateBuf <- msg1
@@ -632,7 +669,7 @@ func TestProcessSameActiveState(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	state := types.NewActiveState(stateResponse)
+	state := types.NewActiveState(data)
 
 	h, err := state.Hash()
 	if err != nil {
@@ -646,4 +683,226 @@ func TestProcessSameActiveState(t *testing.T) {
 	}
 
 	hook.Reset()
+}
+
+func TestSetBlockForInitialSync(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	go func() {
+		ss.runInitialSync(delayChan, ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	block := &pb.BeaconBlock{
+		PowChainRef:           []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: generichash,
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{Block: block}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	ss.blockBuf <- msg1
+
+	ss.cancel()
+	<-exitRoutine
+
+	var hash [32]byte
+	copy(hash[:], blockResponse.Block.CrystallizedStateHash)
+
+	if hash != ss.initialCrystallizedStateHash {
+		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
+	}
+
+	hook.Reset()
+
+}
+
+func TestSavingBlocksInSync(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	go func() {
+		ss.runInitialSync(delayChan, ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	crystallizedState := &pb.CrystallizedState{
+		LastFinalizedSlot: 99,
+	}
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: crystallizedState,
+	}
+
+	incorrectState := &pb.CrystallizedState{
+		LastFinalizedSlot: 9,
+		LastJustifiedSlot: 20,
+	}
+
+	incorrectStateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: incorrectState,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(crystallizedState).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of crystallized state: %v", err)
+	}
+
+	getBlockResponseMsg := func(slotNumber uint64) p2p.Message {
+		block := &pb.BeaconBlock{
+			PowChainRef:           []byte{1, 2, 3},
+			ParentHash:            generichash,
+			SlotNumber:            slotNumber,
+			CrystallizedStateHash: crystallizedStateHash[:],
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: block,
+		}
+
+		return p2p.Message{
+			Peer: p2p.Peer{},
+			Data: blockResponse,
+		}
+	}
+
+	msg1 := getBlockResponseMsg(0)
+
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: incorrectStateResponse,
+	}
+
+	ss.blockBuf <- msg1
+	ss.crystallizedStateBuf <- msg2
+
+	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
+		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
+	}
+
+	msg2.Data = stateResponse
+
+	ss.crystallizedStateBuf <- msg2
+
+	if crystallizedStateHash != ss.initialCrystallizedStateHash {
+		br := msg1.Data.(*pb.BeaconBlockResponse)
+		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateHash)
+	}
+
+	msg1 = getBlockResponseMsg(30)
+	ss.blockBuf <- msg1
+
+	if stateResponse.CrystallizedState.GetLastFinalizedSlot() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedSlot())
+	}
+
+	msg1 = getBlockResponseMsg(100)
+	ss.blockBuf <- msg1
+
+	ss.cancel()
+	<-exitRoutine
+
+	br := msg1.Data.(*pb.BeaconBlockResponse)
+	if br.Block.GetSlotNumber() != ss.currentSlotNumber {
+		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", ss.currentSlotNumber)
+	}
+
+	hook.Reset()
+
+}
+
+func TestDelayChan(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	go func() {
+		ss.runInitialSync(delayChan, ss.ctx.Done())
+		exitRoutine <- true
+	}()
+
+	generichash := make([]byte, 32)
+	generichash[0] = 'a'
+
+	crystallizedstate := &pb.CrystallizedState{
+		LastFinalizedSlot: 99,
+	}
+
+	stateResponse := &pb.CrystallizedStateResponse{
+		CrystallizedState: crystallizedstate,
+	}
+
+	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of crystallized state: %v", err)
+	}
+
+	block := &pb.BeaconBlock{
+		PowChainRef:           []byte{1, 2, 3},
+		ParentHash:            generichash,
+		SlotNumber:            uint64(20),
+		CrystallizedStateHash: crystallizedStateHash[:],
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		Block: block,
+	}
+
+	msg1 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}
+
+	msg2 := p2p.Message{
+		Peer: p2p.Peer{},
+		Data: stateResponse,
+	}
+
+	ss.blockBuf <- msg1
+
+	ss.crystallizedStateBuf <- msg2
+
+	blockResponse.Block.SlotNumber = 100
+	msg1.Data = blockResponse
+
+	ss.blockBuf <- msg1
+
+	delayChan <- time.Time{}
+
+	ss.cancel()
+	<-exitRoutine
+
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+
+	hook.Reset()
+
 }

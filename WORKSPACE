@@ -71,6 +71,18 @@ load(
 
 _go_image_repos()
 
+git_repository(
+    name = "com_github_jmhodges_bazel_gomock",
+    commit = "5b73edb74e569ff404b3beffc809d6d9f205e0e4",
+    remote = "https://github.com/jmhodges/bazel_gomock.git",
+)
+
+go_repository(
+    name = "com_github_golang_mock",
+    commit = "503ea999614e3b9d10f0060b8182b6fc7ea664f8",
+    importpath = "github.com/golang/mock",
+)
+
 # External dependencies
 
 go_repository(
@@ -83,8 +95,8 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    # Last updated July 15, 2018
-    commit = "fad71da72e539ff79183a5d548b105c73ce4969f",
+    # Last updated August 15, 2018
+    commit = "c169d4b64d5360f5c1220a148c4438f7c90c8c96",
 )
 
 go_repository(

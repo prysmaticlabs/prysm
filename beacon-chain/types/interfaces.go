@@ -17,6 +17,14 @@ type P2P interface {
 	Broadcast(msg interface{})
 }
 
+// CanonicalEventAnnouncer defines a struct that pushes canonical blocks
+// and crystallized states to announcement channels once they are
+// finalized in the beacon node.
+type CanonicalEventAnnouncer interface {
+	CanonicalBlockEvent() <-chan *Block
+	CanonicalCrystallizedStateEvent() <-chan *CrystallizedState
+}
+
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {
 	BlockChainService
@@ -29,6 +37,8 @@ type BlockChainService interface {
 	ProcessedBlockHashes() [][32]byte
 	ProcessBlock(b *Block) error
 	ContainsBlock(h [32]byte) bool
+	HasStoredState() (bool, error)
+	SaveBlock(b *Block) error
 }
 
 // CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.
@@ -66,7 +76,7 @@ type POWBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
-// Logger subscribe filtered log on the PoW chain
+// Logger defines a struct that subscribes to filtered logs on the PoW chain.
 type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
 }

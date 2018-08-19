@@ -1,101 +1,67 @@
 package attester
 
 import (
-	"math/big"
+	"context"
+	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/prysmaticlabs/prysm/client/internal"
-	shardparams "github.com/prysmaticlabs/prysm/client/params"
-	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-// Verifies that Attester implements the Actor interface.
-var _ = types.Actor(&Attester{})
-
-func TestHasAccountBeenDeregistered(t *testing.T) {
-	backend, smc := internal.SetupMockClient(t)
-	client := &internal.MockClient{SMC: smc, T: t, Backend: backend, BlockNumber: 1}
-
-	client.SetDepositFlag(true)
-	err := joinAttesterPool(client, client)
-	if err != nil {
-		t.Error(err)
-	}
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 }
 
-func TestIsAccountInAttesterPool(t *testing.T) {
-	backend, smc := internal.SetupMockClient(t)
-	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
-
-	// address should not be in pool initially.
-	b, err := isAccountInAttesterPool(client, client.Account())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if b {
-		t.Fatal("account unexpectedly in attester pool")
-	}
-
-	txOpts, _ := client.CreateTXOpts(shardparams.DefaultAttesterDeposit())
-	if _, err := smc.RegisterAttester(txOpts); err != nil {
-		t.Fatalf("Failed to deposit: %v", err)
-	}
-	client.CommitWithBlock()
-	b, err = isAccountInAttesterPool(client, client.Account())
-	if err != nil {
-		t.Error(err)
-	}
-	if !b {
-		t.Error("account not in attester pool when expected to be")
-	}
+type mockBeaconService struct {
+	proposerChan chan bool
+	attesterChan chan bool
 }
 
-func TestJoinAttesterPool(t *testing.T) {
-	backend, smc := internal.SetupMockClient(t)
-	client := &internal.MockClient{SMC: smc, T: t, Backend: backend}
+func (m *mockBeaconService) AttesterAssignment() <-chan bool {
+	return m.attesterChan
+}
 
-	// There should be no attester initially.
-	numAttesters, err := smc.AttesterPoolLength(&bind.CallOpts{})
-	if err != nil {
-		t.Error(err)
-	}
-	if big.NewInt(0).Cmp(numAttesters) != 0 {
-		t.Errorf("unexpected number of attesters. Got %d, wanted 0.", numAttesters)
-	}
+func (m *mockBeaconService) ProposerAssignment() <-chan bool {
+	return m.proposerChan
+}
 
-	client.SetDepositFlag(false)
-	err = joinAttesterPool(client, client)
-	if err == nil {
-		t.Error("joined attester pool while --deposit was not present")
+func TestLifecycle(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := &mockBeaconService{
+		attesterChan: make(chan bool),
 	}
+	at := NewAttester(context.Background(), b)
+	at.Start()
+	testutil.AssertLogsContain(t, hook, "Starting service")
+	at.Stop()
+	testutil.AssertLogsContain(t, hook, "Stopping service")
+}
 
-	client.SetDepositFlag(true)
-	err = joinAttesterPool(client, client)
-	if err != nil {
-		t.Error(err)
-	}
+func TestAttesterLoop(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	// Now there should be one attester.
-	numAttesters, err = smc.AttesterPoolLength(&bind.CallOpts{})
-	if err != nil {
-		t.Error(err)
+	b := &mockBeaconService{
+		attesterChan: make(chan bool),
 	}
-	if big.NewInt(1).Cmp(numAttesters) != 0 {
-		t.Errorf("unexpected number of attesters. Got %d, wanted 1", numAttesters)
-	}
+	at := NewAttester(context.Background(), b)
 
-	// Join while deposited should do nothing.
-	err = joinAttesterPool(client, client)
-	if err != nil {
-		t.Error(err)
-	}
-
-	numAttesters, err = smc.AttesterPoolLength(&bind.CallOpts{})
-	if err != nil {
-		t.Error(err)
-	}
-	if big.NewInt(1).Cmp(numAttesters) != 0 {
-		t.Errorf("unexpected number of attesters. Got %d, wanted 1", numAttesters)
-	}
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		at.run(doneChan)
+		<-exitRoutine
+	}()
+	b.attesterChan <- true
+	testutil.AssertLogsContain(t, hook, "Performing attestation responsibility")
+	doneChan <- struct{}{}
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }

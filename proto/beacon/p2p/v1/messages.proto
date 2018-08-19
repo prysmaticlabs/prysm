@@ -12,17 +12,23 @@ message BeaconBlockRequest {
   bytes hash = 1;
 }
 
+message BeaconBlockRequestBySlotNumber{
+  uint64 slot_number = 1;
+}
+
 message BeaconBlockResponse {
+  BeaconBlock block = 1;
+}
+
+message BeaconBlock {
   bytes parent_hash = 1;
   uint64 slot_number = 2;
   bytes randao_reveal = 3;
-  bytes attestation_bitmask = 4;
-  repeated uint32 attestation_aggregate_sig = 5;
-  repeated AggregateVote shard_aggregate_votes = 6;
-  bytes main_chain_ref = 7;
-  bytes active_state_hash = 8;
-  bytes crystallized_state_hash = 9;
-  google.protobuf.Timestamp timestamp = 10;
+  bytes pow_chain_ref = 4;
+  bytes active_state_hash = 5;
+  bytes crystallized_state_hash = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  repeated AttestationRecord attestations = 8;
 }
 
 message CrystallizedStateHashAnnounce {
@@ -34,19 +40,26 @@ message CrystallizedStateRequest {
 }
 
 message CrystallizedStateResponse {
-  repeated ValidatorRecord active_validators = 1;
-  repeated ValidatorRecord queued_validators = 2;
-  repeated ValidatorRecord exited_validators = 3;
-  repeated uint64 current_epoch_shuffling = 4;
-  uint64 current_epoch = 5;
-  uint64 last_justified_epoch = 6;
-  uint64 last_finalized_epoch = 7;
-  uint64 current_dynasty = 8;
-  uint64 next_shard = 9;
-  bytes current_check_point = 10;
-  uint64 total_deposits = 11;
-  bytes dynasty_seed = 12;
-  uint64 dynasty_seed_last_reset = 13;
+  CrystallizedState crystallized_state = 1;
+}
+
+message CrystallizedState {
+  uint64 last_state_recalc = 1;
+  uint64 justified_streak = 2;
+  uint64 last_justified_slot = 3;
+  uint64 last_finalized_slot = 4;
+  uint64 current_dynasty = 5;
+  uint64 crosslinking_start_shard = 6;
+  uint64 total_deposits = 7;
+  bytes dynasty_seed = 8;
+  uint64 dynasty_seed_last_reset = 9;
+  repeated CrosslinkRecord crosslink_records = 10;
+  repeated ValidatorRecord validators = 11;
+  repeated ShardAndCommitteeArray indices_for_heights = 12;
+}
+
+message ShardAndCommitteeArray {
+  repeated ShardAndCommittee array_shard_and_committee = 1;
 }
 
 message ActiveStateHashAnnounce {
@@ -57,16 +70,18 @@ message ActiveStateRequest {
   bytes hash = 1;
 }
 
-message ActiveStateResponse {
-  uint64 total_attester_deposits = 1;
-  bytes attester_bitfield = 2;
+message ShardAndCommittee {
+  uint64 shard_id = 1;
+  repeated uint32 committee = 2;
 }
 
-message AggregateVote {
-  uint32 shard_id = 1;
-  bytes shard_block_hash = 2;
-  bytes signer_bitmask = 3;
-  repeated uint32 aggregate_sig = 4;
+message ActiveStateResponse {
+  ActiveState active_state = 1;
+}
+
+message ActiveState {
+  repeated AttestationRecord pending_attestations = 1;
+  repeated bytes recent_block_hashes = 2;
 }
 
 message ValidatorRecord {
@@ -75,5 +90,20 @@ message ValidatorRecord {
   bytes withdrawal_address = 3;
   bytes randao_commitment = 4;
   uint64 balance = 5;
-  uint64 switch_dynasty = 6;
+  uint64 start_dynasty = 6;
+  uint64 end_dynasty = 7;
+}
+
+message AttestationRecord {
+  uint64 slot = 1;
+  uint64 shard_id = 2;
+  bytes shard_block_hash = 3;
+  bytes attester_bitfield = 4;
+  repeated bytes oblique_parent_hashes = 5;
+  repeated uint64 aggregate_sig = 6;
+}
+
+message CrosslinkRecord {
+  uint64 dynasty = 1;
+  bytes blockhash = 2;
 }

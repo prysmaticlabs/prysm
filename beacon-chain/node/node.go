@@ -1,3 +1,4 @@
+// Package node defines the services that a beacon chain node would perform.
 package node
 
 import (
@@ -9,6 +10,8 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -38,9 +41,9 @@ type BeaconNode struct {
 	db       *database.DB
 }
 
-// New creates a new node instance, sets up configuration options, and registers
+// NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(ctx *cli.Context) (*BeaconNode, error) {
+func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -149,7 +152,12 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), b.db, web3Service)
+	beaconChain, err := blockchain.NewBeaconChain(b.db.DB())
+	if err != nil {
+		return fmt.Errorf("could not register blockchain service: %v", err)
+	}
+
+	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), beaconChain, b.db, web3Service)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
@@ -157,11 +165,17 @@ func (b *BeaconNode) registerBlockchainService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService() error {
+	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
+	if err != nil {
+		log.Errorf("Unable to connect to Geth node: %v", err)
+	}
+	powClient := ethclient.NewClient(rpcClient)
+
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
 		Endpoint: b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
 		Pubkey:   b.ctx.GlobalString(utils.PubKeyFlag.Name),
 		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
-	})
+	}, powClient, powClient, powClient)
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
 	}
@@ -202,15 +216,33 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 		return err
 	}
 
-	cfg := simulator.DefaultConfig()
-	simulatorService := simulator.NewSimulator(context.TODO(), cfg, p2pService, web3Service, chainService)
+	defaultConf := simulator.DefaultConfig()
+	cfg := &simulator.Config{
+		Delay:                       defaultConf.Delay,
+		BlockRequestBuf:             defaultConf.BlockRequestBuf,
+		CrystallizedStateRequestBuf: defaultConf.CrystallizedStateRequestBuf,
+		BeaconDB:                    b.db.DB(),
+		P2P:                         p2pService,
+		Web3Service:                 web3Service,
+		ChainService:                chainService,
+	}
+	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
+	var chainService *blockchain.ChainService
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
+	cert := ctx.GlobalString(utils.CertFlag.Name)
+	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port: port,
-	})
+		Port:     port,
+		CertFlag: cert,
+		KeyFlag:  key,
+	}, chainService)
 	return b.services.RegisterService(rpcService)
 }

@@ -1,3 +1,4 @@
+// Package blockchain defines the life-cycle and status of the beacon chain.
 package blockchain
 
 import (
@@ -20,22 +21,41 @@ type ChainService struct {
 	beaconDB                         *database.DB
 	chain                            *BeaconChain
 	web3Service                      *powchain.Web3Service
+	canonicalBlockEvent              chan *types.Block
+	canonicalCrystallizedStateEvent  chan *types.CrystallizedState
 	latestBeaconBlock                chan *types.Block
 	processedBlockHashes             [][32]byte
 	processedActiveStateHashes       [][32]byte
 	processedCrystallizedStateHashes [][32]byte
 }
 
+// Config options for the service.
+type Config struct {
+	BeaconBlockBuf  int
+	AnnouncementBuf int
+}
+
+// DefaultConfig options.
+func DefaultConfig() *Config {
+	return &Config{
+		BeaconBlockBuf:  10,
+		AnnouncementBuf: 10,
+	}
+}
+
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                              ctx,
+		chain:                            beaconChain,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
-		latestBeaconBlock:                make(chan *types.Block),
+		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
+		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
+		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
 		processedCrystallizedStateHashes: [][32]byte{},
@@ -46,12 +66,7 @@ func NewChainService(ctx context.Context, beaconDB *database.DB, web3Service *po
 func (c *ChainService) Start() {
 	log.Infof("Starting service")
 
-	beaconChain, err := NewBeaconChain(c.beaconDB.DB())
-	if err != nil {
-		log.Errorf("Unable to setup blockchain: %v", err)
-	}
-	c.chain = beaconChain
-	go c.updateChainState()
+	go c.run(c.ctx.Done())
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -68,17 +83,36 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// ProcessedBlockHashes by the chain service.
+// HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
+// persisted to the db.
+func (c *ChainService) HasStoredState() (bool, error) {
+
+	hasActive, err := c.beaconDB.DB().Has([]byte(activeStateLookupKey))
+	if err != nil {
+		return false, err
+	}
+	hasCrystallized, err := c.beaconDB.DB().Has([]byte(crystallizedStateLookupKey))
+	if err != nil {
+		return false, err
+	}
+	if !hasActive || !hasCrystallized {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// ProcessedBlockHashes exposes a getter for the processed block hashes of the chain.
 func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
 }
 
-// ProcessedCrystallizedStateHashes by the chain service.
+// ProcessedCrystallizedStateHashes exposes a getter for the processed crystallized state hashes of the chain.
 func (c *ChainService) ProcessedCrystallizedStateHashes() [][32]byte {
 	return c.processedCrystallizedStateHashes
 }
 
-// ProcessedActiveStateHashes by the chain service.
+// ProcessedActiveStateHashes exposes a getter for the processed active state hashes of the chain.
 func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
 	return c.processedActiveStateHashes
 }
@@ -92,7 +126,10 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
 	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
 	if err != nil {
-		return err
+		// We might receive a lot of blocks that fail validity conditions,
+		// so we create a debug level log instead of an error log.
+		log.Debugf("Incoming block failed validity conditions: %v", err)
+		return nil
 	}
 	if canProcess {
 		c.latestBeaconBlock <- block
@@ -100,20 +137,29 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	return nil
 }
 
+// SaveBlock is a mock which saves a block to the local db using the
+// blockhash as the key.
+func (c *ChainService) SaveBlock(block *types.Block) error {
+	return c.chain.saveBlock(block)
+}
+
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
+// TODO: Implement crystallized state verifier function and apply fork choice rules
 func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
 	h, err := state.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
-
-	// TODO: Implement crystallized state verifier function and apply fork choice rules
-
+	// For now, broadcast all incoming crystallized states to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical crystallized states over the channel.
+	c.canonicalCrystallizedStateEvent <- state
 	return nil
 }
 
 // ProcessActiveState accepts a new active state object for inclusion in the chain.
+// TODO: Implement active state verifier function and apply fork choice rules
 func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 	h, err := state.Hash()
 	if err != nil {
@@ -121,27 +167,28 @@ func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received active state, processing validity conditions")
 
-	// TODO: Implement active state verifier function and apply fork choice rules
-
 	return nil
 }
 
 // ContainsBlock checks if a block for the hash exists in the chain.
-// This method must be safe to call from a goroutine
+// This method must be safe to call from a goroutine.
+//
+// TODO: implement function.
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
-	// TODO
 	return false
 }
 
 // ContainsCrystallizedState checks if a crystallized state for the hash exists in the chain.
+//
+// TODO: implement function.
 func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
-	// TODO
 	return false
 }
 
 // ContainsActiveState checks if a active state for the hash exists in the chain.
+//
+// TODO: implement function.
 func (c *ChainService) ContainsActiveState(h [32]byte) bool {
-	// TODO
 	return false
 }
 
@@ -155,34 +202,66 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
-// updateChainState receives a beacon block, computes a new active state and writes it to db. Also
-// it checks for if there is an epoch transition. If there is one it computes the validator rewards
-// and penalties.
-func (c *ChainService) updateChainState() {
+// CanonicalBlockEvent returns a channel that is written to
+// whenever a new block is determined to be canonical in the chain.
+func (c *ChainService) CanonicalBlockEvent() <-chan *types.Block {
+	return c.canonicalBlockEvent
+}
+
+// CanonicalCrystallizedStateEvent returns a channel that is written to
+// whenever a new crystallized state is determined to be canonical in the chain.
+func (c *ChainService) CanonicalCrystallizedStateEvent() <-chan *types.CrystallizedState {
+	return c.canonicalCrystallizedStateEvent
+}
+
+// run processes the changes needed every beacon chain block,
+// including epoch transition if needed.
+func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
 		case block := <-c.latestBeaconBlock:
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao
+			// TODO: Apply 2.1 fork choice logic using the following.
+			vals, err := c.chain.validatorsByHeightShard()
+			if err != nil {
+				log.Errorf("Unable to get validators by height and by shard: %v", err)
+				continue
+			}
+			log.Debugf("Received %d validators by height", vals)
+
+			// Entering epoch transitions.
+			transition := c.chain.IsEpochTransition(block.SlotNumber())
+			if transition {
+				c.chain.CrystallizedState().SetStateRecalc(block.SlotNumber())
+				if err := c.chain.calculateRewardsFFG(block); err != nil {
+					log.Errorf("Error computing validator rewards and penalties %v", err)
+					continue
+				}
+			}
+
+			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
+			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
+			// protocol. For the first few blocks after genesis, the current approach below
+			// will panic as there are no registered validators.
 			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
 
-			err = c.chain.MutateActiveState(activeState)
+			err = c.chain.SetActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			currentslot := block.SlotNumber()
+			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
+			// occurred successfully).
+			c.canonicalBlockEvent <- block
 
-			transition := c.chain.IsEpochTransition(currentslot)
-			if transition {
-				if err := c.chain.calculateRewardsFFG(); err != nil {
-					log.Errorf("Error computing validator rewards and penalties %v", err)
-				}
+			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
+			// save the fork choice rule).
+			if err := c.SaveBlock(block); err != nil {
+				log.Errorf("Unable to save block to db: %v", err)
 			}
-
-		case <-c.ctx.Done():
+		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 		}

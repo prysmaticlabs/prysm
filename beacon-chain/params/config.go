@@ -1,16 +1,15 @@
+// Package params defines important constants that are essential to the beacon chain.
 package params
 
 const (
-	// AttesterCount is the number of attesters per committee/
-	AttesterCount = 32
 	// AttesterReward determines how much ETH attesters get for performing their duty.
 	AttesterReward = 1
-	// EpochLength is the beacon chain epoch length in slots.
-	EpochLength = 64
+	// CycleLength is the beacon chain epoch length in slots.
+	CycleLength = 64
 	// ShardCount is a fixed number.
 	ShardCount = 1024
-	// DefaultBalance of a validator.
-	DefaultBalance = 32000
+	// DefaultBalance of a validator in ETH.
+	DefaultBalance = 32
 	// MaxValidators in the protocol.
 	MaxValidators = 4194304
 	// SlotDuration in seconds.
@@ -19,4 +18,9 @@ const (
 	Cofactor = 19
 	// MinCommiteeSize is the minimal number of validator needs to be in a committee.
 	MinCommiteeSize = 128
+	// DefaultEndDynasty is the upper bound of dynasty. We use it to track queued and exited validators.
+	DefaultEndDynasty = 9999999999999999999
+	// BootstrappedValidatorsCount is the number of validators we seed the first crystallized
+	// state with. This number has yet to be decided by research and is arbitrary for now.
+	BootstrappedValidatorsCount = 100
 )

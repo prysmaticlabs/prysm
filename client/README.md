@@ -66,7 +66,6 @@ Our current work is focused on creating a localized version of a beacon chain wi
 -   A minimal, gossipsub shardp2p network
 -   Ability for proposers/attesters/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
 -   Ability to serialize blobs into collations on shard chains and advance the growth of the shard chains
--   An observer node that can join a network on shardp2p, sync to the latest head, and send tx's to nodes in the network
 
 
 We will forego several security considerations that will be critical for testnet and mainnet release for the purposes of demonstration and local network testing as part of the Ruby Release (See: [Security Considerations Not Included in Ruby](#not-included-in-ruby-release)).

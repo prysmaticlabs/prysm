@@ -4,28 +4,36 @@ package ethereum.beacon.rpc.v1;
 
 import "proto/sharding/p2p/v1/messages.proto";
 import "proto/beacon/p2p/v1/messages.proto";
+import "google/protobuf/empty.proto";
 
 service BeaconService {
-    rpc ShuffleValidators(ShuffleRequest) returns (stream ShuffleResponse);
+    rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
+    rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
+    rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
+}
+
+service AttesterService {
     rpc SignBlock(SignRequest) returns (SignResponse);
+}
+
+service ProposerService {
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
 }
 
 message ShuffleRequest {
-    uint64 validator_count = 1;
-    uint64 validator_index = 2;
+  bytes crystallized_state_hash = 1;
 }
 
 message ShuffleResponse {
-    bool is_proposer = 1;
-    bool is_attester = 2;
+    repeated uint64 shuffled_validator_indices = 1;
+    repeated uint64 cutoff_indices = 2;
+    repeated uint64 assigned_attestation_heights = 3;
 }
 
 message ProposeRequest {
   bytes randao_reveal = 1;
   bytes attestation_bitmask = 2;
   repeated uint32 attestation_aggregate_sig = 3;
-  repeated ethereum.beacon.p2p.v1.AggregateVote shard_aggregate_votes = 5;
 }
 
 message ProposeResponse {

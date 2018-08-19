@@ -1,3 +1,4 @@
+// Package types defines the types used throughout the client.
 package types
 
 import (

@@ -1,7 +1,7 @@
+// Package types defines the essential types used throughout the beacon-chain.
 package types
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -14,40 +14,53 @@ import (
 
 // Block defines a beacon chain core primitive.
 type Block struct {
-	data *pb.BeaconBlockResponse
-}
-
-// AggregateVote contains the fields of aggregate vote in individual shard.
-type AggregateVote struct {
-	ShardID        uint32 // Shard ID of the voted shard.
-	ShardBlockHash []byte // ShardBlockHash is the shard block hash of the voted shard.
-	SignerBitmask  []byte // SignerBitmask is the bit mask of every validator that signed.
-	AggregateSig   []uint // AggregateSig is the aggregated signatures of individual shard.
+	data *pb.BeaconBlock
 }
 
 // NewBlock explicitly sets the data field of a block.
-func NewBlock(data *pb.BeaconBlockResponse) (*Block, error) {
-	if len(data.ParentHash) != 32 {
-		return nil, errors.New("invalid block data, parent hash should be 32 bytes")
+// Return block with default fields if data is nil.
+func NewBlock(data *pb.BeaconBlock) *Block {
+	if data == nil {
+		return &Block{
+			data: &pb.BeaconBlock{
+				ParentHash:            []byte{0},
+				SlotNumber:            0,
+				RandaoReveal:          []byte{0},
+				Attestations:          []*pb.AttestationRecord{},
+				PowChainRef:           []byte{0},
+				ActiveStateHash:       []byte{0},
+				CrystallizedStateHash: []byte{0},
+			},
+		}
 	}
 
-	return &Block{data}, nil
+	return &Block{data: data}
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
+//
+// TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
-	genesisTime := time.Date(2018, time.July, 21, 12, 0, 0, 0, time.UTC)
-	protoGenesis, err := ptypes.TimestampProto(genesisTime)
+	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Add more default fields.
-	return &Block{data: &pb.BeaconBlockResponse{Timestamp: protoGenesis}}, nil
+	return &Block{
+		data: &pb.BeaconBlock{
+			Timestamp:  protoGenesis,
+			ParentHash: []byte{},
+		},
+	}, nil
 }
 
 // Proto returns the underlying protobuf data within a block primitive.
-func (b *Block) Proto() *pb.BeaconBlockResponse {
+func (b *Block) Proto() *pb.BeaconBlock {
 	return b.data
+}
+
+// Marshal encodes block object into the wire format.
+func (b *Block) Marshal() ([]byte, error) {
+	return proto.Marshal(b.data)
 }
 
 // Hash generates the blake2b hash of the block
@@ -62,7 +75,7 @@ func (b *Block) Hash() ([32]byte, error) {
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ParentHash[:32])
+	copy(h[:], b.data.ParentHash)
 	return h
 }
 
@@ -71,30 +84,35 @@ func (b *Block) SlotNumber() uint64 {
 	return b.data.SlotNumber
 }
 
-// MainChainRef returns a keccak256 hash corresponding to a PoW chain block.
-func (b *Block) MainChainRef() common.Hash {
-	return common.BytesToHash(b.data.MainChainRef)
+// PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
+func (b *Block) PowChainRef() common.Hash {
+	return common.BytesToHash(b.data.PowChainRef)
 }
 
 // RandaoReveal returns the blake2b randao hash.
 func (b *Block) RandaoReveal() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.RandaoReveal[:32])
+	copy(h[:], b.data.RandaoReveal)
 	return h
 }
 
-// ActiveStateHash blake2b value.
+// ActiveStateHash returns the active state hash.
 func (b *Block) ActiveStateHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ActiveStateHash[:32])
+	copy(h[:], b.data.ActiveStateHash)
 	return h
 }
 
-// CrystallizedStateHash blake2b value.
+// CrystallizedStateHash returns the crystallized state hash.
 func (b *Block) CrystallizedStateHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.CrystallizedStateHash[:32])
+	copy(h[:], b.data.CrystallizedStateHash)
 	return h
+}
+
+// AttestationCount returns the number of attestations.
+func (b *Block) AttestationCount() int {
+	return len(b.data.Attestations)
 }
 
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
