@@ -129,7 +129,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		if err := proto.Unmarshal(bytes, block); err != nil {
 			return nil, err
 		}
-		return types.NewBlock(block)
+		return types.NewBlock(block), nil
 	}
 	return types.NewGenesisBlock()
 }
@@ -195,7 +195,9 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	if err != nil {
 		return false, err
 	}
-	if !hasParent {
+	// If the block does not have a parent in the database and if that parent is not the genesis block,
+	// then it fails the validity conditions.
+	if !hasParent && block.SlotNumber() != 1 {
 		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 
@@ -215,7 +217,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		return false, nil
 	}
 
-	// Verify state hashes from the block are correct
+	// Verify state hashes from the block are correct.
 	hash, err := b.ActiveState().Hash()
 	if err != nil {
 		return false, err
@@ -306,7 +308,7 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 
 // getAttestersTotalDeposit returns the total deposit combined by attesters.
 // TODO: Consider slashing condition.
-func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
+func (b *BeaconChain) getAttestersTotalDeposit() uint64 {
 	var numOfBits int
 	for _, attestation := range b.ActiveState().PendingAttestations() {
 		for _, byte := range attestation.AttesterBitfield {
@@ -314,7 +316,7 @@ func (b *BeaconChain) getAttestersTotalDeposit() (uint64, error) {
 		}
 	}
 	// Assume there's no slashing condition, the following logic will change later phase.
-	return uint64(numOfBits) * params.DefaultBalance, nil
+	return uint64(numOfBits) * params.DefaultBalance
 }
 
 // calculateRewardsFFG adjusts validators balances by applying rewards or penalties
@@ -324,18 +326,13 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 	defer b.lock.Unlock()
 	validators := b.CrystallizedState().Validators()
 	activeValidators := b.activeValidatorIndices()
-	attesterDeposits, err := b.getAttestersTotalDeposit()
-	if err != nil {
-		return err
-	}
+	attesterDeposits := b.getAttestersTotalDeposit()
 	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
-	println(attesterFactor)
-	println(totalFactor)
 	if attesterFactor >= totalFactor {
-		log.Info("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		log.Infof("Setting justified epoch to current slot number: %v", block.SlotNumber())
 		b.state.CrystallizedState.UpdateJustifiedSlot(block.SlotNumber())
 
 		log.Info("Applying rewards and penalties for the validators from last epoch")
@@ -450,6 +447,24 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 		}
 	}
 	return committees, nil
+}
+
+// getIndicesForSlot returns the attester set of a given height.
+func (b *BeaconChain) getIndicesForHeight(height uint64) (*pb.ShardAndCommitteeArray, error) {
+	lcs := b.CrystallizedState().LastStateRecalc()
+	if !(lcs <= height && height < lcs+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, lcs, lcs+params.CycleLength*2)
+	}
+	return b.CrystallizedState().IndicesForHeights()[height-lcs], nil
+}
+
+// getBlockHash returns the block hash of a given height.
+func (b *BeaconChain) getBlockHash(slot, height uint64) ([]byte, error) {
+	sback := slot - params.CycleLength*2
+	if !(sback <= height && height < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, sback, sback+params.CycleLength*2)
+	}
+	return b.ActiveState().RecentBlockHashes()[height-sback].Bytes(), nil
 }
 
 // saveBlock puts the passed block into the beacon chain db.

@@ -184,10 +184,7 @@ func TestProcessBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(data)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -246,19 +243,13 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block1, err := types.NewBlock(data1)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block1 := types.NewBlock(data1)
 	h1, err := block1.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	block2, err := types.NewBlock(data2)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block2 := types.NewBlock(data2)
 	h2, err := block2.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -307,10 +298,7 @@ func TestProcessSameBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(data)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)

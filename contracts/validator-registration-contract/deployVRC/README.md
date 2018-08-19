@@ -24,7 +24,7 @@ This is a utility to help users deploy validator registration contract for runni
 To use private key with default RPC:
 
 ```
-bazel run //deployVRC --privKey yourPrivateKey
+bazel run //deployVRC -- --privKey yourPrivateKey
 ```
 
 To use UTC JSON with IPC:
