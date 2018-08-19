@@ -95,7 +95,8 @@ Now, save the passphrase you used in the geth node into a text file called passw
 Build our system first
 
 ```
-bazel build //...
+bazel build //beacon-chain/...
+bazel build //client/...
 ```
 
 ## Step 1: Deploy a Validator Registation Contract
@@ -128,9 +129,22 @@ bazel run //beacon-chain --\
 
 Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/beacon-chain/VALIDATOR_REGISTER.md)
 
-## Step 3: Running a Sharding Client
+### Running via Docker
 
-Once your beacon node is up, you'll need to attach a sharding client as a separate process. This client is in charge of running attester/proposer responsibilities and handling shards (shards to be designed in phase 2). This client will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
+To run the beacon node within a docker container, use the `//beacon-chain:image` target.
+
+```text
+bazel run //beacon-chain:image --\
+  --web3provider  ws://127.0.0.1:8546 \
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+  --simulator \
+  --verbosity debug
+```
+
+## Step 3: Running a Beacon/Sharding Client
+
+Once your beacon node is up, you'll need to attach a client as a separate process. This client is in charge of running attester/proposer responsibilities and handling shards (shards to be designed in phase 2). This client will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
 
 Run as follows:
 
@@ -142,12 +156,14 @@ bazel run //client --\
 
 Then, the beacon node will update this client with new blocks + crystallized states in order for the client to act as an attester or proposer.
 
-## Running via Docker
+### Running via Docker
 
 To run the client within a docker container, use the `//client:image` target.
 
 ```text
-bazel run //client:image
+bazel run //client:image --\
+  --beacon-rpc-provider http://localhost:4000 \
+  --verbosity debug
 
 INFO: Build options have changed, discarding analysis cache.
 INFO: Analysed target //client:image (306 packages loaded).
