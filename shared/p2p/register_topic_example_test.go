@@ -10,17 +10,21 @@ import (
 // A basic adapter will complete its logic then call next. Some adapters
 // may choose not to call next. For example, in the case of a rate
 // limiter or blacklisting condition.
-func reqLogger(ctx context.Context, msg p2p.Message, next p2p.Handler) {
-	fmt.Println("Received message from %s", msg.Peer)
-	next(ctx, msg)
+func reqLogger(next p2p.Handler) p2p.Handler {
+	return func(ctx context.Context, msg p2p.Message) {
+		fmt.Println("Received message from %s", msg.Peer)
+		next(ctx, msg)
+	}
 }
 
 // Functions can return an adapter in order to capture configuration.
 func adapterWithParams(i int) p2p.Adapter {
-	return func(ctx context.Context, msg p2p.Message, next p2p.Handler) {
-		fmt.Println("Magic number is %d", i)
-		i++
-		next(ctx, msg)
+	return func(next p2p.Handler) p2p.Handler {
+		return func(ctx context.Context, msg p2p.Message) {
+			fmt.Println("Magic number is %d", i)
+			i++
+			next(ctx, msg)
+		}
 	}
 }
 

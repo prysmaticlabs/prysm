@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package ethereum.testing;
+
+message TestMessage {
+    string foo = 1;
+}

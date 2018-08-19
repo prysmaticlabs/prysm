@@ -10,12 +10,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared"
-
 	floodsub "github.com/libp2p/go-floodsub"
+	bhost "github.com/libp2p/go-libp2p-blankhost"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,7 +42,7 @@ func TestBroadcast(t *testing.T) {
 func TestSubscribeToTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	h := bhost.New(swarmt.GenSwarm(t, ctx))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	gsub, err := floodsub.NewFloodSub(ctx, h)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestSubscribeToTopic(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	h := bhost.New(swarmt.GenSwarm(t, ctx))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	gsub, err := floodsub.NewFloodSub(ctx, h)
 	if err != nil {
@@ -133,20 +133,18 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 	}
 }
 
-func TestRegisterTopic(t *testing.T) {
+func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	s, err := NewServer()
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
-
 	topic := "test_topic"
+	testMessage := testpb.TestMessage{Foo: "bar"}
 
-	type TestMessage struct{}
-
-	s.RegisterTopic(topic, TestMessage{})
+	s.RegisterTopic(topic, testMessage)
 
 	ch := make(chan Message)
-	sub := s.Subscribe(TestMessage{}, ch)
+	sub := s.Subscribe(testMessage, ch)
 	defer sub.Unsubscribe()
 
 	wait := make(chan struct{})
@@ -156,30 +154,87 @@ func TestRegisterTopic(t *testing.T) {
 		_ = msg
 	})()
 
-	if err := simulateIncomingMessage(s, topic, []byte{}); err != nil {
+	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
 	}
 
 	select {
 	case <-wait:
 		return // OK
-	case <-time.After(5 * time.Second):
-		t.Fatal("TestMessage not received within 5 seconds")
+	case <-time.After(1 * time.Second):
+		t.Fatal("TestMessage not received within 1 seconds")
 	}
 }
 
-func simulateIncomingMessage(s *Server, topic string, b []byte) error {
-	// TODO
-	// Create a new host
+func TestRegisterTopic_WithAdapers(t *testing.T) {
+	s, err := NewServer()
+	if err != nil {
+		t.Fatalf("Failed to create new server: %v", err)
+	}
+	topic := "test_topic"
+	testMessage := testpb.TestMessage{Foo: "bar"}
 
-	// Connect to s.Host
+	i := 0
+	var testAdapter Adapter
+	testAdapter = func(next Handler) Handler {
+		return func(ctx context.Context, msg Message) {
+			i++
+			next(ctx, msg)
+		}
+	}
 
-	// Use the new connection to Publish msg on topic
+	adapters := []Adapter{
+		testAdapter,
+		testAdapter,
+		testAdapter,
+		testAdapter,
+		testAdapter,
+	}
 
-	return nil
+	s.RegisterTopic(topic, testMessage, adapters...)
+
+	ch := make(chan Message)
+	sub := s.Subscribe(testMessage, ch)
+	defer sub.Unsubscribe()
+
+	wait := make(chan struct{})
+	go (func() {
+		defer close(wait)
+		msg := <-ch
+		_ = msg
+	})()
+
+	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
+		t.Errorf("Failed to send to topic %s", topic)
+	}
+
+	select {
+	case <-wait:
+		if i != 5 {
+			t.Errorf("Expected testAdapter to increment i to 5, but was %d", i)
+		}
+		return // OK
+	case <-time.After(1 * time.Second):
+		t.Fatal("TestMessage not received within 1 seconds")
+	}
 }
 
-func TestRegisterTopic_WithAdapers(t *testing.T) {
-	// TODO: Test that adapters are called.
-	// TODO: Use a test suite for different conditions.
+func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) error {
+	ctx := context.Background()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	gsub, err := floodsub.NewFloodSub(ctx, h)
+	if err != nil {
+		return err
+	}
+
+	pinfo := h.Peerstore().PeerInfo(h.ID())
+	if err = s.host.Connect(ctx, pinfo); err != nil {
+		return err
+	}
+
+	// Short timeout to allow libp2p to handle peer connection.
+	time.Sleep(time.Millisecond * 10)
+
+	return gsub.Publish(topic, b)
 }

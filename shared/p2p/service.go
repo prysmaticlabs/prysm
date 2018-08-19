@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
@@ -64,14 +65,6 @@ func (s *Server) Start() {
 		log.Errorf("Could not start p2p discovery! %v", err)
 		return
 	}
-
-	// Subscribe to all topics.
-	//	for topic, msgType := range topicTypeMapping {
-	//		log.WithFields(logrus.Fields{
-	//			"topic": topic,
-	//		}).Debug("Subscribing to topic")
-	//		go s.subscribeToTopic(topic, msgType)
-	//	}
 }
 
 // Stop the main p2p loop.
@@ -87,10 +80,8 @@ func (s *Server) Stop() error {
 //
 // The topics can originate from multiple sources. In other words, messages on TopicA may come
 // from direct peer communication or a pub/sub channel.
-//
-// TODO
 func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Adapter) {
-	var msgType reflect.Type // TODO
+	msgType := reflect.TypeOf(message)
 	log.WithFields(logrus.Fields{
 		"topic": topic,
 	}).Debug("Subscribing to topic")
@@ -100,33 +91,48 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 		log.Errorf("Failed to subscribe to topic: %v", err)
 		return
 	}
-	defer sub.Cancel()
 	feed := s.Feed(msgType)
 
-	// TODO: Run this as the last step in the adapter stack.
 	go (func() {
+		defer sub.Cancel()
 		for {
 			msg, err := sub.Next(s.ctx)
 
 			if s.ctx.Err() != nil {
-				return // Context closed or something.
+				log.WithError(s.ctx.Err()).Debug("Context error")
+				return
 			}
+
 			if err != nil {
 				log.Errorf("Failed to get next message: %v", err)
 				return
 			}
 
-			// TODO: Run the adapter stack.
+			// Reverse adapter order
+			for i := len(adapters)/2 - 1; i >= 0; i-- {
+				opp := len(adapters) - 1 - i
+				adapters[i], adapters[opp] = adapters[opp], adapters[i]
+			}
 
-			s.emit(feed, msg, msgType)
+			var h Handler
+			h = func(ctx context.Context, pMsg Message) {
+				s.emit(feed, msg, msgType)
+			}
+
+			pMsg := Message{}
+
+			for _, adapter := range adapters {
+				h = adapter(h)
+			}
+
+			ctx, _ := context.WithTimeout(s.ctx, 10*time.Second)
+			h(ctx, pMsg)
 		}
 	})()
 
 }
 
-// TODO: rename
 func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
-
 	// TODO: reflect.Value.Interface() can panic so we should capture that
 	// panic so the server doesn't crash.
 	d, ok := reflect.New(msgType).Interface().(proto.Message)

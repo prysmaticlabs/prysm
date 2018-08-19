@@ -139,10 +139,11 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerP2P() error {
-	beaconp2p, err := p2p.NewServer()
+	beaconp2p, err := configureP2P()
 	if err != nil {
 		return fmt.Errorf("could not register p2p service: %v", err)
 	}
+
 	return b.services.RegisterService(beaconp2p)
 }
 
