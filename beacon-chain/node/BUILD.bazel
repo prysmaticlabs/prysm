@@ -15,6 +15,7 @@ go_library(
         "//beacon-chain/simulator:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//beacon-chain/utils:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/database:go_default_library",

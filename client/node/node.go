@@ -137,7 +137,7 @@ func (s *ShardEthereum) startDB(ctx *cli.Context) error {
 
 // registerP2P attaches a p2p server to the ShardEthereum instance.
 func (s *ShardEthereum) registerP2P() error {
-	shardp2p, err := p2p.NewServer()
+	shardp2p, err := configureP2P()
 	if err != nil {
 		return fmt.Errorf("could not register shardp2p service: %v", err)
 	}
