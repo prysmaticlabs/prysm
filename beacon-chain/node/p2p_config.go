@@ -25,7 +25,7 @@ func configureP2P() (*p2p.Server, error) {
 		return nil, err
 	}
 
-	// TODO: Define default adaptors for logging, monitoring, etc.
+	// TODO: Define default adapters for logging, monitoring, etc.
 	var adapters []p2p.Adapter
 	for k, v := range topicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
