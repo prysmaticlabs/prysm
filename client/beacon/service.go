@@ -136,7 +136,10 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			log.Errorf("Could not marshal crystallized state proto: %v", err)
 			continue
 		}
-		crystallizedStateHash := blake2b.Sum256(stateData)
+		var crystallizedStateHash [32]byte
+		h := blake2b.Sum512(stateData)
+		copy(crystallizedStateHash[:], h[:32])
+
 		dynasty := crystallizedState.GetCurrentDynasty()
 
 		for i, validator := range crystallizedState.GetValidators() {
