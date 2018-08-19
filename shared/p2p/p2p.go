@@ -6,15 +6,11 @@
 // 	- Floodsub: peer broadcasting to all peers
 // 	- Gossipsub: peer broadcasting to localized peers
 //
+// However, this communication is abstracted through the Feed, Broadcast, and Send.
+//
+//
+//
 // Read more about gossipsub at https://github.com/vyzo/gerbil-simsub
-//
-// Notes:
-// Gossip sub topics can be identified by their proto message types.
-//
-// 		topic := proto.MessageName(myMsg)
-//
-// Then we can assume that only these message types are broadcast in that
-// gossip subscription.
 package p2p
 
 import "context"
@@ -22,6 +18,11 @@ import "context"
 // Use this file for interfaces only!
 
 // Adapters are used to create middleware.
+//
+// See http://godoc.org/github.com/prysmaticlabs/prysm/shared/p2p#Server.RegisterTopic
 type Adapter func(context.Context, Message, Handler)
 
+// Handlers are the callback used in the adapter/middleware stack chain.
+//
+// See http://godoc.org/github.com/prysmaticlabs/prysm/shared/p2p#Server.RegisterTopic
 type Handler func(context.Context, Message)
