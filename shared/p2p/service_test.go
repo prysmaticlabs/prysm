@@ -92,7 +92,7 @@ func TestSubscribe(t *testing.T) {
 
 func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
 	topic := shardpb.Topic_COLLATION_BODY_REQUEST
-	msgType := topicTypeMapping[topic]
+	msgType := reflect.TypeOf(shardpb.CollationBodyRequest{})
 	go s.subscribeToTopic(topic, msgType)
 
 	// Short delay to let goroutine add subscription.

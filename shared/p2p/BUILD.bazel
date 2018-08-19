@@ -10,12 +10,10 @@ go_library(
         "p2p.go",
         "peer.go",
         "service.go",
-        "topics.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/p2p",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
         "//shared/iputils:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
@@ -40,7 +38,6 @@ go_test(
         "options_test.go",
         "register_topic_example_test.go",
         "service_test.go",
-        "topics_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

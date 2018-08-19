@@ -24,12 +24,13 @@ type Sender interface {
 
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	mutex  *sync.Mutex
-	feeds  map[reflect.Type]*event.Feed
-	host   host.Host
-	gsub   *floodsub.PubSub
+	ctx          context.Context
+	cancel       context.CancelFunc
+	mutex        *sync.Mutex
+	feeds        map[reflect.Type]*event.Feed
+	host         host.Host
+	gsub         *floodsub.PubSub
+	topicMapping map[reflect.Type]string
 }
 
 // NewServer creates a new p2p server instance.
@@ -49,19 +50,20 @@ func NewServer() (*Server, error) {
 	}
 
 	return &Server{
-		ctx:    ctx,
-		cancel: cancel,
-		feeds:  make(map[reflect.Type]*event.Feed),
-		host:   host,
-		gsub:   gsub,
-		mutex:  &sync.Mutex{},
+		ctx:          ctx,
+		cancel:       cancel,
+		feeds:        make(map[reflect.Type]*event.Feed),
+		host:         host,
+		gsub:         gsub,
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
 	}, nil
 }
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
 	log.Info("Starting service")
-	if err := startDiscovery(s.ctx, s.host, s.gsub); err != nil {
+	if err := startDiscovery(s.ctx, s.host); err != nil {
 		log.Errorf("Could not start p2p discovery! %v", err)
 		return
 	}
@@ -85,6 +87,8 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 	log.WithFields(logrus.Fields{
 		"topic": topic,
 	}).Debug("Subscribing to topic")
+
+	s.topicMapping[msgType] = topic
 
 	sub, err := s.gsub.Subscribe(topic)
 	if err != nil {
@@ -173,12 +177,12 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg interface{}) {
 	// TODO: https://github.com/prysmaticlabs/prysm/issues/176
-	topic := topic(msg)
+	topic := s.topicMapping[reflect.TypeOf(msg)]
 	log.WithFields(logrus.Fields{
 		"topic": topic,
-	}).Debugf("Broadcasting msg %T", msg)
+	}).Debugf("Broadcasting msg %s", msg)
 
-	if topic == shardpb.Topic_UNKNOWN {
+	if topic == "" {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
 	}
 
@@ -194,7 +198,7 @@ func (s *Server) Broadcast(msg interface{}) {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
 		return
 	}
-	if err := s.gsub.Publish(topic.String(), b); err != nil {
+	if err := s.gsub.Publish(topic, b); err != nil {
 		log.Errorf("Failed to publish to gossipsub topic: %v", err)
 	}
 }
