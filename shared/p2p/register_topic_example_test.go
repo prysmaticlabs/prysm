@@ -12,7 +12,7 @@ import (
 // limiter or blacklisting condition.
 func reqLogger(next p2p.Handler) p2p.Handler {
 	return func(ctx context.Context, msg p2p.Message) {
-		fmt.Println("Received message from %s", msg.Peer)
+		fmt.Printf("Received message from %s\n", msg.Peer)
 		next(ctx, msg)
 	}
 }
@@ -21,7 +21,7 @@ func reqLogger(next p2p.Handler) p2p.Handler {
 func adapterWithParams(i int) p2p.Adapter {
 	return func(next p2p.Handler) p2p.Handler {
 		return func(ctx context.Context, msg p2p.Message) {
-			fmt.Println("Magic number is %d", i)
+			fmt.Printf("Magic number is %d\n", i)
 			i++
 			next(ctx, msg)
 		}
