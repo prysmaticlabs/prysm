@@ -135,7 +135,6 @@ in validator duties such as proposing or attesting blocks. In addition, an obser
 
 ```
 bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
 ```
@@ -144,7 +143,6 @@ or
 
 ```
 bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \

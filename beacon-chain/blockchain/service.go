@@ -50,12 +50,19 @@ func DefaultConfig() *Config {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	var isValidator bool
+	if web3Service == nil {
+		isValidator = false
+	} else {
+		isValidator = true
+	}
 	return &ChainService{
 		ctx:                              ctx,
 		chain:                            beaconChain,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
+		validator:                        isValidator,
 		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
 		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
 		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
@@ -67,12 +74,10 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	if c.web3Service == nil {
-		c.validator = false
-		log.Infof("Starting service as observer")
-	} else {
-		c.validator = true
+	if c.validator {
 		log.Infof("Starting service as validator")
+	} else {
+		log.Infof("Starting service as observer")
 	}
 	go c.run(c.ctx.Done())
 }
@@ -137,9 +142,9 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 
 	// Process block as a validator if beacon node has registered, else process block as an observer.
 	if c.validator {
-		canProcess, err = c.chain.CanProcessBlockValidator(c.web3Service.Client(), block)
+		canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
 	} else {
-		canProcess, err = c.chain.CanProcessBlockObserver(block)
+		canProcess, err = c.chain.CanProcessBlock(nil, block, false)
 	}
 	if err != nil {
 		// We might receive a lot of blocks that fail validity conditions,

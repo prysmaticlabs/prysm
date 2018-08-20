@@ -183,12 +183,13 @@ func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
 
-// CanProcessBlockValidator is called by a validator to decide
-// if an incoming p2p block can be processed into the chain's block trie,
-// it checks time stamp, beacon chain parent block hash, and pow chain reference hash.
-func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
-	if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
-		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
+// CanProcessBlock is called to decide if an incoming p2p block can be processed into the chain's block trie,
+// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a validator.
+func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block, isValidator bool) (bool, error) {
+	if isValidator {
+		if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
+			return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
+		}
 	}
 
 	canProcess, err := b.verifyBlockParentHash(block)
@@ -196,8 +197,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		return false, fmt.Errorf("unable to process block: %v", err)
 	}
 	if !canProcess {
-		log.Debug("parent block verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
+		return false, fmt.Errorf("parent block verification for beacon block %v failed", block.SlotNumber())
 	}
 
 	canProcess, err = b.verifyBlockTimeStamp(block)
@@ -205,8 +205,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		return false, fmt.Errorf("unable to process block: %v", err)
 	}
 	if !canProcess {
-		log.Debug("time stamp verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
+		return false, fmt.Errorf("time stamp verification for beacon block %v failed", block.SlotNumber())
 	}
 
 	canProcess, err = b.verifyBlockActiveHash(block)
@@ -214,8 +213,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		return false, fmt.Errorf("unable to process block: %v", err)
 	}
 	if !canProcess {
-		log.Debug("active state verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
+		return false, fmt.Errorf("active state verification for beacon block %v failed", block.SlotNumber())
 	}
 
 	canProcess, err = b.verifyBlockCrystallizedHash(block)
@@ -223,50 +221,7 @@ func (b *BeaconChain) CanProcessBlockValidator(fetcher types.POWBlockFetcher, bl
 		return false, fmt.Errorf("unable to process block: %v", err)
 	}
 	if !canProcess {
-		log.Debug("crystallized verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
-	}
-	return canProcess, nil
-}
-
-// CanProcessBlockObserver is called by an observer to decide
-// if an incoming p2p block can be processed into the chain's block trie,
-// it checks time stamp, beacon chain parent block hash, and pow chain reference hash.
-func (b *BeaconChain) CanProcessBlockObserver(block *types.Block) (bool, error) {
-	canProcess, err := b.verifyBlockParentHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		log.Debug("parent block verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
-	}
-
-	canProcess, err = b.verifyBlockTimeStamp(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		log.Debug("time stamp verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
-	}
-
-	canProcess, err = b.verifyBlockActiveHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		log.Debug("active state verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
-	}
-
-	canProcess, err = b.verifyBlockCrystallizedHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		log.Debug("crystallized verification for beacon block %v failed", block.SlotNumber())
-		return false, nil
+		return false, fmt.Errorf("crystallized verification for beacon block %v failed", block.SlotNumber())
 	}
 	return canProcess, nil
 }
