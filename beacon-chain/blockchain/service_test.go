@@ -75,12 +75,16 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-
-	chainService, err := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService, err := NewChainService(ctx, cfg, beaconChain, db, nil)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+	chainService.Start()
 
+	chainService, err = NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	if err != nil {
+		t.Fatalf("unable to setup chain service: %v", err)
+	}
 	chainService.Start()
 
 	if len(chainService.ProcessedBlockHashes()) != 0 {
