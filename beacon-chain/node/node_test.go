@@ -60,6 +60,27 @@ func TestNodeValidator_Builds(t *testing.T) {
 	}
 }
 
+// Test that beacon chain node can start.
+func TestNodeStart(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
+	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	set.String("datadir", tmp, "node data directory")
+	set.Bool("simulator", true, "want to be a simulator?")
+
+	context := cli.NewContext(app, set, nil)
+
+	node, err := NewBeaconNode(context)
+	if err != nil {
+		t.Fatalf("Failed to create BeaconNode: %v", err)
+	}
+
+	go node.Start()
+	os.RemoveAll(tmp)
+}
+
+// Test that beacon chain node can close.
 func TestNodeClose(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.NewApp()
