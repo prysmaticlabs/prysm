@@ -258,14 +258,14 @@ func TestLastSimulatedSession(t *testing.T) {
 	}
 }
 
-func TestDefaultConfig (t *testing.T) {
+func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
 	}
 	if DefaultConfig().CrystallizedStateRequestBuf != 100 {
 		t.Errorf("incorrect default config for crystallized state request buffer")
 	}
-	if DefaultConfig().Delay != time.Second * 5 {
+	if DefaultConfig().Delay != time.Second*5 {
 		t.Errorf("incorrect default config for delay")
 	}
 }
