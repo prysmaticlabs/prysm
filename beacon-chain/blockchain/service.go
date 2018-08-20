@@ -4,7 +4,9 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -16,11 +18,14 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
+	validator                        bool
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	beaconDB                         *database.DB
 	chain                            *BeaconChain
 	web3Service                      *powchain.Web3Service
+	canonicalBlockEvent              chan *types.Block
+	canonicalCrystallizedStateEvent  chan *types.CrystallizedState
 	latestBeaconBlock                chan *types.Block
 	processedBlockHashes             [][32]byte
 	processedActiveStateHashes       [][32]byte
@@ -29,13 +34,15 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf int
+	BeaconBlockBuf  int
+	AnnouncementBuf int
 }
 
 // DefaultConfig options.
 func DefaultConfig() *Config {
 	return &Config{
-		BeaconBlockBuf: 10,
+		BeaconBlockBuf:  10,
+		AnnouncementBuf: 10,
 	}
 }
 
@@ -43,13 +50,22 @@ func DefaultConfig() *Config {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	var isValidator bool
+	if web3Service == nil {
+		isValidator = false
+	} else {
+		isValidator = true
+	}
 	return &ChainService{
 		ctx:                              ctx,
 		chain:                            beaconChain,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
+		validator:                        isValidator,
 		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
+		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
+		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
 		processedCrystallizedStateHashes: [][32]byte{},
@@ -58,8 +74,11 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Infof("Starting service")
-
+	if c.validator {
+		log.Infof("Starting service as validator")
+	} else {
+		log.Infof("Starting service as observer")
+	}
 	go c.run(c.ctx.Done())
 }
 
@@ -113,14 +132,25 @@ func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
 
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(block *types.Block) error {
+	var canProcess bool
+	var err error
 	h, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+
+	// Process block as a validator if beacon node has registered, else process block as an observer.
+	if c.validator {
+		canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
+	} else {
+		canProcess, err = c.chain.CanProcessBlock(nil, block, false)
+	}
 	if err != nil {
-		return err
+		// We might receive a lot of blocks that fail validity conditions,
+		// so we create a debug level log instead of an error log.
+		log.Debugf("Incoming block failed validity conditions: %v", err)
+		return nil
 	}
 	if canProcess {
 		c.latestBeaconBlock <- block
@@ -142,7 +172,10 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
-
+	// For now, broadcast all incoming crystallized states to the following channel
+	// for gRPC clients to receive then. TODO: change this to actually send
+	// canonical crystallized states over the channel.
+	c.canonicalCrystallizedStateEvent <- state
 	return nil
 }
 
@@ -190,6 +223,18 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
+// CanonicalBlockEvent returns a channel that is written to
+// whenever a new block is determined to be canonical in the chain.
+func (c *ChainService) CanonicalBlockEvent() <-chan *types.Block {
+	return c.canonicalBlockEvent
+}
+
+// CanonicalCrystallizedStateEvent returns a channel that is written to
+// whenever a new crystallized state is determined to be canonical in the chain.
+func (c *ChainService) CanonicalCrystallizedStateEvent() <-chan *types.CrystallizedState {
+	return c.canonicalCrystallizedStateEvent
+}
+
 // run processes the changes needed every beacon chain block,
 // including epoch transition if needed.
 func (c *ChainService) run(done <-chan struct{}) {
@@ -197,30 +242,47 @@ func (c *ChainService) run(done <-chan struct{}) {
 		select {
 		case block := <-c.latestBeaconBlock:
 			// TODO: Apply 2.1 fork choice logic using the following.
-			validatorsByHeight, err := c.chain.validatorsByHeightShard()
+			vals, err := c.chain.validatorsByHeightShard()
 			if err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
+				continue
 			}
-			log.Debugf("Received the following validators by height: %v", validatorsByHeight)
+			log.Debugf("Received %d validators by height", vals)
 
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
 			if transition {
+				c.chain.CrystallizedState().SetStateRecalc(block.SlotNumber())
 				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
+					continue
 				}
 			}
 
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
+			// TODO: Using random hash based on time stamp for seed, this will eventually be replaced by VDF or RNG.
+			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
+			// protocol. For the first few blocks after genesis, the current approach below
+			// will panic as there are no registered validators.
+			timestamp := time.Now().Unix()
+			activeState, err := c.chain.computeNewActiveState(common.BytesToHash([]byte(string(timestamp))))
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
+
 			err = c.chain.SetActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
+			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
+			// occurred successfully).
+			c.canonicalBlockEvent <- block
+
+			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
+			// save the fork choice rule).
+			if err := c.SaveBlock(block); err != nil {
+				log.Errorf("Unable to save block to db: %v", err)
+			}
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return

@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -10,12 +11,20 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 type mockClient struct{}
 
@@ -42,7 +51,6 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	defer os.RemoveAll(tmp)
@@ -51,8 +59,8 @@ func TestStartStop(t *testing.T) {
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
-
 	}
+
 	endpoint := "ws://127.0.0.1"
 	client := &mockClient{}
 	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
@@ -67,12 +75,16 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-
-	chainService, err := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService, err := NewChainService(ctx, cfg, beaconChain, db, nil)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+	chainService.Start()
 
+	chainService, err = NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	if err != nil {
+		t.Fatalf("unable to setup chain service: %v", err)
+	}
 	chainService.Start()
 
 	if len(chainService.ProcessedBlockHashes()) != 0 {
@@ -87,7 +99,7 @@ func TestStartStop(t *testing.T) {
 	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 0 {
 		t.Errorf("incorrect recent block hashes")
 	}
-	if len(chainService.CurrentCrystallizedState().Validators()) != 0 {
+	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
 	}
 	if chainService.ContainsBlock([32]byte{}) {
@@ -106,6 +118,9 @@ func TestStartStop(t *testing.T) {
 	if hasState {
 		t.Errorf("has stored state should return false")
 	}
+	chainService.CanonicalBlockEvent()
+	chainService.CanonicalCrystallizedStateEvent()
+
 	chainService, _ = NewChainService(ctx, cfg, beaconChain, db, web3Service)
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
@@ -152,11 +167,9 @@ func TestStartStop(t *testing.T) {
 	if chainService.ctx.Err() == nil {
 		t.Error("context was not canceled")
 	}
-	hook.Reset()
 }
 
 func TestFaultyStop(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	defer os.RemoveAll(tmp)
@@ -201,7 +214,6 @@ func TestFaultyStop(t *testing.T) {
 	if err == nil {
 		t.Errorf("chain stop should have failed with persist crystallized state")
 	}
-	hook.Reset()
 }
 
 func TestProcessingStates(t *testing.T) {
@@ -229,7 +241,7 @@ func TestProcessingStates(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
-
+	chainService.canonicalCrystallizedStateEvent = make(chan *types.CrystallizedState, 1)
 	if err := chainService.ProcessCrystallizedState(types.NewCrystallizedState(nil)); err == nil {
 		t.Errorf("processing crystallized state should have failed")
 	}
@@ -239,15 +251,17 @@ func TestProcessingStates(t *testing.T) {
 	}
 
 	chainService.ProcessCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{}))
+	<-chainService.canonicalCrystallizedStateEvent
 	chainService.ProcessActiveState(types.NewActiveState(&pb.ActiveState{}))
 }
 
 func TestProcessingBadBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
 	defer os.RemoveAll(tmp)
 
-	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	config := &database.DBConfig{DataDir: tmp, Name: "badblockdata", InMemory: false}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
@@ -267,6 +281,10 @@ func TestProcessingBadBlock(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+
+	if err = chainService.ProcessBlock(&types.Block{}); err == nil {
+		t.Fatalf("Procss block should have failed with nil block")
+	}
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()
@@ -293,9 +311,11 @@ func TestProcessingBadBlock(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	if err = chainService.ProcessBlock(block); err == nil {
-		t.Error("process block should have failed with parent hash points to nil")
+	if err = chainService.ProcessBlock(block); err != nil {
+		t.Fatalf("Could not setup processing block function")
 	}
+	testutil.AssertLogsContain(t, hook, "parent hash points to nil")
+	hook.Reset()
 }
 
 func TestRunningChainService(t *testing.T) {
@@ -315,12 +335,26 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
 	cfg := &Config{
-		BeaconBlockBuf: 0,
+		BeaconBlockBuf:  0,
+		AnnouncementBuf: 1,
 	}
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
+
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 40; i++ {
+		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
+		validators = append(validators, validator)
+	}
+
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
+	crystallizedStateHash, err := crystallized.Hash()
+	if err != nil {
+		t.Fatalf("Cannot hash crystallized state: %v", err)
+	}
+
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
 	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
 	if err := beaconChain.SetActiveState(state); err != nil {
@@ -328,6 +362,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService.chain.SetCrystallizedState(crystallized)
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -343,19 +378,6 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
 
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
-	}
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-	chainService.chain.SetCrystallizedState(crystallized)
-
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            65,
 		ActiveStateHash:       activeStateHash[:],
@@ -366,5 +388,6 @@ func TestRunningChainService(t *testing.T) {
 
 	chainService.latestBeaconBlock <- block
 	chainService.cancel()
+	<-chainService.canonicalBlockEvent
 	exitRoutine <- true
 }

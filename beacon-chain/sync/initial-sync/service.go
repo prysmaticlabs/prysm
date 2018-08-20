@@ -217,10 +217,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 // requestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
 // for a beacon block.
 func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
-	block, err := types.NewBlock(data.Block)
-	if err != nil {
-		return fmt.Errorf("could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data.Block)
 	h := block.CrystallizedStateHash()
 	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
 	s.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
@@ -230,10 +227,7 @@ func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockRespo
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error {
-	block, err := types.NewBlock(data.Block)
-	if err != nil {
-		return fmt.Errorf("could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data.Block)
 
 	h, err := block.Hash()
 	if err != nil {
@@ -259,10 +253,7 @@ func (s *InitialSync) requestNextBlock() {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
-	block, err := types.NewBlock(data.Block)
-	if err != nil {
-		return fmt.Errorf("could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data.Block)
 
 	if s.currentSlotNumber == uint64(0) {
 		return errors.New("invalid slot number for syncing")

@@ -200,20 +200,17 @@ func TestGetAttestersProposer(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	_, _, err := beaconChain.getAttestersProposer(common.Hash{'A'})
-	if err == nil {
+	if _, _, err := beaconChain.getAttestersProposer(common.Hash{'A'}); err == nil {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
 	// computeNewActiveState should fail the same.
-	_, err = beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'}))
-	if err == nil {
+	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'})); err == nil {
 		t.Errorf("computeNewActiveState should have failed")
 	}
 
 	// validatorsByHeightShard should fail the same.
-	_, err = beaconChain.validatorsByHeightShard()
-	if err == nil {
+	if _, err := beaconChain.validatorsByHeightShard(); err == nil {
 		t.Errorf("validatorsByHeightShard should have failed")
 	}
 
@@ -279,7 +276,7 @@ func TestCanProcessBlock(t *testing.T) {
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 2,
 	})
-	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
+	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block, true); err == nil {
 		t.Error("Using a faulty fetcher should throw an error, received nil")
 	}
 
@@ -305,8 +302,7 @@ func TestCanProcessBlock(t *testing.T) {
 		ParentHash:            parentHash[:],
 	})
 
-	// A properly initialize block should not fail.
-	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
 	if err != nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
 	}
@@ -314,15 +310,45 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Error("Should be able to process block, could not")
 	}
 
-	// Test timestamp validity condition.
+	// Negative scenario #1, invalid active hash
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            2,
+		ActiveStateHash:       []byte{'A'},
+		CrystallizedStateHash: crystallizedHash[:],
+		ParentHash:            parentHash[:],
+	})
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Error("Should not be able to process block with invalid active hash")
+	}
+
+	// Negative scenario #2, invalid crystallized hash
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            2,
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: []byte{'A'},
+		ParentHash:            parentHash[:],
+	})
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Error("Should not be able to process block with invalid crystallied hash")
+	}
+
+	// Negative scenario #3, invalid timestamp
 	block = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            1000000,
 		ActiveStateHash:       activeHash[:],
 		CrystallizedStateHash: crystallizedHash[:],
 		ParentHash:            parentHash[:],
 	})
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
-	if err != nil {
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
+	if err == nil {
 		t.Fatalf("CanProcessBlocks failed: %v", err)
 	}
 	if canProcess {
@@ -367,23 +393,23 @@ func TestProcessBlockWithBadHashes(t *testing.T) {
 	// Test negative scenario where active state hash is different than node's compute.
 	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'B'}}})
 
-	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
 	if err == nil {
-		t.Fatal("CanProcessBlocks should have failed with diff state hashes")
+		t.Fatalf("CanProcessBlocks failed: %v", err)
 	}
 	if canProcess {
-		t.Error("CanProcessBlocks should have returned false")
+		t.Error("CanProcessBlocks should have returned false with diff state hashes")
 	}
 
 	// Test negative scenario where crystallized state hash is different than node's compute.
 	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 9999})
 
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
 	if err == nil {
-		t.Fatal("CanProcessBlocks should have failed with diff state hashes")
+		t.Fatalf("CanProcessBlocks failed: %v", err)
 	}
 	if canProcess {
-		t.Error("CanProcessBlocks should have returned false")
+		t.Error("CanProcessBlocks should have returned false with diff state hashes")
 	}
 }
 
@@ -412,7 +438,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 	})
-	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
+	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true); err == nil {
 		t.Error("Processing without a valid parent hash should fail")
 	}
 
@@ -431,18 +457,18 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 		ParentHash:            parentHash[:],
 	})
 
-	if _, err := beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
+	if _, err := beaconChain.CanProcessBlock(&mockFetcher{}, block, true); err == nil {
 		t.Error("Processing block should fail when parent hash is not in db")
 	}
 
 	if err = db.DB().Put(parentHash[:], nil); err != nil {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
-	_, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	_, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
 	if err == nil {
 		t.Error("Processing block should fail when parent hash points to nil in db")
 	}
-	want := "parent hash points to nil in beaconDB"
+	want := "unable to process block: parent hash points to nil in beaconDB"
 	if err.Error() != want {
 		t.Errorf("invalid log, expected \"%s\", got \"%s\"", want, err.Error())
 	}
@@ -451,7 +477,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
 
-	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
 	if err != nil {
 		t.Errorf("Should have been able to process block: %v", err)
 	}
@@ -742,6 +768,202 @@ func TestValidatorIndices(t *testing.T) {
 	}
 }
 
+func TestCanProcessBlockObserver(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	clock = &fakeClock{}
+
+	// Initialize a parent block.
+	parentBlock := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 1,
+	})
+	parentHash, err := parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
+	}
+	if err = db.DB().Put(parentHash[:], []byte{}); err != nil {
+		t.Fatalf("Failed to put parent block on db: %v", err)
+	}
+
+	// Initialize initial state.
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
+	beaconChain.state.ActiveState = activeState
+	activeHash, err := activeState.Hash()
+	if err != nil {
+		t.Fatalf("Cannot hash active state: %v", err)
+	}
+
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{})
+	beaconChain.state.CrystallizedState = crystallized
+	crystallizedHash, err := crystallized.Hash()
+	if err != nil {
+		t.Fatalf("Compute crystallized state hash failed: %v", err)
+	}
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            2,
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: crystallizedHash[:],
+		ParentHash:            parentHash[:],
+	})
+
+	// A properly initialize block should not fail.
+	canProcess, err := beaconChain.CanProcessBlock(nil, block, false)
+	if err != nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if !canProcess {
+		t.Error("Should be able to process block, could not")
+	}
+
+	// Negative scenario #1, invalid crystallized state hash
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            2,
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: []byte{'A'},
+		ParentHash:            parentHash[:],
+	})
+	canProcess, err = beaconChain.CanProcessBlock(nil, block, false)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Error("Should not be able to process block with invalid crystallized hash")
+	}
+
+	// Negative scenario #2, invalid active sate hash
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            2,
+		ActiveStateHash:       []byte{'A'},
+		CrystallizedStateHash: crystallizedHash[:],
+		ParentHash:            parentHash[:],
+	})
+	canProcess, err = beaconChain.CanProcessBlock(nil, block, false)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Error("Should not be able to process block with invalid active hash")
+	}
+
+	// Negative scenario #3, invalid timestamp
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            1000000,
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: crystallizedHash[:],
+		ParentHash:            parentHash[:],
+	})
+	canProcess, err = beaconChain.CanProcessBlock(nil, block, false)
+	if err == nil {
+		t.Fatalf("CanProcessBlocks failed: %v", err)
+	}
+	if canProcess {
+		t.Error("Should not be able to process block with invalid timestamp condition")
+	}
+}
+
+func TestGetIndicesForHeight(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	state := types.NewCrystallizedState(&pb.CrystallizedState{
+		LastStateRecalc: 1,
+		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
+				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 3, Committee: []uint32{0, 1, 2, 3, 4}},
+				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+		}})
+	if err := beaconChain.SetCrystallizedState(state); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+	if _, err := beaconChain.GetIndicesForHeight(1000); err == nil {
+		t.Error("getIndicesForHeight should have failed with invalid height")
+	}
+	committee, err := beaconChain.GetIndicesForHeight(1)
+	if err != nil {
+		t.Errorf("getIndicesForHeight failed: %v", err)
+	}
+	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
+		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+	committee, _ = beaconChain.GetIndicesForHeight(2)
+	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
+		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+}
+
+func TestGetBlockHash(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	state := types.NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: [][]byte{
+			{'A'},
+			{'B'},
+			{'C'},
+			{'D'},
+			{'E'},
+			{'F'},
+		},
+	})
+	if err := beaconChain.SetActiveState(state); err != nil {
+		t.Fatalf("unable to mutate active state: %v", err)
+	}
+
+	if _, err := beaconChain.GetBlockHash(200, 250); err == nil {
+		t.Error("getBlockHash should have failed with invalid height")
+	}
+	hash, err := beaconChain.GetBlockHash(2*params.CycleLength, 0)
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if bytes.Equal(hash, []byte{'A'}) {
+		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
+	}
+	hash, err = beaconChain.GetBlockHash(2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if bytes.Equal(hash, []byte{'F'}) {
+		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
+	}
+}
+
+func TestSaveBlockWithNil(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	if err := beaconChain.saveBlock(&types.Block{}); err == nil {
+		t.Error("Save block should have failed with nil block")
+	}
+}
+
+func TestVerifyActiveHashWithNil(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+	beaconChain.SetActiveState(&types.ActiveState{})
+	_, err := beaconChain.verifyBlockActiveHash(&types.Block{})
+	if err == nil {
+		t.Error("Verify block hash should have failed with nil active state")
+	}
+}
+
+func TestVerifyCrystallizedHashWithNil(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+	beaconChain.SetCrystallizedState(&types.CrystallizedState{})
+	_, err := beaconChain.verifyBlockCrystallizedHash(&types.Block{})
+	if err == nil {
+		t.Error("Verify block hash should have failed with nil crystallized")
+	}
+}
+
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
@@ -758,9 +980,5 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 		b.ParentHash = make([]byte, 32)
 	}
 
-	blk, err := types.NewBlock(b)
-	if err != nil {
-		t.Fatalf("failed to instantiate block with slot number: %v", err)
-	}
-	return blk
+	return types.NewBlock(b)
 }

@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -37,6 +38,14 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 			RecentBlockHashes:   [][]byte{},
 		},
 	}
+	// We seed the genesis crystallized state with a bunch of validators to
+	// bootstrap the system.
+	// TODO: Perform this task from some sort of genesis state json config instead.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validators = append(validators, validator)
+	}
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedState{
 			LastStateRecalc:        0,
@@ -49,7 +58,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 			DynastySeed:            []byte{},
 			DynastySeedLastReset:   0,
 			CrosslinkRecords:       []*pb.CrosslinkRecord{},
-			Validators:             []*pb.ValidatorRecord{},
+			Validators:             validators,
 			IndicesForHeights:      []*pb.ShardAndCommitteeArray{},
 		},
 	}
@@ -85,7 +94,10 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return blake2b.Sum256(data), nil
+	var hash [32]byte
+	h := blake2b.Sum512(data)
+	copy(hash[:], h[:32])
+	return hash, nil
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
@@ -141,12 +153,20 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return blake2b.Sum256(data), nil
+	var hash [32]byte
+	h := blake2b.Sum512(data)
+	copy(hash[:], h[:32])
+	return hash, nil
 }
 
 // LastStateRecalc returns when the last time crystallized state recalculated.
 func (c *CrystallizedState) LastStateRecalc() uint64 {
 	return c.data.LastStateRecalc
+}
+
+// SetStateRecalc sets last state recalc.
+func (c *CrystallizedState) SetStateRecalc(slot uint64) {
+	c.data.LastStateRecalc = slot
 }
 
 // JustifiedStreak returns number of consecutive justified slots ending at head.

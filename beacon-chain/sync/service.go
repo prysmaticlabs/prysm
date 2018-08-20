@@ -119,10 +119,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 // ReceiveBlock accepts a block to potentially be included in the local chain.
 // The service will filter blocks that have not been requested (unimplemented).
 func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
-	block, err := types.NewBlock(data)
-	if err != nil {
-		return fmt.Errorf("could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash block: %v", err)
@@ -133,7 +130,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
 	if err := ss.chainService.ProcessBlock(block); err != nil {
 		return fmt.Errorf("could not process block: %v", err)
 	}
-	log.Debugf("Successfully processed incoming block with hash: %x", h)
+	log.WithField("slotNumber", block.SlotNumber()).Debugf("Successfully processed incoming block with hash: %x", h)
 	return nil
 }
 
@@ -251,7 +248,7 @@ func (ss *Service) run() {
 				continue
 			}
 			if err := ss.ReceiveBlock(response.Block); err != nil {
-				log.Errorf("Could not receive block: %v", err)
+				log.Errorf("Could not process received block: %v", err)
 			}
 		case msg := <-ss.announceCrystallizedHashBuf:
 			data, ok := msg.Data.(*pb.CrystallizedStateHashAnnounce)
@@ -269,7 +266,7 @@ func (ss *Service) run() {
 				continue
 			}
 			if err := ss.ReceiveCrystallizedState(response.CrystallizedState); err != nil {
-				log.Errorf("Could not receive crystallized state: %v", err)
+				log.Errorf("Could not process received crystallized state: %v", err)
 			}
 		case msg := <-ss.announceActiveHashBuf:
 			data, ok := msg.Data.(*pb.ActiveStateHashAnnounce)
@@ -287,7 +284,7 @@ func (ss *Service) run() {
 				continue
 			}
 			if err := ss.ReceiveActiveState(response.ActiveState); err != nil {
-				log.Errorf("Could not receive active state: %v", err)
+				log.Errorf("Could not process received active state: %v", err)
 			}
 		}
 	}

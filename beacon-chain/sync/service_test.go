@@ -131,7 +131,7 @@ func TestProcessBlockHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -183,10 +183,7 @@ func TestProcessBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(data)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -245,19 +242,13 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block1, err := types.NewBlock(data1)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block1 := types.NewBlock(data1)
 	h1, err := block1.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	block2, err := types.NewBlock(data2)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block2 := types.NewBlock(data2)
 	h2, err := block2.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -306,10 +297,7 @@ func TestProcessSameBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block, err := types.NewBlock(data)
-	if err != nil {
-		t.Fatalf("Could not instantiate new block from proto: %v", err)
-	}
+	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
@@ -340,7 +328,7 @@ func TestProcessCrystallizedHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.CrystallizedStateHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -373,7 +361,7 @@ func TestProcessActiveHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.ActiveStateHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -407,7 +395,7 @@ func TestProcessBadCrystallizedHash(t *testing.T) {
 	}()
 
 	// Send blockHashAnnounce msg format to crystallized state channel. Should fail
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -441,7 +429,7 @@ func TestProcessBadActiveHash(t *testing.T) {
 	}()
 
 	// Send blockHashAnnounce msg format to active state channel. Should fail
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
