@@ -3,12 +3,13 @@ package node
 import (
 	"flag"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli"
 	"os"
 	"os/exec"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli"
 )
 
 // Test that the beacon chain observer node can build with default flag values.
