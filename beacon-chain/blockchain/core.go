@@ -440,14 +440,11 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 
 		log.Info("Resetting attester bit field to all zeros")
 		b.ActiveState().ClearPendingAttestations()
-
 		b.CrystallizedState().SetValidators(validators)
-		err := b.PersistActiveState()
-		if err != nil {
+		if err := b.PersistActiveState(); err != nil {
 			return err
 		}
-		err = b.PersistCrystallizedState()
-		if err != nil {
+		if err := b.PersistCrystallizedState(); err != nil {
 			return err
 		}
 	}

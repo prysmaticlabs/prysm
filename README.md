@@ -130,8 +130,8 @@ bazel run //beacon-chain --\
 
 Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/beacon-chain/VALIDATOR_REGISTER.md)
 
-If you don't want to deposit ETH and become a validator. One option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
-in validator duties such as propose and attest blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.
+If you don't want to deposit ETH and become a validator, one option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
+in validator duties such as proposing or attesting blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.
 
 ```
 bazel run //beacon-chain --\
