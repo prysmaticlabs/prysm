@@ -1,7 +1,18 @@
+// Package initialsync is run by the beacon node when the local chain is
+// behind the network's longest chain. Initial sync works as follows:
+// The node requests for the slot number of the most recent finalized block.
+// The node then builds from the most recent finalized block by requesting for subsequent
+// blocks by slot number. Once the service detects that the local chain is caught up with
+// the network, the service hands over control to the regular sync service.
+// Note: The behavior of initialsync will likely change as the specification changes.
+// The most significant and highly probable change will be determining where to sync from.
+// The beacon chain may sync from a block in the pasts X months in order to combat long-range attacks
+// (see here: https://github.com/ethereum/wiki/wiki/Proof-of-Stake-FAQs#what-is-weak-subjectivity)
 package initialsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,34 +22,42 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "sync")
+var log = logrus.WithField("prefix", "initialsync")
 
-// Config allows the channel's buffer sizes to be changed.
+// Config defines the configurable properties of InitialSync.
+//
 type Config struct {
-	CurrentSlotNumber   uint64
-	SyncPollingInterval time.Duration
+	SyncPollingInterval         time.Duration
+	BlockBufferSize             int
+	CrystallizedStateBufferSize int
 }
 
 // DefaultConfig provides the default configuration for a sync service.
+// SyncPollingInterval determines how frequently the service checks that initial sync is complete.
+// BlockBufferSize determines that buffer size of the `blockBuf` channel.
+// CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
 func DefaultConfig() Config {
 	return Config{
-		CurrentSlotNumber:   0,
-		SyncPollingInterval: time.Second,
+		SyncPollingInterval:         1 * time.Second,
+		BlockBufferSize:             100,
+		CrystallizedStateBufferSize: 100,
 	}
 }
 
-// ChainService is the interface for the blockchain package's ChainService struct
+// ChainService is the interface for the blockchain package's ChainService struct.
 type ChainService interface {
 	HasStoredState() (bool, error)
 	SaveBlock(*types.Block) error
 }
 
-// SyncService is the interface for the Sync service
+// SyncService is the interface for the Sync service.
+// InitialSync calls `Start` when initial sync completes.
 type SyncService interface {
 	Start()
 }
 
-// InitialSync initiates synchronization when the database is empty
+// InitialSync defines the main class in this package.
+// See the package comments for a general description of the service's functions.
 type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
@@ -62,8 +81,8 @@ func NewInitialSyncService(ctx context.Context,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
-	blockBuf := make(chan p2p.Message)
-	crystallizedStateBuf := make(chan p2p.Message)
+	blockBuf := make(chan p2p.Message, cfg.BlockBufferSize)
+	crystallizedStateBuf := make(chan p2p.Message, cfg.CrystallizedStateBufferSize)
 
 	return &InitialSync{
 		ctx:                  ctx,
@@ -77,7 +96,7 @@ func NewInitialSyncService(ctx context.Context,
 	}
 }
 
-// Start begins the goroutine
+// Start begins the goroutine.
 func (s *InitialSync) Start() {
 	stored, err := s.chainService.HasStoredState()
 	if err != nil {
@@ -86,8 +105,8 @@ func (s *InitialSync) Start() {
 	}
 
 	if stored {
-		// TODO: Bail out of the sync service if the chain is only partially synced
-		log.Infof("chain state detected, exiting initial sync")
+		// TODO: Bail out of the sync service if the chain is only partially synced.
+		log.Info("Chain state detected, exiting initial sync")
 		return
 	}
 
@@ -107,7 +126,7 @@ func (s *InitialSync) Stop() error {
 
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
-// It is assumed that the goroutine `run` is only called once per instance
+// It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run(delaychan <-chan time.Time) {
 	blockSub := s.p2p.Subscribe(pb.BeaconBlockResponse{}, s.blockBuf)
 	crystallizedStateSub := s.p2p.Subscribe(pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
@@ -123,11 +142,11 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 	for {
 		select {
 		case <-s.ctx.Done():
-			log.Infof("Exiting goroutine")
+			log.Debug("Exiting goroutine")
 			return
 		case <-delaychan:
 			if highestObservedSlot == s.currentSlotNumber {
-				log.Infof("Exiting initial sync and starting normal sync")
+				log.Info("Exiting initial sync and starting normal sync")
 				// TODO: Resume sync after completion of initial sync.
 				// See comment in Sync service's Start function for explanation.
 				return
@@ -136,7 +155,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			data, ok := msg.Data.(*pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
-				log.Errorf("Received malformed beacon block p2p message")
+				log.Error("Received malformed beacon block p2p message")
 				continue
 			}
 
@@ -170,7 +189,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
-				log.Errorf("Received malformed crystallized state p2p message")
+				log.Error("Received malformed crystallized state p2p message")
 				continue
 			}
 
@@ -220,7 +239,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	if err != nil {
 		return err
 	}
-	log.WithField("Block received with hash", fmt.Sprintf("0x%x", h)).Debug("Crystallized state hash exists locally")
+	log.WithField("blockhash", fmt.Sprintf("%x", h)).Debug("Crystallized state hash exists locally")
 
 	if err := s.writeBlockToDB(block); err != nil {
 		return err
@@ -228,7 +247,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 
 	s.initialCrystallizedStateHash = block.CrystallizedStateHash()
 
-	log.Infof("Saved block with hash 0%x for initial sync", h)
+	log.Infof("Saved block with hash %x for initial sync", h)
 	return nil
 }
 
@@ -246,7 +265,7 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 	}
 
 	if s.currentSlotNumber == uint64(0) {
-		return fmt.Errorf("invalid slot number for syncing")
+		return errors.New("invalid slot number for syncing")
 	}
 
 	if (s.currentSlotNumber + 1) == block.SlotNumber() {
