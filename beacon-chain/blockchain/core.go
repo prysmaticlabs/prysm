@@ -183,37 +183,102 @@ func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
 
-// CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
-func (b *BeaconChain) canProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
-	if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
-		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
+// CanProcessBlock is called to decide if an incoming p2p block can be processed into the chain's block trie,
+// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a validator.
+func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block, isValidator bool) (bool, error) {
+	if isValidator {
+		if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
+			return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
+		}
 	}
 
-	// Check if the parentHash pointed by the beacon block is in the beaconDB.
-	parentHash := block.ParentHash()
-	hasParent, err := b.db.Has(parentHash[:])
+	canProcess, err := b.verifyBlockParentHash(block)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to process block: %v", err)
 	}
-	// If the block does not have a parent in the database and if that parent is not the genesis block,
-	// then it fails the validity conditions.
-	if !hasParent && block.SlotNumber() != 1 {
-		return false, errors.New("parent hash points to nil in beaconDB")
+	if !canProcess {
+		return false, fmt.Errorf("parent block verification for beacon block %v failed", block.SlotNumber())
 	}
 
-	// Calculate the timestamp validity condition.
+	canProcess, err = b.verifyBlockTimeStamp(block)
+	if err != nil {
+		return false, fmt.Errorf("unable to process block: %v", err)
+	}
+	if !canProcess {
+		return false, fmt.Errorf("time stamp verification for beacon block %v failed", block.SlotNumber())
+	}
+
+	canProcess, err = b.verifyBlockActiveHash(block)
+	if err != nil {
+		return false, fmt.Errorf("unable to process block: %v", err)
+	}
+	if !canProcess {
+		return false, fmt.Errorf("active state verification for beacon block %v failed", block.SlotNumber())
+	}
+
+	canProcess, err = b.verifyBlockCrystallizedHash(block)
+	if err != nil {
+		return false, fmt.Errorf("unable to process block: %v", err)
+	}
+	if !canProcess {
+		return false, fmt.Errorf("crystallized verification for beacon block %v failed", block.SlotNumber())
+	}
+	return canProcess, nil
+}
+
+// verifyBlockTimeStamp verifies node's local time is greater than or equal to
+// min timestamp as computed by GENESIS_TIME + slot_number * SLOT_DURATION.
+func (b *BeaconChain) verifyBlockTimeStamp(block *types.Block) (bool, error) {
 	slotDuration := time.Duration(block.SlotNumber()*params.SlotDuration) * time.Second
 	genesis, err := b.GenesisBlock()
 	if err != nil {
 		return false, err
 	}
-
 	genesisTime, err := genesis.Timestamp()
 	if err != nil {
 		return false, err
 	}
 	if clock.Now().Before(genesisTime.Add(slotDuration)) {
 		return false, nil
+	}
+	return true, nil
+}
+
+// verifyBlockActiveHash verifies block's active state hash equal to
+// node's computed active state hash.
+func (b *BeaconChain) verifyBlockActiveHash(block *types.Block) (bool, error) {
+	hash, err := b.ActiveState().Hash()
+	if err != nil {
+		return false, err
+	}
+	if block.ActiveStateHash() != hash {
+		return false, nil
+	}
+	return true, nil
+}
+
+// verifyBlockCrystallizedHash verifies block's crystallized state hash equal to
+// node's computed crystallized state hash.
+func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, error) {
+	hash, err := b.CrystallizedState().Hash()
+	if err != nil {
+		return false, err
+	}
+	if block.CrystallizedStateHash() != hash {
+		return false, nil
+	}
+	return true, nil
+}
+
+// verifyBlockParentHash verifies parentHash pointed by the beacon block is in the beaconDB.
+func (b *BeaconChain) verifyBlockParentHash(block *types.Block) (bool, error) {
+	parentHash := block.ParentHash()
+	hasParent, err := b.db.Has(parentHash[:])
+	if err != nil {
+		return false, err
+	}
+	if !hasParent && block.SlotNumber() != 1 {
+		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 	return true, nil
 }
@@ -330,14 +395,11 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 
 		log.Info("Resetting attester bit field to all zeros")
 		b.ActiveState().ClearPendingAttestations()
-
 		b.CrystallizedState().SetValidators(validators)
-		err := b.PersistActiveState()
-		if err != nil {
+		if err := b.PersistActiveState(); err != nil {
 			return err
 		}
-		err = b.PersistCrystallizedState()
-		if err != nil {
+		if err := b.PersistCrystallizedState(); err != nil {
 			return err
 		}
 	}
@@ -462,7 +524,7 @@ func (b *BeaconChain) processAttestations(block *types.Block) error {
 				attestation.Slot,
 				block.SlotNumber()-params.CycleLength)
 		}
-		parentHashes, err := b.getSignedParentHashes(block, attestation)
+		_, err := b.getSignedParentHashes(block, attestation)
 		if err != nil {
 			return err
 		}

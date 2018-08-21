@@ -69,7 +69,10 @@ func (b *Block) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
 	}
-	return blake2b.Sum256(data), nil
+	var hash [32]byte
+	h := blake2b.Sum512(data)
+	copy(hash[:], h[:32])
+	return hash, nil
 }
 
 // ParentHash corresponding to parent beacon block.
