@@ -132,7 +132,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 	if ss.chainService.ContainsBlock(h) {
 		return
 	}
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received incoming block hash, requesting full block data from sender")
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
 }
@@ -181,7 +181,7 @@ func (ss *Service) SetBlockForInitialSync(data *pb.BeaconBlockResponse) error {
 
 	ss.initialCrystallizedStateHash = block.CrystallizedStateHash()
 
-	log.Infof("Saved block with hash 0%x for initial sync", h)
+	log.Debugf("Saved block with hash 0%x for initial sync", h)
 	return nil
 }
 
@@ -223,11 +223,11 @@ func (ss *Service) runInitialSync(delaychan <-chan time.Time, done <-chan struct
 	for {
 		select {
 		case <-done:
-			log.Infof("Exiting goroutine")
+			log.Debug("Exiting goroutine")
 			return
 		case <-delaychan:
 			if ss.highestObservedSlot == ss.currentSlotNumber {
-				log.Infof("Exiting initial sync and starting normal sync")
+				log.Info("Exiting initial sync and starting normal sync")
 				go ss.run(ss.ctx.Done())
 				return
 			}
@@ -304,7 +304,7 @@ func (ss *Service) run(done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
-			log.Infof("Exiting goroutine")
+			log.Debug("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
 			data, ok := msg.Data.(*pb.BeaconBlockHashAnnounce)
@@ -322,7 +322,7 @@ func (ss *Service) run(done <-chan struct{}) {
 				continue
 			}
 			if err := ss.ReceiveBlock(response.Block); err != nil {
-				log.Errorf("Could not process received block: %v", err)
+				log.Debugf("Could not process received block: %v", err)
 			}
 		}
 	}

@@ -210,7 +210,7 @@ func TestGetAttestersProposer(t *testing.T) {
 	}
 
 	// validatorsByHeightShard should fail the same.
-	if _, err := beaconChain.validatorsByHeightShard(); err == nil {
+	if _, err := beaconChain.validatorsByHeightShard(crystallized); err == nil {
 		t.Errorf("validatorsByHeightShard should have failed")
 	}
 
@@ -231,7 +231,7 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	activeValidators := beaconChain.activeValidatorIndices()
+	activeValidators := beaconChain.activeValidatorIndices(crystallized)
 
 	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
 	if err != nil {
@@ -245,7 +245,7 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
-	indices, err := beaconChain.validatorsByHeightShard()
+	indices, err := beaconChain.validatorsByHeightShard(crystallized)
 	if err != nil {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
@@ -476,17 +476,17 @@ func TestRotateValidatorSet(t *testing.T) {
 	beaconChain.SetCrystallizedState(state)
 
 	// rotate validator set and increment dynasty count by 1.
-	beaconChain.rotateValidatorSet()
+	beaconChain.rotateValidatorSet(state)
 	beaconChain.CrystallizedState().IncrementCurrentDynasty()
 
-	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(), []int{2, 3, 4}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", beaconChain.activeValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(beaconChain.CrystallizedState()), []int{2, 3, 4}) {
+		t.Errorf("active validator indices should be [2,3,4], got: %v", beaconChain.activeValidatorIndices(beaconChain.CrystallizedState()))
 	}
-	if len(beaconChain.queuedValidatorIndices()) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", beaconChain.queuedValidatorIndices())
+	if len(beaconChain.queuedValidatorIndices(state)) != 0 {
+		t.Errorf("queued validator indices should be [], got: %v", beaconChain.queuedValidatorIndices(beaconChain.CrystallizedState()))
 	}
-	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(), []int{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", beaconChain.exitedValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(state), []int{0, 1}) {
+		t.Errorf("exited validator indices should be [0,1], got: %v", beaconChain.exitedValidatorIndices(beaconChain.CrystallizedState()))
 	}
 }
 
@@ -653,13 +653,13 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
 
-	//Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
+	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
 	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
 	if err := beaconChain.SetActiveState(state); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
-	if err := beaconChain.calculateRewardsFFG(block); err != nil {
+	if err := beaconChain.calculateRewardsFFG(state, beaconChain.CrystallizedState(), block); err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
 	if beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(5) {
@@ -700,14 +700,14 @@ func TestValidatorIndices(t *testing.T) {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
 
-	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(), []int{0, 1, 2, 3, 4}) {
-		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", beaconChain.activeValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(crystallized), []int{0, 1, 2, 3, 4}) {
+		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", beaconChain.activeValidatorIndices(crystallized))
 	}
-	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(), []int{5}) {
-		t.Errorf("queued validator indices should be [5], got: %v", beaconChain.queuedValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(crystallized), []int{5}) {
+		t.Errorf("queued validator indices should be [5], got: %v", beaconChain.queuedValidatorIndices(crystallized))
 	}
-	if len(beaconChain.exitedValidatorIndices()) != 0 {
-		t.Errorf("exited validator indices to be empty, got: %v", beaconChain.exitedValidatorIndices())
+	if len(beaconChain.exitedValidatorIndices(crystallized)) != 0 {
+		t.Errorf("exited validator indices to be empty, got: %v", beaconChain.exitedValidatorIndices(crystallized))
 	}
 
 	data = &pb.CrystallizedState{
@@ -727,14 +727,14 @@ func TestValidatorIndices(t *testing.T) {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
 
-	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(), []int{0, 1}) {
-		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", beaconChain.activeValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(crystallized), []int{0, 1}) {
+		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", beaconChain.activeValidatorIndices(crystallized))
 	}
-	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(), []int{2, 3}) {
-		t.Errorf("queued validator indices should be [3], got: %v", beaconChain.queuedValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(crystallized), []int{2, 3}) {
+		t.Errorf("queued validator indices should be [3], got: %v", beaconChain.queuedValidatorIndices(crystallized))
 	}
-	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(), []int{4, 5}) {
-		t.Errorf("exited validator indices should be [3], got: %v", beaconChain.exitedValidatorIndices())
+	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(crystallized), []int{4, 5}) {
+		t.Errorf("exited validator indices should be [3], got: %v", beaconChain.exitedValidatorIndices(crystallized))
 	}
 }
 
@@ -757,17 +757,17 @@ func TestGetIndicesForHeight(t *testing.T) {
 	if err := beaconChain.SetCrystallizedState(state); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
-	if _, err := beaconChain.getIndicesForHeight(1000); err == nil {
+	if _, err := beaconChain.getIndicesForHeight(state, 1000); err == nil {
 		t.Error("getIndicesForHeight should have failed with invalid height")
 	}
-	committee, err := beaconChain.getIndicesForHeight(1)
+	committee, err := beaconChain.getIndicesForHeight(state, 1)
 	if err != nil {
 		t.Errorf("getIndicesForHeight failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
 		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	committee, _ = beaconChain.getIndicesForHeight(2)
+	committee, _ = beaconChain.getIndicesForHeight(state, 2)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
 		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
@@ -791,17 +791,17 @@ func TestGetBlockHash(t *testing.T) {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
 
-	if _, err := beaconChain.getBlockHash(200, 250); err == nil {
+	if _, err := beaconChain.getBlockHash(state, 200, 250); err == nil {
 		t.Error("getBlockHash should have failed with invalid height")
 	}
-	hash, err := beaconChain.getBlockHash(2*params.CycleLength, 0)
+	hash, err := beaconChain.getBlockHash(state, 2*params.CycleLength, 0)
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
 	if bytes.Equal(hash, []byte{'A'}) {
 		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
 	}
-	hash, err = beaconChain.getBlockHash(2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
+	hash, err = beaconChain.getBlockHash(state, 2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}

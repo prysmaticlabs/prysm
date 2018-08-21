@@ -63,7 +63,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		chainService:           cfg.ChainService,
 		beaconDB:               cfg.BeaconDB,
 		delay:                  cfg.Delay,
-		slotNum:                0,
+		slotNum:                1,
 		broadcastedBlocks:      make(map[[32]byte]*types.Block),
 		broadcastedBlockHashes: [][32]byte{},
 		blockRequestChan:       make(chan p2p.Message, cfg.BlockRequestBuf),
@@ -152,13 +152,13 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			// If we have not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
-			if sim.slotNum == 0 {
+			if sim.slotNum == 1 {
 				parentHash = []byte("genesis")
 			} else {
 				parentHash = sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1][:]
 			}
 
-			log.WithField("currentSlot", sim.slotNum).Info("Current slot")
+			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
 
 			block := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
@@ -177,7 +177,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				continue
 			}
 
-			log.WithField("announcedBlockHash", fmt.Sprintf("0x%x", h)).Info("Announcing block hash")
+			log.WithField("announcedBlockHash", fmt.Sprintf("0x%x", h)).Debug("Announcing block hash")
 			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 				Hash: h[:],
 			})
@@ -202,7 +202,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				log.Errorf("Could not hash block: %v", err)
 				continue
 			}
-			log.Infof("Responding to full block request for hash: 0x%x", h)
+			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block.Proto()}
 			sim.p2p.Send(res, msg.Peer)

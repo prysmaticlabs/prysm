@@ -2,9 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
@@ -52,10 +50,8 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestStartStop(t *testing.T) {
 	ctx := context.Background()
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	defer os.RemoveAll(tmp)
 
-	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
@@ -152,10 +148,7 @@ func TestStartStop(t *testing.T) {
 
 func TestFaultyStop(t *testing.T) {
 	ctx := context.Background()
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	defer os.RemoveAll(tmp)
-
-	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
@@ -200,10 +193,7 @@ func TestFaultyStop(t *testing.T) {
 func TestProcessingBadBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	defer os.RemoveAll(tmp)
-
-	config := &database.DBConfig{DataDir: tmp, Name: "badblockdata", InMemory: false}
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
@@ -258,9 +248,7 @@ func TestProcessingBadBlock(t *testing.T) {
 
 func TestRunningChainService(t *testing.T) {
 	ctx := context.Background()
-	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
-	defer os.RemoveAll(tmp)
-	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
@@ -294,24 +282,29 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
-	if err := beaconChain.SetActiveState(state); err != nil {
+	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
+	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService.lastFinalizedSlot = 65
 	chainService.chain.SetCrystallizedState(crystallized)
 
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.run(chainService.ctx.Done())
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
+	go func() {
+		chainService.updateHead(chainService.ctx.Done())
 		<-exitRoutine
 	}()
 
 	parentBlock := NewBlock(t, nil)
 	parentHash, _ := parentBlock.Hash()
 
-	activeStateHash, err := state.Hash()
+	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
 	}
@@ -325,6 +318,7 @@ func TestRunningChainService(t *testing.T) {
 	})
 
 	chainService.latestProcessedBlock <- block
+	chainService.latestSlotEvent <- 66
 	chainService.cancel()
 	<-chainService.canonicalBlockEvent
 	exitRoutine <- true

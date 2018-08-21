@@ -109,6 +109,9 @@ func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
 
 // LatestPendingAttestation returns the latest pending attestaton fields.
 func (a *ActiveState) LatestPendingAttestation() *pb.AttestationRecord {
+	if len(a.data.PendingAttestations) == 0 {
+		return nil
+	}
 	return a.data.PendingAttestations[len(a.data.PendingAttestations)-1]
 }
 

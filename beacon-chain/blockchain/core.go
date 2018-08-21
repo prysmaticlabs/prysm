@@ -239,8 +239,12 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	return true, nil
 }
 
-// computeNewActiveState computes a new active state for every beacon block.
+// computeNewActiveState for every newly processed beacon block.
 func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveState, error) {
+	newActiveState := types.NewActiveState(&pb.ActiveState{
+		PendingAttestations: []*pb.AttestationRecord{},
+		RecentBlockHashes:   [][]byte{},
+	})
 	attesters, proposer, err := b.getAttestersProposer(seed)
 	if err != nil {
 		return nil, err
@@ -257,10 +261,58 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 	// TODO: Verify randao reveal from validator's hash pre image.
 
-	return types.NewActiveState(&pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{},
-		RecentBlockHashes:   [][]byte{},
-	}), nil
+	return newActiveState, nil
+}
+
+// computeNewCrystallizedState for every newly processed beacon block at a cycle transition.
+func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, block *types.Block) (*types.CrystallizedState, error) {
+	newCrystallized := b.CrystallizedState()
+	newCrystallized.SetStateRecalc(block.SlotNumber())
+	if err := b.calculateRewardsFFG(active, newCrystallized, block); err != nil {
+		return newCrystallized, fmt.Errorf("could not calculate ffg rewards/penalties: %v", err)
+	}
+	return newCrystallized, nil
+}
+
+// calculateRewardsFFG adjusts validators balances by applying rewards or penalties
+// based on FFG incentive structure.
+func (b *BeaconChain) calculateRewardsFFG(active *types.ActiveState, crystallized *types.CrystallizedState, block *types.Block) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	latestPendingAtt := active.LatestPendingAttestation()
+	if latestPendingAtt == nil {
+		return nil
+	}
+	validators := crystallized.Validators()
+	activeValidators := b.activeValidatorIndices(crystallized)
+	attesterDeposits := b.getAttestersTotalDeposit(active)
+	totalDeposit := crystallized.TotalDeposits()
+
+	attesterFactor := attesterDeposits * 3
+	totalFactor := uint64(totalDeposit * 2)
+	if attesterFactor >= totalFactor {
+		log.Debugf("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		crystallized.UpdateJustifiedSlot(block.SlotNumber())
+
+		log.Debug("Applying rewards and penalties for the validators from last epoch")
+		for i, attesterIndex := range activeValidators {
+			voted, err := utils.CheckBit(latestPendingAtt.AttesterBitfield, attesterIndex)
+			if err != nil {
+				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
+			}
+			if voted {
+				validators[i].Balance += params.AttesterReward
+			} else {
+				validators[i].Balance -= params.AttesterReward
+			}
+		}
+
+		log.Debug("Resetting attester bit field to all zeros")
+		active.ClearPendingAttestations()
+
+		crystallized.SetValidators(validators)
+	}
+	return nil
 }
 
 // rotateValidatorSet is called every dynasty transition. The primary functions are:
@@ -268,26 +320,26 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 // dynasty to current epoch.
 // 2.) Remove bad active validator whose balance is below threshold to the exit set by
 // setting end dynasty to current epoch.
-func (b *BeaconChain) rotateValidatorSet() {
+func (b *BeaconChain) rotateValidatorSet(crystallized *types.CrystallizedState) {
 
-	validators := b.CrystallizedState().Validators()
-	upperbound := len(b.activeValidatorIndices())/30 + 1
+	validators := crystallized.Validators()
+	upperbound := len(b.activeValidatorIndices(crystallized))/30 + 1
 
 	// Loop through active validator set, remove validator whose balance is below 50%.
-	for _, index := range b.activeValidatorIndices() {
+	for _, index := range b.activeValidatorIndices(crystallized) {
 		if validators[index].Balance < params.DefaultBalance/2 {
-			validators[index].EndDynasty = b.CrystallizedState().CurrentDynasty()
+			validators[index].EndDynasty = crystallized.CurrentDynasty()
 		}
 	}
 	// Get the total number of validator we can induct.
 	inductNum := upperbound
-	if len(b.queuedValidatorIndices()) < inductNum {
-		inductNum = len(b.queuedValidatorIndices())
+	if len(b.queuedValidatorIndices(crystallized)) < inductNum {
+		inductNum = len(b.queuedValidatorIndices(crystallized))
 	}
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
-	for _, index := range b.queuedValidatorIndices() {
-		validators[index].StartDynasty = b.CrystallizedState().CurrentDynasty()
+	for _, index := range b.queuedValidatorIndices(crystallized) {
+		validators[index].StartDynasty = crystallized.CurrentDynasty()
 		inductNum--
 		if inductNum == 0 {
 			break
@@ -299,7 +351,7 @@ func (b *BeaconChain) rotateValidatorSet() {
 func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
 	attesterCount := math.Min(params.MinCommiteeSize, float64(b.CrystallizedState().ValidatorsLength()))
 
-	indices, err := utils.ShuffleIndices(seed, b.activeValidatorIndices())
+	indices, err := utils.ShuffleIndices(seed, b.activeValidatorIndices(b.CrystallizedState()))
 	if err != nil {
 		return nil, -1, err
 	}
@@ -308,9 +360,9 @@ func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error)
 
 // getAttestersTotalDeposit returns the total deposit combined by attesters.
 // TODO: Consider slashing condition.
-func (b *BeaconChain) getAttestersTotalDeposit() uint64 {
+func (b *BeaconChain) getAttestersTotalDeposit(active *types.ActiveState) uint64 {
 	var numOfBits int
-	for _, attestation := range b.ActiveState().PendingAttestations() {
+	for _, attestation := range active.PendingAttestations() {
 		for _, byte := range attestation.AttesterBitfield {
 			numOfBits += int(utils.BitSetCount(byte))
 		}
@@ -319,58 +371,12 @@ func (b *BeaconChain) getAttestersTotalDeposit() uint64 {
 	return uint64(numOfBits) * params.DefaultBalance
 }
 
-// calculateRewardsFFG adjusts validators balances by applying rewards or penalties
-// based on FFG incentive structure.
-func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	validators := b.CrystallizedState().Validators()
-	activeValidators := b.activeValidatorIndices()
-	attesterDeposits := b.getAttestersTotalDeposit()
-	totalDeposit := b.state.CrystallizedState.TotalDeposits()
-
-	attesterFactor := attesterDeposits * 3
-	totalFactor := uint64(totalDeposit * 2)
-	if attesterFactor >= totalFactor {
-		log.Infof("Setting justified epoch to current slot number: %v", block.SlotNumber())
-		b.state.CrystallizedState.UpdateJustifiedSlot(block.SlotNumber())
-
-		log.Info("Applying rewards and penalties for the validators from last epoch")
-
-		for i, attesterIndex := range activeValidators {
-			voted, err := utils.CheckBit(b.state.ActiveState.LatestPendingAttestation().AttesterBitfield, attesterIndex)
-			if err != nil {
-				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
-			}
-			if voted {
-				validators[i].Balance += params.AttesterReward
-			} else {
-				validators[i].Balance -= params.AttesterReward
-			}
-		}
-
-		log.Info("Resetting attester bit field to all zeros")
-		b.ActiveState().ClearPendingAttestations()
-
-		b.CrystallizedState().SetValidators(validators)
-		err := b.PersistActiveState()
-		if err != nil {
-			return err
-		}
-		err = b.PersistCrystallizedState()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // activeValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
-func (b *BeaconChain) activeValidatorIndices() []int {
+func (b *BeaconChain) activeValidatorIndices(crystallized *types.CrystallizedState) []int {
 	var indices []int
-	validators := b.CrystallizedState().Validators()
-	dynasty := b.CrystallizedState().CurrentDynasty()
+	validators := crystallized.Validators()
+	dynasty := crystallized.CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
 			indices = append(indices, i)
@@ -381,10 +387,10 @@ func (b *BeaconChain) activeValidatorIndices() []int {
 
 // exitedValidatorIndices filters out exited validators based on start and end dynasty
 // and returns their indices in a list.
-func (b *BeaconChain) exitedValidatorIndices() []int {
+func (b *BeaconChain) exitedValidatorIndices(crystallized *types.CrystallizedState) []int {
 	var indices []int
-	validators := b.CrystallizedState().Validators()
-	dynasty := b.CrystallizedState().CurrentDynasty()
+	validators := crystallized.Validators()
+	dynasty := crystallized.CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty < dynasty && validators[i].EndDynasty < dynasty {
 			indices = append(indices, i)
@@ -395,10 +401,10 @@ func (b *BeaconChain) exitedValidatorIndices() []int {
 
 // queuedValidatorIndices filters out queued validators based on start and end dynasty
 // and returns their indices in a list.
-func (b *BeaconChain) queuedValidatorIndices() []int {
+func (b *BeaconChain) queuedValidatorIndices(crystallized *types.CrystallizedState) []int {
 	var indices []int
-	validators := b.CrystallizedState().Validators()
-	dynasty := b.CrystallizedState().CurrentDynasty()
+	validators := crystallized.Validators()
+	dynasty := crystallized.CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty > dynasty {
 			indices = append(indices, i)
@@ -410,8 +416,8 @@ func (b *BeaconChain) queuedValidatorIndices() []int {
 // validatorsByHeightShard splits a shuffled validator list by height and by shard,
 // it ensures there's enough validators per height and per shard, if not, it'll skip
 // some heights and shards.
-func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
-	indices := b.activeValidatorIndices()
+func (b *BeaconChain) validatorsByHeightShard(crystallized *types.CrystallizedState) ([]*beaconCommittee, error) {
+	indices := b.activeValidatorIndices(crystallized)
 	var committeesPerSlot int
 	var slotsPerCommittee int
 	var committees []*beaconCommittee
@@ -428,7 +434,7 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 	}
 
 	// split the shuffled list for heights.
-	shuffledList, err := utils.ShuffleIndices(b.state.CrystallizedState.DynastySeed(), indices)
+	shuffledList, err := utils.ShuffleIndices(crystallized.DynastySeed(), indices)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +445,7 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 	for i, subList := range heightList {
 		shardList := utils.SplitIndices(subList, params.MinCommiteeSize)
 		for _, shardIndex := range shardList {
-			shardID := int(b.CrystallizedState().CrosslinkingStartShard()) + i*committeesPerSlot/slotsPerCommittee
+			shardID := int(crystallized.CrosslinkingStartShard()) + i*committeesPerSlot/slotsPerCommittee
 			committees = append(committees, &beaconCommittee{
 				shardID:   shardID,
 				committee: shardIndex,
@@ -450,21 +456,21 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 }
 
 // getIndicesForSlot returns the attester set of a given height.
-func (b *BeaconChain) getIndicesForHeight(height uint64) (*pb.ShardAndCommitteeArray, error) {
-	lcs := b.CrystallizedState().LastStateRecalc()
+func (b *BeaconChain) getIndicesForHeight(crystallized *types.CrystallizedState, height uint64) (*pb.ShardAndCommitteeArray, error) {
+	lcs := crystallized.LastStateRecalc()
 	if !(lcs <= height && height < lcs+params.CycleLength*2) {
 		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, lcs, lcs+params.CycleLength*2)
 	}
-	return b.CrystallizedState().IndicesForHeights()[height-lcs], nil
+	return crystallized.IndicesForHeights()[height-lcs], nil
 }
 
 // getBlockHash returns the block hash of a given height.
-func (b *BeaconChain) getBlockHash(slot, height uint64) ([]byte, error) {
+func (b *BeaconChain) getBlockHash(active *types.ActiveState, slot, height uint64) ([]byte, error) {
 	sback := slot - params.CycleLength*2
 	if !(sback <= height && height < sback+params.CycleLength*2) {
 		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, sback, sback+params.CycleLength*2)
 	}
-	return b.ActiveState().RecentBlockHashes()[height-sback].Bytes(), nil
+	return active.RecentBlockHashes()[height-sback].Bytes(), nil
 }
 
 // saveBlock puts the passed block into the beacon chain db.
