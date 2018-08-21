@@ -124,7 +124,7 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+	canProcess, err := c.chain.canProcessBlock(c.web3Service.Client(), block)
 	if err != nil {
 		// We might receive a lot of blocks that fail validity conditions,
 		// so we create a debug level log instead of an error log.
@@ -132,6 +132,7 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		return nil
 	}
 	if canProcess {
+		c.chain.processAttestations(block)
 		c.latestBeaconBlock <- block
 	}
 	return nil

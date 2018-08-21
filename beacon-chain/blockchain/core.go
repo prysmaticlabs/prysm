@@ -184,7 +184,7 @@ func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
 }
 
 // CanProcessBlock decides if an incoming p2p block can be processed into the chain's block trie.
-func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
+func (b *BeaconChain) canProcessBlock(fetcher types.POWBlockFetcher, block *types.Block) (bool, error) {
 	if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
 		return false, fmt.Errorf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 	}
@@ -212,30 +212,9 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	if err != nil {
 		return false, err
 	}
-
 	if clock.Now().Before(genesisTime.Add(slotDuration)) {
 		return false, nil
 	}
-
-	// Verify state hashes from the block are correct.
-	hash, err := b.ActiveState().Hash()
-	if err != nil {
-		return false, err
-	}
-
-	if block.ActiveStateHash() != hash {
-		return false, fmt.Errorf("active state hash mismatched, wanted: %v, got: %v", block.ActiveStateHash(), hash)
-	}
-
-	hash, err = b.CrystallizedState().Hash()
-	if err != nil {
-		return false, err
-	}
-
-	if block.CrystallizedStateHash() != hash {
-		return false, fmt.Errorf("crystallized state hash mismatched, wanted: %v, got: %v", block.CrystallizedStateHash(), hash)
-	}
-
 	return true, nil
 }
 
@@ -449,22 +428,101 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 	return committees, nil
 }
 
-// getIndicesForSlot returns the attester set of a given height.
-func (b *BeaconChain) getIndicesForHeight(height uint64) (*pb.ShardAndCommitteeArray, error) {
+// getIndicesForSlot returns the attester set of a given slot.
+func (b *BeaconChain) getIndicesForSlot(slot uint64) (*pb.ShardAndCommitteeArray, error) {
 	lcs := b.CrystallizedState().LastStateRecalc()
-	if !(lcs <= height && height < lcs+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, lcs, lcs+params.CycleLength*2)
+	if !(lcs <= slot && slot < lcs+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lcs, lcs+params.CycleLength*2)
 	}
-	return b.CrystallizedState().IndicesForHeights()[height-lcs], nil
+	return b.CrystallizedState().IndicesForHeights()[slot-lcs], nil
 }
 
-// getBlockHash returns the block hash of a given height.
-func (b *BeaconChain) getBlockHash(slot, height uint64) ([]byte, error) {
-	sback := slot - params.CycleLength*2
-	if !(sback <= height && height < sback+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, sback, sback+params.CycleLength*2)
+// getBlockHash returns the block hash of a slot.
+func (b *BeaconChain) getBlockHash(slot uint64, block *types.Block) ([]byte, error) {
+	sback := int(block.SlotNumber()) - params.CycleLength*2
+	if !(sback <= int(slot) && int(slot) < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
 	}
-	return b.ActiveState().RecentBlockHashes()[height-sback].Bytes(), nil
+	if sback < 0 {
+		return b.ActiveState().RecentBlockHashes()[slot].Bytes(), nil
+	} else {
+		return b.ActiveState().RecentBlockHashes()[int(slot)-sback].Bytes(), nil
+	}
+}
+
+func (b *BeaconChain) processAttestations(block *types.Block) error {
+	for _, attestation := range block.Attestations() {
+		if attestation.Slot > block.SlotNumber() {
+			return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %v, Needed lower than: %v",
+				attestation.Slot,
+				block.SlotNumber())
+		}
+		if attestation.Slot < block.SlotNumber()-params.CycleLength {
+			return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
+				attestation.Slot,
+				block.SlotNumber()-params.CycleLength)
+		}
+		parentHashes, err := b.getSignedParentHashes(block, attestation)
+		if err != nil {
+			return err
+		}
+
+		attesterIndices, err := b.getAttestationIndices(attestation)
+		if err != nil {
+			return err
+		}
+		// Validate Bitfield.
+		if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+			return fmt.Errorf("attestation has incorrect bitfield length. Found %v, expected %v",
+				len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+		}
+
+		// Attestation can not have non-zero trailing bits.
+		lastBit := len(attesterIndices)
+		if lastBit%8 != 0 {
+			for i := 0; i < 8-lastBit%8; i++ {
+				voted, err := utils.CheckBit(attestation.AttesterBitfield, lastBit+i)
+				if err != nil {
+					return err
+				}
+				if voted {
+					return errors.New("attestation has non-zero trailing bits")
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) ([]*common.Hash, error) {
+	var signedParentHashes []*common.Hash
+	for i := 0; i < params.CycleLength-len(attestation.ObliqueParentHashes); i++ {
+		byteHash, err := b.getBlockHash(uint64(i), block)
+		if err != nil {
+			return nil, err
+		}
+		hash := common.BytesToHash(byteHash)
+		signedParentHashes = append(signedParentHashes, &hash)
+	}
+	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
+		hash := common.BytesToHash(obliqueParentHashes)
+		signedParentHashes = append(signedParentHashes, &hash)
+	}
+	return signedParentHashes, nil
+}
+
+func (b *BeaconChain) getAttestationIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
+
+	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
+	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
+	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc+params.CycleLength].ArrayShardAndCommittee
+
+	for i := 0; i < len(shardCommittee); i++ {
+		if attestation.ShardId == shardCommittee[i].ShardId {
+			return shardCommittee[i].Committee, nil
+		}
+	}
+	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
 }
 
 // saveBlock puts the passed block into the beacon chain db.

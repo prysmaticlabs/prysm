@@ -4,11 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"math"
-	"reflect"
-	"testing"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
@@ -19,6 +14,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"math"
+	"reflect"
+	"testing"
+	"time"
 )
 
 // FakeClock represents an mocked clock for testing purposes.
@@ -276,7 +275,7 @@ func TestCanProcessBlock(t *testing.T) {
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 2,
 	})
-	if _, err := beaconChain.CanProcessBlock(&faultyFetcher{}, block); err == nil {
+	if _, err := beaconChain.canProcessBlock(&faultyFetcher{}, block); err == nil {
 		t.Error("Using a faulty fetcher should throw an error, received nil")
 	}
 
@@ -303,9 +302,9 @@ func TestCanProcessBlock(t *testing.T) {
 	})
 
 	// A properly initialize block should not fail.
-	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.canProcessBlock(&mockFetcher{}, block)
 	if err != nil {
-		t.Fatalf("CanProcessBlocks failed: %v", err)
+		t.Fatalf("canProcessBlocks failed: %v", err)
 	}
 	if !canProcess {
 		t.Error("Should be able to process block, could not")
@@ -318,69 +317,12 @@ func TestCanProcessBlock(t *testing.T) {
 		CrystallizedStateHash: crystallizedHash[:],
 		ParentHash:            parentHash[:],
 	})
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err = beaconChain.canProcessBlock(&mockFetcher{}, block)
 	if err != nil {
-		t.Fatalf("CanProcessBlocks failed: %v", err)
+		t.Fatalf("canProcessBlocks failed: %v", err)
 	}
 	if canProcess {
 		t.Error("Should not be able to process block with invalid timestamp condition")
-	}
-}
-
-func TestProcessBlockWithBadHashes(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	// Test negative scenario where active state hash is different than node's compute.
-	parentBlock := NewBlock(t, nil)
-	parentHash, err := parentBlock.Hash()
-	if err != nil {
-		t.Fatalf("Failed to compute parent block's hash: %v", err)
-	}
-	if err = db.DB().Put(parentHash[:], []byte{}); err != nil {
-		t.Fatalf("Failed to put parent block on db: %v", err)
-	}
-
-	// Initialize state.
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
-	activeStateHash, err := active.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash active state: %v", err)
-	}
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 10000})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            1,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash[:],
-	})
-
-	// Test negative scenario where active state hash is different than node's compute.
-	beaconChain.state.ActiveState = types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'B'}}})
-
-	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
-	if err == nil {
-		t.Fatal("CanProcessBlocks should have failed with diff state hashes")
-	}
-	if canProcess {
-		t.Error("CanProcessBlocks should have returned false")
-	}
-
-	// Test negative scenario where crystallized state hash is different than node's compute.
-	beaconChain.state.CrystallizedState = types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 9999})
-
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block)
-	if err == nil {
-		t.Fatal("CanProcessBlocks should have failed with diff state hashes")
-	}
-	if canProcess {
-		t.Error("CanProcessBlocks should have returned false")
 	}
 }
 
@@ -409,7 +351,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 	})
-	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
+	if _, err = beaconChain.canProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing without a valid parent hash should fail")
 	}
 
@@ -428,14 +370,14 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 		ParentHash:            parentHash[:],
 	})
 
-	if _, err := beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
+	if _, err := beaconChain.canProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing block should fail when parent hash is not in db")
 	}
 
 	if err = db.DB().Put(parentHash[:], nil); err != nil {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
-	if _, err = beaconChain.CanProcessBlock(&mockFetcher{}, block); err == nil {
+	if _, err = beaconChain.canProcessBlock(&mockFetcher{}, block); err == nil {
 		t.Error("Processing block should fail when parent hash points to nil in db")
 	}
 	want := "parent hash points to nil in beaconDB"
@@ -447,7 +389,7 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 		t.Fatalf("Failed to put parent block on db: %v", err)
 	}
 
-	canProcess, err := beaconChain.CanProcessBlock(&mockFetcher{}, block)
+	canProcess, err := beaconChain.canProcessBlock(&mockFetcher{}, block)
 	if err != nil {
 		t.Errorf("Should have been able to process block: %v", err)
 	}
@@ -738,7 +680,7 @@ func TestValidatorIndices(t *testing.T) {
 	}
 }
 
-func TestGetIndicesForHeight(t *testing.T) {
+func TestGetIndicesForSlot(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -757,56 +699,87 @@ func TestGetIndicesForHeight(t *testing.T) {
 	if err := beaconChain.SetCrystallizedState(state); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
-	if _, err := beaconChain.getIndicesForHeight(1000); err == nil {
-		t.Error("getIndicesForHeight should have failed with invalid height")
+	if _, err := beaconChain.getIndicesForSlot(1000); err == nil {
+		t.Error("getIndicesForSlot should have failed with invalid height")
 	}
-	committee, err := beaconChain.getIndicesForHeight(1)
+	committee, err := beaconChain.getIndicesForSlot(1)
 	if err != nil {
-		t.Errorf("getIndicesForHeight failed: %v", err)
+		t.Errorf("getIndicesForSlot failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
-		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+		t.Errorf("getIndicesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	committee, _ = beaconChain.getIndicesForHeight(2)
+	committee, _ = beaconChain.getIndicesForSlot(2)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
-		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+		t.Errorf("getIndicesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
 }
 
 func TestGetBlockHash(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
-
+	var recentBlockHash [][]byte
+	for i := 0; i < 256; i++ {
+		recentBlockHash = append(recentBlockHash, []byte{byte(i)})
+	}
 	state := types.NewActiveState(&pb.ActiveState{
-		RecentBlockHashes: [][]byte{
-			{'A'},
-			{'B'},
-			{'C'},
-			{'D'},
-			{'E'},
-			{'F'},
-		},
+		RecentBlockHashes: recentBlockHash,
 	})
+	block := NewBlock(t, &pb.BeaconBlock{SlotNumber: 7})
 	if err := beaconChain.SetActiveState(state); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
-
-	if _, err := beaconChain.getBlockHash(200, 250); err == nil {
+	if _, err := beaconChain.getBlockHash(200, block); err == nil {
 		t.Error("getBlockHash should have failed with invalid height")
 	}
-	hash, err := beaconChain.getBlockHash(2*params.CycleLength, 0)
+	hash, err := beaconChain.getBlockHash(0, block)
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
 	if bytes.Equal(hash, []byte{'A'}) {
 		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
 	}
-	hash, err = beaconChain.getBlockHash(2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
+	hash, err = beaconChain.getBlockHash(5, block)
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
 	if bytes.Equal(hash, []byte{'F'}) {
 		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
+	}
+	block = NewBlock(t, &pb.BeaconBlock{SlotNumber: 201})
+	hash, err = beaconChain.getBlockHash(200, block)
+	if err != nil {
+		t.Errorf("getBlockHash failed: %v", err)
+	}
+	if hash[len(hash)-1] != 127 {
+		t.Errorf("getBlockHash returns hash should be 127, got: %v", hash)
+	}
+}
+
+func TestCanProcessAttestations(t *testing.T) {
+	bc, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	// This block should fail because AttestationRecord's slot # > than block's slot #
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 1,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 2, ShardId: 0},
+		},
+	})
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed because attestation slot # > block #")
+	}
+
+	// This block should fail because AttestationRecord's slot # > than block's slot #
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 2 + params.CycleLength,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 1, ShardId: 0},
+		},
+	})
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed because attestation slot # < block # + cycle length")
 	}
 }
 
