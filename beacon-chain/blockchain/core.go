@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var canonicalHeadKey = "latest-canonical-head"
 var activeStateLookupKey = "beacon-active-state"
 var crystallizedStateLookupKey = "beacon-crystallized-state"
 
@@ -132,6 +133,26 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		return types.NewBlock(block), nil
 	}
 	return types.NewGenesisBlock()
+}
+
+// CanonicalHead fetches the latest head stored in persistent storage.
+func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
+	headExists, err := b.db.Has([]byte(canonicalHeadKey))
+	if err != nil {
+		return nil, err
+	}
+	if headExists {
+		bytes, err := b.db.Get([]byte(canonicalHeadKey))
+		if err != nil {
+			return nil, err
+		}
+		block := &pb.BeaconBlock{}
+		if err := proto.Unmarshal(bytes, block); err != nil {
+			return nil, err
+		}
+		return types.NewBlock(block), nil
+	}
+	return nil, nil
 }
 
 // ActiveState contains the current state of attestations and changes every block.
@@ -485,4 +506,17 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	}
 
 	return b.db.Put(hash[:], encodedState)
+}
+
+// saveCanonical puts the passed block into the beacon chain db
+// and also saves a "latest-head" key mapping to the block in the db.
+func (b *BeaconChain) saveCanonical(block *types.Block) error {
+	if err := b.saveBlock(block); err != nil {
+		return err
+	}
+	enc, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	return b.db.Put([]byte(canonicalHeadKey), enc)
 }

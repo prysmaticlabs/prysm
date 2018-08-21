@@ -73,6 +73,15 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Infof("Starting service")
+	head, err := c.chain.CanonicalHead()
+	if err != nil {
+		log.Errorf("Could not fetch latest canonical head from DB: %v", err)
+	}
+	// If there was a canonical head stored in persistent storage,
+	// the fork choice rule proceed where it left off.
+	if head != nil {
+		c.lastSlot = head.SlotNumber() + 1
+	}
 	go c.blockProcessing(c.ctx.Done())
 }
 
@@ -212,9 +221,7 @@ func (c *ChainService) updateHead(slot uint64) {
 		return
 	}
 	// Save canonical block to DB.
-	// TODO: Implement a SaveCanonical method to differentiate between saving any other
-	// regular block.
-	if err := c.SaveBlock(canonicalBlock); err != nil {
+	if err := c.chain.saveCanonical(canonicalBlock); err != nil {
 		log.Errorf("Unable to save block to db: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
