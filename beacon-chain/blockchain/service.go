@@ -63,7 +63,7 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 		beaconDB:                          beaconDB,
 		web3Service:                       web3Service,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
-		lastFinalizedSlot:                 0, // TODO: Initialize from the db.
+		lastFinalizedSlot:                 1, // TODO: Initialize from the db.
 		latestSlotEvent:                   make(chan uint64, cfg.SlotBuf),
 		canonicalBlockEvent:               make(chan *types.Block, cfg.AnnouncementBuf),
 		canonicalCrystallizedStateEvent:   make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
@@ -194,17 +194,17 @@ func (c *ChainService) updateHead(done <-chan struct{}) {
 		// and 2, once a block of slot 2 is received, we update the head of the blockchain by applying
 		// a fork choice rule on slot 1.
 		case slot := <-c.latestSlotEvent:
-			log.Info("Applying fork choice rule")
+			log.WithField("slotNumber", c.lastFinalizedSlot).Info("Applying fork choice rule")
 			// Super naive fork choice rule: pick the first element at each slot
 			// level as canonical.
 			//
 			// TODO: Implement real fork choice rule here.
-			canonicalActiveState := c.processedActiveStatesBySlot[slot-1][0]
+			canonicalActiveState := c.processedActiveStatesBySlot[c.lastFinalizedSlot][0]
 			if err := c.chain.SetActiveState(canonicalActiveState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			canonicalCrystallizedState := c.processedCrystallizedStatesBySlot[slot-1][0]
+			canonicalCrystallizedState := c.processedCrystallizedStatesBySlot[c.lastFinalizedSlot][0]
 			if err := c.chain.SetCrystallizedState(canonicalCrystallizedState); err != nil {
 				log.Errorf("Write crystallized state to disk failed: %v", err)
 			}
@@ -217,7 +217,13 @@ func (c *ChainService) updateHead(done <-chan struct{}) {
 			}
 			log.Debugf("Received %d validators by height", len(vals))
 
-			canonicalBlock := c.processedBlocksBySlot[slot-1][0]
+			canonicalBlock := c.processedBlocksBySlot[c.lastFinalizedSlot][0]
+			h, err := canonicalBlock.Hash()
+			if err != nil {
+				log.Errorf("Unable to hash canonical block: %v", err)
+				continue
+			}
+			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
 			// Save canonical block to DB.
 			// TODO: Implement a SaveCanonical method to differentiate between saving any other
 			// regular block.
