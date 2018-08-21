@@ -3,6 +3,7 @@ package simulator
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -13,8 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 type mockP2P struct{}
 

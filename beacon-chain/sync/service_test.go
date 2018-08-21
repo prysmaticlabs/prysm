@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -10,9 +11,15 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"golang.org/x/crypto/blake2b"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 type mockP2P struct {
 }
