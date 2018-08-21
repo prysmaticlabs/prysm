@@ -24,20 +24,23 @@ type ChainService struct {
 	canonicalBlockEvent             chan *types.Block
 	canonicalCrystallizedStateEvent chan *types.CrystallizedState
 	latestProcessedBlock            chan *types.Block
+	lastFinalizedSlot               uint64
+	latestSlotEvent                 chan uint64
 	processedBlockHashes            [][32]byte
 	// These are the data structures used by the fork choice rule.
 	// We store processed blocks and states into a slice by SlotNumber.
 	// For example, at slot 5, we might have received 10 different blocks,
 	// and a canonical chain must be derived from this DAG.
-	processedBlocksBySlot            map[int][]*types.Block
-	processedCrystallizedStateBySlot map[int][]*types.CrystallizedState
-	processedActiveStateBySlot       map[int][]*types.ActiveState
+	processedBlocksBySlot             map[uint64][]*types.Block
+	processedCrystallizedStatesBySlot map[uint64][]*types.CrystallizedState
+	processedActiveStatesBySlot       map[uint64][]*types.ActiveState
 }
 
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf  int
 	AnnouncementBuf int
+	SlotBuf         int
 }
 
 // DefaultConfig options.
@@ -45,6 +48,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		BeaconBlockBuf:  10,
 		AnnouncementBuf: 10,
+		SlotBuf:         10,
 	}
 }
 
@@ -53,25 +57,26 @@ func DefaultConfig() *Config {
 func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
-		ctx:                              ctx,
-		chain:                            beaconChain,
-		cancel:                           cancel,
-		beaconDB:                         beaconDB,
-		web3Service:                      web3Service,
-		latestProcessedBlock:             make(chan *types.Block, cfg.BeaconBlockBuf),
-		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
-		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
-		processedBlockHashes:             [][32]byte{},
-		processedBlocksBySlot:            make(map[int][]*types.Block),
-		processedCrystallizedStateBySlot: make(map[int][]*types.CrystallizedState),
-		processedActiveStateBySlot:       make(map[int][]*types.ActiveState),
+		ctx:                               ctx,
+		chain:                             beaconChain,
+		cancel:                            cancel,
+		beaconDB:                          beaconDB,
+		web3Service:                       web3Service,
+		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
+		lastFinalizedSlot:                 0,
+		latestSlotEvent:                   make(chan uint64, cfg.SlotBuf),
+		canonicalBlockEvent:               make(chan *types.Block, cfg.AnnouncementBuf),
+		canonicalCrystallizedStateEvent:   make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
+		processedBlockHashes:              [][32]byte{},
+		processedBlocksBySlot:             make(map[uint64][]*types.Block),
+		processedCrystallizedStatesBySlot: make(map[uint64][]*types.CrystallizedState),
+		processedActiveStatesBySlot:       make(map[uint64][]*types.ActiveState),
 	}, nil
 }
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Infof("Starting service")
-
 	go c.run(c.ctx.Done())
 }
 
@@ -130,6 +135,10 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	if canProcess {
 		// If the block can be processed, we derive its state and store it in an in-memory
 		// data structure for our fork choice rule. This block is NOT yet canonical.
+		c.processedBlockHashes = append(c.processedBlockHashes, h)
+		if block.SlotNumber() > c.lastFinalizedSlot {
+			c.latestSlotEvent <- block.SlotNumber()
+		}
 		c.latestProcessedBlock <- block
 	}
 	return nil
@@ -176,10 +185,14 @@ func (c *ChainService) CanonicalCrystallizedStateEvent() <-chan *types.Crystalli
 func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
-		// Listen for the latestProcessedBlock which has
-		// passed validity conditions but has not yet been determined as
-		// canonical by the fork choice rule.
-		case block := <-c.latestProcessedBlock:
+		// Listens for a newly received slot interval to apply the fork choice rule on the
+		// last slot before it.
+		//
+		// For example, if we are currently in slot 1 and have received 5 processed blocks in between slot 1
+		// and 2, once a block of slot 2 is received, we update the head of the blockchain by applying
+		// a fork choice rule on slot 1.
+		case slot := <-c.latestSlotEvent:
+			// TODO: Utilize this value in the fork choice rule.
 			vals, err := c.chain.validatorsByHeightShard()
 			if err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
@@ -187,13 +200,56 @@ func (c *ChainService) run(done <-chan struct{}) {
 			}
 			log.Debugf("Received %d validators by height", vals)
 
-			// TODO: 3 steps:
+			// Update the last finalized slot.
+			c.lastFinalizedSlot = slot
+
+			// Super naive fork choice rule: pick the first element at each slot
+			// level as canonical.
+			//
+			// TODO: Implement real fork choice rule here.
+			canonicalActiveState := c.processedActiveStatesBySlot[slot][0]
+			if err := c.chain.SetActiveState(canonicalActiveState); err != nil {
+				log.Errorf("Write active state to disk failed: %v", err)
+			}
+			canonicalCrystallizedState := c.processedCrystallizedStatesBySlot[slot][0]
+			if err := c.chain.SetCrystallizedState(canonicalCrystallizedState); err != nil {
+				log.Errorf("Write crystallized state to disk failed: %v", err)
+			}
+			canonicalBlock := c.processedBlocksBySlot[slot][0]
+			// Save canonical block to DB.
+			// TODO: Implement a SaveCanonical method to differentiate between saving any other
+			// regular block.
+			if err := c.SaveBlock(canonicalBlock); err != nil {
+				log.Errorf("Unable to save block to db: %v", err)
+			}
+			// We fire events that notify listeners of a new block (or crystallized state in
+			// the case of a state transition). This is useful for the beacon node's gRPC
+			// server to stream these events to beacon clients.
+			transition := c.chain.IsEpochTransition(slot)
+			if transition {
+				c.canonicalCrystallizedStateEvent <- canonicalCrystallizedState
+			}
+			c.canonicalBlockEvent <- canonicalBlock
+
+		// Listen for the latestProcessedBlock which has
+		// passed validity conditions but has not yet been determined as
+		// canonical by the fork choice rule.
+		case block := <-c.latestProcessedBlock:
+			// 3 steps:
 			// - Compute the active state for the block.
 			// - Compute the crystallized state for the block if epoch transition.
-			// - Store both states and the block into a data structure used for fork-choice.
+			// - Store both states and the block into a data structure used for fork choice.
 			//
-			// Concurrently, an updateHead() routine will run that will continually compute
-			// the canonical block and states from this data structure.
+			// Another routine will run that will continually compute
+			// the canonical block and states from this data structure using the
+			// fork choice rule
+			slot := block.SlotNumber()
+
+			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
+			activeState, err := c.chain.computeNewActiveState(block.PowChainRef())
+			if err != nil {
+				log.Errorf("Compute active state failed: %v", err)
+			}
 
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
@@ -205,33 +261,13 @@ func (c *ChainService) run(done <-chan struct{}) {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
 					continue
 				}
+			} else {
+				c.processedCrystallizedStatesBySlot[slot] = append(c.processedCrystallizedStatesBySlot[slot], c.chain.CrystallizedState())
 			}
 
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			// TODO: Uncomment after there is a reasonable way to bootstrap validators into the
-			// protocol. For the first few blocks after genesis, the current approach below
-			// will panic as there are no registered validators.
-			activeState, err := c.chain.computeNewActiveState(c.web3Service.LatestBlockHash())
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
+			c.processedBlocksBySlot[slot] = append(c.processedBlocksBySlot[slot], block)
+			c.processedActiveStatesBySlot[slot] = append(c.processedActiveStatesBySlot[slot], activeState)
 
-			// TODO: Do not update in place. Instead, store the computed active state into
-			// a data structure to determine forks.
-			err = c.chain.SetActiveState(activeState)
-			if err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-			}
-
-			// TODO: do not broadcast a canonical event or save the block here.
-			// Instead, do this after the fork choice has been applied.
-			c.canonicalBlockEvent <- block
-
-			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
-			// save the fork choice rule).
-			if err := c.SaveBlock(block); err != nil {
-				log.Errorf("Unable to save block to db: %v", err)
-			}
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
