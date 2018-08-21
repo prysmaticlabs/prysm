@@ -27,6 +27,7 @@ type Simulator struct {
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
 	beaconDB               ethdb.Database
+	validator              bool
 	delay                  time.Duration
 	slotNum                uint64
 	broadcastedBlocks      map[[32]byte]*types.Block
@@ -39,6 +40,7 @@ type Config struct {
 	Delay           time.Duration
 	BlockRequestBuf int
 	P2P             types.P2P
+	Validator       bool
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
 	BeaconDB        ethdb.Database
@@ -63,6 +65,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		chainService:           cfg.ChainService,
 		beaconDB:               cfg.BeaconDB,
 		delay:                  cfg.Delay,
+		validator:              cfg.Validator,
 		slotNum:                1,
 		broadcastedBlocks:      make(map[[32]byte]*types.Block),
 		broadcastedBlockHashes: [][32]byte{},
@@ -160,10 +163,17 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
 
+			var powChainRef []byte
+			if sim.validator {
+				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
+			} else {
+				powChainRef = []byte{'N', '/', 'A'}
+			}
+
 			block := types.NewBlock(&pb.BeaconBlock{
 				SlotNumber:            sim.slotNum,
 				Timestamp:             ptypes.TimestampNow(),
-				PowChainRef:           sim.web3Service.LatestBlockHash().Bytes(),
+				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            parentHash,

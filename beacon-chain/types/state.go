@@ -94,7 +94,10 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return blake2b.Sum256(data), nil
+	var hash [32]byte
+	h := blake2b.Sum512(data)
+	copy(hash[:], h[:32])
+	return hash, nil
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
@@ -153,7 +156,10 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return blake2b.Sum256(data), nil
+	var hash [32]byte
+	h := blake2b.Sum512(data)
+	copy(hash[:], h[:32])
+	return hash, nil
 }
 
 // LastStateRecalc returns when the last time crystallized state recalculated.

@@ -80,7 +80,7 @@ func TestProcessBlockHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}

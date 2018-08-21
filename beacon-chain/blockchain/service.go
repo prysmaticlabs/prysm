@@ -21,6 +21,7 @@ type ChainService struct {
 	beaconDB                        *database.DB
 	chain                           *BeaconChain
 	web3Service                     *powchain.Web3Service
+	validator                       bool
 	canonicalBlockEvent             chan *types.Block
 	canonicalCrystallizedStateEvent chan *types.CrystallizedState
 	latestProcessedBlock            chan *types.Block
@@ -53,12 +54,19 @@ func DefaultConfig() *Config {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	var isValidator bool
+	if web3Service == nil {
+		isValidator = false
+	} else {
+		isValidator = true
+	}
 	return &ChainService{
 		ctx:                               ctx,
 		chain:                             beaconChain,
 		cancel:                            cancel,
 		beaconDB:                          beaconDB,
 		web3Service:                       web3Service,
+		validator:                         isValidator,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
 		lastSlot:                          1, // TODO: Initialize from the db.
 		canonicalBlockEvent:               make(chan *types.Block, cfg.AnnouncementBuf),
@@ -72,7 +80,11 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Infof("Starting service")
+	if c.validator {
+		log.Infof("Starting service as validator")
+	} else {
+		log.Infof("Starting service as observer")
+	}
 	head, err := c.chain.CanonicalHead()
 	if err != nil {
 		log.Errorf("Could not fetch latest canonical head from DB: %v", err)
@@ -127,6 +139,8 @@ func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(block *types.Block) {
+	var canProcess bool
+	var err error
 	h, err := block.Hash()
 	if err != nil {
 		log.Debugf("Could not hash incoming block: %v", err)
@@ -135,7 +149,13 @@ func (c *ChainService) ProcessBlock(block *types.Block) {
 		c.updateHead(block.SlotNumber())
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-	canProcess, err := c.chain.CanProcessBlock(c.web3Service.Client(), block)
+
+	// Process block as a validator if beacon node has registered, else process block as an observer.
+	if c.validator {
+		canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
+	} else {
+		canProcess, err = c.chain.CanProcessBlock(nil, block, false)
+	}
 	if err != nil {
 		// We might receive a lot of blocks that fail validity conditions,
 		// so we create a debug level log instead of an error log.
