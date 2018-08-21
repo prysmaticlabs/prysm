@@ -103,7 +103,7 @@ bazel build //client:client
 
 Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/deployVRC/README.md).
 
-## Step 2: Running a Beacon Node
+## Step 2a: Running a Beacon Node as a Validator or Observer
 
 Make sure a geth node is running as a separate process according to the instructions from the previous section. Then, you can run a full beacon node as follows:
 
@@ -111,7 +111,8 @@ Make sure a geth node is running as a separate process according to the instruct
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
-  --rpc-port 4000
+  --rpc-port 4000 \
+  --validator
 ```
 
 This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding clients to connect to it, and begins listening for p2p events.
@@ -123,11 +124,21 @@ bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
+  --validator \
   --simulator \
   --verbosity debug
 ```
 
 Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/beacon-chain/VALIDATOR_REGISTER.md)
+
+If you don't want to deposit ETH and become a validator, one option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
+in validator duties such as proposing or attesting blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.
+
+```
+bazel run //beacon-chain --\
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+```
 
 ### Running via Docker
 
