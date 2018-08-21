@@ -82,6 +82,8 @@ func (c *ChainService) Start() {
 	if head != nil {
 		c.lastSlot = head.SlotNumber() + 1
 	}
+	// TODO: Fetch the slot: (block, state) DAGs from persistent storage
+	// to truly continue across sessions.
 	go c.blockProcessing(c.ctx.Done())
 }
 
