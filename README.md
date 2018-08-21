@@ -95,8 +95,8 @@ Now, save the passphrase you used in the geth node into a text file called passw
 Build our system first
 
 ```
-bazel build //beacon-chain/...
-bazel build //client/...
+bazel build //beacon-chain:beacon-chain
+bazel build //client:client
 ```
 
 ## Step 1: Deploy a Validator Registation Contract
@@ -144,7 +144,7 @@ bazel run //beacon-chain:image --\
 
 ## Step 3: Running a Beacon/Sharding Client
 
-Once your beacon node is up, you'll need to attach a client as a separate process. This client is in charge of running attester/proposer responsibilities and handling shards (shards to be designed in phase 2). This client will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
+Once your beacon node is up, you'll need to attach a client as a separate process. This client is in charge of running attester/proposer responsibilities and processing shard cross links (shards to be designed in phase 2). This client will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
 
 Run as follows:
 
