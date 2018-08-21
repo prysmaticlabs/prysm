@@ -28,16 +28,14 @@ type CanonicalEventAnnouncer interface {
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {
 	BlockChainService
-	CrystallizedStateChainService
-	ActiveStateChainService
 }
 
 // BlockChainService is the interface for block related functions in local beacon chain.
 type BlockChainService interface {
 	ProcessedBlockHashes() [][32]byte
 	ProcessBlock(b *Block) error
-	ContainsBlock(h [32]byte) bool
 	HasStoredState() (bool, error)
+	ContainsBlock(h [32]byte) bool
 	SaveBlock(b *Block) error
 }
 

@@ -33,10 +33,7 @@ type Service struct {
 	chainService                 types.ChainService
 	announceBlockHashBuf         chan p2p.Message
 	blockBuf                     chan p2p.Message
-	announceCrystallizedHashBuf  chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
-	announceActiveHashBuf        chan p2p.Message
-	activeStateBuf               chan p2p.Message
 	syncMode                     Mode
 	currentSlotNumber            uint64
 	highestObservedSlot          uint64
@@ -46,16 +43,13 @@ type Service struct {
 
 // Config allows the channel's buffer sizes to be changed.
 type Config struct {
-	BlockHashBufferSize             int
-	BlockBufferSize                 int
-	ActiveStateHashBufferSize       int
-	ActiveStateBufferSize           int
-	CrystallizedStateHashBufferSize int
-	CrystallizedStateBufferSize     int
-	SyncMode                        Mode
-	CurrentSlotNumber               uint64
-	HighestObservedSlot             uint64
-	SyncPollingInterval             time.Duration
+	BlockHashBufferSize         int
+	BlockBufferSize             int
+	CrystallizedStateBufferSize int
+	SyncMode                    Mode
+	CurrentSlotNumber           uint64
+	HighestObservedSlot         uint64
+	SyncPollingInterval         time.Duration
 }
 
 // Mode refers to the type for the sync mode of the client.
@@ -70,16 +64,13 @@ const (
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
 	return Config{
-		BlockHashBufferSize:             100,
-		BlockBufferSize:                 100,
-		ActiveStateHashBufferSize:       100,
-		ActiveStateBufferSize:           100,
-		CrystallizedStateHashBufferSize: 100,
-		CrystallizedStateBufferSize:     100,
-		SyncMode:                        SyncModeDefault,
-		CurrentSlotNumber:               0,
-		HighestObservedSlot:             0,
-		SyncPollingInterval:             time.Second,
+		BlockHashBufferSize:         100,
+		BlockBufferSize:             100,
+		CrystallizedStateBufferSize: 100,
+		SyncMode:                    SyncModeDefault,
+		CurrentSlotNumber:           0,
+		HighestObservedSlot:         0,
+		SyncPollingInterval:         time.Second,
 	}
 }
 
@@ -104,10 +95,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs typ
 		chainService:                 cs,
 		announceBlockHashBuf:         make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:                     make(chan p2p.Message, cfg.BlockBufferSize),
-		announceCrystallizedHashBuf:  make(chan p2p.Message, cfg.ActiveStateHashBufferSize),
-		crystallizedStateBuf:         make(chan p2p.Message, cfg.ActiveStateBufferSize),
-		announceActiveHashBuf:        make(chan p2p.Message, cfg.CrystallizedStateHashBufferSize),
-		activeStateBuf:               make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
+		crystallizedStateBuf:         make(chan p2p.Message, cfg.CrystallizedStateBufferSize),
 		syncMode:                     cfg.SyncMode,
 		currentSlotNumber:            cfg.CurrentSlotNumber,
 		highestObservedSlot:          cfg.HighestObservedSlot,
@@ -167,82 +155,6 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
 	return nil
 }
 
-// ReceiveCrystallizedStateHash accepts a crystallized state hash.
-// New hashes are forwarded to other peers in the network (unimplemented), and
-// the contents of the crystallized hash are requested if the local chain doesn't have the hash.
-func (ss *Service) ReceiveCrystallizedStateHash(data *pb.CrystallizedStateHashAnnounce, peer p2p.Peer) {
-	var h [32]byte
-	copy(h[:], data.Hash[:32])
-	if ss.chainService.ContainsCrystallizedState(h) {
-		log.WithFields(logrus.Fields{"crystallizedStateHash": h}).Debug("Crystallized state hash exists locally")
-		return
-	}
-	log.WithField("crystallizedStateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state hash, requesting state data from sender")
-	// Request the crystallized hash data from peer that sent the block hash.
-	ss.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
-}
-
-// ReceiveCrystallizedState accepts a crystallized state object to potentially be included in the local chain.
-// The service will filter crystallized state objects that have not been requested (unimplemented).
-func (ss *Service) ReceiveCrystallizedState(data *pb.CrystallizedState) error {
-	state := types.NewCrystallizedState(data)
-
-	h, err := state.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash crystallized state: %v", err)
-	}
-	if ss.chainService.ContainsCrystallizedState(h) {
-		log.WithFields(logrus.Fields{"crystallizedStateHash": h}).Debug("Crystallized state hash exists locally")
-		return nil
-	}
-
-	if err := ss.chainService.ProcessCrystallizedState(state); err != nil {
-		return fmt.Errorf("could not process crystallized state: %v", err)
-	}
-	log.Debugf("Successfully received incoming crystallized state with hash: %x", h)
-	return nil
-}
-
-// ReceiveActiveStateHash accepts a active state hash.
-// New hashes are forwarded to other peers in the network (unimplemented), and
-// the contents of the active hash are requested if the local chain doesn't have the hash.
-//
-// TODO: implement hash forwarding
-func (ss *Service) ReceiveActiveStateHash(data *pb.ActiveStateHashAnnounce, peer p2p.Peer) {
-	var h [32]byte
-	copy(h[:], data.Hash[:32])
-	if ss.chainService.ContainsActiveState(h) {
-		log.WithFields(logrus.Fields{"activeStateHash": h}).Debug("Active state hash exists locally")
-		return
-	}
-	log.WithField("activeStateHash", fmt.Sprintf("0x%x", h)).Info("Received active state hash, requesting state data from sender")
-	// Request the active hash data from peer that sent the block hash.
-	ss.p2p.Send(&pb.ActiveStateRequest{Hash: h[:]}, peer)
-}
-
-// ReceiveActiveState accepts a active state object to potentially be included in the local chain.
-// The service will filter active state objects that have not been requested (unimplemented).
-//
-// TODO: implement filter for non requested state objects.
-func (ss *Service) ReceiveActiveState(data *pb.ActiveState) error {
-	state := types.NewActiveState(data)
-
-	h, err := state.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash active state: %v", err)
-	}
-	if ss.chainService.ContainsActiveState(h) {
-		log.WithFields(logrus.Fields{"activeStateHash": h}).Debug("Active state hash exists locally")
-		return nil
-	}
-
-	if err := ss.chainService.ProcessActiveState(state); err != nil {
-		return fmt.Errorf("could not process active state: %v", err)
-	}
-	log.Debugf("Successfully received incoming active state with hash: %x", h)
-	return nil
-}
-
 // RequestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
 // for a beacon block.
 func (ss *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
@@ -256,7 +168,6 @@ func (ss *Service) RequestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse
 // SetBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (ss *Service) SetBlockForInitialSync(data *pb.BeaconBlockResponse) error {
-
 	block := types.NewBlock(data.Block)
 	h, err := block.Hash()
 	if err != nil {
@@ -386,17 +297,9 @@ func (ss *Service) runInitialSync(delaychan <-chan time.Time, done <-chan struct
 func (ss *Service) run(done <-chan struct{}) {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
-	announceCrystallizedHashSub := ss.p2p.Subscribe(pb.CrystallizedStateHashAnnounce{}, ss.announceCrystallizedHashBuf)
-	crystallizedStateSub := ss.p2p.Subscribe(pb.CrystallizedStateResponse{}, ss.crystallizedStateBuf)
-	announceActiveHashSub := ss.p2p.Subscribe(pb.ActiveStateHashAnnounce{}, ss.announceActiveHashBuf)
-	activeStateSub := ss.p2p.Subscribe(pb.ActiveStateResponse{}, ss.activeStateBuf)
 
 	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
-	defer announceCrystallizedHashSub.Unsubscribe()
-	defer crystallizedStateSub.Unsubscribe()
-	defer announceActiveHashSub.Unsubscribe()
-	defer activeStateSub.Unsubscribe()
 
 	for {
 		select {
@@ -420,42 +323,6 @@ func (ss *Service) run(done <-chan struct{}) {
 			}
 			if err := ss.ReceiveBlock(response.Block); err != nil {
 				log.Errorf("Could not process received block: %v", err)
-			}
-		case msg := <-ss.announceCrystallizedHashBuf:
-			data, ok := msg.Data.(*pb.CrystallizedStateHashAnnounce)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed crystallized state hash announcement p2p message")
-				continue
-			}
-			ss.ReceiveCrystallizedStateHash(data, msg.Peer)
-		case msg := <-ss.crystallizedStateBuf:
-			response, ok := msg.Data.(*pb.CrystallizedStateResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Errorf("Received malformed crystallized state p2p message")
-				continue
-			}
-			if err := ss.ReceiveCrystallizedState(response.CrystallizedState); err != nil {
-				log.Errorf("Could not process received crystallized state: %v", err)
-			}
-		case msg := <-ss.announceActiveHashBuf:
-			data, ok := msg.Data.(*pb.ActiveStateHashAnnounce)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed active state hash announcement p2p message")
-				continue
-			}
-			ss.ReceiveActiveStateHash(data, msg.Peer)
-		case msg := <-ss.activeStateBuf:
-			response, ok := msg.Data.(*pb.ActiveStateResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Errorf("Received malformed active state p2p message")
-				continue
-			}
-			if err := ss.ReceiveActiveState(response.ActiveState); err != nil {
-				log.Errorf("Could not process received active state: %v", err)
 			}
 		}
 	}

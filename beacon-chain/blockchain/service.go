@@ -16,17 +16,15 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx                              context.Context
-	cancel                           context.CancelFunc
-	beaconDB                         *database.DB
-	chain                            *BeaconChain
-	web3Service                      *powchain.Web3Service
-	canonicalBlockEvent              chan *types.Block
-	canonicalCrystallizedStateEvent  chan *types.CrystallizedState
-	latestProcessedBlock             chan *types.Block
-	processedBlockHashes             [][32]byte
-	processedActiveStateHashes       [][32]byte
-	processedCrystallizedStateHashes [][32]byte
+	ctx                             context.Context
+	cancel                          context.CancelFunc
+	beaconDB                        *database.DB
+	chain                           *BeaconChain
+	web3Service                     *powchain.Web3Service
+	canonicalBlockEvent             chan *types.Block
+	canonicalCrystallizedStateEvent chan *types.CrystallizedState
+	latestProcessedBlock            chan *types.Block
+	processedBlockHashes            [][32]byte
 	// These are the data structures used by the fork choice rule.
 	// We store processed blocks and states into a slice by SlotNumber.
 	// For example, at slot 5, we might have received 10 different blocks,
@@ -64,8 +62,6 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
 		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
 		processedBlockHashes:             [][32]byte{},
-		processedActiveStateHashes:       [][32]byte{},
-		processedCrystallizedStateHashes: [][32]byte{},
 		processedBlocksBySlot:            make(map[int][]*types.Block),
 		processedCrystallizedStateBySlot: make(map[int][]*types.CrystallizedState),
 		processedActiveStateBySlot:       make(map[int][]*types.ActiveState),
@@ -117,16 +113,6 @@ func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 	return c.processedBlockHashes
 }
 
-// ProcessedCrystallizedStateHashes exposes a getter for the processed crystallized state hashes of the chain.
-func (c *ChainService) ProcessedCrystallizedStateHashes() [][32]byte {
-	return c.processedCrystallizedStateHashes
-}
-
-// ProcessedActiveStateHashes exposes a getter for the processed active state hashes of the chain.
-func (c *ChainService) ProcessedActiveStateHashes() [][32]byte {
-	return c.processedActiveStateHashes
-}
-
 // ProcessBlock accepts a new block for inclusion in the chain.
 func (c *ChainService) ProcessBlock(block *types.Block) error {
 	h, err := block.Hash()
@@ -155,53 +141,11 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 	return c.chain.saveBlock(block)
 }
 
-// ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
-// TODO: Deprecate. Nodes should not receive crystallized states via sync but should compute
-// them locally.
-func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
-	h, err := state.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash incoming block: %v", err)
-	}
-	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received crystallized state, processing validity conditions")
-	// For now, broadcast all incoming crystallized states to the following channel
-	// for gRPC clients to receive then. TODO: change this to actually send
-	// canonical crystallized states over the channel.
-	c.canonicalCrystallizedStateEvent <- state
-	return nil
-}
-
-// ProcessActiveState accepts a new active state object for inclusion in the chain.
-// TODO: Deprecate. Nodes should not receive active states via sync but should compute
-// them locally.
-func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
-	h, err := state.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash incoming block: %v", err)
-	}
-	log.WithField("stateHash", fmt.Sprintf("0x%x", h)).Info("Received active state, processing validity conditions")
-
-	return nil
-}
-
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine.
 //
 // TODO: implement function.
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
-	return false
-}
-
-// ContainsCrystallizedState checks if the a received state exists in the chain.
-// TODO: Deprecate. Crystallized state will be calculated on the fly by a node in a cycle
-// transition.
-func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
-	return false
-}
-
-// ContainsActiveState checks if a active state for the hash exists in the chain.
-// TODO: Deprecate. Active state will be calculated on the fly by a node.
-func (c *ChainService) ContainsActiveState(h [32]byte) bool {
 	return false
 }
 
