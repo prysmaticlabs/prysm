@@ -35,6 +35,7 @@ go_image(
         "@com_github_urfave_cli//:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
     ],
+    tags=["manual"],
 )
 
 container_push(
@@ -45,6 +46,7 @@ container_push(
     repository = "prysmaticlabs/prysm/beacon-chain",
     tag = "latest",
     visibility = ["//visibility:private"],
+    tags=["manual"],
 )
 
 go_binary(
