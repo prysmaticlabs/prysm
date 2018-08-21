@@ -285,13 +285,13 @@ func TestStartEmptyState(t *testing.T) {
 
 	mcs.setState(true)
 	ss.Start()
-	testutil.AssertLogsContain(t, hook, "chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Chain state detected, exiting initial sync")
 
 	hook.Reset()
 
 	mcs.setState(false)
 	ss.Start()
-	testutil.AssertLogsDoNotContain(t, hook, "chain state detected, exiting initial sync")
+	testutil.AssertLogsDoNotContain(t, hook, "Chain state detected, exiting initial sync")
 
 	ss.cancel()
 }
