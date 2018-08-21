@@ -218,13 +218,12 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 	defaultConf := simulator.DefaultConfig()
 	cfg := &simulator.Config{
-		Delay:                       defaultConf.Delay,
-		BlockRequestBuf:             defaultConf.BlockRequestBuf,
-		CrystallizedStateRequestBuf: defaultConf.CrystallizedStateRequestBuf,
-		BeaconDB:                    b.db.DB(),
-		P2P:                         p2pService,
-		Web3Service:                 web3Service,
-		ChainService:                chainService,
+		Delay:           defaultConf.Delay,
+		BlockRequestBuf: defaultConf.BlockRequestBuf,
+		BeaconDB:        b.db.DB(),
+		P2P:             p2pService,
+		Web3Service:     web3Service,
+		ChainService:    chainService,
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
