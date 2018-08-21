@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -22,38 +21,34 @@ var log = logrus.WithField("prefix", "simulator")
 
 // Simulator struct.
 type Simulator struct {
-	ctx                           context.Context
-	cancel                        context.CancelFunc
-	p2p                           types.P2P
-	web3Service                   types.POWChainService
-	chainService                  types.StateFetcher
-	beaconDB                      ethdb.Database
-	delay                         time.Duration
-	slotNum                       uint64
-	broadcastedBlocks             map[[32]byte]*types.Block
-	broadcastedBlockHashes        [][32]byte
-	blockRequestChan              chan p2p.Message
-	broadcastedCrystallizedStates map[[32]byte]*types.CrystallizedState
-	crystallizedStateRequestChan  chan p2p.Message
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	p2p                    types.P2P
+	web3Service            types.POWChainService
+	chainService           types.StateFetcher
+	beaconDB               ethdb.Database
+	delay                  time.Duration
+	slotNum                uint64
+	broadcastedBlocks      map[[32]byte]*types.Block
+	broadcastedBlockHashes [][32]byte
+	blockRequestChan       chan p2p.Message
 }
 
 // Config options for the simulator service.
 type Config struct {
-	Delay                       time.Duration
-	BlockRequestBuf             int
-	CrystallizedStateRequestBuf int
-	P2P                         types.P2P
-	Web3Service                 types.POWChainService
-	ChainService                types.StateFetcher
-	BeaconDB                    ethdb.Database
+	Delay           time.Duration
+	BlockRequestBuf int
+	P2P             types.P2P
+	Web3Service     types.POWChainService
+	ChainService    types.StateFetcher
+	BeaconDB        ethdb.Database
 }
 
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		Delay:                       time.Second * 5,
-		BlockRequestBuf:             100,
-		CrystallizedStateRequestBuf: 100,
+		Delay:           time.Second * 5,
+		BlockRequestBuf: 100,
 	}
 }
 
@@ -61,19 +56,17 @@ func DefaultConfig() *Config {
 func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
-		ctx:                           ctx,
-		cancel:                        cancel,
-		p2p:                           cfg.P2P,
-		web3Service:                   cfg.Web3Service,
-		chainService:                  cfg.ChainService,
-		beaconDB:                      cfg.BeaconDB,
-		delay:                         cfg.Delay,
-		slotNum:                       0,
-		broadcastedBlocks:             make(map[[32]byte]*types.Block),
-		broadcastedBlockHashes:        [][32]byte{},
-		blockRequestChan:              make(chan p2p.Message, cfg.BlockRequestBuf),
-		broadcastedCrystallizedStates: make(map[[32]byte]*types.CrystallizedState),
-		crystallizedStateRequestChan:  make(chan p2p.Message, cfg.CrystallizedStateRequestBuf),
+		ctx:                    ctx,
+		cancel:                 cancel,
+		p2p:                    cfg.P2P,
+		web3Service:            cfg.Web3Service,
+		chainService:           cfg.ChainService,
+		beaconDB:               cfg.BeaconDB,
+		delay:                  cfg.Delay,
+		slotNum:                0,
+		broadcastedBlocks:      make(map[[32]byte]*types.Block),
+		broadcastedBlockHashes: [][32]byte{},
+		blockRequestChan:       make(chan p2p.Message, cfg.BlockRequestBuf),
 	}
 }
 
@@ -122,11 +115,7 @@ func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
 
 func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 	blockReqSub := sim.p2p.Subscribe(pb.BeaconBlockRequest{}, sim.blockRequestChan)
-	crystallizedStateReqSub := sim.p2p.Subscribe(pb.CrystallizedStateRequest{}, sim.crystallizedStateRequestChan)
 	defer blockReqSub.Unsubscribe()
-	defer crystallizedStateReqSub.Unsubscribe()
-
-	crystallizedState := sim.chainService.CurrentCrystallizedState()
 
 	// Check if we saved a simulated block in the DB from a previous session.
 	// If that is the case, simulator will start from there.
@@ -155,41 +144,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				log.Errorf("Could not fetch active state hash: %v", err)
 				continue
 			}
-
-			crystallizedStateHash, err := crystallizedState.Hash()
+			crystallizedStateHash, err := sim.chainService.CurrentCrystallizedState().Hash()
 			if err != nil {
 				log.Errorf("Could not fetch crystallized state hash: %v", err)
 				continue
-			}
-
-			// Is it epoch transition time?
-			if sim.slotNum >= crystallizedState.LastStateRecalc()+params.CycleLength {
-				// We populate the validators in the crystallized state with some fake
-				// set of validators for simulation purposes.
-				var validators []*pb.ValidatorRecord
-				for i := 0; i < params.BootstrappedValidatorsCount; i++ {
-					validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
-					validators = append(validators, validator)
-				}
-
-				crystallizedState.SetValidators(validators)
-				crystallizedState.SetStateRecalc(sim.slotNum)
-				crystallizedState.SetLastJustifiedSlot(sim.slotNum)
-				crystallizedState.UpdateJustifiedSlot(sim.slotNum)
-				log.WithField("lastJustifiedEpoch", crystallizedState.LastJustifiedSlot()).Info("Last justified epoch")
-				log.WithField("lastFinalizedEpoch", crystallizedState.LastFinalizedSlot()).Info("Last finalized epoch")
-
-				cHash, err := crystallizedState.Hash()
-				if err != nil {
-					log.Errorf("Could not hash simulated crystallized state: %v", err)
-					continue
-				}
-				crystallizedStateHash = cHash
-				log.WithField("announcedStateHash", fmt.Sprintf("0x%x", crystallizedStateHash)).Info("Announcing crystallized state hash")
-				sim.p2p.Broadcast(&pb.CrystallizedStateHashAnnounce{
-					Hash: crystallizedStateHash[:],
-				})
-				sim.broadcastedCrystallizedStates[crystallizedStateHash] = crystallizedState
 			}
 
 			// If we have not broadcast a simulated block yet, we set parent hash
@@ -247,26 +205,6 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.Infof("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block.Proto()}
-			sim.p2p.Send(res, msg.Peer)
-
-		case msg := <-sim.crystallizedStateRequestChan:
-			data, ok := msg.Data.(*pb.CrystallizedStateRequest)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed crystallized state request p2p message")
-				continue
-			}
-			var h [32]byte
-			copy(h[:], data.Hash[:32])
-
-			state := sim.broadcastedCrystallizedStates[h]
-			h, err := state.Hash()
-			if err != nil {
-				log.Errorf("Could not hash state: %v", err)
-				continue
-			}
-			log.Infof("Responding to crystallized state request for hash: 0x%x", h)
-			res := &pb.CrystallizedStateResponse{CrystallizedState: state.Proto()}
 			sim.p2p.Send(res, msg.Peer)
 		}
 	}
