@@ -23,10 +23,17 @@ type ChainService struct {
 	web3Service                      *powchain.Web3Service
 	canonicalBlockEvent              chan *types.Block
 	canonicalCrystallizedStateEvent  chan *types.CrystallizedState
-	latestBeaconBlock                chan *types.Block
+	latestProcessedBlock             chan *types.Block
 	processedBlockHashes             [][32]byte
 	processedActiveStateHashes       [][32]byte
 	processedCrystallizedStateHashes [][32]byte
+	// These are the data structures used by the fork choice rule.
+	// We store processed blocks and states into a slice by SlotNumber.
+	// For example, at slot 5, we might have received 10 different blocks,
+	// and a canonical chain must be derived from this DAG.
+	processedBlocksBySlot            map[int][]*types.Block
+	processedCrystallizedStateBySlot map[int][]*types.CrystallizedState
+	processedActiveStateBySlot       map[int][]*types.ActiveState
 }
 
 // Config options for the service.
@@ -53,7 +60,7 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 		cancel:                           cancel,
 		beaconDB:                         beaconDB,
 		web3Service:                      web3Service,
-		latestBeaconBlock:                make(chan *types.Block, cfg.BeaconBlockBuf),
+		latestProcessedBlock:             make(chan *types.Block, cfg.BeaconBlockBuf),
 		canonicalBlockEvent:              make(chan *types.Block, cfg.AnnouncementBuf),
 		canonicalCrystallizedStateEvent:  make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
 		processedBlockHashes:             [][32]byte{},
@@ -132,7 +139,9 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		return nil
 	}
 	if canProcess {
-		c.latestBeaconBlock <- block
+		// If the block can be processed, we derive its state and store it in an in-memory
+		// data structure for our fork choice rule. This block is NOT yet canonical.
+		c.latestProcessedBlock <- block
 	}
 	return nil
 }
@@ -144,7 +153,8 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 }
 
 // ProcessCrystallizedState accepts a new crystallized state object for inclusion in the chain.
-// TODO: Implement crystallized state verifier function and apply fork choice rules
+// TODO: Deprecate. Nodes should not receive crystallized states via sync but should compute
+// them locally.
 func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) error {
 	h, err := state.Hash()
 	if err != nil {
@@ -159,7 +169,8 @@ func (c *ChainService) ProcessCrystallizedState(state *types.CrystallizedState) 
 }
 
 // ProcessActiveState accepts a new active state object for inclusion in the chain.
-// TODO: Implement active state verifier function and apply fork choice rules
+// TODO: Deprecate. Nodes should not receive active states via sync but should compute
+// them locally.
 func (c *ChainService) ProcessActiveState(state *types.ActiveState) error {
 	h, err := state.Hash()
 	if err != nil {
@@ -178,16 +189,15 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
-// ContainsCrystallizedState checks if a crystallized state for the hash exists in the chain.
-//
-// TODO: implement function.
+// ContainsCrystallizedState checks if the a received state exists in the chain.
+// TODO: Deprecate. Crystallized state will be calculated on the fly by a node in a cycle
+// transition.
 func (c *ChainService) ContainsCrystallizedState(h [32]byte) bool {
 	return false
 }
 
 // ContainsActiveState checks if a active state for the hash exists in the chain.
-//
-// TODO: implement function.
+// TODO: Deprecate. Active state will be calculated on the fly by a node.
 func (c *ChainService) ContainsActiveState(h [32]byte) bool {
 	return false
 }
@@ -219,8 +229,10 @@ func (c *ChainService) CanonicalCrystallizedStateEvent() <-chan *types.Crystalli
 func (c *ChainService) run(done <-chan struct{}) {
 	for {
 		select {
-		case block := <-c.latestBeaconBlock:
-			// TODO: Apply 2.1 fork choice logic using the following.
+		// Listen for the latestProcessedBlock which has
+		// passed validity conditions but has not yet been determined as
+		// canonical by the fork choice rule.
+		case block := <-c.latestProcessedBlock:
 			vals, err := c.chain.validatorsByHeightShard()
 			if err != nil {
 				log.Errorf("Unable to get validators by height and by shard: %v", err)
@@ -228,9 +240,19 @@ func (c *ChainService) run(done <-chan struct{}) {
 			}
 			log.Debugf("Received %d validators by height", vals)
 
+			// TODO: 3 steps:
+			// - Compute the active state for the block.
+			// - Compute the crystallized state for the block if epoch transition.
+			// - Store both states and the block into a data structure used for fork-choice.
+			//
+			// Concurrently, an updateHead() routine will run that will continually compute
+			// the canonical block and states from this data structure.
+
 			// Entering epoch transitions.
 			transition := c.chain.IsEpochTransition(block.SlotNumber())
 			if transition {
+				// TODO: Do not update state in place. Instead, create a new crystallized
+				// state instance that will go into a data structure to determine forks.
 				c.chain.CrystallizedState().SetStateRecalc(block.SlotNumber())
 				if err := c.chain.calculateRewardsFFG(block); err != nil {
 					log.Errorf("Error computing validator rewards and penalties %v", err)
@@ -247,13 +269,15 @@ func (c *ChainService) run(done <-chan struct{}) {
 				log.Errorf("Compute active state failed: %v", err)
 			}
 
+			// TODO: Do not update in place. Instead, store the computed active state into
+			// a data structure to determine forks.
 			err = c.chain.SetActiveState(activeState)
 			if err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			// Announce the block as "canonical" (TODO: this assumes a fork choice rule
-			// occurred successfully).
+			// TODO: do not broadcast a canonical event or save the block here.
+			// Instead, do this after the fork choice has been applied.
 			c.canonicalBlockEvent <- block
 
 			// SaveBlock to the DB (TODO: this should be done after the fork choice rule and
