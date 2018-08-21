@@ -66,6 +66,9 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 		processedBlockHashes:             [][32]byte{},
 		processedActiveStateHashes:       [][32]byte{},
 		processedCrystallizedStateHashes: [][32]byte{},
+		processedBlocksBySlot:            make(map[int][]*types.Block),
+		processedCrystallizedStateBySlot: make(map[int][]*types.CrystallizedState),
+		processedActiveStateBySlot:       make(map[int][]*types.ActiveState),
 	}, nil
 }
 
