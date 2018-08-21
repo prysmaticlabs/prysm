@@ -148,10 +148,7 @@ func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
 	if ss.chainService.ContainsBlock(h) {
 		return nil
 	}
-	if err := ss.chainService.ProcessBlock(block); err != nil {
-		return fmt.Errorf("could not process block: %v", err)
-	}
-	log.WithField("slotNumber", block.SlotNumber()).Debugf("Successfully processed incoming block with hash: %x", h)
+	ss.chainService.ProcessBlock(block)
 	return nil
 }
 

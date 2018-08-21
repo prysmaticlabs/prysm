@@ -30,17 +30,12 @@ type mockChainService struct {
 	processedBlockHashes [][32]byte
 }
 
-func (ms *mockChainService) ProcessBlock(b *types.Block) error {
-	h, err := b.Hash()
-	if err != nil {
-		return err
-	}
-
+func (ms *mockChainService) ProcessBlock(b *types.Block) {
+	h, _ := b.Hash()
 	if ms.processedBlockHashes == nil {
 		ms.processedBlockHashes = [][32]byte{}
 	}
 	ms.processedBlockHashes = append(ms.processedBlockHashes, h)
-	return nil
 }
 
 func (ms *mockChainService) ContainsBlock(h [32]byte) bool {

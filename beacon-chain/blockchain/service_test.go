@@ -239,9 +239,7 @@ func TestProcessingBadBlock(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	if err = chainService.ProcessBlock(block); err != nil {
-		t.Fatalf("Could not setup processing block function")
-	}
+	chainService.ProcessBlock(block)
 	testutil.AssertLogsContain(t, hook, "parent hash points to nil")
 	hook.Reset()
 }
@@ -288,16 +286,12 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
-	chainService.lastFinalizedSlot = 65
+	chainService.lastSlot = 65
 	chainService.chain.SetCrystallizedState(crystallized)
 
 	exitRoutine := make(chan bool)
 	go func() {
 		chainService.blockProcessing(chainService.ctx.Done())
-		<-exitRoutine
-	}()
-	go func() {
-		chainService.updateHead(chainService.ctx.Done())
 		<-exitRoutine
 	}()
 
@@ -318,7 +312,7 @@ func TestRunningChainService(t *testing.T) {
 	})
 
 	chainService.latestProcessedBlock <- block
-	chainService.latestSlotEvent <- 66
+	chainService.updateHead(66)
 	chainService.cancel()
 	<-chainService.canonicalBlockEvent
 	exitRoutine <- true

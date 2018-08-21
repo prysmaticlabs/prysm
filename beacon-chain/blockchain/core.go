@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -198,7 +197,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	// If the block does not have a parent in the database and if that parent is not the genesis block,
 	// then it fails the validity conditions.
 	if !hasParent && block.SlotNumber() != 1 {
-		return false, errors.New("parent hash points to nil in beaconDB")
+		return false, fmt.Errorf("parent hash points to nil in beaconDB: %x", parentHash)
 	}
 
 	// Calculate the timestamp validity condition.

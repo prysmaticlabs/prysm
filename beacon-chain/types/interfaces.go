@@ -33,7 +33,7 @@ type ChainService interface {
 // BlockChainService is the interface for block related functions in local beacon chain.
 type BlockChainService interface {
 	ProcessedBlockHashes() [][32]byte
-	ProcessBlock(b *Block) error
+	ProcessBlock(b *Block)
 	HasStoredState() (bool, error)
 	ContainsBlock(h [32]byte) bool
 	SaveBlock(b *Block) error
