@@ -553,7 +553,7 @@ func (b *BeaconChain) processAttestations(block *types.Block) error {
 		}
 		binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
 		msg = append(msg, signedHashesStr...)
-		binary.BigEndian.PutUint64(msg, attestation.ShardId)
+		binary.PutUvarint(msg, attestation.ShardId)
 		msg = append(msg, attestation.ShardBlockHash...)
 
 		msgHash := blake2b.Sum512(msg)
