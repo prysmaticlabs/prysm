@@ -531,7 +531,7 @@ func (b *BeaconChain) processAttestations(block *types.Block) error {
 
 		// Get all the block hashes up to cycle length.
 		parentHashes := b.getSignedParentHashes(block, attestation)
-		attesterIndices, err := b.getAttestatorIndices(attestation)
+		attesterIndices, err := b.getAttesterIndices(attestation)
 		if err != nil {
 			return err
 		}

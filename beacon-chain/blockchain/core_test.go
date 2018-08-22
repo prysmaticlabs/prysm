@@ -900,27 +900,6 @@ func TestCanProcessAttestations(t *testing.T) {
 	if err := bc.processAttestations(block); err != nil {
 		t.Error(err)
 	}
-
-	//// Process attestation should work now, there's a committee in shard 0
-	//crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
-	//	LastStateRecalc: 64,
-	//	IndicesForHeights: []*pb.ShardAndCommitteeArray{
-	//		{
-	//			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-	//				{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
-	//			},
-	//		},
-	//	},
-	//})
-	//if err := bc.SetCrystallizedState(crystallized); err != nil {
-	//	t.Fatalf("unable to mutate crystallized state: %v", err)
-	//}
-	//if err := bc.SetCrystallizedState(crystallized); err != nil {
-	//	t.Fatalf("unable to mutate crystallized state: %v", err)
-	//}
-	//if err := bc.processAttestations(block); err != nil {
-	//	t.Errorf("Process attestation failed: %v", err)
-	//}
 }
 
 func TestSaveBlockWithNil(t *testing.T) {
