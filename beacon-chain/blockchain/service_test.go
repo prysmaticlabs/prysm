@@ -42,12 +42,6 @@ func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
-func TestDefaultConfig(t *testing.T) {
-	if DefaultConfig().BeaconBlockBuf != 10 {
-		t.Errorf("Default block buffer should be 10, got: %v", DefaultConfig().BeaconBlockBuf)
-	}
-}
-
 func TestStartStop(t *testing.T) {
 	ctx := context.Background()
 
@@ -63,21 +57,28 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
+	beaconChain, err := NewBeaconChain(db.DB())
 	cfg := &Config{
 		BeaconBlockBuf: 0,
+		BeaconDB:       db,
+		Chain:          beaconChain,
 	}
-
-	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-	chainService, err := NewChainService(ctx, cfg, beaconChain, db, nil)
+	chainService, err := NewChainService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
 	chainService.Start()
 
-	chainService, err = NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	cfg = &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db,
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+	chainService, err = NewChainService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -105,7 +106,7 @@ func TestStartStop(t *testing.T) {
 	chainService.CanonicalBlockFeed()
 	chainService.CanonicalCrystallizedStateFeed()
 
-	chainService, _ = NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService, _ = NewChainService(ctx, cfg)
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()
@@ -167,16 +168,18 @@ func TestFaultyStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-	}
-
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db,
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
 
-	chainService, err := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService, err := NewChainService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -212,14 +215,17 @@ func TestProcessingBadBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-	}
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db,
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+	chainService, _ := NewChainService(ctx, cfg)
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()
@@ -266,9 +272,6 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-	}
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -292,7 +295,13 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
 
-	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db,
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+	chainService, _ := NewChainService(ctx, cfg)
 	chainService.lastSlot = 65
 	chainService.chain.SetCrystallizedState(crystallized)
 
