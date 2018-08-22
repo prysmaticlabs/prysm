@@ -3,8 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["service.go"],
-    importpath = "github.com/prysmaticlabs/prysm/client/txpool",
-    visibility = ["//client:__subpackages__"],
+    importpath = "github.com/prysmaticlabs/prysm/validator/txpool",
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",

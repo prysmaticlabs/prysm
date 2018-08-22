@@ -7,8 +7,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/client/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
@@ -33,13 +33,13 @@ type Config struct {
 	ProposerChanBuf int
 }
 
-// DefaultConfig options for the beacon client service.
+// DefaultConfig options for the beacon validator service.
 func DefaultConfig() *Config {
 	return &Config{AttesterChanBuf: 5, ProposerChanBuf: 5}
 }
 
-// NewBeaconClient instantiates a service that interacts with a beacon node.
-func NewBeaconClient(ctx context.Context, cfg *Config, rpcClient types.RPCClient) *Service {
+// NewBeaconValidator instantiates a service that interacts with a beacon node.
+func NewBeaconValidator(ctx context.Context, cfg *Config, rpcClient types.RPCClient) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:          ctx,

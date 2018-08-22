@@ -95,25 +95,25 @@ func (s *Service) Stop() error {
 
 // FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
 // assigned attestation heights at a given crystallized state hash.
-// This function can be called by clients to fetch a historical list of shuffled
+// This function can be called by validators to fetch a historical list of shuffled
 // validators ata point in time corresponding to a certain crystallized state.
 func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
 	var shuffledIndices []uint64
 	// Simulator always pushes out a validator list of length 100. By having index 0
-	// as the last index, the validator will always be a proposer in the client code.
+	// as the last index, the validator will always be a proposer in the validator code.
 	// TODO: Implement the real method by fetching the crystallized state in the request
 	// from persistent disk storage and shuffling the indices appropriately.
 	for i := 99; i >= 0; i-- {
 		shuffledIndices = append(shuffledIndices, uint64(i))
 	}
-	// For now, this will cause clients to always pick the validator as a proposer.
+	// For now, this will cause validators to always pick the validator as a proposer.
 	shuffleRes := &pb.ShuffleResponse{
 		ShuffledValidatorIndices: shuffledIndices,
 	}
 	return shuffleRes, nil
 }
 
-// ProposeBlock is called by a proposer in a sharding client and a full beacon node
+// ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
 //
 // TODO: needs implementation.
@@ -122,7 +122,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	return nil, errors.New("unimplemented")
 }
 
-// SignBlock is a function called by an attester in a sharding client to sign off
+// SignBlock is a function called by an attester in a sharding validator to sign off
 // on a block.
 //
 // TODO: needs implementation.

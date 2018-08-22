@@ -10,10 +10,10 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/client/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/internal"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -49,7 +49,7 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 func TestChannelGetters(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconClient(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
 	b.proposerChan <- false
 	proposerVal := <-b.ProposerAssignment()
 	if proposerVal {
@@ -66,7 +66,7 @@ func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconClient(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
 
 	// Testing default config values.
 	cfg := DefaultConfig()
@@ -88,7 +88,7 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	b := NewBeaconClient(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
 
 	// Create mock for the stream returned by LatestBeaconBlock.
 	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
@@ -163,7 +163,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	b := NewBeaconClient(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
 
 	// Creating a faulty stream will trigger error.
 	stream := internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)

@@ -4,10 +4,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/prysm/client/node"
-	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/validator/node"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"

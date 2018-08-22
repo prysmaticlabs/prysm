@@ -1,4 +1,4 @@
-// Package node defines a sharding client which connects to a
+// Package node defines a sharding validator which connects to a
 // full beacon node as part of the Ethereum 2.0 specification.
 package node
 
@@ -10,17 +10,17 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/client/attester"
-	"github.com/prysmaticlabs/prysm/client/beacon"
-	"github.com/prysmaticlabs/prysm/client/proposer"
-	"github.com/prysmaticlabs/prysm/client/rpcclient"
-	"github.com/prysmaticlabs/prysm/client/txpool"
-	"github.com/prysmaticlabs/prysm/client/types"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/validator/attester"
+	"github.com/prysmaticlabs/prysm/validator/beacon"
+	"github.com/prysmaticlabs/prysm/validator/proposer"
+	"github.com/prysmaticlabs/prysm/validator/rpcclient"
+	"github.com/prysmaticlabs/prysm/validator/txpool"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -29,7 +29,7 @@ var log = logrus.WithField("prefix", "node")
 
 const shardChainDBName = "shardchaindata"
 
-// ShardEthereum defines an instance of a sharding client that manages
+// ShardEthereum defines an instance of a sharding validator that manages
 // the entire lifecycle of services attached to it participating in
 // Ethereum 2.0.
 type ShardEthereum struct {
@@ -39,7 +39,7 @@ type ShardEthereum struct {
 	db       *database.DB
 }
 
-// NewShardInstance creates a new, Ethereum 2.0 sharding client.
+// NewShardInstance creates a new, Ethereum 2.0 sharding validator.
 func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 	registry := shared.NewServiceRegistry()
 	shardEthereum := &ShardEthereum{
@@ -78,11 +78,11 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 	return shardEthereum, nil
 }
 
-// Start every service in the sharding client.
+// Start every service in the sharding validator.
 func (s *ShardEthereum) Start() {
 	s.lock.Lock()
 
-	log.Info("Starting sharding client")
+	log.Info("Starting sharding validator")
 
 	s.services.StartAll()
 
@@ -103,7 +103,7 @@ func (s *ShardEthereum) Start() {
 			}
 		}
 		debug.Exit() // Ensure trace and CPU profile data are flushed.
-		panic("Panic closing the sharding client")
+		panic("Panic closing the sharding validator")
 	}()
 
 	// Wait for stop channel to be closed.
@@ -117,7 +117,7 @@ func (s *ShardEthereum) Close() {
 
 	s.db.Close()
 	s.services.StopAll()
-	log.Info("Stopping sharding client")
+	log.Info("Stopping sharding validator")
 
 	close(s.stop)
 }
@@ -168,7 +168,7 @@ func (s *ShardEthereum) registerBeaconService() error {
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
 	}
-	b := beacon.NewBeaconClient(context.TODO(), beacon.DefaultConfig(), rpcService)
+	b := beacon.NewBeaconValidator(context.TODO(), beacon.DefaultConfig(), rpcService)
 	return s.services.RegisterService(b)
 }
 
