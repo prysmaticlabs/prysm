@@ -2,7 +2,6 @@ package casper
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -86,7 +85,10 @@ func QueuedValidatorIndices(crystallized *types.CrystallizedState) []int {
 
 // SampleAttestersAndProposers returns lists of random sampled attesters and proposer indices.
 func SampleAttestersAndProposers(seed common.Hash, crystallized *types.CrystallizedState) ([]int, int, error) {
-	attesterCount := math.Min(params.MinCommiteeSize, float64(crystallized.ValidatorsLength()))
+	attesterCount := params.MinCommiteeSize
+	if crystallized.ValidatorsLength() < params.MinCommiteeSize {
+		attesterCount = crystallized.ValidatorsLength()
+	}
 	indices, err := utils.ShuffleIndices(seed, ActiveValidatorIndices(crystallized))
 	if err != nil {
 		return nil, -1, err
