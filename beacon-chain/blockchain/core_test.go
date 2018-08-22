@@ -527,11 +527,11 @@ func TestIsSlotTransition(t *testing.T) {
 	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: params.CycleLength})); err != nil {
 		t.Fatalf("unable to mutate crystallizedstate: %v", err)
 	}
-	if !beaconChain.IsEpochTransition(128) {
-		t.Errorf("there was supposed to be an Slot transition but there isn't one now")
+	if !beaconChain.IsCycleTransition(128) {
+		t.Errorf("there was supposed to be a slot transition but there isn't one now")
 	}
-	if beaconChain.IsEpochTransition(80) {
-		t.Errorf("there is not supposed to be an Slot transition but there is one now")
+	if beaconChain.IsCycleTransition(80) {
+		t.Errorf("there is not supposed to be a slot transition but there is one now")
 	}
 }
 

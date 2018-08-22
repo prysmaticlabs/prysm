@@ -36,7 +36,7 @@ type beaconState struct {
 	// ActiveState captures the beacon state at block processing level,
 	// it focuses on verifying aggregated signatures and pending attestations.
 	ActiveState *types.ActiveState
-	// CrystallizedState captures the beacon state at epoch transition level,
+	// CrystallizedState captures the beacon state at cycle transition level,
 	// it focuses on changes to the validator set, processing cross links and
 	// setting up FFG checkpoints.
 	CrystallizedState *types.CrystallizedState
@@ -160,7 +160,7 @@ func (b *BeaconChain) ActiveState() *types.ActiveState {
 	return b.state.ActiveState
 }
 
-// CrystallizedState contains epoch dependent validator information, changes every epoch.
+// CrystallizedState contains cycle dependent validator information, changes every cycle.
 func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
@@ -199,8 +199,8 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	return b.db.Put([]byte(crystallizedStateLookupKey), encodedState)
 }
 
-// IsEpochTransition checks if it's epoch transition time.
-func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
+// IsCycleTransition checks if it's crystallized state transition time.
+func (b *BeaconChain) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
 
@@ -356,10 +356,10 @@ func (b *BeaconChain) calculateRewardsFFG(active *types.ActiveState, crystallize
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
 	if attesterFactor >= totalFactor {
-		log.Debugf("Setting justified epoch to current slot number: %v", block.SlotNumber())
+		log.Debugf("Setting justified slot to current slot number: %v", block.SlotNumber())
 		crystallized.UpdateJustifiedSlot(block.SlotNumber())
 
-		log.Debug("Applying rewards and penalties for the validators from last epoch")
+		log.Debug("Applying rewards and penalties for the validators from last cycle")
 		for i, attesterIndex := range activeValidators {
 			voted, err := utils.CheckBit(latestPendingAtt.AttesterBitfield, attesterIndex)
 			if err != nil {
@@ -382,9 +382,9 @@ func (b *BeaconChain) calculateRewardsFFG(active *types.ActiveState, crystallize
 
 // rotateValidatorSet is called every dynasty transition. The primary functions are:
 // 1.) Go through queued validator indices and induct them to be active by setting start
-// dynasty to current epoch.
+// dynasty to current cycle.
 // 2.) Remove bad active validator whose balance is below threshold to the exit set by
-// setting end dynasty to current epoch.
+// setting end dynasty to current cycle.
 func (b *BeaconChain) rotateValidatorSet(crystallized *types.CrystallizedState) {
 
 	validators := crystallized.Validators()

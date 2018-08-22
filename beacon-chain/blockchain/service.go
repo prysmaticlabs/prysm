@@ -32,6 +32,9 @@ type ChainService struct {
 	// We store processed blocks and states into a slice by SlotNumber.
 	// For example, at slot 5, we might have received 10 different blocks,
 	// and a canonical chain must be derived from this DAG.
+	//
+	// NOTE: These are temporary and will be replaced by a structure
+	// that can support light-client proofs, such as a Sparse Merkle Trie.
 	processedBlocksBySlot             map[uint64][]*types.Block
 	processedCrystallizedStatesBySlot map[uint64][]*types.CrystallizedState
 	processedActiveStatesBySlot       map[uint64][]*types.ActiveState
@@ -86,7 +89,7 @@ func (c *ChainService) Start() {
 	}
 	head, err := c.chain.CanonicalHead()
 	if err != nil {
-		log.Errorf("Could not fetch latest canonical head from DB: %v", err)
+		log.Fatalf("Could not fetch latest canonical head from DB: %v", err)
 	}
 	// If there was a canonical head stored in persistent storage,
 	// the fork choice rule proceed where it left off.
@@ -204,8 +207,8 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
 }
 
-// run processes the changes needed every beacon chain block,
-// including epoch transition if needed.
+// updateHead applies the fork choice rule to the last received
+// slot.
 func (c *ChainService) updateHead(slot uint64) {
 	// Super naive fork choice rule: pick the first element at each slot
 	// level as canonical.
@@ -253,7 +256,7 @@ func (c *ChainService) updateHead(slot uint64) {
 	// We fire events that notify listeners of a new block (or crystallized state in
 	// the case of a state transition). This is useful for the beacon node's gRPC
 	// server to stream these events to beacon clients.
-	transition := c.chain.IsEpochTransition(slot)
+	transition := c.chain.IsCycleTransition(slot)
 	if transition {
 		c.canonicalCrystallizedStateFeed.Send(canonicalCrystallizedState)
 	}
@@ -272,12 +275,12 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case block := <-c.latestProcessedBlock:
 			// 3 steps:
 			// - Compute the active state for the block.
-			// - Compute the crystallized state for the block if epoch transition.
+			// - Compute the crystallized state for the block if cycle transition.
 			// - Store both states and the block into a data structure used for fork choice.
 			//
 			// Another routine will run that will continually compute
 			// the canonical block and states from this data structure using the
-			// fork choice rule
+			// fork choice rule.
 			slot := block.SlotNumber()
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
@@ -287,7 +290,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Entering cycle transitions.
-			transition := c.chain.IsEpochTransition(block.SlotNumber())
+			transition := c.chain.IsCycleTransition(block.SlotNumber())
 			if transition {
 				crystallized, err := c.chain.computeNewCrystallizedState(activeState, block)
 				if err != nil {
