@@ -11,6 +11,7 @@ go_library(
         "//beacon-chain/rpc:go_default_library",
         "//beacon-chain/simulator:go_default_library",
         "//beacon-chain/sync:go_default_library",
+        "//beacon-chain/sync/initial-sync:go_default_library",
         "//beacon-chain/utils:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
