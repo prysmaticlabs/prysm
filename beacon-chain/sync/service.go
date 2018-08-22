@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -26,12 +27,13 @@ var log = logrus.WithField("prefix", "sync")
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type Service struct {
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	p2p                  types.P2P
-	chainService         types.ChainService
-	announceBlockHashBuf chan p2p.Message
-	blockBuf             chan p2p.Message
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	p2p                   types.P2P
+	chainService          types.ChainService
+	blockAnnouncementFeed *event.Feed
+	announceBlockHashBuf  chan p2p.Message
+	blockBuf              chan p2p.Message
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -52,12 +54,13 @@ func DefaultConfig() Config {
 func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
-		p2p:                  beaconp2p,
-		chainService:         cs,
-		announceBlockHashBuf: make(chan p2p.Message, cfg.BlockHashBufferSize),
-		blockBuf:             make(chan p2p.Message, cfg.BlockBufferSize),
+		ctx:                   ctx,
+		cancel:                cancel,
+		p2p:                   beaconp2p,
+		chainService:          cs,
+		blockAnnouncementFeed: new(event.Feed),
+		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
+		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
 	}
 }
 
@@ -73,7 +76,7 @@ func (ss *Service) Start() {
 		// TODO: Resume sync after completion of initial sync.
 		// Currently, `Simulator` only supports sync from genesis block, therefore
 		// new nodes with a fresh database must skip InitialSync and immediately run the Sync goroutine.
-		log.Infof("empty chain state, but continue sync")
+		log.Infof("Empty chain state, but continue sync")
 	}
 
 	go ss.run()
@@ -100,21 +103,7 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
 }
 
-// ReceiveBlock accepts a block to potentially be included in the local chain.
-// The service will filter blocks that have not been requested (unimplemented).
-func (ss *Service) ReceiveBlock(data *pb.BeaconBlock) error {
-	block := types.NewBlock(data)
-	h, err := block.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash block: %v", err)
-	}
-	if ss.chainService.ContainsBlock(h) {
-		return nil
-	}
-	ss.chainService.ProcessBlock(block)
-	return nil
-}
-
+// run handles incoming block sync.
 func (ss *Service) run() {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
@@ -142,9 +131,17 @@ func (ss *Service) run() {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue
 			}
-			if err := ss.ReceiveBlock(response.Block); err != nil {
-				log.Debugf("Could not process received block: %v", err)
+			block := types.NewBlock(response.Block)
+			h, err := block.Hash()
+			if err != nil {
+				log.Errorf("Could not hash received block: %v", err)
 			}
+			if ss.chainService.ContainsBlock(h) {
+				continue
+			}
+			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
+			// We send out a message over a feed.
+			ss.blockAnnouncementFeed.Send(block)
 		}
 	}
 }

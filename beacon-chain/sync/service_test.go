@@ -131,15 +131,7 @@ func TestProcessBlock(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	block := types.NewBlock(data)
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if ms.processedBlockHashes[0] != h {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedBlockHashes[0])
-	}
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
 	hook.Reset()
 }
 
@@ -189,76 +181,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	ss.blockBuf <- msg2
 	ss.cancel()
 	<-exitRoutine
-
-	block1 := types.NewBlock(data1)
-	h1, err := block1.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	block2 := types.NewBlock(data2)
-	h2, err := block2.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Sync service broadcasts the two separate blocks
-	// and forwards them to to the local chain.
-	if ms.processedBlockHashes[0] != h1 {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h1, ms.processedBlockHashes[0])
-	}
-	if ms.processedBlockHashes[1] != h2 {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h2, ms.processedBlockHashes[1])
-	}
-	hook.Reset()
-}
-
-func TestProcessSameBlock(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
-	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	data := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3},
-		ParentHash:  make([]byte, 32),
-	}
-
-	responseBlock := &pb.BeaconBlockResponse{
-		Block: data,
-	}
-
-	msg := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: responseBlock,
-	}
-	ss.blockBuf <- msg
-	ss.blockBuf <- msg
-	ss.cancel()
-	<-exitRoutine
-
-	block := types.NewBlock(data)
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Sync service broadcasts the two separate blocks
-	// and forwards them to to the local chain.
-	if len(ms.processedBlockHashes) > 1 {
-		t.Error("Should have only processed one block, processed both instead")
-	}
-	if ms.processedBlockHashes[0] != h {
-		t.Errorf("Expected processed hash to be equal to block hash. wanted=%x, got=%x", h, ms.processedBlockHashes[0])
-	}
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
 	hook.Reset()
 }
 
@@ -321,13 +245,13 @@ func TestStartEmptyState(t *testing.T) {
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
 	ss.Start()
-	testutil.AssertLogsContain(t, hook, "empty chain state, but continue sync")
+	testutil.AssertLogsContain(t, hook, "Empty chain state, but continue sync")
 
 	hook.Reset()
 	ms.setState(true)
 
 	ss.Start()
-	testutil.AssertLogsDoNotContain(t, hook, "empty chain state, but continue sync")
+	testutil.AssertLogsDoNotContain(t, hook, "Empty chain state, but continue sync")
 
 	ss.cancel()
 }
