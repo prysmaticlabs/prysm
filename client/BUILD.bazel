@@ -25,6 +25,7 @@ go_image(
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/client",
     static = "on",
+    tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
         "//client/node:go_default_library",
@@ -44,6 +45,7 @@ container_push(
     registry = "gcr.io",
     repository = "prysmaticlabs/prysm/client",
     tag = "latest",
+    tags = ["manual"],
 )
 
 go_binary(
