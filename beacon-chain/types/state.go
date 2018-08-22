@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -98,6 +100,15 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	h := blake2b.Sum512(data)
 	copy(hash[:], h[:32])
 	return hash, nil
+}
+
+// BlockHashForSlot returns the block hash of a given slot given a lowerBound and upperBound.
+func (a *ActiveState) BlockHashForSlot(lowerBound, upperBound uint64) ([]byte, error) {
+	sback := lowerBound - params.CycleLength*2
+	if !(sback <= upperBound && upperBound < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", upperBound, sback, sback+params.CycleLength*2)
+	}
+	return a.RecentBlockHashes()[upperBound-sback].Bytes(), nil
 }
 
 // PendingAttestations returns attestations that have not yet been processed.

@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"reflect"
@@ -648,43 +647,6 @@ func TestCanProcessBlockObserver(t *testing.T) {
 	}
 	if canProcess {
 		t.Error("Should not be able to process block with invalid timestamp condition")
-	}
-}
-
-func TestGetBlockHash(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	state := types.NewActiveState(&pb.ActiveState{
-		RecentBlockHashes: [][]byte{
-			{'A'},
-			{'B'},
-			{'C'},
-			{'D'},
-			{'E'},
-			{'F'},
-		},
-	})
-	if err := beaconChain.SetActiveState(state); err != nil {
-		t.Fatalf("unable to mutate active state: %v", err)
-	}
-
-	if _, err := beaconChain.getBlockHash(state, 200, 250); err == nil {
-		t.Error("getBlockHash should have failed with invalid height")
-	}
-	hash, err := beaconChain.getBlockHash(state, 2*params.CycleLength, 0)
-	if err != nil {
-		t.Errorf("getBlockHash failed: %v", err)
-	}
-	if bytes.Equal(hash, []byte{'A'}) {
-		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
-	}
-	hash, err = beaconChain.getBlockHash(state, 2*params.CycleLength, uint64(len(beaconChain.ActiveState().RecentBlockHashes())-1))
-	if err != nil {
-		t.Errorf("getBlockHash failed: %v", err)
-	}
-	if bytes.Equal(hash, []byte{'F'}) {
-		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
 	}
 }
 

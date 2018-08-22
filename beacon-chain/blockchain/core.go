@@ -335,15 +335,6 @@ func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, blo
 	return newCrystallized, nil
 }
 
-// getBlockHash returns the block hash of a given height.
-func (b *BeaconChain) getBlockHash(active *types.ActiveState, slot, height uint64) ([]byte, error) {
-	sback := slot - params.CycleLength*2
-	if !(sback <= height && height < sback+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, sback, sback+params.CycleLength*2)
-	}
-	return active.RecentBlockHashes()[height-sback].Bytes(), nil
-}
-
 // saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
 	encodedState, err := block.Marshal()
