@@ -9,8 +9,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/prysmaticlabs/prysm/client/params"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/validator/params"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"
@@ -43,7 +43,7 @@ type collationHeaderData struct {
 	ProposerSignature [32]byte        // the proposer's signature for calculating collation hash.
 }
 
-// NewCollation initializes a collation and leaves it up to clients to serialize, deserialize
+// NewCollation initializes a collation and leaves it up to validators to serialize, deserialize
 // and provide the body and transactions upon creation.
 func NewCollation(header *CollationHeader, body []byte, transactions []*gethTypes.Transaction) *Collation {
 	return &Collation{

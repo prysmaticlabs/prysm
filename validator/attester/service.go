@@ -5,7 +5,7 @@ package attester
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/client/types"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,11 +17,11 @@ var log = logrus.WithField("prefix", "attester")
 type Attester struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
-	beaconService types.BeaconClient
+	beaconService types.BeaconValidator
 }
 
 // NewAttester creates a new attester instance.
-func NewAttester(ctx context.Context, beaconService types.BeaconClient) *Attester {
+func NewAttester(ctx context.Context, beaconService types.BeaconValidator) *Attester {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Attester{
 		ctx:           ctx,

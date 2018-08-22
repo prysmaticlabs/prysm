@@ -5,9 +5,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
-// BeaconClient defines a service that interacts with a beacon node via RPC to determine
+// BeaconValidator defines a service that interacts with a beacon node via RPC to determine
 // attestation/proposal responsibilities.
-type BeaconClient interface {
+type BeaconValidator interface {
 	AttesterAssignment() <-chan bool
 	ProposerAssignment() <-chan bool
 }

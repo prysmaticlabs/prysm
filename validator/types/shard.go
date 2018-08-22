@@ -1,4 +1,4 @@
-// Package types defines the types used throughout the client.
+// Package types defines the types used throughout the validator.
 package types
 
 import (
