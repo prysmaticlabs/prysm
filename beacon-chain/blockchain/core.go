@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
@@ -11,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/encoding/binary"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
