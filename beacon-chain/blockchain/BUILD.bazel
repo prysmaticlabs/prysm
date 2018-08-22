@@ -9,7 +9,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//bazel-prysm/external/go_sdk/src/encoding/binary:go_default_library",
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/types:go_default_library",
