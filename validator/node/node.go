@@ -1,4 +1,4 @@
-// Package node defines a sharding validator which connects to a
+// Package node defines a validator node which connects to a
 // full beacon node as part of the Ethereum 2.0 specification.
 package node
 
@@ -168,7 +168,7 @@ func (s *ShardEthereum) registerBeaconService() error {
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
 	}
-	b := beacon.NewBeaconValidator(context.TODO(), beacon.DefaultConfig(), rpcService)
+	b := beacon.NewBeaconClient(context.TODO(), beacon.DefaultConfig(), rpcService)
 	return s.services.RegisterService(b)
 }
 
