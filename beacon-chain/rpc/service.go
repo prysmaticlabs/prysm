@@ -19,21 +19,24 @@ var log = logrus.WithField("prefix", "rpc")
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx        context.Context
-	cancel     context.CancelFunc
-	announcer  types.CanonicalEventAnnouncer
-	port       string
-	listener   net.Listener
-	withCert   string
-	withKey    string
-	grpcServer *grpc.Server
+	ctx                context.Context
+	cancel             context.CancelFunc
+	announcer          types.CanonicalEventAnnouncer
+	port               string
+	listener           net.Listener
+	withCert           string
+	withKey            string
+	grpcServer         *grpc.Server
+	canonicalBlockChan chan *types.Block
+	canonicalStateChan chan *types.CrystallizedState
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port     string
-	CertFlag string
-	KeyFlag  string
+	Port            string
+	CertFlag        string
+	KeyFlag         string
+	SubscriptionBuf int
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -41,12 +44,14 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config, announcer types.CanonicalEventAnnouncer) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:       ctx,
-		cancel:    cancel,
-		announcer: announcer,
-		port:      cfg.Port,
-		withCert:  cfg.CertFlag,
-		withKey:   cfg.KeyFlag,
+		ctx:                ctx,
+		cancel:             cancel,
+		announcer:          announcer,
+		port:               cfg.Port,
+		withCert:           cfg.CertFlag,
+		withKey:            cfg.KeyFlag,
+		canonicalBlockChan: make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalStateChan: make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 	}
 }
 
@@ -136,9 +141,11 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 	// Right now, this streams every announced block received via p2p. It should only stream
 	// finalized blocks that are canonical in the beacon node after applying the fork choice
 	// rule.
+	sub := s.announcer.CanonicalBlockFeed().Subscribe(s.canonicalBlockChan)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case block := <-s.announcer.CanonicalBlockEvent():
+		case block := <-s.canonicalBlockChan:
 			log.Info("Sending latest canonical block to RPC clients")
 			if err := stream.Send(block.Proto()); err != nil {
 				return err
@@ -154,9 +161,11 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
 	// Right now, this streams every newly created crystallized state but should only
 	// stream canonical states.
+	sub := s.announcer.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case state := <-s.announcer.CanonicalCrystallizedStateEvent():
+		case state := <-s.canonicalStateChan:
 			log.Info("Sending crystallized state to RPC clients")
 			if err := stream.Send(state.Proto()); err != nil {
 				return err

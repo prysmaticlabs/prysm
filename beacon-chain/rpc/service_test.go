@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -24,28 +25,29 @@ func init() {
 }
 
 type mockAnnouncer struct {
-	blockChan             chan *types.Block
-	crystallizedStateChan chan *types.CrystallizedState
+	blockFeed *event.Feed
+	stateFeed *event.Feed
 }
 
 func newMockAnnouncer() *mockAnnouncer {
 	return &mockAnnouncer{
-		blockChan:             make(chan *types.Block),
-		crystallizedStateChan: make(chan *types.CrystallizedState),
+		blockFeed: new(event.Feed),
+		stateFeed: new(event.Feed),
 	}
 }
 
-func (m *mockAnnouncer) CanonicalBlockEvent() <-chan *types.Block {
-	return m.blockChan
+func (m *mockAnnouncer) CanonicalBlockFeed() *event.Feed {
+	return m.blockFeed
 }
 
-func (m *mockAnnouncer) CanonicalCrystallizedStateEvent() <-chan *types.CrystallizedState {
-	return m.crystallizedStateChan
+func (m *mockAnnouncer) CanonicalCrystallizedStateFeed() *event.Feed {
+	return m.stateFeed
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7348", CertFlag: "alice.crt", KeyFlag: "alice.key"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7348", CertFlag: "alice.crt", KeyFlag: "alice.key"}, announcer)
 
 	rpcService.Start()
 
@@ -58,7 +60,8 @@ func TestLifecycle(t *testing.T) {
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"}, announcer)
 
 	rpcService.Start()
 
@@ -71,7 +74,8 @@ func TestBadEndpoint(t *testing.T) {
 
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7777"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7777"}, announcer)
 
 	rpcService.Start()
 
@@ -84,7 +88,8 @@ func TestInsecureEndpoint(t *testing.T) {
 }
 
 func TestRPCMethods(t *testing.T) {
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7362"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7362"}, announcer)
 	if _, err := rpcService.ProposeBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
 	}
@@ -94,7 +99,8 @@ func TestRPCMethods(t *testing.T) {
 }
 
 func TestFetchShuffledValidatorIndices(t *testing.T) {
-	rpcService := NewRPCService(context.Background(), &Config{Port: "6372"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "6372"}, announcer)
 	res, err := rpcService.FetchShuffledValidatorIndices(context.Background(), &pb.ShuffleRequest{})
 	if err != nil {
 		t.Fatalf("Could not call RPC method: %v", err)
@@ -106,7 +112,8 @@ func TestFetchShuffledValidatorIndices(t *testing.T) {
 
 func TestLatestBeaconBlockContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "6663"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "6663", SubscriptionBuf: 0}, announcer)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -125,7 +132,7 @@ func TestLatestBeaconBlockContextClosed(t *testing.T) {
 func TestLatestBeaconBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7771"}, announcer)
+	rpcService := NewRPCService(context.Background(), &Config{Port: "7771", SubscriptionBuf: 0}, announcer)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -137,7 +144,7 @@ func TestLatestBeaconBlock(t *testing.T) {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 	}(t)
-	announcer.blockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
+	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
 
 	mockStream = internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.BeaconBlock{}).Return(nil)
@@ -148,14 +155,15 @@ func TestLatestBeaconBlock(t *testing.T) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
-	announcer.blockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
+	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
 	testutil.AssertLogsContain(t, hook, "Sending latest canonical block to RPC clients")
 	rpcService.cancel()
 }
 
 func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777"}, &mockAnnouncer{})
+	announcer := newMockAnnouncer()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0}, announcer)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -174,7 +182,7 @@ func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 func TestLatestCrystallizedState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8773"}, announcer)
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8773", SubscriptionBuf: 0}, announcer)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -186,7 +194,7 @@ func TestLatestCrystallizedState(t *testing.T) {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 	}(t)
-	announcer.crystallizedStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
+	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
 
 	mockStream = internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(nil)
@@ -197,7 +205,7 @@ func TestLatestCrystallizedState(t *testing.T) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
-	announcer.crystallizedStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
+	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
 	testutil.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
 	rpcService.cancel()
 }

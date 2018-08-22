@@ -102,8 +102,8 @@ func TestStartStop(t *testing.T) {
 	if hasState {
 		t.Errorf("has stored state should return false")
 	}
-	chainService.CanonicalBlockEvent()
-	chainService.CanonicalCrystallizedStateEvent()
+	chainService.CanonicalBlockFeed()
+	chainService.CanonicalCrystallizedStateFeed()
 
 	chainService, _ = NewChainService(ctx, cfg, beaconChain, db, web3Service)
 
@@ -252,6 +252,7 @@ func TestProcessingBadBlock(t *testing.T) {
 }
 
 func TestRunningChainService(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
@@ -266,8 +267,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
 	cfg := &Config{
-		BeaconBlockBuf:  0,
-		AnnouncementBuf: 1,
+		BeaconBlockBuf: 0,
 	}
 	beaconChain, err := NewBeaconChain(db.DB())
 	if err != nil {
@@ -321,6 +321,6 @@ func TestRunningChainService(t *testing.T) {
 	chainService.latestProcessedBlock <- block
 	chainService.updateHead(66)
 	chainService.cancel()
-	<-chainService.canonicalBlockEvent
 	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 }

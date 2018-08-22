@@ -21,8 +21,8 @@ type P2P interface {
 // and crystallized states to announcement channels once they are
 // finalized in the beacon node.
 type CanonicalEventAnnouncer interface {
-	CanonicalBlockEvent() <-chan *Block
-	CanonicalCrystallizedStateEvent() <-chan *CrystallizedState
+	CanonicalBlockFeed() *event.Feed
+	CanonicalCrystallizedStateFeed() *event.Feed
 }
 
 // ChainService is the interface for the local beacon chain.

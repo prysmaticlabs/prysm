@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -16,17 +17,17 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx                             context.Context
-	cancel                          context.CancelFunc
-	beaconDB                        *database.DB
-	chain                           *BeaconChain
-	web3Service                     *powchain.Web3Service
-	validator                       bool
-	canonicalBlockEvent             chan *types.Block
-	canonicalCrystallizedStateEvent chan *types.CrystallizedState
-	latestProcessedBlock            chan *types.Block
-	lastSlot                        uint64
-	processedBlockHashes            [][32]byte
+	ctx                            context.Context
+	cancel                         context.CancelFunc
+	beaconDB                       *database.DB
+	chain                          *BeaconChain
+	web3Service                    *powchain.Web3Service
+	validator                      bool
+	canonicalBlockFeed             *event.Feed
+	canonicalCrystallizedStateFeed *event.Feed
+	latestProcessedBlock           chan *types.Block
+	lastSlot                       uint64
+	processedBlockHashes           [][32]byte
 	// These are the data structures used by the fork choice rule.
 	// We store processed blocks and states into a slice by SlotNumber.
 	// For example, at slot 5, we might have received 10 different blocks,
@@ -38,15 +39,13 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf  int
-	AnnouncementBuf int
+	BeaconBlockBuf int
 }
 
 // DefaultConfig options.
 func DefaultConfig() *Config {
 	return &Config{
-		BeaconBlockBuf:  10,
-		AnnouncementBuf: 10,
+		BeaconBlockBuf: 10,
 	}
 }
 
@@ -69,8 +68,8 @@ func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain,
 		validator:                         isValidator,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
 		lastSlot:                          1, // TODO: Initialize from the db.
-		canonicalBlockEvent:               make(chan *types.Block, cfg.AnnouncementBuf),
-		canonicalCrystallizedStateEvent:   make(chan *types.CrystallizedState, cfg.AnnouncementBuf),
+		canonicalBlockFeed:                new(event.Feed),
+		canonicalCrystallizedStateFeed:    new(event.Feed),
 		processedBlockHashes:              [][32]byte{},
 		processedBlocksBySlot:             make(map[uint64][]*types.Block),
 		processedCrystallizedStatesBySlot: make(map[uint64][]*types.CrystallizedState),
@@ -141,6 +140,7 @@ func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 func (c *ChainService) ProcessBlock(block *types.Block) {
 	var canProcess bool
 	var err error
+
 	h, err := block.Hash()
 	if err != nil {
 		log.Debugf("Could not hash incoming block: %v", err)
@@ -192,16 +192,16 @@ func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
 
-// CanonicalBlockEvent returns a channel that is written to
+// CanonicalBlockFeed returns a channel that is written to
 // whenever a new block is determined to be canonical in the chain.
-func (c *ChainService) CanonicalBlockEvent() <-chan *types.Block {
-	return c.canonicalBlockEvent
+func (c *ChainService) CanonicalBlockFeed() *event.Feed {
+	return c.canonicalBlockFeed
 }
 
-// CanonicalCrystallizedStateEvent returns a channel that is written to
+// CanonicalCrystallizedStateFeed returns a feed that is written to
 // whenever a new crystallized state is determined to be canonical in the chain.
-func (c *ChainService) CanonicalCrystallizedStateEvent() <-chan *types.CrystallizedState {
-	return c.canonicalCrystallizedStateEvent
+func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+	return c.canonicalCrystallizedStateFeed
 }
 
 // run processes the changes needed every beacon chain block,
@@ -247,16 +247,17 @@ func (c *ChainService) updateHead(slot uint64) {
 		log.Errorf("Unable to save block to db: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
+
+	// Update the last received slot.
+	c.lastSlot = slot
 	// We fire events that notify listeners of a new block (or crystallized state in
 	// the case of a state transition). This is useful for the beacon node's gRPC
 	// server to stream these events to beacon clients.
 	transition := c.chain.IsEpochTransition(slot)
 	if transition {
-		c.canonicalCrystallizedStateEvent <- canonicalCrystallizedState
+		c.canonicalCrystallizedStateFeed.Send(canonicalCrystallizedState)
 	}
-	c.canonicalBlockEvent <- canonicalBlock
-	// Update the last finalized slot.
-	c.lastSlot = slot
+	c.canonicalBlockFeed.Send(canonicalBlock)
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
