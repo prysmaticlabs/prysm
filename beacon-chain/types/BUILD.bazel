@@ -28,8 +28,5 @@ go_test(
     name = "go_default_test",
     srcs = ["state_test.go"],
     embed = [":go_default_library"],
-    deps = [
-        "//beacon-chain/params:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
-    ],
+    deps = ["//proto/beacon/p2p/v1:go_default_library"],
 )

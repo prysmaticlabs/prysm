@@ -103,12 +103,15 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 }
 
 // BlockHashForSlot returns the block hash of a given slot given a lowerBound and upperBound.
-func (a *ActiveState) BlockHashForSlot(lowerBound, upperBound uint64) ([]byte, error) {
-	sback := lowerBound - params.CycleLength*2
-	if !(sback <= upperBound && upperBound < sback+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", upperBound, sback, sback+params.CycleLength*2)
+func (a *ActiveState) BlockHashForSlot(slot uint64, block *Block) ([]byte, error) {
+	sback := int(block.SlotNumber()) - params.CycleLength*2
+	if !(sback <= int(slot) && int(slot) < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
 	}
-	return a.RecentBlockHashes()[upperBound-sback].Bytes(), nil
+	if sback < 0 {
+		return a.RecentBlockHashes()[slot].Bytes(), nil
+	}
+	return a.RecentBlockHashes()[int(slot)-sback].Bytes(), nil
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
