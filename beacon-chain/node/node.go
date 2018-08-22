@@ -165,7 +165,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	}
 
 	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
-		BeaconDB:         b.db,
+		BeaconDB:         b.db.DB(),
 		Web3Service:      web3Service,
 		Chain:            beaconChain,
 		BeaconBlockBuf:   10,

@@ -60,7 +60,7 @@ func TestStartStop(t *testing.T) {
 	beaconChain, err := NewBeaconChain(db.DB())
 	cfg := &Config{
 		BeaconBlockBuf: 0,
-		BeaconDB:       db,
+		BeaconDB:       db.DB(),
 		Chain:          beaconChain,
 	}
 	if err != nil {
@@ -74,7 +74,7 @@ func TestStartStop(t *testing.T) {
 
 	cfg = &Config{
 		BeaconBlockBuf: 0,
-		BeaconDB:       db,
+		BeaconDB:       db.DB(),
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
 	}
@@ -171,7 +171,7 @@ func TestFaultyStop(t *testing.T) {
 	}
 	cfg := &Config{
 		BeaconBlockBuf: 0,
-		BeaconDB:       db,
+		BeaconDB:       db.DB(),
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
 	}
@@ -219,7 +219,7 @@ func TestProcessingBadBlock(t *testing.T) {
 	cfg := &Config{
 		BeaconBlockBuf:   0,
 		IncomingBlockBuf: 0,
-		BeaconDB:         db,
+		BeaconDB:         db.DB(),
 		Chain:            beaconChain,
 		Web3Service:      web3Service,
 	}
@@ -303,7 +303,7 @@ func TestRunningChainService(t *testing.T) {
 
 	cfg := &Config{
 		BeaconBlockBuf: 0,
-		BeaconDB:       db,
+		BeaconDB:       db.DB(),
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
 	}

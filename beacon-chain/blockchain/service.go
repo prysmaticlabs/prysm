@@ -5,11 +5,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +20,7 @@ var log = logrus.WithField("prefix", "blockchain")
 type ChainService struct {
 	ctx                            context.Context
 	cancel                         context.CancelFunc
-	beaconDB                       *database.DB
+	beaconDB                       ethdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
 	validator                      bool
@@ -48,7 +48,7 @@ type Config struct {
 	IncomingBlockBuf int
 	Chain            *BeaconChain
 	Web3Service      *powchain.Web3Service
-	BeaconDB         *database.DB
+	BeaconDB         ethdb.Database
 }
 
 // NewChainService instantiates a new service instance that will
@@ -125,11 +125,11 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
 
-	hasActive, err := c.beaconDB.DB().Has([]byte(activeStateLookupKey))
+	hasActive, err := c.beaconDB.Has([]byte(activeStateLookupKey))
 	if err != nil {
 		return false, err
 	}
-	hasCrystallized, err := c.beaconDB.DB().Has([]byte(crystallizedStateLookupKey))
+	hasCrystallized, err := c.beaconDB.Has([]byte(crystallizedStateLookupKey))
 	if err != nil {
 		return false, err
 	}
