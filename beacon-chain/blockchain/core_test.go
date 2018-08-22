@@ -200,7 +200,7 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	if _, _, err := casper.SampleAttestersAndProposers(common.Hash{'A'}); err == nil {
+	if _, _, err := casper.SampleAttestersAndProposers(common.Hash{'A'}, crystallized); err == nil {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
@@ -226,7 +226,7 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	attesters, proposer, err := casper.SampleAttestersAndProposers(common.Hash{'A'})
+	attesters, proposer, err := casper.SampleAttestersAndProposers(common.Hash{'A'}, crystallized)
 	if err != nil {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
