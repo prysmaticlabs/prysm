@@ -153,6 +153,9 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 		return nil
 	}
 	if canProcess {
+		if err := c.chain.processAttestations(block); err != nil {
+			return fmt.Errorf("could not process attestation: %v", err)
+		}
 		c.latestBeaconBlock <- block
 	}
 	return nil

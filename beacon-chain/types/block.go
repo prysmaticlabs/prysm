@@ -118,6 +118,11 @@ func (b *Block) AttestationCount() int {
 	return len(b.data.Attestations)
 }
 
+// Attestations returns an array of attestations in the block.
+func (b *Block) Attestations() []*pb.AttestationRecord {
+	return b.data.Attestations
+}
+
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)

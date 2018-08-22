@@ -32,3 +32,8 @@ func BitSetCount(v byte) byte {
 	v = (v & 0x33) + ((v >> 2) & 0x33)
 	return (v + (v >> 4)) & 0xF
 }
+
+// BitLength returns the length of the bitfield for a given number of attesters in bytes.
+func BitLength(b int) int {
+	return (b + 7) / 8
+}
