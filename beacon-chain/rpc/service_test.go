@@ -136,6 +136,8 @@ func TestLatestBeaconBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	exitRoutine := make(chan bool)
+
 	mockStream := internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.BeaconBlock{}).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
@@ -143,6 +145,7 @@ func TestLatestBeaconBlock(t *testing.T) {
 		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
+		<-exitRoutine
 	}(t)
 	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
 
@@ -154,10 +157,12 @@ func TestLatestBeaconBlock(t *testing.T) {
 		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
+		<-exitRoutine
 	}(t)
 	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
 	testutil.AssertLogsContain(t, hook, "Sending latest canonical block to RPC clients")
 	rpcService.cancel()
+	exitRoutine <- true
 }
 
 func TestLatestCrystallizedStateContextClosed(t *testing.T) {
@@ -186,6 +191,8 @@ func TestLatestCrystallizedState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	exitRoutine := make(chan bool)
+
 	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
@@ -193,6 +200,7 @@ func TestLatestCrystallizedState(t *testing.T) {
 		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
+		<-exitRoutine
 	}(t)
 	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
 
@@ -204,8 +212,10 @@ func TestLatestCrystallizedState(t *testing.T) {
 		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
+		<-exitRoutine
 	}(t)
 	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
 	testutil.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
 	rpcService.cancel()
+	exitRoutine <- true
 }
