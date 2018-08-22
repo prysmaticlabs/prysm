@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -13,6 +12,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -186,7 +186,7 @@ func TestSetCrystallizedState(t *testing.T) {
 	}
 }
 
-func TestGetAttestersProposer(t *testing.T) {
+func TestSampleAttestersAndProposers(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 	// Create validators more than params.MaxValidators, this should fail.
@@ -200,7 +200,7 @@ func TestGetAttestersProposer(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	if _, _, err := beaconChain.getAttestersProposer(common.Hash{'A'}); err == nil {
+	if _, _, err := casper.SampleAttestersAndProposers(common.Hash{'A'}); err == nil {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
@@ -209,9 +209,9 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("computeNewActiveState should have failed")
 	}
 
-	// validatorsByHeightShard should fail the same.
-	if _, err := beaconChain.validatorsByHeightShard(crystallized); err == nil {
-		t.Errorf("validatorsByHeightShard should have failed")
+	// ValidatorsByHeightShard should fail the same.
+	if _, err := casper.ValidatorsByHeightShard(crystallized); err == nil {
+		t.Errorf("ValidatorsByHeightShard should have failed")
 	}
 
 	// Create 1000 validators in ActiveValidators.
@@ -226,12 +226,12 @@ func TestGetAttestersProposer(t *testing.T) {
 	crystallized.IncrementCurrentDynasty()
 	beaconChain.SetCrystallizedState(crystallized)
 
-	attesters, proposer, err := beaconChain.getAttestersProposer(common.Hash{'A'})
+	attesters, proposer, err := casper.SampleAttestersAndProposers(common.Hash{'A'})
 	if err != nil {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	activeValidators := beaconChain.activeValidatorIndices(crystallized)
+	activeValidators := casper.ActiveValidatorIndices(crystallized)
 
 	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
 	if err != nil {
@@ -245,7 +245,7 @@ func TestGetAttestersProposer(t *testing.T) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
-	indices, err := beaconChain.validatorsByHeightShard(crystallized)
+	indices, err := casper.ValidatorsByHeightShard(crystallized)
 	if err != nil {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
@@ -486,40 +486,6 @@ func TestProcessBlockWithInvalidParent(t *testing.T) {
 	}
 }
 
-func TestRotateValidatorSet(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	validators := []*pb.ValidatorRecord{
-		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
-		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
-		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-	}
-
-	data := &pb.CrystallizedState{
-		Validators:     validators,
-		CurrentDynasty: 10,
-	}
-	state := types.NewCrystallizedState(data)
-	beaconChain.SetCrystallizedState(state)
-
-	// rotate validator set and increment dynasty count by 1.
-	beaconChain.rotateValidatorSet(state)
-	beaconChain.CrystallizedState().IncrementCurrentDynasty()
-
-	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(beaconChain.CrystallizedState()), []int{2, 3, 4}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", beaconChain.activeValidatorIndices(beaconChain.CrystallizedState()))
-	}
-	if len(beaconChain.queuedValidatorIndices(state)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", beaconChain.queuedValidatorIndices(beaconChain.CrystallizedState()))
-	}
-	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(state), []int{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", beaconChain.exitedValidatorIndices(beaconChain.CrystallizedState()))
-	}
-}
-
 func TestIsSlotTransition(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -532,74 +498,6 @@ func TestIsSlotTransition(t *testing.T) {
 	}
 	if beaconChain.IsCycleTransition(80) {
 		t.Errorf("there is not supposed to be a slot transition but there is one now")
-	}
-}
-
-func TestHasVoted(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	// Setting bit field to 11111111.
-	pendingAttestation := &pb.AttestationRecord{
-		AttesterBitfield: []byte{255},
-	}
-	beaconChain.ActiveState().NewPendingAttestation(pendingAttestation)
-
-	for i := 0; i < len(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield); i++ {
-		voted, err := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
-		if err != nil {
-			t.Errorf("checking bitfield for vote failed: %v", err)
-		}
-		if !voted {
-			t.Error("validator voted but received didn't vote")
-		}
-	}
-
-	// Setting bit field to 01010101.
-	pendingAttestation = &pb.AttestationRecord{
-		AttesterBitfield: []byte{85},
-	}
-	beaconChain.ActiveState().NewPendingAttestation(pendingAttestation)
-
-	for i := 0; i < len(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield); i++ {
-		voted, err := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
-		if err != nil {
-			t.Errorf("checking bitfield for vote failed: %v", err)
-		}
-		if i%2 == 0 && voted {
-			t.Error("validator didn't vote but received voted")
-		}
-		if i%2 == 1 && !voted {
-			t.Error("validator voted but received didn't vote")
-		}
-	}
-}
-
-func TestClearAttesterBitfields(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	// Testing validator set sizes from 1 to 100.
-	for j := 1; j <= 100; j++ {
-		var validators []*pb.ValidatorRecord
-
-		for i := 0; i < j; i++ {
-			validator := &pb.ValidatorRecord{WithdrawalAddress: []byte{}, PublicKey: 0}
-			validators = append(validators, validator)
-		}
-
-		testAttesterBitfield := []byte{1, 2, 3, 4}
-		beaconChain.CrystallizedState().SetValidators(validators)
-		beaconChain.ActiveState().NewPendingAttestation(&pb.AttestationRecord{AttesterBitfield: testAttesterBitfield})
-		beaconChain.ActiveState().ClearPendingAttestations()
-
-		if bytes.Equal(testAttesterBitfield, beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield) {
-			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
-		}
-
-		if !bytes.Equal(beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield, []byte{}) {
-			t.Fatalf("attester bitfields are not zeroed out: %v", beaconChain.state.ActiveState.LatestPendingAttestation().AttesterBitfield)
-		}
 	}
 }
 
@@ -655,116 +553,6 @@ func TestUpdateJustifiedSlot(t *testing.T) {
 	}
 	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(3) {
 		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
-	}
-}
-
-func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
-	}
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber: 5,
-	})
-
-	data := &pb.CrystallizedState{
-		Validators:        validators,
-		CurrentDynasty:    1,
-		TotalDeposits:     100,
-		LastJustifiedSlot: 4,
-		LastFinalizedSlot: 3,
-	}
-	if err := beaconChain.SetCrystallizedState(types.NewCrystallizedState(data)); err != nil {
-		t.Fatalf("unable to mutate crystallizedstate: %v", err)
-	}
-
-	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
-	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	state := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
-	if err := beaconChain.SetActiveState(state); err != nil {
-		t.Fatalf("unable to Mutate Active state: %v", err)
-	}
-	if err := beaconChain.calculateRewardsFFG(state, beaconChain.CrystallizedState(), block); err != nil {
-		t.Fatalf("could not compute validator rewards and penalties: %v", err)
-	}
-	if beaconChain.state.CrystallizedState.LastJustifiedSlot() != uint64(5) {
-		t.Fatalf("unable to update last justified Slot: %d", beaconChain.state.CrystallizedState.LastJustifiedSlot())
-	}
-	if beaconChain.state.CrystallizedState.LastFinalizedSlot() != uint64(4) {
-		t.Fatalf("unable to update last finalized Slot: %d", beaconChain.state.CrystallizedState.LastFinalizedSlot())
-	}
-	if beaconChain.CrystallizedState().Validators()[0].Balance != uint64(33) {
-		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
-	}
-	if beaconChain.CrystallizedState().Validators()[7].Balance != uint64(31) {
-		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
-	}
-	if beaconChain.CrystallizedState().Validators()[29].Balance != uint64(31) {
-		t.Fatalf("validator balance not updated: %d", beaconChain.CrystallizedState().Validators()[1].Balance)
-	}
-}
-
-func TestValidatorIndices(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	data := &pb.CrystallizedState{
-		Validators: []*pb.ValidatorRecord{
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 3},                   // active.
-			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // queued.
-		},
-		CurrentDynasty: 1,
-	}
-
-	crystallized := types.NewCrystallizedState(data)
-	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
-		t.Fatalf("unable to mutate crystallized state: %v", err)
-	}
-
-	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(crystallized), []int{0, 1, 2, 3, 4}) {
-		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", beaconChain.activeValidatorIndices(crystallized))
-	}
-	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(crystallized), []int{5}) {
-		t.Errorf("queued validator indices should be [5], got: %v", beaconChain.queuedValidatorIndices(crystallized))
-	}
-	if len(beaconChain.exitedValidatorIndices(crystallized)) != 0 {
-		t.Errorf("exited validator indices to be empty, got: %v", beaconChain.exitedValidatorIndices(crystallized))
-	}
-
-	data = &pb.CrystallizedState{
-		Validators: []*pb.ValidatorRecord{
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // active.
-			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // active.
-			{PublicKey: 0, StartDynasty: 6, EndDynasty: uint64(math.Inf(0))}, // queued.
-			{PublicKey: 0, StartDynasty: 7, EndDynasty: uint64(math.Inf(0))}, // queued.
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // exited.
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 3},                   // exited.
-		},
-		CurrentDynasty: 5,
-	}
-
-	crystallized = types.NewCrystallizedState(data)
-	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
-		t.Fatalf("unable to mutate crystallized state: %v", err)
-	}
-
-	if !reflect.DeepEqual(beaconChain.activeValidatorIndices(crystallized), []int{0, 1}) {
-		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", beaconChain.activeValidatorIndices(crystallized))
-	}
-	if !reflect.DeepEqual(beaconChain.queuedValidatorIndices(crystallized), []int{2, 3}) {
-		t.Errorf("queued validator indices should be [3], got: %v", beaconChain.queuedValidatorIndices(crystallized))
-	}
-	if !reflect.DeepEqual(beaconChain.exitedValidatorIndices(crystallized), []int{4, 5}) {
-		t.Errorf("exited validator indices should be [3], got: %v", beaconChain.exitedValidatorIndices(crystallized))
 	}
 }
 
@@ -860,41 +648,6 @@ func TestCanProcessBlockObserver(t *testing.T) {
 	}
 	if canProcess {
 		t.Error("Should not be able to process block with invalid timestamp condition")
-	}
-}
-
-func TestGetIndicesForHeight(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	state := types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 1,
-		IndicesForHeights: []*pb.ShardAndCommitteeArray{
-			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
-				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
-			}},
-			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{ShardId: 3, Committee: []uint32{0, 1, 2, 3, 4}},
-				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
-			}},
-		}})
-	if err := beaconChain.SetCrystallizedState(state); err != nil {
-		t.Fatalf("unable to mutate crystallized state: %v", err)
-	}
-	if _, err := beaconChain.getIndicesForHeight(state, 1000); err == nil {
-		t.Error("getIndicesForHeight should have failed with invalid height")
-	}
-	committee, err := beaconChain.getIndicesForHeight(state, 1)
-	if err != nil {
-		t.Errorf("getIndicesForHeight failed: %v", err)
-	}
-	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
-		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
-	}
-	committee, _ = beaconChain.getIndicesForHeight(state, 2)
-	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
-		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
 }
 

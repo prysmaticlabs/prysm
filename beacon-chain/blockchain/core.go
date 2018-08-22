@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -310,7 +310,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 		PendingAttestations: []*pb.AttestationRecord{},
 		RecentBlockHashes:   [][]byte{},
 	})
-	attesters, proposer, err := b.getAttestersProposer(seed)
+	attesters, proposer, err := casper.SampleAttestersAndProposers(seed, b.CrystallizedState())
 	if err != nil {
 		return nil, err
 	}
@@ -333,200 +333,10 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, block *types.Block) (*types.CrystallizedState, error) {
 	newCrystallized := b.CrystallizedState()
 	newCrystallized.SetStateRecalc(block.SlotNumber())
-	if err := b.calculateRewardsFFG(active, newCrystallized, block); err != nil {
+	if err := casper.CalculateRewardsFFG(active, newCrystallized, block); err != nil {
 		return newCrystallized, fmt.Errorf("could not calculate ffg rewards/penalties: %v", err)
 	}
 	return newCrystallized, nil
-}
-
-// calculateRewardsFFG adjusts validators balances by applying rewards or penalties
-// based on FFG incentive structure.
-func (b *BeaconChain) calculateRewardsFFG(active *types.ActiveState, crystallized *types.CrystallizedState, block *types.Block) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	latestPendingAtt := active.LatestPendingAttestation()
-	if latestPendingAtt == nil {
-		return nil
-	}
-	validators := crystallized.Validators()
-	activeValidators := b.activeValidatorIndices(crystallized)
-	attesterDeposits := b.getAttestersTotalDeposit(active)
-	totalDeposit := crystallized.TotalDeposits()
-
-	attesterFactor := attesterDeposits * 3
-	totalFactor := uint64(totalDeposit * 2)
-	if attesterFactor >= totalFactor {
-		log.Debugf("Setting justified slot to current slot number: %v", block.SlotNumber())
-		crystallized.UpdateJustifiedSlot(block.SlotNumber())
-
-		log.Debug("Applying rewards and penalties for the validators from last cycle")
-		for i, attesterIndex := range activeValidators {
-			voted, err := utils.CheckBit(latestPendingAtt.AttesterBitfield, attesterIndex)
-			if err != nil {
-				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
-			}
-			if voted {
-				validators[i].Balance += params.AttesterReward
-			} else {
-				validators[i].Balance -= params.AttesterReward
-			}
-		}
-
-		log.Debug("Resetting attester bit field to all zeros")
-		active.ClearPendingAttestations()
-
-		crystallized.SetValidators(validators)
-	}
-	return nil
-}
-
-// rotateValidatorSet is called every dynasty transition. The primary functions are:
-// 1.) Go through queued validator indices and induct them to be active by setting start
-// dynasty to current cycle.
-// 2.) Remove bad active validator whose balance is below threshold to the exit set by
-// setting end dynasty to current cycle.
-func (b *BeaconChain) rotateValidatorSet(crystallized *types.CrystallizedState) {
-
-	validators := crystallized.Validators()
-	upperbound := len(b.activeValidatorIndices(crystallized))/30 + 1
-
-	// Loop through active validator set, remove validator whose balance is below 50%.
-	for _, index := range b.activeValidatorIndices(crystallized) {
-		if validators[index].Balance < params.DefaultBalance/2 {
-			validators[index].EndDynasty = crystallized.CurrentDynasty()
-		}
-	}
-	// Get the total number of validator we can induct.
-	inductNum := upperbound
-	if len(b.queuedValidatorIndices(crystallized)) < inductNum {
-		inductNum = len(b.queuedValidatorIndices(crystallized))
-	}
-
-	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
-	for _, index := range b.queuedValidatorIndices(crystallized) {
-		validators[index].StartDynasty = crystallized.CurrentDynasty()
-		inductNum--
-		if inductNum == 0 {
-			break
-		}
-	}
-}
-
-// getAttestersProposer returns lists of random sampled attesters and proposer indices.
-func (b *BeaconChain) getAttestersProposer(seed common.Hash) ([]int, int, error) {
-	attesterCount := math.Min(params.MinCommiteeSize, float64(b.CrystallizedState().ValidatorsLength()))
-
-	indices, err := utils.ShuffleIndices(seed, b.activeValidatorIndices(b.CrystallizedState()))
-	if err != nil {
-		return nil, -1, err
-	}
-	return indices[:int(attesterCount)], indices[len(indices)-1], nil
-}
-
-// getAttestersTotalDeposit returns the total deposit combined by attesters.
-// TODO: Consider slashing condition.
-func (b *BeaconChain) getAttestersTotalDeposit(active *types.ActiveState) uint64 {
-	var numOfBits int
-	for _, attestation := range active.PendingAttestations() {
-		for _, byte := range attestation.AttesterBitfield {
-			numOfBits += int(utils.BitSetCount(byte))
-		}
-	}
-	// Assume there's no slashing condition, the following logic will change later phase.
-	return uint64(numOfBits) * params.DefaultBalance
-}
-
-// activeValidatorIndices filters out active validators based on start and end dynasty
-// and returns their indices in a list.
-func (b *BeaconChain) activeValidatorIndices(crystallized *types.CrystallizedState) []int {
-	var indices []int
-	validators := crystallized.Validators()
-	dynasty := crystallized.CurrentDynasty()
-	for i := 0; i < len(validators); i++ {
-		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
-			indices = append(indices, i)
-		}
-	}
-	return indices
-}
-
-// exitedValidatorIndices filters out exited validators based on start and end dynasty
-// and returns their indices in a list.
-func (b *BeaconChain) exitedValidatorIndices(crystallized *types.CrystallizedState) []int {
-	var indices []int
-	validators := crystallized.Validators()
-	dynasty := crystallized.CurrentDynasty()
-	for i := 0; i < len(validators); i++ {
-		if validators[i].StartDynasty < dynasty && validators[i].EndDynasty < dynasty {
-			indices = append(indices, i)
-		}
-	}
-	return indices
-}
-
-// queuedValidatorIndices filters out queued validators based on start and end dynasty
-// and returns their indices in a list.
-func (b *BeaconChain) queuedValidatorIndices(crystallized *types.CrystallizedState) []int {
-	var indices []int
-	validators := crystallized.Validators()
-	dynasty := crystallized.CurrentDynasty()
-	for i := 0; i < len(validators); i++ {
-		if validators[i].StartDynasty > dynasty {
-			indices = append(indices, i)
-		}
-	}
-	return indices
-}
-
-// validatorsByHeightShard splits a shuffled validator list by height and by shard,
-// it ensures there's enough validators per height and per shard, if not, it'll skip
-// some heights and shards.
-func (b *BeaconChain) validatorsByHeightShard(crystallized *types.CrystallizedState) ([]*beaconCommittee, error) {
-	indices := b.activeValidatorIndices(crystallized)
-	var committeesPerSlot int
-	var slotsPerCommittee int
-	var committees []*beaconCommittee
-
-	if len(indices) >= params.CycleLength*params.MinCommiteeSize {
-		committeesPerSlot = len(indices)/params.CycleLength/(params.MinCommiteeSize*2) + 1
-		slotsPerCommittee = 1
-	} else {
-		committeesPerSlot = 1
-		slotsPerCommittee = 1
-		for len(indices)*slotsPerCommittee < params.MinCommiteeSize && slotsPerCommittee < params.CycleLength {
-			slotsPerCommittee *= 2
-		}
-	}
-
-	// split the shuffled list for heights.
-	shuffledList, err := utils.ShuffleIndices(crystallized.DynastySeed(), indices)
-	if err != nil {
-		return nil, err
-	}
-
-	heightList := utils.SplitIndices(shuffledList, params.CycleLength)
-
-	// split the shuffled height list for shards
-	for i, subList := range heightList {
-		shardList := utils.SplitIndices(subList, params.MinCommiteeSize)
-		for _, shardIndex := range shardList {
-			shardID := int(crystallized.CrosslinkingStartShard()) + i*committeesPerSlot/slotsPerCommittee
-			committees = append(committees, &beaconCommittee{
-				shardID:   shardID,
-				committee: shardIndex,
-			})
-		}
-	}
-	return committees, nil
-}
-
-// getIndicesForSlot returns the attester set of a given height.
-func (b *BeaconChain) getIndicesForHeight(crystallized *types.CrystallizedState, height uint64) (*pb.ShardAndCommitteeArray, error) {
-	lcs := crystallized.LastStateRecalc()
-	if !(lcs <= height && height < lcs+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, lcs, lcs+params.CycleLength*2)
-	}
-	return crystallized.IndicesForHeights()[height-lcs], nil
 }
 
 // getBlockHash returns the block hash of a given height.

@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/casper:go_default_library",
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/types:go_default_library",
@@ -32,6 +33,7 @@ go_test(
     embed = [":go_default_library"],
     race = "off",  # TODO(#412): fix issues with tests failing with race on.
     deps = [
+        "//beacon-chain/casper:go_default_library",
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/types:go_default_library",

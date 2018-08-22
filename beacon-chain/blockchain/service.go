@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -140,6 +141,8 @@ func (c *ChainService) ProcessedBlockHashes() [][32]byte {
 }
 
 // ProcessBlock accepts a new block for inclusion in the chain.
+// TODO: Refactor into single routine that subscribes to the event feed
+// from the sync service instead.
 func (c *ChainService) ProcessBlock(block *types.Block) {
 	var canProcess bool
 	var err error
@@ -232,7 +235,7 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 
 	// TODO: Utilize this value in the fork choice rule.
-	vals, err := c.chain.validatorsByHeightShard(canonicalCrystallizedState)
+	vals, err := casper.ValidatorsByHeightShard(canonicalCrystallizedState)
 	if err != nil {
 		log.Errorf("Unable to get validators by height and by shard: %v", err)
 		return
