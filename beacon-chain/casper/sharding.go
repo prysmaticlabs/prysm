@@ -7,7 +7,7 @@ import (
 )
 
 // BeaconCommittee structure encompassing a specific shard and validator indices
-// within that shard's commitee.
+// within that shard's committee.
 type BeaconCommittee struct {
 	shardID   int
 	committee []int
