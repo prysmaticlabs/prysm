@@ -11,11 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/encoding/binary"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 )
 
 var activeStateLookupKey = "beacon-active-state"
@@ -179,8 +181,8 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 }
 
 // IsEpochTransition checks if it's epoch transition time.
-func (b *BeaconChain) IsEpochTransition(slotNumber uint64) bool {
-	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
+func (b *BeaconChain) IsEpochTransition(slot uint64) bool {
+	return slot >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
 
 // CanProcessBlock is called to decide if an incoming p2p block can be processed into the chain's block trie,
@@ -507,70 +509,68 @@ func (b *BeaconChain) getBlockHash(slot uint64, block *types.Block) ([]byte, err
 	}
 	if sback < 0 {
 		return b.ActiveState().RecentBlockHashes()[slot].Bytes(), nil
-	} else {
-		return b.ActiveState().RecentBlockHashes()[int(slot)-sback].Bytes(), nil
 	}
+	return b.ActiveState().RecentBlockHashes()[int(slot)-sback].Bytes(), nil
 }
 
 func (b *BeaconChain) processAttestations(block *types.Block) error {
+	slotNumber := int(block.SlotNumber())
 	for _, attestation := range block.Attestations() {
-		if attestation.Slot > block.SlotNumber() {
+		if int(attestation.Slot) > slotNumber {
 			return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %v, Needed lower than: %v",
 				attestation.Slot,
-				block.SlotNumber())
+				slotNumber)
 		}
-		if attestation.Slot < block.SlotNumber()-params.CycleLength {
+		if int(attestation.Slot) < slotNumber-params.CycleLength {
 			return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
 				attestation.Slot,
-				block.SlotNumber()-params.CycleLength)
+				slotNumber-params.CycleLength)
 		}
-		_, err := b.getSignedParentHashes(block, attestation)
-		if err != nil {
-			return err
-		}
-
+		parentHashes := b.getSignedParentHashes(block, attestation)
 		attesterIndices, err := b.getAttestationIndices(attestation)
 		if err != nil {
 			return err
 		}
-		// Validate Bitfield.
-		if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
-			return fmt.Errorf("attestation has incorrect bitfield length. Found %v, expected %v",
-				len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+
+		if err := b.validateAttesterBitfields(attestation, attesterIndices); err != nil {
+			return err
 		}
 
-		// Attestation can not have non-zero trailing bits.
-		lastBit := len(attesterIndices)
-		if lastBit%8 != 0 {
-			for i := 0; i < 8-lastBit%8; i++ {
-				voted, err := utils.CheckBit(attestation.AttesterBitfield, lastBit+i)
-				if err != nil {
-					return err
-				}
-				if voted {
-					return errors.New("attestation has non-zero trailing bits")
-				}
-			}
+		// TODO: Generate validators aggregated pub key
+
+		msg := make([]byte, binary.MaxVarintLen64)
+		var signedHashesStr []byte
+		for _, parentHash := range parentHashes {
+			signedHashesStr = append(signedHashesStr, parentHash.Bytes()...)
+			signedHashesStr = append(signedHashesStr, byte(' '))
 		}
+		binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
+		msg = append(msg, signedHashesStr...)
+		binary.BigEndian.PutUint64(msg, attestation.ShardId)
+		msg = append(msg, attestation.ShardBlockHash...)
+
+		msgHash := blake2b.Sum512(msg)
+
+		log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
+			attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
+
+		// TODO: Verify msgHash against aggregated pub key and aggregated signature
 	}
 	return nil
 }
 
-func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) ([]*common.Hash, error) {
+func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) []*common.Hash {
 	var signedParentHashes []*common.Hash
-	for i := 0; i < params.CycleLength-len(attestation.ObliqueParentHashes); i++ {
-		byteHash, err := b.getBlockHash(uint64(i), block)
-		if err != nil {
-			return nil, err
-		}
-		hash := common.BytesToHash(byteHash)
-		signedParentHashes = append(signedParentHashes, &hash)
+	start := block.SlotNumber() - attestation.Slot
+	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
+	for _, hashes := range b.ActiveState().RecentBlockHashes()[start:end] {
+		signedParentHashes = append(signedParentHashes, &hashes)
 	}
 	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
-		hash := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, &hash)
+		hashes := common.BytesToHash(obliqueParentHashes)
+		signedParentHashes = append(signedParentHashes, &hashes)
 	}
-	return signedParentHashes, nil
+	return signedParentHashes
 }
 
 func (b *BeaconChain) getAttestationIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
@@ -578,13 +578,35 @@ func (b *BeaconChain) getAttestationIndices(attestation *pb.AttestationRecord) (
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
 	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc+params.CycleLength].ArrayShardAndCommittee
-
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
 			return shardCommittee[i].Committee, nil
 		}
 	}
 	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
+}
+
+func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecord, attesterIndices []uint32) error {
+	// Validate attester bit field has the correct length.
+	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+		return fmt.Errorf("attestation has incorrect bitfield length. Found %v, expected %v",
+			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+	}
+
+	// Validate attestation can not have non-zero trailing bits.
+	lastBit := len(attesterIndices)
+	if lastBit%8 != 0 {
+		for i := 0; i < 8-lastBit%8; i++ {
+			voted, err := utils.CheckBit(attestation.AttesterBitfield, lastBit+i)
+			if err != nil {
+				return err
+			}
+			if voted {
+				return errors.New("attestation has non-zero trailing bits")
+			}
+		}
+	}
+	return nil
 }
 
 // saveBlock puts the passed block into the beacon chain db.

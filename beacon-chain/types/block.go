@@ -118,7 +118,7 @@ func (b *Block) AttestationCount() int {
 	return len(b.data.Attestations)
 }
 
-// AttestationCount returns an array of attestations in the block.
+// Attestations returns an array of attestations in the block.
 func (b *Block) Attestations() []*pb.AttestationRecord {
 	return b.data.Attestations
 }

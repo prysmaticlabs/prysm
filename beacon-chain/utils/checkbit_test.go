@@ -48,3 +48,21 @@ func TestBitSetCount(t *testing.T) {
 		}
 	}
 }
+
+func TestByteLength(t *testing.T) {
+	tests := []struct {
+		a int
+		b int
+	}{
+		{a: 200, b: 25},     //11001000
+		{a: 34324, b: 4291}, //10010100
+		{a: 146, b: 19},     //10010010
+		{a: 179, b: 23},     //10110011
+		{a: 49, b: 7},       //00110001
+	}
+	for _, tt := range tests {
+		if BitLength(tt.a) != tt.b {
+			t.Errorf("Expected %v, Got %v", tt.b, BitLength(tt.b))
+		}
+	}
+}
