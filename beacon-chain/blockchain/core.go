@@ -581,8 +581,8 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 	return signedParentHashes
 }
 
-// getAttestatorIndices returns the attestor committee of based from attestation's shard ID  and slot number.
-func (b *BeaconChain) getAttestatorIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
+// getAttesterIndices returns the attester committee of based from attestation's shard ID  and slot number.
+func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
 	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc+params.CycleLength].ArrayShardAndCommittee
