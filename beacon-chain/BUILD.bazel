@@ -25,6 +25,7 @@ go_image(
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
     static = "on",
+    tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
         "//beacon-chain/node:go_default_library",
@@ -44,6 +45,7 @@ container_push(
     registry = "gcr.io",
     repository = "prysmaticlabs/prysm/beacon-chain",
     tag = "latest",
+    tags = ["manual"],
     visibility = ["//visibility:private"],
 )
 
