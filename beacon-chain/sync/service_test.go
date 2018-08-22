@@ -190,9 +190,7 @@ type mockEmptyChainService struct {
 	hasStoredState bool
 }
 
-func (ms *mockEmptyChainService) ProcessBlock(b *types.Block) {
-	return
-}
+func (ms *mockEmptyChainService) ProcessBlock(b *types.Block) {}
 
 func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) bool {
 	return false

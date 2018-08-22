@@ -42,11 +42,6 @@ type beaconState struct {
 	CrystallizedState *types.CrystallizedState
 }
 
-type beaconCommittee struct {
-	shardID   int
-	committee []int
-}
-
 // NewBeaconChain initializes a beacon chain using genesis state parameters if
 // none provided.
 func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
@@ -199,7 +194,8 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	return b.db.Put([]byte(crystallizedStateLookupKey), encodedState)
 }
 
-// IsCycleTransition checks if it's crystallized state transition time.
+// IsCycleTransition checks if a new cycle has been reached. At that point,
+// a new state transition will occur.
 func (b *BeaconChain) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }

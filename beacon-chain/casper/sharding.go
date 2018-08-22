@@ -6,7 +6,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 )
 
-type beaconCommittee struct {
+// BeaconCommittee structure encompassing a specific shard and validator indices
+// within that shard's commitee.
+type BeaconCommittee struct {
 	shardID   int
 	committee []int
 }
@@ -14,11 +16,11 @@ type beaconCommittee struct {
 // ValidatorsByHeightShard splits a shuffled validator list by height and by shard,
 // it ensures there's enough validators per height and per shard, if not, it'll skip
 // some heights and shards.
-func ValidatorsByHeightShard(crystallized *types.CrystallizedState) ([]*beaconCommittee, error) {
+func ValidatorsByHeightShard(crystallized *types.CrystallizedState) ([]*BeaconCommittee, error) {
 	indices := ActiveValidatorIndices(crystallized)
 	var committeesPerSlot int
 	var slotsPerCommittee int
-	var committees []*beaconCommittee
+	var committees []*BeaconCommittee
 
 	if len(indices) >= params.CycleLength*params.MinCommiteeSize {
 		committeesPerSlot = len(indices)/params.CycleLength/(params.MinCommiteeSize*2) + 1
@@ -44,7 +46,7 @@ func ValidatorsByHeightShard(crystallized *types.CrystallizedState) ([]*beaconCo
 		shardList := utils.SplitIndices(subList, params.MinCommiteeSize)
 		for _, shardIndex := range shardList {
 			shardID := int(crystallized.CrosslinkingStartShard()) + i*committeesPerSlot/slotsPerCommittee
-			committees = append(committees, &beaconCommittee{
+			committees = append(committees, &BeaconCommittee{
 				shardID:   shardID,
 				committee: shardIndex,
 			})
