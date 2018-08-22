@@ -24,6 +24,7 @@ type ChainService struct {
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
 	validator                      bool
+	incomingBlockFeed              *event.Feed
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
@@ -44,34 +45,31 @@ type ChainService struct {
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf int
-}
-
-// DefaultConfig options.
-func DefaultConfig() *Config {
-	return &Config{
-		BeaconBlockBuf: 10,
-	}
+	Chain          *BeaconChain
+	Web3Service    *powchain.Web3Service
+	BeaconDB       *database.DB
 }
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, cfg *Config, beaconChain *BeaconChain, beaconDB *database.DB, web3Service *powchain.Web3Service) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	var isValidator bool
-	if web3Service == nil {
+	if cfg.Web3Service == nil {
 		isValidator = false
 	} else {
 		isValidator = true
 	}
 	return &ChainService{
 		ctx:                               ctx,
-		chain:                             beaconChain,
+		chain:                             cfg.Chain,
 		cancel:                            cancel,
-		beaconDB:                          beaconDB,
-		web3Service:                       web3Service,
+		beaconDB:                          cfg.BeaconDB,
+		web3Service:                       cfg.Web3Service,
 		validator:                         isValidator,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
 		lastSlot:                          1, // TODO: Initialize from the db.
+		incomingBlockFeed:                 new(event.Feed),
 		canonicalBlockFeed:                new(event.Feed),
 		canonicalCrystallizedStateFeed:    new(event.Feed),
 		processedBlockHashes:              [][32]byte{},
@@ -114,6 +112,12 @@ func (c *ChainService) Stop() error {
 		return fmt.Errorf("Error persisting crystallized state: %v", err)
 	}
 	return nil
+}
+
+// IncomingBlockFeed returns a feed that a sync service can send incoming p2p blocks into.
+// The chain service will subscribe to this feed in order to process incoming blocks.
+func (c *ChainService) IncomingBlockFeed() *event.Feed {
+	return c.incomingBlockFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -311,4 +315,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			log.Info("Finished processing received block and states into DAG")
 		}
 	}
+}
+
+func (c *ChainService) run(done <-chan struct{}) {
 }

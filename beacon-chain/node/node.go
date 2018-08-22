@@ -69,15 +69,15 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerSimulatorService(ctx); err != nil {
-		return nil, err
-	}
-
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
 	}
 
 	if err := beacon.registerInitialSyncService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerSimulatorService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -153,7 +153,6 @@ func (b *BeaconNode) registerP2P() error {
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-
 	if ctx.GlobalBool(utils.ValidatorFlag.Name) {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
@@ -165,7 +164,12 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), beaconChain, b.db, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
+		BeaconDB:       b.db,
+		Web3Service:    web3Service,
+		Chain:          beaconChain,
+		BeaconBlockBuf: 10,
+	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}

@@ -14,6 +14,12 @@ import (
 
 var log = logrus.WithField("prefix", "sync")
 
+type chainService interface {
+	ContainsBlock(h [32]byte) bool
+	HasStoredState() (bool, error)
+	IncomingBlockFeed() *event.Feed
+}
+
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
 // In broad terms, a new block is synced in 4 steps:
 //     1. Receive a block hash from a peer
@@ -30,7 +36,7 @@ type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	p2p                   types.P2P
-	chainService          types.ChainService
+	chainService          chainService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
 	blockBuf              chan p2p.Message
@@ -51,7 +57,7 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs types.ChainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
@@ -76,7 +82,7 @@ func (ss *Service) Start() {
 		// TODO: Resume sync after completion of initial sync.
 		// Currently, `Simulator` only supports sync from genesis block, therefore
 		// new nodes with a fresh database must skip InitialSync and immediately run the Sync goroutine.
-		log.Infof("Empty chain state, but continue sync")
+		log.Info("Empty chain state, but continue sync")
 	}
 
 	go ss.run()
@@ -87,6 +93,12 @@ func (ss *Service) Stop() error {
 	log.Info("Stopping service")
 	ss.cancel()
 	return nil
+}
+
+// BlockAnnouncementFeed returns an event feed processes can subscribe to for
+// newly received, incoming p2p blocks.
+func (ss *Service) BlockAnnouncementFeed() *event.Feed {
+	return ss.blockAnnouncementFeed
 }
 
 // ReceiveBlockHash accepts a block hash.
@@ -141,7 +153,7 @@ func (ss *Service) run() {
 			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
 			// We send out a message over a feed.
-			ss.blockAnnouncementFeed.Send(block)
+			ss.chainService.IncomingBlockFeed().Send(block)
 		}
 	}
 }

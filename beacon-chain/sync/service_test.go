@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -32,37 +31,18 @@ func (mp *mockP2P) Broadcast(msg interface{}) {}
 func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
 }
 
-type mockChainService struct {
-	processedBlockHashes [][32]byte
-}
-
-func (ms *mockChainService) ProcessBlock(b *types.Block) {
-	h, _ := b.Hash()
-	if ms.processedBlockHashes == nil {
-		ms.processedBlockHashes = [][32]byte{}
-	}
-	ms.processedBlockHashes = append(ms.processedBlockHashes, h)
-}
+type mockChainService struct{}
 
 func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
-	for _, h1 := range ms.processedBlockHashes {
-		if h == h1 {
-			return true
-		}
-	}
 	return false
-}
-
-func (ms *mockChainService) ProcessedBlockHashes() [][32]byte {
-	return ms.processedBlockHashes
-}
-
-func (ms *mockChainService) SaveBlock(block *types.Block) error {
-	return nil
 }
 
 func (ms *mockChainService) HasStoredState() (bool, error) {
 	return false, nil
+}
+
+func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
+	return new(event.Feed)
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -190,50 +170,20 @@ type mockEmptyChainService struct {
 	hasStoredState bool
 }
 
-func (ms *mockEmptyChainService) ProcessBlock(b *types.Block) {}
-
 func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) bool {
 	return false
-}
-
-func (ms *mockEmptyChainService) ProcessedBlockHashes() [][32]byte {
-	return nil
-}
-
-func (ms *mockEmptyChainService) ProcessActiveState(a *types.ActiveState) error {
-	return nil
-}
-
-func (ms *mockEmptyChainService) ContainsActiveState(h [32]byte) bool {
-	return false
-}
-
-func (ms *mockEmptyChainService) ProcessedActiveStateHashes() [][32]byte {
-	return nil
-}
-
-func (ms *mockEmptyChainService) ProcessCrystallizedState(c *types.CrystallizedState) error {
-	return nil
-}
-
-func (ms *mockEmptyChainService) ContainsCrystallizedState(h [32]byte) bool {
-	return false
-}
-
-func (ms *mockEmptyChainService) ProcessedCrystallizedStateHashes() [][32]byte {
-	return nil
 }
 
 func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
 	return ms.hasStoredState, nil
 }
 
-func (ms *mockEmptyChainService) setState(flag bool) {
-	ms.hasStoredState = flag
+func (ms *mockEmptyChainService) IncomingBlockFeed() *event.Feed {
+	return new(event.Feed)
 }
 
-func (ms *mockEmptyChainService) SaveBlock(block *types.Block) error {
-	return nil
+func (ms *mockEmptyChainService) setState(flag bool) {
+	ms.hasStoredState = flag
 }
 
 func TestStartEmptyState(t *testing.T) {
