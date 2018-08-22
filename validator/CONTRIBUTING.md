@@ -1,8 +1,8 @@
 # Contribution Guidelines
 
-Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? Our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/client/READINGS.md) doc includes comprehensive information on Ethereum and sharding for both part-time and core contributors to the project.
+Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? Our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/validator/READINGS.md) doc includes comprehensive information on Ethereum and sharding for both part-time and core contributors to the project.
 
-Additionally, our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md) serves source of truth for all things related to our implementation of sharding fo Ethereum.
+Additionally, our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/validator/README.md) serves source of truth for all things related to our implementation of sharding fo Ethereum.
 
 You can explore our [Current Projects](https://github.com/prysmaticlabs/prysm/projects) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Gitter](https://gitter.im/prysmaticlabs/geth-sharding) drop us a line there if you want to get more involved or have any questions on our implementation!
 
@@ -44,7 +44,7 @@ Anyone can become a part-time contributor and help out on implementing sharding.
 -   Follow up on open PRs
     -   Have an estimated timeframe to completion and let the core contributors know if a PR will take longer than expected
 
-We do not expect all part-time contributors to be experts on all the latest sharding documentation, but all contributors should at least be familiarized with our sharding [README.md](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md) and have gone through the required Ethereum readings as posted on our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/client/READINGS.md) document.
+We do not expect all part-time contributors to be experts on all the latest sharding documentation, but all contributors should at least be familiarized with our sharding [README.md](https://github.com/prysmaticlabs/prysm/blob/master/validator/README.md) and have gone through the required Ethereum readings as posted on our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/validator/READINGS.md) document.
 
 ### Core Contributors
 

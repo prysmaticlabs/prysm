@@ -53,7 +53,7 @@ Sharding revolves around being able to store shard metadata in a full proof of s
 
 # Roadmap Phases
 
-Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) by the Foundation's research team and roll out a sharding client that communicates with this beacon.
+Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) by the Foundation's research team and roll out a sharding validator that communicates with this beacon.
 
 To concretize these phases, we will be releasing our implementation of sharding and the beacon chain as follows:
 
@@ -118,7 +118,7 @@ Our Ruby Release requires users to start a local geth node running a localized, 
 
 1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 
-2.  _**Assign the validator as a proposer/attester/attester based on RANDAO mechanism:**_ on incoming headers, the client will interact with the SMC to check if the current user is an eligible attester for an upcoming period (only a few minutes notice)
+2.  _**Assign the validator as a proposer/attester/attester based on RANDAO mechanism:**_ on incoming headers, the validator will interact with the SMC to check if the current user is an eligible attester for an upcoming period (only a few minutes notice)
 
 3.  _**Process shard cross-links:**_ once a attester is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
 
