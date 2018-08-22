@@ -84,9 +84,6 @@ func TestStartStop(t *testing.T) {
 	}
 	chainService.Start()
 
-	if len(chainService.ProcessedBlockHashes()) != 0 {
-		t.Errorf("incorrect processedBlockHashes size")
-	}
 	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 0 {
 		t.Errorf("incorrect recent block hashes")
 	}
@@ -220,10 +217,11 @@ func TestProcessingBadBlock(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db,
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
+		BeaconBlockBuf:   0,
+		IncomingBlockBuf: 0,
+		BeaconDB:         db,
+		Chain:            beaconChain,
+		Web3Service:      web3Service,
 	}
 	chainService, _ := NewChainService(ctx, cfg)
 
@@ -252,7 +250,15 @@ func TestProcessingBadBlock(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	chainService.ProcessBlock(block)
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
+
+	chainService.incomingBlockChan <- block
+	chainService.cancel()
+	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "parent hash points to nil")
 	hook.Reset()
 }
@@ -312,6 +318,9 @@ func TestRunningChainService(t *testing.T) {
 	}()
 
 	parentBlock := NewBlock(t, nil)
+	if err := chainService.SaveBlock(parentBlock); err != nil {
+		t.Fatal(err)
+	}
 	parentHash, _ := parentBlock.Hash()
 
 	activeStateHash, err := active.Hash()
@@ -327,8 +336,25 @@ func TestRunningChainService(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	chainService.latestProcessedBlock <- block
-	chainService.updateHead(66)
+	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nextBlock := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            66,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		ParentHash:            h[:],
+		PowChainRef:           []byte("a"),
+	})
+
+	if err := chainService.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.incomingBlockChan <- block
+	chainService.incomingBlockChan <- nextBlock
 	chainService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")

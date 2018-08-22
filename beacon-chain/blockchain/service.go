@@ -25,11 +25,11 @@ type ChainService struct {
 	web3Service                    *powchain.Web3Service
 	validator                      bool
 	incomingBlockFeed              *event.Feed
+	incomingBlockChan              chan *types.Block
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
 	lastSlot                       uint64
-	processedBlockHashes           [][32]byte
 	// These are the data structures used by the fork choice rule.
 	// We store processed blocks and states into a slice by SlotNumber.
 	// For example, at slot 5, we might have received 10 different blocks,
@@ -44,10 +44,11 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf int
-	Chain          *BeaconChain
-	Web3Service    *powchain.Web3Service
-	BeaconDB       *database.DB
+	BeaconBlockBuf   int
+	IncomingBlockBuf int
+	Chain            *BeaconChain
+	Web3Service      *powchain.Web3Service
+	BeaconDB         *database.DB
 }
 
 // NewChainService instantiates a new service instance that will
@@ -68,11 +69,11 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:                       cfg.Web3Service,
 		validator:                         isValidator,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
+		incomingBlockChan:                 make(chan *types.Block, cfg.IncomingBlockBuf),
 		lastSlot:                          1, // TODO: Initialize from the db.
 		incomingBlockFeed:                 new(event.Feed),
 		canonicalBlockFeed:                new(event.Feed),
 		canonicalCrystallizedStateFeed:    new(event.Feed),
-		processedBlockHashes:              [][32]byte{},
 		processedBlocksBySlot:             make(map[uint64][]*types.Block),
 		processedCrystallizedStatesBySlot: make(map[uint64][]*types.CrystallizedState),
 		processedActiveStatesBySlot:       make(map[uint64][]*types.ActiveState),
@@ -137,45 +138,6 @@ func (c *ChainService) HasStoredState() (bool, error) {
 	}
 
 	return true, nil
-}
-
-// ProcessedBlockHashes exposes a getter for the processed block hashes of the chain.
-func (c *ChainService) ProcessedBlockHashes() [][32]byte {
-	return c.processedBlockHashes
-}
-
-// ProcessBlock accepts a new block for inclusion in the chain.
-// TODO: Refactor into single routine that subscribes to the event feed
-// from the sync service instead.
-func (c *ChainService) ProcessBlock(block *types.Block) {
-	var canProcess bool
-	var err error
-
-	h, err := block.Hash()
-	if err != nil {
-		log.Debugf("Could not hash incoming block: %v", err)
-	}
-	if block.SlotNumber() > c.lastSlot && block.SlotNumber() > 1 {
-		c.updateHead(block.SlotNumber())
-	}
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-
-	// Process block as a validator if beacon node has registered, else process block as an observer.
-	if c.validator {
-		canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
-	} else {
-		canProcess, err = c.chain.CanProcessBlock(nil, block, false)
-	}
-	if err != nil {
-		// We might receive a lot of blocks that fail validity conditions,
-		// so we create a debug level log instead of an error log.
-		log.Debugf("Incoming block failed validity conditions: %v", err)
-	}
-	if canProcess {
-		// If the block can be processed, we derive its state and store it in an in-memory
-		// data structure for our fork choice rule. This block is NOT yet canonical.
-		c.latestProcessedBlock <- block
-	}
 }
 
 // SaveBlock is a mock which saves a block to the local db using the
@@ -260,6 +222,7 @@ func (c *ChainService) updateHead(slot uint64) {
 
 	// Update the last received slot.
 	c.lastSlot = slot
+
 	// We fire events that notify listeners of a new block (or crystallized state in
 	// the case of a state transition). This is useful for the beacon node's gRPC
 	// server to stream these events to beacon clients.
@@ -271,15 +234,15 @@ func (c *ChainService) updateHead(slot uint64) {
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
+	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		// Listen for the latestProcessedBlock which has
-		// passed validity conditions but has not yet been determined as
-		// canonical by the fork choice rule.
-		case block := <-c.latestProcessedBlock:
+		// Listen for a newly received incoming block from the sync service.
+		case block := <-c.incomingBlockChan:
 			// 3 steps:
 			// - Compute the active state for the block.
 			// - Compute the crystallized state for the block if cycle transition.
@@ -288,7 +251,45 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Another routine will run that will continually compute
 			// the canonical block and states from this data structure using the
 			// fork choice rule.
-			slot := block.SlotNumber()
+			var canProcess bool
+			var err error
+
+			h, err := block.Hash()
+			if err != nil {
+				log.Debugf("Could not hash incoming block: %v", err)
+			}
+
+			receivedSlotNumber := block.SlotNumber()
+
+			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
+				c.updateHead(receivedSlotNumber)
+			}
+			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
+
+			// Process block as a validator if beacon node has registered, else process block as an observer.
+			if c.validator {
+				canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
+			} else {
+				canProcess, err = c.chain.CanProcessBlock(nil, block, false)
+			}
+			if err != nil {
+				// We might receive a lot of blocks that fail validity conditions,
+				// so we create a debug level log instead of an error log.
+				log.Debugf("Incoming block failed validity conditions: %v", err)
+			}
+
+			// If we cannot process this block, we keep listening.
+			if !canProcess {
+				continue
+			}
+
+			// 3 steps:
+			// - Compute the active state for the block.
+			// - Compute the crystallized state for the block if cycle transition.
+			// - Store both states and the block into a data structure used for fork choice
+			//
+			// This data structure will be used by the updateHead function to determine
+			// canonical blocks and states.
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
 			activeState, err := c.chain.computeNewActiveState(block.PowChainRef())
@@ -297,25 +298,34 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Entering cycle transitions.
-			transition := c.chain.IsCycleTransition(block.SlotNumber())
+			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
 				crystallized, err := c.chain.computeNewCrystallizedState(activeState, block)
 				if err != nil {
 					log.Errorf("Compute crystallized state failed: %v", err)
 				}
-				c.processedCrystallizedStatesBySlot[slot] = append(c.processedCrystallizedStatesBySlot[slot], crystallized)
+				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
+					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
+					crystallized,
+				)
 			} else {
-				c.processedCrystallizedStatesBySlot[slot] = append(c.processedCrystallizedStatesBySlot[slot], c.chain.CrystallizedState())
+				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
+					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
+					c.chain.CrystallizedState(),
+				)
 			}
 
 			// We store a slice of received states and blocks.
 			// perceived slot number for forks.
-			c.processedBlocksBySlot[slot] = append(c.processedBlocksBySlot[slot], block)
-			c.processedActiveStatesBySlot[slot] = append(c.processedActiveStatesBySlot[slot], activeState)
+			c.processedBlocksBySlot[receivedSlotNumber] = append(
+				c.processedBlocksBySlot[receivedSlotNumber],
+				block,
+			)
+			c.processedActiveStatesBySlot[receivedSlotNumber] = append(
+				c.processedActiveStatesBySlot[receivedSlotNumber],
+				activeState,
+			)
 			log.Info("Finished processing received block and states into DAG")
 		}
 	}
-}
-
-func (c *ChainService) run(done <-chan struct{}) {
 }
