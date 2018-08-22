@@ -513,7 +513,9 @@ func (b *BeaconChain) getBlockHash(slot uint64, block *types.Block) ([]byte, err
 	return b.ActiveState().RecentBlockHashes()[int(slot)-sback].Bytes(), nil
 }
 
+// processAttestations processes the attestations of an incoming block.
 func (b *BeaconChain) processAttestations(block *types.Block) error {
+	// Validate attestation's slot number has is within range of incoming block number.
 	slotNumber := int(block.SlotNumber())
 	for _, attestation := range block.Attestations() {
 		if int(attestation.Slot) > slotNumber {
@@ -526,18 +528,23 @@ func (b *BeaconChain) processAttestations(block *types.Block) error {
 				attestation.Slot,
 				slotNumber-params.CycleLength)
 		}
+
+		// Get all the block hashes up to cycle length.
 		parentHashes := b.getSignedParentHashes(block, attestation)
-		attesterIndices, err := b.getAttestationIndices(attestation)
+		attesterIndices, err := b.getAttestatorIndices(attestation)
 		if err != nil {
 			return err
 		}
 
+		// Verify attester bitfields matches crystallized state's prev computed bitfield.
 		if err := b.validateAttesterBitfields(attestation, attesterIndices); err != nil {
 			return err
 		}
 
-		// TODO: Generate validators aggregated pub key
+		// TODO: Generate validators aggregated pub key.
 
+		// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
+		// to verify with aggregated public key and aggregated attestation signature.
 		msg := make([]byte, binary.MaxVarintLen64)
 		var signedHashesStr []byte
 		for _, parentHash := range parentHashes {
@@ -554,11 +561,12 @@ func (b *BeaconChain) processAttestations(block *types.Block) error {
 		log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
 			attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
 
-		// TODO: Verify msgHash against aggregated pub key and aggregated signature
+		// TODO: Verify msgHash against aggregated pub key and aggregated signature.
 	}
 	return nil
 }
 
+// getSignedParentHashes returns all the parent hashes stored in active state up to last ycle length.
 func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) []*common.Hash {
 	var signedParentHashes []*common.Hash
 	start := block.SlotNumber() - attestation.Slot
@@ -573,8 +581,8 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 	return signedParentHashes
 }
 
-func (b *BeaconChain) getAttestationIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
-
+// getAttestatorIndices returns the attestor committee of based from attestation's shard ID  and slot number.
+func (b *BeaconChain) getAttestatorIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
 	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc+params.CycleLength].ArrayShardAndCommittee
@@ -586,6 +594,7 @@ func (b *BeaconChain) getAttestationIndices(attestation *pb.AttestationRecord) (
 	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
 }
 
+// validateAttesterBitfields validates the attester bitfields are equal between attestation and crystallized state's calculation.
 func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecord, attesterIndices []uint32) error {
 	// Validate attester bit field has the correct length.
 	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
