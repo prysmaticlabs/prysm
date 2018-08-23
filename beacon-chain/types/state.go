@@ -1,9 +1,11 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
@@ -35,7 +37,7 @@ func NewActiveState(data *pb.ActiveState) *ActiveState {
 func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 	// Bootstrap recent block hashes to all 0s for first 2 cycles (128 slots).
 	var recentBlockHashes [][]byte
-	for i := 0; i < 2*params.ShardCount; i++ {
+	for i := 0; i < 2*params.CycleLength; i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
 	}
 	active := &ActiveState{
@@ -56,7 +58,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
 	seed := make([]byte, 0, 32)
-	committee, err := blockchain.ValidatorsByHeightShard(common.BytesToHash(seed), validators, 1, 0)
+	committee, err := casper.ValidatorsByHeightShard(common.BytesToHash(seed), validators, 1, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,6 +151,18 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	return hash, nil
 }
 
+// BlockHashForSlot returns the block hash of a given slot given a lowerBound and upperBound.
+func (a *ActiveState) BlockHashForSlot(slot uint64, block *Block) ([]byte, error) {
+	sback := int(block.SlotNumber()) - params.CycleLength*2
+	if !(sback <= int(slot) && int(slot) < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
+	}
+	if sback < 0 {
+		return a.RecentBlockHashes()[slot].Bytes(), nil
+	}
+	return a.RecentBlockHashes()[int(slot)-sback].Bytes(), nil
+}
+
 // PendingAttestations returns attestations that have not yet been processed.
 func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
 	return a.data.PendingAttestations
@@ -161,6 +175,9 @@ func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
 
 // LatestPendingAttestation returns the latest pending attestaton fields.
 func (a *ActiveState) LatestPendingAttestation() *pb.AttestationRecord {
+	if len(a.data.PendingAttestations) == 0 {
+		return nil
+	}
 	return a.data.PendingAttestations[len(a.data.PendingAttestations)-1]
 }
 

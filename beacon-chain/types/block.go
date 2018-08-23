@@ -30,6 +30,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				PowChainRef:           []byte{0},
 				ActiveStateHash:       []byte{0},
 				CrystallizedStateHash: []byte{0},
+				Timestamp:             ptypes.TimestampNow(),
 			},
 		}
 	}
