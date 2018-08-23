@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -262,6 +263,7 @@ func TestProcessingBadBlock(t *testing.T) {
 }
 
 func TestRunningChainService(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
@@ -305,7 +307,6 @@ func TestRunningChainService(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 	chainService, _ := NewChainService(ctx, cfg)
-	chainService.lastSlot = 10
 	chainService.chain.SetCrystallizedState(crystallized)
 
 	exitRoutine := make(chan bool)
@@ -326,23 +327,10 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            10,
+		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
-		PowChainRef:           []byte("a"),
-	})
-
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	nextBlock := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            11,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            h[:],
 		PowChainRef:           []byte("a"),
 	})
 
@@ -351,7 +339,83 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	chainService.incomingBlockChan <- block
-	chainService.incomingBlockChan <- nextBlock
 	chainService.cancel()
 	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Finished processing received block and states into DAG")
+}
+
+func TestUpdateHead(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+
+	}
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+	cfg := &Config{
+		BeaconBlockBuf:   0,
+		IncomingBlockBuf: 0,
+		BeaconDB:         db.DB(),
+		Chain:            beaconChain,
+		Web3Service:      web3Service,
+	}
+	chainService, _ := NewChainService(ctx, cfg)
+
+	active, crystallized := types.NewGenesisStates()
+	activeStateHash, _ := active.Hash()
+	crystallizedStateHash, _ := crystallized.Hash()
+
+	parentHash := []byte{}
+	chainService.processedBlockHashesBySlot[4] = append(
+		chainService.processedBlockHashesBySlot[4],
+		parentHash,
+	)
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:            64,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		ParentHash:            parentHash,
+		PowChainRef:           []byte("a"),
+	})
+
+	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.processedBlockHashesBySlot[64] = append(
+		chainService.processedBlockHashesBySlot[64],
+		h[:],
+	)
+	chainService.processedBlocksBySlot[64] = append(
+		chainService.processedBlocksBySlot[64],
+		block,
+	)
+	chainService.processedActiveStatesBySlot[64] = append(
+		chainService.processedActiveStatesBySlot[64],
+		active,
+	)
+	chainService.processedCrystallizedStatesBySlot[64] = append(
+		chainService.processedCrystallizedStatesBySlot[64],
+		crystallized,
+	)
+
+	chainService.lastSlot = 64
+	chainService.updateHead(65)
+	testutil.AssertLogsContain(t, hook, "Canonical block determined")
+
+	chainService.lastSlot = 100
+	chainService.updateHead(101)
 }
