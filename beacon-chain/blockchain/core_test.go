@@ -310,37 +310,7 @@ func TestCanProcessBlock(t *testing.T) {
 		t.Error("Should be able to process block, could not")
 	}
 
-	// Negative scenario #1, invalid active hash
-	block = NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            2,
-		ActiveStateHash:       []byte{'A'},
-		CrystallizedStateHash: crystallizedHash[:],
-		ParentHash:            parentHash[:],
-	})
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
-	if err == nil {
-		t.Fatalf("CanProcessBlocks failed: %v", err)
-	}
-	if canProcess {
-		t.Error("Should not be able to process block with invalid active hash")
-	}
-
-	// Negative scenario #2, invalid crystallized hash
-	block = NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            2,
-		ActiveStateHash:       activeHash[:],
-		CrystallizedStateHash: []byte{'A'},
-		ParentHash:            parentHash[:],
-	})
-	canProcess, err = beaconChain.CanProcessBlock(&mockFetcher{}, block, true)
-	if err == nil {
-		t.Fatalf("CanProcessBlocks failed: %v", err)
-	}
-	if canProcess {
-		t.Error("Should not be able to process block with invalid crystallied hash")
-	}
-
-	// Negative scenario #3, invalid timestamp
+	// Negative scenario, invalid timestamp
 	block = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            1000000,
 		ActiveStateHash:       activeHash[:],
@@ -491,10 +461,7 @@ func TestHasVoted(t *testing.T) {
 	beaconChain.ActiveState().NewPendingAttestation(pendingAttestation)
 
 	for i := 0; i < len(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield); i++ {
-		voted, err := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
-		if err != nil {
-			t.Errorf("checking bitfield for vote failed: %v", err)
-		}
+		voted := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
 		if !voted {
 			t.Error("validator voted but received didn't vote")
 		}
@@ -507,10 +474,7 @@ func TestHasVoted(t *testing.T) {
 	beaconChain.ActiveState().NewPendingAttestation(pendingAttestation)
 
 	for i := 0; i < len(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield); i++ {
-		voted, err := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
-		if err != nil {
-			t.Errorf("checking bitfield for vote failed: %v", err)
-		}
+		voted := utils.CheckBit(beaconChain.ActiveState().LatestPendingAttestation().AttesterBitfield, i)
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
@@ -859,9 +823,6 @@ func TestCanProcessAttestations(t *testing.T) {
 			},
 		},
 	})
-	if err := bc.SetCrystallizedState(crystallized); err != nil {
-		t.Fatalf("unable to mutate crystallized state: %v", err)
-	}
 	if err := bc.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}

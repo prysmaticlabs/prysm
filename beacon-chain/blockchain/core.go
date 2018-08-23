@@ -209,22 +209,6 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	if !canProcess {
 		return false, fmt.Errorf("time stamp verification for beacon block %v failed", block.SlotNumber())
 	}
-
-	canProcess, err = b.verifyBlockActiveHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		return false, fmt.Errorf("active state verification for beacon block %v failed", block.SlotNumber())
-	}
-
-	canProcess, err = b.verifyBlockCrystallizedHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		return false, fmt.Errorf("crystallized verification for beacon block %v failed", block.SlotNumber())
-	}
 	return canProcess, nil
 }
 
@@ -384,10 +368,7 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 		log.Info("Applying rewards and penalties for the validators from last epoch")
 
 		for i, attesterIndex := range activeValidators {
-			voted, err := utils.CheckBit(b.state.ActiveState.LatestPendingAttestation().AttesterBitfield, attesterIndex)
-			if err != nil {
-				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
-			}
+			voted := utils.CheckBit(b.state.ActiveState.LatestPendingAttestation().AttesterBitfield, attesterIndex)
 			if voted {
 				validators[i].Balance += params.AttesterReward
 			} else {
@@ -606,11 +587,7 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 	lastBit := len(attesterIndices)
 	if lastBit%8 != 0 {
 		for i := 0; i < 8-lastBit%8; i++ {
-			voted, err := utils.CheckBit(attestation.AttesterBitfield, lastBit+i)
-			if err != nil {
-				return err
-			}
-			if voted {
+			if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
 				return errors.New("attestation has non-zero trailing bits")
 			}
 		}

@@ -1,4 +1,4 @@
-// Package node defines a sharding validator which connects to a
+// Package node defines a validator node which connects to a
 // full beacon node as part of the Ethereum 2.0 specification.
 package node
 

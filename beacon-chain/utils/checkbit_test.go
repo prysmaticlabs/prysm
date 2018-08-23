@@ -15,19 +15,12 @@ func TestCheckBit(t *testing.T) {
 		{a: []byte{146}, b: 4, c: false}, //10010010
 		{a: []byte{179}, b: 7, c: true},  //10110011
 		{a: []byte{49}, b: 6, c: false},  //00110001
-
 	}
 	for _, tt := range tests {
-		set, err := CheckBit(tt.a, tt.b)
-		if err != nil {
-			t.Fatalf("Call check bit failed: %v", err)
-		}
+		set := CheckBit(tt.a, tt.b)
 		if set != tt.c {
 			t.Errorf("Test check bit set failed with %v and location %v", tt.a, tt.b)
 		}
-	}
-	if _, err := CheckBit([]byte{1}, 8); err == nil {
-		t.Errorf("Call check bit should have failed with invalid index")
 	}
 }
 
@@ -44,7 +37,7 @@ func TestBitSetCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if int(BitSetCount(tt.a)) != tt.b {
-			t.Errorf("Expected %v, Got %v", tt.b, int(BitSetCount(tt.a)))
+			t.Errorf("BitSetCount(%d) = %v, want = %d", tt.a, int(BitSetCount(tt.a)), tt.b)
 		}
 	}
 }
@@ -62,7 +55,7 @@ func TestByteLength(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if BitLength(tt.a) != tt.b {
-			t.Errorf("Expected %v, Got %v", tt.b, BitLength(tt.b))
+			t.Errorf("BitLength(%d) = %d, want = %d", tt.a, BitLength(tt.a), tt.b)
 		}
 	}
 }

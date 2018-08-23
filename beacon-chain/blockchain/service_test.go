@@ -391,3 +391,76 @@ func TestRunningChainService(t *testing.T) {
 	<-chainService.canonicalBlockEvent
 	exitRoutine <- true
 }
+
+func TestProcessingBlockWithAttestations(t *testing.T) {
+	ctx := context.Background()
+	tmp := fmt.Sprintf("%s/beacontest", os.TempDir())
+	defer os.RemoveAll(tmp)
+	config := &database.DBConfig{DataDir: tmp, Name: "beacontestdata", InMemory: false}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+
+	}
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	cfg := &Config{
+		BeaconBlockBuf:  0,
+		AnnouncementBuf: 1,
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 40; i++ {
+		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
+		validators = append(validators, validator)
+	}
+
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
+		LastStateRecalc: 64,
+		Validators:      validators,
+		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
+				},
+			},
+		},
+	})
+	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+
+	var recentBlockHashes [][]byte
+	for i := 0; i < params.CycleLength+1; i++ {
+		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
+	}
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
+	if err := beaconChain.SetActiveState(active); err != nil {
+		t.Fatalf("unable to mutate active state: %v", err)
+	}
+
+	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 1,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
+		},
+	})
+
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.ProcessBlock(block)
+		<-exitRoutine
+	}()
+	<-chainService.latestBeaconBlock
+	exitRoutine <- true
+}
