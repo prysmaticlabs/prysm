@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -259,12 +258,10 @@ func TestProcessingBadBlock(t *testing.T) {
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "parent hash points to nil")
 	hook.Reset()
 }
 
 func TestRunningChainService(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
@@ -357,5 +354,4 @@ func TestRunningChainService(t *testing.T) {
 	chainService.incomingBlockChan <- nextBlock
 	chainService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 }
