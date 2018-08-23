@@ -484,14 +484,14 @@ func (b *BeaconChain) getIndicesForSlot(slot uint64) (*pb.ShardAndCommitteeArray
 
 // getBlockHash returns the block hash of a slot.
 func (b *BeaconChain) getBlockHash(slot uint64, block *types.Block) ([]byte, error) {
-	sback := int(block.SlotNumber()) - params.CycleLength*2
-	if !(sback <= int(slot) && int(slot) < sback+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
+	slotBack := int(block.SlotNumber()) - params.CycleLength*2
+	if !(slotBack <= int(slot) && int(slot) < slotBack+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, slotBack, slotBack+params.CycleLength*2)
 	}
-	if sback < 0 {
+	if slotBack < 0 {
 		return b.ActiveState().RecentBlockHashes()[slot].Bytes(), nil
 	}
-	return b.ActiveState().RecentBlockHashes()[int(slot)-sback].Bytes(), nil
+	return b.ActiveState().RecentBlockHashes()[int(slot)-slotBack].Bytes(), nil
 }
 
 // processAttestations processes the attestations of an incoming block.
@@ -583,7 +583,7 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
 	}
 
-	// Validate attestation can not have non-zero trailing bits.
+	// Valid attestation can not have non-zero trailing bits.
 	lastBit := len(attesterIndices)
 	if lastBit%8 != 0 {
 		for i := 0; i < 8-lastBit%8; i++ {

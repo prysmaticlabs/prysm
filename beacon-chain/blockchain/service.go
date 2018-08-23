@@ -146,7 +146,6 @@ func (c *ChainService) ProcessBlock(block *types.Block) error {
 	} else {
 		canProcess, err = c.chain.CanProcessBlock(nil, block, false)
 	}
-	fmt.Println(err)
 	if err != nil {
 		// We might receive a lot of blocks that fail validity conditions,
 		// so we create a debug level log instead of an error log.
