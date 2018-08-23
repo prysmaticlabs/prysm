@@ -9,7 +9,7 @@ Before you begin, check out our [Contribution Guidelines](#contributing) and joi
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/client/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
+Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/validator/README.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
 
 
 # Table of Contents
@@ -95,14 +95,15 @@ Now, save the passphrase you used in the geth node into a text file called passw
 Build our system first
 
 ```
-bazel build //...
+bazel build //beacon-chain:beacon-chain
+bazel build //validator:validator
 ```
 
 ## Step 1: Deploy a Validator Registation Contract
 
 Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/deployVRC/README.md).
 
-## Step 2: Running a Beacon Node
+## Step 2a: Running a Beacon Node as a Validator or Observer
 
 Make sure a geth node is running as a separate process according to the instructions from the previous section. Then, you can run a full beacon node as follows:
 
@@ -110,10 +111,11 @@ Make sure a geth node is running as a separate process according to the instruct
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
-  --rpc-port 4000
+  --rpc-port 4000 \
+  --validator
 ```
 
-This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding clients to connect to it, and begins listening for p2p events.
+This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding validators to connect to it, and begins listening for p2p events.
 
 To try out the beacon node in development by simulating incoming blocks, run the same command above but enable the `--simulator` and a debug level, log verbosity with `--verbosity debug` to see everything happening underneath the hood.
 
@@ -122,45 +124,70 @@ bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
+  --validator \
   --simulator \
   --verbosity debug
 ```
 
 Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/beacon-chain/VALIDATOR_REGISTER.md)
 
-## Step 3: Running a Sharding Client
+If you don't want to deposit ETH and become a validator, one option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
+in validator duties such as proposing or attesting blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.
 
-Once your beacon node is up, you'll need to attach a sharding client as a separate process. This client is in charge of running attester/proposer responsibilities and handling shards (shards to be designed in phase 2). This client will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
+```
+bazel run //beacon-chain --\
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+```
+
+### Running via Docker
+
+To run the beacon node within a docker container, use the `//beacon-chain:image` target.
+
+```text
+bazel run //beacon-chain:image --\
+  --web3provider  ws://127.0.0.1:8546 \
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+  --simulator \
+  --verbosity debug
+```
+
+## Step 3: Running a Beacon/Sharding validator
+
+Once your beacon node is up, you'll need to attach a validator as a separate process. This validator is in charge of running attester/proposer responsibilities and processing shard cross links (shards to be designed in phase 2). This validator will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
 
 Run as follows:
 
 ```
-bazel run //client --\
+bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
   --verbosity debug
 ```
 
-Then, the beacon node will update this client with new blocks + crystallized states in order for the client to act as an attester or proposer.
+Then, the beacon node will update this validator with new blocks + crystallized states in order for the validator to act as an attester or proposer.
 
-## Running via Docker
+### Running via Docker
 
-To run the client within a docker container, use the `//client:image` target.
+To run the validator within a docker container, use the `//validator:image` target.
 
 ```text
-bazel run //client:image
+bazel run //validator:image --\
+  --beacon-rpc-provider http://localhost:4000 \
+  --verbosity debug
 
 INFO: Build options have changed, discarding analysis cache.
-INFO: Analysed target //client:image (306 packages loaded).
+INFO: Analysed target //validator:image (306 packages loaded).
 INFO: Found 1 target...
-Target //client:image up-to-date:
-  bazel-bin/client/image-layer.tar
+Target //validator:image up-to-date:
+  bazel-bin/validator/image-layer.tar
 INFO: Elapsed time: 8.568s, Critical Path: 0.22s
 INFO: 0 processes.
 INFO: Build completed successfully, 1 total action
 INFO: Build completed successfully, 1 total action
 37fd88e7190b: Loading layer  22.42MB/22.42MB
 Loaded image ID: sha256:89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1
-Tagging 89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1 as bazel/client:image
+Tagging 89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1 as bazel/validator:image
 ...
 ```
 
@@ -185,7 +212,7 @@ gometalinter ./...
 
 # Contributing
 
-We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/prysm/blob/master/client/CONTRIBUTING.md)! Check it out to get started.
+We have put all of our contribution guidelines into [CONTRIBUTING.md](https://github.com/prysmaticlabs/prysm/blob/master/validator/CONTRIBUTING.md)! Check it out to get started.
 
 ![nyancat](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBSus2ozk_HuGdHMHKWjb1W5CmwwoxmYIjIBmERE1u-WeONpJJXg)
 

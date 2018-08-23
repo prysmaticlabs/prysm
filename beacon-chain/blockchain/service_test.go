@@ -75,12 +75,16 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-
-	chainService, err := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	chainService, err := NewChainService(ctx, cfg, beaconChain, db, nil)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+	chainService.Start()
 
+	chainService, err = NewChainService(ctx, cfg, beaconChain, db, web3Service)
+	if err != nil {
+		t.Fatalf("unable to setup chain service: %v", err)
+	}
 	chainService.Start()
 
 	if len(chainService.ProcessedBlockHashes()) != 0 {
@@ -114,6 +118,9 @@ func TestStartStop(t *testing.T) {
 	if hasState {
 		t.Errorf("has stored state should return false")
 	}
+	chainService.CanonicalBlockEvent()
+	chainService.CanonicalCrystallizedStateEvent()
+
 	chainService, _ = NewChainService(ctx, cfg, beaconChain, db, web3Service)
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
@@ -274,6 +281,10 @@ func TestProcessingBadBlock(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 	chainService, _ := NewChainService(ctx, cfg, beaconChain, db, web3Service)
+
+	if err = chainService.ProcessBlock(&types.Block{}); err == nil {
+		t.Fatalf("Procss block should have failed with nil block")
+	}
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
 	activeStateHash, err := active.Hash()

@@ -16,7 +16,7 @@ func ShuffleIndices(seed common.Hash, validatorList []int) ([]int, error) {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}
 
-	hashSeed := blake2b.Sum256(seed[:])
+	hashSeed := blake2b.Sum512(seed[:])
 	validatorCount := len(validatorList)
 
 	// shuffle stops at the second to last index.

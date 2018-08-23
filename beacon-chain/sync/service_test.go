@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -128,11 +127,11 @@ func TestProcessBlockHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -162,7 +161,7 @@ func TestProcessBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -206,7 +205,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -276,7 +275,7 @@ func TestProcessSameBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -325,11 +324,11 @@ func TestProcessCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.CrystallizedStateHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -358,11 +357,11 @@ func TestProcessActiveHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.ActiveStateHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -391,12 +390,12 @@ func TestProcessBadCrystallizedHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
 	// Send blockHashAnnounce msg format to crystallized state channel. Should fail
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -425,12 +424,12 @@ func TestProcessBadActiveHash(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
 	// Send blockHashAnnounce msg format to active state channel. Should fail
-	announceHash := blake2b.Sum256([]byte{})
+	announceHash := blake2b.Sum512([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -459,7 +458,7 @@ func TestProcessCrystallizedStates(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -525,7 +524,7 @@ func TestProcessActiveStates(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -590,7 +589,7 @@ func TestProcessSameCrystallizedState(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -643,7 +642,7 @@ func TestProcessSameActiveState(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		ss.run(ss.ctx.Done())
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -685,224 +684,72 @@ func TestProcessSameActiveState(t *testing.T) {
 	hook.Reset()
 }
 
-func TestSetBlockForInitialSync(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
-	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-
-	go func() {
-		ss.runInitialSync(delayChan, ss.ctx.Done())
-		exitRoutine <- true
-	}()
-
-	generichash := make([]byte, 32)
-	generichash[0] = 'a'
-
-	block := &pb.BeaconBlock{
-		PowChainRef:           []byte{1, 2, 3},
-		ParentHash:            generichash,
-		SlotNumber:            uint64(20),
-		CrystallizedStateHash: generichash,
-	}
-
-	blockResponse := &pb.BeaconBlockResponse{Block: block}
-
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse,
-	}
-
-	ss.blockBuf <- msg1
-
-	ss.cancel()
-	<-exitRoutine
-
-	var hash [32]byte
-	copy(hash[:], blockResponse.Block.CrystallizedStateHash)
-
-	if hash != ss.initialCrystallizedStateHash {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateHash)
-	}
-
-	hook.Reset()
-
+type mockEmptyChainService struct {
+	hasStoredState bool
 }
 
-func TestSavingBlocksInSync(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
-	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-
-	go func() {
-		ss.runInitialSync(delayChan, ss.ctx.Done())
-		exitRoutine <- true
-	}()
-
-	generichash := make([]byte, 32)
-	generichash[0] = 'a'
-
-	crystallizedState := &pb.CrystallizedState{
-		LastFinalizedSlot: 99,
-	}
-
-	stateResponse := &pb.CrystallizedStateResponse{
-		CrystallizedState: crystallizedState,
-	}
-
-	incorrectState := &pb.CrystallizedState{
-		LastFinalizedSlot: 9,
-		LastJustifiedSlot: 20,
-	}
-
-	incorrectStateResponse := &pb.CrystallizedStateResponse{
-		CrystallizedState: incorrectState,
-	}
-
-	crystallizedStateHash, err := types.NewCrystallizedState(crystallizedState).Hash()
-	if err != nil {
-		t.Fatalf("unable to get hash of crystallized state: %v", err)
-	}
-
-	getBlockResponseMsg := func(slotNumber uint64) p2p.Message {
-		block := &pb.BeaconBlock{
-			PowChainRef:           []byte{1, 2, 3},
-			ParentHash:            generichash,
-			SlotNumber:            slotNumber,
-			CrystallizedStateHash: crystallizedStateHash[:],
-		}
-
-		blockResponse := &pb.BeaconBlockResponse{
-			Block: block,
-		}
-
-		return p2p.Message{
-			Peer: p2p.Peer{},
-			Data: blockResponse,
-		}
-	}
-
-	msg1 := getBlockResponseMsg(0)
-
-	msg2 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: incorrectStateResponse,
-	}
-
-	ss.blockBuf <- msg1
-	ss.crystallizedStateBuf <- msg2
-
-	if ss.currentSlotNumber == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlotNumber)
-	}
-
-	msg2.Data = stateResponse
-
-	ss.crystallizedStateBuf <- msg2
-
-	if crystallizedStateHash != ss.initialCrystallizedStateHash {
-		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateHash)
-	}
-
-	msg1 = getBlockResponseMsg(30)
-	ss.blockBuf <- msg1
-
-	if stateResponse.CrystallizedState.GetLastFinalizedSlot() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedSlot())
-	}
-
-	msg1 = getBlockResponseMsg(100)
-	ss.blockBuf <- msg1
-
-	ss.cancel()
-	<-exitRoutine
-
-	br := msg1.Data.(*pb.BeaconBlockResponse)
-	if br.Block.GetSlotNumber() != ss.currentSlotNumber {
-		t.Fatalf("slotnumber not updated despite receiving a valid block: %v", ss.currentSlotNumber)
-	}
-
-	hook.Reset()
-
+func (ms *mockEmptyChainService) ProcessBlock(b *types.Block) error {
+	return nil
 }
 
-func TestDelayChan(t *testing.T) {
+func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) bool {
+	return false
+}
+
+func (ms *mockEmptyChainService) ProcessedBlockHashes() [][32]byte {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ProcessActiveState(a *types.ActiveState) error {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ContainsActiveState(h [32]byte) bool {
+	return false
+}
+
+func (ms *mockEmptyChainService) ProcessedActiveStateHashes() [][32]byte {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ProcessCrystallizedState(c *types.CrystallizedState) error {
+	return nil
+}
+
+func (ms *mockEmptyChainService) ContainsCrystallizedState(h [32]byte) bool {
+	return false
+}
+
+func (ms *mockEmptyChainService) ProcessedCrystallizedStateHashes() [][32]byte {
+	return nil
+}
+
+func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
+	return ms.hasStoredState, nil
+}
+
+func (ms *mockEmptyChainService) setState(flag bool) {
+	ms.hasStoredState = flag
+}
+
+func (ms *mockEmptyChainService) SaveBlock(block *types.Block) error {
+	return nil
+}
+
+func TestStartEmptyState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := Config{BlockBufferSize: 0, CrystallizedStateBufferSize: 0}
-	ms := &mockChainService{}
+	cfg := DefaultConfig()
+	ms := &mockEmptyChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-
-	go func() {
-		ss.runInitialSync(delayChan, ss.ctx.Done())
-		exitRoutine <- true
-	}()
-
-	generichash := make([]byte, 32)
-	generichash[0] = 'a'
-
-	crystallizedstate := &pb.CrystallizedState{
-		LastFinalizedSlot: 99,
-	}
-
-	stateResponse := &pb.CrystallizedStateResponse{
-		CrystallizedState: crystallizedstate,
-	}
-
-	crystallizedStateHash, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
-	if err != nil {
-		t.Fatalf("unable to get hash of crystallized state: %v", err)
-	}
-
-	block := &pb.BeaconBlock{
-		PowChainRef:           []byte{1, 2, 3},
-		ParentHash:            generichash,
-		SlotNumber:            uint64(20),
-		CrystallizedStateHash: crystallizedStateHash[:],
-	}
-
-	blockResponse := &pb.BeaconBlockResponse{
-		Block: block,
-	}
-
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse,
-	}
-
-	msg2 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: stateResponse,
-	}
-
-	ss.blockBuf <- msg1
-
-	ss.crystallizedStateBuf <- msg2
-
-	blockResponse.Block.SlotNumber = 100
-	msg1.Data = blockResponse
-
-	ss.blockBuf <- msg1
-
-	delayChan <- time.Time{}
-
-	ss.cancel()
-	<-exitRoutine
-
-	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+	ss.Start()
+	testutil.AssertLogsContain(t, hook, "empty chain state, but continue sync")
 
 	hook.Reset()
+	ms.setState(true)
 
+	ss.Start()
+	testutil.AssertLogsDoNotContain(t, hook, "empty chain state, but continue sync")
+
+	ss.cancel()
 }

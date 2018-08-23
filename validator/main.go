@@ -1,14 +1,13 @@
-// Package beacon-chain defines all the utlities needed for a beacon chain node.
 package main
 
 import (
 	"os"
 	"runtime"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/validator/node"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -22,11 +21,12 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	beacon, err := node.NewBeaconNode(ctx)
+	shardingNode, err := node.NewShardInstance(ctx)
 	if err != nil {
 		return err
 	}
-	beacon.Start()
+
+	shardingNode.Start()
 	return nil
 }
 
@@ -36,7 +36,7 @@ func main() {
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
 	log := logrus.WithField("prefix", "main")
-	app := cli.NewApp()
+
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 USAGE:
@@ -55,21 +55,16 @@ VERSION:
    {{.Version}}
    {{end}}
 `
-	app.Name = "beacon-chain"
-	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
-	app.Action = startNode
 
+	app := cli.NewApp()
+	app.Name = "sharding"
+	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
+`
+	app.Action = startNode
 	app.Flags = []cli.Flag{
-		utils.SimulatorFlag,
-		utils.ValidatorFlag,
-		utils.VrcContractFlag,
-		utils.PubKeyFlag,
-		utils.Web3ProviderFlag,
-		utils.RPCPort,
-		utils.CertFlag,
-		utils.KeyFlag,
-		cmd.DataDirFlag,
+		types.BeaconRPCProviderFlag,
 		cmd.VerbosityFlag,
+		cmd.DataDirFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
@@ -81,6 +76,11 @@ VERSION:
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
+	}
+
+	app.After = func(ctx *cli.Context) error {
+		debug.Exit()
+		return nil
 	}
 
 	if err := app.Run(os.Args); err != nil {
