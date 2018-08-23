@@ -11,10 +11,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -182,74 +180,6 @@ func TestSetCrystallizedState(t *testing.T) {
 	}
 	if crystallized.DynastySeed() != newBeaconChain.state.CrystallizedState.DynastySeed() {
 		t.Errorf("crystallized state current checkpoint incorrect. wanted %v, got %v", crystallized.DynastySeed(), newBeaconChain.state.CrystallizedState.DynastySeed())
-	}
-}
-
-func TestSampleAttestersAndProposers(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-	// Create validators more than params.MaxValidators, this should fail.
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.MaxValidators+1; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
-		validators = append(validators, validator)
-	}
-	_, crystallized := types.NewGenesisStates()
-	crystallized.SetValidators(validators)
-	crystallized.IncrementCurrentDynasty()
-	beaconChain.SetCrystallizedState(crystallized)
-
-	if _, _, err := casper.SampleAttestersAndProposers(common.Hash{'A'}, crystallized); err == nil {
-		t.Errorf("GetAttestersProposer should have failed")
-	}
-
-	// computeNewActiveState should fail the same.
-	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte{'A'})); err == nil {
-		t.Errorf("computeNewActiveState should have failed")
-	}
-
-	// ValidatorsByHeightShard should fail the same.
-	if _, err := casper.ValidatorsByHeightShard(crystallized); err == nil {
-		t.Errorf("ValidatorsByHeightShard should have failed")
-	}
-
-	// Create 1000 validators in ActiveValidators.
-	validators = validators[:0]
-	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
-		validators = append(validators, validator)
-	}
-
-	_, crystallized = types.NewGenesisStates()
-	crystallized.SetValidators(validators)
-	crystallized.IncrementCurrentDynasty()
-	beaconChain.SetCrystallizedState(crystallized)
-
-	attesters, proposer, err := casper.SampleAttestersAndProposers(common.Hash{'A'}, crystallized)
-	if err != nil {
-		t.Errorf("GetAttestersProposer function failed: %v", err)
-	}
-
-	activeValidators := casper.ActiveValidatorIndices(crystallized)
-
-	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
-	if err != nil {
-		t.Errorf("Shuffle function function failed: %v", err)
-	}
-
-	if !reflect.DeepEqual(proposer, validatorList[len(validatorList)-1]) {
-		t.Errorf("Get proposer failed, expected: %v got: %v", validatorList[len(validatorList)-1], proposer)
-	}
-	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
-		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
-	}
-
-	indices, err := casper.ValidatorsByHeightShard(crystallized)
-	if err != nil {
-		t.Errorf("validatorsByHeightShard failed with %v:", err)
-	}
-	if len(indices) != 8192 {
-		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
 	}
 }
 

@@ -1,9 +1,13 @@
 package casper
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -33,5 +37,102 @@ func TestGetIndicesForHeight(t *testing.T) {
 	committee, _ = GetIndicesForHeight(state, 2)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
 		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	}
+}
+
+func TestSampleAttestersAndProposers(t *testing.T) {
+	// Create validators more than params.MaxValidators, this should fail.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.MaxValidators+1; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, validator)
+	}
+	_, crystallized := types.NewGenesisStates()
+	crystallized.SetValidators(validators)
+	crystallized.IncrementCurrentDynasty()
+
+	if _, _, err := SampleAttestersAndProposers(common.Hash{'A'}, crystallized); err == nil {
+		t.Errorf("GetAttestersProposer should have failed")
+	}
+
+	// ValidatorsByHeightShard should fail the same.
+	if _, err := ValidatorsByHeightShard(crystallized); err == nil {
+		t.Errorf("ValidatorsByHeightShard should have failed")
+	}
+
+	// Create 1000 validators in ActiveValidators.
+	validators = validators[:0]
+	for i := 0; i < 1000; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, validator)
+	}
+
+	_, crystallized = types.NewGenesisStates()
+	crystallized.SetValidators(validators)
+	crystallized.IncrementCurrentDynasty()
+
+	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, crystallized)
+	if err != nil {
+		t.Errorf("GetAttestersProposer function failed: %v", err)
+	}
+
+	activeValidators := ActiveValidatorIndices(crystallized)
+
+	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
+	if err != nil {
+		t.Errorf("Shuffle function function failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(proposer, validatorList[len(validatorList)-1]) {
+		t.Errorf("Get proposer failed, expected: %v got: %v", validatorList[len(validatorList)-1], proposer)
+	}
+	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
+		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
+	}
+
+	indices, err := ValidatorsByHeightShard(crystallized)
+	if err != nil {
+		t.Errorf("validatorsByHeightShard failed with %v:", err)
+	}
+	if len(indices) != 8192 {
+		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
+	}
+
+	// Create a small number of validators validators in ActiveValidators.
+	validators = validators[:0]
+	for i := 0; i < 20; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, validator)
+	}
+
+	_, crystallized = types.NewGenesisStates()
+	crystallized.SetValidators(validators)
+	crystallized.IncrementCurrentDynasty()
+
+	attesters, proposer, err = SampleAttestersAndProposers(common.Hash{'A'}, crystallized)
+	if err != nil {
+		t.Errorf("GetAttestersProposer function failed: %v", err)
+	}
+
+	activeValidators = ActiveValidatorIndices(crystallized)
+
+	validatorList, err = utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
+	if err != nil {
+		t.Errorf("Shuffle function function failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(proposer, validatorList[len(validatorList)-1]) {
+		t.Errorf("Get proposer failed, expected: %v got: %v", validatorList[len(validatorList)-1], proposer)
+	}
+	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
+		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
+	}
+
+	indices, err = ValidatorsByHeightShard(crystallized)
+	if err != nil {
+		t.Errorf("validatorsByHeightShard failed with %v:", err)
+	}
+	if len(indices) != 8192 {
+		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
 	}
 }
