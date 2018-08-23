@@ -41,9 +41,9 @@ type beaconState struct {
 	CrystallizedState *types.CrystallizedState
 }
 
-type beaconCommittee struct {
-	shardID   int
-	committee []int
+type BeaconCommittee struct {
+	ShardID   int
+	Committee []int
 }
 
 // NewBeaconChain initializes a beacon chain using genesis state parameters if
@@ -312,25 +312,25 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 // dynasty to current epoch.
 // 2.) Remove bad active validator whose balance is below threshold to the exit set by
 // setting end dynasty to current epoch.
-func (b *BeaconChain) rotateValidatorSet() {
+func (b *BeaconChain) rotateValidatorSet(dynasty uint64) {
 
 	validators := b.CrystallizedState().Validators()
-	upperbound := len(b.activeValidatorIndices())/30 + 1
+	upperbound := len(activeValidatorIndices(validators, dynasty))/30 + 1
 
 	// Loop through active validator set, remove validator whose balance is below 50%.
-	for _, index := range b.activeValidatorIndices() {
+	for _, index := range activeValidatorIndices(validators, dynasty) {
 		if validators[index].Balance < params.DefaultBalance/2 {
 			validators[index].EndDynasty = b.CrystallizedState().CurrentDynasty()
 		}
 	}
 	// Get the total number of validator we can induct.
 	inductNum := upperbound
-	if len(b.queuedValidatorIndices()) < inductNum {
-		inductNum = len(b.queuedValidatorIndices())
+	if len(queuedValidatorIndices(validators, dynasty)) < inductNum {
+		inductNum = len(queuedValidatorIndices(validators, dynasty))
 	}
 
 	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
-	for _, index := range b.queuedValidatorIndices() {
+	for _, index := range queuedValidatorIndices(validators, dynasty) {
 		validators[index].StartDynasty = b.CrystallizedState().CurrentDynasty()
 		inductNum--
 		if inductNum == 0 {
@@ -369,7 +369,7 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	validators := b.CrystallizedState().Validators()
-	activeValidators := b.activeValidatorIndices()
+	activeValidators := activeValidatorIndices(validators, b.CrystallizedState().CurrentDynasty())
 	attesterDeposits := b.getAttestersTotalDeposit()
 	totalDeposit := b.state.CrystallizedState.TotalDeposits()
 
@@ -408,10 +408,8 @@ func (b *BeaconChain) calculateRewardsFFG(block *types.Block) error {
 
 // activeValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
-func (b *BeaconChain) activeValidatorIndices() []int {
+func activeValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []int {
 	var indices []int
-	validators := b.CrystallizedState().Validators()
-	dynasty := b.CrystallizedState().CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
 			indices = append(indices, i)
@@ -422,10 +420,8 @@ func (b *BeaconChain) activeValidatorIndices() []int {
 
 // exitedValidatorIndices filters out exited validators based on start and end dynasty
 // and returns their indices in a list.
-func (b *BeaconChain) exitedValidatorIndices() []int {
+func exitedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []int {
 	var indices []int
-	validators := b.CrystallizedState().Validators()
-	dynasty := b.CrystallizedState().CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty < dynasty && validators[i].EndDynasty < dynasty {
 			indices = append(indices, i)
@@ -436,10 +432,8 @@ func (b *BeaconChain) exitedValidatorIndices() []int {
 
 // queuedValidatorIndices filters out queued validators based on start and end dynasty
 // and returns their indices in a list.
-func (b *BeaconChain) queuedValidatorIndices() []int {
+func queuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []int {
 	var indices []int
-	validators := b.CrystallizedState().Validators()
-	dynasty := b.CrystallizedState().CurrentDynasty()
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty > dynasty {
 			indices = append(indices, i)
@@ -448,14 +442,14 @@ func (b *BeaconChain) queuedValidatorIndices() []int {
 	return indices
 }
 
-// validatorsByHeightShard splits a shuffled validator list by height and by shard,
+// ValidatorsByHeightShard splits a shuffled validator list by height and by shard,
 // it ensures there's enough validators per height and per shard, if not, it'll skip
 // some heights and shards.
-func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
-	indices := b.activeValidatorIndices()
+func ValidatorsByHeightShard(seed common.Hash, validators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard int) ([]*BeaconCommittee, error) {
+	indices := activeValidatorIndices(validators, dynasty)
 	var committeesPerSlot int
 	var slotsPerCommittee int
-	var committees []*beaconCommittee
+	var committees []*BeaconCommittee
 
 	if len(indices) >= params.CycleLength*params.MinCommiteeSize {
 		committeesPerSlot = len(indices)/params.CycleLength/(params.MinCommiteeSize*2) + 1
@@ -469,7 +463,7 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 	}
 
 	// split the shuffled list for heights.
-	shuffledList, err := utils.ShuffleIndices(b.state.CrystallizedState.DynastySeed(), indices)
+	shuffledList, err := utils.ShuffleIndices(seed, indices)
 	if err != nil {
 		return nil, err
 	}
@@ -480,10 +474,10 @@ func (b *BeaconChain) validatorsByHeightShard() ([]*beaconCommittee, error) {
 	for i, subList := range heightList {
 		shardList := utils.SplitIndices(subList, params.MinCommiteeSize)
 		for _, shardIndex := range shardList {
-			shardID := int(b.CrystallizedState().CrosslinkingStartShard()) + i*committeesPerSlot/slotsPerCommittee
-			committees = append(committees, &beaconCommittee{
-				shardID:   shardID,
-				committee: shardIndex,
+			shardID := crosslinkStartShard + i*committeesPerSlot/slotsPerCommittee
+			committees = append(committees, &BeaconCommittee{
+				ShardID:   shardID,
+				Committee: shardIndex,
 			})
 		}
 	}
