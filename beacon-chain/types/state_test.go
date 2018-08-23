@@ -51,6 +51,83 @@ func TestActiveState(t *testing.T) {
 	}
 }
 
+func TestCrystallizedState(t *testing.T) {
+	if !reflect.DeepEqual(NewCrystallizedState(nil), &CrystallizedState{}) {
+		t.Errorf("Crystallized state mismatch, want %v, received %v", NewCrystallizedState(nil), &CrystallizedState{})
+	}
+	_, crystallized := NewGenesisStates()
+
+	emptyCrystallized := &CrystallizedState{}
+	if _, err := emptyCrystallized.Marshal(); err == nil {
+		t.Error("marshal with empty data should fail")
+	}
+	if _, err := emptyCrystallized.Hash(); err == nil {
+		t.Error("hash with empty data should fail")
+	}
+	if _, err := crystallized.Hash(); err != nil {
+		t.Errorf("hashing with data should not fail, received %v", err)
+	}
+	if !reflect.DeepEqual(crystallized.data, crystallized.Proto()) {
+		t.Errorf("inner crystallized state data did not match proto: received %v, wanted %v", crystallized.Proto(), crystallized.data)
+	}
+
+	crystallized.SetStateRecalc(5)
+	if crystallized.LastStateRecalc() != 5 {
+		t.Errorf("mistmatched last state recalc: wanted 5, received %v", crystallized.LastStateRecalc())
+	}
+
+	crystallized.data.JustifiedStreak = 1
+	if crystallized.JustifiedStreak() != 1 {
+		t.Errorf("mistmatched streak: wanted 1, received %v", crystallized.JustifiedStreak())
+	}
+	crystallized.ClearJustifiedStreak()
+	if crystallized.JustifiedStreak() != 0 {
+		t.Errorf("mistmatched streak: wanted 0, received %v", crystallized.JustifiedStreak())
+	}
+	if crystallized.CrosslinkingStartShard() != 0 {
+		t.Errorf("mistmatched streak: wanted 0, received %v", crystallized.JustifiedStreak())
+	}
+	crystallized.SetLastJustifiedSlot(5)
+	if crystallized.LastJustifiedSlot() != 5 {
+		t.Errorf("mistmatched justified slot: wanted 5, received %v", crystallized.LastJustifiedSlot())
+	}
+	crystallized.SetLastFinalizedSlot(5)
+	if crystallized.LastFinalizedSlot() != 5 {
+		t.Errorf("mistmatched finalized slot: wanted 5, received %v", crystallized.LastFinalizedSlot())
+	}
+	crystallized.IncrementCurrentDynasty()
+	if crystallized.CurrentDynasty() != 1 {
+		t.Errorf("mistmatched current dynasty: wanted 1, received %v", crystallized.CurrentDynasty())
+	}
+	crystallized.SetTotalDeposits(1000)
+	if crystallized.TotalDeposits() != 1000 {
+		t.Errorf("mistmatched total deposits: wanted 1000, received %v", crystallized.TotalDeposits())
+	}
+	crystallized.data.DynastySeedLastReset = 1000
+	if crystallized.DynastySeedLastReset() != 1000 {
+		t.Errorf("mistmatched total deposits: wanted 1000, received %v", crystallized.DynastySeedLastReset())
+	}
+	crystallized.DynastySeed()
+
+	validators := []*pb.ValidatorRecord{}
+	crystallized.SetValidators(validators)
+	if crystallized.ValidatorsLength() > 0 {
+		t.Errorf("wanted 0 validators, received %v", crystallized.ValidatorsLength())
+	}
+	if !reflect.DeepEqual(crystallized.Validators(), validators) {
+		t.Errorf("mismatched validator set: wanted %v, received %v", validators, crystallized.Validators())
+	}
+	crystallized.ClearIndicesForHeights()
+	if !reflect.DeepEqual(crystallized.IndicesForHeights(), []*pb.ShardAndCommitteeArray{}) {
+		t.Errorf("mismatched indices for heights: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForHeights())
+	}
+	crystallized.CrosslinkRecords()
+	crystallized.UpdateJustifiedSlot(6)
+	if crystallized.LastFinalizedSlot() != 5 {
+		t.Errorf("mistmatched finalized slot: wanted 5, received %v", crystallized.LastFinalizedSlot())
+	}
+}
+
 func TestBlockHashForSlot(t *testing.T) {
 	var recentBlockHash [][]byte
 	for i := 0; i < 256; i++ {
