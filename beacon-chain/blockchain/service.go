@@ -267,6 +267,9 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
 
 			// Check if parentHash is in previous slot's processed blockHash list.
+			// TODO: This is messy. Instead, we should implement c.chain.CanProcessBlock
+			// to take in the block and the DAG of previously processed blocks
+			// and determine all validity conditions from those two parameters.
 			isParentHashExistent := false
 			for i := 0; i < len(c.processedBlockHashesBySlot[receivedSlotNumber-1]); i++ {
 				p := block.ParentHash()
@@ -276,7 +279,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// If parentHash does not exist, received block fails validity conditions.
-			if !isParentHashExistent {
+			if !isParentHashExistent && receivedSlotNumber > 1 {
 				continue
 			}
 
