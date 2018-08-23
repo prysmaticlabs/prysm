@@ -42,7 +42,10 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 //
 // TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
-	protoGenesis, _ := ptypes.TimestampProto(time.Unix(0, 0))
+	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
+	if err != nil {
+		return nil, err
+	}
 	return &Block{
 		data: &pb.BeaconBlock{
 			Timestamp:  protoGenesis,
