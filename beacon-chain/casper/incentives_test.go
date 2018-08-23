@@ -28,8 +28,13 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	crystallized := types.NewCrystallizedState(data)
 
 	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
+	active := types.NewActiveState(&pb.ActiveState{})
+	if err := CalculateRewards(active, crystallized, block); err != nil {
+		t.Fatalf("error should be nil as function should have simply returned if no pending attestations: %v", err)
+	}
+
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
+	active = types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
 	if err := CalculateRewards(active, crystallized, block); err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}

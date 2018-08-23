@@ -14,11 +14,12 @@ import (
 
 func TestRotateValidatorSet(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
-		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
-		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active.
+		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty},  // half below default balance, should be moved to exit.
+		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty},  // half below default balance, should be moved to exit.
+		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty},  // stays in active.
+		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty},  // stays in active.
+		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty},  // stays in active.
+		{Balance: 30, StartDynasty: 15, EndDynasty: params.DefaultEndDynasty}, // will trigger for loop in rotate val indices.
 	}
 
 	data := &pb.CrystallizedState{
@@ -26,6 +27,35 @@ func TestRotateValidatorSet(t *testing.T) {
 		CurrentDynasty: 10,
 	}
 	state := types.NewCrystallizedState(data)
+
+	// Rotate validator set and increment dynasty count by 1.
+	RotateValidatorSet(state)
+	state.IncrementCurrentDynasty()
+
+	if !reflect.DeepEqual(ActiveValidatorIndices(state), []int{2, 3, 4, 5}) {
+		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(state))
+	}
+	if len(QueuedValidatorIndices(state)) != 0 {
+		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(state))
+	}
+	if !reflect.DeepEqual(ExitedValidatorIndices(state), []int{0, 1}) {
+		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(state))
+	}
+
+	// Another run without queuing validators.
+	validators = []*pb.ValidatorRecord{
+		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
+		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
+		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active.
+		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active.
+		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active.
+	}
+
+	data = &pb.CrystallizedState{
+		Validators:     validators,
+		CurrentDynasty: 10,
+	}
+	state = types.NewCrystallizedState(data)
 
 	// rotate validator set and increment dynasty count by 1.
 	RotateValidatorSet(state)

@@ -2,10 +2,54 @@ package types
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
+
+func TestActiveState(t *testing.T) {
+	active, _ := NewGenesisStates()
+	if len(active.PendingAttestations()) > 0 {
+		t.Errorf("there should be no pending attestations, got %v", len(active.PendingAttestations()))
+	}
+	if active.LatestPendingAttestation() != nil {
+		t.Errorf("there should be no latest pending attestation, got %v", active.LatestPendingAttestation())
+	}
+
+	record := NewAttestationRecord()
+	active.NewPendingAttestation(record)
+	if len(active.PendingAttestations()) != 1 {
+		t.Errorf("there should be 1 pending attestation, got %v", len(active.PendingAttestations()))
+	}
+	if !reflect.DeepEqual(active.LatestPendingAttestation(), record) {
+		t.Errorf("latest pending attestation record did not match, received %v", active.LatestPendingAttestation())
+	}
+	active.ClearPendingAttestations()
+	if !reflect.DeepEqual(active.LatestPendingAttestation(), &pb.AttestationRecord{}) {
+		t.Errorf("latest pending attestation record did not match, received %v", active.LatestPendingAttestation())
+	}
+
+	if !reflect.DeepEqual(active.data, active.Proto()) {
+		t.Errorf("inner active state data did not match proto: received %v, wanted %v", active.Proto(), active.data)
+	}
+
+	active.ClearRecentBlockHashes()
+	if len(active.data.RecentBlockHashes) > 0 {
+		t.Errorf("there should be no recent block hashes, received %v", len(active.data.RecentBlockHashes))
+	}
+
+	emptyActive := &ActiveState{}
+	if _, err := emptyActive.Marshal(); err == nil {
+		t.Error("marshal with empty data should fail")
+	}
+	if _, err := emptyActive.Hash(); err == nil {
+		t.Error("hash with empty data should fail")
+	}
+	if _, err := active.Hash(); err != nil {
+		t.Errorf("hashing with data should not fail, received %v", err)
+	}
+}
 
 func TestBlockHashForSlot(t *testing.T) {
 	var recentBlockHash [][]byte
