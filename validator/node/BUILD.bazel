@@ -9,10 +9,14 @@ go_test(
 
 go_library(
     name = "go_default_library",
-    srcs = ["node.go"],
+    srcs = [
+        "node.go",
+        "p2p_config.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/node",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//proto/sharding/p2p/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/database:go_default_library",
