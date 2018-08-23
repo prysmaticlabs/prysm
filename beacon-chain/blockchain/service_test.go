@@ -308,7 +308,7 @@ func TestRunningChainService(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 	chainService, _ := NewChainService(ctx, cfg)
-	chainService.lastSlot = 65
+	chainService.lastSlot = 10
 	chainService.chain.SetCrystallizedState(crystallized)
 
 	exitRoutine := make(chan bool)
@@ -329,7 +329,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            65,
+		SlotNumber:            10,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
@@ -342,7 +342,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	nextBlock := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            66,
+		SlotNumber:            11,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            h[:],

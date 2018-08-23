@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -209,15 +208,7 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 		}
 	}
 
-	canProcess, err := b.verifyBlockParentHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		return false, fmt.Errorf("parent block verification for beacon block %v failed", block.SlotNumber())
-	}
-
-	canProcess, err = b.verifyBlockTimeStamp(block)
+	canProcess, err := b.verifyBlockTimeStamp(block)
 	if err != nil {
 		return false, fmt.Errorf("unable to process block: %v", err)
 	}
@@ -283,19 +274,6 @@ func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, err
 	}
 	if block.CrystallizedStateHash() != hash {
 		return false, nil
-	}
-	return true, nil
-}
-
-// verifyBlockParentHash verifies parentHash pointed by the beacon block is in the beaconDB.
-func (b *BeaconChain) verifyBlockParentHash(block *types.Block) (bool, error) {
-	parentHash := block.ParentHash()
-	hasParent, err := b.db.Has(parentHash[:])
-	if err != nil {
-		return false, err
-	}
-	if !hasParent && block.SlotNumber() != 1 {
-		return false, errors.New("parent hash points to nil in beaconDB")
 	}
 	return true, nil
 }

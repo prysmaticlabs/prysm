@@ -2,6 +2,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -37,6 +38,7 @@ type ChainService struct {
 	//
 	// NOTE: These are temporary and will be replaced by a structure
 	// that can support light-client proofs, such as a Sparse Merkle Trie.
+	processedBlockHashesBySlot        map[uint64][][]byte
 	processedBlocksBySlot             map[uint64][]*types.Block
 	processedCrystallizedStatesBySlot map[uint64][]*types.CrystallizedState
 	processedActiveStatesBySlot       map[uint64][]*types.ActiveState
@@ -74,6 +76,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:                 new(event.Feed),
 		canonicalBlockFeed:                new(event.Feed),
 		canonicalCrystallizedStateFeed:    new(event.Feed),
+		processedBlockHashesBySlot:        make(map[uint64][][]byte),
 		processedBlocksBySlot:             make(map[uint64][]*types.Block),
 		processedCrystallizedStatesBySlot: make(map[uint64][]*types.CrystallizedState),
 		processedActiveStatesBySlot:       make(map[uint64][]*types.ActiveState),
@@ -261,10 +264,21 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			receivedSlotNumber := block.SlotNumber()
 
-			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
-				c.updateHead(receivedSlotNumber)
-			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
+
+			// Check if parentHash is in previous slot's processed blockHash list.
+			isParentHashExistent := false
+			for i := 0; i < len(c.processedBlockHashesBySlot[receivedSlotNumber-1]); i++ {
+				p := block.ParentHash()
+				if bytes.Equal(c.processedBlockHashesBySlot[receivedSlotNumber-1][i], p[:]) {
+					isParentHashExistent = true
+				}
+			}
+
+			// If parentHash does not exist, received block fails validity conditions.
+			if !isParentHashExistent {
+				continue
+			}
 
 			// Process block as a validator if beacon node has registered, else process block as an observer.
 			if c.validator {
@@ -281,6 +295,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// If we cannot process this block, we keep listening.
 			if !canProcess {
 				continue
+			}
+
+			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
+				c.updateHead(receivedSlotNumber)
 			}
 
 			// 3 steps:
@@ -317,6 +335,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// We store a slice of received states and blocks.
 			// perceived slot number for forks.
+			c.processedBlockHashesBySlot[receivedSlotNumber] = append(
+				c.processedBlockHashesBySlot[receivedSlotNumber],
+				h[:],
+			)
+
 			c.processedBlocksBySlot[receivedSlotNumber] = append(
 				c.processedBlocksBySlot[receivedSlotNumber],
 				block,
