@@ -30,6 +30,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				PowChainRef:           []byte{0},
 				ActiveStateHash:       []byte{0},
 				CrystallizedStateHash: []byte{0},
+				Timestamp:             ptypes.TimestampNow(),
 			},
 		}
 	}
@@ -41,10 +42,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 //
 // TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
-	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
-	if err != nil {
-		return nil, err
-	}
+	protoGenesis, _ := ptypes.TimestampProto(time.Unix(0, 0))
 	return &Block{
 		data: &pb.BeaconBlock{
 			Timestamp:  protoGenesis,
