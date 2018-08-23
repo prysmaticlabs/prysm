@@ -142,7 +142,7 @@ func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
 		}
 		block := &pb.BeaconBlock{}
 		if err := proto.Unmarshal(bytes, block); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 		}
 		return types.NewBlock(block), nil
 	}

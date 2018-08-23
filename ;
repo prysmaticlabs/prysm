@@ -550,17 +550,7 @@ func TestComputeCrystallizedState(t *testing.T) {
 	active := types.NewActiveState(data)
 	block := types.NewBlock(&pb.BeaconBlock{SlotNumber: 1})
 	if _, err := beaconChain.computeNewCrystallizedState(active, block); err != nil {
-		t.Errorf("computing crystallized state should not have failed: %v", err)
-	}
-}
-
-func TestComputeActiveState(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-	_, crystallized := types.NewGenesisStates()
-	beaconChain.SetCrystallizedState(crystallized)
-	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte("chain"))); err != nil {
-		t.Errorf("computing active state should not have failed: %v", err)
+		t.Errorf("computing crystallized state failed: %v")
 	}
 }
 
