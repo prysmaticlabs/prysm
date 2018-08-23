@@ -11,9 +11,9 @@ import (
 
 var log = logrus.WithField("prefix", "casper")
 
-// CalculateRewardsFFG adjusts validators balances by applying rewards or penalties
+// CalculateRewards adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
-func CalculateRewardsFFG(active *types.ActiveState, crystallized *types.CrystallizedState, block *types.Block) error {
+func CalculateRewards(active *types.ActiveState, crystallized *types.CrystallizedState, block *types.Block) error {
 	latestPendingAtt := active.LatestPendingAttestation()
 	if latestPendingAtt == nil {
 		return nil

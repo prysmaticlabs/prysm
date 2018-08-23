@@ -30,7 +30,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
 	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
-	if err := CalculateRewardsFFG(active, crystallized, block); err != nil {
+	if err := CalculateRewards(active, crystallized, block); err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
 	if crystallized.LastJustifiedSlot() != uint64(5) {

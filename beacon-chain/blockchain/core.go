@@ -307,7 +307,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, block *types.Block) (*types.CrystallizedState, error) {
 	newCrystallized := b.CrystallizedState()
 	newCrystallized.SetStateRecalc(block.SlotNumber())
-	if err := casper.CalculateRewardsFFG(active, newCrystallized, block); err != nil {
+	if err := casper.CalculateRewards(active, newCrystallized, block); err != nil {
 		return newCrystallized, fmt.Errorf("could not calculate ffg rewards/penalties: %v", err)
 	}
 	return newCrystallized, nil
