@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -100,6 +102,18 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	return hash, nil
 }
 
+// BlockHashForSlot returns the block hash of a given slot given a lowerBound and upperBound.
+func (a *ActiveState) BlockHashForSlot(slot uint64, block *Block) ([]byte, error) {
+	sback := int(block.SlotNumber()) - params.CycleLength*2
+	if !(sback <= int(slot) && int(slot) < sback+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
+	}
+	if sback < 0 {
+		return a.RecentBlockHashes()[slot].Bytes(), nil
+	}
+	return a.RecentBlockHashes()[int(slot)-sback].Bytes(), nil
+}
+
 // PendingAttestations returns attestations that have not yet been processed.
 func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
 	return a.data.PendingAttestations
@@ -112,6 +126,9 @@ func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
 
 // LatestPendingAttestation returns the latest pending attestaton fields.
 func (a *ActiveState) LatestPendingAttestation() *pb.AttestationRecord {
+	if len(a.data.PendingAttestations) == 0 {
+		return nil
+	}
 	return a.data.PendingAttestations[len(a.data.PendingAttestations)-1]
 }
 
