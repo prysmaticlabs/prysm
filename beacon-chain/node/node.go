@@ -69,15 +69,15 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerSimulatorService(ctx); err != nil {
-		return nil, err
-	}
-
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
 	}
 
 	if err := beacon.registerInitialSyncService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerSimulatorService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -153,7 +153,6 @@ func (b *BeaconNode) registerP2P() error {
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-
 	if ctx.GlobalBool(utils.ValidatorFlag.Name) {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
@@ -165,7 +164,13 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), blockchain.DefaultConfig(), beaconChain, b.db, web3Service)
+	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
+		BeaconDB:         b.db.DB(),
+		Web3Service:      web3Service,
+		Chain:            beaconChain,
+		BeaconBlockBuf:   10,
+		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
+	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
@@ -253,14 +258,13 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 	defaultConf := simulator.DefaultConfig()
 	cfg := &simulator.Config{
-		Delay:                       defaultConf.Delay,
-		BlockRequestBuf:             defaultConf.BlockRequestBuf,
-		CrystallizedStateRequestBuf: defaultConf.CrystallizedStateRequestBuf,
-		BeaconDB:                    b.db.DB(),
-		P2P:                         p2pService,
-		Web3Service:                 web3Service,
-		ChainService:                chainService,
-		Validator:                   isValidator,
+		Delay:           defaultConf.Delay,
+		BlockRequestBuf: defaultConf.BlockRequestBuf,
+		BeaconDB:        b.db.DB(),
+		P2P:             p2pService,
+		Web3Service:     web3Service,
+		ChainService:    chainService,
+		Validator:       isValidator,
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
@@ -276,9 +280,10 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:     port,
-		CertFlag: cert,
-		KeyFlag:  key,
+		Port:            port,
+		CertFlag:        cert,
+		KeyFlag:         key,
+		SubscriptionBuf: 100,
 	}, chainService)
 
 	return b.services.RegisterService(rpcService)
