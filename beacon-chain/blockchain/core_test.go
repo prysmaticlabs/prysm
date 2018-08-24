@@ -448,6 +448,116 @@ func TestComputeActiveState(t *testing.T) {
 	}
 }
 
+func TestCanProcessAttestations(t *testing.T) {
+	bc, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	// Process attestation on this block should fail because AttestationRecord's slot # > than block's slot #.
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 1,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 2, ShardId: 0},
+		},
+	})
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed because attestation slot # > block #")
+	}
+
+	// Process attestation on this should fail because AttestationRecord's slot # > than block's slot #.
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 2 + params.CycleLength,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 1, ShardId: 0},
+		},
+	})
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed because attestation slot # < block # + cycle length")
+	}
+
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardId: 0, ObliqueParentHashes: [][]byte{{'A'}, {'B'}, {'C'}}},
+		},
+	})
+	var recentBlockHashes [][]byte
+	for i := 0; i < params.CycleLength; i++ {
+		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
+	}
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
+	if err := bc.SetActiveState(active); err != nil {
+		t.Fatalf("unable to mutate active state: %v", err)
+	}
+
+	// Process attestation on this crystallized state should fail because only committee is in shard 1.
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
+		LastStateRecalc: 64,
+		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4, 5}},
+				},
+			},
+		},
+	})
+	if err := bc.SetCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed, there's no committee in shard 0")
+	}
+
+	// Process attestation should work now, there's a committee in shard 0.
+	crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
+		LastStateRecalc: 64,
+		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
+				},
+			},
+		},
+	})
+	if err := bc.SetCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+
+	// Process attestation should fail because attester bit field has incorrect length.
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'A', 'B', 'C'}},
+		},
+	})
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed, incorrect attester bit field length")
+	}
+
+	// Set attester bitfield to the right length.
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'a'}},
+		},
+	})
+	// Process attestation should fail because the non-zero leading bits for votes.
+	// a is 01100001
+	if err := bc.processAttestations(block); err == nil {
+		t.Error("Process attestation should have failed, incorrect attester bit field length")
+	}
+
+	// Process attestation should work with correct bitfield bits.
+	block = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
+		},
+	})
+	if err := bc.processAttestations(block); err != nil {
+		t.Error(err)
+	}
+}
+
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
