@@ -5,7 +5,7 @@
 
 # Protected packages are:
 #   //beacon-chain/...
-#   //client/...
+#   //validator/...
 
 # Duplicate redirect 5 to stdout so that it can be captured, but still printed
 # nicely.
@@ -13,7 +13,7 @@ exec 5>&1
 
 # Run gazelle while piping a copy of the output to stdout via 5.
 changes=$(
-bazel query 'visible(//... except (//beacon-chain/... union //client/...), (//beacon-chain/... union //client/...))' | tee >(cat - >&5)
+bazel query 'visible(//... except (//beacon-chain/... union //validator/...), (//beacon-chain/... union //validator/...))' | tee >(cat - >&5)
 )
 
 # If the captured stdout is not empty then targets are exposed!

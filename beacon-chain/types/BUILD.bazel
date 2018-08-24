@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -22,4 +22,14 @@ go_library(
         "@com_github_golang_protobuf//ptypes:go_default_library",
         "@org_golang_x_crypto//blake2b:go_default_library",
     ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "block_test.go",
+        "state_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//proto/beacon/p2p/v1:go_default_library"],
 )

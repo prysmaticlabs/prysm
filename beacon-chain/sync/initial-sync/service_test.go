@@ -66,14 +66,14 @@ func TestSetBlockForInitialSync(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	generichash := make([]byte, 32)
-	generichash[0] = 'a'
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
 		PowChainRef:           []byte{1, 2, 3},
-		ParentHash:            generichash,
+		ParentHash:            genericHash,
 		SlotNumber:            uint64(20),
-		CrystallizedStateHash: generichash,
+		CrystallizedStateHash: genericHash,
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{Block: block}
@@ -116,8 +116,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	generichash := make([]byte, 32)
-	generichash[0] = 'a'
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
 
 	crystallizedState := &pb.CrystallizedState{
 		LastFinalizedSlot: 99,
@@ -144,7 +144,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	getBlockResponseMsg := func(slotNumber uint64) p2p.Message {
 		block := &pb.BeaconBlock{
 			PowChainRef:           []byte{1, 2, 3},
-			ParentHash:            generichash,
+			ParentHash:            genericHash,
 			SlotNumber:            slotNumber,
 			CrystallizedStateHash: crystallizedStateHash[:],
 		}
@@ -220,8 +220,8 @@ func TestDelayChan(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	generichash := make([]byte, 32)
-	generichash[0] = 'a'
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
 
 	crystallizedstate := &pb.CrystallizedState{
 		LastFinalizedSlot: 99,
@@ -238,7 +238,7 @@ func TestDelayChan(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		PowChainRef:           []byte{1, 2, 3},
-		ParentHash:            generichash,
+		ParentHash:            genericHash,
 		SlotNumber:            uint64(20),
 		CrystallizedStateHash: crystallizedStateHash[:],
 	}
