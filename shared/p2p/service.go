@@ -119,8 +119,7 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 				adapters[i], adapters[opp] = adapters[opp], adapters[i]
 			}
 
-			var h Handler
-			h = func(ctx context.Context, pMsg Message) {
+			var h Handler = func(ctx context.Context, pMsg Message) {
 				s.emit(feed, msg, msgType)
 			}
 

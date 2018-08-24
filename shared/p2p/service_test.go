@@ -204,8 +204,7 @@ func TestRegisterTopic_WithAdapers(t *testing.T) {
 	testMessage := testpb.TestMessage{Foo: "bar"}
 
 	i := 0
-	var testAdapter Adapter
-	testAdapter = func(next Handler) Handler {
+	var testAdapter Adapter = func(next Handler) Handler {
 		return func(ctx context.Context, msg Message) {
 			i++
 			next(ctx, msg)
