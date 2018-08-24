@@ -1,8 +1,6 @@
 package casper
 
 import (
-	"fmt"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -31,10 +29,7 @@ func CalculateRewards(active *types.ActiveState, crystallized *types.Crystallize
 
 		log.Debug("Applying rewards and penalties for the validators from last cycle")
 		for i, attesterIndex := range activeValidators {
-			voted, err := utils.CheckBit(latestPendingAtt.AttesterBitfield, attesterIndex)
-			if err != nil {
-				return fmt.Errorf("exiting calculate rewards FFG due to %v", err)
-			}
+			voted := utils.CheckBit(latestPendingAtt.AttesterBitfield, attesterIndex)
 			if voted {
 				validators[i].Balance += params.AttesterReward
 			} else {

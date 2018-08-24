@@ -89,6 +89,7 @@ func SampleAttestersAndProposers(seed common.Hash, crystallized *types.Crystalli
 	if crystallized.ValidatorsLength() < params.MinCommiteeSize {
 		attesterCount = crystallized.ValidatorsLength()
 	}
+	fmt.Println()
 	indices, err := utils.ShuffleIndices(seed, ActiveValidatorIndices(crystallized))
 	if err != nil {
 		return nil, -1, err
