@@ -77,11 +77,12 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-// RegisterTopic, message, and the adapter stack for the given topic. The message type provided
-// will be feed selector for emitting messages received on a given topic.
+// RegisterTopic with a message and the adapter stack for the given topic. The
+// message type provided will be feed selector for emitting messages received
+// on a given topic.
 //
-// The topics can originate from multiple sources. In other words, messages on TopicA may come
-// from direct peer communication or a pub/sub channel.
+// The topics can originate from multiple sources. In other words, messages on
+// TopicA may come from direct peer communication or a pub/sub channel.
 func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Adapter) {
 	msgType := reflect.TypeOf(message)
 	log.WithFields(logrus.Fields{
