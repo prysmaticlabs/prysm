@@ -20,7 +20,7 @@ func CalculateRewards(attestations []*pb.AttestationRecord, validators []*pb.Val
 	if attesterFactor >= totalFactor {
 		log.Debug("Applying rewards and penalties for the validators from last cycle")
 		for i, attesterIndex := range activeValidators {
-			voted := utils.CheckBit(attestations[len(attestations)-1].AttesterBitfield, attesterIndex)
+			voted := utils.CheckBit(attestations[len(attestations)-1].AttesterBitfield, int(attesterIndex))
 			if voted {
 				validators[i].Balance += params.AttesterReward
 			} else {

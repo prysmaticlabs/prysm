@@ -42,11 +42,11 @@ func RotateValidatorSet(validators []*pb.ValidatorRecord, dynasty uint64) []*pb.
 
 // ActiveValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
-func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []int {
-	var indices []int
+func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
+	var indices []uint32
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
-			indices = append(indices, i)
+			indices = append(indices, uint32(i))
 		}
 	}
 	return indices
@@ -54,11 +54,11 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 
 // ExitedValidatorIndices filters out exited validators based on start and end dynasty
 // and returns their indices in a list.
-func ExitedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []int {
-	var indices []int
+func ExitedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
+	var indices []uint32
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty < dynasty && validators[i].EndDynasty <= dynasty {
-			indices = append(indices, i)
+			indices = append(indices, uint32(i))
 		}
 	}
 	return indices
@@ -66,25 +66,25 @@ func ExitedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 
 // QueuedValidatorIndices filters out queued validators based on start and end dynasty
 // and returns their indices in a list.
-func QueuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []int {
-	var indices []int
+func QueuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
+	var indices []uint32
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty > dynasty {
-			indices = append(indices, i)
+			indices = append(indices, uint32(i))
 		}
 	}
 	return indices
 }
 
 // SampleAttestersAndProposers returns lists of random sampled attesters and proposer indices.
-func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRecord, dynasty uint64) ([]int, int, error) {
+func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRecord, dynasty uint64) ([]uint32, uint32, error) {
 	attesterCount := params.MinCommiteeSize
 	if len(validators) < params.MinCommiteeSize {
 		attesterCount = len(validators)
 	}
 	indices, err := utils.ShuffleIndices(seed, ActiveValidatorIndices(validators, dynasty))
 	if err != nil {
-		return nil, -1, err
+		return nil, 0, err
 	}
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }

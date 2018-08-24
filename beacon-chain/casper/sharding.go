@@ -11,14 +11,14 @@ import (
 // within that shard's committee.
 type BeaconCommittee struct {
 	ShardID   int
-	Committee []int
+	Committee []uint32
 }
 
 // ValidatorsByHeightShard splits a shuffled validator list by height and by shard,
 // it ensures there's enough validators per height and per shard, if not, it'll skip
 // some heights and shards.
-func ValidatorsByHeightShard(seed common.Hash, validators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard uint64) ([]*BeaconCommittee, error) {
-	indices := ActiveValidatorIndices(validators, dynasty)
+func ValidatorsByHeightShard(seed common.Hash, activeValidators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard uint64) ([]*BeaconCommittee, error) {
+	indices := ActiveValidatorIndices(activeValidators, dynasty)
 	var committeesPerSlot int
 	var slotsPerCommittee int
 	var committees []*BeaconCommittee

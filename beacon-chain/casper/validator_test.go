@@ -27,13 +27,13 @@ func TestRotateValidatorSet(t *testing.T) {
 
 	// Rotate validator set and increment dynasty count by 1.
 	rotatedValidators := RotateValidatorSet(data.Validators, data.CurrentDynasty)
-	if !reflect.DeepEqual(ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty), []int{2, 3, 4, 5}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty))
+	if !reflect.DeepEqual(ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{2, 3, 4, 5}) {
+		t.Errorf("active validator indices should be [2,3,4,5], got: %v", ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
 	if len(QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty)) != 0 {
 		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty), []int{0, 1}) {
+	if !reflect.DeepEqual(ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{0, 1}) {
 		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
 
@@ -54,13 +54,13 @@ func TestRotateValidatorSet(t *testing.T) {
 	// rotate validator set and increment dynasty count by 1.
 	RotateValidatorSet(data.Validators, data.CurrentDynasty)
 
-	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []int{2, 3, 4}) {
+	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3, 4}) {
 		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if len(QueuedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
 		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []int{0, 1}) {
+	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
 		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 }
@@ -107,10 +107,10 @@ func TestValidatorIndices(t *testing.T) {
 		CurrentDynasty: 1,
 	}
 
-	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []int{0, 1, 2, 3, 4}) {
+	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1, 2, 3, 4}) {
 		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []int{5}) {
+	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{5}) {
 		t.Errorf("queued validator indices should be [5], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if len(ExitedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
@@ -129,13 +129,13 @@ func TestValidatorIndices(t *testing.T) {
 		CurrentDynasty: 5,
 	}
 
-	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []int{0, 1}) {
+	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
 		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []int{2, 3}) {
+	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3}) {
 		t.Errorf("queued validator indices should be [3], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []int{4, 5}) {
+	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{4, 5}) {
 		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 }

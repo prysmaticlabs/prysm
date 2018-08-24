@@ -35,15 +35,10 @@ func NewActiveState(data *pb.ActiveState) *ActiveState {
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
-	// Bootstrap recent block hashes to all 0s for first 2 cycles (128 slots).
-	var recentBlockHashes [][]byte
-	for i := 0; i < 2*params.CycleLength; i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
-	}
 	active := &ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AttestationRecord{},
-			RecentBlockHashes:   recentBlockHashes,
+			RecentBlockHashes:   [][]byte{},
 		},
 	}
 
@@ -58,27 +53,23 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
 	seed := make([]byte, 0, 32)
-	committee, err := casper.ValidatorsByHeightShard(common.BytesToHash(seed), validators, 1, 0)
+	committees, err := casper.ValidatorsByHeightShard(common.BytesToHash(seed), validators, 1, 0)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Starting with 2 cycles (128 slots) with the same committees.
-	committees := append(committee, committee...)
+	committees = append(committees, committees...)
 	// Convert boot strapped attester indices array into proto format.
 	var shardCommittees []*pb.ShardAndCommittee
-	var indexCommittees []uint32
 	for _, committee := range committees {
-		for _, index := range committee.Committee {
-			indexCommittees = append(indexCommittees, uint32(index))
-		}
 		c := &pb.ShardAndCommittee{
 			ShardId:   uint64(committee.ShardID),
-			Committee: indexCommittees,
+			Committee: committee.Committee,
 		}
 		shardCommittees = append(shardCommittees, c)
 	}
-	indicesForHeight := []*pb.ShardAndCommitteeArray{
+	indicesForSlots := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: shardCommittees},
 	}
 
@@ -110,7 +101,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 			DynastySeedLastReset:   0,
 			CrosslinkRecords:       crosslinkRecords,
 			Validators:             validators,
-			IndicesForHeights:      indicesForHeight,
+			IndicesForSlots:        indicesForSlots,
 		},
 	}
 	return active, crystallized, nil
@@ -318,14 +309,14 @@ func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 }
 
 // IndicesForHeights returns what active validators are part of the attester set
-// at what height, and in what shard.
+// at what slot, and in what shard.
 func (c *CrystallizedState) IndicesForHeights() []*pb.ShardAndCommitteeArray {
-	return c.data.IndicesForHeights
+	return c.data.IndicesForSlots
 }
 
 // ClearIndicesForHeights clears the IndicesForHeights set.
 func (c *CrystallizedState) ClearIndicesForHeights() {
-	c.data.IndicesForHeights = []*pb.ShardAndCommitteeArray{}
+	c.data.IndicesForSlots = []*pb.ShardAndCommitteeArray{}
 }
 
 // CrosslinkRecords returns records about the most recent cross link or each shard.
