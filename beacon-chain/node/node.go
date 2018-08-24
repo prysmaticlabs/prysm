@@ -285,5 +285,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		KeyFlag:         key,
 		SubscriptionBuf: 100,
 	}, chainService)
+
 	return b.services.RegisterService(rpcService)
 }

@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"context"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 )
 
 var canonicalHeadKey = "latest-canonical-head"
@@ -145,7 +148,7 @@ func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
 		}
 		block := &pb.BeaconBlock{}
 		if err := proto.Unmarshal(bytes, block); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 		}
 		return types.NewBlock(block), nil
 	}
@@ -197,7 +200,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
-// a new state transition will occur.
+// a new crystallized state transition will occur.
 func (b *BeaconChain) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
@@ -217,22 +220,6 @@ func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *type
 	}
 	if !canProcess {
 		return false, fmt.Errorf("time stamp verification for beacon block %v failed", block.SlotNumber())
-	}
-
-	canProcess, err = b.verifyBlockActiveHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		return false, fmt.Errorf("active state verification for beacon block %v failed", block.SlotNumber())
-	}
-
-	canProcess, err = b.verifyBlockCrystallizedHash(block)
-	if err != nil {
-		return false, fmt.Errorf("unable to process block: %v", err)
-	}
-	if !canProcess {
-		return false, fmt.Errorf("crystallized verification for beacon block %v failed", block.SlotNumber())
 	}
 	return canProcess, nil
 }
@@ -330,6 +317,107 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	}
 
 	return b.db.Put(hash[:], encodedState)
+}
+
+// processAttestations processes the attestations of an incoming block.
+func (b *BeaconChain) processAttestations(block *types.Block) error {
+	// Validate attestation's slot number has is within range of incoming block number.
+	slotNumber := int(block.SlotNumber())
+	for _, attestation := range block.Attestations() {
+		if int(attestation.Slot) > slotNumber {
+			return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %v, Needed lower than: %v",
+				attestation.Slot,
+				slotNumber)
+		}
+		if int(attestation.Slot) < slotNumber-params.CycleLength {
+			return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
+				attestation.Slot,
+				slotNumber-params.CycleLength)
+		}
+
+		// Get all the block hashes up to cycle length.
+		parentHashes := b.getSignedParentHashes(block, attestation)
+		attesterIndices, err := b.getAttesterIndices(attestation)
+		if err != nil {
+			return err
+		}
+
+		// Verify attester bitfields matches crystallized state's prev computed bitfield.
+		if err := b.validateAttesterBitfields(attestation, attesterIndices); err != nil {
+			return err
+		}
+
+		// TODO: Generate validators aggregated pub key.
+
+		// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
+		// to verify with aggregated public key and aggregated attestation signature.
+		msg := make([]byte, binary.MaxVarintLen64)
+		var signedHashesStr []byte
+		for _, parentHash := range parentHashes {
+			signedHashesStr = append(signedHashesStr, parentHash.Bytes()...)
+			signedHashesStr = append(signedHashesStr, byte(' '))
+		}
+		binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
+		msg = append(msg, signedHashesStr...)
+		binary.PutUvarint(msg, attestation.ShardId)
+		msg = append(msg, attestation.ShardBlockHash...)
+
+		msgHash := blake2b.Sum512(msg)
+
+		log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
+			attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
+
+		// TODO: Verify msgHash against aggregated pub key and aggregated signature.
+	}
+	return nil
+}
+
+// getSignedParentHashes returns all the parent hashes stored in active state up to last ycle length.
+func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) []*common.Hash {
+	var signedParentHashes []*common.Hash
+	start := block.SlotNumber() - attestation.Slot
+	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
+	for _, hashes := range b.ActiveState().RecentBlockHashes()[start:end] {
+		signedParentHashes = append(signedParentHashes, &hashes)
+	}
+	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
+		hashes := common.BytesToHash(obliqueParentHashes)
+		signedParentHashes = append(signedParentHashes, &hashes)
+	}
+	return signedParentHashes
+}
+
+// getAttesterIndices returns the attester committee of based from attestation's shard ID  and slot number.
+func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
+	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
+	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
+	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc+params.CycleLength].ArrayShardAndCommittee
+	for i := 0; i < len(shardCommittee); i++ {
+		if attestation.ShardId == shardCommittee[i].ShardId {
+			return shardCommittee[i].Committee, nil
+		}
+	}
+	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
+}
+
+// validateAttesterBitfields validates the attester bitfields are equal between attestation and crystallized state's calculation.
+func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecord, attesterIndices []uint32) error {
+	// Validate attester bit field has the correct length.
+	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+		return fmt.Errorf("attestation has incorrect bitfield length. Found %v, expected %v",
+			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+	}
+
+	// Valid attestation can not have non-zero trailing bits.
+	lastBit := len(attesterIndices)
+	if lastBit%8 != 0 {
+		for i := 0; i < 8-lastBit%8; i++ {
+			if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+				return errors.New("attestation has non-zero trailing bits")
+			}
+		}
+	}
+	return nil
 }
 
 // saveCanonical puts the passed block into the beacon chain db

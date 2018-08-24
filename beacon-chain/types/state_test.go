@@ -100,8 +100,9 @@ func TestCrystallizedState(t *testing.T) {
 	if crystallized.LastFinalizedSlot() != 5 {
 		t.Errorf("mistmatched finalized slot: wanted 5, received %v", crystallized.LastFinalizedSlot())
 	}
-	if crystallized.CurrentDynasty() != 1 {
-		t.Errorf("mistmatched current dynasty: wanted 1, received %v", crystallized.CurrentDynasty())
+	crystallized.IncrementCurrentDynasty()
+	if crystallized.CurrentDynasty() != 2 {
+		t.Errorf("mistmatched current dynasty: wanted 2, received %v", crystallized.CurrentDynasty())
 	}
 	crystallized.SetTotalDeposits(1000)
 	if crystallized.TotalDeposits() != 1000 {

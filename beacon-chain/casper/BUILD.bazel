@@ -11,6 +11,10 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/params:go_default_library",
+<<<<<<< HEAD
+=======
+        "//beacon-chain/types:go_default_library",
+>>>>>>> 1598ae86054f6d8f58157c060b7ba821ce317d40
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
@@ -26,8 +30,15 @@ go_test(
         "validator_test.go",
     ],
     embed = [":go_default_library"],
+<<<<<<< HEAD
     deps = [
         "//beacon-chain/params:go_default_library",
+=======
+    race = "off",  # TODO(#434): fix issues with tests failing with race on.
+    deps = [
+        "//beacon-chain/params:go_default_library",
+        "//beacon-chain/types:go_default_library",
+>>>>>>> 1598ae86054f6d8f58157c060b7ba821ce317d40
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

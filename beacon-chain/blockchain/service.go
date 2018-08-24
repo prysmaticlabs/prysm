@@ -300,6 +300,13 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
+			// Process attestation as a validator.
+			if err := c.chain.processAttestations(block); err != nil {
+				// We might receive a lot of blocks that fail attestation processing,
+				// so we create a debug level log instead of an error log.
+				log.Debugf("could not process attestation: %v", err)
+			}
+
 			// If we cannot process this block, we keep listening.
 			if !canProcess {
 				continue
