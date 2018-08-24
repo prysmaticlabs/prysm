@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -11,12 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
 	floodsub "github.com/libp2p/go-floodsub"
+	floodsubPb "github.com/libp2p/go-floodsub/pb"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Ensure that server implements service.
@@ -37,6 +40,32 @@ func TestBroadcast(t *testing.T) {
 	s.Broadcast(msg)
 
 	// TODO: test that topic was published
+}
+
+func TestEmitFailsNonProtobuf(t *testing.T) {
+	s, _ := NewServer()
+	hook := logTest.NewGlobal()
+	s.emit(nil /*feed*/, nil /*msg*/, reflect.TypeOf(""))
+	want := "Received message is not a protobuf message"
+	if hook.LastEntry().Message != want {
+		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+	}
+}
+
+func TestEmitFailsUnmarshal(t *testing.T) {
+	s, _ := NewServer()
+	hook := logTest.NewGlobal()
+	msg := &floodsub.Message{
+		&floodsubPb.Message{
+			Data: []byte("bogus"),
+		},
+	}
+
+	s.emit(nil /*feed*/, msg, reflect.TypeOf(testpb.TestMessage{}))
+	want := "Failed to decode data:"
+	if !strings.Contains(hook.LastEntry().Message, want) {
+		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+	}
 }
 
 func TestSubscribeToTopic(t *testing.T) {
