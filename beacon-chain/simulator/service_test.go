@@ -3,6 +3,7 @@ package simulator
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -13,8 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 type mockP2P struct{}
 
@@ -150,94 +157,6 @@ func TestBlockRequest(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to full block request for hash: 0x%x", h))
 }
 
-func TestBroadcastCrystallizedHash(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := database.NewKVStore()
-	cfg := &Config{
-		Delay:           time.Second,
-		BlockRequestBuf: 0,
-		P2P:             &mockP2P{},
-		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
-		BeaconDB:        db,
-		Validator:       true,
-	}
-	sim := NewSimulator(context.Background(), cfg)
-
-	delayChan := make(chan time.Time)
-	doneChan := make(chan struct{})
-	exitRoutine := make(chan bool)
-
-	sim.slotNum = 64
-	sim.broadcastedBlockHashes = [][32]byte{}
-	sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, [32]byte{1})
-
-	go func() {
-		sim.run(delayChan, doneChan)
-		<-exitRoutine
-	}()
-
-	delayChan <- time.Time{}
-	doneChan <- struct{}{}
-
-	testutil.AssertLogsContain(t, hook, "Announcing crystallized state hash")
-
-	exitRoutine <- true
-
-	if len(sim.broadcastedCrystallizedStates) != 1 {
-		t.Error("Did not store the broadcasted state hash")
-	}
-	hook.Reset()
-}
-
-func TestCrystallizedRequest(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := database.NewKVStore()
-	cfg := &Config{
-		Delay:           time.Second,
-		BlockRequestBuf: 0,
-		P2P:             &mockP2P{},
-		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
-		BeaconDB:        db,
-		Validator:       true,
-	}
-	sim := NewSimulator(context.Background(), cfg)
-
-	delayChan := make(chan time.Time)
-	doneChan := make(chan struct{})
-	exitRoutine := make(chan bool)
-
-	go func() {
-		sim.run(delayChan, doneChan)
-		<-exitRoutine
-	}()
-
-	state := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 99})
-
-	h, err := state.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data := &pb.CrystallizedStateRequest{
-		Hash: h[:],
-	}
-
-	msg := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: data,
-	}
-
-	sim.broadcastedCrystallizedStates[h] = state
-
-	sim.crystallizedStateRequestChan <- msg
-	doneChan <- struct{}{}
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to crystallized state request for hash: 0x%x", h))
-}
-
 func TestLastSimulatedSession(t *testing.T) {
 	db := database.NewKVStore()
 	cfg := &Config{
@@ -261,9 +180,6 @@ func TestLastSimulatedSession(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
-	}
-	if DefaultConfig().CrystallizedStateRequestBuf != 100 {
-		t.Errorf("incorrect default config for crystallized state request buffer")
 	}
 	if DefaultConfig().Delay != time.Second*5 {
 		t.Errorf("incorrect default config for delay")
