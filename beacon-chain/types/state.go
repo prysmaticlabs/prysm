@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
@@ -33,13 +34,14 @@ func NewActiveState(data *pb.ActiveState) *ActiveState {
 }
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
-func NewGenesisStates() (*ActiveState, *CrystallizedState) {
+func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 	active := &ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AttestationRecord{},
 			RecentBlockHashes:   [][]byte{},
 		},
 	}
+
 	// We seed the genesis crystallized state with a bunch of validators to
 	// bootstrap the system.
 	// TODO: Perform this task from some sort of genesis state json config instead.
@@ -48,23 +50,61 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState) {
 		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
 		validators = append(validators, validator)
 	}
+
+	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
+	seed := make([]byte, 0, 32)
+	committees, err := casper.ValidatorsByHeightShard(common.BytesToHash(seed), validators, 1, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Starting with 2 cycles (128 slots) with the same committees.
+	committees = append(committees, committees...)
+	// Convert boot strapped attester indices array into proto format.
+	var shardCommittees []*pb.ShardAndCommittee
+	for _, committee := range committees {
+		c := &pb.ShardAndCommittee{
+			ShardId:   uint64(committee.ShardID),
+			Committee: committee.Committee,
+		}
+		shardCommittees = append(shardCommittees, c)
+	}
+	indicesForSlots := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: shardCommittees},
+	}
+
+	// Bootstrap cross link records.
+	var crosslinkRecords []*pb.CrosslinkRecord
+	for i := 0; i < params.ShardCount; i++ {
+		crosslinkRecords = append(crosslinkRecords, &pb.CrosslinkRecord{
+			Dynasty:   0,
+			Blockhash: make([]byte, 0, 32),
+		})
+	}
+
+	// Calculate total deposit from boot strapped validators.
+	var totalDeposit uint64
+	for _, v := range validators {
+		totalDeposit += v.Balance
+	}
+
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedState{
 			LastStateRecalc:        0,
 			JustifiedStreak:        0,
 			LastJustifiedSlot:      0,
 			LastFinalizedSlot:      0,
-			CurrentDynasty:         0,
+			CurrentDynasty:         1,
 			CrosslinkingStartShard: 0,
-			TotalDeposits:          0,
+			TotalDeposits:          totalDeposit,
 			DynastySeed:            []byte{},
 			DynastySeedLastReset:   0,
-			CrosslinkRecords:       []*pb.CrosslinkRecord{},
+			CrosslinkRecords:       crosslinkRecords,
 			Validators:             validators,
-			IndicesForHeights:      []*pb.ShardAndCommitteeArray{},
+			IndicesForSlots:        indicesForSlots,
 		},
 	}
-	return active, crystallized
+	return active, crystallized, nil
 }
 
 // NewAttestationRecord initializes an attestation record with default parameters.
@@ -269,14 +309,14 @@ func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 }
 
 // IndicesForHeights returns what active validators are part of the attester set
-// at what height, and in what shard.
+// at what slot, and in what shard.
 func (c *CrystallizedState) IndicesForHeights() []*pb.ShardAndCommitteeArray {
-	return c.data.IndicesForHeights
+	return c.data.IndicesForSlots
 }
 
 // ClearIndicesForHeights clears the IndicesForHeights set.
 func (c *CrystallizedState) ClearIndicesForHeights() {
-	c.data.IndicesForHeights = []*pb.ShardAndCommitteeArray{}
+	c.data.IndicesForSlots = []*pb.ShardAndCommitteeArray{}
 }
 
 // CrosslinkRecords returns records about the most recent cross link or each shard.
