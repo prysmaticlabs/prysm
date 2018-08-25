@@ -140,7 +140,7 @@ func TestBlockHashForSlot(t *testing.T) {
 	}
 	state := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHash,
-	})
+	}, nil)
 	block := newTestBlock(t, &pb.BeaconBlock{SlotNumber: 7})
 	if _, err := state.BlockHashForSlot(200, block); err == nil {
 		t.Error("getBlockHash should have failed with invalid height")

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
@@ -261,6 +262,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// fork choice rule.
 			var canProcess bool
 			var err error
+			var blockVoteCache map[*common.Hash]*types.VoteCache
 
 			h, err := block.Hash()
 			if err != nil {
@@ -300,11 +302,17 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
-			// Process attestation as a validator.
-			if err := c.chain.processAttestations(block); err != nil {
-				// We might receive a lot of blocks that fail attestation processing,
-				// so we create a debug level log instead of an error log.
-				log.Debugf("could not process attestation: %v", err)
+			// Process attestations as a validator.
+			for _, attestation := range block.Attestations() {
+				if err := c.chain.processAttestation(attestation, block); err != nil {
+					// We might receive a lot of blocks that fail attestation processing,
+					// so we create a debug level log instead of an error log.
+					log.Debugf("could not process attestation: %v", err)
+				}
+				blockVoteCache, err = c.chain.calculateBlockVoteCache(attestation, block)
+				if err != nil {
+					log.Debugf("could not calculate new block vote cache: %v", nil)
+				}
 			}
 
 			// If we cannot process this block, we keep listening.
@@ -325,7 +333,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// canonical blocks and states.
 
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(block.PowChainRef())
+			activeState, err := c.chain.computeNewActiveState(block.PowChainRef(), blockVoteCache)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
