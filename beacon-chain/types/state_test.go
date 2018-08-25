@@ -42,6 +42,16 @@ func TestActiveState(t *testing.T) {
 		t.Errorf("there should be no recent block hashes, received %v", len(active.data.RecentBlockHashes))
 	}
 
+	bvc := active.GetBlockVoteCache()
+	bvc[nil] = &VoteCache{
+		VoterIndices:     []uint32{0, 1, 2},
+		VoteTotalDeposit: 1000,
+	}
+	active.SetBlockVoteCache(bvc)
+	if !active.IsVoteCacheThere(nil) {
+		t.Errorf("block vote cache should be there but recevied false")
+	}
+
 	emptyActive := &ActiveState{}
 	if _, err := emptyActive.Marshal(); err == nil {
 		t.Error("marshal with empty data should fail")

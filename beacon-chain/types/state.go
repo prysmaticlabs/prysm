@@ -196,6 +196,22 @@ func (a *ActiveState) RecentBlockHashes() []common.Hash {
 	return blockhashes
 }
 
+// IsVoteCacheThere returns false if vote cache of an input block hash doesn't exist.
+func (a *ActiveState) IsVoteCacheThere(blockHash *common.Hash) bool {
+	_, ok := a.blockVoteCache[blockHash]
+	return ok
+}
+
+// GetBlockVoteCache returns the entire set of block vote cache.
+func (a *ActiveState) GetBlockVoteCache() map[*common.Hash]*VoteCache {
+	return a.blockVoteCache
+}
+
+// SetBlockVoteCache resets the entire set of block vote cache.
+func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[*common.Hash]*VoteCache) {
+	a.blockVoteCache = blockVoteCache
+}
+
 // ClearRecentBlockHashes resets the most recent 64 block hashes.
 func (a *ActiveState) ClearRecentBlockHashes() {
 	a.data.RecentBlockHashes = [][]byte{}
@@ -340,20 +356,4 @@ func (c *CrystallizedState) UpdateJustifiedSlot(currentSlot uint64) {
 	if currentSlot == (slot + 1) {
 		c.SetLastFinalizedSlot(slot)
 	}
-}
-
-// IsVoteCacheThere returns false if vote cache of an input block hash doesn't exist.
-func (a *ActiveState) IsVoteCacheThere(blockHash *common.Hash) bool {
-	_, ok := a.blockVoteCache[blockHash]
-	return ok
-}
-
-// GetBlockVoteCache returns the entire set of block vote cache.
-func (a *ActiveState) GetBlockVoteCache() map[*common.Hash]*VoteCache {
-	return a.blockVoteCache
-}
-
-// SetBlockVoteCache resets the entire set of block vote cache.
-func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[*common.Hash]*VoteCache) {
-	a.blockVoteCache = blockVoteCache
 }
