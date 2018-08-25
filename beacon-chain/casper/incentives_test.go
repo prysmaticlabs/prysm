@@ -3,7 +3,6 @@ package casper
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -14,10 +13,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber: 5,
-	})
-
 	data := &pb.CrystallizedState{
 		Validators:        validators,
 		CurrentDynasty:    1,
@@ -25,32 +20,24 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}
-	crystallized := types.NewCrystallizedState(data)
 
 	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
-	active := types.NewActiveState(&pb.ActiveState{})
-	if err := CalculateRewards(active, crystallized, block); err != nil {
-		t.Fatalf("error should be nil as function should have simply returned if no pending attestations: %v", err)
-	}
-
-	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active = types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
-	if err := CalculateRewards(active, crystallized, block); err != nil {
+	testAttesterBitfield := []*pb.AttestationRecord{{AttesterBitfield: []byte{200, 148, 146, 179, 49}}}
+	rewardedValidators, err := CalculateRewards(
+		testAttesterBitfield,
+		data.Validators,
+		data.CurrentDynasty,
+		data.TotalDeposits)
+	if err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
-	if crystallized.LastJustifiedSlot() != uint64(5) {
-		t.Fatalf("unable to update last justified Slot: %d", crystallized.LastJustifiedSlot())
+	if rewardedValidators[0].Balance != uint64(33) {
+		t.Fatalf("validator balance not updated: %d", rewardedValidators[0].Balance)
 	}
-	if crystallized.LastFinalizedSlot() != uint64(4) {
-		t.Fatalf("unable to update last finalized Slot: %d", crystallized.LastFinalizedSlot())
+	if rewardedValidators[7].Balance != uint64(31) {
+		t.Fatalf("validator balance not updated: %d", rewardedValidators[7].Balance)
 	}
-	if crystallized.Validators()[0].Balance != uint64(33) {
-		t.Fatalf("validator balance not updated: %d", crystallized.Validators()[1].Balance)
-	}
-	if crystallized.Validators()[7].Balance != uint64(31) {
-		t.Fatalf("validator balance not updated: %d", crystallized.Validators()[1].Balance)
-	}
-	if crystallized.Validators()[29].Balance != uint64(31) {
-		t.Fatalf("validator balance not updated: %d", crystallized.Validators()[1].Balance)
+	if rewardedValidators[29].Balance != uint64(31) {
+		t.Fatalf("validator balance not updated: %d", rewardedValidators[29].Balance)
 	}
 }

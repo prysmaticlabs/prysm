@@ -1,13 +1,11 @@
 package casper
 
 import (
-	"bytes"
 	"math"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -26,20 +24,17 @@ func TestRotateValidatorSet(t *testing.T) {
 		Validators:     validators,
 		CurrentDynasty: 10,
 	}
-	state := types.NewCrystallizedState(data)
 
 	// Rotate validator set and increment dynasty count by 1.
-	RotateValidatorSet(state)
-	state.IncrementCurrentDynasty()
-
-	if !reflect.DeepEqual(ActiveValidatorIndices(state), []int{2, 3, 4, 5}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(state))
+	rotatedValidators := RotateValidatorSet(data.Validators, data.CurrentDynasty)
+	if !reflect.DeepEqual(ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{2, 3, 4, 5}) {
+		t.Errorf("active validator indices should be [2,3,4,5], got: %v", ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
-	if len(QueuedValidatorIndices(state)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(state))
+	if len(QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty)) != 0 {
+		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(state), []int{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(state))
+	if !reflect.DeepEqual(ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{0, 1}) {
+		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
 
 	// Another run without queuing validators.
@@ -55,20 +50,18 @@ func TestRotateValidatorSet(t *testing.T) {
 		Validators:     validators,
 		CurrentDynasty: 10,
 	}
-	state = types.NewCrystallizedState(data)
 
 	// rotate validator set and increment dynasty count by 1.
-	RotateValidatorSet(state)
-	state.IncrementCurrentDynasty()
+	RotateValidatorSet(data.Validators, data.CurrentDynasty)
 
-	if !reflect.DeepEqual(ActiveValidatorIndices(state), []int{2, 3, 4}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(state))
+	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3, 4}) {
+		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if len(QueuedValidatorIndices(state)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(state))
+	if len(QueuedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
+		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(state), []int{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(state))
+	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
+		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 }
 
@@ -77,11 +70,9 @@ func TestHasVoted(t *testing.T) {
 	pendingAttestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{255},
 	}
-	active := types.NewActiveState(&pb.ActiveState{})
-	active.NewPendingAttestation(pendingAttestation)
 
-	for i := 0; i < len(active.LatestPendingAttestation().AttesterBitfield); i++ {
-		voted := utils.CheckBit(active.LatestPendingAttestation().AttesterBitfield, i)
+	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
+		voted := utils.CheckBit(pendingAttestation.AttesterBitfield, i)
 		if !voted {
 			t.Error("validator voted but received didn't vote")
 		}
@@ -91,43 +82,14 @@ func TestHasVoted(t *testing.T) {
 	pendingAttestation = &pb.AttestationRecord{
 		AttesterBitfield: []byte{85},
 	}
-	active.NewPendingAttestation(pendingAttestation)
 
-	for i := 0; i < len(active.LatestPendingAttestation().AttesterBitfield); i++ {
-		voted := utils.CheckBit(active.LatestPendingAttestation().AttesterBitfield, i)
+	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
+		voted := utils.CheckBit(pendingAttestation.AttesterBitfield, i)
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
 		if i%2 == 1 && !voted {
 			t.Error("validator voted but received didn't vote")
-		}
-	}
-}
-
-func TestClearAttesterBitfields(t *testing.T) {
-	// Testing validator set sizes from 1 to 100.
-	for j := 1; j <= 100; j++ {
-		var validators []*pb.ValidatorRecord
-
-		for i := 0; i < j; i++ {
-			validator := &pb.ValidatorRecord{WithdrawalAddress: []byte{}, PublicKey: 0}
-			validators = append(validators, validator)
-		}
-
-		crystallized := types.NewCrystallizedState(&pb.CrystallizedState{})
-		active := types.NewActiveState(&pb.ActiveState{})
-
-		testAttesterBitfield := []byte{1, 2, 3, 4}
-		crystallized.SetValidators(validators)
-		active.NewPendingAttestation(&pb.AttestationRecord{AttesterBitfield: testAttesterBitfield})
-		active.ClearPendingAttestations()
-
-		if bytes.Equal(testAttesterBitfield, active.LatestPendingAttestation().AttesterBitfield) {
-			t.Fatalf("attester bitfields have not been able to be reset: %v", testAttesterBitfield)
-		}
-
-		if !bytes.Equal(active.LatestPendingAttestation().AttesterBitfield, []byte{}) {
-			t.Fatalf("attester bitfields are not zeroed out: %v", active.LatestPendingAttestation().AttesterBitfield)
 		}
 	}
 }
@@ -145,16 +107,14 @@ func TestValidatorIndices(t *testing.T) {
 		CurrentDynasty: 1,
 	}
 
-	crystallized := types.NewCrystallizedState(data)
-
-	if !reflect.DeepEqual(ActiveValidatorIndices(crystallized), []int{0, 1, 2, 3, 4}) {
-		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", ActiveValidatorIndices(crystallized))
+	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1, 2, 3, 4}) {
+		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(QueuedValidatorIndices(crystallized), []int{5}) {
-		t.Errorf("queued validator indices should be [5], got: %v", QueuedValidatorIndices(crystallized))
+	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{5}) {
+		t.Errorf("queued validator indices should be [5], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if len(ExitedValidatorIndices(crystallized)) != 0 {
-		t.Errorf("exited validator indices to be empty, got: %v", ExitedValidatorIndices(crystallized))
+	if len(ExitedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
+		t.Errorf("exited validator indices to be empty, got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 
 	data = &pb.CrystallizedState{
@@ -169,34 +129,13 @@ func TestValidatorIndices(t *testing.T) {
 		CurrentDynasty: 5,
 	}
 
-	crystallized = types.NewCrystallizedState(data)
-
-	if !reflect.DeepEqual(ActiveValidatorIndices(crystallized), []int{0, 1}) {
-		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", ActiveValidatorIndices(crystallized))
+	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
+		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(QueuedValidatorIndices(crystallized), []int{2, 3}) {
-		t.Errorf("queued validator indices should be [3], got: %v", QueuedValidatorIndices(crystallized))
+	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3}) {
+		t.Errorf("queued validator indices should be [3], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(crystallized), []int{4, 5}) {
-		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(crystallized))
+	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{4, 5}) {
+		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
-}
-
-// NewBlock is a helper method to create blocks with valid defaults.
-// For a generic block, use NewBlock(t, nil).
-func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
-	if b == nil {
-		b = &pb.BeaconBlock{}
-	}
-	if b.ActiveStateHash == nil {
-		b.ActiveStateHash = make([]byte, 32)
-	}
-	if b.CrystallizedStateHash == nil {
-		b.CrystallizedStateHash = make([]byte, 32)
-	}
-	if b.ParentHash == nil {
-		b.ParentHash = make([]byte, 32)
-	}
-
-	return types.NewBlock(b)
 }

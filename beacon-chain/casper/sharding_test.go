@@ -6,15 +6,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestGetIndicesForHeight(t *testing.T) {
-	state := types.NewCrystallizedState(&pb.CrystallizedState{
+	state := &pb.CrystallizedState{
 		LastStateRecalc: 1,
-		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+		IndicesForSlots: []*pb.ShardAndCommitteeArray{
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
 				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
@@ -23,18 +22,18 @@ func TestGetIndicesForHeight(t *testing.T) {
 				{ShardId: 3, Committee: []uint32{0, 1, 2, 3, 4}},
 				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
 			}},
-		}})
-	if _, err := GetIndicesForHeight(state, 1000); err == nil {
+		}}
+	if _, err := GetIndicesForHeight(state.IndicesForSlots, state.LastStateRecalc, 1000); err == nil {
 		t.Error("getIndicesForHeight should have failed with invalid height")
 	}
-	committee, err := GetIndicesForHeight(state, 1)
+	committee, err := GetIndicesForHeight(state.IndicesForSlots, state.LastStateRecalc, 1)
 	if err != nil {
 		t.Errorf("getIndicesForHeight failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
 		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	committee, _ = GetIndicesForHeight(state, 2)
+	committee, _ = GetIndicesForHeight(state.IndicesForSlots, state.LastStateRecalc, 2)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
 		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
@@ -47,16 +46,13 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
 	}
-	_, crystallized := types.NewGenesisStates()
-	crystallized.SetValidators(validators)
-	crystallized.IncrementCurrentDynasty()
 
-	if _, _, err := SampleAttestersAndProposers(common.Hash{'A'}, crystallized); err == nil {
+	if _, _, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1); err == nil {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
 	// ValidatorsByHeightShard should fail the same.
-	if _, err := ValidatorsByHeightShard(crystallized); err == nil {
+	if _, err := ValidatorsByHeightShard(common.Hash{'A'}, validators, 1, 0); err == nil {
 		t.Errorf("ValidatorsByHeightShard should have failed")
 	}
 
@@ -67,16 +63,12 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	_, crystallized = types.NewGenesisStates()
-	crystallized.SetValidators(validators)
-	crystallized.IncrementCurrentDynasty()
-
-	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, crystallized)
+	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	activeValidators := ActiveValidatorIndices(crystallized)
+	activeValidators := ActiveValidatorIndices(validators, 1)
 
 	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
 	if err != nil {
@@ -90,7 +82,7 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
-	indices, err := ValidatorsByHeightShard(crystallized)
+	indices, err := ValidatorsByHeightShard(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
@@ -105,16 +97,12 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	_, crystallized = types.NewGenesisStates()
-	crystallized.SetValidators(validators)
-	crystallized.IncrementCurrentDynasty()
-
-	attesters, proposer, err = SampleAttestersAndProposers(common.Hash{'A'}, crystallized)
+	attesters, proposer, err = SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	activeValidators = ActiveValidatorIndices(crystallized)
+	activeValidators = ActiveValidatorIndices(validators, 1)
 
 	validatorList, err = utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
 	if err != nil {
@@ -128,7 +116,7 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
-	indices, err = ValidatorsByHeightShard(crystallized)
+	indices, err = ValidatorsByHeightShard(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}

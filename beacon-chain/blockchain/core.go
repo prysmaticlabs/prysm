@@ -79,7 +79,10 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	}
 	if !hasActive && !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
-		active, crystallized := types.NewGenesisStates()
+		active, crystallized, err := types.NewGenesisStates()
+		if err != nil {
+			return nil, err
+		}
 		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
 
@@ -271,7 +274,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 		PendingAttestations: []*pb.AttestationRecord{},
 		RecentBlockHashes:   [][]byte{},
 	})
-	attesters, proposer, err := casper.SampleAttestersAndProposers(seed, b.CrystallizedState())
+	attesters, proposer, err := casper.SampleAttestersAndProposers(seed, b.CrystallizedState().Validators(), b.CrystallizedState().CurrentDynasty())
 	if err != nil {
 		return nil, err
 	}
@@ -294,9 +297,11 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, block *types.Block) (*types.CrystallizedState, error) {
 	newCrystallized := b.CrystallizedState()
 	newCrystallized.SetStateRecalc(block.SlotNumber())
-	if err := casper.CalculateRewards(active, newCrystallized, block); err != nil {
-		return newCrystallized, fmt.Errorf("could not calculate ffg rewards/penalties: %v", err)
+	rewardedValidators, err := casper.CalculateRewards(active.PendingAttestations(), newCrystallized.Validators(), newCrystallized.CurrentDynasty(), newCrystallized.TotalDeposits())
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate ffg rewards/penalties: %v", err)
 	}
+	b.CrystallizedState().SetValidators(rewardedValidators)
 	return newCrystallized, nil
 }
 

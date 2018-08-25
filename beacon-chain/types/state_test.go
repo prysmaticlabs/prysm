@@ -9,7 +9,10 @@ import (
 )
 
 func TestActiveState(t *testing.T) {
-	active, _ := NewGenesisStates()
+	active, _, err := NewGenesisStates()
+	if err != nil {
+		t.Fatalf("Can't get genesis state: %v", err)
+	}
 	if len(active.PendingAttestations()) > 0 {
 		t.Errorf("there should be no pending attestations, got %v", len(active.PendingAttestations()))
 	}
@@ -55,8 +58,10 @@ func TestCrystallizedState(t *testing.T) {
 	if !reflect.DeepEqual(NewCrystallizedState(nil), &CrystallizedState{}) {
 		t.Errorf("Crystallized state mismatch, want %v, received %v", NewCrystallizedState(nil), &CrystallizedState{})
 	}
-	_, crystallized := NewGenesisStates()
-
+	_, crystallized, err := NewGenesisStates()
+	if err != nil {
+		t.Fatalf("Can't get genesis state: %v", err)
+	}
 	emptyCrystallized := &CrystallizedState{}
 	if _, err := emptyCrystallized.Marshal(); err == nil {
 		t.Error("marshal with empty data should fail")
@@ -96,8 +101,8 @@ func TestCrystallizedState(t *testing.T) {
 		t.Errorf("mistmatched finalized slot: wanted 5, received %v", crystallized.LastFinalizedSlot())
 	}
 	crystallized.IncrementCurrentDynasty()
-	if crystallized.CurrentDynasty() != 1 {
-		t.Errorf("mistmatched current dynasty: wanted 1, received %v", crystallized.CurrentDynasty())
+	if crystallized.CurrentDynasty() != 2 {
+		t.Errorf("mistmatched current dynasty: wanted 2, received %v", crystallized.CurrentDynasty())
 	}
 	crystallized.SetTotalDeposits(1000)
 	if crystallized.TotalDeposits() != 1000 {
