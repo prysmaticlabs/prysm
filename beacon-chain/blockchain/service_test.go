@@ -105,7 +105,7 @@ func TestStartStop(t *testing.T) {
 
 	chainService, _ = NewChainService(ctx, cfg)
 
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
@@ -134,7 +134,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	// Save states so HasStoredState state should return true.
-	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}))
+	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}, make(map[*common.Hash]*types.VoteCache)))
 	chainService.chain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{}))
 	hasState, _ = chainService.HasStoredState()
 	if !hasState {
@@ -183,13 +183,13 @@ func TestFaultyStop(t *testing.T) {
 
 	chainService.Start()
 
-	chainService.chain.SetActiveState(types.NewActiveState(nil))
+	chainService.chain.SetActiveState(types.NewActiveState(nil, make(map[*common.Hash]*types.VoteCache)))
 	err = chainService.Stop()
 	if err == nil {
 		t.Errorf("chain stop should have failed with persist active state")
 	}
 
-	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}))
+	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}, make(map[*common.Hash]*types.VoteCache)))
 	chainService.chain.SetCrystallizedState(types.NewCrystallizedState(nil))
 	err = chainService.Stop()
 	if err == nil {
@@ -225,7 +225,7 @@ func TestProcessingBadBlock(t *testing.T) {
 	}
 	chainService, _ := NewChainService(ctx, cfg)
 
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
@@ -295,7 +295,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
+	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}}, make(map[*common.Hash]*types.VoteCache))
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
@@ -469,7 +469,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	for i := 0; i < params.CycleLength+1; i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
 	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[*common.Hash]*types.VoteCache))
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
