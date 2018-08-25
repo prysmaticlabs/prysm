@@ -34,7 +34,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active = types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
+	active = types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}}, make(map[*common.Hash]*types.VoteCache))
 	if err := CalculateRewards(active, crystallized, block); err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
