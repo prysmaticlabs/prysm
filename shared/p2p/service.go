@@ -98,6 +98,12 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 	}
 	feed := s.Feed(msgType)
 
+	// Reverse adapter order
+	for i := len(adapters)/2 - 1; i >= 0; i-- {
+		opp := len(adapters) - 1 - i
+		adapters[i], adapters[opp] = adapters[opp], adapters[i]
+	}
+
 	go (func() {
 		defer sub.Cancel()
 		for {
@@ -111,12 +117,6 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 			if err != nil {
 				log.Errorf("Failed to get next message: %v", err)
 				return
-			}
-
-			// Reverse adapter order
-			for i := len(adapters)/2 - 1; i >= 0; i-- {
-				opp := len(adapters) - 1 - i
-				adapters[i], adapters[opp] = adapters[opp], adapters[i]
 			}
 
 			var h Handler = func(ctx context.Context, pMsg Message) {

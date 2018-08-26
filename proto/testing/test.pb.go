@@ -29,7 +29,7 @@ func (m *TestMessage) Reset()         { *m = TestMessage{} }
 func (m *TestMessage) String() string { return proto.CompactTextString(m) }
 func (*TestMessage) ProtoMessage()    {}
 func (*TestMessage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_test_45722d484cf957ef, []int{0}
+	return fileDescriptor_test_efe8e22469748e36, []int{0}
 }
 func (m *TestMessage) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TestMessage.Unmarshal(m, b)
@@ -56,18 +56,68 @@ func (m *TestMessage) GetFoo() string {
 	return ""
 }
 
-func init() {
-	proto.RegisterType((*TestMessage)(nil), "ethereum.testing.TestMessage")
+type Puzzle struct {
+	Challenge            string   `protobuf:"bytes,1,opt,name=challenge" json:"challenge,omitempty"`
+	Answer               string   `protobuf:"bytes,2,opt,name=answer" json:"answer,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func init() { proto.RegisterFile("proto/testing/test.proto", fileDescriptor_test_45722d484cf957ef) }
+func (m *Puzzle) Reset()         { *m = Puzzle{} }
+func (m *Puzzle) String() string { return proto.CompactTextString(m) }
+func (*Puzzle) ProtoMessage()    {}
+func (*Puzzle) Descriptor() ([]byte, []int) {
+	return fileDescriptor_test_efe8e22469748e36, []int{1}
+}
+func (m *Puzzle) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Puzzle.Unmarshal(m, b)
+}
+func (m *Puzzle) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Puzzle.Marshal(b, m, deterministic)
+}
+func (dst *Puzzle) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Puzzle.Merge(dst, src)
+}
+func (m *Puzzle) XXX_Size() int {
+	return xxx_messageInfo_Puzzle.Size(m)
+}
+func (m *Puzzle) XXX_DiscardUnknown() {
+	xxx_messageInfo_Puzzle.DiscardUnknown(m)
+}
 
-var fileDescriptor_test_45722d484cf957ef = []byte{
-	// 92 bytes of a gzipped FileDescriptorProto
+var xxx_messageInfo_Puzzle proto.InternalMessageInfo
+
+func (m *Puzzle) GetChallenge() string {
+	if m != nil {
+		return m.Challenge
+	}
+	return ""
+}
+
+func (m *Puzzle) GetAnswer() string {
+	if m != nil {
+		return m.Answer
+	}
+	return ""
+}
+
+func init() {
+	proto.RegisterType((*TestMessage)(nil), "ethereum.testing.TestMessage")
+	proto.RegisterType((*Puzzle)(nil), "ethereum.testing.Puzzle")
+}
+
+func init() { proto.RegisterFile("proto/testing/test.proto", fileDescriptor_test_efe8e22469748e36) }
+
+var fileDescriptor_test_efe8e22469748e36 = []byte{
+	// 135 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0x28, 0x28, 0xca, 0x2f,
 	0xc9, 0xd7, 0x2f, 0x49, 0x2d, 0x2e, 0xc9, 0xcc, 0x4b, 0x07, 0xd3, 0x7a, 0x60, 0x21, 0x21, 0x81,
 	0xd4, 0x92, 0x8c, 0xd4, 0xa2, 0xd4, 0xd2, 0x5c, 0x3d, 0xa8, 0xa4, 0x92, 0x3c, 0x17, 0x77, 0x48,
 	0x6a, 0x71, 0x89, 0x6f, 0x6a, 0x71, 0x71, 0x62, 0x7a, 0xaa, 0x90, 0x00, 0x17, 0x73, 0x5a, 0x7e,
-	0xbe, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0x67, 0x10, 0x88, 0x99, 0xc4, 0x06, 0xd6, 0x69, 0x0c, 0x08,
-	0x00, 0x00, 0xff, 0xff, 0xf9, 0x33, 0x23, 0x18, 0x55, 0x00, 0x00, 0x00,
+	0xbe, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0x67, 0x10, 0x88, 0xa9, 0x64, 0xc7, 0xc5, 0x16, 0x50, 0x5a,
+	0x55, 0x95, 0x93, 0x2a, 0x24, 0xc3, 0xc5, 0x99, 0x9c, 0x91, 0x98, 0x93, 0x93, 0x9a, 0x97, 0x9e,
+	0x0a, 0x55, 0x81, 0x10, 0x10, 0x12, 0xe3, 0x62, 0x4b, 0xcc, 0x2b, 0x2e, 0x4f, 0x2d, 0x92, 0x60,
+	0x02, 0x4b, 0x41, 0x79, 0x49, 0x6c, 0x60, 0x9b, 0x8d, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0x7f,
+	0xb3, 0xa3, 0x6b, 0x95, 0x00, 0x00, 0x00,
 }

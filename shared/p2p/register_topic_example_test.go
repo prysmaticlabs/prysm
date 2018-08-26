@@ -33,7 +33,6 @@ func ExampleServer_RegisterTopic() {
 
 	s, _ := p2p.NewServer()
 
-	// TODO: Figure out the topic. Is it a protobuf topic, string, or int?
 	var topic string
 	var message interface{}
 
