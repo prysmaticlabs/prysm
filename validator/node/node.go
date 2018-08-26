@@ -168,7 +168,7 @@ func (s *ShardEthereum) registerBeaconService() error {
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
 	}
-	b := beacon.NewBeaconClient(context.TODO(), beacon.DefaultConfig(), rpcService)
+	b := beacon.NewBeaconValidator(context.TODO(), beacon.DefaultConfig(), rpcService)
 	return s.services.RegisterService(b)
 }
 

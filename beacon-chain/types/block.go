@@ -30,6 +30,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				PowChainRef:           []byte{0},
 				ActiveStateHash:       []byte{0},
 				CrystallizedStateHash: []byte{0},
+				Timestamp:             ptypes.TimestampNow(),
 			},
 		}
 	}
@@ -116,6 +117,11 @@ func (b *Block) CrystallizedStateHash() [32]byte {
 // AttestationCount returns the number of attestations.
 func (b *Block) AttestationCount() int {
 	return len(b.data.Attestations)
+}
+
+// Attestations returns an array of attestations in the block.
+func (b *Block) Attestations() []*pb.AttestationRecord {
+	return b.data.Attestations
 }
 
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.

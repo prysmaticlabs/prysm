@@ -4,7 +4,7 @@ package params
 const (
 	// AttesterReward determines how much ETH attesters get for performing their duty.
 	AttesterReward = 1
-	// CycleLength is the beacon chain epoch length in slots.
+	// CycleLength is the beacon chain cycle length in slots.
 	CycleLength = 64
 	// ShardCount is a fixed number.
 	ShardCount = 1024
@@ -22,5 +22,5 @@ const (
 	DefaultEndDynasty = 9999999999999999999
 	// BootstrappedValidatorsCount is the number of validators we seed the first crystallized
 	// state with. This number has yet to be decided by research and is arbitrary for now.
-	BootstrappedValidatorsCount = 100
+	BootstrappedValidatorsCount = 1000
 )

@@ -69,7 +69,7 @@ message CrystallizedState {
   uint64 dynasty_seed_last_reset = 9;
   repeated CrosslinkRecord crosslink_records = 10;
   repeated ValidatorRecord validators = 11;
-  repeated ShardAndCommitteeArray indices_for_heights = 12;
+  repeated ShardAndCommitteeArray indices_for_slots = 12;
 }
 
 message ShardAndCommitteeArray {
