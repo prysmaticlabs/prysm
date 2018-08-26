@@ -9,7 +9,7 @@ sol2go(
 
 go_library(
     name = "go_default_library",
-    srcs = ["validator_registration.go"],
+    srcs = [":contract_go"],  # keep
     importpath = "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract",
     visibility = ["//visibility:public"],
     deps = [
