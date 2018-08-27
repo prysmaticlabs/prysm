@@ -200,7 +200,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
-// a new crystallized state transition will occur.
+// a new crystallized state and active state transition will occur.
 func (b *BeaconChain) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
@@ -431,4 +431,16 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 		return err
 	}
 	return b.db.Put([]byte(canonicalHeadKey), enc)
+}
+
+// initCycle is called when a new cycle has been reached, beacon node
+// will re-compute active state and crystallized state during init cycle transition.
+func (b *BeaconChain) initCycle(cState *pb.CrystallizedState, aState *pb.ActiveState, block *pb.BeaconBlock) (*pb.CrystallizedState, *pb.ActiveState, error) {
+	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
+	for i := uint64(0); i < params.CycleLength; i ++ {
+		slot := cState.LastStateRecalc - params.CycleLength + i
+		blockHash := aState.RecentBlockHashes[i]
+		if _, ok := aState.
+
+	}
 }
