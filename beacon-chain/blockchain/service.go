@@ -302,7 +302,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
-			// Process attestations as a validator.
+			// Process attestations as a beacon chain node.
 			for _, attestation := range block.Attestations() {
 				if err := c.chain.processAttestation(attestation, block); err != nil {
 					// We might receive a lot of blocks that fail attestation processing,
@@ -313,6 +313,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				if err != nil {
 					log.Debugf("could not calculate new block vote cache: %v", nil)
 				}
+				c.chain.ActiveState().NewPendingAttestation(attestation)
 			}
 
 			// If we cannot process this block, we keep listening.
