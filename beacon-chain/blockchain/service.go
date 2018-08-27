@@ -204,7 +204,12 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 
 	// TODO: Utilize this value in the fork choice rule.
-	vals, err := casper.ValidatorsByHeightShard(canonicalCrystallizedState)
+	vals, err := casper.ValidatorsByHeightShard(
+		canonicalCrystallizedState.DynastySeed(),
+		canonicalCrystallizedState.Validators(),
+		canonicalCrystallizedState.CurrentDynasty(),
+		canonicalCrystallizedState.CrosslinkingStartShard())
+
 	if err != nil {
 		log.Errorf("Unable to get validators by height and by shard: %v", err)
 		return

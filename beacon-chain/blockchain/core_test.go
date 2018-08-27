@@ -90,7 +90,10 @@ func TestNewBeaconChain(t *testing.T) {
 	}
 
 	hook.Reset()
-	active, crystallized := types.NewGenesisStates()
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Errorf("Creating new genesis state failed %v", err)
+	}
 	if _, err := types.NewGenesisBlock(); err != nil {
 		t.Errorf("Creating a new genesis block failed %v", err)
 	}
@@ -441,7 +444,10 @@ func TestComputeCrystallizedState(t *testing.T) {
 func TestComputeActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
-	_, crystallized := types.NewGenesisStates()
+	_, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
 	beaconChain.SetCrystallizedState(crystallized)
 	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte("chain"))); err != nil {
 		t.Errorf("computing active state should not have failed: %v", err)
@@ -492,7 +498,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation on this crystallized state should fail because only committee is in shard 1.
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 64,
-		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+		IndicesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -510,7 +516,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation should work now, there's a committee in shard 0.
 	crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 64,
-		IndicesForHeights: []*pb.ShardAndCommitteeArray{
+		IndicesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},

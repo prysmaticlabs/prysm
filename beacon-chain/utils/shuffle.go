@@ -11,7 +11,7 @@ import (
 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
-func ShuffleIndices(seed common.Hash, validatorList []int) ([]int, error) {
+func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) {
 	if len(validatorList) > params.MaxValidators {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}
@@ -33,8 +33,8 @@ func ShuffleIndices(seed common.Hash, validatorList []int) ([]int, error) {
 }
 
 // SplitIndices splits a list into n pieces.
-func SplitIndices(l []int, n int) [][]int {
-	var divided [][]int
+func SplitIndices(l []uint32, n int) [][]uint32 {
+	var divided [][]uint32
 	for i := 0; i < n; i++ {
 		start := len(l) * i / n
 		end := len(l) * (i + 1) / n
