@@ -14,7 +14,8 @@ import (
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
 type ActiveState struct {
-	data *pb.ActiveState
+	data           *pb.ActiveState
+	blockVoteCache map[*common.Hash]*VoteCache //blockVoteCache is not part of protocol state, it is used as a helper cache for cycle init calculations.
 }
 
 // CrystallizedState contains fields of every Slot state,
@@ -23,14 +24,20 @@ type CrystallizedState struct {
 	data *pb.CrystallizedState
 }
 
+// VoteCache is a helper cache to track which validators voted for this block hash and total deposit supported for this block hash.
+type VoteCache struct {
+	VoterIndices     []uint32
+	VoteTotalDeposit uint64
+}
+
 // NewCrystallizedState creates a new crystallized state with a explicitly set data field.
 func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 	return &CrystallizedState{data: data}
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveState) *ActiveState {
-	return &ActiveState{data: data}
+func NewActiveState(data *pb.ActiveState, blockVoteCache map[*common.Hash]*VoteCache) *ActiveState {
+	return &ActiveState{data: data, blockVoteCache: blockVoteCache}
 }
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
@@ -40,6 +47,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 			PendingAttestations: []*pb.AttestationRecord{},
 			RecentBlockHashes:   [][]byte{},
 		},
+		blockVoteCache: make(map[*common.Hash]*VoteCache),
 	}
 
 	// We seed the genesis crystallized state with a bunch of validators to
@@ -186,6 +194,22 @@ func (a *ActiveState) RecentBlockHashes() []common.Hash {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
 	return blockhashes
+}
+
+// IsVoteCacheThere returns false if vote cache of an input block hash doesn't exist.
+func (a *ActiveState) IsVoteCacheThere(blockHash *common.Hash) bool {
+	_, ok := a.blockVoteCache[blockHash]
+	return ok
+}
+
+// GetBlockVoteCache returns the entire set of block vote cache.
+func (a *ActiveState) GetBlockVoteCache() map[*common.Hash]*VoteCache {
+	return a.blockVoteCache
+}
+
+// SetBlockVoteCache resets the entire set of block vote cache.
+func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[*common.Hash]*VoteCache) {
+	a.blockVoteCache = blockVoteCache
 }
 
 // ClearRecentBlockHashes resets the most recent 64 block hashes.
