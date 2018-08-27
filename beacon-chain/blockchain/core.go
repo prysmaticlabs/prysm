@@ -311,12 +311,12 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	hash, err := block.Hash()
-	if err != nil {
-		return err
-	}
+	slot := block.SlotNumber()
 
-	return b.db.Put(hash[:], encodedState)
+	key := make([]byte, 1)
+	key[0] = byte(slot)
+
+	return b.db.Put(key, encodedState)
 }
 
 // processAttestations processes the attestations of an incoming block.
