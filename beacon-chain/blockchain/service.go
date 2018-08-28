@@ -338,7 +338,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
-			c.chain.SetActiveState(activeState)
+
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
