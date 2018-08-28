@@ -204,7 +204,7 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 
 	// TODO: Utilize this value in the fork choice rule.
-	vals, err := casper.ValidatorsByHeightShard(
+	vals, err := casper.ShuffleValidatorsToCommittees(
 		canonicalCrystallizedState.DynastySeed(),
 		canonicalCrystallizedState.Validators(),
 		canonicalCrystallizedState.CurrentDynasty(),

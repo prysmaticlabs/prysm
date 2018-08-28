@@ -53,25 +53,14 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
 	seed := make([]byte, 0, 32)
-	committees, err := casper.ValidatorsByHeightShard(common.BytesToHash(seed), validators, 1, 0)
+	committees, err := casper.ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1, 0)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Starting with 2 cycles (128 slots) with the same committees.
 	committees = append(committees, committees...)
-	// Convert boot strapped attester indices array into proto format.
-	var shardCommittees []*pb.ShardAndCommittee
-	for _, committee := range committees {
-		c := &pb.ShardAndCommittee{
-			ShardId:   uint64(committee.ShardID),
-			Committee: committee.Committee,
-		}
-		shardCommittees = append(shardCommittees, c)
-	}
-	indicesForSlots := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: shardCommittees},
-	}
+	indicesForSlots := append(committees, committees...)
 
 	// Bootstrap cross link records.
 	var crosslinkRecords []*pb.CrosslinkRecord
