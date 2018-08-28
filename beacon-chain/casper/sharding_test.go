@@ -132,7 +132,7 @@ func TestSmallSampleValidators(t *testing.T) {
 func TestGetCommitteeParams1(t *testing.T) {
 	numValidators := params.CycleLength * params.MinCommiteeSize / 4
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators, 0)
+	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
@@ -145,7 +145,7 @@ func TestGetCommitteeParams1(t *testing.T) {
 func TestGetCommitteeParams2(t *testing.T) {
 	numValidators := params.CycleLength * params.MinCommiteeSize
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators, 0)
+	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
@@ -158,7 +158,7 @@ func TestGetCommitteeParams2(t *testing.T) {
 func TestGetCommitteeParams3(t *testing.T) {
 	numValidators := params.CycleLength * params.MinCommiteeSize * 8
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators, 0)
+	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 5 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 5, committesPerSlot)
 	}
