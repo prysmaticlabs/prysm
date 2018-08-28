@@ -303,17 +303,24 @@ func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, blo
 
 // saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
-	encodedState, err := block.Marshal()
-	if err != nil {
-		return err
-	}
 
 	hash, err := block.Hash()
 	if err != nil {
 		return err
 	}
 
-	return b.db.Put(blockKey(block.SlotNumber(), hash), encodedState)
+	key := blockKey(block.SlotNumber(), hash)
+	hasBlock, err := b.db.Has(key)
+	if hasBlock {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	encodedState, err := block.Marshal()
+	return b.db.Put(key, encodedState)
 }
 
 // processAttestations processes the attestations of an incoming block.
