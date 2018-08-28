@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -303,9 +304,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Process attestations as a beacon chain node.
-			for index := range block.Attestations() {
+			var processedAttestations []*pb.AttestationRecord
+			for index, attestation := range block.Attestations() {
 				// Don't add invalid attestation to block vote cache.
 				if err := c.chain.processAttestation(index, block); err == nil {
+					processedAttestations = append(processedAttestations, attestation)
 					blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
 					if err != nil {
 						log.Debugf("could not calculate new block vote cache: %v", nil)
@@ -330,7 +333,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// This data structure will be used by the updateHead function to determine
 			// canonical blocks and states.
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(block.Attestations(), c.chain.ActiveState(), blockVoteCache)
+			activeState, err := c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
