@@ -21,7 +21,7 @@ func TestActiveState(t *testing.T) {
 	}
 
 	record := NewAttestationRecord()
-	active.NewPendingAttestation(record)
+	active.NewPendingAttestation([]*pb.AttestationRecord{record})
 	if len(active.PendingAttestations()) != 1 {
 		t.Errorf("there should be 1 pending attestation, got %v", len(active.PendingAttestations()))
 	}

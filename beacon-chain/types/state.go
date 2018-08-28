@@ -83,8 +83,13 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 		}
 		shardCommittees = append(shardCommittees, c)
 	}
-	indicesForSlots := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: shardCommittees},
+	// Repeat for first 64 slots
+	var indicesForSlots []*pb.ShardAndCommitteeArray
+	for i := 0; i < params.CycleLength; i++ {
+		shardSlotCommittee := &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardCommittees,
+		}
+		indicesForSlots = append(indicesForSlots, shardSlotCommittee)
 	}
 
 	// Bootstrap cross link records.
@@ -174,8 +179,8 @@ func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
 }
 
 // NewPendingAttestation inserts a new pending attestaton fields.
-func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
-	a.data.PendingAttestations = append(a.data.PendingAttestations, record)
+func (a *ActiveState) NewPendingAttestation(record []*pb.AttestationRecord) {
+	a.data.PendingAttestations = append(a.data.PendingAttestations, record...)
 }
 
 // LatestPendingAttestation returns the latest pending attestaton fields.

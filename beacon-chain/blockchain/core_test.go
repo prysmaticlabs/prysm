@@ -444,12 +444,12 @@ func TestComputeCrystallizedState(t *testing.T) {
 func TestComputeActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
-	_, crystallized, err := types.NewGenesisStates()
+	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	beaconChain.SetCrystallizedState(crystallized)
-	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte("chain")), map[*common.Hash]*types.VoteCache{}); err != nil {
+	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[*common.Hash]*types.VoteCache{}); err != nil {
 		t.Errorf("computing active state should not have failed: %v", err)
 	}
 }

@@ -303,7 +303,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Process attestations as a beacon chain node.
-			for index, attestation := range block.Attestations() {
+			for index := range block.Attestations() {
 				if err := c.chain.processAttestation(index, block); err != nil {
 					// We might receive a lot of blocks that fail attestation processing,
 					// so we create a debug level log instead of an error log.
@@ -313,7 +313,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				if err != nil {
 					log.Debugf("could not calculate new block vote cache: %v", nil)
 				}
-				c.chain.ActiveState().NewPendingAttestation(attestation)
 			}
 
 			// If we cannot process this block, we keep listening.
@@ -332,13 +331,14 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			//
 			// This data structure will be used by the updateHead function to determine
 			// canonical blocks and states.
-
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(block.PowChainRef(), blockVoteCache)
+			activeState, err := c.chain.computeNewActiveState(block.Attestations(), c.chain.ActiveState(), blockVoteCache)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
-
+			if err := c.chain.SetActiveState(activeState); err != nil {
+				log.Errorf("Set active state failed: %v", err)
+			}
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {

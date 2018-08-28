@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -270,35 +269,12 @@ func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, err
 }
 
 // computeNewActiveState for every newly processed beacon block.
-func (b *BeaconChain) computeNewActiveState(seed common.Hash, blockVoteCache map[*common.Hash]*types.VoteCache) (*types.ActiveState, error) {
-	newActiveState := types.NewActiveState(&pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{},
-		RecentBlockHashes:   [][]byte{},
-	}, make(map[*common.Hash]*types.VoteCache))
+func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[*common.Hash]*types.VoteCache) (*types.ActiveState, error) {
+	// TODO: Insert recent block hash.
+	activeState.SetBlockVoteCache(blockVoteCache)
+	activeState.NewPendingAttestation(attestations)
 
-	attesters, proposer, err := casper.SampleAttestersAndProposers(
-		seed,
-		b.CrystallizedState().Validators(),
-		b.CrystallizedState().CurrentDynasty())
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Verify attestations from attesters.
-	log.WithFields(logrus.Fields{"attestersIndices": attesters}).Debug("Attester indices")
-
-	// TODO: Verify main signature from proposer.
-	log.WithFields(logrus.Fields{"proposerIndex": proposer}).Debug("Proposer index")
-
-	// TODO: Update crosslink records (post Ruby release).
-
-	// TODO: Track reward for the proposer that just proposed the latest beacon block.
-
-	// TODO: Verify randao reveal from validator's hash pre image.
-
-	newActiveState.SetBlockVoteCache(blockVoteCache)
-
-	return newActiveState, nil
+	return activeState, nil
 }
 
 // computeNewCrystallizedState for every newly processed beacon block at a cycle transition.

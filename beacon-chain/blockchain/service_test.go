@@ -515,3 +515,119 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 }
+
+func TestProcessingBlockWithChainSwitch(t *testing.T) {
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+	}
+
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db.DB(),
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+
+	chainService, _ := NewChainService(ctx, cfg)
+
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+
+	activeStateHash, _ := active.Hash()
+	crystallizedStateHash, _ := crystallized.Hash()
+
+	genesis, err := beaconChain.GenesisBlock()
+	if err != nil {
+		t.Fatalf("unable to get canonical head: %v", err)
+	}
+
+	parentHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	block1 := NewBlock(t, &pb.BeaconBlock{
+		ParentHash:            parentHash[:],
+		SlotNumber:            1,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		Attestations: []*pb.AttestationRecord{{
+			Slot:             0,
+			AttesterBitfield: []byte{200},
+			ShardId:          0,
+		}},
+	})
+
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
+
+	if err := chainService.SaveBlock(block1); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.incomingBlockChan <- block1
+
+	block1Hash, err := block1.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of block 1: %v", err)
+	}
+
+	// Add 1 more attestation field for slot2
+	block2 := NewBlock(t, &pb.BeaconBlock{
+		ParentHash: block1Hash[:],
+		SlotNumber: 2,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 1, AttesterBitfield: []byte{200}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{200}, ShardId: 2},
+		}})
+
+	chainService.incomingBlockChan <- block2
+
+	if len(beaconChain.ActiveState().PendingAttestations()) != 1 {
+		t.Fatalf("Active state should have 1 pending attestation: %d", len(beaconChain.ActiveState().PendingAttestations()))
+	}
+
+	block2Hash, err := block2.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of block 1: %v", err)
+	}
+
+	// Add 1 more attestation field for slot3
+	block3 := NewBlock(t, &pb.BeaconBlock{
+		ParentHash: block2Hash[:],
+		SlotNumber: 3,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 2, AttesterBitfield: []byte{200}, ShardId: 0},
+			{Slot: 2, AttesterBitfield: []byte{200}, ShardId: 2},
+			{Slot: 2, AttesterBitfield: []byte{200}, ShardId: 4},
+		}})
+
+	chainService.incomingBlockChan <- block3
+
+	chainService.cancel()
+	exitRoutine <- true
+
+	// We should have 6 pending attestations from block 1 to block 3
+	if len(beaconChain.ActiveState().PendingAttestations()) != 6 {
+		t.Fatalf("Active state should have 6 pending attestation: %d", len(beaconChain.ActiveState().PendingAttestations()))
+	}
+}
