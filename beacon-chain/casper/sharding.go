@@ -7,7 +7,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// ShuffleValidatorsToCommittees splits a shuffled validator into slots and by shard.
+// ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
 func ShuffleValidatorsToCommittees(seed common.Hash, activeValidators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
 	indices := ActiveValidatorIndices(activeValidators, dynasty)
 
@@ -29,12 +29,13 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
-	// split the shuffled height list for shards
+	// split the validator indices by slot.
 	validatorsBySlot := utils.SplitIndices(shuffledValidators, params.CycleLength)
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
 		shardStart := int(crosslinkStartShard) + i*committeesPerSlot/slotsPerCommittee
+
 		for j, validatorsForShard := range validatorsByShard {
 			shardID := (shardStart + j) % params.ShardCount
 			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
