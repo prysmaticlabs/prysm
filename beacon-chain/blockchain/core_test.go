@@ -421,26 +421,6 @@ func TestVerifyCrystallizedHashWithNil(t *testing.T) {
 	}
 }
 
-func TestComputeCrystallizedState(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 0})
-	beaconChain.SetCrystallizedState(crystallized)
-	data := &pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
-			{Slot: 0, ShardBlockHash: []byte{1}}, {Slot: 1, ShardBlockHash: []byte{2}},
-		},
-		RecentBlockHashes: [][]byte{
-			{'A'}, {'B'}, {'C'}, {'D'},
-		},
-	}
-	active := types.NewActiveState(data, make(map[*common.Hash]*types.VoteCache))
-	block := types.NewBlock(&pb.BeaconBlock{SlotNumber: 1})
-	if _, err := beaconChain.computeNewCrystallizedState(active, block); err != nil {
-		t.Errorf("computing crystallized state should not have failed: %v", err)
-	}
-}
-
 func TestComputeActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()

@@ -332,14 +332,14 @@ func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 	c.data.Validators = validators
 }
 
-// IndicesForHeights returns what active validators are part of the attester set
+// IndicesForSlots returns what active validators are part of the attester set
 // at what slot, and in what shard.
-func (c *CrystallizedState) IndicesForHeights() []*pb.ShardAndCommitteeArray {
+func (c *CrystallizedState) IndicesForSlots() []*pb.ShardAndCommitteeArray {
 	return c.data.IndicesForSlots
 }
 
-// ClearIndicesForHeights clears the IndicesForHeights set.
-func (c *CrystallizedState) ClearIndicesForHeights() {
+// ClearIndicesForSlots clears the IndicesForSlots set.
+func (c *CrystallizedState) ClearIndicesForSlots() {
 	c.data.IndicesForSlots = []*pb.ShardAndCommitteeArray{}
 }
 

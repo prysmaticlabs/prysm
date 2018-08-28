@@ -342,18 +342,24 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
-				crystallized, err := c.chain.computeNewCrystallizedState(activeState, block)
-				if err != nil {
-					log.Errorf("Compute crystallized state failed: %v", err)
-				}
+				newCrystallizedState, newActiveState := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
+
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
-					crystallized,
+					newCrystallizedState,
+				)
+				c.processedActiveStatesBySlot[receivedSlotNumber] = append(
+					c.processedActiveStatesBySlot[receivedSlotNumber],
+					newActiveState,
 				)
 			} else {
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
 					c.chain.CrystallizedState(),
+				)
+				c.processedActiveStatesBySlot[receivedSlotNumber] = append(
+					c.processedActiveStatesBySlot[receivedSlotNumber],
+					activeState,
 				)
 			}
 
@@ -367,10 +373,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			c.processedBlocksBySlot[receivedSlotNumber] = append(
 				c.processedBlocksBySlot[receivedSlotNumber],
 				block,
-			)
-			c.processedActiveStatesBySlot[receivedSlotNumber] = append(
-				c.processedActiveStatesBySlot[receivedSlotNumber],
-				activeState,
 			)
 			log.Info("Finished processing received block and states into DAG")
 		}

@@ -132,9 +132,9 @@ func TestCrystallizedState(t *testing.T) {
 	if !reflect.DeepEqual(crystallized.Validators(), validators) {
 		t.Errorf("mismatched validator set: wanted %v, received %v", validators, crystallized.Validators())
 	}
-	crystallized.ClearIndicesForHeights()
-	if !reflect.DeepEqual(crystallized.IndicesForHeights(), []*pb.ShardAndCommitteeArray{}) {
-		t.Errorf("mismatched indices for heights: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForHeights())
+	crystallized.ClearIndicesForSlots()
+	if !reflect.DeepEqual(crystallized.IndicesForSlots(), []*pb.ShardAndCommitteeArray{}) {
+		t.Errorf("mismatched indices for heights: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForSlots())
 	}
 	crystallized.CrosslinkRecords()
 	crystallized.UpdateJustifiedSlot(6)
