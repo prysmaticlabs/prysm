@@ -444,8 +444,10 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 // getAttesterIndices returns the attester committee of based from attestation's shard ID and slot number.
 func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
+	// TODO: IndicesForHeights will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
-	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc+params.CycleLength].ArrayShardAndCommittee
+	//
+	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
 			return shardCommittee[i].Committee, nil

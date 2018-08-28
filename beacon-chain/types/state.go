@@ -42,10 +42,16 @@ func NewActiveState(data *pb.ActiveState, blockVoteCache map[*common.Hash]*VoteC
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
+	// Bootstrap recent block hashes to all 0s for first 2 cycles (128 slots).
+	var recentBlockHashes [][]byte
+	for i := 0; i < 2*params.CycleLength; i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
+	}
+
 	active := &ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AttestationRecord{},
-			RecentBlockHashes:   [][]byte{},
+			RecentBlockHashes:   recentBlockHashes,
 		},
 		blockVoteCache: make(map[*common.Hash]*VoteCache),
 	}
