@@ -327,7 +327,7 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	return b.db.Put(hash[:], encodedState)
 }
 
-// processAttestation processes the attestation of an incoming block.
+// processAttestation processes the attestations for one shard in an incoming block.
 func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
 	// Validate attestation's slot number has is within range of incoming block number.
 	slotNumber := int(block.SlotNumber())
