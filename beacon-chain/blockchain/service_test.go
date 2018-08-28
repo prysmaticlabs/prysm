@@ -198,7 +198,6 @@ func TestFaultyStop(t *testing.T) {
 }
 
 func TestProcessingBadBlock(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
@@ -259,7 +258,6 @@ func TestProcessingBadBlock(t *testing.T) {
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
-	hook.Reset()
 }
 
 func TestRunningChainService(t *testing.T) {

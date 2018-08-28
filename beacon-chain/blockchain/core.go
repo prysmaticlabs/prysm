@@ -275,10 +275,15 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash, blockVoteCache map
 		PendingAttestations: []*pb.AttestationRecord{},
 		RecentBlockHashes:   [][]byte{},
 	}, make(map[*common.Hash]*types.VoteCache))
-	attesters, proposer, err := casper.SampleAttestersAndProposers(seed, b.CrystallizedState().Validators(), b.CrystallizedState().CurrentDynasty())
+
+	attesters, proposer, err := casper.SampleAttestersAndProposers(
+		seed,
+		b.CrystallizedState().Validators(),
+		b.CrystallizedState().CurrentDynasty())
 	if err != nil {
 		return nil, err
 	}
+
 	// TODO: Verify attestations from attesters.
 	log.WithFields(logrus.Fields{"attestersIndices": attesters}).Debug("Attester indices")
 
@@ -341,7 +346,7 @@ func (b *BeaconChain) processAttestation(attestation *pb.AttestationRecord, bloc
 	parentHashes := b.getSignedParentHashes(block, attestation)
 	attesterIndices, err := b.getAttesterIndices(attestation)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get validator committee: %v", attesterIndices)
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
@@ -390,7 +395,7 @@ func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord,
 			}
 		}
 		// Initialize vote cache of a given block hash if it doesn't exist already.
-		if !b.ActiveState().IsVoteCacheThere(h) {
+		if !b.ActiveState().IsVoteCacheEmpty(h) {
 			newVoteCache[h] = &types.VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
 		}
 
@@ -429,7 +434,7 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 	return signedParentHashes
 }
 
-// getAttesterIndices returns the attester committee of based from attestation's shard ID  and slot number.
+// getAttesterIndices returns the attester committee of based from attestation's shard ID and slot number.
 func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
 	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()

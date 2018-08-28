@@ -196,8 +196,8 @@ func (a *ActiveState) RecentBlockHashes() []common.Hash {
 	return blockhashes
 }
 
-// IsVoteCacheThere returns false if vote cache of an input block hash doesn't exist.
-func (a *ActiveState) IsVoteCacheThere(blockHash *common.Hash) bool {
+// IsVoteCacheEmpty returns false if vote cache of an input block hash doesn't exist.
+func (a *ActiveState) IsVoteCacheEmpty(blockHash *common.Hash) bool {
 	_, ok := a.blockVoteCache[blockHash]
 	return ok
 }

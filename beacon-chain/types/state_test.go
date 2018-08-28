@@ -48,7 +48,7 @@ func TestActiveState(t *testing.T) {
 		VoteTotalDeposit: 1000,
 	}
 	active.SetBlockVoteCache(bvc)
-	if !active.IsVoteCacheThere(nil) {
+	if !active.IsVoteCacheEmpty(nil) {
 		t.Errorf("block vote cache should be there but recevied false")
 	}
 
