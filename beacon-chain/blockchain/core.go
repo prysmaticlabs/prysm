@@ -533,7 +533,6 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		LastFinalizedSlot:      finalizedSlot,
 		CrosslinkingStartShard: 0, // TODO: Stub. Need to see where this epoch left off.
 		CrosslinkRecords:       newCrossLinkRecords,
-		DynastySeed:            cState.DynastySeed()[:],       // TODO: Stub. Dynasty transition is not finalized according to the spec.
 		DynastySeedLastReset:   cState.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
 		TotalDeposits:          nextCycleBalance,
 	})
