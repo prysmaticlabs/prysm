@@ -128,11 +128,11 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
 
-	hasActive, err := c.beaconDB.Has([]byte(activeStateLookupKey))
+	hasActive, err := c.beaconDB.Has([]byte(ActiveStateLookupKey))
 	if err != nil {
 		return false, err
 	}
-	hasCrystallized, err := c.beaconDB.Has([]byte(crystallizedStateLookupKey))
+	hasCrystallized, err := c.beaconDB.Has([]byte(CrystallizedStateLookupKey))
 	if err != nil {
 		return false, err
 	}
@@ -270,6 +270,8 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			receivedSlotNumber := block.SlotNumber()
 
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
+
+			c.beaconDB.Get(blockRegistryKey(receivedSlotNumber))
 
 			// Check if parentHash is in previous slot's processed blockHash list.
 			// TODO: This is messy. Instead, we should implement c.chain.CanProcessBlock

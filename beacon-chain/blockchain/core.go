@@ -47,15 +47,15 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	hasActive, err := db.Has(activeStateLookupKey)
+	hasActive, err := db.Has(ActiveStateLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	hasCrystallized, err := db.Has(crystallizedStateLookupKey)
+	hasCrystallized, err := db.Has(CrystallizedStateLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	hasGenesis, err := db.Has(genesisLookupKey)
+	hasGenesis, err := db.Has(GenesisLookupKey)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := beaconChain.db.Put(genesisLookupKey, genesisMarshall); err != nil {
+		if err := beaconChain.db.Put(GenesisLookupKey, genesisMarshall); err != nil {
 			return nil, err
 		}
 	}
@@ -85,7 +85,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		return beaconChain, nil
 	}
 	if hasActive {
-		enc, err := db.Get(activeStateLookupKey)
+		enc, err := db.Get(ActiveStateLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +97,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		beaconChain.state.ActiveState = types.NewActiveState(activeData)
 	}
 	if hasCrystallized {
-		enc, err := db.Get(crystallizedStateLookupKey)
+		enc, err := db.Get(CrystallizedStateLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -113,12 +113,12 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
-	genesisExists, err := b.db.Has(genesisLookupKey)
+	genesisExists, err := b.db.Has(GenesisLookupKey)
 	if err != nil {
 		return nil, err
 	}
 	if genesisExists {
-		bytes, err := b.db.Get(genesisLookupKey)
+		bytes, err := b.db.Get(GenesisLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -133,12 +133,12 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
-	headExists, err := b.db.Has(canonicalHeadLookupKey)
+	headExists, err := b.db.Has(CanonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
 	}
 	if headExists {
-		bytes, err := b.db.Get(canonicalHeadLookupKey)
+		bytes, err := b.db.Get(CanonicalHeadLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func (b *BeaconChain) PersistActiveState() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put(activeStateLookupKey, encodedState)
+	return b.db.Put(ActiveStateLookupKey, encodedState)
 }
 
 // PersistCrystallizedState stores proto encoding of the current beacon chain crystallized state into the db.
@@ -192,7 +192,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put(crystallizedStateLookupKey, encodedState)
+	return b.db.Put(CrystallizedStateLookupKey, encodedState)
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
@@ -307,12 +307,13 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	slot := block.SlotNumber()
 
-	key := make([]byte, 1)
-	key[0] = byte(slot)
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
 
-	return b.db.Put(key, encodedState)
+	return b.db.Put(blockKey(block.SlotNumber(), hash), encodedState)
 }
 
 // processAttestations processes the attestations of an incoming block.
@@ -426,5 +427,34 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put((canonicalHeadLookupKey), enc)
+	return b.db.Put(CanonicalHeadLookupKey, enc)
+}
+
+func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
+	if err := b.saveBlock(block); err != nil {
+		return err
+	}
+
+	key := blockRegistryKey(block.SlotNumber())
+	hasBlockHashes, err := b.db.Has(key)
+	if err != nil {
+		return err
+	}
+
+	if hasBlockHashes {
+		enc, err := b.db.Get(key)
+		if err != nil {
+			return err
+		}
+
+		registry := &pb.BlockRegistry{}
+		if err := proto.Unmarshal(enc, registry); err != nil {
+			return err
+		}
+
+		for i := 0; i < len(registry.Blockhashes); i++ {
+
+		}
+	}
+	return b.db.Put(blockRegistryKey())
 }

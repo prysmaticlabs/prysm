@@ -107,3 +107,7 @@ message CrosslinkRecord {
   uint64 dynasty = 1;
   bytes blockhash = 2;
 }
+
+message BlockRegistry {
+  repeated bytes blockhashes = 1;
+}
