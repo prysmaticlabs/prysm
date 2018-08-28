@@ -109,5 +109,5 @@ message CrosslinkRecord {
 }
 
 message BlockRegistry {
-  repeated bytes blockhashes = 1;
+  map<string, bool> blockhashes = 1;
 }

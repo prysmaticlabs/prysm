@@ -435,6 +435,11 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 		return err
 	}
 
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
 	key := blockRegistryKey(block.SlotNumber())
 	hasBlockHashes, err := b.db.Has(key)
 	if err != nil {
@@ -452,9 +457,27 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 			return err
 		}
 
-		for i := 0; i < len(registry.Blockhashes); i++ {
-
+		hashRegistered := registry.Blockhashes[string(hash[:])]
+		if hashRegistered {
+			return nil
 		}
+
+		registry.Blockhashes[string(hash[:])] = true
+		enc, err = proto.Marshal(registry)
+		if err != nil {
+			return err
+		}
+
+		return b.db.Put(key, enc)
 	}
-	return b.db.Put(blockRegistryKey())
+
+	registry := &pb.BlockRegistry{}
+
+	registry.Blockhashes[string(hash[:])] = true
+	enc, err := proto.Marshal(registry)
+	if err != nil {
+		return err
+	}
+
+	return b.db.Put(key, enc)
 }
