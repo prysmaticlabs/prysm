@@ -332,12 +332,12 @@ func (b *BeaconChain) processAttestation(attestation *pb.AttestationRecord, bloc
 	// Validate attestation's slot number has is within range of incoming block number.
 	slotNumber := int(block.SlotNumber())
 	if int(attestation.Slot) > slotNumber {
-		return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %v, Needed lower than: %v",
+		return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
 			attestation.Slot,
 			slotNumber)
 	}
 	if int(attestation.Slot) < slotNumber-params.CycleLength {
-		return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
+		return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestation.Slot,
 			slotNumber-params.CycleLength)
 	}
@@ -388,12 +388,17 @@ func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord,
 	}
 
 	for _, h := range parentHashes {
-		// Skip calculating if the hash is part of oblique parent hashes..
+		// Skip calculating for this hash if the hash is part of oblique parent hashes.
+		var skip bool
 		for _, obliqueParentHash := range attestation.ObliqueParentHashes {
 			if bytes.Equal(h.Bytes(), obliqueParentHash) {
-				continue
+				skip = true
 			}
 		}
+		if skip {
+			continue
+		}
+
 		// Initialize vote cache of a given block hash if it doesn't exist already.
 		if !b.ActiveState().IsVoteCacheEmpty(h) {
 			newVoteCache[h] = &types.VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}

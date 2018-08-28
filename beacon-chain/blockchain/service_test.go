@@ -197,7 +197,7 @@ func TestFaultyStop(t *testing.T) {
 	}
 }
 
-func TestProcessingBadBlock(t *testing.T) {
+func TestProcessingBlock(t *testing.T) {
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
