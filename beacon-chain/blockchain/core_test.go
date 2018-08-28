@@ -481,7 +481,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 
 	block = NewBlock(t, &pb.BeaconBlock{
-		SlotNumber: 0,
+		SlotNumber: 1,
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, ShardId: 0, ObliqueParentHashes: [][]byte{{'A'}, {'B'}, {'C'}}},
 		},
@@ -497,7 +497,7 @@ func TestCanProcessAttestations(t *testing.T) {
 
 	// Process attestation on this crystallized state should fail because only committee is in shard 1.
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 64,
+		LastStateRecalc: 0,
 		IndicesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -515,7 +515,7 @@ func TestCanProcessAttestations(t *testing.T) {
 
 	// Process attestation should work now, there's a committee in shard 0.
 	crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 64,
+		LastStateRecalc: 0,
 		IndicesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{

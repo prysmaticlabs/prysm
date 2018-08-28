@@ -84,7 +84,7 @@ func TestStartStop(t *testing.T) {
 	}
 	chainService.Start()
 
-	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 0 {
+	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
 		t.Errorf("incorrect recent block hashes")
 	}
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
@@ -447,7 +447,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	}
 
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 64,
+		LastStateRecalc: 0,
 		Validators:      validators,
 		CurrentDynasty:  5,
 		IndicesForSlots: []*pb.ShardAndCommitteeArray{

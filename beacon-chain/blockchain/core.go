@@ -446,7 +446,6 @@ func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]u
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
 	// TODO: IndicesForHeights will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
-	//
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
