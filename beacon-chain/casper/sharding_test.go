@@ -129,7 +129,7 @@ func TestSmallSampleValidators(t *testing.T) {
 	}
 }
 
-func TestGetCommitteeParams1(t *testing.T) {
+func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
 	numValidators := params.CycleLength * params.MinCommiteeSize / 4
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
@@ -142,7 +142,7 @@ func TestGetCommitteeParams1(t *testing.T) {
 	}
 }
 
-func TestGetCommitteeParams2(t *testing.T) {
+func TestGetCommitteeParamsRegularValidatorSet(t *testing.T) {
 	numValidators := params.CycleLength * params.MinCommiteeSize
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
@@ -155,7 +155,7 @@ func TestGetCommitteeParams2(t *testing.T) {
 	}
 }
 
-func TestGetCommitteeParams3(t *testing.T) {
+func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
 	numValidators := params.CycleLength * params.MinCommiteeSize * 8
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
@@ -168,7 +168,7 @@ func TestGetCommitteeParams3(t *testing.T) {
 	}
 }
 
-func TestValidatorsByHeightShard1(t *testing.T) {
+func TestValidatorsByHeightShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
 	numValidators := params.CycleLength * params.MinCommiteeSize
 	for i := 0; i < numValidators; i++ {
@@ -194,7 +194,7 @@ func TestValidatorsByHeightShard1(t *testing.T) {
 	}
 }
 
-func TestValidatorsByHeightShard2(t *testing.T) {
+func TestValidatorsByHeightShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
 	numValidators := params.CycleLength * params.MinCommiteeSize * 2
 	for i := 0; i < numValidators; i++ {
@@ -226,7 +226,7 @@ func TestValidatorsByHeightShard2(t *testing.T) {
 	}
 }
 
-func TestValidatorsByHeightShard3(t *testing.T) {
+func TestValidatorsByHeightShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
 	numValidators := params.CycleLength * params.MinCommiteeSize / 2
 	for i := 0; i < numValidators; i++ {
