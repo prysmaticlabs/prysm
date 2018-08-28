@@ -303,13 +303,13 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Process attestations as a beacon chain node.
-			for _, attestation := range block.Attestations() {
-				if err := c.chain.processAttestation(attestation, block); err != nil {
+			for index, attestation := range block.Attestations() {
+				if err := c.chain.processAttestation(index, block); err != nil {
 					// We might receive a lot of blocks that fail attestation processing,
 					// so we create a debug level log instead of an error log.
 					log.Debugf("could not process attestation: %v", err)
 				}
-				blockVoteCache, err = c.chain.calculateBlockVoteCache(attestation, block)
+				blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
 				if err != nil {
 					log.Debugf("could not calculate new block vote cache: %v", nil)
 				}
@@ -338,7 +338,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}
-
+			c.chain.SetActiveState(activeState)
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {

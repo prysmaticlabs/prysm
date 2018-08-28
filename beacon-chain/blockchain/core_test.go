@@ -465,7 +465,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 2, ShardId: 0},
 		},
 	})
-	if err := bc.processAttestation(block.Attestations()[0], block); err == nil {
+	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed because attestation slot # > block #")
 	}
 
@@ -476,7 +476,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 1, ShardId: 0},
 		},
 	})
-	if err := bc.processAttestation(block.Attestations()[0], block); err == nil {
+	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed because attestation slot # < block # + cycle length")
 	}
 
@@ -509,7 +509,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	if err := bc.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
-	if err := bc.processAttestation(block.Attestations()[0], block); err == nil {
+	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, there's no committee in shard 0")
 	}
 
@@ -535,7 +535,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'A', 'B', 'C'}},
 		},
 	})
-	if err := bc.processAttestation(block.Attestations()[0], block); err == nil {
+	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, incorrect attester bit field length")
 	}
 
@@ -548,7 +548,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	})
 	// Process attestation should fail because the non-zero leading bits for votes.
 	// a is 01100001
-	if err := bc.processAttestation(block.Attestations()[0], block); err == nil {
+	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, incorrect attester bit field length")
 	}
 
@@ -559,7 +559,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
 		},
 	})
-	if err := bc.processAttestation(block.Attestations()[0], block); err != nil {
+	if err := bc.processAttestation(0, block); err != nil {
 		t.Error(err)
 	}
 }

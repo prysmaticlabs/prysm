@@ -328,9 +328,10 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 }
 
 // processAttestation processes the attestation of an incoming block.
-func (b *BeaconChain) processAttestation(attestation *pb.AttestationRecord, block *types.Block) error {
+func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
 	// Validate attestation's slot number has is within range of incoming block number.
 	slotNumber := int(block.SlotNumber())
+	attestation := block.Attestations()[attestationIndex]
 	if int(attestation.Slot) > slotNumber {
 		return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
 			attestation.Slot,
@@ -379,7 +380,8 @@ func (b *BeaconChain) processAttestation(attestation *pb.AttestationRecord, bloc
 }
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord, block *types.Block) (map[*common.Hash]*types.VoteCache, error) {
+func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types.Block) (map[*common.Hash]*types.VoteCache, error) {
+	attestation := block.Attestations()[attestationIndex]
 	newVoteCache := b.ActiveState().GetBlockVoteCache()
 	parentHashes := b.getSignedParentHashes(block, attestation)
 	attesterIndices, err := b.getAttesterIndices(attestation)
