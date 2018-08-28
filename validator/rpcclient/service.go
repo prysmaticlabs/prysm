@@ -80,3 +80,8 @@ func (s *Service) Stop() error {
 func (s *Service) BeaconServiceClient() pb.BeaconServiceClient {
 	return pb.NewBeaconServiceClient(s.conn)
 }
+
+// ProposerServiceClient return the proto RPC interface.
+func (s *Service) ProposerServiceClient() pb.ProposerServiceClient {
+	return pb.NewProposerServiceClient(s.conn)
+}

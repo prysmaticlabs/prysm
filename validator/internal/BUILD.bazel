@@ -3,7 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     testonly = True,
-    srcs = ["beacon_service_mock.go"],
+    srcs = [
+        "beacon_service_mock.go",
+        "proposer_service_mock.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/internal",
     visibility = ["//validator:__subpackages__"],
     deps = [

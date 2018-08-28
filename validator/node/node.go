@@ -185,12 +185,16 @@ func (s *ShardEthereum) registerAttesterService() error {
 
 // registerProposerService that listens to assignments from the beacon service.
 func (s *ShardEthereum) registerProposerService() error {
+	var rpcService *rpcclient.Service
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
 	}
 
-	prop := proposer.NewProposer(context.TODO(), beaconService)
+	prop := proposer.NewProposer(context.TODO(), beaconService, rpcService)
 	return s.services.RegisterService(prop)
 }
 

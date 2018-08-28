@@ -8,18 +8,21 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "beacon")
 
+type rpcClientService interface {
+	BeaconServiceClient() pb.BeaconServiceClient
+}
+
 // Service that interacts with a beacon node via RPC.
 type Service struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
-	rpcClient      types.RPCClient
+	rpcClient      rpcClientService
 	validatorIndex int
 	assignedHeight uint64
 	responsibility string
@@ -39,7 +42,7 @@ func DefaultConfig() *Config {
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node.
-func NewBeaconValidator(ctx context.Context, cfg *Config, rpcClient types.RPCClient) *Service {
+func NewBeaconValidator(ctx context.Context, cfg *Config, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:          ctx,
@@ -53,9 +56,9 @@ func NewBeaconValidator(ctx context.Context, cfg *Config, rpcClient types.RPCCli
 // Start the main routine for a beacon service.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	rpcClient := s.rpcClient.BeaconServiceClient()
-	go s.fetchBeaconBlocks(rpcClient)
-	go s.fetchCrystallizedState(rpcClient)
+	client := s.rpcClient.BeaconServiceClient()
+	go s.fetchBeaconBlocks(client)
+	go s.fetchCrystallizedState(client)
 }
 
 // Stop the main loop..

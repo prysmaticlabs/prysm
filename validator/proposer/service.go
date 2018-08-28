@@ -4,7 +4,6 @@ package proposer
 
 import (
 	"context"
-	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/validator/types"
@@ -59,9 +58,18 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
+		// TODO: Instead subscribe to a proposal assignment feed that contains
+		// important fields from the currently received beacon block thta will be put into
+		// a proposal RPC message such as slot number and parent hash.
+		//
+		// TODO: On the beacon node side, calculate active and crystallized and update the
+		// active/crystallize state hash values in the proposed block.
 		case <-p.beaconService.ProposerAssignment():
 			log.Info("Performing proposer responsibility")
 
+			// Sending empty values for now.
+			// TODO: Implement real proposals with randao reveals and attestation fields.
+			// TODO: Add timestamp, parent hash, and slot number.
 			req := &pb.ProposeRequest{
 				RandaoReveal:            []byte{},
 				AttestationBitmask:      []byte{},
@@ -73,7 +81,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				log.Errorf("Could not propose block: %v", err)
 				continue
 			}
-			log.WithField("blockHash", fmt.Sprintf("0x%x", res.BlockHash)).Info("Block proposed successfully")
+			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
 		}
 	}
 }
