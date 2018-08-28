@@ -544,6 +544,71 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 }
 
+
+// Test cycle transition where there's not enough justified streak to finalize a slot.
+func TestInitCycleNotFinalized(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Errorf("Creating new genesis state failed %v", err)
+	}
+	crystallized.SetStateRecalc(64)
+
+	newCrystalled, newActive := b.initCycle(crystallized, active)
+
+	if newCrystalled.LastFinalizedSlot() != 0 {
+		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
+	}
+	if newCrystalled.LastJustifiedSlot() != 0 {
+		t.Errorf("Last justified slot should be 0 but got: %d", newCrystalled.LastJustifiedSlot())
+	}
+	if newCrystalled.JustifiedStreak() != 0 {
+		t.Errorf("Justified streak should be 0 but got: %d", newCrystalled.JustifiedStreak())
+	}
+	if len(newActive.RecentBlockHashes()) != 128 {
+		t.Errorf("Recent block hash length should be 128 but got: %d", newActive.RecentBlockHashes())
+	}
+}
+
+// Test cycle transition where there's enough justified streak to finalize a slot.
+func TestInitCycleFinalized(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Errorf("Creating new genesis state failed %v", err)
+	}
+	crystallized.SetStateRecalc(64)
+	var activeStateBlockHashes []*common.Hash
+	blockVoteCache := make(map[*common.Hash]*types.VoteCache)
+	for i:=0; i < params.CycleLength; i ++ {
+		hash := common.BytesToHash([]byte{byte(i)})
+		voteCache := &types.VoteCache{VoteTotalDeposit: 10000}
+		blockVoteCache[&hash] = voteCache
+		activeStateBlockHashes = append(activeStateBlockHashes, &hash)
+	}
+	active.ReplaceBlockHashes(activeStateBlockHashes)
+	active.SetBlockVoteCache(blockVoteCache)
+
+	b.initCycle(crystallized, active)
+
+	//if newCrystalled.LastFinalizedSlot() != 0 {
+	//	t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
+	//}
+	//if newCrystalled.LastJustifiedSlot() != 0 {
+	//	t.Errorf("Last justified slot should be 0 but got: %d", newCrystalled.LastJustifiedSlot())
+	//}
+	//if newCrystalled.JustifiedStreak() != 0 {
+	//	t.Errorf("Justified streak should be 0 but got: %d", newCrystalled.JustifiedStreak())
+	//}
+	//if len(newActive.RecentBlockHashes()) != 128 {
+	//	t.Errorf("Recent block hash length should be 128 but got: %d", newActive.RecentBlockHashes())
+	//}
+}
+
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {

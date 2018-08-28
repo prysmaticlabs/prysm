@@ -47,6 +47,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 	for i := 0; i < 2*params.CycleLength; i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
 	}
+
 	active := &ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AttestationRecord{},
@@ -199,6 +200,15 @@ func (a *ActiveState) RecentBlockHashes() []common.Hash {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
 	return blockhashes
+}
+
+// ReplaceBlockHashes replaces current block hashes with the input block hashes.
+func (a *ActiveState) ReplaceBlockHashes(blockHashes []*common.Hash) {
+	var blockHashesBytes [][]byte
+	for _, blockHash := range blockHashes {
+		blockHashesBytes = append(blockHashesBytes, blockHash.Bytes())
+	}
+	a.data.RecentBlockHashes = blockHashesBytes
 }
 
 // IsVoteCacheThere returns false if vote cache of an input block hash doesn't exist.

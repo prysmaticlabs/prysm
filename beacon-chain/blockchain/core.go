@@ -470,12 +470,12 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
 	finalizedSlot := cState.LastFinalizedSlot()
+	blockVoteCache := aState.GetBlockVoteCache()
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := cState.LastStateRecalc() - params.CycleLength + i
 		blockHash := aState.RecentBlockHashes()[i]
-		blockVoteCache := b.ActiveState().GetBlockVoteCache()
-
+		fmt.Println(blockHash.String())
 		if _, ok := blockVoteCache[&blockHash]; ok {
 			blockVoteBalance = blockVoteCache[&blockHash].VoteTotalDeposit
 		} else {
