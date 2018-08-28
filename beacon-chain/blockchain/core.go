@@ -385,14 +385,15 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 		// Loop through attester indices, if the attester has voted but was not accounted for
 		// in the cache, then we add attester's index and balance to the block cache.
 		for i, attesterIndex := range attesterIndices {
-			var newAttester bool
-			if utils.CheckBit(attestation.AttesterBitfield, i) {
-				for _, indexInCache := range newVoteCache[h].VoterIndices {
-					if attesterIndex == indexInCache {
-						newAttester = true
-					}
+			var existingAttester bool
+			if !utils.CheckBit(attestation.AttesterBitfield, i) {
+				continue
+			}
+			for _, indexInCache := range newVoteCache[h].VoterIndices {
+				if attesterIndex == indexInCache {
+					existingAttester = true
 				}
-				if !newAttester {
+				if !existingAttester {
 					newVoteCache[h].VoterIndices = append(newVoteCache[h].VoterIndices, attesterIndex)
 					newVoteCache[h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
 				}
