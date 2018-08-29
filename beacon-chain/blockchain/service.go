@@ -38,7 +38,7 @@ type ChainService struct {
 	//
 	// NOTE: These are temporary and will be replaced by a structure
 	// that can support light-client proofs, such as a Sparse Merkle Trie.
-	processedBlockHashesBySlot        map[uint64][][]byte
+	processedBlockHashesBySlot        map[uint64][][32]byte
 	processedBlocksBySlot             map[uint64][]*types.Block
 	processedCrystallizedStatesBySlot map[uint64][]*types.CrystallizedState
 	processedActiveStatesBySlot       map[uint64][]*types.ActiveState
@@ -76,7 +76,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:                 new(event.Feed),
 		canonicalBlockFeed:                new(event.Feed),
 		canonicalCrystallizedStateFeed:    new(event.Feed),
-		processedBlockHashesBySlot:        make(map[uint64][][]byte),
+		processedBlockHashesBySlot:        make(map[uint64][][32]byte),
 		processedBlocksBySlot:             make(map[uint64][]*types.Block),
 		processedCrystallizedStatesBySlot: make(map[uint64][]*types.CrystallizedState),
 		processedActiveStatesBySlot:       make(map[uint64][]*types.ActiveState),
@@ -189,7 +189,7 @@ func (c *ChainService) updateHead(slot uint64) {
 
 	// If no blocks were stored at the last slot, we simply skip the fork choice
 	// rule.
-	if len(c.processedBlocksBySlot[c.lastSlot]) == 0 {
+	if len(c.processedBlockHashesBySlot[c.lastSlot]) == 0 {
 		return
 	}
 	log.WithField("slotNumber", c.lastSlot).Info("Applying fork choice rule")
@@ -216,7 +216,11 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 	log.Debugf("Received %d validators by height", len(vals))
 
-	canonicalBlock := c.processedBlocksBySlot[c.lastSlot][0]
+	canonicalBlock, err := c.chain.retrieveBlock(slot, c.processedBlockHashesBySlot[slot][0])
+	if err != nil {
+		log.Errorf("unable to retrieve block %v", err)
+	}
+
 	h, err := canonicalBlock.Hash()
 	if err != nil {
 		log.Errorf("Unable to hash canonical block: %v", err)
@@ -352,6 +356,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// We store a slice of received states and blocks.
 			// perceived slot number for forks.
+			if err := c.chain.saveProcessedBlockToDB(block); err != nil {
+				log.Errorf("Saving processed blocks failed: %v", err)
+			}
+
 			c.processedBlockHashesBySlot[receivedSlotNumber] = append(
 				c.processedBlockHashesBySlot[receivedSlotNumber],
 				h[:],

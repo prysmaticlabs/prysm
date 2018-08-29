@@ -488,3 +488,19 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 
 	return b.db.Put(key, enc)
 }
+
+func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Block, error) {
+	key := blockKey(slotnumber, hash)
+	enc, err := b.db.Get(key)
+
+	if err != nil {
+		return nil, err
+	}
+	block := &pb.BeaconBlock{}
+
+	if err := proto.Unmarshal(enc, block); err != nil {
+		return nil, err
+	}
+
+	return types.NewBlock(block), nil
+}
