@@ -38,7 +38,7 @@ type ChainService struct {
 	//
 	// NOTE: These are temporary and will be replaced by a structure
 	// that can support light-client proofs, such as a Sparse Merkle Trie.
-	processedBlockHashes        [][32]byte
+	processedBlockHashes        [][]byte
 	processedCrystallizedStates []*types.CrystallizedState
 	processedActiveStates       []*types.ActiveState
 }
@@ -75,7 +75,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:              new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
-		processedBlockHashes:           make([][32]byte, 20),
+		processedBlockHashes:           make([][]byte, 0),
 		processedCrystallizedStates:    make([]*types.CrystallizedState, 0),
 		processedActiveStates:          make([]*types.ActiveState, 0),
 	}, nil
@@ -178,8 +178,7 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 }
 
 func (c *ChainService) AddBlockHash(hash [32]byte) {
-	newindex := len(c.processedBlockHashes)
-	c.processedBlockHashes[newindex] = hash
+	c.processedBlockHashes = append(c.processedBlockHashes, hash[:])
 }
 
 // updateHead applies the fork choice rule to the last received
@@ -218,8 +217,10 @@ func (c *ChainService) updateHead(slot uint64) {
 		return
 	}
 	log.Debugf("Received %d validators by height", len(vals))
+	var canonicalHash [32]byte
+	copy(canonicalHash[:], c.processedBlockHashes[0])
 
-	canonicalBlock, err := c.chain.retrieveBlock(slot, c.processedBlockHashes[0])
+	canonicalBlock, err := c.chain.retrieveBlock(slot, canonicalHash)
 	if err != nil {
 		log.Errorf("unable to retrieve block %v", err)
 	}

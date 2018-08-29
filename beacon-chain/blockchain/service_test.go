@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"testing"
 
@@ -314,8 +315,7 @@ func TestUpdateHead(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	parentHash := [32]byte{}
-	chainService.processedBlockHashes = append(chainService.processedBlockHashes, parentHash)
+	parentHash := [32]byte{'a'}
 
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            64,
@@ -325,22 +325,32 @@ func TestUpdateHead(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
+	registryKey := blockRegistryKey(block.SlotNumber() - 1)
+	blockhashes := make([][]byte, 0)
+	blockhashes = append(blockhashes, parentHash[:])
+
+	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	marshalled, err := proto.Marshal(registry)
+
+	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	chainService.processedBlockHashes = append(chainService.processedBlockHashes, h)
+	chainService.processedBlockHashes = append(chainService.processedBlockHashes, h[:])
 	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
 		t.Fatalf("could not save block %v", err)
 	}
 
 	chainService.processedActiveStates = append(chainService.processedActiveStates, active)
 	chainService.processedCrystallizedStates = append(chainService.processedCrystallizedStates, crystallized)
-	t.Error(chainService.processedActiveStates)
 
-	chainService.lastSlot = 64
-	chainService.updateHead(65)
+	chainService.lastSlot = 63
+	chainService.updateHead(64)
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 
 	chainService.lastSlot = 100
