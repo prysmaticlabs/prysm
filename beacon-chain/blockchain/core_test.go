@@ -17,6 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"golang.org/x/crypto/blake2b"
 )
 
 // FakeClock represents an mocked clock for testing purposes.
@@ -181,7 +182,7 @@ func TestSetActiveState(t *testing.T) {
 			{'A'}, {'B'}, {'C'}, {'D'},
 		},
 	}
-	active := types.NewActiveState(data, make(map[common.Hash]*types.VoteCache))
+	active := types.NewActiveState(data, make(map[[32]byte]*types.VoteCache))
 
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
@@ -198,8 +199,8 @@ func TestSetActiveState(t *testing.T) {
 
 	// The active state should still be the one we mutated and persited earlier
 	for i, hash := range active.RecentBlockHashes() {
-		if hash.Hex() != newBeaconChain.ActiveState().RecentBlockHashes()[i].Hex() {
-			t.Errorf("active state block hash. wanted %v, got %v", hash.Hex(), newBeaconChain.ActiveState().RecentBlockHashes()[i].Hex())
+		if hash != newBeaconChain.ActiveState().RecentBlockHashes()[i] {
+			t.Errorf("active state block hash. wanted %v, got %v", hash, newBeaconChain.ActiveState().RecentBlockHashes()[i])
 		}
 	}
 	if reflect.DeepEqual(active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes()) {
@@ -266,7 +267,7 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Initialize initial state.
-	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[common.Hash]*types.VoteCache))
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[[32]byte]*types.VoteCache))
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -346,7 +347,7 @@ func TestCanProcessBlockObserver(t *testing.T) {
 	}
 
 	// Initialize initial state.
-	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[common.Hash]*types.VoteCache))
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[[32]byte]*types.VoteCache))
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -429,7 +430,7 @@ func TestComputeActiveState(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	beaconChain.SetCrystallizedState(crystallized)
-	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[common.Hash]*types.VoteCache{}); err != nil {
+	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[[32]byte]*types.VoteCache{}); err != nil {
 		t.Errorf("computing active state should not have failed: %v", err)
 	}
 }
@@ -471,7 +472,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	for i := 0; i < params.CycleLength; i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
 	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[common.Hash]*types.VoteCache))
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[[32]byte]*types.VoteCache))
 	if err := bc.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
@@ -586,13 +587,16 @@ func TestInitCycleFinalized(t *testing.T) {
 	}
 	crystallized.SetStateRecalc(64)
 
-	var activeStateBlockHashes []*common.Hash
-	blockVoteCache := make(map[common.Hash]*types.VoteCache)
-	for i := uint64(0); i < params.CycleLength; i++ {
-		hash := common.BytesToHash([]byte{byte(i)})
+	var activeStateBlockHashes [][32]byte
+	blockVoteCache := make(map[[32]byte]*types.VoteCache)
+	for i := 0; i < params.CycleLength; i++ {
+		hash := blake2b.Sum256([]byte{byte(i)})
+		if err != nil {
+			t.Fatalf("Can't proceed test, blake2b hashing function failed: %v", err)
+		}
 		voteCache := &types.VoteCache{VoteTotalDeposit: 100000}
 		blockVoteCache[hash] = voteCache
-		activeStateBlockHashes = append(activeStateBlockHashes, &hash)
+		activeStateBlockHashes = append(activeStateBlockHashes, hash)
 	}
 
 	active.ReplaceBlockHashes(activeStateBlockHashes)

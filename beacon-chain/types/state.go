@@ -15,7 +15,7 @@ import (
 // it changes every block.
 type ActiveState struct {
 	data           *pb.ActiveState
-	blockVoteCache map[common.Hash]*VoteCache //blockVoteCache is not part of protocol state, it is used as a helper cache for cycle init calculations.
+	blockVoteCache map[[32]byte]*VoteCache //blockVoteCache is not part of protocol state, it is used as a helper cache for cycle init calculations.
 }
 
 // CrystallizedState contains fields of every Slot state,
@@ -36,7 +36,7 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveState, blockVoteCache map[common.Hash]*VoteCache) *ActiveState {
+func NewActiveState(data *pb.ActiveState, blockVoteCache map[[32]byte]*VoteCache) *ActiveState {
 	return &ActiveState{data: data, blockVoteCache: blockVoteCache}
 }
 
@@ -53,7 +53,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 			PendingAttestations: []*pb.AttestationRecord{},
 			RecentBlockHashes:   recentBlockHashes,
 		},
-		blockVoteCache: make(map[common.Hash]*VoteCache),
+		blockVoteCache: make(map[[32]byte]*VoteCache),
 	}
 
 	// We seed the genesis crystallized state with a bunch of validators to
@@ -162,15 +162,15 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 }
 
 // BlockHashForSlot returns the block hash of a given slot given a lowerBound and upperBound.
-func (a *ActiveState) BlockHashForSlot(slot uint64, block *Block) ([]byte, error) {
+func (a *ActiveState) BlockHashForSlot(slot uint64, block *Block) ([32]byte, error) {
 	sback := int(block.SlotNumber()) - params.CycleLength*2
 	if !(sback <= int(slot) && int(slot) < sback+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
+		return [32]byte{}, fmt.Errorf("can not return block hash of a given slot, input slot %v has to be in between %v and %v", slot, sback, sback+params.CycleLength*2)
 	}
 	if sback < 0 {
-		return a.RecentBlockHashes()[slot].Bytes(), nil
+		return a.RecentBlockHashes()[slot], nil
 	}
-	return a.RecentBlockHashes()[int(slot)-sback].Bytes(), nil
+	return a.RecentBlockHashes()[int(slot)-sback], nil
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
@@ -199,8 +199,8 @@ func (a *ActiveState) ClearPendingAttestations() {
 }
 
 // RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
-func (a *ActiveState) RecentBlockHashes() []common.Hash {
-	var blockhashes []common.Hash
+func (a *ActiveState) RecentBlockHashes() [][32]byte {
+	var blockhashes [][32]byte
 	for _, hash := range a.data.RecentBlockHashes {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
@@ -208,27 +208,27 @@ func (a *ActiveState) RecentBlockHashes() []common.Hash {
 }
 
 // ReplaceBlockHashes replaces current block hashes with the input block hashes.
-func (a *ActiveState) ReplaceBlockHashes(blockHashes []*common.Hash) {
+func (a *ActiveState) ReplaceBlockHashes(blockHashes [][32]byte) {
 	var blockHashesBytes [][]byte
 	for _, blockHash := range blockHashes {
-		blockHashesBytes = append(blockHashesBytes, blockHash.Bytes())
+		blockHashesBytes = append(blockHashesBytes, blockHash[:])
 	}
 	a.data.RecentBlockHashes = blockHashesBytes
 }
 
 // IsVoteCacheEmpty returns false if vote cache of an input block hash doesn't exist.
-func (a *ActiveState) IsVoteCacheEmpty(blockHash common.Hash) bool {
+func (a *ActiveState) IsVoteCacheEmpty(blockHash [32]byte) bool {
 	_, ok := a.blockVoteCache[blockHash]
 	return ok
 }
 
 // GetBlockVoteCache returns the entire set of block vote cache.
-func (a *ActiveState) GetBlockVoteCache() map[common.Hash]*VoteCache {
+func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
 	return a.blockVoteCache
 }
 
 // SetBlockVoteCache resets the entire set of block vote cache.
-func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[common.Hash]*VoteCache) {
+func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[[32]byte]*VoteCache) {
 	a.blockVoteCache = blockVoteCache
 }
 

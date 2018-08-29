@@ -98,7 +98,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[common.Hash]*types.VoteCache))
+		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[[32]byte]*types.VoteCache))
 	}
 	if hasCrystallized {
 		enc, err := db.Get([]byte(crystallizedStateLookupKey))
@@ -269,7 +269,7 @@ func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, err
 }
 
 // computeNewActiveState for every newly processed beacon block.
-func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[common.Hash]*types.VoteCache) (*types.ActiveState, error) {
+func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache) (*types.ActiveState, error) {
 	// TODO: Insert recent block hash.
 	activeState.SetBlockVoteCache(blockVoteCache)
 	activeState.NewPendingAttestation(attestations)
@@ -327,7 +327,7 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 	msg := make([]byte, binary.MaxVarintLen64)
 	var signedHashesStr []byte
 	for _, parentHash := range parentHashes {
-		signedHashesStr = append(signedHashesStr, parentHash.Bytes()...)
+		signedHashesStr = append(signedHashesStr, parentHash[:]...)
 		signedHashesStr = append(signedHashesStr, byte(' '))
 	}
 	binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
@@ -345,7 +345,7 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 }
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types.Block) (map[common.Hash]*types.VoteCache, error) {
+func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types.Block) (map[[32]byte]*types.VoteCache, error) {
 	attestation := block.Attestations()[attestationIndex]
 	newVoteCache := b.ActiveState().GetBlockVoteCache()
 	parentHashes := b.getSignedParentHashes(block, attestation)
@@ -358,7 +358,7 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 		// Skip calculating for this hash if the hash is part of oblique parent hashes.
 		var skip bool
 		for _, obliqueParentHash := range attestation.ObliqueParentHashes {
-			if bytes.Equal(h.Bytes(), obliqueParentHash) {
+			if bytes.Equal(h[:], obliqueParentHash) {
 				skip = true
 			}
 		}
@@ -367,8 +367,8 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 		}
 
 		// Initialize vote cache of a given block hash if it doesn't exist already.
-		if !b.ActiveState().IsVoteCacheEmpty(*h) {
-			newVoteCache[*h] = &types.VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
+		if !b.ActiveState().IsVoteCacheEmpty(h) {
+			newVoteCache[h] = &types.VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
 		}
 
 		// Loop through attester indices, if the attester has voted but was not accounted for
@@ -378,14 +378,14 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 			if !utils.CheckBit(attestation.AttesterBitfield, i) {
 				continue
 			}
-			for _, indexInCache := range newVoteCache[*h].VoterIndices {
+			for _, indexInCache := range newVoteCache[h].VoterIndices {
 				if attesterIndex == indexInCache {
 					existingAttester = true
 				}
 			}
 			if !existingAttester {
-				newVoteCache[*h].VoterIndices = append(newVoteCache[*h].VoterIndices, attesterIndex)
-				newVoteCache[*h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
+				newVoteCache[h].VoterIndices = append(newVoteCache[h].VoterIndices, attesterIndex)
+				newVoteCache[h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
 			}
 		}
 	}
@@ -393,16 +393,16 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last ycle length.
-func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) []*common.Hash {
-	var signedParentHashes []*common.Hash
+func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) [][32]byte {
+	var signedParentHashes [][32]byte
 	start := block.SlotNumber() - attestation.Slot
 	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
-	for _, hashes := range b.ActiveState().RecentBlockHashes()[start:end] {
-		signedParentHashes = append(signedParentHashes, &hashes)
-	}
+
+	signedParentHashes = append(signedParentHashes, b.ActiveState().RecentBlockHashes()[start:end]...)
+
 	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
 		hashes := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, &hashes)
+		signedParentHashes = append(signedParentHashes, hashes)
 	}
 	return signedParentHashes
 }
@@ -529,7 +529,7 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 
 	var recentBlockHashes [][]byte
 	for _, blockHashes := range aState.RecentBlockHashes() {
-		recentBlockHashes = append(recentBlockHashes, blockHashes.Bytes())
+		recentBlockHashes = append(recentBlockHashes, blockHashes[:])
 	}
 
 	// Construct new active state for cycle transition.

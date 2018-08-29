@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -38,7 +37,7 @@ func TestActiveState(t *testing.T) {
 		t.Errorf("inner active state data did not match proto: received %v, wanted %v", active.Proto(), active.data)
 	}
 
-	blockHashes := []*common.Hash{{byte(100)}}
+	blockHashes := [][32]byte{{'A'}}
 	active.ReplaceBlockHashes(blockHashes)
 	if len(active.data.RecentBlockHashes) != 1 {
 		t.Errorf("there should be 1 recent block hash, received %v", len(active.data.RecentBlockHashes))
@@ -166,14 +165,14 @@ func TestBlockHashForSlot(t *testing.T) {
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
-	if bytes.Equal(hash, []byte{'A'}) {
+	if bytes.Equal(hash[:], []byte{'A'}) {
 		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
 	}
 	hash, err = state.BlockHashForSlot(5, block)
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
-	if bytes.Equal(hash, []byte{'F'}) {
+	if bytes.Equal(hash[:], []byte{'F'}) {
 		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
 	}
 	block = newTestBlock(t, &pb.BeaconBlock{SlotNumber: 201})

@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
@@ -263,7 +262,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// fork choice rule.
 			var canProcess bool
 			var err error
-			var blockVoteCache map[common.Hash]*types.VoteCache
+			var blockVoteCache map[[32]byte]*types.VoteCache
 
 			h, err := block.Hash()
 			if err != nil {
