@@ -16,13 +16,11 @@ type BlockRegistry struct {
 	data *pb.BlockRegistry
 }
 
-type BlockHashes map[string]bool
-
 func NewRegistry(data *pb.BlockRegistry) *BlockRegistry {
 	if data == nil {
 		return &BlockRegistry{
 			data: &pb.BlockRegistry{
-				Blockhashes: make(map[string]bool),
+				Blockhashes: make([][]byte, 0),
 			},
 		}
 	}
@@ -40,7 +38,7 @@ func (b *BlockRegistry) Marshal() ([]byte, error) {
 	return proto.Marshal(b.data)
 }
 
-func (b *BlockRegistry) BlockHashes() BlockHashes {
+func (b *BlockRegistry) BlockHashes() [][]byte {
 	return b.data.Blockhashes
 }
 

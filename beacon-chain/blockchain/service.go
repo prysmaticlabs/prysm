@@ -76,8 +76,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		processedBlockHashes:           make([][32]byte, 20),
-		processedCrystallizedStates:    make([]*types.CrystallizedState, 20),
-		processedActiveStates:          make([]*types.ActiveState, 20),
+		processedCrystallizedStates:    make([]*types.CrystallizedState, 0),
+		processedActiveStates:          make([]*types.ActiveState, 0),
 	}, nil
 }
 
@@ -293,10 +293,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to retrieve block registry %v", err)
 			}
 
-			for k, _ := range blockhashes {
+			for _, blockhash := range blockhashes {
 				p := block.ParentHash()
 
-				if bytes.Equal([]byte(k), p[:]) {
+				if bytes.Equal(blockhash, p[:]) {
 					isParentHashExistent = true
 				}
 			}

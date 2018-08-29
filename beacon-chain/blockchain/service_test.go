@@ -314,17 +314,14 @@ func TestUpdateHead(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	parentHash := []byte{}
-	chainService.processedBlockHashesBySlot[4] = append(
-		chainService.processedBlockHashesBySlot[4],
-		parentHash,
-	)
+	parentHash := [32]byte{}
+	chainService.processedBlockHashes = append(chainService.processedBlockHashes, parentHash)
 
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            64,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash,
+		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
 	})
 
@@ -333,22 +330,14 @@ func TestUpdateHead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService.processedBlockHashesBySlot[64] = append(
-		chainService.processedBlockHashesBySlot[64],
-		h[:],
-	)
-	chainService.processedBlocksBySlot[64] = append(
-		chainService.processedBlocksBySlot[64],
-		block,
-	)
-	chainService.processedActiveStatesBySlot[64] = append(
-		chainService.processedActiveStatesBySlot[64],
-		active,
-	)
-	chainService.processedCrystallizedStatesBySlot[64] = append(
-		chainService.processedCrystallizedStatesBySlot[64],
-		crystallized,
-	)
+	chainService.processedBlockHashes = append(chainService.processedBlockHashes, h)
+	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
+		t.Fatalf("could not save block %v", err)
+	}
+
+	chainService.processedActiveStates = append(chainService.processedActiveStates, active)
+	chainService.processedCrystallizedStates = append(chainService.processedCrystallizedStates, crystallized)
+	t.Error(chainService.processedActiveStates)
 
 	chainService.lastSlot = 64
 	chainService.updateHead(65)

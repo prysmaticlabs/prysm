@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -311,6 +312,7 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 
 	key := blockKey(block.SlotNumber(), hash)
 	hasBlock, err := b.db.Has(key)
+
 	if hasBlock {
 		return nil
 	}
@@ -464,12 +466,19 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 			return err
 		}
 
-		hashRegistered := registry.Blockhashes[string(hash[:])]
+		hashRegistered := false
+
+		for _, blockhash := range registry.Blockhashes {
+			if bytes.Equal(hash[:], blockhash) {
+				hashRegistered = true
+			}
+		}
+
 		if hashRegistered {
 			return nil
 		}
 
-		registry.Blockhashes[string(hash[:])] = true
+		registry.Blockhashes = append(registry.Blockhashes, hash[:])
 		enc, err = proto.Marshal(registry)
 		if err != nil {
 			return err
@@ -478,9 +487,9 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 		return b.db.Put(key, enc)
 	}
 
-	registry := &pb.BlockRegistry{}
+	registry := &pb.BlockRegistry{Blockhashes: make([][]byte, 0)}
 
-	registry.Blockhashes[string(hash[:])] = true
+	registry.Blockhashes = append(registry.Blockhashes, hash[:])
 	enc, err := proto.Marshal(registry)
 	if err != nil {
 		return err
@@ -505,7 +514,7 @@ func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Bl
 	return types.NewBlock(block), nil
 }
 
-func (b *BeaconChain) retrieveBlockRegistry(slotnumber uint64) (types.BlockHashes, error) {
+func (b *BeaconChain) retrieveBlockRegistry(slotnumber uint64) ([][]byte, error) {
 	key := blockRegistryKey(slotnumber)
 	enc, err := b.db.Get(key)
 

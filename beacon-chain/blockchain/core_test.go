@@ -564,6 +564,20 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 }
 
+func TestSaveProcessedBlock(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
+		t.Errorf("Could not save processed block %v", err)
+	}
+}
+
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
