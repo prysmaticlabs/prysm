@@ -14,7 +14,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/p2p",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/sharding/p2p/v1:go_default_library",
         "//shared/iputils:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
