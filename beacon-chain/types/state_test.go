@@ -21,7 +21,7 @@ func TestActiveState(t *testing.T) {
 	}
 
 	record := NewAttestationRecord()
-	active.NewPendingAttestation(record)
+	active.NewPendingAttestation([]*pb.AttestationRecord{record})
 	if len(active.PendingAttestations()) != 1 {
 		t.Errorf("there should be 1 pending attestation, got %v", len(active.PendingAttestations()))
 	}
@@ -40,6 +40,16 @@ func TestActiveState(t *testing.T) {
 	active.ClearRecentBlockHashes()
 	if len(active.data.RecentBlockHashes) > 0 {
 		t.Errorf("there should be no recent block hashes, received %v", len(active.data.RecentBlockHashes))
+	}
+
+	bvc := active.GetBlockVoteCache()
+	bvc[nil] = &VoteCache{
+		VoterIndices:     []uint32{0, 1, 2},
+		VoteTotalDeposit: 1000,
+	}
+	active.SetBlockVoteCache(bvc)
+	if !active.IsVoteCacheEmpty(nil) {
+		t.Errorf("block vote cache should be there but recevied false")
 	}
 
 	emptyActive := &ActiveState{}
@@ -140,7 +150,7 @@ func TestBlockHashForSlot(t *testing.T) {
 	}
 	state := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHash,
-	})
+	}, nil)
 	block := newTestBlock(t, &pb.BeaconBlock{SlotNumber: 7})
 	if _, err := state.BlockHashForSlot(200, block); err == nil {
 		t.Error("getBlockHash should have failed with invalid height")
