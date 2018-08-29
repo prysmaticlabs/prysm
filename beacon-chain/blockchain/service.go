@@ -38,10 +38,9 @@ type ChainService struct {
 	//
 	// NOTE: These are temporary and will be replaced by a structure
 	// that can support light-client proofs, such as a Sparse Merkle Trie.
-	processedBlockHashesBySlot        map[uint64][][32]byte
-	processedBlocksBySlot             map[uint64][]*types.Block
-	processedCrystallizedStatesBySlot map[uint64][]*types.CrystallizedState
-	processedActiveStatesBySlot       map[uint64][]*types.ActiveState
+	processedBlockHashes        [][32]byte
+	processedCrystallizedStates []*types.CrystallizedState
+	processedActiveStates       []*types.ActiveState
 }
 
 // Config options for the service.
@@ -64,22 +63,21 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		isValidator = true
 	}
 	return &ChainService{
-		ctx:                               ctx,
-		chain:                             cfg.Chain,
-		cancel:                            cancel,
-		beaconDB:                          cfg.BeaconDB,
-		web3Service:                       cfg.Web3Service,
-		validator:                         isValidator,
-		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
-		incomingBlockChan:                 make(chan *types.Block, cfg.IncomingBlockBuf),
-		lastSlot:                          1, // TODO: Initialize from the db.
-		incomingBlockFeed:                 new(event.Feed),
-		canonicalBlockFeed:                new(event.Feed),
-		canonicalCrystallizedStateFeed:    new(event.Feed),
-		processedBlockHashesBySlot:        make(map[uint64][][32]byte),
-		processedBlocksBySlot:             make(map[uint64][]*types.Block),
-		processedCrystallizedStatesBySlot: make(map[uint64][]*types.CrystallizedState),
-		processedActiveStatesBySlot:       make(map[uint64][]*types.ActiveState),
+		ctx:                            ctx,
+		chain:                          cfg.Chain,
+		cancel:                         cancel,
+		beaconDB:                       cfg.BeaconDB,
+		web3Service:                    cfg.Web3Service,
+		validator:                      isValidator,
+		latestProcessedBlock:           make(chan *types.Block, cfg.BeaconBlockBuf),
+		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
+		lastSlot:                       1, // TODO: Initialize from the db.
+		incomingBlockFeed:              new(event.Feed),
+		canonicalBlockFeed:             new(event.Feed),
+		canonicalCrystallizedStateFeed: new(event.Feed),
+		processedBlockHashes:           make([][32]byte, 20),
+		processedCrystallizedStates:    make([]*types.CrystallizedState, 20),
+		processedActiveStates:          make([]*types.ActiveState, 20),
 	}, nil
 }
 
@@ -179,6 +177,11 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
 }
 
+func (c *ChainService) AddBlockHash(hash [32]byte) {
+	newindex := len(c.processedBlockHashes)
+	c.processedBlockHashes[newindex] = hash
+}
+
 // updateHead applies the fork choice rule to the last received
 // slot.
 func (c *ChainService) updateHead(slot uint64) {
@@ -189,16 +192,16 @@ func (c *ChainService) updateHead(slot uint64) {
 
 	// If no blocks were stored at the last slot, we simply skip the fork choice
 	// rule.
-	if len(c.processedBlockHashesBySlot[c.lastSlot]) == 0 {
+	if len(c.processedBlockHashes) == 0 {
 		return
 	}
 	log.WithField("slotNumber", c.lastSlot).Info("Applying fork choice rule")
-	canonicalActiveState := c.processedActiveStatesBySlot[c.lastSlot][0]
+	canonicalActiveState := c.processedActiveStates[0]
 	if err := c.chain.SetActiveState(canonicalActiveState); err != nil {
 		log.Errorf("Write active state to disk failed: %v", err)
 	}
 
-	canonicalCrystallizedState := c.processedCrystallizedStatesBySlot[c.lastSlot][0]
+	canonicalCrystallizedState := c.processedCrystallizedStates[0]
 	if err := c.chain.SetCrystallizedState(canonicalCrystallizedState); err != nil {
 		log.Errorf("Write crystallized state to disk failed: %v", err)
 	}
@@ -216,7 +219,7 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 	log.Debugf("Received %d validators by height", len(vals))
 
-	canonicalBlock, err := c.chain.retrieveBlock(slot, c.processedBlockHashesBySlot[slot][0])
+	canonicalBlock, err := c.chain.retrieveBlock(slot, c.processedBlockHashes[0])
 	if err != nil {
 		log.Errorf("unable to retrieve block %v", err)
 	}
@@ -242,6 +245,11 @@ func (c *ChainService) updateHead(slot uint64) {
 	if transition {
 		c.canonicalCrystallizedStateFeed.Send(canonicalCrystallizedState)
 	}
+
+	c.processedBlockHashes = nil
+	c.processedActiveStates = nil
+	c.processedCrystallizedStates = nil
+
 	c.canonicalBlockFeed.Send(canonicalBlock)
 }
 
@@ -275,16 +283,20 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
 
-			c.beaconDB.Get(blockRegistryKey(receivedSlotNumber))
-
 			// Check if parentHash is in previous slot's processed blockHash list.
 			// TODO: This is messy. Instead, we should implement c.chain.CanProcessBlock
 			// to take in the block and the DAG of previously processed blocks
 			// and determine all validity conditions from those two parameters.
 			isParentHashExistent := false
-			for i := 0; i < len(c.processedBlockHashesBySlot[receivedSlotNumber-1]); i++ {
+			blockhashes, err := c.chain.retrieveBlockRegistry(receivedSlotNumber - 1)
+			if err != nil {
+				log.Errorf("Failed to retrieve block registry %v", err)
+			}
+
+			for k, _ := range blockhashes {
 				p := block.ParentHash()
-				if bytes.Equal(c.processedBlockHashesBySlot[receivedSlotNumber-1][i], p[:]) {
+
+				if bytes.Equal([]byte(k), p[:]) {
 					isParentHashExistent = true
 				}
 			}
@@ -318,10 +330,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
-				c.updateHead(receivedSlotNumber)
-			}
-
 			// 3 steps:
 			// - Compute the active state for the block.
 			// - Compute the crystallized state for the block if cycle transition.
@@ -343,15 +351,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				if err != nil {
 					log.Errorf("Compute crystallized state failed: %v", err)
 				}
-				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
-					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
-					crystallized,
-				)
+				c.processedCrystallizedStates = append(c.processedCrystallizedStates, crystallized)
+
 			} else {
-				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
-					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
-					c.chain.CrystallizedState(),
-				)
+				c.processedCrystallizedStates = append(c.processedCrystallizedStates, c.chain.CrystallizedState())
 			}
 
 			// We store a slice of received states and blocks.
@@ -360,19 +363,14 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Saving processed blocks failed: %v", err)
 			}
 
-			c.processedBlockHashesBySlot[receivedSlotNumber] = append(
-				c.processedBlockHashesBySlot[receivedSlotNumber],
-				h[:],
-			)
+			c.AddBlockHash(h)
 
-			c.processedBlocksBySlot[receivedSlotNumber] = append(
-				c.processedBlocksBySlot[receivedSlotNumber],
-				block,
-			)
-			c.processedActiveStatesBySlot[receivedSlotNumber] = append(
-				c.processedActiveStatesBySlot[receivedSlotNumber],
-				activeState,
-			)
+			c.processedActiveStates = append(c.processedActiveStates, activeState)
+
+			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
+				c.updateHead(receivedSlotNumber)
+			}
+
 			log.Info("Finished processing received block and states into DAG")
 		}
 	}

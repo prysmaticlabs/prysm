@@ -504,3 +504,18 @@ func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Bl
 
 	return types.NewBlock(block), nil
 }
+
+func (b *BeaconChain) retrieveBlockRegistry(slotnumber uint64) (types.BlockHashes, error) {
+	key := blockRegistryKey(slotnumber)
+	enc, err := b.db.Get(key)
+
+	if err != nil {
+		return nil, err
+	}
+	data := &pb.BlockRegistry{}
+
+	if err := proto.Unmarshal(enc, data); err != nil {
+		return nil, err
+	}
+	return data.Blockhashes, nil
+}

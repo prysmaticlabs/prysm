@@ -12,6 +12,38 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+type BlockRegistry struct {
+	data *pb.BlockRegistry
+}
+
+type BlockHashes map[string]bool
+
+func NewRegistry(data *pb.BlockRegistry) *BlockRegistry {
+	if data == nil {
+		return &BlockRegistry{
+			data: &pb.BlockRegistry{
+				Blockhashes: make(map[string]bool),
+			},
+		}
+	}
+
+	return &BlockRegistry{data: data}
+}
+
+// Proto returns the underlying protobuf data within the block registry struct.
+func (b *BlockRegistry) Proto() *pb.BlockRegistry {
+	return b.data
+}
+
+// Marshal encodes block registry object into the wire format.
+func (b *BlockRegistry) Marshal() ([]byte, error) {
+	return proto.Marshal(b.data)
+}
+
+func (b *BlockRegistry) BlockHashes() BlockHashes {
+	return b.data.Blockhashes
+}
+
 // Block defines a beacon chain core primitive.
 type Block struct {
 	data *pb.BeaconBlock
