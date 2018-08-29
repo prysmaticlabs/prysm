@@ -4,7 +4,6 @@ import (
 	"context"
 	"reflect"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
@@ -13,7 +12,6 @@ import (
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -129,16 +127,13 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 				h = adapter(h)
 			}
 
-			ctx, _ := context.WithTimeout(s.ctx, 10*time.Second)
-			h(ctx, pMsg)
+			h(s.ctx, pMsg)
 		}
 	})()
 
 }
 
 func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
-	// TODO: reflect.Value.Interface() can panic so we should capture that
-	// panic so the server doesn't crash.
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
 		log.Error("Received message is not a protobuf message")
@@ -200,45 +195,5 @@ func (s *Server) Broadcast(msg interface{}) {
 	}
 	if err := s.gsub.Publish(topic, b); err != nil {
 		log.Errorf("Failed to publish to gossipsub topic: %v", err)
-	}
-}
-
-func (s *Server) subscribeToTopic(topic shardpb.Topic, msgType reflect.Type) {
-	sub, err := s.gsub.Subscribe(topic.String())
-	if err != nil {
-		log.Errorf("Failed to subscribe to topic: %v", err)
-		return
-	}
-	defer sub.Cancel()
-	feed := s.Feed(msgType)
-
-	for {
-		msg, err := sub.Next(s.ctx)
-
-		if s.ctx.Err() != nil {
-			return // Context closed or something.
-		}
-		if err != nil {
-			log.Errorf("Failed to get next message: %v", err)
-			return
-		}
-
-		// TODO: reflect.Value.Interface() can panic so we should capture that
-		// panic so the server doesn't crash.
-		d, ok := reflect.New(msgType).Interface().(proto.Message)
-		if !ok {
-			log.Error("Received message is not a protobuf message")
-			continue
-		}
-		err = proto.Unmarshal(msg.Data, d)
-		if err != nil {
-			log.Errorf("Failed to decode data: %v", err)
-			continue
-		}
-
-		i := feed.Send(Message{Data: d})
-		log.WithFields(logrus.Fields{
-			"numSubs": i,
-		}).Debug("Sent a request to subs")
 	}
 }

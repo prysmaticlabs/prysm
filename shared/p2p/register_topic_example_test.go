@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+    "github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
@@ -34,7 +35,7 @@ func ExampleServer_RegisterTopic() {
 	s, _ := p2p.NewServer()
 
 	var topic string
-	var message interface{}
+	var message proto.Message
 
 	s.RegisterTopic(topic, message, adapters...)
 

@@ -84,6 +84,7 @@ func TestSubscribeToTopic(t *testing.T) {
 		host:  h,
 		feeds: make(map[reflect.Type]*event.Feed),
 		mutex: &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
 	}
 
 	feed := s.Feed(shardpb.CollationBodyRequest{})
@@ -110,6 +111,7 @@ func TestSubscribe(t *testing.T) {
 		host:  h,
 		feeds: make(map[reflect.Type]*event.Feed),
 		mutex: &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
 	}
 
 	ch := make(chan Message)
@@ -121,8 +123,8 @@ func TestSubscribe(t *testing.T) {
 
 func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
 	topic := shardpb.Topic_COLLATION_BODY_REQUEST
-	msgType := reflect.TypeOf(shardpb.CollationBodyRequest{})
-	go s.subscribeToTopic(topic, msgType)
+	
+	go s.RegisterTopic(topic.String(), shardpb.CollationBodyRequest{})
 
 	// Short delay to let goroutine add subscription.
 	time.Sleep(time.Millisecond * 10)
@@ -170,18 +172,17 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	topic := "test_topic"
 	testMessage := testpb.TestMessage{Foo: "bar"}
 
-	s.RegisterTopic(topic, testMessage)
+	s.RegisterTopic(topic, testpb.TestMessage{})
 
 	ch := make(chan Message)
 	sub := s.Subscribe(testMessage, ch)
 	defer sub.Unsubscribe()
 
 	wait := make(chan struct{})
-	go (func() {
+	go func() {
 		defer close(wait)
-		msg := <-ch
-		_ = msg
-	})()
+		<-ch
+	}()
 
 	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
@@ -219,18 +220,17 @@ func TestRegisterTopic_WithAdapers(t *testing.T) {
 		testAdapter,
 	}
 
-	s.RegisterTopic(topic, testMessage, adapters...)
+	s.RegisterTopic(topic, testpb.TestMessage{}, adapters...)
 
 	ch := make(chan Message)
 	sub := s.Subscribe(testMessage, ch)
 	defer sub.Unsubscribe()
 
 	wait := make(chan struct{})
-	go (func() {
+	go func() {
 		defer close(wait)
-		msg := <-ch
-		_ = msg
-	})()
+		<-ch
+	} ()
 
 	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
