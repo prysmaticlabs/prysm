@@ -624,6 +624,9 @@ func TestSaveProcessedBlockWithBlockRegistry(t *testing.T) {
 
 	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
 		t.Fatal(err)
@@ -692,6 +695,9 @@ func TestHashRegistered(t *testing.T) {
 
 	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
 		t.Fatal(err)
@@ -772,6 +778,9 @@ func TestRetrieveBlockRegistry(t *testing.T) {
 
 	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
 		t.Fatal(err)

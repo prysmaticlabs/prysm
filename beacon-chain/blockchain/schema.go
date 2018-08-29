@@ -6,8 +6,6 @@ import (
 
 // The fields below define the prefixing of keys in the db.
 var (
-	// headBlockKey tracks the latest know full block's hash.
-	HeadBlockKey = []byte("LastBlock")
 
 	// CanonicalHeadLookupKey tracks the latest canonical head.
 	CanonicalHeadLookupKey = []byte("latest-canonical-head")
@@ -44,14 +42,4 @@ func blockKey(slotnumber uint64, hash [32]byte) []byte {
 // blockKey = blockRegistryPrefix + slotnumber (uint64 big endian).
 func blockRegistryKey(slotnumber uint64) []byte {
 	return append(blockSlotRegistryPrefix, encodeSlotNumber(slotnumber)...)
-}
-
-// activeStateKey = activeStateLookupKey + hash.
-func activeStateKey(hash [32]byte) []byte {
-	return append(ActiveStateLookupKey, hash[:]...)
-}
-
-// crystallizedStateKey = crytsallizedStateLookupKey + hash.
-func crystallizedStateKey(hash [32]byte) []byte {
-	return append(CrystallizedStateLookupKey, hash[:]...)
 }

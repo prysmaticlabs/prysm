@@ -305,6 +305,9 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	}
 
 	encodedState, err := block.Marshal()
+	if err != nil {
+		return err
+	}
 	return b.db.Put(key, encodedState)
 }
 

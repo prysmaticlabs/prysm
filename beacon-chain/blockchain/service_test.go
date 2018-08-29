@@ -2,9 +2,10 @@ package blockchain
 
 import (
 	"context"
-	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"testing"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -331,6 +332,9 @@ func TestUpdateHead(t *testing.T) {
 
 	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
 		t.Fatal(err)
@@ -459,6 +463,9 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 
 	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
 		t.Fatal(err)
