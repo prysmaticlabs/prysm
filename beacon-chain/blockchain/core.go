@@ -372,7 +372,7 @@ func (b *BeaconChain) processAttestations(block *types.Block) error {
 	return nil
 }
 
-// getSignedParentHashes returns all the parent hashes stored in active state up to last ycle length.
+// getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
 func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) []*common.Hash {
 	var signedParentHashes []*common.Hash
 	start := block.SlotNumber() - attestation.Slot
