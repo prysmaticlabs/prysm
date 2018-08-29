@@ -129,7 +129,7 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 
 			h(s.ctx, pMsg)
 		}
-	} ()
+	}()
 
 }
 

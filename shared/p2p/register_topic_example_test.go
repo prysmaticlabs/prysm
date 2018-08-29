@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-    "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 

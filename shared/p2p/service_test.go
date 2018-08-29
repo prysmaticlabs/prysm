@@ -79,11 +79,11 @@ func TestSubscribeToTopic(t *testing.T) {
 	}
 
 	s := Server{
-		ctx:   ctx,
-		gsub:  gsub,
-		host:  h,
-		feeds: make(map[reflect.Type]*event.Feed),
-		mutex: &sync.Mutex{},
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]*event.Feed),
+		mutex:        &sync.Mutex{},
 		topicMapping: make(map[reflect.Type]string),
 	}
 
@@ -106,11 +106,11 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	s := Server{
-		ctx:   ctx,
-		gsub:  gsub,
-		host:  h,
-		feeds: make(map[reflect.Type]*event.Feed),
-		mutex: &sync.Mutex{},
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]*event.Feed),
+		mutex:        &sync.Mutex{},
 		topicMapping: make(map[reflect.Type]string),
 	}
 
@@ -123,7 +123,7 @@ func TestSubscribe(t *testing.T) {
 
 func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
 	topic := shardpb.Topic_COLLATION_BODY_REQUEST
-	
+
 	go s.RegisterTopic(topic.String(), shardpb.CollationBodyRequest{})
 
 	// Short delay to let goroutine add subscription.
@@ -230,7 +230,7 @@ func TestRegisterTopic_WithAdapers(t *testing.T) {
 	go func() {
 		defer close(wait)
 		<-ch
-	} ()
+	}()
 
 	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
