@@ -104,6 +104,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 
 **Sharding Research Posts in Order**
 
+-   [Sharding v2.1 Spec](https://notes.ethereum.org/SCIg8AH5SA-O4C1G1LYZHQ)
 -   [RETIRED! Sharding Phase 1 Spec](https://ethresear.ch/t/sharding-phase-1-spec-retired/1407/92)
 -   [Exploring the Proposer/Collator Spec and Why it Was Retired](https://ethresear.ch/t/exploring-the-proposer-collator-split/1632/24)
 -   [The Stateless Client Concept](https://ethresear.ch/t/the-stateless-client-concept/172/4)
