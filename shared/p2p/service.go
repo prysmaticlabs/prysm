@@ -102,7 +102,7 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 		adapters[i], adapters[opp] = adapters[opp], adapters[i]
 	}
 
-	go (func() {
+	go func() {
 		defer sub.Cancel()
 		for {
 			msg, err := sub.Next(s.ctx)
@@ -129,7 +129,7 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 
 			h(s.ctx, pMsg)
 		}
-	})()
+	} ()
 
 }
 
