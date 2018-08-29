@@ -544,7 +544,6 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 }
 
-
 // Test cycle transition where there's not enough justified streak to finalize a slot.
 func TestInitCycleNotFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
@@ -555,8 +554,9 @@ func TestInitCycleNotFinalized(t *testing.T) {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	crystallized.SetStateRecalc(64)
+	blockVoteCache := make(map[*common.Hash]*types.VoteCache)
 
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive := b.initCycle(crystallized, active, blockVoteCache)
 
 	if newCrystalled.LastFinalizedSlot() != 0 {
 		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -589,11 +589,11 @@ func TestInitCycleFinalized(t *testing.T) {
 		voteCache := &types.VoteCache{VoteTotalDeposit: 10000}
 		blockVoteCache[&hash] = voteCache
 		activeStateBlockHashes = append(activeStateBlockHashes, &hash)
+		t.Log(blockVoteCache[&hash])
 	}
 	active.ReplaceBlockHashes(activeStateBlockHashes)
-	active.SetBlockVoteCache(blockVoteCache)
 
-	b.initCycle(crystallized, active)
+	b.initCycle(crystallized, active, blockVoteCache)
 
 	//if newCrystalled.LastFinalizedSlot() != 0 {
 	//	t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())

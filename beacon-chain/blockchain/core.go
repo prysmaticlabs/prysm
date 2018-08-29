@@ -465,19 +465,18 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 
 // initCycle is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
-func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
+func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState, bvc map[*common.Hash]*types.VoteCache)(*types.CrystallizedState, *types.ActiveState) {
 	var blockVoteBalance uint64
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
 	finalizedSlot := cState.LastFinalizedSlot()
-	blockVoteCache := aState.GetBlockVoteCache()
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := cState.LastStateRecalc() - params.CycleLength + i
 		blockHash := aState.RecentBlockHashes()[i]
-		fmt.Println(blockHash.String())
-		if _, ok := blockVoteCache[&blockHash]; ok {
-			blockVoteBalance = blockVoteCache[&blockHash].VoteTotalDeposit
+		fmt.Println(bvc[&blockHash])
+		if _, ok := bvc[&blockHash]; ok {
+			blockVoteBalance = bvc[&blockHash].VoteTotalDeposit
 		} else {
 			blockVoteBalance = 0
 		}

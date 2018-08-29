@@ -342,7 +342,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
-				newCrystallizedState, newActiveState := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
+				newCrystallizedState, newActiveState := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState(), c.chain.ActiveState().GetBlockVoteCache())
 
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
