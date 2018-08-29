@@ -303,6 +303,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
+			// If we cannot process this block, we keep listening.
+			if !canProcess {
+				continue
+			}
+
 			// Process attestations as a beacon chain node.
 			var processedAttestations []*pb.AttestationRecord
 			for index, attestation := range block.Attestations() {
@@ -314,11 +319,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 						log.Debugf("could not calculate new block vote cache: %v", nil)
 					}
 				}
-			}
-
-			// If we cannot process this block, we keep listening.
-			if !canProcess {
-				continue
 			}
 
 			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
