@@ -353,6 +353,12 @@ func TestUpdateHead(t *testing.T) {
 	chainService.updateHead(64)
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 
+	if (len(chainService.processedActiveStates) +
+		len(chainService.processedCrystallizedStates) +
+		len(chainService.processedBlockHashes)) > 0 {
+		t.Error("memory mappings were unable to be reset")
+	}
+
 	chainService.lastSlot = 100
 	chainService.updateHead(101)
 }
@@ -437,7 +443,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	}
 
 	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            1,
+		SlotNumber:            2,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
@@ -447,7 +453,26 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		},
 	})
 
+	registryKey := blockRegistryKey(block.SlotNumber() - 1)
+	blockhashes := make([][]byte, 0)
+	blockhashes = append(blockhashes, parentHash[:])
+
+	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	marshalled, err := proto.Marshal(registry)
+
+	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.lastSlot = 1
+
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
+
+	if (len(chainService.processedActiveStates) +
+		len(chainService.processedCrystallizedStates) +
+		len(chainService.processedBlockHashes)) > 0 {
+		t.Error("memory mappings were unable to be reset")
+	}
 }

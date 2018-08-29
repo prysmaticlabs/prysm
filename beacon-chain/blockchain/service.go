@@ -177,6 +177,7 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
 }
 
+// AddBlockHash adds a blockhash to the inmemory mapping of blockhashes.
 func (c *ChainService) AddBlockHash(hash [32]byte) {
 	c.processedBlockHashes = append(c.processedBlockHashes, hash[:])
 }

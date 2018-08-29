@@ -439,6 +439,9 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 	return b.db.Put(CanonicalHeadLookupKey, enc)
 }
 
+// saveProcessedBlockToDB takes a beacon block, persists it to the db and then
+// takes its blockhash and saves it to the block registry for the block's
+// slotnumber.
 func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 	if err := b.saveBlock(block); err != nil {
 		return err
@@ -498,6 +501,7 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 	return b.db.Put(key, enc)
 }
 
+// retrieveBlock retrieves a block from the db using its slotnumber and hash.
 func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Block, error) {
 	key := blockKey(slotnumber, hash)
 	enc, err := b.db.Get(key)
@@ -514,6 +518,8 @@ func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Bl
 	return types.NewBlock(block), nil
 }
 
+// retrieveBlockRegistry retrieves the block registry of a particular slot from
+// the db.
 func (b *BeaconChain) retrieveBlockRegistry(slotnumber uint64) ([][]byte, error) {
 	key := blockRegistryKey(slotnumber)
 	enc, err := b.db.Get(key)
