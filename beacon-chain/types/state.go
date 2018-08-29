@@ -14,7 +14,8 @@ import (
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
 type ActiveState struct {
-	data *pb.ActiveState
+	data           *pb.ActiveState
+	blockVoteCache map[*common.Hash]*VoteCache //blockVoteCache is not part of protocol state, it is used as a helper cache for cycle init calculations.
 }
 
 // CrystallizedState contains fields of every Slot state,
@@ -23,23 +24,36 @@ type CrystallizedState struct {
 	data *pb.CrystallizedState
 }
 
+// VoteCache is a helper cache to track which validators voted for this block hash and total deposit supported for this block hash.
+type VoteCache struct {
+	VoterIndices     []uint32
+	VoteTotalDeposit uint64
+}
+
 // NewCrystallizedState creates a new crystallized state with a explicitly set data field.
 func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 	return &CrystallizedState{data: data}
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveState) *ActiveState {
-	return &ActiveState{data: data}
+func NewActiveState(data *pb.ActiveState, blockVoteCache map[*common.Hash]*VoteCache) *ActiveState {
+	return &ActiveState{data: data, blockVoteCache: blockVoteCache}
 }
 
 // NewGenesisStates initializes a beacon chain with starting parameters.
 func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
+	// Bootstrap recent block hashes to all 0s for first 2 cycles (128 slots).
+	var recentBlockHashes [][]byte
+	for i := 0; i < 2*params.CycleLength; i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
+	}
+
 	active := &ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AttestationRecord{},
-			RecentBlockHashes:   [][]byte{},
+			RecentBlockHashes:   recentBlockHashes,
 		},
+		blockVoteCache: make(map[*common.Hash]*VoteCache),
 	}
 
 	// We seed the genesis crystallized state with a bunch of validators to
@@ -69,8 +83,13 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 		}
 		shardCommittees = append(shardCommittees, c)
 	}
-	indicesForSlots := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: shardCommittees},
+	// Repeat for first 64 slots
+	var indicesForSlots []*pb.ShardAndCommitteeArray
+	for i := 0; i < params.CycleLength; i++ {
+		shardSlotCommittee := &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardCommittees,
+		}
+		indicesForSlots = append(indicesForSlots, shardSlotCommittee)
 	}
 
 	// Bootstrap cross link records.
@@ -160,8 +179,8 @@ func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
 }
 
 // NewPendingAttestation inserts a new pending attestaton fields.
-func (a *ActiveState) NewPendingAttestation(record *pb.AttestationRecord) {
-	a.data.PendingAttestations = append(a.data.PendingAttestations, record)
+func (a *ActiveState) NewPendingAttestation(record []*pb.AttestationRecord) {
+	a.data.PendingAttestations = append(a.data.PendingAttestations, record...)
 }
 
 // LatestPendingAttestation returns the latest pending attestaton fields.
@@ -186,6 +205,22 @@ func (a *ActiveState) RecentBlockHashes() []common.Hash {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
 	return blockhashes
+}
+
+// IsVoteCacheEmpty returns false if vote cache of an input block hash doesn't exist.
+func (a *ActiveState) IsVoteCacheEmpty(blockHash *common.Hash) bool {
+	_, ok := a.blockVoteCache[blockHash]
+	return ok
+}
+
+// GetBlockVoteCache returns the entire set of block vote cache.
+func (a *ActiveState) GetBlockVoteCache() map[*common.Hash]*VoteCache {
+	return a.blockVoteCache
+}
+
+// SetBlockVoteCache resets the entire set of block vote cache.
+func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[*common.Hash]*VoteCache) {
+	a.blockVoteCache = blockVoteCache
 }
 
 // ClearRecentBlockHashes resets the most recent 64 block hashes.

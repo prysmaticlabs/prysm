@@ -85,7 +85,7 @@ func TestStartStop(t *testing.T) {
 	}
 	chainService.Start()
 
-	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 0 {
+	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
 		t.Errorf("incorrect recent block hashes")
 	}
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
@@ -106,7 +106,7 @@ func TestStartStop(t *testing.T) {
 
 	chainService, _ = NewChainService(ctx, cfg)
 
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
 	activeStateHash, err := active.Hash()
 	if err != nil {
 		t.Fatalf("Cannot hash active state: %v", err)
@@ -135,7 +135,7 @@ func TestStartStop(t *testing.T) {
 	}
 
 	// Save states so HasStoredState state should return true.
-	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}))
+	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}, make(map[*common.Hash]*types.VoteCache)))
 	chainService.chain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{}))
 	hasState, _ = chainService.HasStoredState()
 	if !hasState {
@@ -184,13 +184,13 @@ func TestFaultyStop(t *testing.T) {
 
 	chainService.Start()
 
-	chainService.chain.SetActiveState(types.NewActiveState(nil))
+	chainService.chain.SetActiveState(types.NewActiveState(nil, make(map[*common.Hash]*types.VoteCache)))
 	err = chainService.Stop()
 	if err == nil {
 		t.Errorf("chain stop should have failed with persist active state")
 	}
 
-	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}))
+	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}, make(map[*common.Hash]*types.VoteCache)))
 	chainService.chain.SetCrystallizedState(types.NewCrystallizedState(nil))
 	err = chainService.Stop()
 	if err == nil {
@@ -198,7 +198,7 @@ func TestFaultyStop(t *testing.T) {
 	}
 }
 
-func TestProcessingBadBlock(t *testing.T) {
+func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
@@ -231,7 +231,7 @@ func TestProcessingBadBlock(t *testing.T) {
 	}
 
 	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
+	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}}, make(map[*common.Hash]*types.VoteCache))
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to Mutate Active state: %v", err)
 	}
@@ -389,7 +389,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	}
 
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 64,
+		LastStateRecalc: 0,
 		Validators:      validators,
 		CurrentDynasty:  5,
 		IndicesForSlots: []*pb.ShardAndCommitteeArray{
@@ -412,7 +412,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	for i := 0; i < params.CycleLength+1; i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
 	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[*common.Hash]*types.VoteCache))
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
@@ -474,5 +474,117 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		len(chainService.processedCrystallizedStates) +
 		len(chainService.processedBlockHashes)) > 0 {
 		t.Error("memory mappings were unable to be reset")
+	}
+}
+
+func TestProcessingBlocks(t *testing.T) {
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+	}
+
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db.DB(),
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+
+	chainService, _ := NewChainService(ctx, cfg)
+
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+
+	activeStateHash, _ := active.Hash()
+	crystallizedStateHash, _ := crystallized.Hash()
+
+	genesis, err := beaconChain.GenesisBlock()
+	if err != nil {
+		t.Fatalf("unable to get canonical head: %v", err)
+	}
+
+	parentHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	block1 := NewBlock(t, &pb.BeaconBlock{
+		ParentHash:            parentHash[:],
+		SlotNumber:            1,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		Attestations: []*pb.AttestationRecord{{
+			Slot:             0,
+			AttesterBitfield: []byte{},
+			ShardId:          0,
+		}},
+	})
+
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
+
+	if err := chainService.SaveBlock(block1); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.incomingBlockChan <- block1
+
+	block1Hash, err := block1.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of block 1: %v", err)
+	}
+
+	// Add 1 more attestation field for slot2
+	block2 := NewBlock(t, &pb.BeaconBlock{
+		ParentHash: block1Hash[:],
+		SlotNumber: 2,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 1, AttesterBitfield: []byte{}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{}, ShardId: 2},
+		}})
+
+	chainService.incomingBlockChan <- block2
+
+	block2Hash, err := block2.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of block 1: %v", err)
+	}
+
+	// Add 1 more attestation field for slot3
+	block3 := NewBlock(t, &pb.BeaconBlock{
+		ParentHash: block2Hash[:],
+		SlotNumber: 3,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 0},
+			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 2},
+			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 4},
+		}})
+
+	chainService.incomingBlockChan <- block3
+
+	chainService.cancel()
+	exitRoutine <- true
+
+	// We should have 6 pending attestations from block 1 to block 3
+	if len(beaconChain.ActiveState().PendingAttestations()) != 6 {
+		t.Fatalf("Active state should have 6 pending attestation: %d", len(beaconChain.ActiveState().PendingAttestations()))
 	}
 }
