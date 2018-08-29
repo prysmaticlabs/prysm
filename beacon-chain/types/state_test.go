@@ -43,12 +43,12 @@ func TestActiveState(t *testing.T) {
 	}
 
 	bvc := active.GetBlockVoteCache()
-	bvc[nil] = &VoteCache{
+	bvc[[32]byte{'A'}] = &VoteCache{
 		VoterIndices:     []uint32{0, 1, 2},
 		VoteTotalDeposit: 1000,
 	}
 	active.SetBlockVoteCache(bvc)
-	if !active.IsVoteCacheThere(nil) {
+	if !active.IsVoteCacheThere([32]byte{'A'}) {
 		t.Errorf("block vote cache should be there but recevied false")
 	}
 

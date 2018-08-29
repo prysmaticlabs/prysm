@@ -262,7 +262,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// fork choice rule.
 			var canProcess bool
 			var err error
-			var blockVoteCache map[*common.Hash]*types.VoteCache
+			var blockVoteCache map[common.Hash]*types.VoteCache
 
 			h, err := block.Hash()
 			if err != nil {
@@ -342,7 +342,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
-				newCrystallizedState, newActiveState := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState(), c.chain.ActiveState().GetBlockVoteCache())
+				newCrystallizedState, newActiveState := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
 
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],

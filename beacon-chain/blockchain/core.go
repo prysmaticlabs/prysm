@@ -99,7 +99,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[*common.Hash]*types.VoteCache))
+		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[common.Hash]*types.VoteCache))
 	}
 	if hasCrystallized {
 		enc, err := db.Get([]byte(crystallizedStateLookupKey))
@@ -270,11 +270,11 @@ func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, err
 }
 
 // computeNewActiveState for every newly processed beacon block.
-func (b *BeaconChain) computeNewActiveState(seed common.Hash, blockVoteCache map[*common.Hash]*types.VoteCache) (*types.ActiveState, error) {
+func (b *BeaconChain) computeNewActiveState(seed common.Hash, blockVoteCache map[common.Hash]*types.VoteCache) (*types.ActiveState, error) {
 	newActiveState := types.NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AttestationRecord{},
 		RecentBlockHashes:   [][]byte{},
-	}, make(map[*common.Hash]*types.VoteCache))
+	}, make(map[common.Hash]*types.VoteCache))
 	attesters, proposer, err := casper.SampleAttestersAndProposers(seed, b.CrystallizedState().Validators(), b.CrystallizedState().CurrentDynasty())
 	if err != nil {
 		return nil, err
@@ -362,7 +362,7 @@ func (b *BeaconChain) processAttestation(attestation *pb.AttestationRecord, bloc
 }
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord, block *types.Block) (map[*common.Hash]*types.VoteCache, error) {
+func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord, block *types.Block) (map[common.Hash]*types.VoteCache, error) {
 	newVoteCache := b.ActiveState().GetBlockVoteCache()
 	parentHashes := b.getSignedParentHashes(block, attestation)
 	attesterIndices, err := b.getAttesterIndices(attestation)
@@ -378,8 +378,8 @@ func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord,
 			}
 		}
 		// Initialize vote cache of a given block hash if it doesn't exist already.
-		if !b.ActiveState().IsVoteCacheThere(h) {
-			newVoteCache[h] = &types.VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
+		if !b.ActiveState().IsVoteCacheThere(*h) {
+			newVoteCache[*h] = &types.VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
 		}
 
 		// Loop through attester indices, if the attester has voted but was not accounted for
@@ -387,14 +387,14 @@ func (b *BeaconChain) calculateBlockVoteCache(attestation *pb.AttestationRecord,
 		for i, attesterIndex := range attesterIndices {
 			var newAttester bool
 			if utils.CheckBit(attestation.AttesterBitfield, i) {
-				for _, indexInCache := range newVoteCache[h].VoterIndices {
+				for _, indexInCache := range newVoteCache[*h].VoterIndices {
 					if attesterIndex == indexInCache {
 						newAttester = true
 					}
 				}
 				if !newAttester {
-					newVoteCache[h].VoterIndices = append(newVoteCache[h].VoterIndices, attesterIndex)
-					newVoteCache[h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
+					newVoteCache[*h].VoterIndices = append(newVoteCache[*h].VoterIndices, attesterIndex)
+					newVoteCache[*h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
 				}
 			}
 		}
@@ -465,18 +465,19 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 
 // initCycle is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
-func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState, bvc map[*common.Hash]*types.VoteCache)(*types.CrystallizedState, *types.ActiveState) {
+func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
 	var blockVoteBalance uint64
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
 	finalizedSlot := cState.LastFinalizedSlot()
+	blockVoteCache := aState.GetBlockVoteCache()
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := cState.LastStateRecalc() - params.CycleLength + i
 		blockHash := aState.RecentBlockHashes()[i]
-		fmt.Println(bvc[&blockHash])
-		if _, ok := bvc[&blockHash]; ok {
-			blockVoteBalance = bvc[&blockHash].VoteTotalDeposit
+		fmt.Println()
+		if _, ok := blockVoteCache[blockHash]; ok {
+			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
 		} else {
 			blockVoteBalance = 0
 		}

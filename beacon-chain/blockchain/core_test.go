@@ -181,7 +181,7 @@ func TestSetActiveState(t *testing.T) {
 			{'A'}, {'B'}, {'C'}, {'D'},
 		},
 	}
-	active := types.NewActiveState(data, make(map[*common.Hash]*types.VoteCache))
+	active := types.NewActiveState(data, make(map[common.Hash]*types.VoteCache))
 
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
@@ -266,7 +266,7 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Initialize initial state.
-	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[common.Hash]*types.VoteCache))
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -346,7 +346,7 @@ func TestCanProcessBlockObserver(t *testing.T) {
 	}
 
 	// Initialize initial state.
-	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[common.Hash]*types.VoteCache))
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -429,7 +429,7 @@ func TestComputeActiveState(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	beaconChain.SetCrystallizedState(crystallized)
-	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte("chain")), map[*common.Hash]*types.VoteCache{}); err != nil {
+	if _, err := beaconChain.computeNewActiveState(common.BytesToHash([]byte("chain")), map[common.Hash]*types.VoteCache{}); err != nil {
 		t.Errorf("computing active state should not have failed: %v", err)
 	}
 }
@@ -470,7 +470,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	for i := 0; i < params.CycleLength; i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
 	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[*common.Hash]*types.VoteCache))
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[common.Hash]*types.VoteCache))
 	if err := bc.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
@@ -554,9 +554,7 @@ func TestInitCycleNotFinalized(t *testing.T) {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	crystallized.SetStateRecalc(64)
-	blockVoteCache := make(map[*common.Hash]*types.VoteCache)
-
-	newCrystalled, newActive := b.initCycle(crystallized, active, blockVoteCache)
+	newCrystalled, newActive := b.initCycle(crystallized, active)
 
 	if newCrystalled.LastFinalizedSlot() != 0 {
 		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -583,17 +581,15 @@ func TestInitCycleFinalized(t *testing.T) {
 	}
 	crystallized.SetStateRecalc(64)
 	var activeStateBlockHashes []*common.Hash
-	blockVoteCache := make(map[*common.Hash]*types.VoteCache)
-	for i:=0; i < params.CycleLength; i ++ {
+	blockVoteCache := make(map[common.Hash]*types.VoteCache)
+	for i := uint64(0); i < params.CycleLength; i++ {
 		hash := common.BytesToHash([]byte{byte(i)})
 		voteCache := &types.VoteCache{VoteTotalDeposit: 10000}
-		blockVoteCache[&hash] = voteCache
+		blockVoteCache[hash] = voteCache
 		activeStateBlockHashes = append(activeStateBlockHashes, &hash)
-		t.Log(blockVoteCache[&hash])
 	}
 	active.ReplaceBlockHashes(activeStateBlockHashes)
-
-	b.initCycle(crystallized, active, blockVoteCache)
+	b.initCycle(crystallized, active)
 
 	//if newCrystalled.LastFinalizedSlot() != 0 {
 	//	t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
