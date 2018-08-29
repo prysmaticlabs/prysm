@@ -393,10 +393,10 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 				if attesterIndex == indexInCache {
 					existingAttester = true
 				}
-				if !existingAttester {
-					newVoteCache[h].VoterIndices = append(newVoteCache[h].VoterIndices, attesterIndex)
-					newVoteCache[h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
-				}
+			}
+			if !existingAttester {
+				newVoteCache[h].VoterIndices = append(newVoteCache[h].VoterIndices, attesterIndex)
+				newVoteCache[h].VoteTotalDeposit += b.CrystallizedState().Validators()[attesterIndex].Balance
 			}
 		}
 	}
