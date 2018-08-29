@@ -98,7 +98,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[*common.Hash]*types.VoteCache))
+		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[[32]byte]*types.VoteCache))
 	}
 	if hasCrystallized {
 		enc, err := db.Get([]byte(crystallizedStateLookupKey))
@@ -200,7 +200,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
-// a new crystallized state transition will occur.
+// a new crystallized state and active state transition will occur.
 func (b *BeaconChain) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= b.CrystallizedState().LastStateRecalc()+params.CycleLength
 }
@@ -269,24 +269,20 @@ func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, err
 }
 
 // computeNewActiveState for every newly processed beacon block.
-func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[*common.Hash]*types.VoteCache) (*types.ActiveState, error) {
+func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache, blockHash [32]byte) (*types.ActiveState, error) {
 	// TODO: Insert recent block hash.
 	activeState.SetBlockVoteCache(blockVoteCache)
 	activeState.NewPendingAttestation(attestations)
+	blockHashes := activeState.RecentBlockHashes()
+	blockHashes = append(blockHashes, blockHash)
+
+	for len(blockHashes) > 2*params.CycleLength {
+		blockHashes = blockHashes[1:]
+	}
+
+	activeState.ReplaceBlockHashes(blockHashes)
 
 	return activeState, nil
-}
-
-// computeNewCrystallizedState for every newly processed beacon block at a cycle transition.
-func (b *BeaconChain) computeNewCrystallizedState(active *types.ActiveState, block *types.Block) (*types.CrystallizedState, error) {
-	newCrystallized := b.CrystallizedState()
-	newCrystallized.SetStateRecalc(block.SlotNumber())
-	rewardedValidators, err := casper.CalculateRewards(active.PendingAttestations(), newCrystallized.Validators(), newCrystallized.CurrentDynasty(), newCrystallized.TotalDeposits())
-	if err != nil {
-		return nil, fmt.Errorf("could not calculate ffg rewards/penalties: %v", err)
-	}
-	b.CrystallizedState().SetValidators(rewardedValidators)
-	return newCrystallized, nil
 }
 
 // saveBlock puts the passed block into the beacon chain db.
@@ -314,7 +310,8 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 			slotNumber)
 	}
 	if int(attestation.Slot) < slotNumber-params.CycleLength {
-		return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %d, Needed greater than: %d",
+		return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
+
 			attestation.Slot,
 			slotNumber-params.CycleLength)
 	}
@@ -338,7 +335,7 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 	msg := make([]byte, binary.MaxVarintLen64)
 	var signedHashesStr []byte
 	for _, parentHash := range parentHashes {
-		signedHashesStr = append(signedHashesStr, parentHash.Bytes()...)
+		signedHashesStr = append(signedHashesStr, parentHash[:]...)
 		signedHashesStr = append(signedHashesStr, byte(' '))
 	}
 	binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
@@ -356,7 +353,7 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 }
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types.Block) (map[*common.Hash]*types.VoteCache, error) {
+func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types.Block) (map[[32]byte]*types.VoteCache, error) {
 	attestation := block.Attestations()[attestationIndex]
 	newVoteCache := b.ActiveState().GetBlockVoteCache()
 	parentHashes := b.getSignedParentHashes(block, attestation)
@@ -369,7 +366,7 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 		// Skip calculating for this hash if the hash is part of oblique parent hashes.
 		var skip bool
 		for _, obliqueParentHash := range attestation.ObliqueParentHashes {
-			if bytes.Equal(h.Bytes(), obliqueParentHash) {
+			if bytes.Equal(h[:], obliqueParentHash) {
 				skip = true
 			}
 		}
@@ -404,16 +401,16 @@ func (b *BeaconChain) calculateBlockVoteCache(attestationIndex int, block *types
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last ycle length.
-func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) []*common.Hash {
-	var signedParentHashes []*common.Hash
+func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.AttestationRecord) [][32]byte {
+	var signedParentHashes [][32]byte
 	start := block.SlotNumber() - attestation.Slot
 	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
-	for _, hashes := range b.ActiveState().RecentBlockHashes()[start:end] {
-		signedParentHashes = append(signedParentHashes, &hashes)
-	}
+
+	signedParentHashes = append(signedParentHashes, b.ActiveState().RecentBlockHashes()[start:end]...)
+
 	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
 		hashes := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, &hashes)
+		signedParentHashes = append(signedParentHashes, hashes)
 	}
 	return signedParentHashes
 }
@@ -422,7 +419,7 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
 	// TODO: IndicesForHeights will return default value because the spec for dynasty transition is not finalized.
-	shardCommitteeArray := b.CrystallizedState().IndicesForHeights()
+	shardCommitteeArray := b.CrystallizedState().IndicesForSlots()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
@@ -463,4 +460,94 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 		return err
 	}
 	return b.db.Put([]byte(canonicalHeadKey), enc)
+}
+
+// initCycle is called when a new cycle has been reached, beacon node
+// will re-compute active state and crystallized state during init cycle transition.
+func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
+	var blockVoteBalance uint64
+	justifiedStreak := cState.JustifiedStreak()
+	justifiedSlot := cState.LastJustifiedSlot()
+	finalizedSlot := cState.LastFinalizedSlot()
+	lastStateRecalc := cState.LastStateRecalc()
+	blockVoteCache := aState.GetBlockVoteCache()
+
+	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
+	for i := uint64(0); i < params.CycleLength; i++ {
+		slot := lastStateRecalc - params.CycleLength + i
+		blockHash := aState.RecentBlockHashes()[i]
+		if _, ok := blockVoteCache[blockHash]; ok {
+			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
+		} else {
+			blockVoteBalance = 0
+		}
+		if 3*blockVoteBalance >= 2*cState.TotalDeposits() {
+			if slot > justifiedSlot {
+				justifiedSlot = slot
+			}
+			justifiedStreak++
+		} else {
+			justifiedStreak = 0
+		}
+
+		if justifiedStreak >= params.CycleLength+1 && slot-params.CycleLength > finalizedSlot {
+			finalizedSlot = slot - params.CycleLength
+		}
+	}
+
+	// TODO: Process Crosslink records here.
+	newCrossLinkRecords := []*pb.CrosslinkRecord{}
+
+	// Remove attestations older than LastStateRecalc.
+	var newPendingAttestations []*pb.AttestationRecord
+	for _, attestation := range aState.PendingAttestations() {
+		if attestation.Slot > lastStateRecalc {
+			newPendingAttestations = append(newPendingAttestations, attestation)
+		}
+	}
+
+	// TODO: Full rewards and penalties design is not finalized according to the spec.
+	rewardedValidators, _ := casper.CalculateRewards(
+		aState.PendingAttestations(),
+		cState.Validators(),
+		cState.CurrentDynasty(),
+		cState.TotalDeposits())
+
+	// Get all active validators and calculate total balance for next cycle.
+	var nextCycleBalance uint64
+	nextCycleValidators := casper.ActiveValidatorIndices(cState.Validators(), cState.CurrentDynasty())
+	for _, index := range nextCycleValidators {
+		nextCycleBalance += cState.Validators()[index].Balance
+	}
+
+	// Construct new crystallized state for cycle transition.
+	newCrystallizedState := types.NewCrystallizedState(&pb.CrystallizedState{
+		Validators:             rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
+		LastStateRecalc:        lastStateRecalc + params.CycleLength,
+		IndicesForSlots:        cState.IndicesForSlots(), // TODO: Stub. This will be addresses by shuffling during dynasty transition.
+		LastJustifiedSlot:      justifiedSlot,
+		JustifiedStreak:        justifiedStreak,
+		LastFinalizedSlot:      finalizedSlot,
+		CrosslinkingStartShard: 0, // TODO: Stub. Need to see where this epoch left off.
+		CrosslinkRecords:       newCrossLinkRecords,
+		DynastySeedLastReset:   cState.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
+		TotalDeposits:          nextCycleBalance,
+	})
+
+	var recentBlockHashes [][]byte
+	for _, blockHashes := range aState.RecentBlockHashes() {
+		recentBlockHashes = append(recentBlockHashes, blockHashes[:])
+		// Drop the oldest block hash if the recent block hashes length is more than 2 * cycle length.
+		for len(recentBlockHashes) > 2*params.CycleLength {
+			recentBlockHashes = recentBlockHashes[1:]
+		}
+	}
+
+	// Construct new active state for cycle transition.
+	newActiveState := types.NewActiveState(&pb.ActiveState{
+		PendingAttestations: newPendingAttestations,
+		RecentBlockHashes:   recentBlockHashes,
+	}, aState.GetBlockVoteCache())
+
+	return newCrystallizedState, newActiveState
 }
