@@ -430,7 +430,7 @@ func TestComputeActiveState(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	beaconChain.SetCrystallizedState(crystallized)
-	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[[32]byte]*types.VoteCache{}); err != nil {
+	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[[32]byte]*types.VoteCache{}, [32]byte{}); err != nil {
 		t.Errorf("computing active state should not have failed: %v", err)
 	}
 }

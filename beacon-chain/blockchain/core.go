@@ -269,10 +269,18 @@ func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, err
 }
 
 // computeNewActiveState for every newly processed beacon block.
-func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache) (*types.ActiveState, error) {
+func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache, blockHash [32]byte) (*types.ActiveState, error) {
 	// TODO: Insert recent block hash.
 	activeState.SetBlockVoteCache(blockVoteCache)
 	activeState.NewPendingAttestation(attestations)
+	blockHashes := activeState.RecentBlockHashes()
+	blockHashes = append(blockHashes, blockHash)
+
+	for len(blockHashes) > 2*params.CycleLength {
+		blockHashes = blockHashes[1:]
+	}
+
+	activeState.ReplaceBlockHashes(blockHashes)
 
 	return activeState, nil
 }
@@ -461,11 +469,12 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
 	finalizedSlot := cState.LastFinalizedSlot()
+	lastStateRecalc := cState.LastStateRecalc()
 	blockVoteCache := aState.GetBlockVoteCache()
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
-		slot := cState.LastStateRecalc() - params.CycleLength + i
+		slot := lastStateRecalc - params.CycleLength + i
 		blockHash := aState.RecentBlockHashes()[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
@@ -481,10 +490,8 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 			justifiedStreak = 0
 		}
 
-		if justifiedStreak >= params.CycleLength+1 {
-			if slot-params.CycleLength > finalizedSlot {
-				finalizedSlot = slot - params.CycleLength
-			}
+		if justifiedStreak >= params.CycleLength+1 && slot-params.CycleLength > finalizedSlot {
+			finalizedSlot = slot - params.CycleLength
 		}
 	}
 
@@ -494,7 +501,7 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	// Remove attestations older than LastStateRecalc.
 	var newPendingAttestations []*pb.AttestationRecord
 	for _, attestation := range aState.PendingAttestations() {
-		if attestation.Slot > cState.LastStateRecalc() {
+		if attestation.Slot > lastStateRecalc {
 			newPendingAttestations = append(newPendingAttestations, attestation)
 		}
 	}
@@ -516,7 +523,7 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	// Construct new crystallized state for cycle transition.
 	newCrystallizedState := types.NewCrystallizedState(&pb.CrystallizedState{
 		Validators:             rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
-		LastStateRecalc:        cState.LastStateRecalc() + params.CycleLength,
+		LastStateRecalc:        lastStateRecalc + params.CycleLength,
 		IndicesForSlots:        cState.IndicesForSlots(), // TODO: Stub. This will be addresses by shuffling during dynasty transition.
 		LastJustifiedSlot:      justifiedSlot,
 		JustifiedStreak:        justifiedStreak,
@@ -530,6 +537,10 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	var recentBlockHashes [][]byte
 	for _, blockHashes := range aState.RecentBlockHashes() {
 		recentBlockHashes = append(recentBlockHashes, blockHashes[:])
+		// Drop the oldest block hash if the recent block hashes length is more than 2 * cycle length.
+		for len(recentBlockHashes) > 2*params.CycleLength {
+			recentBlockHashes = recentBlockHashes[1:]
+		}
 	}
 
 	// Construct new active state for cycle transition.

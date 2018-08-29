@@ -333,27 +333,36 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// canonical blocks and states.
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
 
-			activeState, err := c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache)
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
-			if err := c.chain.SetActiveState(activeState); err != nil {
-				log.Errorf("Set active state failed: %v", err)
-			}
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
-				newCrystallizedState, newActiveState := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
+				crystallizedStateAfterCycle, activeStateAfterCycle := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
+
+				activeState, err := c.chain.computeNewActiveState(processedAttestations, activeStateAfterCycle, blockVoteCache, h)
+				if err != nil {
+					log.Errorf("Compute active state failed: %v", err)
+				}
+				if err := c.chain.SetActiveState(activeState); err != nil {
+					log.Errorf("Set active state failed: %v", err)
+				}
 
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
-					newCrystallizedState,
+					crystallizedStateAfterCycle,
 				)
 				c.processedActiveStatesBySlot[receivedSlotNumber] = append(
 					c.processedActiveStatesBySlot[receivedSlotNumber],
-					newActiveState,
+					activeState,
 				)
 			} else {
+				activeState, err := c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache, h)
+				if err != nil {
+					log.Errorf("Compute active state failed: %v", err)
+				}
+				if err := c.chain.SetActiveState(activeState); err != nil {
+					log.Errorf("Set active state failed: %v", err)
+				}
+
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
 					c.chain.CrystallizedState(),
