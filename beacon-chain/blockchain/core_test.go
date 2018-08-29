@@ -717,6 +717,77 @@ func TestHashRegistered(t *testing.T) {
 
 }
 
+func TestRetrieveBlock(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	key := blockKey(block.SlotNumber(), hash)
+	marshalled, err := proto.Marshal(block.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := beaconChain.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	retBlock, err := beaconChain.retrieveBlock(block.SlotNumber(), hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(block.PowChainRef().Bytes(), retBlock.PowChainRef().Bytes()) {
+		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
+	}
+
+}
+
+func TestRetrieveBlockRegistry(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	registryKey := blockRegistryKey(block.SlotNumber())
+	blockhashes := make([][]byte, 0)
+	blockhashes = append(blockhashes, hash[:])
+
+	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	marshalled, err := proto.Marshal(registry)
+
+	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	retRegistry, err := beaconChain.retrieveBlockRegistry(block.SlotNumber())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(hash[:], retRegistry[0]) {
+		t.Fatal("blockhash saved is not the same as blockhash retrieved")
+	}
+
+}
+
 // NewBlock is a helper method to create blocks with valid defaults.
 // For a generic block, use NewBlock(t, nil).
 func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
