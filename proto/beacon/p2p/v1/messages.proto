@@ -4,6 +4,20 @@ package ethereum.beacon.p2p.v1;
 
 import "google/protobuf/timestamp.proto";
 
+enum Topic {
+  UNKNOWN = 0;
+  BEACON_BLOCK_HASH_ANNOUNCE = 1;
+  BEACON_BLOCK_REQUEST = 2;
+  BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER = 3;
+  BEACON_BLOCK_RESPONSE = 4;
+  CRYSTALLIZED_STATE_HASH_ANNOUNCE = 5;
+  CRYSTALLIZED_STATE_REQUEST = 6;
+  CRYSTALLIZED_STATE_RESPONSE = 7;
+  ACTIVE_STATE_HASH_ANNOUNCE = 8;
+  ACTIVE_STATE_REQUEST = 9;
+  ACTIVE_STATE_RESPONSE = 10;
+} 
+
 message BeaconBlockHashAnnounce {
   bytes hash = 1;
 }
