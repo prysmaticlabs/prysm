@@ -5,10 +5,8 @@ import (
 	"time"
 
 	host "github.com/libp2p/go-libp2p-host"
-	peer "github.com/libp2p/go-libp2p-peer"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
-	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,30 +22,20 @@ var mDNSTag = mdns.ServiceTag
 // DNS peer discovery.
 //
 // TODO: add other discovery protocols such as DHT, etc.
-func startDiscovery(ctx context.Context, host host.Host, gsub topicPeerLister) error {
+func startDiscovery(ctx context.Context, host host.Host) error {
 	mdnsService, err := mdns.NewMdnsService(ctx, host, discoveryInterval, mDNSTag)
 	if err != nil {
 		return err
 	}
 
-	mdnsService.RegisterNotifee(&discovery{ctx, host, gsub})
-
+	mdnsService.RegisterNotifee(&discovery{ctx, host})
 	return nil
-}
-
-// topicPeerLister has a method to return connected peers on a given topic.
-// This is implemented by floodsub.PubSub.
-type topicPeerLister interface {
-	ListPeers(string) []peer.ID
 }
 
 // Discovery implements mDNS notifee interface.
 type discovery struct {
 	ctx  context.Context
 	host host.Host
-
-	// Required for helper method.
-	gsub topicPeerLister
 }
 
 // HandlePeerFound registers the peer with the host.
@@ -65,19 +53,4 @@ func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
 	log.WithFields(logrus.Fields{
 		"peers": d.host.Peerstore().Peers(),
 	}).Debug("Peers are now")
-
-	log.WithFields(logrus.Fields{
-		"peerMap": d.topicPeerMap(),
-	}).Debug("Gsub has peers")
-}
-
-// topicPeerMap helper function for inspecting which peers are available for
-// the p2p topics.
-func (d *discovery) topicPeerMap() map[shardpb.Topic][]peer.ID {
-	m := make(map[shardpb.Topic][]peer.ID)
-	for topic := range topicTypeMapping {
-		peers := d.gsub.ListPeers(topic.String())
-		m[topic] = peers
-	}
-	return m
 }

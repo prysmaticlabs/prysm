@@ -566,3 +566,9 @@ go_repository(
     commit = "c4c61651e9e37fa117f53c5a906d3b63090d8445",
     importpath = "github.com/syndtr/goleveldb",
 )
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_blankhost",
+    commit = "073f507db72de824e981aa0f15f158175a8d6be1",
+    importpath = "github.com/libp2p/go-libp2p-blankhost",
+)
