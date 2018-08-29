@@ -32,5 +32,8 @@ go_test(
         "state_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//proto/beacon/p2p/v1:go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+    ],
 )
