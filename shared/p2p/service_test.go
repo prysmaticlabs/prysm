@@ -4,19 +4,22 @@ import (
 	"context"
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared"
-
 	floodsub "github.com/libp2p/go-floodsub"
+	floodsubPb "github.com/libp2p/go-floodsub/pb"
+	bhost "github.com/libp2p/go-libp2p-blankhost"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
-	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Ensure that server implements service.
@@ -39,10 +42,36 @@ func TestBroadcast(t *testing.T) {
 	// TODO: test that topic was published
 }
 
+func TestEmitFailsNonProtobuf(t *testing.T) {
+	s, _ := NewServer()
+	hook := logTest.NewGlobal()
+	s.emit(nil /*feed*/, nil /*msg*/, reflect.TypeOf(""))
+	want := "Received message is not a protobuf message"
+	if hook.LastEntry().Message != want {
+		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+	}
+}
+
+func TestEmitFailsUnmarshal(t *testing.T) {
+	s, _ := NewServer()
+	hook := logTest.NewGlobal()
+	msg := &floodsub.Message{
+		&floodsubPb.Message{
+			Data: []byte("bogus"),
+		},
+	}
+
+	s.emit(nil /*feed*/, msg, reflect.TypeOf(testpb.TestMessage{}))
+	want := "Failed to decode data:"
+	if !strings.Contains(hook.LastEntry().Message, want) {
+		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+	}
+}
+
 func TestSubscribeToTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	h := bhost.New(swarmt.GenSwarm(t, ctx))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	gsub, err := floodsub.NewFloodSub(ctx, h)
 	if err != nil {
@@ -50,11 +79,12 @@ func TestSubscribeToTopic(t *testing.T) {
 	}
 
 	s := Server{
-		ctx:   ctx,
-		gsub:  gsub,
-		host:  h,
-		feeds: make(map[reflect.Type]*event.Feed),
-		mutex: &sync.Mutex{},
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]*event.Feed),
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
 	}
 
 	feed := s.Feed(shardpb.CollationBodyRequest{})
@@ -68,7 +98,7 @@ func TestSubscribeToTopic(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	h := bhost.New(swarmt.GenSwarm(t, ctx))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	gsub, err := floodsub.NewFloodSub(ctx, h)
 	if err != nil {
@@ -76,11 +106,12 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	s := Server{
-		ctx:   ctx,
-		gsub:  gsub,
-		host:  h,
-		feeds: make(map[reflect.Type]*event.Feed),
-		mutex: &sync.Mutex{},
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]*event.Feed),
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
 	}
 
 	ch := make(chan Message)
@@ -92,8 +123,8 @@ func TestSubscribe(t *testing.T) {
 
 func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
 	topic := shardpb.Topic_COLLATION_BODY_REQUEST
-	msgType := topicTypeMapping[topic]
-	go s.subscribeToTopic(topic, msgType)
+
+	go s.RegisterTopic(topic.String(), shardpb.CollationBodyRequest{})
 
 	// Short delay to let goroutine add subscription.
 	time.Sleep(time.Millisecond * 10)
@@ -131,4 +162,107 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 	case <-ctx.Done():
 		t.Error("Context timed out before a message was received!")
 	}
+}
+
+func TestRegisterTopic_WithoutAdapters(t *testing.T) {
+	s, err := NewServer()
+	if err != nil {
+		t.Fatalf("Failed to create new server: %v", err)
+	}
+	topic := "test_topic"
+	testMessage := testpb.TestMessage{Foo: "bar"}
+
+	s.RegisterTopic(topic, testpb.TestMessage{})
+
+	ch := make(chan Message)
+	sub := s.Subscribe(testMessage, ch)
+	defer sub.Unsubscribe()
+
+	wait := make(chan struct{})
+	go func() {
+		defer close(wait)
+		<-ch
+	}()
+
+	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
+		t.Errorf("Failed to send to topic %s", topic)
+	}
+
+	select {
+	case <-wait:
+		return // OK
+	case <-time.After(1 * time.Second):
+		t.Fatal("TestMessage not received within 1 seconds")
+	}
+}
+
+func TestRegisterTopic_WithAdapers(t *testing.T) {
+	s, err := NewServer()
+	if err != nil {
+		t.Fatalf("Failed to create new server: %v", err)
+	}
+	topic := "test_topic"
+	testMessage := testpb.TestMessage{Foo: "bar"}
+
+	i := 0
+	var testAdapter Adapter = func(next Handler) Handler {
+		return func(ctx context.Context, msg Message) {
+			i++
+			next(ctx, msg)
+		}
+	}
+
+	adapters := []Adapter{
+		testAdapter,
+		testAdapter,
+		testAdapter,
+		testAdapter,
+		testAdapter,
+	}
+
+	s.RegisterTopic(topic, testpb.TestMessage{}, adapters...)
+
+	ch := make(chan Message)
+	sub := s.Subscribe(testMessage, ch)
+	defer sub.Unsubscribe()
+
+	wait := make(chan struct{})
+	go func() {
+		defer close(wait)
+		<-ch
+	}()
+
+	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
+		t.Errorf("Failed to send to topic %s", topic)
+	}
+
+	select {
+	case <-wait:
+		if i != 5 {
+			t.Errorf("Expected testAdapter to increment i to 5, but was %d", i)
+		}
+		return // OK
+	case <-time.After(1 * time.Second):
+		t.Fatal("TestMessage not received within 1 seconds")
+	}
+}
+
+func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) error {
+	ctx := context.Background()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	gsub, err := floodsub.NewFloodSub(ctx, h)
+	if err != nil {
+		return err
+	}
+
+	pinfo := h.Peerstore().PeerInfo(h.ID())
+	if err = s.host.Connect(ctx, pinfo); err != nil {
+		return err
+	}
+
+	// Short timeout to allow libp2p to handle peer connection.
+	time.Sleep(time.Millisecond * 10)
+
+	return gsub.Publish(topic, b)
 }

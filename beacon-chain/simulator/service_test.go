@@ -42,7 +42,7 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 type mockChainService struct{}
 
 func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
-	return types.NewActiveState(&pb.ActiveState{})
+	return types.NewActiveState(&pb.ActiveState{}, make(map[[32]byte]*types.VoteCache))
 }
 
 func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {

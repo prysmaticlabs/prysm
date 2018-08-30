@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -261,6 +262,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// fork choice rule.
 			var canProcess bool
 			var err error
+			var blockVoteCache map[[32]byte]*types.VoteCache
 
 			h, err := block.Hash()
 			if err != nil {
@@ -300,11 +302,17 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
-			// Process attestation as a validator.
-			if err := c.chain.processAttestations(block); err != nil {
-				// We might receive a lot of blocks that fail attestation processing,
-				// so we create a debug level log instead of an error log.
-				log.Debugf("could not process attestation: %v", err)
+			// Process attestations as a beacon chain node.
+			var processedAttestations []*pb.AttestationRecord
+			for index, attestation := range block.Attestations() {
+				// Don't add invalid attestation to block vote cache.
+				if err := c.chain.processAttestation(index, block); err == nil {
+					processedAttestations = append(processedAttestations, attestation)
+					blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
+					if err != nil {
+						log.Debugf("could not calculate new block vote cache: %v", nil)
+					}
+				}
 			}
 
 			// If we cannot process this block, we keep listening.
@@ -323,28 +331,45 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			//
 			// This data structure will be used by the updateHead function to determine
 			// canonical blocks and states.
-
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(block.PowChainRef())
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
 
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
-				crystallized, err := c.chain.computeNewCrystallizedState(activeState, block)
+				crystallizedStateAfterCycle, activeStateAfterCycle := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
+
+				activeState, err := c.chain.computeNewActiveState(processedAttestations, activeStateAfterCycle, blockVoteCache, h)
 				if err != nil {
-					log.Errorf("Compute crystallized state failed: %v", err)
+					log.Errorf("Compute active state failed: %v", err)
 				}
+				if err := c.chain.SetActiveState(activeState); err != nil {
+					log.Errorf("Set active state failed: %v", err)
+				}
+
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
-					crystallized,
+					crystallizedStateAfterCycle,
+				)
+				c.processedActiveStatesBySlot[receivedSlotNumber] = append(
+					c.processedActiveStatesBySlot[receivedSlotNumber],
+					activeState,
 				)
 			} else {
+				activeState, err := c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache, h)
+				if err != nil {
+					log.Errorf("Compute active state failed: %v", err)
+				}
+				if err := c.chain.SetActiveState(activeState); err != nil {
+					log.Errorf("Set active state failed: %v", err)
+				}
+
 				c.processedCrystallizedStatesBySlot[receivedSlotNumber] = append(
 					c.processedCrystallizedStatesBySlot[receivedSlotNumber],
 					c.chain.CrystallizedState(),
+				)
+				c.processedActiveStatesBySlot[receivedSlotNumber] = append(
+					c.processedActiveStatesBySlot[receivedSlotNumber],
+					activeState,
 				)
 			}
 
@@ -358,10 +383,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			c.processedBlocksBySlot[receivedSlotNumber] = append(
 				c.processedBlocksBySlot[receivedSlotNumber],
 				block,
-			)
-			c.processedActiveStatesBySlot[receivedSlotNumber] = append(
-				c.processedActiveStatesBySlot[receivedSlotNumber],
-				activeState,
 			)
 			log.Info("Finished processing received block and states into DAG")
 		}
