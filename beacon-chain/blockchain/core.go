@@ -20,9 +20,11 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+// TODO: define these as bytes instead of strings, and include genesis key
 var canonicalHeadKey = "latest-canonical-head"
 var activeStateLookupKey = "beacon-active-state"
 var crystallizedStateLookupKey = "beacon-crystallized-state"
+var blockPrefix = "b-"
 
 var clock utils.Clock = &utils.RealClock{}
 
@@ -285,6 +287,24 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 	return activeState, nil
 }
 
+func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
+	return b.db.Has(append([]byte(blockPrefix), blockhash[:]...))
+}
+
+func (b *BeaconChain) getBlock(blockhash [32]byte) (*types.Block, error) {
+	enc, err := b.db.Get(append([]byte(blockPrefix), blockhash[:]...))
+	if err != nil {
+		return nil, err
+	}
+
+	data := &pb.BeaconBlock{}
+	if err := proto.Unmarshal(enc, data); err != nil {
+		return nil, err
+	}
+
+	return types.NewBlock(data), nil
+}
+
 // saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
 	encodedState, err := block.Marshal()
@@ -296,7 +316,16 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	return b.db.Put(hash[:], encodedState)
+	return b.db.Put(append([]byte(blockPrefix), hash[:]...), encodedState)
+}
+
+// saveCanonical saves the block hash of the current head of the chain
+func (b *BeaconChain) saveCanonical(block *types.Block) error {
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+	return b.db.Put([]byte(canonicalHeadKey), hash[:])
 }
 
 // processAttestation processes the attestations for one shard in an incoming block.
@@ -447,19 +476,6 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 		}
 	}
 	return nil
-}
-
-// saveCanonical puts the passed block into the beacon chain db
-// and also saves a "latest-head" key mapping to the block in the db.
-func (b *BeaconChain) saveCanonical(block *types.Block) error {
-	if err := b.saveBlock(block); err != nil {
-		return err
-	}
-	enc, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-	return b.db.Put([]byte(canonicalHeadKey), enc)
 }
 
 // initCycle is called when a new cycle has been reached, beacon node
