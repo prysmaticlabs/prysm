@@ -576,13 +576,13 @@ func TestSaveProcessedBlock(t *testing.T) {
 
 	hash, err := block.Hash()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unable to generate hash of block %v", err)
 	}
 
 	key := blockKey(block.SlotNumber(), hash)
 
 	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
-		t.Errorf("Could not save processed block %v", err)
+		t.Fatalf("Could not save processed block %v", err)
 	}
 
 	enc, err := beaconChain.db.Get(key)
@@ -599,7 +599,7 @@ func TestSaveProcessedBlock(t *testing.T) {
 	retrievedblock := NewBlock(t, unmarshalled)
 
 	if !bytes.Equal(block.PowChainRef().Bytes(), retrievedblock.PowChainRef().Bytes()) {
-		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
+		t.Error("block retrieved does not have the same POW chain ref as the block saved")
 	}
 
 }
@@ -615,7 +615,7 @@ func TestSaveProcessedBlockWithBlockRegistry(t *testing.T) {
 
 	hash, err := block.Hash()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unable to generate hash of block %v", err)
 	}
 
 	registryKey := blockRegistryKey(block.SlotNumber())
@@ -635,7 +635,7 @@ func TestSaveProcessedBlockWithBlockRegistry(t *testing.T) {
 	key := blockKey(block.SlotNumber(), hash)
 
 	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
-		t.Errorf("Could not save processed block %v", err)
+		t.Fatalf("Could not save processed block %v", err)
 	}
 
 	enc, err := beaconChain.db.Get(key)
@@ -686,7 +686,7 @@ func TestHashRegistered(t *testing.T) {
 
 	hash, err := block.Hash()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unable to generate hash of block %v", err)
 	}
 
 	registryKey := blockRegistryKey(block.SlotNumber())
@@ -696,15 +696,15 @@ func TestHashRegistered(t *testing.T) {
 	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("unable to marshal registry %v", err)
 	}
 
 	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
-		t.Fatal(err)
+		t.Fatalf("unable to save registry in db %v", err)
 	}
 
 	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
-		t.Errorf("Could not save processed block %v", err)
+		t.Fatalf("Could not save processed block %v", err)
 	}
 
 	enc, err := beaconChain.db.Get(registryKey)
@@ -718,7 +718,7 @@ func TestHashRegistered(t *testing.T) {
 	}
 
 	if len(unmarshalledRegistry.Blockhashes) > 1 {
-		t.Fatal("same hash is being saved twice in the db")
+		t.Error("same hash is being saved twice in the db")
 	}
 
 }
@@ -755,7 +755,6 @@ func TestRetrieveBlock(t *testing.T) {
 	if !bytes.Equal(block.PowChainRef().Bytes(), retBlock.PowChainRef().Bytes()) {
 		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
 	}
-
 }
 
 func TestRetrieveBlockRegistry(t *testing.T) {

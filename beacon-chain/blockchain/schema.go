@@ -22,7 +22,7 @@ var (
 	// BlockSlotRegistryPrefix tracks the registry of stored blockhashes.
 	blockSlotRegistryPrefix = []byte("block-registry")
 
-	//Data item prefixes.
+	// Data item prefixes.
 	blockPrefix = []byte("b") // blockPrefix + num(uint64 big endian) + blockhash -> block
 
 )

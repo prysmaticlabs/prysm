@@ -19,15 +19,13 @@ type BlockRegistry struct {
 
 // NewRegistry creates a new block registry from the protobuf data.
 func NewRegistry(data *pb.BlockRegistry) *BlockRegistry {
-	if data == nil {
-		return &BlockRegistry{
-			data: &pb.BlockRegistry{
-				Blockhashes: make([][]byte, 0),
-			},
-		}
+
+	if data != nil {
+		return &BlockRegistry{data: data}
 	}
 
-	return &BlockRegistry{data: data}
+	newdata := &pb.BlockRegistry{Blockhashes: make([][]byte, 0)}
+	return &BlockRegistry{data: newdata}
 }
 
 // Proto returns the underlying protobuf data within the block registry struct.

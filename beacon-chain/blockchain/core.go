@@ -535,7 +535,7 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 	return b.db.Put(key, enc)
 }
 
-// retrieveBlock retrieves a block from the db using its slotnumber and hash.
+// retrieveBlock retrieves a block from the db using its slot number and hash.
 func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Block, error) {
 	key := blockKey(slotnumber, hash)
 	enc, err := b.db.Get(key)
