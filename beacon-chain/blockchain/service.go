@@ -177,10 +177,8 @@ func (c *ChainService) updateHead(slot uint64) {
 		log.Errorf("Write active state to disk failed: %v", err)
 	}
 
-	if c.candidateCState != nilCrystallizedState {
-		if err := c.chain.SetCrystallizedState(c.candidateCState); err != nil {
-			log.Errorf("Write crystallized state to disk failed: %v", err)
-		}
+	if err := c.chain.SetCrystallizedState(c.candidateCState); err != nil {
+		log.Errorf("Write crystallized state to disk failed: %v", err)
 	}
 
 	// TODO: Utilize this value in the fork choice rule.
