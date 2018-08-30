@@ -128,19 +128,12 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
 
-	hasActive, err := c.beaconDB.Has([]byte(ActiveStateLookupKey))
-	if err != nil {
-		return false, err
-	}
 	hasCrystallized, err := c.beaconDB.Has([]byte(CrystallizedStateLookupKey))
 	if err != nil {
 		return false, err
 	}
-	if !hasActive || !hasCrystallized {
-		return false, nil
-	}
 
-	return true, nil
+	return hasCrystallized, nil
 }
 
 // SaveBlock is a mock which saves a block to the local db using the

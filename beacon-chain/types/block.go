@@ -24,7 +24,7 @@ func NewRegistry(data *pb.BlockRegistry) *BlockRegistry {
 		return &BlockRegistry{data: data}
 	}
 
-	newdata := &pb.BlockRegistry{Blockhashes: make([][]byte, 0)}
+	newdata := &pb.BlockRegistry{BlockHashes: make([][]byte, 0)}
 	return &BlockRegistry{data: newdata}
 }
 
@@ -40,7 +40,7 @@ func (b *BlockRegistry) Marshal() ([]byte, error) {
 
 // BlockHashes returns the hashes stored in the registry.
 func (b *BlockRegistry) BlockHashes() [][]byte {
-	return b.data.Blockhashes
+	return b.data.BlockHashes
 }
 
 // Block defines a beacon chain core primitive.

@@ -47,10 +47,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	hasActive, err := db.Has(ActiveStateLookupKey)
-	if err != nil {
-		return nil, err
-	}
 	hasCrystallized, err := db.Has(CrystallizedStateLookupKey)
 	if err != nil {
 		return nil, err
@@ -83,18 +79,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		beaconChain.state.CrystallizedState = crystallized
 
 		return beaconChain, nil
-	}
-	if hasActive {
-		enc, err := db.Get(ActiveStateLookupKey)
-		if err != nil {
-			return nil, err
-		}
-		activeData := &pb.ActiveState{}
-		err = proto.Unmarshal(enc, activeData)
-		if err != nil {
-			return nil, err
-		}
-		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[*common.Hash]*types.VoteCache))
 	}
 	if hasCrystallized {
 		enc, err := db.Get(CrystallizedStateLookupKey)
