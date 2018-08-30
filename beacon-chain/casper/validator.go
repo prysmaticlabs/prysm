@@ -101,10 +101,10 @@ func GetAttestersTotalDeposit(attestations []*pb.AttestationRecord) uint64 {
 	return uint64(numOfBits) * params.DefaultBalance
 }
 
-// GetIndicesForHeight returns the attester set of a given height.
-func GetIndicesForHeight(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, height uint64) (*pb.ShardAndCommitteeArray, error) {
-	if !(lcs <= height && height < lcs+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given height, input height %v has to be in between %v and %v", height, lcs, lcs+params.CycleLength*2)
+// GetIndicesForSlot returns the attester set of a given slot.
+func GetIndicesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+	if !(lcs <= slot && slot < lcs+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lcs, lcs+params.CycleLength*2)
 	}
-	return shardCommittees[height-lcs], nil
+	return shardCommittees[slot-lcs], nil
 }
