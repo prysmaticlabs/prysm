@@ -91,16 +91,14 @@ func TestNewBeaconChain(t *testing.T) {
 	}
 
 	hook.Reset()
-	active, crystallized, err := types.NewGenesisStates()
+	_, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	if _, err := types.NewGenesisBlock(); err != nil {
 		t.Errorf("Creating a new genesis block failed %v", err)
 	}
-	if !reflect.DeepEqual(beaconChain.ActiveState(), active) {
-		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), active)
-	}
+
 	if !reflect.DeepEqual(beaconChain.CrystallizedState(), crystallized) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), crystallized)
 	}
@@ -191,21 +189,6 @@ func TestSetActiveState(t *testing.T) {
 		t.Errorf("active state was not updated. wanted %v, got %v", active, beaconChain.state.ActiveState)
 	}
 
-	// Initializing a new beacon chain should deserialize persisted state from disk.
-	newBeaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup second beacon chain: %v", err)
-	}
-
-	// The active state should still be the one we mutated and persited earlier
-	for i, hash := range active.RecentBlockHashes() {
-		if hash.Hex() != newBeaconChain.ActiveState().RecentBlockHashes()[i].Hex() {
-			t.Errorf("active state block hash. wanted %v, got %v", hash.Hex(), newBeaconChain.ActiveState().RecentBlockHashes()[i].Hex())
-		}
-	}
-	if reflect.DeepEqual(active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes()) {
-		t.Errorf("active state pending attestation incorrect. wanted %v, got %v", active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes())
-	}
 }
 
 func TestSetCrystallizedState(t *testing.T) {
@@ -622,7 +605,7 @@ func TestSaveProcessedBlockWithBlockRegistry(t *testing.T) {
 	blockhashes := make([][]byte, 0)
 	blockhashes = append(blockhashes, []byte{'a'})
 
-	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
 	if err != nil {
 		t.Fatal(err)
@@ -665,11 +648,11 @@ func TestSaveProcessedBlockWithBlockRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(unmarshalledRegistry.GetBlockhashes()[0], []byte{'a'}) {
-		t.Errorf("blockhashes are unequal to each other %v , %v", unmarshalledRegistry.GetBlockhashes()[0], []byte{'a'})
+	if !bytes.Equal(unmarshalledRegistry.GetBlockHashes()[0], []byte{'a'}) {
+		t.Errorf("blockhashes are unequal to each other %v , %v", unmarshalledRegistry.GetBlockHashes()[0], []byte{'a'})
 	}
 
-	if !bytes.Equal(unmarshalledRegistry.GetBlockhashes()[1], hash[:]) {
+	if !bytes.Equal(unmarshalledRegistry.GetBlockHashes()[1], hash[:]) {
 		t.Errorf("incorrect blockhash saved %v", hash)
 	}
 
@@ -693,7 +676,7 @@ func TestHashRegistered(t *testing.T) {
 	blockhashes := make([][]byte, 0)
 	blockhashes = append(blockhashes, hash[:])
 
-	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
 	if err != nil {
 		t.Fatalf("unable to marshal registry %v", err)
@@ -717,7 +700,7 @@ func TestHashRegistered(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(unmarshalledRegistry.Blockhashes) > 1 {
+	if len(unmarshalledRegistry.BlockHashes) > 1 {
 		t.Error("same hash is being saved twice in the db")
 	}
 
@@ -775,7 +758,7 @@ func TestRetrieveBlockRegistry(t *testing.T) {
 	blockhashes := make([][]byte, 0)
 	blockhashes = append(blockhashes, hash[:])
 
-	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
 	if err != nil {
 		t.Fatal(err)

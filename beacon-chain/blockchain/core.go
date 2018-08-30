@@ -69,13 +69,13 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 			return nil, err
 		}
 	}
-	if !hasActive && !hasCrystallized {
+	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
-		active, crystallized, err := types.NewGenesisStates()
+		_, crystallized, err := types.NewGenesisStates()
 		if err != nil {
 			return nil, err
 		}
-		beaconChain.state.ActiveState = active
+
 		beaconChain.state.CrystallizedState = crystallized
 
 		return beaconChain, nil
@@ -489,7 +489,7 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 
 		hashRegistered := false
 
-		for _, blockhash := range registry.Blockhashes {
+		for _, blockhash := range registry.BlockHashes {
 			if bytes.Equal(hash[:], blockhash) {
 				hashRegistered = true
 			}
@@ -499,7 +499,7 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 			return nil
 		}
 
-		registry.Blockhashes = append(registry.Blockhashes, hash[:])
+		registry.BlockHashes = append(registry.BlockHashes, hash[:])
 		enc, err = proto.Marshal(registry)
 		if err != nil {
 			return err
@@ -508,9 +508,9 @@ func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
 		return b.db.Put(key, enc)
 	}
 
-	registry := &pb.BlockRegistry{Blockhashes: make([][]byte, 0)}
+	registry := &pb.BlockRegistry{BlockHashes: make([][]byte, 0)}
 
-	registry.Blockhashes = append(registry.Blockhashes, hash[:])
+	registry.BlockHashes = append(registry.BlockHashes, hash[:])
 	enc, err := proto.Marshal(registry)
 	if err != nil {
 		return err
@@ -550,5 +550,5 @@ func (b *BeaconChain) retrieveBlockRegistry(slotnumber uint64) ([][]byte, error)
 	if err := proto.Unmarshal(enc, data); err != nil {
 		return nil, err
 	}
-	return data.Blockhashes, nil
+	return data.BlockHashes, nil
 }

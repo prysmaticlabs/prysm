@@ -86,9 +86,6 @@ func TestStartStop(t *testing.T) {
 	}
 	chainService.Start()
 
-	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
-		t.Errorf("incorrect recent block hashes")
-	}
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
 	}
@@ -330,7 +327,7 @@ func TestUpdateHead(t *testing.T) {
 	blockhashes := make([][]byte, 0)
 	blockhashes = append(blockhashes, parentHash[:])
 
-	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
 	if err != nil {
 		t.Fatal(err)
@@ -461,7 +458,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	blockhashes := make([][]byte, 0)
 	blockhashes = append(blockhashes, parentHash[:])
 
-	registry := &pb.BlockRegistry{Blockhashes: blockhashes}
+	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
 	marshalled, err := proto.Marshal(registry)
 	if err != nil {
 		t.Fatal(err)
