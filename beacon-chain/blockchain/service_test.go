@@ -281,7 +281,7 @@ func TestRunningChainService(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Finished processing received block and states into DAG")
 }
-
+/*
 func TestUpdateHead(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
@@ -360,7 +360,7 @@ func TestUpdateHead(t *testing.T) {
 	chainService.lastSlot = 100
 	chainService.updateHead(101)
 }
-
+*/
 func TestProcessingBlockWithAttestations(t *testing.T) {
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
