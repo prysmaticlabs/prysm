@@ -220,23 +220,13 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
-	}
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
-	crystallizedStateHash, err := crystallized.Hash()
+	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
+		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 
-	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}}, make(map[[32]byte]*types.VoteCache))
-	if err := beaconChain.SetActiveState(active); err != nil {
-		t.Fatalf("unable to Mutate Active state: %v", err)
-	}
+	activeStateHash, _ := active.Hash()
+	crystallizedStateHash, _ := crystallized.Hash()
 
 	cfg := &Config{
 		BeaconBlockBuf: 0,
@@ -245,17 +235,15 @@ func TestRunningChainService(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 	chainService, _ := NewChainService(ctx, cfg)
-	chainService.chain.SetCrystallizedState(crystallized)
 
-	parentBlock := NewBlock(t, nil)
-	if err := chainService.SaveBlock(parentBlock); err != nil {
-		t.Fatal(err)
-	}
-	parentHash, _ := parentBlock.Hash()
-
-	activeStateHash, err := active.Hash()
+	genesis, err := beaconChain.GenesisBlock()
 	if err != nil {
-		t.Fatalf("Cannot hash active state: %v", err)
+		t.Fatalf("unable to get canonical head: %v", err)
+	}
+
+	parentHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
 	block := NewBlock(t, &pb.BeaconBlock{
@@ -264,6 +252,11 @@ func TestRunningChainService(t *testing.T) {
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
+		Attestations: []*pb.AttestationRecord{{
+			Slot:             0,
+			AttesterBitfield: []byte{},
+			ShardId:          0,
+		}},
 	})
 
 	exitRoutine := make(chan bool)

@@ -260,7 +260,8 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Another routine will run that will continually compute
 			// the canonical block and states from this data structure using the
 			// fork choice rule.
-			var canProcess bool
+			var canProcessBlock bool
+			var canProcessAttestations bool
 			var err error
 			var blockVoteCache map[[32]byte]*types.VoteCache
 
@@ -292,9 +293,9 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// Process block as a validator if beacon node has registered, else process block as an observer.
 			if c.validator {
-				canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
+				canProcessBlock, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
 			} else {
-				canProcess, err = c.chain.CanProcessBlock(nil, block, false)
+				canProcessBlock, err = c.chain.CanProcessBlock(nil, block, false)
 			}
 			if err != nil {
 				// We might receive a lot of blocks that fail validity conditions,
@@ -306,7 +307,12 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			var processedAttestations []*pb.AttestationRecord
 			for index, attestation := range block.Attestations() {
 				// Don't add invalid attestation to block vote cache.
-				if err := c.chain.processAttestation(index, block); err == nil {
+				if err := c.chain.processAttestation(index, block); err != nil {
+					fmt.Println("bad block")
+					canProcessAttestations = false
+					log.Errorf("could not process attestation for block %d because %v", block.SlotNumber(), err)
+				} else {
+					canProcessAttestations = true
 					processedAttestations = append(processedAttestations, attestation)
 					blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
 					if err != nil {
@@ -315,8 +321,12 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				}
 			}
 
+			// If we cannot process an attestation in this block, we keep listening.
+			if !canProcessAttestations {
+				continue
+			}
 			// If we cannot process this block, we keep listening.
-			if !canProcess {
+			if !canProcessBlock {
 				continue
 			}
 
