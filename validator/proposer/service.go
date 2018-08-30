@@ -59,7 +59,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
 		// TODO: Instead subscribe to a proposal assignment feed that contains
-		// important fields from the currently received beacon block thta will be put into
+		// important fields from the currently received beacon block that will be put into
 		// a proposal RPC message such as slot number and parent hash.
 		//
 		// TODO: On the beacon node side, calculate active and crystallized and update the
