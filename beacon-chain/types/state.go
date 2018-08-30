@@ -135,6 +135,8 @@ func NewAttestationRecord() *pb.AttestationRecord {
 		ShardBlockHash:      []byte{0},
 		AttesterBitfield:    nil,
 		AggregateSig:        []uint64{0, 0},
+		JustifiedSlot:       0,
+		JustifiedBlockHash:  []byte{},
 	}
 }
 
