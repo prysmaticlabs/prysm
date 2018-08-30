@@ -308,7 +308,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			for index, attestation := range block.Attestations() {
 				// Don't add invalid attestation to block vote cache.
 				if err := c.chain.processAttestation(index, block); err != nil {
-					fmt.Println("bad block")
 					canProcessAttestations = false
 					log.Errorf("could not process attestation for block %d because %v", block.SlotNumber(), err)
 				} else {
