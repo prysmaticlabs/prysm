@@ -18,6 +18,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"golang.org/x/crypto/blake2b"
 )
 
 // FakeClock represents an mocked clock for testing purposes.
@@ -184,7 +185,7 @@ func TestSetActiveState(t *testing.T) {
 			{'A'}, {'B'}, {'C'}, {'D'},
 		},
 	}
-	active := types.NewActiveState(data, make(map[*common.Hash]*types.VoteCache))
+	active := types.NewActiveState(data, make(map[[32]byte]*types.VoteCache))
 
 	if err := beaconChain.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
@@ -254,7 +255,7 @@ func TestCanProcessBlock(t *testing.T) {
 	}
 
 	// Initialize initial state.
-	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[[32]byte]*types.VoteCache))
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -334,7 +335,7 @@ func TestCanProcessBlockObserver(t *testing.T) {
 	}
 
 	// Initialize initial state.
-	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[*common.Hash]*types.VoteCache))
+	activeState := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[[32]byte]*types.VoteCache))
 	beaconChain.state.ActiveState = activeState
 	activeHash, err := activeState.Hash()
 	if err != nil {
@@ -409,26 +410,6 @@ func TestVerifyCrystallizedHashWithNil(t *testing.T) {
 	}
 }
 
-func TestComputeCrystallizedState(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 0})
-	beaconChain.SetCrystallizedState(crystallized)
-	data := &pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
-			{Slot: 0, ShardBlockHash: []byte{1}}, {Slot: 1, ShardBlockHash: []byte{2}},
-		},
-		RecentBlockHashes: [][]byte{
-			{'A'}, {'B'}, {'C'}, {'D'},
-		},
-	}
-	active := types.NewActiveState(data, make(map[*common.Hash]*types.VoteCache))
-	block := types.NewBlock(&pb.BeaconBlock{SlotNumber: 1})
-	if _, err := beaconChain.computeNewCrystallizedState(active, block); err != nil {
-		t.Errorf("computing crystallized state should not have failed: %v", err)
-	}
-}
-
 func TestComputeActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -437,7 +418,7 @@ func TestComputeActiveState(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	beaconChain.SetCrystallizedState(crystallized)
-	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[*common.Hash]*types.VoteCache{}); err != nil {
+	if _, err := beaconChain.computeNewActiveState([]*pb.AttestationRecord{}, active, map[[32]byte]*types.VoteCache{}, [32]byte{}); err != nil {
 		t.Errorf("computing active state should not have failed: %v", err)
 	}
 }
@@ -464,6 +445,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 1, ShardId: 0},
 		},
 	})
+
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed because attestation slot # < block # + cycle length")
 	}
@@ -478,7 +460,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	for i := 0; i < params.CycleLength; i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
 	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[*common.Hash]*types.VoteCache))
+	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[[32]byte]*types.VoteCache))
 	if err := bc.SetActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
 	}
@@ -497,6 +479,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	if err := bc.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
+
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, there's no committee in shard 0")
 	}
@@ -523,6 +506,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'A', 'B', 'C'}},
 		},
 	})
+
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, incorrect attester bit field length")
 	}
@@ -536,6 +520,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	})
 	// Process attestation should fail because the non-zero leading bits for votes.
 	// a is 01100001
+
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, incorrect attester bit field length")
 	}
@@ -547,6 +532,7 @@ func TestCanProcessAttestations(t *testing.T) {
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
 		},
 	})
+
 	if err := bc.processAttestation(0, block); err != nil {
 		t.Error(err)
 	}
@@ -583,6 +569,79 @@ func TestRetrieveBlock(t *testing.T) {
 
 	if !bytes.Equal(block.PowChainRef().Bytes(), retBlock.PowChainRef().Bytes()) {
 		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
+	}
+}
+
+// Test cycle transition where there's not enough justified streak to finalize a slot.
+func TestInitCycleNotFinalized(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Errorf("Creating new genesis state failed %v", err)
+	}
+	crystallized.SetStateRecalc(64)
+	newCrystalled, newActive := b.initCycle(crystallized, active)
+
+	if newCrystalled.LastFinalizedSlot() != 0 {
+		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
+	}
+	if newCrystalled.LastJustifiedSlot() != 0 {
+		t.Errorf("Last justified slot should be 0 but got: %d", newCrystalled.LastJustifiedSlot())
+	}
+	if newCrystalled.JustifiedStreak() != 0 {
+		t.Errorf("Justified streak should be 0 but got: %d", newCrystalled.JustifiedStreak())
+	}
+	if len(newActive.RecentBlockHashes()) != 128 {
+		t.Errorf("Recent block hash length should be 128 but got: %d", newActive.RecentBlockHashes())
+	}
+}
+
+// Test cycle transition where there's enough justified streak to finalize a slot.
+func TestInitCycleFinalized(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	active, crystallized, err := types.NewGenesisStates()
+	if err != nil {
+		t.Errorf("Creating new genesis state failed %v", err)
+	}
+	crystallized.SetStateRecalc(64)
+
+	var activeStateBlockHashes [][32]byte
+	blockVoteCache := make(map[[32]byte]*types.VoteCache)
+	for i := 0; i < params.CycleLength; i++ {
+		hash := blake2b.Sum256([]byte{byte(i)})
+		if err != nil {
+			t.Fatalf("Can't proceed test, blake2b hashing function failed: %v", err)
+		}
+		voteCache := &types.VoteCache{VoteTotalDeposit: 100000}
+		blockVoteCache[hash] = voteCache
+		activeStateBlockHashes = append(activeStateBlockHashes, hash)
+	}
+
+	active.ReplaceBlockHashes(activeStateBlockHashes)
+	active.SetBlockVoteCache(blockVoteCache)
+
+	// justified block: 63, finalized block: 0, justified streak: 64
+	newCrystalled, newActive := b.initCycle(crystallized, active)
+
+	newActive.ReplaceBlockHashes(activeStateBlockHashes)
+	// justified block: 127, finalized block: 63, justified streak: 128
+	newCrystalled, newActive = b.initCycle(newCrystalled, newActive)
+
+	if newCrystalled.LastFinalizedSlot() != 63 {
+		t.Errorf("Last finalized slot should be 63 but got: %d", newCrystalled.LastFinalizedSlot())
+	}
+	if newCrystalled.LastJustifiedSlot() != 127 {
+		t.Errorf("Last justified slot should be 127 but got: %d", newCrystalled.LastJustifiedSlot())
+	}
+	if newCrystalled.JustifiedStreak() != 128 {
+		t.Errorf("Justified streak should be 128 but got: %d", newCrystalled.JustifiedStreak())
+	}
+	if len(newActive.RecentBlockHashes()) != 64 {
+		t.Errorf("Recent block hash length should be 64 but got: %d", len(newActive.RecentBlockHashes()))
 	}
 }
 

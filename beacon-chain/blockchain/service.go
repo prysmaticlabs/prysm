@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
@@ -201,7 +200,7 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 
 	// TODO: Utilize this value in the fork choice rule.
-	vals, err := casper.ValidatorsByHeightShard(
+	vals, err := casper.ShuffleValidatorsToCommittees(
 		canonicalCrystallizedState.DynastySeed(),
 		canonicalCrystallizedState.Validators(),
 		canonicalCrystallizedState.CurrentDynasty(),
@@ -269,7 +268,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// fork choice rule.
 			var canProcess bool
 			var err error
-			var blockVoteCache map[*common.Hash]*types.VoteCache
+			var blockVoteCache map[[32]byte]*types.VoteCache
 
 			h, err := block.Hash()
 			if err != nil {
@@ -307,6 +306,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
+			// If we cannot process this block, we keep listening.
+			if !canProcess {
+				continue
+			}
+
 			// Process attestations as a beacon chain node.
 			var processedAttestations []*pb.AttestationRecord
 			for index, attestation := range block.Attestations() {
@@ -333,23 +337,20 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// This data structure will be used by the updateHead function to determine
 			// canonical blocks and states.
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			activeState, err := c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache)
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
-			if err := c.chain.SetActiveState(activeState); err != nil {
-				log.Errorf("Set active state failed: %v", err)
-			}
+			var activeState *types.ActiveState
 			// Entering cycle transitions.
 			transition := c.chain.IsCycleTransition(receivedSlotNumber)
 			if transition {
-				crystallized, err := c.chain.computeNewCrystallizedState(activeState, block)
+				crystallizedStateAfterCycle, activeStateAfterCycle := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
+
+				activeState, err = c.chain.computeNewActiveState(processedAttestations, activeStateAfterCycle, blockVoteCache, h)
 				if err != nil {
-					log.Errorf("Compute crystallized state failed: %v", err)
+					log.Errorf("Compute active state failed: %v", err)
 				}
-				c.processedCrystallizedStates = append(c.processedCrystallizedStates, crystallized)
+				c.processedCrystallizedStates = append(c.processedCrystallizedStates, crystallizedStateAfterCycle)
 
 			} else {
+				activeState, err = c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache, h)
 				c.processedCrystallizedStates = append(c.processedCrystallizedStates, c.chain.CrystallizedState())
 			}
 
