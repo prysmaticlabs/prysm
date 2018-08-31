@@ -663,3 +663,40 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 
 	return types.NewBlock(b)
 }
+
+func TestRemoveAndScanBlocks(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Fatalf("unable to generate hash of block %v", err)
+	}
+
+	if err := b.saveBlock(block); err != nil {
+		t.Fatalf("unable to save block %v", err)
+	}
+
+	if err := b.removeBlock(hash); err != nil {
+		t.Fatalf("error removing block %v", err)
+	}
+
+	hasblock, err := b.hasBlock(hash)
+	if err != nil {
+		t.Fatalf("error checking for block %v", err)
+	}
+
+	if hasblock {
+		t.Error("block unable to be removed")
+	}
+
+	if b.scanBlocks() != nil {
+		t.Error("the method is supposed to be unimplemented")
+	}
+
+}

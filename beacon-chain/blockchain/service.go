@@ -112,7 +112,7 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // TODO: Remove - only used in tests
 func (c *ChainService) HasStoredState() (bool, error) {
 
-	hasCrystallized, err := c.beaconDB.Has([]byte(CrystallizedStateLookupKey))
+	hasCrystallized, err := c.beaconDB.Has(CrystallizedStateLookupKey)
 	if err != nil {
 		return false, err
 	}
@@ -247,7 +247,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
-				log.Debugf("Could not check existance of parent hash: %v", err)
+				log.Debugf("Could not check existence of parent hash: %v", err)
 			}
 
 			// If parentHash does not exist, received block fails validity conditions.

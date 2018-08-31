@@ -56,7 +56,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		return nil, err
 	}
 
-	active, _, err := types.NewGenesisStates()
+	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		return nil, err
 	}
@@ -79,15 +79,9 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	}
 	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
-		_, crystallized, err := types.NewGenesisStates()
-		if err != nil {
-			return nil, err
-		}
-
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
-	}
-	if hasCrystallized {
+	} else {
 		enc, err := db.Get(CrystallizedStateLookupKey)
 		if err != nil {
 			return nil, err
@@ -273,21 +267,7 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 }
 
 func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
-	return b.db.Has(append([]byte(blockPrefix), blockhash[:]...))
-}
-
-func (b *BeaconChain) getBlock(blockhash [32]byte) (*types.Block, error) {
-	enc, err := b.db.Get(append([]byte(blockPrefix), blockhash[:]...))
-	if err != nil {
-		return nil, err
-	}
-
-	data := &pb.BeaconBlock{}
-	if err := proto.Unmarshal(enc, data); err != nil {
-		return nil, err
-	}
-
-	return types.NewBlock(data), nil
+	return b.db.Has(blockKey(blockhash))
 }
 
 // saveBlock puts the passed block into the beacon chain db.
@@ -299,16 +279,6 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	}
 
 	key := blockKey(hash)
-	hasBlock, err := b.db.Has(key)
-
-	if hasBlock {
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
 	encodedState, err := block.Marshal()
 	if err != nil {
 		return err
@@ -495,17 +465,12 @@ func (b *BeaconChain) retrieveBlock(hash [32]byte) (*types.Block, error) {
 	return types.NewBlock(block), nil
 }
 
-// doesBlockExist checks if the block exists in the db.
-func (b *BeaconChain) doesBlockExist(hash [32]byte) (bool, error) {
-	return b.db.Has(blockKey(hash))
-}
-
 // removeBlock removes the block from the db.
 func (b *BeaconChain) removeBlock(hash [32]byte) error {
 	return b.db.Delete(blockKey(hash))
 }
 
-// removeBlock removes the block from the db.
+// scanBlocks scans for all the blocks in the db.
 func (b *BeaconChain) scanBlocks() error {
 	// TODO: implement iterator method for db
 	return nil
