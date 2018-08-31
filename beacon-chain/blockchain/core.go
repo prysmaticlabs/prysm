@@ -500,6 +500,17 @@ func (b *BeaconChain) doesBlockExist(hash [32]byte) (bool, error) {
 	return b.db.Has(blockKey(hash))
 }
 
+// removeBlock removes the block from the db.
+func (b *BeaconChain) removeBlock(hash [32]byte) error {
+	return b.db.Delete(blockKey(hash))
+}
+
+// removeBlock removes the block from the db.
+func (b *BeaconChain) scanBlocks() error {
+	// TODO: implement iterator method for db
+	return nil
+}
+
 // initCycle is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
 func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
