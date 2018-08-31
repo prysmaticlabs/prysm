@@ -272,6 +272,24 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 	return activeState, nil
 }
 
+func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
+	return b.db.Has(append([]byte(blockPrefix), blockhash[:]...))
+}
+
+func (b *BeaconChain) getBlock(blockhash [32]byte) (*types.Block, error) {
+	enc, err := b.db.Get(append([]byte(blockPrefix), blockhash[:]...))
+	if err != nil {
+		return nil, err
+	}
+
+	data := &pb.BeaconBlock{}
+	if err := proto.Unmarshal(enc, data); err != nil {
+		return nil, err
+	}
+
+	return types.NewBlock(data), nil
+}
+
 // saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
 

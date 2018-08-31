@@ -15,6 +15,9 @@ import (
 )
 
 var log = logrus.WithField("prefix", "blockchain")
+var nilBlock = &types.Block{}
+var nilActiveState = &types.ActiveState{}
+var nilCrystallizedState = &types.CrystallizedState{}
 
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
@@ -30,17 +33,9 @@ type ChainService struct {
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
-	lastSlot                       uint64
-	// These are the data structures used by the fork choice rule.
-	// We store processed blocks and states into a slice by SlotNumber.
-	// For example, at slot 5, we might have received 10 different blocks,
-	// and a canonical chain must be derived from this DAG.
-	//
-	// NOTE: These are temporary and will be replaced by a structure
-	// that can support light-client proofs, such as a Sparse Merkle Trie.
-	processedBlockHashes        [][]byte
-	processedCrystallizedStates []*types.CrystallizedState
-	processedActiveStates       []*types.ActiveState
+	candidateBlock                 *types.Block
+	candidateActiveState           *types.ActiveState
+	candidateCrystallizedState     *types.CrystallizedState
 }
 
 // Config options for the service.
@@ -71,13 +66,12 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		validator:                      isValidator,
 		latestProcessedBlock:           make(chan *types.Block, cfg.BeaconBlockBuf),
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
-		lastSlot:                       1, // TODO: Initialize from the db.
 		incomingBlockFeed:              new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
-		processedBlockHashes:           make([][]byte, 0),
-		processedCrystallizedStates:    make([]*types.CrystallizedState, 0),
-		processedActiveStates:          make([]*types.ActiveState, 0),
+		candidateBlock:                 nilBlock,
+		candidateActiveState:           nilActiveState,
+		candidateCrystallizedState:     nilCrystallizedState,
 	}, nil
 }
 
@@ -87,15 +81,6 @@ func (c *ChainService) Start() {
 		log.Infof("Starting service as validator")
 	} else {
 		log.Infof("Starting service as observer")
-	}
-	head, err := c.chain.CanonicalHead()
-	if err != nil {
-		log.Fatalf("Could not fetch latest canonical head from DB: %v", err)
-	}
-	// If there was a canonical head stored in persistent storage,
-	// the fork choice rule proceed where it left off.
-	if head != nil {
-		c.lastSlot = head.SlotNumber() + 1
 	}
 	// TODO: Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
@@ -124,6 +109,7 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
+// TODO: Remove - only used in tests
 func (c *ChainService) HasStoredState() (bool, error) {
 
 	hasCrystallized, err := c.beaconDB.Has([]byte(CrystallizedStateLookupKey))
@@ -136,6 +122,7 @@ func (c *ChainService) HasStoredState() (bool, error) {
 
 // SaveBlock is a mock which saves a block to the local db using the
 // blockhash as the key.
+// TODO: Remove - only used in tests
 func (c *ChainService) SaveBlock(block *types.Block) error {
 	return c.chain.saveBlock(block)
 }
@@ -149,11 +136,13 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 }
 
 // CurrentCrystallizedState of the canonical chain.
+// TODO: Remove - only used in tests
 func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	return c.chain.CrystallizedState()
 }
 
 // CurrentActiveState of the canonical chain.
+// TODO: Remove - only used in tests
 func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
@@ -170,11 +159,6 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
 }
 
-// AddBlockHash adds a blockhash to the inmemory mapping of blockhashes.
-func (c *ChainService) AddBlockHash(hash [32]byte) {
-	c.processedBlockHashes = append(c.processedBlockHashes, hash[:])
-}
-
 // updateHead applies the fork choice rule to the last received
 // slot.
 func (c *ChainService) updateHead(slot uint64) {
@@ -182,70 +166,52 @@ func (c *ChainService) updateHead(slot uint64) {
 	// level as canonical.
 	//
 	// TODO: Implement real fork choice rule here.
-
-	// If no blocks were stored at the last slot, we simply skip the fork choice
-	// rule.
-	if len(c.processedBlockHashes) == 0 {
-		return
-	}
-	log.WithField("slotNumber", c.lastSlot).Info("Applying fork choice rule")
-	canonicalActiveState := c.processedActiveStates[0]
-	if err := c.chain.SetActiveState(canonicalActiveState); err != nil {
+	log.WithField("slotNumber", c.candidateBlock.SlotNumber()).Info("Applying fork choice rule")
+	if err := c.chain.SetActiveState(c.candidateActiveState); err != nil {
 		log.Errorf("Write active state to disk failed: %v", err)
 	}
 
-	canonicalCrystallizedState := c.processedCrystallizedStates[0]
-	if err := c.chain.SetCrystallizedState(canonicalCrystallizedState); err != nil {
+	if err := c.chain.SetCrystallizedState(c.candidateCrystallizedState); err != nil {
 		log.Errorf("Write crystallized state to disk failed: %v", err)
 	}
 
 	// TODO: Utilize this value in the fork choice rule.
 	vals, err := casper.ShuffleValidatorsToCommittees(
-		canonicalCrystallizedState.DynastySeed(),
-		canonicalCrystallizedState.Validators(),
-		canonicalCrystallizedState.CurrentDynasty(),
-		canonicalCrystallizedState.CrosslinkingStartShard())
+		c.candidateCrystallizedState.DynastySeed(),
+		c.candidateCrystallizedState.Validators(),
+		c.candidateCrystallizedState.CurrentDynasty(),
+		c.candidateCrystallizedState.CrosslinkingStartShard(),
+	)
 
 	if err != nil {
 		log.Errorf("Unable to get validators by height and by shard: %v", err)
 		return
 	}
 	log.Debugf("Received %d validators by height", len(vals))
-	var canonicalHash [32]byte
-	copy(canonicalHash[:], c.processedBlockHashes[0])
 
-	canonicalBlock, err := c.chain.retrieveBlock(canonicalHash)
-	if err != nil {
-		log.Errorf("unable to retrieve block %v", err)
-	}
-
-	h, err := canonicalBlock.Hash()
+	h, err := c.candidateBlock.Hash()
 	if err != nil {
 		log.Errorf("Unable to hash canonical block: %v", err)
 		return
 	}
 	// Save canonical block to DB.
-	if err := c.chain.saveCanonical(canonicalBlock); err != nil {
+	if err := c.chain.saveCanonical(c.candidateBlock); err != nil {
 		log.Errorf("Unable to save block to db: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
-
-	// Update the last received slot.
-	c.lastSlot = slot
 
 	// We fire events that notify listeners of a new block (or crystallized state in
 	// the case of a state transition). This is useful for the beacon node's gRPC
 	// server to stream these events to beacon clients.
 	transition := c.chain.IsCycleTransition(slot)
 	if transition {
-		c.canonicalCrystallizedStateFeed.Send(canonicalCrystallizedState)
+		c.canonicalCrystallizedStateFeed.Send(c.candidateCrystallizedState)
 	}
+	c.canonicalBlockFeed.Send(c.candidateBlock)
 
-	c.processedBlockHashes = nil
-	c.processedActiveStates = nil
-	c.processedCrystallizedStates = nil
-
-	c.canonicalBlockFeed.Send(canonicalBlock)
+	c.candidateBlock = nilBlock
+	c.candidateActiveState = nilActiveState
+	c.candidateCrystallizedState = nilCrystallizedState
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
@@ -279,18 +245,13 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
 
-			// Check if parentHash is in previous slot's processed blockHash list.
-			// TODO: This is messy. Instead, we should implement c.chain.CanProcessBlock
-			// to take in the block and the DAG of previously processed blocks
-			// and determine all validity conditions from those two parameters.
-
-			isParentHashExistent, err := c.chain.doesBlockExist(block.ParentHash())
+			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
-				log.Debugf("Unable to check for parent block %v", err)
+				log.Debugf("Could not check existance of parent hash: %v", err)
 			}
 
 			// If parentHash does not exist, received block fails validity conditions.
-			if !isParentHashExistent && receivedSlotNumber > 1 {
+			if !parentExists && receivedSlotNumber > 1 {
 				continue
 			}
 
@@ -329,6 +290,21 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
+			if c.candidateBlock != nil && receivedSlotNumber > c.candidateBlock.SlotNumber() && receivedSlotNumber > 1 {
+				c.updateHead(receivedSlotNumber)
+			}
+
+			if err := c.chain.saveBlock(block); err != nil {
+				log.Errorf("Failed to save block: %v", err)
+			}
+
+			log.Info("Finished processing received block")
+
+			// Do not proceed further, because a candidate has already been chosen.
+			if c.candidateBlock != nil {
+				continue
+			}
+
 			// 3 steps:
 			// - Compute the active state for the block.
 			// - Compute the crystallized state for the block if cycle transition.
@@ -337,38 +313,25 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// This data structure will be used by the updateHead function to determine
 			// canonical blocks and states.
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
-			var activeState *types.ActiveState
+
 			// Entering cycle transitions.
-			transition := c.chain.IsCycleTransition(receivedSlotNumber)
-			if transition {
-				crystallizedStateAfterCycle, activeStateAfterCycle := c.chain.initCycle(c.chain.CrystallizedState(), c.chain.ActiveState())
-
-				activeState, err = c.chain.computeNewActiveState(processedAttestations, activeStateAfterCycle, blockVoteCache, h)
-				if err != nil {
-					log.Errorf("Compute active state failed: %v", err)
-				}
-				c.processedCrystallizedStates = append(c.processedCrystallizedStates, crystallizedStateAfterCycle)
-
-			} else {
-				activeState, err = c.chain.computeNewActiveState(processedAttestations, c.chain.ActiveState(), blockVoteCache, h)
-				c.processedCrystallizedStates = append(c.processedCrystallizedStates, c.chain.CrystallizedState())
+			isTransition := c.chain.IsCycleTransition(receivedSlotNumber)
+			activeState := c.chain.ActiveState()
+			crystallizedState := c.chain.CrystallizedState()
+			if isTransition {
+				crystallizedState, activeState = c.chain.initCycle(crystallizedState, activeState)
 			}
 
-			// We store a slice of received states and blocks.
-			// perceived slot number for forks.
-			if err := c.chain.saveBlock(block); err != nil {
-				log.Errorf("Saving processed blocks failed: %v", err)
+			activeState, err = c.chain.computeNewActiveState(processedAttestations, activeState, blockVoteCache, h)
+			if err != nil {
+				log.Errorf("Compute active state failed: %v", err)
 			}
 
-			c.AddBlockHash(h)
+			c.candidateBlock = block
+			c.candidateActiveState = activeState
+			c.candidateCrystallizedState = crystallizedState
 
-			c.processedActiveStates = append(c.processedActiveStates, activeState)
-
-			if receivedSlotNumber > c.lastSlot && receivedSlotNumber > 1 {
-				c.updateHead(receivedSlotNumber)
-			}
-
-			log.Info("Finished processing received block and states into DAG")
+			log.Info("Finished processing state for candidate block")
 		}
 	}
 }
