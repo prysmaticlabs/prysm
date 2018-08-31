@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -85,6 +83,10 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
 	chainService.Start()
+
+	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
+		t.Errorf("incorrect recent block hashes")
+	}
 
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
@@ -323,27 +325,13 @@ func TestUpdateHead(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	registryKey := blockRegistryKey(block.SlotNumber() - 1)
-	blockhashes := make([][]byte, 0)
-	blockhashes = append(blockhashes, parentHash[:])
-
-	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
-	marshalled, err := proto.Marshal(registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
-		t.Fatal(err)
-	}
-
 	h, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	chainService.processedBlockHashes = append(chainService.processedBlockHashes, h[:])
-	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
+	if err := beaconChain.saveBlock(block); err != nil {
 		t.Fatalf("could not save block %v", err)
 	}
 
@@ -453,20 +441,6 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
 		},
 	})
-
-	registryKey := blockRegistryKey(block.SlotNumber() - 1)
-	blockhashes := make([][]byte, 0)
-	blockhashes = append(blockhashes, parentHash[:])
-
-	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
-	marshalled, err := proto.Marshal(registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
-		t.Fatal(err)
-	}
 
 	chainService.lastSlot = 1
 

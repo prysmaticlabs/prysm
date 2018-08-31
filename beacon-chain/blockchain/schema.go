@@ -34,12 +34,7 @@ func encodeSlotNumber(number uint64) []byte {
 	return enc
 }
 
-// blockKey = blockPrefix + num (uint64 big endian) + hash.
-func blockKey(slotnumber uint64, hash [32]byte) []byte {
-	return append(append(blockPrefix, encodeSlotNumber(slotnumber)...), hash[:]...)
-}
-
-// blockKey = blockRegistryPrefix + slotnumber (uint64 big endian).
-func blockRegistryKey(slotnumber uint64) []byte {
-	return append(blockSlotRegistryPrefix, encodeSlotNumber(slotnumber)...)
+// blockKey = blockPrefix + hash.
+func blockKey(hash [32]byte) []byte {
+	return append(blockPrefix, hash[:]...)
 }

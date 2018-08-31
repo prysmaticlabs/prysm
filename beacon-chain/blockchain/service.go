@@ -2,7 +2,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -216,7 +215,7 @@ func (c *ChainService) updateHead(slot uint64) {
 	var canonicalHash [32]byte
 	copy(canonicalHash[:], c.processedBlockHashes[0])
 
-	canonicalBlock, err := c.chain.retrieveBlock(slot, canonicalHash)
+	canonicalBlock, err := c.chain.retrieveBlock(canonicalHash)
 	if err != nil {
 		log.Errorf("unable to retrieve block %v", err)
 	}
@@ -285,18 +284,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// TODO: This is messy. Instead, we should implement c.chain.CanProcessBlock
 			// to take in the block and the DAG of previously processed blocks
 			// and determine all validity conditions from those two parameters.
-			isParentHashExistent := false
-			blockhashes, err := c.chain.retrieveBlockRegistry(receivedSlotNumber - 1)
+
+			isParentHashExistent, err := c.chain.doesBlockExist(block.ParentHash())
 			if err != nil {
-				log.Errorf("Failed to retrieve block registry %v", err)
-			}
-
-			for _, blockhash := range blockhashes {
-				p := block.ParentHash()
-
-				if bytes.Equal(blockhash, p[:]) {
-					isParentHashExistent = true
-				}
+				log.Debugf("Unable to check for parent block %v", err)
 			}
 
 			// If parentHash does not exist, received block fails validity conditions.
@@ -364,7 +355,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// We store a slice of received states and blocks.
 			// perceived slot number for forks.
-			if err := c.chain.saveProcessedBlockToDB(block); err != nil {
+			if err := c.chain.saveBlock(block); err != nil {
 				log.Errorf("Saving processed blocks failed: %v", err)
 			}
 

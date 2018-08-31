@@ -55,6 +55,14 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	active, _, err := types.NewGenesisStates()
+	if err != nil {
+		return nil, err
+	}
+
+	beaconChain.state.ActiveState = active
+
 	if !hasGenesis {
 		log.Info("No genesis block found on disk, initializing genesis block")
 		genesisBlock, err := types.NewGenesisBlock()
@@ -77,7 +85,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		}
 
 		beaconChain.state.CrystallizedState = crystallized
-
 		return beaconChain, nil
 	}
 	if hasCrystallized {
@@ -277,7 +284,7 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	key := blockKey(block.SlotNumber(), hash)
+	key := blockKey(hash)
 	hasBlock, err := b.db.Has(key)
 
 	if hasBlock {
@@ -457,98 +464,23 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 	return b.db.Put(CanonicalHeadLookupKey, enc)
 }
 
-// saveProcessedBlockToDB takes a beacon block, persists it to the db and then
-// takes its blockhash and saves it to the block registry for the block's
-// slotnumber.
-func (b *BeaconChain) saveProcessedBlockToDB(block *types.Block) error {
-	if err := b.saveBlock(block); err != nil {
-		return err
-	}
-
-	hash, err := block.Hash()
-	if err != nil {
-		return err
-	}
-
-	key := blockRegistryKey(block.SlotNumber())
-	hasBlockHashes, err := b.db.Has(key)
-	if err != nil {
-		return err
-	}
-
-	if hasBlockHashes {
-		enc, err := b.db.Get(key)
-		if err != nil {
-			return err
-		}
-
-		registry := &pb.BlockRegistry{}
-		if err := proto.Unmarshal(enc, registry); err != nil {
-			return err
-		}
-
-		hashRegistered := false
-
-		for _, blockhash := range registry.BlockHashes {
-			if bytes.Equal(hash[:], blockhash) {
-				hashRegistered = true
-			}
-		}
-
-		if hashRegistered {
-			return nil
-		}
-
-		registry.BlockHashes = append(registry.BlockHashes, hash[:])
-		enc, err = proto.Marshal(registry)
-		if err != nil {
-			return err
-		}
-
-		return b.db.Put(key, enc)
-	}
-
-	registry := &pb.BlockRegistry{BlockHashes: make([][]byte, 0)}
-
-	registry.BlockHashes = append(registry.BlockHashes, hash[:])
-	enc, err := proto.Marshal(registry)
-	if err != nil {
-		return err
-	}
-
-	return b.db.Put(key, enc)
-}
-
 // retrieveBlock retrieves a block from the db using its slot number and hash.
-func (b *BeaconChain) retrieveBlock(slotnumber uint64, hash [32]byte) (*types.Block, error) {
-	key := blockKey(slotnumber, hash)
+func (b *BeaconChain) retrieveBlock(hash [32]byte) (*types.Block, error) {
+	key := blockKey(hash)
 	enc, err := b.db.Get(key)
-
 	if err != nil {
 		return nil, err
 	}
+
 	block := &pb.BeaconBlock{}
 
 	if err := proto.Unmarshal(enc, block); err != nil {
 		return nil, err
 	}
-
 	return types.NewBlock(block), nil
 }
 
-// retrieveBlockRegistry retrieves the block registry of a particular slot from
-// the db.
-func (b *BeaconChain) retrieveBlockRegistry(slotnumber uint64) ([][]byte, error) {
-	key := blockRegistryKey(slotnumber)
-	enc, err := b.db.Get(key)
-
-	if err != nil {
-		return nil, err
-	}
-	data := &pb.BlockRegistry{}
-
-	if err := proto.Unmarshal(enc, data); err != nil {
-		return nil, err
-	}
-	return data.BlockHashes, nil
+// doesBlockExist checks if the block exists in the db.
+func (b *BeaconChain) doesBlockExist(hash [32]byte) (bool, error) {
+	return b.db.Has(blockKey(hash))
 }

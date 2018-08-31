@@ -12,37 +12,6 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-// BlockRegistry is a struct used to stor the blockhashes of blocks saved in the DB.
-type BlockRegistry struct {
-	data *pb.BlockRegistry
-}
-
-// NewRegistry creates a new block registry from the protobuf data.
-func NewRegistry(data *pb.BlockRegistry) *BlockRegistry {
-
-	if data != nil {
-		return &BlockRegistry{data: data}
-	}
-
-	newdata := &pb.BlockRegistry{BlockHashes: make([][]byte, 0)}
-	return &BlockRegistry{data: newdata}
-}
-
-// Proto returns the underlying protobuf data within the block registry struct.
-func (b *BlockRegistry) Proto() *pb.BlockRegistry {
-	return b.data
-}
-
-// Marshal encodes block registry object into the wire format.
-func (b *BlockRegistry) Marshal() ([]byte, error) {
-	return proto.Marshal(b.data)
-}
-
-// BlockHashes returns the hashes stored in the registry.
-func (b *BlockRegistry) BlockHashes() [][]byte {
-	return b.data.BlockHashes
-}
-
 // Block defines a beacon chain core primitive.
 type Block struct {
 	data *pb.BeaconBlock

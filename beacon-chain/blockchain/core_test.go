@@ -91,12 +91,16 @@ func TestNewBeaconChain(t *testing.T) {
 	}
 
 	hook.Reset()
-	_, crystallized, err := types.NewGenesisStates()
+	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	if _, err := types.NewGenesisBlock(); err != nil {
 		t.Errorf("Creating a new genesis block failed %v", err)
+	}
+
+	if !reflect.DeepEqual(beaconChain.ActiveState(), active) {
+		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), active)
 	}
 
 	if !reflect.DeepEqual(beaconChain.CrystallizedState(), crystallized) {
@@ -548,164 +552,6 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 }
 
-func TestSaveProcessedBlock(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:  64,
-		PowChainRef: []byte("a"),
-	})
-
-	hash, err := block.Hash()
-	if err != nil {
-		t.Fatalf("unable to generate hash of block %v", err)
-	}
-
-	key := blockKey(block.SlotNumber(), hash)
-
-	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
-		t.Fatalf("Could not save processed block %v", err)
-	}
-
-	enc, err := beaconChain.db.Get(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	unmarshalled := &pb.BeaconBlock{}
-
-	if err := proto.Unmarshal(enc, unmarshalled); err != nil {
-		t.Fatal(err)
-	}
-
-	retrievedblock := NewBlock(t, unmarshalled)
-
-	if !bytes.Equal(block.PowChainRef().Bytes(), retrievedblock.PowChainRef().Bytes()) {
-		t.Error("block retrieved does not have the same POW chain ref as the block saved")
-	}
-
-}
-
-func TestSaveProcessedBlockWithBlockRegistry(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:  64,
-		PowChainRef: []byte("a"),
-	})
-
-	hash, err := block.Hash()
-	if err != nil {
-		t.Fatalf("unable to generate hash of block %v", err)
-	}
-
-	registryKey := blockRegistryKey(block.SlotNumber())
-	blockhashes := make([][]byte, 0)
-	blockhashes = append(blockhashes, []byte{'a'})
-
-	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
-	marshalled, err := proto.Marshal(registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
-		t.Fatal(err)
-	}
-
-	key := blockKey(block.SlotNumber(), hash)
-
-	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
-		t.Fatalf("Could not save processed block %v", err)
-	}
-
-	enc, err := beaconChain.db.Get(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	unmarshalled := &pb.BeaconBlock{}
-
-	if err := proto.Unmarshal(enc, unmarshalled); err != nil {
-		t.Fatal(err)
-	}
-
-	retrievedblock := NewBlock(t, unmarshalled)
-
-	if !bytes.Equal(block.PowChainRef().Bytes(), retrievedblock.PowChainRef().Bytes()) {
-		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
-	}
-
-	enc, err = beaconChain.db.Get(registryKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	unmarshalledRegistry := &pb.BlockRegistry{}
-	if err := proto.Unmarshal(enc, unmarshalledRegistry); err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(unmarshalledRegistry.GetBlockHashes()[0], []byte{'a'}) {
-		t.Errorf("blockhashes are unequal to each other %v , %v", unmarshalledRegistry.GetBlockHashes()[0], []byte{'a'})
-	}
-
-	if !bytes.Equal(unmarshalledRegistry.GetBlockHashes()[1], hash[:]) {
-		t.Errorf("incorrect blockhash saved %v", hash)
-	}
-
-}
-
-func TestHashRegistered(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:  64,
-		PowChainRef: []byte("a"),
-	})
-
-	hash, err := block.Hash()
-	if err != nil {
-		t.Fatalf("unable to generate hash of block %v", err)
-	}
-
-	registryKey := blockRegistryKey(block.SlotNumber())
-	blockhashes := make([][]byte, 0)
-	blockhashes = append(blockhashes, hash[:])
-
-	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
-	marshalled, err := proto.Marshal(registry)
-	if err != nil {
-		t.Fatalf("unable to marshal registry %v", err)
-	}
-
-	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
-		t.Fatalf("unable to save registry in db %v", err)
-	}
-
-	if err := beaconChain.saveProcessedBlockToDB(block); err != nil {
-		t.Fatalf("Could not save processed block %v", err)
-	}
-
-	enc, err := beaconChain.db.Get(registryKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	unmarshalledRegistry := &pb.BlockRegistry{}
-	if err := proto.Unmarshal(enc, unmarshalledRegistry); err != nil {
-		t.Fatal(err)
-	}
-
-	if len(unmarshalledRegistry.BlockHashes) > 1 {
-		t.Error("same hash is being saved twice in the db")
-	}
-
-}
-
 func TestRetrieveBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -720,7 +566,7 @@ func TestRetrieveBlock(t *testing.T) {
 		t.Error(err)
 	}
 
-	key := blockKey(block.SlotNumber(), hash)
+	key := blockKey(hash)
 	marshalled, err := proto.Marshal(block.Proto())
 	if err != nil {
 		t.Fatal(err)
@@ -730,7 +576,7 @@ func TestRetrieveBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	retBlock, err := beaconChain.retrieveBlock(block.SlotNumber(), hash)
+	retBlock, err := beaconChain.retrieveBlock(hash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -738,45 +584,6 @@ func TestRetrieveBlock(t *testing.T) {
 	if !bytes.Equal(block.PowChainRef().Bytes(), retBlock.PowChainRef().Bytes()) {
 		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
 	}
-}
-
-func TestRetrieveBlockRegistry(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:  64,
-		PowChainRef: []byte("a"),
-	})
-
-	hash, err := block.Hash()
-	if err != nil {
-		t.Error(err)
-	}
-
-	registryKey := blockRegistryKey(block.SlotNumber())
-	blockhashes := make([][]byte, 0)
-	blockhashes = append(blockhashes, hash[:])
-
-	registry := &pb.BlockRegistry{BlockHashes: blockhashes}
-	marshalled, err := proto.Marshal(registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := beaconChain.db.Put(registryKey, marshalled); err != nil {
-		t.Fatal(err)
-	}
-
-	retRegistry, err := beaconChain.retrieveBlockRegistry(block.SlotNumber())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(hash[:], retRegistry[0]) {
-		t.Fatal("blockhash saved is not the same as blockhash retrieved")
-	}
-
 }
 
 // NewBlock is a helper method to create blocks with valid defaults.
