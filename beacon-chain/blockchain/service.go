@@ -290,7 +290,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			if c.candidateBlock != nil && receivedSlotNumber > c.candidateBlock.SlotNumber() && receivedSlotNumber > 1 {
+			if c.candidateBlock != nilBlock && receivedSlotNumber > c.candidateBlock.SlotNumber() && receivedSlotNumber > 1 {
 				c.updateHead(receivedSlotNumber)
 			}
 
@@ -301,7 +301,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			log.Info("Finished processing received block")
 
 			// Do not proceed further, because a candidate has already been chosen.
-			if c.candidateBlock != nil {
+			if c.candidateBlock != nilBlock {
 				continue
 			}
 

@@ -280,10 +280,9 @@ func TestRunningChainService(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Finished processing received block and states into DAG")
+	testutil.AssertLogsContain(t, hook, "Finished processing state for candidate block")
 }
 
-/*
 func TestUpdateHead(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
@@ -329,33 +328,18 @@ func TestUpdateHead(t *testing.T) {
 		PowChainRef:           []byte("a"),
 	})
 
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
+	chainService.candidateBlock = block
+	chainService.candidateActiveState = active
+	chainService.candidateCrystallizedState = crystallized
 
-	chainService.processedBlockHashes = append(chainService.processedBlockHashes, h[:])
-	if err := beaconChain.saveBlock(block); err != nil {
-		t.Fatalf("could not save block %v", err)
-	}
-
-	chainService.processedActiveStates = append(chainService.processedActiveStates, active)
-	chainService.processedCrystallizedStates = append(chainService.processedCrystallizedStates, crystallized)
-
-	chainService.lastSlot = 63
 	chainService.updateHead(64)
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 
-	if (len(chainService.processedActiveStates) +
-		len(chainService.processedCrystallizedStates) +
-		len(chainService.processedBlockHashes)) > 0 {
-		t.Error("memory mappings were unable to be reset")
+	if chainService.candidateBlock != nilBlock {
+		t.Error("Candidate Block unable to be reset")
 	}
-
-	chainService.lastSlot = 100
-	chainService.updateHead(101)
 }
-*/
+
 func TestProcessingBlockWithAttestations(t *testing.T) {
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
