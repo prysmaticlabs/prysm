@@ -39,8 +39,8 @@ func TestGetIndicesForHeight(t *testing.T) {
 	}
 }
 
-func TestSampleAttestersAndProposers(t *testing.T) {
-	// Create validators more than params.MaxValidators, this should fail.
+func TestMaxValidators(t *testing.T) {
+	// Create more validators than params.MaxValidators, this should fail.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.MaxValidators+1; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
@@ -52,12 +52,14 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 	}
 
 	// ValidatorsByHeightShard should fail the same.
-	if _, err := ValidatorsByHeightShard(common.Hash{'A'}, validators, 1, 0); err == nil {
+	if _, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0); err == nil {
 		t.Errorf("ValidatorsByHeightShard should have failed")
 	}
+}
 
+func Test1000ActiveValidators(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
-	validators = validators[:0]
+	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
@@ -82,29 +84,31 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
-	indices, err := ValidatorsByHeightShard(common.Hash{'A'}, validators, 1, 0)
+	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
-	if len(indices) != 8192 {
-		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
+	if len(indices) != params.CycleLength {
+		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", params.CycleLength, len(indices))
 	}
+}
 
+func TestSmallSampleValidators(t *testing.T) {
 	// Create a small number of validators validators in ActiveValidators.
-	validators = validators[:0]
+	var validators []*pb.ValidatorRecord
 	for i := 0; i < 20; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
 	}
 
-	attesters, proposer, err = SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
+	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("GetAttestersProposer function failed: %v", err)
 	}
 
-	activeValidators = ActiveValidatorIndices(validators, 1)
+	activeValidators := ActiveValidatorIndices(validators, 1)
 
-	validatorList, err = utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
+	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
 	if err != nil {
 		t.Errorf("Shuffle function function failed: %v", err)
 	}
@@ -116,11 +120,136 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
-	indices, err = ValidatorsByHeightShard(common.Hash{'A'}, validators, 1, 0)
+	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
-	if len(indices) != 8192 {
-		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
+	if len(indices) != params.CycleLength {
+		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", params.CycleLength, len(indices))
+	}
+}
+
+func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
+	numValidators := params.CycleLength * params.MinCommiteeSize / 4
+
+	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	if committesPerSlot != 1 {
+		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
+	}
+
+	if slotsPerCommittee != 4 {
+		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 4, slotsPerCommittee)
+	}
+}
+
+func TestGetCommitteeParamsRegularValidatorSet(t *testing.T) {
+	numValidators := params.CycleLength * params.MinCommiteeSize
+
+	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	if committesPerSlot != 1 {
+		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
+	}
+
+	if slotsPerCommittee != 1 {
+		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 1, slotsPerCommittee)
+	}
+}
+
+func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
+	numValidators := params.CycleLength * params.MinCommiteeSize * 8
+
+	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	if committesPerSlot != 5 {
+		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 5, committesPerSlot)
+	}
+
+	if slotsPerCommittee != 1 {
+		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 1, slotsPerCommittee)
+	}
+}
+
+func TestValidatorsByHeightShardRegularValidatorSet(t *testing.T) {
+	validatorIndices := []uint32{}
+	numValidators := params.CycleLength * params.MinCommiteeSize
+	for i := 0; i < numValidators; i++ {
+		validatorIndices = append(validatorIndices, uint32(i))
+	}
+
+	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
+
+	if len(shardAndCommitteeArray) != params.CycleLength {
+		t.Fatalf("Expected length %d: got %d", params.CycleLength, len(shardAndCommitteeArray))
+	}
+
+	for i := 0; i < len(shardAndCommitteeArray); i++ {
+		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
+		if len(shardAndCommittees) != 1 {
+			t.Fatalf("Expected %d committee per slot: got %d", params.MinCommiteeSize, 1)
+		}
+
+		committeeSize := len(shardAndCommittees[0].Committee)
+		if committeeSize != params.MinCommiteeSize {
+			t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize, committeeSize)
+		}
+	}
+}
+
+func TestValidatorsByHeightShardLargeValidatorSet(t *testing.T) {
+	validatorIndices := []uint32{}
+	numValidators := params.CycleLength * params.MinCommiteeSize * 2
+	for i := 0; i < numValidators; i++ {
+		validatorIndices = append(validatorIndices, uint32(i))
+	}
+
+	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
+
+	if len(shardAndCommitteeArray) != params.CycleLength {
+		t.Fatalf("Expected length %d: got %d", params.CycleLength, len(shardAndCommitteeArray))
+	}
+
+	for i := 0; i < len(shardAndCommitteeArray); i++ {
+		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
+		if len(shardAndCommittees) != 2 {
+			t.Fatalf("Expected %d committee per slot: got %d", params.MinCommiteeSize, 2)
+		}
+
+		t.Logf("slot %d", i)
+		for j := 0; j < len(shardAndCommittees); j++ {
+			shardCommittee := shardAndCommittees[j]
+			t.Logf("shard %d", shardCommittee.ShardId)
+			t.Logf("committee: %v", shardCommittee.Committee)
+			if len(shardCommittee.Committee) != params.MinCommiteeSize {
+				t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize, len(shardCommittee.Committee))
+			}
+		}
+
+	}
+}
+
+func TestValidatorsByHeightShardSmallValidatorSet(t *testing.T) {
+	validatorIndices := []uint32{}
+	numValidators := params.CycleLength * params.MinCommiteeSize / 2
+	for i := 0; i < numValidators; i++ {
+		validatorIndices = append(validatorIndices, uint32(i))
+	}
+
+	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
+
+	if len(shardAndCommitteeArray) != params.CycleLength {
+		t.Fatalf("Expected length %d: got %d", params.CycleLength, len(shardAndCommitteeArray))
+	}
+
+	for i := 0; i < len(shardAndCommitteeArray); i++ {
+		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
+		if len(shardAndCommittees) != 1 {
+			t.Fatalf("Expected %d committee per slot: got %d", params.MinCommiteeSize, 1)
+		}
+
+		for j := 0; j < len(shardAndCommittees); j++ {
+			shardCommittee := shardAndCommittees[j]
+			if len(shardCommittee.Committee) != params.MinCommiteeSize/2 {
+				t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize/2, len(shardCommittee.Committee))
+			}
+		}
 	}
 }
