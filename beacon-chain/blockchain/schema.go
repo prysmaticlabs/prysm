@@ -31,7 +31,7 @@ var (
 	// Data item prefixes.
 	blockPrefix = []byte("block-") // blockPrefix + blockhash -> block
 
-	canonicalPrefix = []byte("canoncial-") // canonicalPrefix + num(uint64 big endian) -> blockhash
+	canonicalPrefix = []byte("canonical-") // canonicalPrefix + num(uint64 big endian) -> blockhash
 
 )
 
