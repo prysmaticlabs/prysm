@@ -527,27 +527,25 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	return b.db.Put(key, encodedState)
 }
 
-func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, blockhash [32]byte) error {
-	return b.db.Put(canonicalBlockKey(slotnumber), blockhash[:])
-}
-
-// saveCanonical puts the passed block into the beacon chain db
-// and also saves a "latest-head" key mapping to the block in the db.
-func (b *BeaconChain) saveCanonical(block *types.Block) error {
-	if err := b.saveBlock(block); err != nil {
-		return err
-	}
-	enc, err := block.Marshal()
-	if err != nil {
-		return err
-	}
+// saveCanonicalSlotNumber saves the slot number of the canonical block.
+func (b *BeaconChain) saveCanonicalSlotNumber(block *types.Block) error {
 
 	hash, err := block.Hash()
 	if err != nil {
 		return err
 	}
 
-	if err := b.saveCanonicalSlotNumber(block.SlotNumber(), hash); err != nil {
+	return b.db.Put(canonicalBlockKey(block.SlotNumber()), hash[:])
+}
+
+// saveCanonical puts the passed block into the beacon chain db
+// and also saves a "latest-head" key mapping to the block in the db.
+func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
+	if err := b.saveBlock(block); err != nil {
+		return err
+	}
+	enc, err := block.Marshal()
+	if err != nil {
 		return err
 	}
 

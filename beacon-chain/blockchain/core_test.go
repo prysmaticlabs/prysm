@@ -162,13 +162,13 @@ func TestCanonicalHead(t *testing.T) {
 	}
 }
 
-func TestSaveCanonical(t *testing.T) {
+func TestSaveCanonicalBlock(t *testing.T) {
 	block := types.NewBlock(&pb.BeaconBlock{})
 	chain, err := NewBeaconChain(&faultyDB{})
 	if err != nil {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
-	if err := chain.saveCanonical(block); err != nil {
+	if err := chain.saveCanonicalBlock(block); err != nil {
 		t.Errorf("save canonical should pass: %v", err)
 	}
 }
