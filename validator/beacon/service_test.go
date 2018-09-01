@@ -93,11 +93,11 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	// Create mock for the stream returned by LatestBeaconBlock.
 	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
 
-	// If the block's slot number from the stream matches the assigned attestation height,
+	// If the block's slot number from the stream matches the assigned attestation slot,
 	// trigger a log.
 	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{SlotNumber: 10}, nil)
 	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, io.EOF)
-	b.assignedHeight = 10
+	b.assignedSlot = 10
 	b.responsibility = "attester"
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
@@ -243,7 +243,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Could not fetch shuffled validator indices: something went wrong")
 
-	// Height should be assigned based on the result of ShuffleValidators.
+	// Slot should be assigned based on the result of ShuffleValidators.
 	validator1 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
 	validator2 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x1"), StartDynasty: 1, EndDynasty: 10}
 	validator3 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
@@ -260,9 +260,9 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&pb.ShuffleResponse{
-		AssignedAttestationHeights: []uint64{0, 1, 2},
-		CutoffIndices:              []uint64{0, 1, 2},
-		ShuffledValidatorIndices:   []uint64{2, 1, 0},
+		AssignedAttestationSlots: []uint64{0, 1, 2},
+		CutoffIndices:            []uint64{0, 1, 2},
+		ShuffledValidatorIndices: []uint64{2, 1, 0},
 	}, nil)
 
 	b.fetchCrystallizedState(mockServiceClient)

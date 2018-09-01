@@ -21,7 +21,7 @@ type Service struct {
 	cancel         context.CancelFunc
 	rpcClient      types.RPCClient
 	validatorIndex int
-	assignedHeight uint64
+	assignedSlot   uint64
 	responsibility string
 	attesterChan   chan bool
 	proposerChan   chan bool
@@ -96,13 +96,13 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		}
 		log.WithField("slotNumber", block.GetSlotNumber()).Info("Latest beacon block slot number")
 
-		// Based on the height determined from the latest crystallized state, check if
-		// it matches the latest received beacon height.
+		// Based on the slot determined from the latest crystallized state, check if
+		// it matches the latest received beacon slot.
 		if s.responsibility == "proposer" {
 			log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
 			s.responsibility = ""
 			s.proposerChan <- true
-		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedHeight {
+		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedSlot {
 			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
 			log.Info("Assigned attestation slot number reached")
 			s.responsibility = ""
@@ -185,27 +185,27 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		// If the condition above did not pass, the validator is an attester.
 		s.responsibility = "attester"
 
-		// Based on the cutoff and assigned heights, determine the beacon block
-		// height at which attester has to perform its responsibility.
-		currentAssignedHeights := res.GetAssignedAttestationHeights()
+		// Based on the cutoff and assigned slots, determine the beacon block
+		// slot at which attester has to perform its responsibility.
+		currentAssignedSlots := res.GetAssignedAttestationSlots()
 		currentCutoffs := res.GetCutoffIndices()
 
 		// The algorithm functions as follows:
-		// Given a list of heights: [0 19 38 57 12 31 50] and
+		// Given a list of slots: [0 19 38 57 12 31 50] and
 		// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
-		// if the validator index is between 0-142, it can attest at height 0, if it is
-		// between 142-285, that validator can attest at height 19, etc.
-		heightIndex := 0
+		// if the validator index is between 0-142, it can attest at slot 0, if it is
+		// between 142-285, that validator can attest at slot 19, etc.
+		slotIndex := 0
 		for i := 0; i < len(currentCutoffs)-1; i++ {
 			lowCutoff := currentCutoffs[i]
 			highCutoff := currentCutoffs[i+1]
 			if (uint64(s.validatorIndex) >= lowCutoff) && (uint64(s.validatorIndex) <= highCutoff) {
 				break
 			}
-			heightIndex++
+			slotIndex++
 		}
-		s.assignedHeight = currentAssignedHeights[heightIndex]
-		log.Debug("Validator selected as attester at slot number: %d", s.assignedHeight)
+		s.assignedSlot = currentAssignedSlots[slotIndex]
+		log.Debug("Validator selected as attester at slot number: %d", s.assignedSlot)
 	}
 }
 
