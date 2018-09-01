@@ -40,19 +40,22 @@ type Service struct {
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
 	blockBuf              chan p2p.Message
+	blockRequestBySlot    chan p2p.Message
 }
 
 // Config allows the channel's buffer sizes to be changed.
 type Config struct {
-	BlockHashBufferSize int
-	BlockBufferSize     int
+	BlockHashBufferSize    int
+	BlockBufferSize        int
+	BlockRequestBufferSize int
 }
 
 // DefaultConfig provides the default configuration for a sync service.
 func DefaultConfig() Config {
 	return Config{
-		BlockHashBufferSize: 100,
-		BlockBufferSize:     100,
+		BlockHashBufferSize:    100,
+		BlockBufferSize:        100,
+		BlockRequestBufferSize: 100,
 	}
 }
 
@@ -67,6 +70,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs cha
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
+		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
 	}
 }
 
@@ -101,6 +105,10 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 	return ss.blockAnnouncementFeed
 }
 
+func (ss *Service) SearchDBForBlock(slotnumber uint64) (*types.Block, error) {
+	return nil, nil
+}
+
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
@@ -119,9 +127,11 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 func (ss *Service) run() {
 	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
+	blockRequestSub := ss.p2p.Subscribe(pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
 
 	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
+	defer blockRequestSub.Unsubscribe()
 
 	for {
 		select {
@@ -154,6 +164,22 @@ func (ss *Service) run() {
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
 			// We send out a message over a feed.
 			ss.chainService.IncomingBlockFeed().Send(block)
+		case msg := <-ss.blockRequestBySlot:
+			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
+			if !ok {
+				log.Errorf("Received malformed beacon block request p2p message")
+				continue
+			}
+
+			block, err := ss.SearchDBForBlock(request.GetSlotNumber())
+			if err != nil {
+				log.Errorf("Error searching db for block %v", err)
+				continue
+			}
+			if block == nil {
+				continue
+			}
+			ss.p2p.Send(block.Proto(), msg.Peer)
 		}
 	}
 }
