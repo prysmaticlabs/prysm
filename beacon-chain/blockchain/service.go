@@ -112,7 +112,7 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // TODO: Remove - only used in tests
 func (c *ChainService) HasStoredState() (bool, error) {
 
-	hasCrystallized, err := c.beaconDB.Has(CrystallizedStateLookupKey)
+	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return false, err
 	}
