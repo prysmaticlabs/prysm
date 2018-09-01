@@ -10,7 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestGetIndicesForHeight(t *testing.T) {
+func TestGetIndicesForSlot(t *testing.T) {
 	state := &pb.CrystallizedState{
 		LastStateRecalc: 1,
 		IndicesForSlots: []*pb.ShardAndCommitteeArray{
@@ -23,19 +23,19 @@ func TestGetIndicesForHeight(t *testing.T) {
 				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
 			}},
 		}}
-	if _, err := GetIndicesForHeight(state.IndicesForSlots, state.LastStateRecalc, 1000); err == nil {
-		t.Error("getIndicesForHeight should have failed with invalid height")
+	if _, err := GetIndicesForSlot(state.IndicesForSlots, state.LastStateRecalc, 1000); err == nil {
+		t.Error("getIndicesForSlot should have failed with invalid slot")
 	}
-	committee, err := GetIndicesForHeight(state.IndicesForSlots, state.LastStateRecalc, 1)
+	committee, err := GetIndicesForSlot(state.IndicesForSlots, state.LastStateRecalc, 1)
 	if err != nil {
-		t.Errorf("getIndicesForHeight failed: %v", err)
+		t.Errorf("getIndicesForSlot failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
-		t.Errorf("getIndicesForHeight returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+		t.Errorf("getIndicesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	committee, _ = GetIndicesForHeight(state.IndicesForSlots, state.LastStateRecalc, 2)
+	committee, _ = GetIndicesForSlot(state.IndicesForSlots, state.LastStateRecalc, 2)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
-		t.Errorf("getIndicesForHeight returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+		t.Errorf("getIndicesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
 }
 
@@ -51,9 +51,9 @@ func TestMaxValidators(t *testing.T) {
 		t.Errorf("GetAttestersProposer should have failed")
 	}
 
-	// ValidatorsByHeightShard should fail the same.
+	// ValidatorsBySlotShard should fail the same.
 	if _, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0); err == nil {
-		t.Errorf("ValidatorsByHeightShard should have failed")
+		t.Errorf("ValidatorsBySlotShard should have failed")
 	}
 }
 
@@ -86,7 +86,7 @@ func Test1000ActiveValidators(t *testing.T) {
 
 	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
-		t.Errorf("validatorsByHeightShard failed with %v:", err)
+		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
 	if len(indices) != params.CycleLength {
 		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", params.CycleLength, len(indices))
@@ -122,7 +122,7 @@ func TestSmallSampleValidators(t *testing.T) {
 
 	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
-		t.Errorf("validatorsByHeightShard failed with %v:", err)
+		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
 	if len(indices) != params.CycleLength {
 		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", params.CycleLength, len(indices))
@@ -168,7 +168,7 @@ func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
 	}
 }
 
-func TestValidatorsByHeightShardRegularValidatorSet(t *testing.T) {
+func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
 	numValidators := params.CycleLength * params.MinCommiteeSize
 	for i := 0; i < numValidators; i++ {
@@ -194,7 +194,7 @@ func TestValidatorsByHeightShardRegularValidatorSet(t *testing.T) {
 	}
 }
 
-func TestValidatorsByHeightShardLargeValidatorSet(t *testing.T) {
+func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
 	numValidators := params.CycleLength * params.MinCommiteeSize * 2
 	for i := 0; i < numValidators; i++ {
@@ -226,7 +226,7 @@ func TestValidatorsByHeightShardLargeValidatorSet(t *testing.T) {
 	}
 }
 
-func TestValidatorsByHeightShardSmallValidatorSet(t *testing.T) {
+func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
 	numValidators := params.CycleLength * params.MinCommiteeSize / 2
 	for i := 0; i < numValidators; i++ {

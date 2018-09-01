@@ -140,7 +140,7 @@ func TestCrystallizedState(t *testing.T) {
 	}
 	crystallized.ClearIndicesForSlots()
 	if !reflect.DeepEqual(crystallized.IndicesForSlots(), []*pb.ShardAndCommitteeArray{}) {
-		t.Errorf("mismatched indices for heights: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForSlots())
+		t.Errorf("mismatched indices for slots: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForSlots())
 	}
 	crystallized.CrosslinkRecords()
 	crystallized.UpdateJustifiedSlot(6)
@@ -159,7 +159,7 @@ func TestBlockHashForSlot(t *testing.T) {
 	}, nil)
 	block := newTestBlock(t, &pb.BeaconBlock{SlotNumber: 7})
 	if _, err := state.BlockHashForSlot(200, block); err == nil {
-		t.Error("getBlockHash should have failed with invalid height")
+		t.Error("getBlockHash should have failed with invalid slot")
 	}
 	hash, err := state.BlockHashForSlot(0, block)
 	if err != nil {

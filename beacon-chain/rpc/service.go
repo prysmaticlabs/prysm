@@ -99,7 +99,7 @@ func (s *Service) Stop() error {
 }
 
 // FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
-// assigned attestation heights at a given crystallized state hash.
+// assigned attestation slots at a given crystallized state hash.
 // This function can be called by validators to fetch a historical list of shuffled
 // validators ata point in time corresponding to a certain crystallized state.
 func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
