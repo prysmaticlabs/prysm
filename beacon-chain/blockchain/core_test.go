@@ -538,7 +538,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 }
 
-func TestRetrieveBlock(t *testing.T) {
+func TestGetBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -562,7 +562,7 @@ func TestRetrieveBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	retBlock, err := beaconChain.retrieveBlock(hash)
+	retBlock, err := beaconChain.getBlock(hash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -664,7 +664,7 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	return types.NewBlock(b)
 }
 
-func TestRemoveAndScanBlocks(t *testing.T) {
+func TestSaveAndRemoveBlocks(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -682,21 +682,44 @@ func TestRemoveAndScanBlocks(t *testing.T) {
 		t.Fatalf("unable to save block %v", err)
 	}
 
+	// Adding a different block with the same key
+	newblock := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  4,
+		PowChainRef: []byte("b"),
+	})
+
+	key := blockKey(hash)
+	marshalled, err := proto.Marshal(newblock.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	retblock, err := b.getBlock(hash)
+	if err != nil {
+		t.Fatalf("block is unable to be retrieved")
+	}
+
+	if retblock.SlotNumber() != newblock.SlotNumber() {
+		t.Errorf("slotnumber does not match for saved and retrived blocks")
+	}
+
+	if !bytes.Equal(retblock.PowChainRef().Bytes(), newblock.PowChainRef().Bytes()) {
+		t.Errorf("POW chain ref does not match for saved and retrieved blocks")
+	}
+
 	if err := b.removeBlock(hash); err != nil {
 		t.Fatalf("error removing block %v", err)
 	}
 
-	hasblock, err := b.hasBlock(hash)
-	if err != nil {
-		t.Fatalf("error checking for block %v", err)
+	if _, err := b.getBlock(hash); err == nil {
+		t.Fatalf("block is able to be retrieved")
 	}
 
-	if hasblock {
-		t.Error("block unable to be removed")
+	if err := b.removeBlock(hash); err != nil {
+		t.Fatalf("unable to remove block a second time %v", err)
 	}
-
-	if b.scanBlocks() != nil {
-		t.Error("the method is supposed to be unimplemented")
-	}
-
 }

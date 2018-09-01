@@ -266,26 +266,6 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 	return activeState, nil
 }
 
-func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
-	return b.db.Has(blockKey(blockhash))
-}
-
-// saveBlock puts the passed block into the beacon chain db.
-func (b *BeaconChain) saveBlock(block *types.Block) error {
-
-	hash, err := block.Hash()
-	if err != nil {
-		return err
-	}
-
-	key := blockKey(hash)
-	encodedState, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-	return b.db.Put(key, encodedState)
-}
-
 // processAttestation processes the attestations for one shard in an incoming block.
 func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
 	// Validate attestation's slot number has is within range of incoming block number.
@@ -436,46 +416,6 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 	return nil
 }
 
-// saveCanonical puts the passed block into the beacon chain db
-// and also saves a "latest-head" key mapping to the block in the db.
-func (b *BeaconChain) saveCanonical(block *types.Block) error {
-	if err := b.saveBlock(block); err != nil {
-		return err
-	}
-	enc, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-	return b.db.Put(CanonicalHeadLookupKey, enc)
-}
-
-// retrieveBlock retrieves a block from the db using its slot number and hash.
-func (b *BeaconChain) retrieveBlock(hash [32]byte) (*types.Block, error) {
-	key := blockKey(hash)
-	enc, err := b.db.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	block := &pb.BeaconBlock{}
-
-	if err := proto.Unmarshal(enc, block); err != nil {
-		return nil, err
-	}
-	return types.NewBlock(block), nil
-}
-
-// removeBlock removes the block from the db.
-func (b *BeaconChain) removeBlock(hash [32]byte) error {
-	return b.db.Delete(blockKey(hash))
-}
-
-// scanBlocks scans for all the blocks in the db.
-func (b *BeaconChain) scanBlocks() error {
-	// TODO: implement iterator method for db
-	return nil
-}
-
 // initCycle is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
 func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
@@ -564,4 +504,64 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	}, aState.GetBlockVoteCache())
 
 	return newCrystallizedState, newActiveState
+}
+
+func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
+	return b.db.Has(blockKey(blockhash))
+}
+
+// saveBlock puts the passed block into the beacon chain db.
+func (b *BeaconChain) saveBlock(block *types.Block) error {
+
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
+	key := blockKey(hash)
+	encodedState, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	return b.db.Put(key, encodedState)
+}
+
+// saveCanonical puts the passed block into the beacon chain db
+// and also saves a "latest-head" key mapping to the block in the db.
+func (b *BeaconChain) saveCanonical(block *types.Block) error {
+	if err := b.saveBlock(block); err != nil {
+		return err
+	}
+	enc, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	return b.db.Put(CanonicalHeadLookupKey, enc)
+}
+
+// getBlock retrieves a block from the db using its slot number and hash.
+func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
+	key := blockKey(hash)
+	enc, err := b.db.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	block := &pb.BeaconBlock{}
+
+	if err := proto.Unmarshal(enc, block); err != nil {
+		return nil, err
+	}
+	return types.NewBlock(block), nil
+}
+
+// removeBlock removes the block from the db.
+func (b *BeaconChain) removeBlock(hash [32]byte) error {
+	return b.db.Delete(blockKey(hash))
+}
+
+// scanBlocks scans for all the blocks in the db.
+func (b *BeaconChain) scanBlocks() error {
+	// TODO: implement iterator method for db
+	return nil
 }
