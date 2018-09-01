@@ -21,7 +21,7 @@ func TestActiveState(t *testing.T) {
 	}
 
 	record := NewAttestationRecord()
-	active.NewPendingAttestation([]*pb.AttestationRecord{record})
+	active = active.NewPendingAttestation([]*pb.AttestationRecord{record})
 	if len(active.PendingAttestations()) != 1 {
 		t.Errorf("there should be 1 pending attestation, got %v", len(active.PendingAttestations()))
 	}
@@ -38,11 +38,11 @@ func TestActiveState(t *testing.T) {
 	}
 
 	blockHashes := [][32]byte{{'A'}}
-	active.ReplaceBlockHashes(blockHashes)
+	active = active.ReplaceBlockHashes(blockHashes)
 	if len(active.data.RecentBlockHashes) != 1 {
 		t.Errorf("there should be 1 recent block hash, received %v", len(active.data.RecentBlockHashes))
 	}
-	active.ClearRecentBlockHashes()
+	active = active.ClearRecentBlockHashes()
 	if len(active.data.RecentBlockHashes) > 0 {
 		t.Errorf("there should be no recent block hashes, received %v", len(active.data.RecentBlockHashes))
 	}
@@ -53,7 +53,7 @@ func TestActiveState(t *testing.T) {
 		VoterIndices:     []uint32{0, 1, 2},
 		VoteTotalDeposit: 1000,
 	}
-	active.SetBlockVoteCache(bvc)
+	active = active.SetBlockVoteCache(bvc)
 	if !active.IsVoteCacheEmpty([32]byte{'A'}) {
 		t.Errorf("block vote cache should be there but recevied false")
 	}

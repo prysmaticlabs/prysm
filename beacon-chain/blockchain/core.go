@@ -222,8 +222,8 @@ func (b *BeaconChain) verifyBlockTimeStamp(block *types.Block) (bool, error) {
 // computeNewActiveState for every newly processed beacon block.
 func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache, blockHash [32]byte) (*types.ActiveState, error) {
 	// TODO: Insert recent block hash.
-	activeState.SetBlockVoteCache(blockVoteCache)
-	activeState.NewPendingAttestation(attestations)
+	activeState = activeState.SetBlockVoteCache(blockVoteCache)
+	activeState = activeState.NewPendingAttestation(attestations)
 	blockHashes := activeState.RecentBlockHashes()
 	blockHashes = append(blockHashes, blockHash)
 
@@ -231,7 +231,7 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 		blockHashes = blockHashes[1:]
 	}
 
-	activeState.ReplaceBlockHashes(blockHashes)
+	activeState = activeState.ReplaceBlockHashes(blockHashes)
 
 	return activeState, nil
 }

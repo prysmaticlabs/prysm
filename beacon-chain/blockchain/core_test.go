@@ -633,13 +633,13 @@ func TestInitCycleFinalized(t *testing.T) {
 		activeStateBlockHashes = append(activeStateBlockHashes, hash)
 	}
 
-	active.ReplaceBlockHashes(activeStateBlockHashes)
-	active.SetBlockVoteCache(blockVoteCache)
+	active = active.ReplaceBlockHashes(activeStateBlockHashes)
+	active = active.SetBlockVoteCache(blockVoteCache)
 
 	// justified block: 63, finalized block: 0, justified streak: 64
 	newCrystalled, newActive := b.initCycle(crystallized, active)
 
-	newActive.ReplaceBlockHashes(activeStateBlockHashes)
+	newActive = newActive.ReplaceBlockHashes(activeStateBlockHashes)
 	// justified block: 127, finalized block: 63, justified streak: 128
 	newCrystalled, newActive = b.initCycle(newCrystalled, newActive)
 
