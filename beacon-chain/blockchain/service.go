@@ -196,8 +196,8 @@ func (c *ChainService) updateHead(slot uint64) {
 	}
 
 	// Save canonical slotnumber to DB.
-	if err := c.chain.saveCanonicalSlotNumber(c.candidateBlock); err != nil {
-		log.Errorf("Unable to save block to db: %v", err)
+	if err := c.chain.saveCanonicalSlotNumber(c.candidateBlock.SlotNumber(), h); err != nil {
+		log.Errorf("Unable to save slot number to db: %v", err)
 	}
 
 	// Save canonical block to DB.

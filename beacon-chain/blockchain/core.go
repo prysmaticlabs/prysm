@@ -528,14 +528,8 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 }
 
 // saveCanonicalSlotNumber saves the slot number of the canonical block.
-func (b *BeaconChain) saveCanonicalSlotNumber(block *types.Block) error {
-
-	hash, err := block.Hash()
-	if err != nil {
-		return err
-	}
-
-	return b.db.Put(canonicalBlockKey(block.SlotNumber()), hash[:])
+func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) error {
+	return b.db.Put(canonicalBlockKey(slotnumber), hash[:])
 }
 
 // saveCanonical puts the passed block into the beacon chain db
