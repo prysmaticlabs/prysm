@@ -81,18 +81,19 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
-	} else {
-		enc, err := db.Get(crystallizedStateLookupKey)
-		if err != nil {
-			return nil, err
-		}
-		crystallizedData := &pb.CrystallizedState{}
-		err = proto.Unmarshal(enc, crystallizedData)
-		if err != nil {
-			return nil, err
-		}
-		beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
 	}
+
+	enc, err := db.Get(crystallizedStateLookupKey)
+	if err != nil {
+		return nil, err
+	}
+	crystallizedData := &pb.CrystallizedState{}
+	err = proto.Unmarshal(enc, crystallizedData)
+	if err != nil {
+		return nil, err
+	}
+	beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
+
 	return beaconChain, nil
 }
 
@@ -572,10 +573,4 @@ func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 // removeBlock removes the block from the db.
 func (b *BeaconChain) removeBlock(hash [32]byte) error {
 	return b.db.Delete(blockKey(hash))
-}
-
-// scanBlocks scans for all the blocks in the db.
-func (b *BeaconChain) scanBlocks() error {
-	// TODO: implement iterator method for db
-	return nil
 }

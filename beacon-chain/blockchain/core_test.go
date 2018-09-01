@@ -704,7 +704,7 @@ func TestSaveAndRemoveBlocks(t *testing.T) {
 	}
 
 	if retblock.SlotNumber() != newblock.SlotNumber() {
-		t.Errorf("slotnumber does not match for saved and retrived blocks")
+		t.Errorf("slotnumber does not match for saved and retrieved blocks")
 	}
 
 	if !bytes.Equal(retblock.PowChainRef().Bytes(), newblock.PowChainRef().Bytes()) {
