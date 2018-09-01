@@ -510,7 +510,7 @@ func TestProcessingBlocks(t *testing.T) {
 		CrystallizedStateHash: crystallizedStateHash[:],
 		Attestations: []*pb.AttestationRecord{{
 			Slot:             0,
-			AttesterBitfield: []byte{},
+			AttesterBitfield: []byte{0, 0},
 			ShardId:          0,
 		}},
 	})
@@ -537,8 +537,8 @@ func TestProcessingBlocks(t *testing.T) {
 		ParentHash: block1Hash[:],
 		SlotNumber: 2,
 		Attestations: []*pb.AttestationRecord{
-			{Slot: 1, AttesterBitfield: []byte{}, ShardId: 0},
-			{Slot: 1, AttesterBitfield: []byte{}, ShardId: 2},
+			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
 	chainService.incomingBlockChan <- block2
@@ -553,9 +553,9 @@ func TestProcessingBlocks(t *testing.T) {
 		ParentHash: block2Hash[:],
 		SlotNumber: 3,
 		Attestations: []*pb.AttestationRecord{
-			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 0},
-			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 2},
-			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 4},
+			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+			{Slot: 2, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
 	chainService.incomingBlockChan <- block3
