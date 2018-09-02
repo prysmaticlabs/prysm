@@ -1,4 +1,4 @@
-# Kubernetes 
+# Kubernetes Configuration for Ethereum 2.0
 
 ## Requirements
 
