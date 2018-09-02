@@ -219,32 +219,6 @@ func (b *BeaconChain) verifyBlockTimeStamp(block *types.Block) (bool, error) {
 	return true, nil
 }
 
-// verifyBlockActiveHash verifies block's active state hash equal to
-// node's computed active state hash.
-func (b *BeaconChain) verifyBlockActiveHash(block *types.Block) (bool, error) {
-	hash, err := b.ActiveState().Hash()
-	if err != nil {
-		return false, err
-	}
-	if block.ActiveStateHash() != hash {
-		return false, nil
-	}
-	return true, nil
-}
-
-// verifyBlockCrystallizedHash verifies block's crystallized state hash equal to
-// node's computed crystallized state hash.
-func (b *BeaconChain) verifyBlockCrystallizedHash(block *types.Block) (bool, error) {
-	hash, err := b.CrystallizedState().Hash()
-	if err != nil {
-		return false, err
-	}
-	if block.CrystallizedStateHash() != hash {
-		return false, nil
-	}
-	return true, nil
-}
-
 // computeNewActiveState for every newly processed beacon block.
 func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache, blockHash [32]byte) (*types.ActiveState, error) {
 	// TODO: Insert recent block hash.
