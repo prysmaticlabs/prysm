@@ -520,7 +520,6 @@ func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
 
 // saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
-
 	hash, err := block.Hash()
 	if err != nil {
 		return err
@@ -582,9 +581,8 @@ func (b *BeaconChain) checkForBlockBySlotNumber(slotnumber uint64) (bool, error)
 
 // getBlockBySlotNumber retrieves the canonical block which is saved in the db
 // which has the required slot number.
-func (b *BeaconChain) getBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
-
-	enc, err := b.db.Get(canonicalBlockKey(slotnumber))
+func (b *BeaconChain) getBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
+	enc, err := b.db.Get(canonicalBlockKey(slotNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -596,6 +594,5 @@ func (b *BeaconChain) getBlockBySlotNumber(slotnumber uint64) (*types.Block, err
 	if err != nil {
 		return nil, err
 	}
-
 	return block, nil
 }

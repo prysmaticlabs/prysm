@@ -184,7 +184,7 @@ func (ss *Service) run() {
 				continue
 			}
 
-			log.WithField("slotnumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
+			log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
 			ss.p2p.Send(block.Proto(), msg.Peer)
 		}
 	}
