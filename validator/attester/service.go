@@ -12,32 +12,32 @@ import (
 var log = logrus.WithField("prefix", "attester")
 
 type assignmentAnnouncer interface {
-	AttesterAssignment() *event.Feed
+	AttesterAssignmentFeed() *event.Feed
 }
 
 // Attester holds functionality required to run a block attester
 // in Ethereum 2.0.
 type Attester struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	assigner         assignmentAnnouncer
-	announcementChan chan bool
+	ctx            context.Context
+	cancel         context.CancelFunc
+	assigner       assignmentAnnouncer
+	assignmentChan chan bool
 }
 
 // Config options for an attester service.
 type Config struct {
-	AnnouncementBuf int
-	Assigner        assignmentAnnouncer
+	AssignmentBuf int
+	Assigner      assignmentAnnouncer
 }
 
 // NewAttester creates a new attester instance.
 func NewAttester(ctx context.Context, cfg *Config) *Attester {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Attester{
-		ctx:              ctx,
-		cancel:           cancel,
-		assigner:         cfg.Assigner,
-		announcementChan: make(chan bool, cfg.AnnouncementBuf),
+		ctx:            ctx,
+		cancel:         cancel,
+		assigner:       cfg.Assigner,
+		assignmentChan: make(chan bool, cfg.AssignmentBuf),
 	}
 }
 
@@ -56,14 +56,14 @@ func (p *Attester) Stop() error {
 
 // run the main event loop that listens for an attester assignment.
 func (p *Attester) run(done <-chan struct{}) {
-	sub := p.assigner.AttesterAssignment().Subscribe(p.announcementChan)
+	sub := p.assigner.AttesterAssignmentFeed().Subscribe(p.assignmentChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-done:
 			log.Debug("Attester context closed, exiting goroutine")
 			return
-		case <-p.announcementChan:
+		case <-p.assignmentChan:
 			log.Info("Performing attester responsibility")
 		}
 	}

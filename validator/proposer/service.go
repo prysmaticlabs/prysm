@@ -18,7 +18,7 @@ type rpcClientService interface {
 }
 
 type assignmentAnnouncer interface {
-	ProposerAssignment() *event.Feed
+	ProposerAssignmentFeed() *event.Feed
 }
 
 // Proposer holds functionality required to run a block proposer
@@ -29,14 +29,14 @@ type Proposer struct {
 	cancel           context.CancelFunc
 	assigner         assignmentAnnouncer
 	rpcClientService rpcClientService
-	announcementChan chan *pbp2p.BeaconBlock
+	assignmentChan   chan *pbp2p.BeaconBlock
 }
 
 // Config options for proposer service.
 type Config struct {
-	AnnouncementBuf int
-	Assigner        assignmentAnnouncer
-	Client          rpcClientService
+	AssignmentBuf int
+	Assigner      assignmentAnnouncer
+	Client        rpcClientService
 }
 
 // NewProposer creates a new attester instance.
@@ -47,7 +47,7 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 		cancel:           cancel,
 		assigner:         cfg.Assigner,
 		rpcClientService: cfg.Client,
-		announcementChan: make(chan *pbp2p.BeaconBlock, cfg.AnnouncementBuf),
+		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 	}
 }
 
@@ -67,20 +67,20 @@ func (p *Proposer) Stop() error {
 
 // run the main event loop that listens for a proposer assignment.
 func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
-	sub := p.assigner.ProposerAssignment().Subscribe(p.announcementChan)
+	sub := p.assigner.ProposerAssignmentFeed().Subscribe(p.assignmentChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
-		// TODO: Instead subscribe to a proposal assignment feed that contains
-		// important fields from the currently received beacon block that will be put into
-		// a proposal RPC message such as slot number and parent hash.
-		//
+
 		// TODO: On the beacon node side, calculate active and crystallized and update the
 		// active/crystallize state hash values in the proposed block.
-		case <-p.announcementChan:
+
+		// When we receive an assignment on a slot, we leverage the fields
+		// from the latest canonical beacon block to perform a proposal responsibility.
+		case <-p.assignmentChan:
 			log.Info("Performing proposer responsibility")
 
 			// Sending empty values for now.

@@ -21,25 +21,25 @@ type rpcClientService interface {
 
 // Service that interacts with a beacon node via RPC.
 type Service struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
-	rpcClient          rpcClientService
-	validatorIndex     int
-	assignedSlot       uint64
-	responsibility     string
-	attesterAssignment *event.Feed
-	proposerAssignment *event.Feed
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	rpcClient              rpcClientService
+	validatorIndex         int
+	assignedSlot           uint64
+	responsibility         string
+	attesterAssignmentFeed *event.Feed
+	proposerAssignmentFeed *event.Feed
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node.
 func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		rpcClient:          rpcClient,
-		attesterAssignment: new(event.Feed),
-		proposerAssignment: new(event.Feed),
+		ctx:                    ctx,
+		cancel:                 cancel,
+		rpcClient:              rpcClient,
+		attesterAssignmentFeed: new(event.Feed),
+		proposerAssignmentFeed: new(event.Feed),
 	}
 }
 
@@ -58,16 +58,16 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// AttesterAssignment returns a feed that is written to whenever it is the validator's
+// AttesterAssignmentFeed returns a feed that is written to whenever it is the validator's
 // slot to perform attestations.
-func (s *Service) AttesterAssignment() *event.Feed {
-	return s.attesterAssignment
+func (s *Service) AttesterAssignmentFeed() *event.Feed {
+	return s.attesterAssignmentFeed
 }
 
-// ProposerAssignment returns a feed that is written to whenever it is the validator's
+// ProposerAssignmentFeed returns a feed that is written to whenever it is the validator's
 // slot to proposer blocks.
-func (s *Service) ProposerAssignment() *event.Feed {
-	return s.proposerAssignment
+func (s *Service) ProposerAssignmentFeed() *event.Feed {
+	return s.proposerAssignmentFeed
 }
 
 func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
@@ -94,12 +94,12 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		if s.responsibility == "proposer" {
 			log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
 			s.responsibility = ""
-			s.proposerAssignment.Send(true)
+			s.proposerAssignmentFeed.Send(block)
 		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedSlot {
 			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
 			log.Info("Assigned attestation slot number reached")
 			s.responsibility = ""
-			s.attesterAssignment.Send(true)
+			s.attesterAssignmentFeed.Send(block)
 		}
 	}
 }

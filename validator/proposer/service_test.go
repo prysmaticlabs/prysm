@@ -32,7 +32,7 @@ func (mc *mockClient) ProposerServiceClient() pb.ProposerServiceClient {
 
 type mockAssigner struct{}
 
-func (m *mockAssigner) ProposerAssignment() *event.Feed {
+func (m *mockAssigner) ProposerAssignmentFeed() *event.Feed {
 	return new(event.Feed)
 }
 
@@ -41,9 +41,9 @@ func TestLifecycle(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	cfg := &Config{
-		AnnouncementBuf: 0,
-		Assigner:        &mockAssigner{},
-		Client:          &mockClient{ctrl},
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
 	}
 	p := NewProposer(context.Background(), cfg)
 	p.Start()
@@ -57,9 +57,9 @@ func TestProposerLoop(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	cfg := &Config{
-		AnnouncementBuf: 0,
-		Assigner:        &mockAssigner{},
-		Client:          &mockClient{ctrl},
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
 	}
 	p := NewProposer(context.Background(), cfg)
 
@@ -79,7 +79,7 @@ func TestProposerLoop(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	p.announcementChan <- &pbp2p.BeaconBlock{}
+	p.assignmentChan <- &pbp2p.BeaconBlock{}
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	doneChan <- struct{}{}
@@ -92,9 +92,9 @@ func TestProposerErrorLoop(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	cfg := &Config{
-		AnnouncementBuf: 0,
-		Assigner:        &mockAssigner{},
-		Client:          &mockClient{ctrl},
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
 	}
 	p := NewProposer(context.Background(), cfg)
 
@@ -112,7 +112,7 @@ func TestProposerErrorLoop(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	p.announcementChan <- &pbp2p.BeaconBlock{}
+	p.assignmentChan <- &pbp2p.BeaconBlock{}
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, "bad block proposed")
 	doneChan <- struct{}{}

@@ -18,15 +18,15 @@ func init() {
 
 type mockAssigner struct{}
 
-func (m *mockAssigner) AttesterAssignment() *event.Feed {
+func (m *mockAssigner) AttesterAssignmentFeed() *event.Feed {
 	return new(event.Feed)
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{
-		AnnouncementBuf: 0,
-		Assigner:        &mockAssigner{},
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
 	}
 	att := NewAttester(context.Background(), cfg)
 	att.Start()
@@ -38,8 +38,8 @@ func TestLifecycle(t *testing.T) {
 func TestAttesterLoop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &Config{
-		AnnouncementBuf: 0,
-		Assigner:        &mockAssigner{},
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
 	}
 	att := NewAttester(context.Background(), cfg)
 
@@ -49,7 +49,7 @@ func TestAttesterLoop(t *testing.T) {
 		att.run(doneChan)
 		<-exitRoutine
 	}()
-	att.announcementChan <- true
+	att.assignmentChan <- true
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
 	doneChan <- struct{}{}
 	exitRoutine <- true
