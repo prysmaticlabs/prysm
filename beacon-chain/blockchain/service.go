@@ -109,7 +109,6 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
-// TODO: Remove - only used in tests
 func (c *ChainService) HasStoredState() (bool, error) {
 
 	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
@@ -122,27 +121,22 @@ func (c *ChainService) HasStoredState() (bool, error) {
 
 // SaveBlock is a mock which saves a block to the local db using the
 // blockhash as the key.
-// TODO: Remove - only used in tests
 func (c *ChainService) SaveBlock(block *types.Block) error {
 	return c.chain.saveBlock(block)
 }
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine.
-//
-// TODO: implement function.
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }
 
 // CurrentCrystallizedState of the canonical chain.
-// TODO: Remove - only used in tests
 func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	return c.chain.CrystallizedState()
 }
 
 // CurrentActiveState of the canonical chain.
-// TODO: Remove - only used in tests
 func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
