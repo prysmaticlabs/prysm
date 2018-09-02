@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/event"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -28,7 +29,7 @@ type Proposer struct {
 	cancel           context.CancelFunc
 	assigner         assignmentAnnouncer
 	rpcClientService rpcClientService
-	announcementChan chan bool
+	announcementChan chan *pbp2p.BeaconBlock
 }
 
 // Config options for proposer service.
@@ -46,7 +47,7 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 		cancel:           cancel,
 		assigner:         cfg.Assigner,
 		rpcClientService: cfg.Client,
-		announcementChan: make(chan bool, cfg.AnnouncementBuf),
+		announcementChan: make(chan *pbp2p.BeaconBlock, cfg.AnnouncementBuf),
 	}
 }
 

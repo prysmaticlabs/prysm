@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -78,7 +79,7 @@ func TestProposerLoop(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	p.announcementChan <- true
+	p.announcementChan <- &pbp2p.BeaconBlock{}
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	doneChan <- struct{}{}
@@ -111,7 +112,7 @@ func TestProposerErrorLoop(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	p.announcementChan <- true
+	p.announcementChan <- &pbp2p.BeaconBlock{}
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, "bad block proposed")
 	doneChan <- struct{}{}
