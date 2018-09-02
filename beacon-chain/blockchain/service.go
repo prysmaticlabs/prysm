@@ -129,8 +129,6 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine.
-//
-// TODO: implement function.
 func (c *ChainService) ContainsBlock(h [32]byte) bool {
 	return false
 }

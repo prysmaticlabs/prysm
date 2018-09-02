@@ -29,6 +29,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "core_test.go",
+        "schema_test.go",
         "service_test.go",
     ],
     embed = [":go_default_library"],
