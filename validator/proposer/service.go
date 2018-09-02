@@ -5,8 +5,8 @@ package proposer
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/event"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,23 +16,27 @@ type rpcClientService interface {
 	ProposerServiceClient() pb.ProposerServiceClient
 }
 
+type assignmentAnnouncer interface {
+	ProposerAssignment() *event.Feed
+}
+
 // Proposer holds functionality required to run a block proposer
 // in Ethereum 2.0. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
-	beaconService    types.BeaconValidator
+	assigner         assignmentAnnouncer
 	rpcClientService rpcClientService
 }
 
 // NewProposer creates a new attester instance.
-func NewProposer(ctx context.Context, beaconService types.BeaconValidator, client rpcClientService) *Proposer {
+func NewProposer(ctx context.Context, assigner assignmentAnnouncer, client rpcClientService) *Proposer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
 		ctx:              ctx,
 		cancel:           cancel,
-		beaconService:    beaconService,
+		assigner:         assigner,
 		rpcClientService: client,
 	}
 }
@@ -53,6 +57,9 @@ func (p *Proposer) Stop() error {
 
 // run the main event loop that listens for a proposer assignment.
 func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
+	announcement := make(chan bool, 100)
+	sub := p.assigner.ProposerAssignment().Subscribe(announcement)
+	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-done:
@@ -64,7 +71,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 		//
 		// TODO: On the beacon node side, calculate active and crystallized and update the
 		// active/crystallize state hash values in the proposed block.
-		case <-p.beaconService.ProposerAssignment():
+		case <-announcement:
 			log.Info("Performing proposer responsibility")
 
 			// Sending empty values for now.

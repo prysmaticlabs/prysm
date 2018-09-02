@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -20,36 +21,25 @@ type rpcClientService interface {
 
 // Service that interacts with a beacon node via RPC.
 type Service struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	rpcClient      rpcClientService
-	validatorIndex int
-	assignedSlot   uint64
-	responsibility string
-	attesterChan   chan bool
-	proposerChan   chan bool
-}
-
-// Config options for the beacon service.
-type Config struct {
-	AttesterChanBuf int
-	ProposerChanBuf int
-}
-
-// DefaultConfig options for the beacon validator service.
-func DefaultConfig() *Config {
-	return &Config{AttesterChanBuf: 5, ProposerChanBuf: 5}
+	ctx                context.Context
+	cancel             context.CancelFunc
+	rpcClient          rpcClientService
+	validatorIndex     int
+	assignedSlot       uint64
+	responsibility     string
+	attesterAssignment *event.Feed
+	proposerAssignment *event.Feed
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node.
-func NewBeaconValidator(ctx context.Context, cfg *Config, rpcClient rpcClientService) *Service {
+func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		rpcClient:    rpcClient,
-		attesterChan: make(chan bool, cfg.AttesterChanBuf),
-		proposerChan: make(chan bool, cfg.ProposerChanBuf),
+		ctx:                ctx,
+		cancel:             cancel,
+		rpcClient:          rpcClient,
+		attesterAssignment: new(event.Feed),
+		proposerAssignment: new(event.Feed),
 	}
 }
 
@@ -68,16 +58,16 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// AttesterAssignment returns a channel that is written to whenever it is the validator's
+// AttesterAssignment returns a feed that is written to whenever it is the validator's
 // slot to perform attestations.
-func (s *Service) AttesterAssignment() <-chan bool {
-	return s.attesterChan
+func (s *Service) AttesterAssignment() *event.Feed {
+	return s.attesterAssignment
 }
 
-// ProposerAssignment returns a channel that is written to whenever it is the validator's
+// ProposerAssignment returns a feed that is written to whenever it is the validator's
 // slot to proposer blocks.
-func (s *Service) ProposerAssignment() <-chan bool {
-	return s.proposerChan
+func (s *Service) ProposerAssignment() *event.Feed {
+	return s.proposerAssignment
 }
 
 func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
@@ -104,12 +94,12 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		if s.responsibility == "proposer" {
 			log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
 			s.responsibility = ""
-			s.proposerChan <- true
+			s.proposerAssignment.Send(true)
 		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedSlot {
 			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
 			log.Info("Assigned attestation slot number reached")
 			s.responsibility = ""
-			s.attesterChan <- true
+			s.attesterAssignment.Send(true)
 		}
 	}
 }
