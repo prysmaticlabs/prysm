@@ -159,10 +159,14 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
 }
 
+// CheckForCanonicalBlockBySlot checks if the canonical block for that slot exists
+// in the db.
 func (c *ChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
 	return c.chain.checkForBlockBySlotNumber(slotnumber)
 }
 
+// GetCanonicalBlockBySlotNumber retrieves the canonical block for that slot which
+// has been saved in the db.
 func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	return c.chain.getBlockBySlotNumber(slotnumber)
 }
