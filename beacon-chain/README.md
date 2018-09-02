@@ -8,3 +8,5 @@ This is the main project folder for the beacon chain implementation of Ethereum 
 Also, read the latest sharding + casper [design spec](https://notes.ethereum.org/SCIg8AH5SA-O4C1G1LYZHQ), this design spec serves as a source of truth for the beacon chain implementation we follow at prysmatic labs.
 Check out the [FAQs](https://notes.ethereum.org/9MMuzWeFTTSg-3Tz_YeiBA?view). Refer this page on [why](http://email.mg2.substack.com/c/eJwlj9GOhCAMRb9G3jRQQPGBh5mM8xsbhKrsDGIAM9m_X9xN2qZtbpt7rCm4xvSjj5gLOTOmL-809CMbKXFaOKakIl4DZYr2AGyQIGjHOnWH22OiYnoIxmDijaBhhS6fcy7GvjobA9m0mSXOcnZq5GBqLkilXBZhBsus5ZK89VbKkRt-a-BZI6DzZ7iur1lQ953KJ9bemnxgahuQU9XJu6pFPdu8meT8vragzEjpMCwMGLlgLo6h5z1JumQTu4IJd4v15xqMf_8ZLP_Y1bSLdbnrD-LL71i2Kj7DLxaWWF4)
 we are combining sharding and casper together.
+
+TODO: Add details on our beacon chain project architecture.

@@ -11,7 +11,7 @@ import (
 func ShuffleValidatorsToCommittees(seed common.Hash, activeValidators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
 	indices := ActiveValidatorIndices(activeValidators, dynasty)
 
-	// split the shuffled list for heights.
+	// split the shuffled list for slot.
 	shuffledValidators, err := utils.ShuffleIndices(seed, indices)
 	if err != nil {
 		return nil, err

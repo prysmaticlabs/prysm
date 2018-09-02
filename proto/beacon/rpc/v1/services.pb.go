@@ -65,12 +65,12 @@ func (m *ShuffleRequest) GetCrystallizedStateHash() []byte {
 }
 
 type ShuffleResponse struct {
-	ShuffledValidatorIndices   []uint64 `protobuf:"varint,1,rep,packed,name=shuffled_validator_indices,json=shuffledValidatorIndices,proto3" json:"shuffled_validator_indices,omitempty"`
-	CutoffIndices              []uint64 `protobuf:"varint,2,rep,packed,name=cutoff_indices,json=cutoffIndices,proto3" json:"cutoff_indices,omitempty"`
-	AssignedAttestationHeights []uint64 `protobuf:"varint,3,rep,packed,name=assigned_attestation_heights,json=assignedAttestationHeights,proto3" json:"assigned_attestation_heights,omitempty"`
-	XXX_NoUnkeyedLiteral       struct{} `json:"-"`
-	XXX_unrecognized           []byte   `json:"-"`
-	XXX_sizecache              int32    `json:"-"`
+	ShuffledValidatorIndices []uint64 `protobuf:"varint,1,rep,packed,name=shuffled_validator_indices,json=shuffledValidatorIndices,proto3" json:"shuffled_validator_indices,omitempty"`
+	CutoffIndices            []uint64 `protobuf:"varint,2,rep,packed,name=cutoff_indices,json=cutoffIndices,proto3" json:"cutoff_indices,omitempty"`
+	AssignedAttestationSlots []uint64 `protobuf:"varint,3,rep,packed,name=assigned_attestation_slots,json=assignedAttestationSlots,proto3" json:"assigned_attestation_slots,omitempty"`
+	XXX_NoUnkeyedLiteral     struct{} `json:"-"`
+	XXX_unrecognized         []byte   `json:"-"`
+	XXX_sizecache            int32    `json:"-"`
 }
 
 func (m *ShuffleResponse) Reset()         { *m = ShuffleResponse{} }
@@ -111,9 +111,9 @@ func (m *ShuffleResponse) GetCutoffIndices() []uint64 {
 	return nil
 }
 
-func (m *ShuffleResponse) GetAssignedAttestationHeights() []uint64 {
+func (m *ShuffleResponse) GetAssignedAttestationSlots() []uint64 {
 	if m != nil {
-		return m.AssignedAttestationHeights
+		return m.AssignedAttestationSlots
 	}
 	return nil
 }

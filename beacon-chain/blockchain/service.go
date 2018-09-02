@@ -112,7 +112,7 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // TODO: Remove - only used in tests
 func (c *ChainService) HasStoredState() (bool, error) {
 
-	hasCrystallized, err := c.beaconDB.Has(CrystallizedStateLookupKey)
+	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return false, err
 	}
@@ -184,18 +184,24 @@ func (c *ChainService) updateHead(slot uint64) {
 	)
 
 	if err != nil {
-		log.Errorf("Unable to get validators by height and by shard: %v", err)
+		log.Errorf("Unable to get validators by slot and by shard: %v", err)
 		return
 	}
-	log.Debugf("Received %d validators by height", len(vals))
+	log.Debugf("Received %d validators by slot", len(vals))
 
 	h, err := c.candidateBlock.Hash()
 	if err != nil {
 		log.Errorf("Unable to hash canonical block: %v", err)
 		return
 	}
+
+	// Save canonical slotnumber to DB.
+	if err := c.chain.saveCanonicalSlotNumber(c.candidateBlock.SlotNumber(), h); err != nil {
+		log.Errorf("Unable to save slot number to db: %v", err)
+	}
+
 	// Save canonical block to DB.
-	if err := c.chain.saveCanonical(c.candidateBlock); err != nil {
+	if err := c.chain.saveCanonicalBlock(c.candidateBlock); err != nil {
 		log.Errorf("Unable to save block to db: %v", err)
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")

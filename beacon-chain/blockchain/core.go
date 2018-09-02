@@ -47,11 +47,11 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	hasCrystallized, err := db.Has(CrystallizedStateLookupKey)
+	hasCrystallized, err := db.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	hasGenesis, err := db.Has(GenesisLookupKey)
+	hasGenesis, err := db.Has(genesisLookupKey)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := beaconChain.db.Put(GenesisLookupKey, genesisMarshall); err != nil {
+		if err := beaconChain.db.Put(genesisLookupKey, genesisMarshall); err != nil {
 			return nil, err
 		}
 	}
@@ -81,29 +81,30 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
-	} else {
-		enc, err := db.Get(CrystallizedStateLookupKey)
-		if err != nil {
-			return nil, err
-		}
-		crystallizedData := &pb.CrystallizedState{}
-		err = proto.Unmarshal(enc, crystallizedData)
-		if err != nil {
-			return nil, err
-		}
-		beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
 	}
+
+	enc, err := db.Get(crystallizedStateLookupKey)
+	if err != nil {
+		return nil, err
+	}
+	crystallizedData := &pb.CrystallizedState{}
+	err = proto.Unmarshal(enc, crystallizedData)
+	if err != nil {
+		return nil, err
+	}
+	beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
+
 	return beaconChain, nil
 }
 
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
-	genesisExists, err := b.db.Has(GenesisLookupKey)
+	genesisExists, err := b.db.Has(genesisLookupKey)
 	if err != nil {
 		return nil, err
 	}
 	if genesisExists {
-		bytes, err := b.db.Get(GenesisLookupKey)
+		bytes, err := b.db.Get(genesisLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -118,12 +119,12 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
-	headExists, err := b.db.Has(CanonicalHeadLookupKey)
+	headExists, err := b.db.Has(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
 	}
 	if headExists {
-		bytes, err := b.db.Get(CanonicalHeadLookupKey)
+		bytes, err := b.db.Get(canonicalHeadLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +169,7 @@ func (b *BeaconChain) PersistActiveState() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put(ActiveStateLookupKey, encodedState)
+	return b.db.Put(activeStateLookupKey, encodedState)
 }
 
 // PersistCrystallizedState stores proto encoding of the current beacon chain crystallized state into the db.
@@ -177,7 +178,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put(CrystallizedStateLookupKey, encodedState)
+	return b.db.Put(crystallizedStateLookupKey, encodedState)
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
@@ -385,7 +386,7 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 // getAttesterIndices returns the attester committee of based from attestation's shard ID and slot number.
 func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
-	// TODO: IndicesForHeights will return default value because the spec for dynasty transition is not finalized.
+	// TODO: IndicesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := b.CrystallizedState().IndicesForSlots()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
@@ -526,9 +527,14 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	return b.db.Put(key, encodedState)
 }
 
+// saveCanonicalSlotNumber saves the slot number of the canonical block.
+func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) error {
+	return b.db.Put(canonicalBlockKey(slotnumber), hash[:])
+}
+
 // saveCanonical puts the passed block into the beacon chain db
 // and also saves a "latest-head" key mapping to the block in the db.
-func (b *BeaconChain) saveCanonical(block *types.Block) error {
+func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
 	if err := b.saveBlock(block); err != nil {
 		return err
 	}
@@ -536,7 +542,8 @@ func (b *BeaconChain) saveCanonical(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put(CanonicalHeadLookupKey, enc)
+
+	return b.db.Put(canonicalHeadLookupKey, enc)
 }
 
 // getBlock retrieves a block from the db using its slot number and hash.
@@ -558,10 +565,4 @@ func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 // removeBlock removes the block from the db.
 func (b *BeaconChain) removeBlock(hash [32]byte) error {
 	return b.db.Delete(blockKey(hash))
-}
-
-// scanBlocks scans for all the blocks in the db.
-func (b *BeaconChain) scanBlocks() error {
-	// TODO: implement iterator method for db
-	return nil
 }
