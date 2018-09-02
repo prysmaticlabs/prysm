@@ -42,6 +42,11 @@ func encodeSlotNumber(number uint64) []byte {
 	return enc
 }
 
+// decodeSlotNumber decodes the number from a slice.
+func decodeSlotNumber(encoding []byte) uint64 {
+	return binary.BigEndian.Uint64(encoding)
+}
+
 // blockKey = blockPrefix + hash.
 func blockKey(hash [32]byte) []byte {
 	return append(blockPrefix, hash[:]...)
