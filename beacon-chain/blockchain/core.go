@@ -573,3 +573,25 @@ func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 func (b *BeaconChain) removeBlock(hash [32]byte) error {
 	return b.db.Delete(blockKey(hash))
 }
+
+func (b *BeaconChain) checkForBlockBySlotNumber(slotnumber uint64) (bool, error) {
+	return b.db.Has(canonicalBlockKey(slotnumber))
+}
+
+func (b *BeaconChain) getBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+
+	enc, err := b.db.Get(canonicalBlockKey(slotnumber))
+	if err != nil {
+		return nil, err
+	}
+
+	var blockhash [32]byte
+	copy(blockhash[:], enc)
+
+	block, err := b.getBlock(blockhash)
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}

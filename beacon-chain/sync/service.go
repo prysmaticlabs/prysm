@@ -18,6 +18,8 @@ type chainService interface {
 	ContainsBlock(h [32]byte) bool
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
+	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
+	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -105,10 +107,6 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 	return ss.blockAnnouncementFeed
 }
 
-func (ss *Service) SearchDBForBlock(slotnumber uint64) (*types.Block, error) {
-	return nil, nil
-}
-
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
@@ -167,18 +165,25 @@ func (ss *Service) run() {
 		case msg := <-ss.blockRequestBySlot:
 			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 			if !ok {
-				log.Errorf("Received malformed beacon block request p2p message")
+				log.Error("Received malformed beacon block request p2p message")
 				continue
 			}
 
-			block, err := ss.SearchDBForBlock(request.GetSlotNumber())
+			blockExists, err := ss.chainService.CheckForCanonicalBlockBySlot(request.GetSlotNumber())
 			if err != nil {
-				log.Errorf("Error searching db for block %v", err)
+				log.Errorf("Error checking db for block %v", err)
 				continue
 			}
-			if block == nil {
+			if !blockExists {
 				continue
 			}
+
+			block, err := ss.chainService.GetCanonicalBlockBySlotNumber(request.GetSlotNumber())
+			if err != nil {
+				log.Errorf("Error retrieving block from db %v", err)
+				continue
+			}
+
 			ss.p2p.Send(block.Proto(), msg.Peer)
 		}
 	}

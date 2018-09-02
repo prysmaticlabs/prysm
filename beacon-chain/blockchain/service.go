@@ -159,6 +159,14 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
 }
 
+func (c *ChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
+	return c.chain.checkForBlockBySlotNumber(slotnumber)
+}
+
+func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+	return c.chain.getBlockBySlotNumber(slotnumber)
+}
+
 // updateHead applies the fork choice rule to the last received
 // slot.
 func (c *ChainService) updateHead(slot uint64) {
