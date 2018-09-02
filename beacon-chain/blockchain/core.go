@@ -553,7 +553,7 @@ func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
 	return b.db.Put(canonicalHeadLookupKey, enc)
 }
 
-// getBlock retrieves a block from the db using its slot number and hash.
+// getBlock retrieves a block from the db using its hash.
 func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 	key := blockKey(hash)
 	enc, err := b.db.Get(key)
