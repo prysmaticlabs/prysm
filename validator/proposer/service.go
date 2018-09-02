@@ -6,6 +6,9 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	blake2b "github.com/minio/blake2b-simd"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -80,16 +83,25 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 		// When we receive an assignment on a slot, we leverage the fields
 		// from the latest canonical beacon block to perform a proposal responsibility.
-		case <-p.assignmentChan:
+		case latestBeaconBlock := <-p.assignmentChan:
 			log.Info("Performing proposer responsibility")
 
-			// Sending empty values for now.
+			// Extract the hash of the latest beacon block to use as parent hash in
+			// the proposal.
+			data, err := proto.Marshal(latestBeaconBlock)
+			if err != nil {
+				log.Errorf("Could not marshal latest beacon block: %v", err)
+			}
+			latestBlockHash := blake2b.Sum512(data)
+
 			// TODO: Implement real proposals with randao reveals and attestation fields.
-			// TODO: Add timestamp, parent hash, and slot number.
 			req := &pb.ProposeRequest{
+				ParentHash:              latestBlockHash[:],
+				SlotNumber:              latestBeaconBlock.GetSlotNumber() + 1,
 				RandaoReveal:            []byte{},
 				AttestationBitmask:      []byte{},
 				AttestationAggregateSig: []uint32{},
+				Timestamp:               ptypes.TimestampNow(),
 			}
 
 			res, err := client.ProposeBlock(p.ctx, req)
