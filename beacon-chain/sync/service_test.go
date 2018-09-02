@@ -3,9 +3,10 @@ package sync
 import (
 	"context"
 	"errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"io/ioutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 
 	"github.com/ethereum/go-ethereum/event"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
