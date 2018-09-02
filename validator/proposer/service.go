@@ -91,6 +91,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
 				log.Errorf("Could not marshal latest beacon block: %v", err)
+				continue
 			}
 			latestBlockHash := blake2b.Sum512(data)
 
