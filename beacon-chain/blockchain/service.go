@@ -184,10 +184,10 @@ func (c *ChainService) updateHead(slot uint64) {
 	)
 
 	if err != nil {
-		log.Errorf("Unable to get validators by height and by shard: %v", err)
+		log.Errorf("Unable to get validators by slot and by shard: %v", err)
 		return
 	}
-	log.Debugf("Received %d validators by height", len(vals))
+	log.Debugf("Received %d validators by slot", len(vals))
 
 	h, err := c.candidateBlock.Hash()
 	if err != nil {
