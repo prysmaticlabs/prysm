@@ -119,22 +119,17 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
-	headExists, err := b.db.Has(canonicalHeadLookupKey)
+
+	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	if headExists {
-		bytes, err := b.db.Get(canonicalHeadLookupKey)
-		if err != nil {
-			return nil, err
-		}
-		block := &pb.BeaconBlock{}
-		if err := proto.Unmarshal(bytes, block); err != nil {
-			return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
-		}
-		return types.NewBlock(block), nil
+	block := &pb.BeaconBlock{}
+	if err := proto.Unmarshal(bytes, block); err != nil {
+		return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 	}
-	return nil, nil
+	return types.NewBlock(block), nil
+
 }
 
 // ActiveState contains the current state of attestations and changes every block.
@@ -534,12 +529,17 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	return b.db.Put(key, encodedState)
 }
 
-// saveCanonicalSlotNumber saves the slot number of the canonical block.
+// saveCanonicalSlotNumber saves the slotnumber and blockhash of a canonical block
+// saved in the db. This will alow for canonical blocks to be retrieved from the db
+// by using their slotnumber as a key, and then using the retrived blockhash to get
+// the block from the db.
+// prefix + slotnumber -> blockhash
+// prefix + blockhash -> block
 func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) error {
 	return b.db.Put(canonicalBlockKey(slotnumber), hash[:])
 }
 
-// saveCanonical puts the passed block into the beacon chain db
+// saveCanonicalBlock puts the passed block into the beacon chain db
 // and also saves a "latest-head" key mapping to the block in the db.
 func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
 	if err := b.saveBlock(block); err != nil {

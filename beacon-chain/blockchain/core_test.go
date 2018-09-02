@@ -549,7 +549,7 @@ func TestGetBlock(t *testing.T) {
 
 	hash, err := block.Hash()
 	if err != nil {
-		t.Error(err)
+		t.Errorf("unable to generate hash of block %v", err)
 	}
 
 	key := blockKey(hash)
