@@ -311,10 +311,17 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 	}
 	if int(attestation.Slot) < slotNumber-params.CycleLength {
 		return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
-
 			attestation.Slot,
 			slotNumber-params.CycleLength)
 	}
+
+	if attestation.JustifiedSlot != b.CrystallizedState().LastJustifiedSlot() {
+		return fmt.Errorf("attestation's last justified slot has to match crystallied state's last justified slot. Found: %d. Want: %d",
+			attestation.JustifiedSlot,
+			b.CrystallizedState().LastJustifiedSlot())
+	}
+
+	// TODO: Validate last justified block hash matches in the crystallizedState.
 
 	// Get all the block hashes up to cycle length.
 	parentHashes := b.getSignedParentHashes(block, attestation)
