@@ -402,26 +402,6 @@ func TestSaveBlockWithNil(t *testing.T) {
 	}
 }
 
-func TestVerifyActiveHashWithNil(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-	beaconChain.SetActiveState(&types.ActiveState{})
-	_, err := beaconChain.verifyBlockActiveHash(&types.Block{})
-	if err == nil {
-		t.Error("Verify block hash should have failed with nil active state")
-	}
-}
-
-func TestVerifyCrystallizedHashWithNil(t *testing.T) {
-	beaconChain, db := startInMemoryBeaconChain(t)
-	defer db.Close()
-	beaconChain.SetCrystallizedState(&types.CrystallizedState{})
-	_, err := beaconChain.verifyBlockCrystallizedHash(&types.Block{})
-	if err == nil {
-		t.Error("Verify block hash should have failed with nil crystallized")
-	}
-}
-
 func TestComputeActiveState(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
