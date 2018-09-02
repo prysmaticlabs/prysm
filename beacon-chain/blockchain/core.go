@@ -531,7 +531,7 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 
 // saveCanonicalSlotNumber saves the slotnumber and blockhash of a canonical block
 // saved in the db. This will alow for canonical blocks to be retrieved from the db
-// by using their slotnumber as a key, and then using the retrived blockhash to get
+// by using their slotnumber as a key, and then using the retrieved blockhash to get
 // the block from the db.
 // prefix + slotnumber -> blockhash
 // prefix + blockhash -> block
