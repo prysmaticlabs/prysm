@@ -28,16 +28,25 @@ type Proposer struct {
 	cancel           context.CancelFunc
 	assigner         assignmentAnnouncer
 	rpcClientService rpcClientService
+	announcementChan chan bool
+}
+
+// Config options for proposer service.
+type Config struct {
+	AnnouncementBuf int
+	Assigner        assignmentAnnouncer
+	Client          rpcClientService
 }
 
 // NewProposer creates a new attester instance.
-func NewProposer(ctx context.Context, assigner assignmentAnnouncer, client rpcClientService) *Proposer {
+func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
 		ctx:              ctx,
 		cancel:           cancel,
-		assigner:         assigner,
-		rpcClientService: client,
+		assigner:         cfg.Assigner,
+		rpcClientService: cfg.Client,
+		announcementChan: make(chan bool, cfg.AnnouncementBuf),
 	}
 }
 
@@ -57,8 +66,7 @@ func (p *Proposer) Stop() error {
 
 // run the main event loop that listens for a proposer assignment.
 func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
-	announcement := make(chan bool, 100)
-	sub := p.assigner.ProposerAssignment().Subscribe(announcement)
+	sub := p.assigner.ProposerAssignment().Subscribe(p.announcementChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -71,7 +79,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 		//
 		// TODO: On the beacon node side, calculate active and crystallized and update the
 		// active/crystallize state hash values in the proposed block.
-		case <-announcement:
+		case <-p.announcementChan:
 			log.Info("Performing proposer responsibility")
 
 			// Sending empty values for now.

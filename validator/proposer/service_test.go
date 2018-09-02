@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,27 +29,22 @@ func (mc *mockClient) ProposerServiceClient() pb.ProposerServiceClient {
 	return internal.NewMockProposerServiceClient(mc.ctrl)
 }
 
-type mockBeaconService struct {
-	proposerChan chan bool
-	attesterChan chan bool
-}
+type mockAssigner struct{}
 
-func (m *mockBeaconService) AttesterAssignment() <-chan bool {
-	return m.attesterChan
-}
-
-func (m *mockBeaconService) ProposerAssignment() <-chan bool {
-	return m.proposerChan
+func (m *mockAssigner) ProposerAssignment() *event.Feed {
+	return new(event.Feed)
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := &mockBeaconService{
-		proposerChan: make(chan bool),
+	cfg := &Config{
+		AnnouncementBuf: 0,
+		Assigner:        &mockAssigner{},
+		Client:          &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), b, &mockClient{ctrl})
+	p := NewProposer(context.Background(), cfg)
 	p.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	p.Stop()
@@ -59,10 +55,12 @@ func TestProposerLoop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := &mockBeaconService{
-		proposerChan: make(chan bool),
+	cfg := &Config{
+		AnnouncementBuf: 0,
+		Assigner:        &mockAssigner{},
+		Client:          &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), b, &mockClient{ctrl})
+	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
@@ -80,7 +78,7 @@ func TestProposerLoop(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	b.proposerChan <- true
+	p.announcementChan <- true
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	doneChan <- struct{}{}
@@ -92,10 +90,12 @@ func TestProposerErrorLoop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := &mockBeaconService{
-		proposerChan: make(chan bool),
+	cfg := &Config{
+		AnnouncementBuf: 0,
+		Assigner:        &mockAssigner{},
+		Client:          &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), b, &mockClient{ctrl})
+	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
@@ -111,7 +111,7 @@ func TestProposerErrorLoop(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	b.proposerChan <- true
+	p.announcementChan <- true
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, "bad block proposed")
 	doneChan <- struct{}{}
