@@ -179,7 +179,10 @@ func (s *ShardEthereum) registerAttesterService() error {
 		return err
 	}
 
-	att := attester.NewAttester(context.TODO(), beaconService)
+	att := attester.NewAttester(context.TODO(), &attester.Config{
+		Assigner:      beaconService,
+		AssignmentBuf: 100,
+	})
 	return s.services.RegisterService(att)
 }
 
@@ -195,9 +198,9 @@ func (s *ShardEthereum) registerProposerService() error {
 	}
 
 	prop := proposer.NewProposer(context.TODO(), &proposer.Config{
-		Assigner:        beaconService,
-		Client:          rpcService,
-		AnnouncementBuf: 100,
+		Assigner:      beaconService,
+		Client:        rpcService,
+		AssignmentBuf: 100,
 	})
 	return s.services.RegisterService(prop)
 }
