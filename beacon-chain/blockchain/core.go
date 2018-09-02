@@ -20,10 +20,6 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var canonicalHeadKey = "latest-canonical-head"
-var activeStateLookupKey = "beacon-active-state"
-var crystallizedStateLookupKey = "beacon-crystallized-state"
-
 var clock utils.Clock = &utils.RealClock{}
 
 // BeaconChain represents the core PoS blockchain object containing
@@ -51,18 +47,22 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		db:    db,
 		state: &beaconState{},
 	}
-	hasActive, err := db.Has([]byte(activeStateLookupKey))
+	hasCrystallized, err := db.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	hasCrystallized, err := db.Has([]byte(crystallizedStateLookupKey))
+	hasGenesis, err := db.Has(genesisLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	hasGenesis, err := db.Has([]byte("genesis"))
+
+	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		return nil, err
 	}
+
+	beaconChain.state.ActiveState = active
+
 	if !hasGenesis {
 		log.Info("No genesis block found on disk, initializing genesis block")
 		genesisBlock, err := types.NewGenesisBlock()
@@ -73,56 +73,38 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := beaconChain.db.Put([]byte("genesis"), genesisMarshall); err != nil {
+		if err := beaconChain.db.Put(genesisLookupKey, genesisMarshall); err != nil {
 			return nil, err
 		}
 	}
-	if !hasActive && !hasCrystallized {
+	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
-		active, crystallized, err := types.NewGenesisStates()
-		if err != nil {
-			return nil, err
-		}
-		beaconChain.state.ActiveState = active
 		beaconChain.state.CrystallizedState = crystallized
-
 		return beaconChain, nil
 	}
-	if hasActive {
-		enc, err := db.Get([]byte(activeStateLookupKey))
-		if err != nil {
-			return nil, err
-		}
-		activeData := &pb.ActiveState{}
-		err = proto.Unmarshal(enc, activeData)
-		if err != nil {
-			return nil, err
-		}
-		beaconChain.state.ActiveState = types.NewActiveState(activeData, make(map[[32]byte]*types.VoteCache))
+
+	enc, err := db.Get(crystallizedStateLookupKey)
+	if err != nil {
+		return nil, err
 	}
-	if hasCrystallized {
-		enc, err := db.Get([]byte(crystallizedStateLookupKey))
-		if err != nil {
-			return nil, err
-		}
-		crystallizedData := &pb.CrystallizedState{}
-		err = proto.Unmarshal(enc, crystallizedData)
-		if err != nil {
-			return nil, err
-		}
-		beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
+	crystallizedData := &pb.CrystallizedState{}
+	err = proto.Unmarshal(enc, crystallizedData)
+	if err != nil {
+		return nil, err
 	}
+	beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
+
 	return beaconChain, nil
 }
 
 // GenesisBlock returns the canonical, genesis block.
 func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
-	genesisExists, err := b.db.Has([]byte("genesis"))
+	genesisExists, err := b.db.Has(genesisLookupKey)
 	if err != nil {
 		return nil, err
 	}
 	if genesisExists {
-		bytes, err := b.db.Get([]byte("genesis"))
+		bytes, err := b.db.Get(genesisLookupKey)
 		if err != nil {
 			return nil, err
 		}
@@ -137,22 +119,17 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
-	headExists, err := b.db.Has([]byte(canonicalHeadKey))
+
+	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
 	}
-	if headExists {
-		bytes, err := b.db.Get([]byte(canonicalHeadKey))
-		if err != nil {
-			return nil, err
-		}
-		block := &pb.BeaconBlock{}
-		if err := proto.Unmarshal(bytes, block); err != nil {
-			return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
-		}
-		return types.NewBlock(block), nil
+	block := &pb.BeaconBlock{}
+	if err := proto.Unmarshal(bytes, block); err != nil {
+		return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 	}
-	return nil, nil
+	return types.NewBlock(block), nil
+
 }
 
 // ActiveState contains the current state of attestations and changes every block.
@@ -187,7 +164,7 @@ func (b *BeaconChain) PersistActiveState() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put([]byte(activeStateLookupKey), encodedState)
+	return b.db.Put(activeStateLookupKey, encodedState)
 }
 
 // PersistCrystallizedState stores proto encoding of the current beacon chain crystallized state into the db.
@@ -196,7 +173,7 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	if err != nil {
 		return err
 	}
-	return b.db.Put([]byte(crystallizedStateLookupKey), encodedState)
+	return b.db.Put(crystallizedStateLookupKey, encodedState)
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
@@ -283,20 +260,6 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 	activeState.ReplaceBlockHashes(blockHashes)
 
 	return activeState, nil
-}
-
-// saveBlock puts the passed block into the beacon chain db.
-func (b *BeaconChain) saveBlock(block *types.Block) error {
-	encodedState, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-	hash, err := block.Hash()
-	if err != nil {
-		return err
-	}
-
-	return b.db.Put(hash[:], encodedState)
 }
 
 // processAttestation processes the attestations for one shard in an incoming block.
@@ -456,19 +419,6 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 	return nil
 }
 
-// saveCanonical puts the passed block into the beacon chain db
-// and also saves a "latest-head" key mapping to the block in the db.
-func (b *BeaconChain) saveCanonical(block *types.Block) error {
-	if err := b.saveBlock(block); err != nil {
-		return err
-	}
-	enc, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-	return b.db.Put([]byte(canonicalHeadKey), enc)
-}
-
 // initCycle is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
 func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
@@ -557,4 +507,69 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	}, aState.GetBlockVoteCache())
 
 	return newCrystallizedState, newActiveState
+}
+
+func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
+	return b.db.Has(blockKey(blockhash))
+}
+
+// saveBlock puts the passed block into the beacon chain db.
+func (b *BeaconChain) saveBlock(block *types.Block) error {
+
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
+	key := blockKey(hash)
+	encodedState, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+	return b.db.Put(key, encodedState)
+}
+
+// saveCanonicalSlotNumber saves the slotnumber and blockhash of a canonical block
+// saved in the db. This will alow for canonical blocks to be retrieved from the db
+// by using their slotnumber as a key, and then using the retrieved blockhash to get
+// the block from the db.
+// prefix + slotnumber -> blockhash
+// prefix + blockhash -> block
+func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) error {
+	return b.db.Put(canonicalBlockKey(slotnumber), hash[:])
+}
+
+// saveCanonicalBlock puts the passed block into the beacon chain db
+// and also saves a "latest-head" key mapping to the block in the db.
+func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
+	if err := b.saveBlock(block); err != nil {
+		return err
+	}
+	enc, err := block.Marshal()
+	if err != nil {
+		return err
+	}
+
+	return b.db.Put(canonicalHeadLookupKey, enc)
+}
+
+// getBlock retrieves a block from the db using its hash.
+func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
+	key := blockKey(hash)
+	enc, err := b.db.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	block := &pb.BeaconBlock{}
+
+	if err := proto.Unmarshal(enc, block); err != nil {
+		return nil, err
+	}
+	return types.NewBlock(block), nil
+}
+
+// removeBlock removes the block from the db.
+func (b *BeaconChain) removeBlock(hash [32]byte) error {
+	return b.db.Delete(blockKey(hash))
 }

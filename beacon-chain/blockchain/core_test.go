@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"reflect"
@@ -98,9 +99,11 @@ func TestNewBeaconChain(t *testing.T) {
 	if _, err := types.NewGenesisBlock(); err != nil {
 		t.Errorf("Creating a new genesis block failed %v", err)
 	}
+
 	if !reflect.DeepEqual(beaconChain.ActiveState(), active) {
 		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), active)
 	}
+
 	if !reflect.DeepEqual(beaconChain.CrystallizedState(), crystallized) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), crystallized)
 	}
@@ -159,13 +162,13 @@ func TestCanonicalHead(t *testing.T) {
 	}
 }
 
-func TestSaveCanonical(t *testing.T) {
+func TestSaveCanonicalBlock(t *testing.T) {
 	block := types.NewBlock(&pb.BeaconBlock{})
 	chain, err := NewBeaconChain(&faultyDB{})
 	if err != nil {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
-	if err := chain.saveCanonical(block); err != nil {
+	if err := chain.saveCanonicalBlock(block); err != nil {
 		t.Errorf("save canonical should pass: %v", err)
 	}
 }
@@ -191,21 +194,6 @@ func TestSetActiveState(t *testing.T) {
 		t.Errorf("active state was not updated. wanted %v, got %v", active, beaconChain.state.ActiveState)
 	}
 
-	// Initializing a new beacon chain should deserialize persisted state from disk.
-	newBeaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("unable to setup second beacon chain: %v", err)
-	}
-
-	// The active state should still be the one we mutated and persited earlier
-	for i, hash := range active.RecentBlockHashes() {
-		if hash != newBeaconChain.ActiveState().RecentBlockHashes()[i] {
-			t.Errorf("active state block hash. wanted %v, got %v", hash, newBeaconChain.ActiveState().RecentBlockHashes()[i])
-		}
-	}
-	if reflect.DeepEqual(active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes()) {
-		t.Errorf("active state pending attestation incorrect. wanted %v, got %v", active.PendingAttestations(), newBeaconChain.state.ActiveState.RecentBlockHashes())
-	}
 }
 
 func TestSetCrystallizedState(t *testing.T) {
@@ -550,6 +538,39 @@ func TestCanProcessAttestations(t *testing.T) {
 	}
 }
 
+func TestGetBlock(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Errorf("unable to generate hash of block %v", err)
+	}
+
+	key := blockKey(hash)
+	marshalled, err := proto.Marshal(block.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := beaconChain.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	retBlock, err := beaconChain.getBlock(hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(block.PowChainRef().Bytes(), retBlock.PowChainRef().Bytes()) {
+		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
+	}
+}
 func TestProcessAttestationBadSlot(t *testing.T) {
 	bc, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -673,4 +694,64 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	}
 
 	return types.NewBlock(b)
+}
+
+func TestSaveAndRemoveBlocks(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Fatalf("unable to generate hash of block %v", err)
+	}
+
+	if err := b.saveBlock(block); err != nil {
+		t.Fatalf("unable to save block %v", err)
+	}
+
+	// Adding a different block with the same key
+	newblock := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  4,
+		PowChainRef: []byte("b"),
+	})
+
+	key := blockKey(hash)
+	marshalled, err := proto.Marshal(newblock.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	retblock, err := b.getBlock(hash)
+	if err != nil {
+		t.Fatalf("block is unable to be retrieved")
+	}
+
+	if retblock.SlotNumber() != newblock.SlotNumber() {
+		t.Errorf("slotnumber does not match for saved and retrieved blocks")
+	}
+
+	if !bytes.Equal(retblock.PowChainRef().Bytes(), newblock.PowChainRef().Bytes()) {
+		t.Errorf("POW chain ref does not match for saved and retrieved blocks")
+	}
+
+	if err := b.removeBlock(hash); err != nil {
+		t.Fatalf("error removing block %v", err)
+	}
+
+	if _, err := b.getBlock(hash); err == nil {
+		t.Fatalf("block is able to be retrieved")
+	}
+
+	if err := b.removeBlock(hash); err != nil {
+		t.Fatalf("unable to remove block a second time %v", err)
+	}
 }
