@@ -14,7 +14,7 @@ const (
 	MaxValidators = 4194304
 	// SlotDuration in seconds.
 	SlotDuration = 8
-	// Cofactor is used cutoff algorithm to select height and shard cutoffs.
+	// Cofactor is used cutoff algorithm to select slot and shard cutoffs.
 	Cofactor = 19
 	// MinCommiteeSize is the minimal number of validator needs to be in a committee.
 	MinCommiteeSize = 128

@@ -37,18 +37,24 @@ func TestActiveState(t *testing.T) {
 		t.Errorf("inner active state data did not match proto: received %v, wanted %v", active.Proto(), active.data)
 	}
 
+	blockHashes := [][32]byte{{'A'}}
+	active.ReplaceBlockHashes(blockHashes)
+	if len(active.data.RecentBlockHashes) != 1 {
+		t.Errorf("there should be 1 recent block hash, received %v", len(active.data.RecentBlockHashes))
+	}
 	active.ClearRecentBlockHashes()
 	if len(active.data.RecentBlockHashes) > 0 {
 		t.Errorf("there should be no recent block hashes, received %v", len(active.data.RecentBlockHashes))
 	}
 
 	bvc := active.GetBlockVoteCache()
-	bvc[nil] = &VoteCache{
+	bvc[[32]byte{'A'}] = &VoteCache{
+
 		VoterIndices:     []uint32{0, 1, 2},
 		VoteTotalDeposit: 1000,
 	}
 	active.SetBlockVoteCache(bvc)
-	if !active.IsVoteCacheEmpty(nil) {
+	if !active.IsVoteCacheEmpty([32]byte{'A'}) {
 		t.Errorf("block vote cache should be there but recevied false")
 	}
 
@@ -132,9 +138,9 @@ func TestCrystallizedState(t *testing.T) {
 	if !reflect.DeepEqual(crystallized.Validators(), validators) {
 		t.Errorf("mismatched validator set: wanted %v, received %v", validators, crystallized.Validators())
 	}
-	crystallized.ClearIndicesForHeights()
-	if !reflect.DeepEqual(crystallized.IndicesForHeights(), []*pb.ShardAndCommitteeArray{}) {
-		t.Errorf("mismatched indices for heights: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForHeights())
+	crystallized.ClearIndicesForSlots()
+	if !reflect.DeepEqual(crystallized.IndicesForSlots(), []*pb.ShardAndCommitteeArray{}) {
+		t.Errorf("mismatched indices for slots: wanted %v, received %v", []*pb.ShardAndCommitteeArray{}, crystallized.IndicesForSlots())
 	}
 	crystallized.CrosslinkRecords()
 	crystallized.UpdateJustifiedSlot(6)
@@ -153,20 +159,20 @@ func TestBlockHashForSlot(t *testing.T) {
 	}, nil)
 	block := newTestBlock(t, &pb.BeaconBlock{SlotNumber: 7})
 	if _, err := state.BlockHashForSlot(200, block); err == nil {
-		t.Error("getBlockHash should have failed with invalid height")
+		t.Error("getBlockHash should have failed with invalid slot")
 	}
 	hash, err := state.BlockHashForSlot(0, block)
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
-	if bytes.Equal(hash, []byte{'A'}) {
+	if bytes.Equal(hash[:], []byte{'A'}) {
 		t.Errorf("getBlockHash returns hash should be A, got: %v", hash)
 	}
 	hash, err = state.BlockHashForSlot(5, block)
 	if err != nil {
 		t.Errorf("getBlockHash failed: %v", err)
 	}
-	if bytes.Equal(hash, []byte{'F'}) {
+	if bytes.Equal(hash[:], []byte{'F'}) {
 		t.Errorf("getBlockHash returns hash should be F, got: %v", hash)
 	}
 	block = newTestBlock(t, &pb.BeaconBlock{SlotNumber: 201})

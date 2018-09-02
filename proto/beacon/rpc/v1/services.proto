@@ -27,7 +27,7 @@ message ShuffleRequest {
 message ShuffleResponse {
     repeated uint64 shuffled_validator_indices = 1;
     repeated uint64 cutoff_indices = 2;
-    repeated uint64 assigned_attestation_heights = 3;
+    repeated uint64 assigned_attestation_slots = 3;
 }
 
 message ProposeRequest {
