@@ -571,6 +571,38 @@ func TestGetBlock(t *testing.T) {
 		t.Fatal("block retrieved does not have the same POW chain ref as the block saved")
 	}
 }
+func TestProcessAttestationBadSlot(t *testing.T) {
+	bc, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	// Process attestation should work now, there's a committee in shard 0.
+	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
+		LastJustifiedSlot: 99,
+		LastStateRecalc:   0,
+		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
+				},
+			},
+		},
+	})
+	if err := bc.SetCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to mutate crystallized state: %v", err)
+	}
+
+	// Process attestation should work with correct bitfield bits.
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}, JustifiedSlot: 98},
+		},
+	})
+
+	if err := bc.processAttestation(0, block); err == nil {
+		t.Error("Process attestation should have failed, justified slot was incorrect")
+	}
+}
 
 // Test cycle transition where there's not enough justified streak to finalize a slot.
 func TestInitCycleNotFinalized(t *testing.T) {
