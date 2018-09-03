@@ -131,12 +131,12 @@ func (s *Service) processBeaconBlock(block *pbp2p.BeaconBlock) {
 	if s.responsibility == "proposer" {
 		log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
 		s.responsibility = ""
-		// s.proposerChan <- true
+		s.proposerChan <- true
 	} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedSlot {
 		// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
 		log.Info("Assigned attestation slot number reached")
 		s.responsibility = ""
-		// s.attesterChan <- true
+		s.attesterChan <- true
 	}
 	return
 }
