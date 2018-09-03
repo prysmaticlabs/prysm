@@ -93,36 +93,20 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 	return mockServiceClient
 }
 
-func TestChannelGetters(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
-	b.proposerChan <- false
-	proposerVal := <-b.ProposerAssignment()
-	if proposerVal {
-		t.Error("Expected false value from channel, received true")
-	}
-	b.attesterChan <- false
-	attesterVal := <-b.AttesterAssignment()
-	if attesterVal {
-		t.Error("Expected false value from channel, received true")
-	}
-}
-
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockLifecycleClient{ctrl})
-
-	// Testing default config values.
-	cfg := DefaultConfig()
-	if cfg.AttesterChanBuf != 5 && cfg.ProposerChanBuf != 5 {
-		t.Error("Default config values incorrect")
+	b := NewBeaconValidator(context.Background(), &mockLifecycleClient{ctrl})
+	// Testing basic feeds.
+	if b.AttesterAssignmentFeed() == nil {
+		t.Error("AttesterAssignmentFeed empty")
+	}
+	if b.ProposerAssignmentFeed() == nil {
+		t.Error("ProposerAssignmentFeed empty")
 	}
 	b.Start()
-	// TODO: find a better way to test this. The problem is that start is nonblocking, and it ends
+	// TODO: find a better way to test this. The problem is that start is non-blocking, and it ends
 	// before the for loops of its inner goroutines begin.
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -134,8 +118,7 @@ func TestListenForBeaconBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
 
 	// Create mock for the stream returned by LatestBeaconBlock.
 	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
@@ -154,7 +137,6 @@ func TestListenForBeaconBlocks(t *testing.T) {
 	).Return(stream, nil)
 
 	b.listenForBeaconBlocks(mockServiceClient)
-	<-b.attesterChan
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
 	testutil.AssertLogsContain(t, hook, "Assigned attestation slot number reached")
@@ -174,7 +156,6 @@ func TestListenForBeaconBlocks(t *testing.T) {
 	).Return(stream, nil)
 
 	b.listenForBeaconBlocks(mockServiceClient)
-	<-b.proposerChan
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
 	testutil.AssertLogsContain(t, hook, "Assigned proposal slot number reached")
@@ -209,8 +190,7 @@ func TestListenForCrystallizedStates(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
 
 	// Creating a faulty stream will trigger error.
 	stream := internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)

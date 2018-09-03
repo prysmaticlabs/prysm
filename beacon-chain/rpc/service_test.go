@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -28,6 +29,10 @@ func init() {
 type mockChainService struct {
 	blockFeed *event.Feed
 	stateFeed *event.Feed
+}
+
+func (m *mockChainService) IncomingBlockFeed() *event.Feed {
+	return new(event.Feed)
 }
 
 func newMockChainService() *mockChainService {
@@ -174,6 +179,23 @@ func TestFetchShuffledValidatorIndices(t *testing.T) {
 	}
 	if len(res.ShuffledValidatorIndices) != 100 {
 		t.Errorf("Expected 100 validators in the shuffled indices, received %d", len(res.ShuffledValidatorIndices))
+	}
+}
+
+func TestProposeBlock(t *testing.T) {
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "6372",
+		CanonicalFetcher: mockChain,
+		ChainService:     mockChain,
+	})
+	req := &pb.ProposeRequest{
+		SlotNumber: 5,
+		ParentHash: []byte("parent-hash"),
+		Timestamp:  ptypes.TimestampNow(),
+	}
+	if _, err := rpcService.ProposeBlock(context.Background(), req); err != nil {
+		t.Errorf("Could not propose block correctly: %v", err)
 	}
 }
 
