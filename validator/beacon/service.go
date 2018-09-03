@@ -134,7 +134,6 @@ func (s *Service) processBeaconBlock(block *pbp2p.BeaconBlock) {
 		s.responsibility = ""
 		s.attesterAssignmentFeed.Send(block)
 	}
-	return
 }
 
 // listenForCrystallizedStates receives the latest canonical crystallized state
