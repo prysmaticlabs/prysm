@@ -104,7 +104,6 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				AttestationAggregateSig: []uint32{},
 				Timestamp:               ptypes.TimestampNow(),
 			}
-
 			res, err := client.ProposeBlock(p.ctx, req)
 			if err != nil {
 				log.Errorf("Could not propose block: %v", err)
