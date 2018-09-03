@@ -17,6 +17,11 @@ import (
 
 var log = logrus.WithField("prefix", "rpc")
 
+type canonicalFetcher interface {
+	CanonicalBlock() (*types.Block, error)
+	CanonicalCrystallizedState(crystallizedHash [32]byte) (*types.CrystallizedState, error)
+}
+
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                context.Context
