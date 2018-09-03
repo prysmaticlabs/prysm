@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/beacon",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//validator/types:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

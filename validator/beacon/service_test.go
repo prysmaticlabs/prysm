@@ -46,6 +46,53 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	return mockServiceClient
 }
 
+type mockLifecycleClient struct {
+	ctrl *gomock.Controller
+}
+
+func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
+	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
+
+	blockStream := internal.NewMockBeaconService_LatestBeaconBlockClient(fc.ctrl)
+	blockStream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, io.EOF)
+	stateStream := internal.NewMockBeaconService_LatestCrystallizedStateClient(fc.ctrl)
+	stateStream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
+
+	mockServiceClient.EXPECT().LatestBeaconBlock(
+		gomock.Any(),
+		&empty.Empty{},
+	).Return(blockStream, nil)
+	mockServiceClient.EXPECT().LatestCrystallizedState(
+		gomock.Any(),
+		&empty.Empty{},
+	).Return(stateStream, nil)
+
+	validator1 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
+	validator2 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x1"), StartDynasty: 1, EndDynasty: 10}
+	validator3 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
+	crystallized := &pbp2p.CrystallizedState{
+		Validators:     []*pbp2p.ValidatorRecord{validator1, validator2, validator3},
+		CurrentDynasty: 5,
+	}
+
+	mockServiceClient.EXPECT().CanonicalHeadAndState(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.CanonicalResponse{
+		CrystallizedState: crystallized,
+		CanonicalBlock:    &pbp2p.BeaconBlock{SlotNumber: 1},
+	}, nil)
+
+	mockServiceClient.EXPECT().FetchShuffledValidatorIndices(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.ShuffleResponse{
+		ShuffledValidatorIndices: []uint64{0, 1, 2},
+	}, nil)
+
+	return mockServiceClient
+}
+
 func TestChannelGetters(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -66,14 +113,14 @@ func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
+
+	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockLifecycleClient{ctrl})
 
 	// Testing default config values.
 	cfg := DefaultConfig()
 	if cfg.AttesterChanBuf != 5 && cfg.ProposerChanBuf != 5 {
 		t.Error("Default config values incorrect")
 	}
-
 	b.Start()
 	// TODO: find a better way to test this. The problem is that start is nonblocking, and it ends
 	// before the for loops of its inner goroutines begin.
@@ -83,7 +130,7 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestFetchBeaconBlocks(t *testing.T) {
+func TestListenForBeaconBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -106,7 +153,7 @@ func TestFetchBeaconBlocks(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchBeaconBlocks(mockServiceClient)
+	b.listenForBeaconBlocks(mockServiceClient)
 	<-b.attesterChan
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
@@ -126,7 +173,7 @@ func TestFetchBeaconBlocks(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchBeaconBlocks(mockServiceClient)
+	b.listenForBeaconBlocks(mockServiceClient)
 	<-b.proposerChan
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
@@ -143,7 +190,7 @@ func TestFetchBeaconBlocks(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchBeaconBlocks(mockServiceClient)
+	b.listenForBeaconBlocks(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "stream error")
 
@@ -154,11 +201,11 @@ func TestFetchBeaconBlocks(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, errors.New("stream creation failed"))
 
-	b.fetchBeaconBlocks(mockServiceClient)
+	b.listenForBeaconBlocks(mockServiceClient)
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
 }
 
-func TestFetchCrystallizedState(t *testing.T) {
+func TestListenForCrystallizedStates(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -173,7 +220,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, errors.New("stream creation failed"))
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
 
@@ -188,7 +235,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "recv error")
 
@@ -203,7 +250,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Could not marshal crystallized state proto")
 
@@ -219,7 +266,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Validator index not found in latest crystallized state's active validator list")
 
@@ -239,7 +286,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, errors.New("something went wrong"))
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Could not fetch shuffled validator indices: something went wrong")
 
@@ -265,7 +312,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		ShuffledValidatorIndices: []uint64{2, 1, 0},
 	}, nil)
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Validator selected as attester")
 
@@ -290,7 +337,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 		ShuffledValidatorIndices: []uint64{0, 1, 2},
 	}, nil)
 
-	b.fetchCrystallizedState(mockServiceClient)
+	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Validator selected as proposer of the next slot")
 }
