@@ -109,7 +109,6 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
-// TODO: Remove - only used in tests
 func (c *ChainService) HasStoredState() (bool, error) {
 
 	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
@@ -122,7 +121,6 @@ func (c *ChainService) HasStoredState() (bool, error) {
 
 // SaveBlock is a mock which saves a block to the local db using the
 // blockhash as the key.
-// TODO: Remove - only used in tests
 func (c *ChainService) SaveBlock(block *types.Block) error {
 	return c.chain.saveBlock(block)
 }
@@ -134,13 +132,11 @@ func (c *ChainService) ContainsBlock(h [32]byte) bool {
 }
 
 // CurrentCrystallizedState of the canonical chain.
-// TODO: Remove - only used in tests
 func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	return c.chain.CrystallizedState()
 }
 
 // CurrentActiveState of the canonical chain.
-// TODO: Remove - only used in tests
 func (c *ChainService) CurrentActiveState() *types.ActiveState {
 	return c.chain.ActiveState()
 }
@@ -160,13 +156,13 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 // CheckForCanonicalBlockBySlot checks if the canonical block for that slot exists
 // in the db.
 func (c *ChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
-	return c.chain.checkForBlockBySlotNumber(slotnumber)
+	return c.chain.hasCanonicalBlockForSlot(slotnumber)
 }
 
 // GetCanonicalBlockBySlotNumber retrieves the canonical block for that slot which
 // has been saved in the db.
 func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
-	return c.chain.getBlockBySlotNumber(slotnumber)
+	return c.chain.getCanonicalBlockForSlot(slotnumber)
 }
 
 // updateHead applies the fork choice rule to the last received

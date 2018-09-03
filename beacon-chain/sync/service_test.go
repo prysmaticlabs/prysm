@@ -185,7 +185,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestBlockRequestBySlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
 	ms := &mockChainService{}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
 
