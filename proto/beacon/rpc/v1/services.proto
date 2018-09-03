@@ -7,6 +7,7 @@ import "proto/beacon/p2p/v1/messages.proto";
 import "google/protobuf/empty.proto";
 
 service BeaconService {
+    rpc CanonicalBlockAndState(google.protobuf.Empty) returns (CanonicalResponse);
     rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
     rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
@@ -18,6 +19,11 @@ service AttesterService {
 
 service ProposerService {
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
+}
+
+message CanonicalResponse {
+  ethereum.beacon.p2p.v1.BeaconBlock canonical_block = 1;
+  ethereum.beacon.p2p.v1.CrystallizedState crystallized_state = 2;
 }
 
 message ShuffleRequest {

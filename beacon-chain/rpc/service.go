@@ -98,6 +98,14 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// CanonicalBlockAndState returns the latest block and crystallized state
+// determined as canonical in a beacon node. Validator clients send this request
+// once upon establishing a connection to the beacon node in order to determine
+// their responsibility.
+func (s *Service) CanonicalBlockAndState(ctx context.Context, req *empty.Empty) (*pb.CanonicalResponse, error) {
+	return nil, errors.New("unimplemented")
+}
+
 // FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
 // assigned attestation slots at a given crystallized state hash.
 // This function can be called by validators to fetch a historical list of shuffled
