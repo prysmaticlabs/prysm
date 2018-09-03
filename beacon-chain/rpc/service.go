@@ -27,6 +27,7 @@ type Service struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	announcer          types.CanonicalEventAnnouncer
+	fetcher            canonicalFetcher
 	port               string
 	listener           net.Listener
 	withCert           string
@@ -38,20 +39,23 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port            string
-	CertFlag        string
-	KeyFlag         string
-	SubscriptionBuf int
+	Port               string
+	CertFlag           string
+	KeyFlag            string
+	SubscriptionBuf    int
+	CanonicalAnnouncer types.CanonicalEventAnnouncer
+	CanonicalFetcher   canonicalFetcher
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config, announcer types.CanonicalEventAnnouncer) *Service {
+func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                ctx,
 		cancel:             cancel,
-		announcer:          announcer,
+		announcer:          cfg.CanonicalAnnouncer,
+		fetcher:            cfg.CanonicalFetcher,
 		port:               cfg.Port,
 		withCert:           cfg.CertFlag,
 		withKey:            cfg.KeyFlag,
