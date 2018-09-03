@@ -37,6 +37,19 @@ func (m *MockBeaconServiceServer) EXPECT() *MockBeaconServiceServerMockRecorder 
 	return m.recorder
 }
 
+// CanonicalBlockAndState mocks base method
+func (m *MockBeaconServiceServer) CanonicalBlockAndState(arg0 context.Context, arg1 *empty.Empty) (*v10.CanonicalResponse, error) {
+	ret := m.ctrl.Call(m, "CanonicalBlockAndState", arg0, arg1)
+	ret0, _ := ret[0].(*v10.CanonicalResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CanonicalBlockAndState indicates an expected call of CanonicalBlockAndState
+func (mr *MockBeaconServiceServerMockRecorder) CanonicalBlockAndState(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalBlockAndState", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalBlockAndState), arg0, arg1)
+}
+
 // FetchShuffledValidatorIndices mocks base method
 func (m *MockBeaconServiceServer) FetchShuffledValidatorIndices(arg0 context.Context, arg1 *v10.ShuffleRequest) (*v10.ShuffleResponse, error) {
 	ret := m.ctrl.Call(m, "FetchShuffledValidatorIndices", arg0, arg1)
