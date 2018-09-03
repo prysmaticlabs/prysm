@@ -119,7 +119,6 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
-
 	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
@@ -129,7 +128,6 @@ func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
 		return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 	}
 	return types.NewBlock(block), nil
-
 }
 
 // ActiveState contains the current state of attestations and changes every block.

@@ -17,14 +17,6 @@ type P2P interface {
 	Broadcast(msg interface{})
 }
 
-// CanonicalEventAnnouncer defines a struct that pushes canonical blocks
-// and crystallized states to announcement channels once they are
-// finalized in the beacon node.
-type CanonicalEventAnnouncer interface {
-	CanonicalBlockFeed() *event.Feed
-	CanonicalCrystallizedStateFeed() *event.Feed
-}
-
 // ChainService is the interface for the local beacon chain.
 type ChainService interface {
 	BlockChainService

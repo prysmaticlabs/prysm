@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -17,16 +18,23 @@ import (
 
 var log = logrus.WithField("prefix", "rpc")
 
+// canonicalFetcher defines a struct with methods that can be
+// called on-demand to fetch the latest canonical head
+// and crystallized state as well as methods that stream
+// latest canonical head events to clients
+// These functions are called by a validator client upon
+// establishing an initial connection to a beacon node via gRPC.
 type canonicalFetcher interface {
-	CanonicalBlock() (*types.Block, error)
-	CanonicalCrystallizedState(crystallizedHash [32]byte) (*types.CrystallizedState, error)
+	CanonicalHead() (*types.Block, error)
+	CanonicalCrystallizedState() *types.CrystallizedState
+	CanonicalBlockFeed() *event.Feed
+	CanonicalCrystallizedStateFeed() *event.Feed
 }
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
-	announcer          types.CanonicalEventAnnouncer
 	fetcher            canonicalFetcher
 	port               string
 	listener           net.Listener
@@ -39,12 +47,11 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port               string
-	CertFlag           string
-	KeyFlag            string
-	SubscriptionBuf    int
-	CanonicalAnnouncer types.CanonicalEventAnnouncer
-	CanonicalFetcher   canonicalFetcher
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	SubscriptionBuf  int
+	CanonicalFetcher canonicalFetcher
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -54,7 +61,6 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	return &Service{
 		ctx:                ctx,
 		cancel:             cancel,
-		announcer:          cfg.CanonicalAnnouncer,
 		fetcher:            cfg.CanonicalFetcher,
 		port:               cfg.Port,
 		withCert:           cfg.CertFlag,
@@ -110,9 +116,17 @@ func (s *Service) Stop() error {
 // CanonicalBlockAndState returns the latest block and crystallized state
 // determined as canonical in a beacon node. Validator clients send this request
 // once upon establishing a connection to the beacon node in order to determine
-// their responsibility.
+// their role and assigned slot initially.
 func (s *Service) CanonicalBlockAndState(ctx context.Context, req *empty.Empty) (*pb.CanonicalResponse, error) {
-	return nil, errors.New("unimplemented")
+	block, err := s.fetcher.CanonicalHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch canonical block: %v", err)
+	}
+	crystallized := s.fetcher.CanonicalCrystallizedState()
+	return &pb.CanonicalResponse{
+		CanonicalBlock:    block.Proto(),
+		CrystallizedState: crystallized.Proto(),
+	}, nil
 }
 
 // FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
@@ -158,7 +172,7 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 	// Right now, this streams every announced block received via p2p. It should only stream
 	// finalized blocks that are canonical in the beacon node after applying the fork choice
 	// rule.
-	sub := s.announcer.CanonicalBlockFeed().Subscribe(s.canonicalBlockChan)
+	sub := s.fetcher.CanonicalBlockFeed().Subscribe(s.canonicalBlockChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -178,7 +192,7 @@ func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_La
 func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
 	// Right now, this streams every newly created crystallized state but should only
 	// stream canonical states.
-	sub := s.announcer.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
+	sub := s.fetcher.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {

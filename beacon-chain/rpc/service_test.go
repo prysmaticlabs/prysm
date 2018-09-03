@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -24,30 +25,63 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockAnnouncer struct {
+type mockChainService struct {
 	blockFeed *event.Feed
 	stateFeed *event.Feed
 }
 
-func newMockAnnouncer() *mockAnnouncer {
-	return &mockAnnouncer{
+func newMockChainService() *mockChainService {
+	return &mockChainService{
 		blockFeed: new(event.Feed),
 		stateFeed: new(event.Feed),
 	}
 }
 
-func (m *mockAnnouncer) CanonicalBlockFeed() *event.Feed {
+func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return m.blockFeed
 }
 
-func (m *mockAnnouncer) CanonicalCrystallizedStateFeed() *event.Feed {
+func (m *mockChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return m.stateFeed
+}
+
+func (m *mockChainService) CanonicalHead() (*types.Block, error) {
+	data := &pbp2p.BeaconBlock{SlotNumber: 5}
+	return types.NewBlock(data), nil
+}
+
+func (m *mockChainService) CanonicalCrystallizedState() *types.CrystallizedState {
+	data := &pbp2p.CrystallizedState{}
+	return types.NewCrystallizedState(data)
+}
+
+type faultyChainService struct{}
+
+func (f *faultyChainService) CanonicalBlockFeed() *event.Feed {
+	return nil
+}
+
+func (f *faultyChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+	return nil
+}
+
+func (f *faultyChainService) CanonicalHead() (*types.Block, error) {
+	return nil, errors.New("oops failed")
+}
+
+func (f *faultyChainService) CanonicalCrystallizedState() *types.CrystallizedState {
+	return nil
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7348", CertFlag: "alice.crt", KeyFlag: "alice.key"}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "7348",
+		CertFlag:         "alice.crt",
+		KeyFlag:          "alice.key",
+		CanonicalFetcher: cs,
+	})
 
 	rpcService.Start()
 
@@ -60,8 +94,11 @@ func TestLifecycle(t *testing.T) {
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "ralph merkle!!!"}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "ralph merkle!!!",
+		CanonicalFetcher: cs,
+	})
 
 	rpcService.Start()
 
@@ -74,8 +111,11 @@ func TestBadEndpoint(t *testing.T) {
 
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7777"}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "7777",
+		CanonicalFetcher: cs,
+	})
 
 	rpcService.Start()
 
@@ -88,8 +128,11 @@ func TestInsecureEndpoint(t *testing.T) {
 }
 
 func TestRPCMethods(t *testing.T) {
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7362"}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "7362",
+		CanonicalFetcher: cs,
+	})
 	if _, err := rpcService.ProposeBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
 	}
@@ -98,9 +141,33 @@ func TestRPCMethods(t *testing.T) {
 	}
 }
 
+func TestCanonicalBlockAndState(t *testing.T) {
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "7362",
+		CanonicalFetcher: cs,
+	})
+	if _, err := rpcService.CanonicalBlockAndState(context.Background(), nil); err != nil {
+		t.Errorf("Unexpected error when calling CanonicalBlockAndState: %v", err)
+	}
+
+	faulty := &faultyChainService{}
+	rpcService = NewRPCService(context.Background(), &Config{
+		Port:             "7362",
+		CanonicalFetcher: faulty,
+	})
+	_, err := rpcService.CanonicalBlockAndState(context.Background(), nil)
+	if !strings.Contains(err.Error(), "could not fetch canonical") {
+		t.Errorf("Expected: could not fetch canonical, received %v", err)
+	}
+}
+
 func TestFetchShuffledValidatorIndices(t *testing.T) {
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "6372"}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "6372",
+		CanonicalFetcher: cs,
+	})
 	res, err := rpcService.FetchShuffledValidatorIndices(context.Background(), &pb.ShuffleRequest{})
 	if err != nil {
 		t.Fatalf("Could not call RPC method: %v", err)
@@ -112,8 +179,12 @@ func TestFetchShuffledValidatorIndices(t *testing.T) {
 
 func TestLatestBeaconBlockContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "6663", SubscriptionBuf: 0}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "6663",
+		SubscriptionBuf:  0,
+		CanonicalFetcher: cs,
+	})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -131,8 +202,12 @@ func TestLatestBeaconBlockContextClosed(t *testing.T) {
 
 func TestLatestBeaconBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7771", SubscriptionBuf: 0}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "7771",
+		SubscriptionBuf:  0,
+		CanonicalFetcher: cs,
+	})
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -167,8 +242,12 @@ func TestLatestBeaconBlock(t *testing.T) {
 
 func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "8777",
+		SubscriptionBuf:  0,
+		CanonicalFetcher: cs,
+	})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -186,8 +265,12 @@ func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 
 func TestLatestCrystallizedState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8773", SubscriptionBuf: 0}, announcer)
+	cs := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "8773",
+		SubscriptionBuf:  0,
+		CanonicalFetcher: cs,
+	})
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

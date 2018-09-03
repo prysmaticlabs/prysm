@@ -101,6 +101,16 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// CanonicalHead of the current beacon chain.
+func (c *ChainService) CanonicalHead() (*types.Block, error) {
+	return c.chain.CanonicalHead()
+}
+
+// CanonicalCrystallizedState of the current beacon chain's head.
+func (c *ChainService) CanonicalCrystallizedState() *types.CrystallizedState {
+	return c.chain.CrystallizedState()
+}
+
 // IncomingBlockFeed returns a feed that a sync service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
@@ -110,12 +120,10 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
-
 	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return false, err
 	}
-
 	return hasCrystallized, nil
 }
 
