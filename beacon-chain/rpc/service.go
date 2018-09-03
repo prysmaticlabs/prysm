@@ -176,6 +176,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debugf("Block proposal received via RPC")
 	// We relay the received block from the proposer to the chain service for processing.
 	s.chainService.IncomingBlockFeed().Send(block)
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil

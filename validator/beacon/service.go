@@ -53,18 +53,20 @@ func (s *Service) Start() {
 	// First thing the validator does is request the current, canonical
 	// beacon chain head and crystallized state in case the beacon node is
 	// currently in a cycle we are supposed to participate in.
-	res, err := client.CanonicalHeadAndState(s.ctx, &empty.Empty{})
-	if err != nil {
-		// If this RPC request fails, the entire system should fatal as it is critical for
-		// the validator to begin this way.
-		log.Fatalf("Could not fetch current canonical head and state from beacon node: %v", err)
-	}
-	if err := s.processCrystallizedState(res.GetCrystallizedState(), client); err != nil {
-		log.Fatalf("Unable to process received crystallized state: %v", err)
-	}
-	// We process the received canonical block to determine if we have to perform
-	// validator responsibilities right away.
-	s.processBeaconBlock(res.GetCanonicalBlock())
+	go func() {
+		res, err := client.CanonicalHeadAndState(s.ctx, &empty.Empty{})
+		if err != nil {
+			// If this RPC request fails, the entire system should fatal as it is critical for
+			// the validator to begin this way.
+			log.Fatalf("Could not fetch current canonical head and state from beacon node: %v", err)
+		}
+		if err := s.processCrystallizedState(res.GetCrystallizedState(), client); err != nil {
+			log.Fatalf("Unable to process received crystallized state: %v", err)
+		}
+		// We process the received canonical block to determine if we have to perform
+		// validator responsibilities right away.
+		s.processBeaconBlock(res.GetCanonicalBlock())
+	}()
 
 	// Then, we start up some routines in the background that will constantly listen
 	// for the canonical head/state in order to keep performing validator responsibilities

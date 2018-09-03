@@ -119,6 +119,15 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
+	has, err := b.db.Has(canonicalHeadLookupKey)
+	if err != nil {
+		return nil, err
+	}
+	// If there has not been a canonical head stored yet, we
+	// return the genesis block of the chain.
+	if !has {
+		return b.GenesisBlock()
+	}
 	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
