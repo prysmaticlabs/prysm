@@ -38,22 +38,22 @@ func (m *MockBeaconServiceClient) EXPECT() *MockBeaconServiceClientMockRecorder 
 	return m.recorder
 }
 
-// CanonicalBlockAndState mocks base method
-func (m *MockBeaconServiceClient) CanonicalBlockAndState(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.CanonicalResponse, error) {
+// CanonicalHeadAndState mocks base method
+func (m *MockBeaconServiceClient) CanonicalHeadAndState(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.CanonicalResponse, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "CanonicalBlockAndState", varargs...)
+	ret := m.ctrl.Call(m, "CanonicalHeadAndState", varargs...)
 	ret0, _ := ret[0].(*v10.CanonicalResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CanonicalBlockAndState indicates an expected call of CanonicalBlockAndState
-func (mr *MockBeaconServiceClientMockRecorder) CanonicalBlockAndState(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// CanonicalHeadAndState indicates an expected call of CanonicalHeadAndState
+func (mr *MockBeaconServiceClientMockRecorder) CanonicalHeadAndState(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalBlockAndState", reflect.TypeOf((*MockBeaconServiceClient)(nil).CanonicalBlockAndState), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHeadAndState", reflect.TypeOf((*MockBeaconServiceClient)(nil).CanonicalHeadAndState), varargs...)
 }
 
 // FetchShuffledValidatorIndices mocks base method

@@ -25,8 +25,13 @@ var log = logrus.WithField("prefix", "rpc")
 // These functions are called by a validator client upon
 // establishing an initial connection to a beacon node via gRPC.
 type canonicalFetcher interface {
+	// These methods can be called on-demand by a validator
+	// to fetch canonical head and state.
 	CanonicalHead() (*types.Block, error)
 	CanonicalCrystallizedState() *types.CrystallizedState
+	// These methods are not called on-demand by a validator
+	// but instead streamed to connected validators every
+	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
 	CanonicalCrystallizedStateFeed() *event.Feed
 }
@@ -113,11 +118,11 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// CanonicalBlockAndState returns the latest block and crystallized state
+// CanonicalHeadAndState returns the latest block and crystallized state
 // determined as canonical in a beacon node. Validator clients send this request
 // once upon establishing a connection to the beacon node in order to determine
 // their role and assigned slot initially.
-func (s *Service) CanonicalBlockAndState(ctx context.Context, req *empty.Empty) (*pb.CanonicalResponse, error) {
+func (s *Service) CanonicalHeadAndState(ctx context.Context, req *empty.Empty) (*pb.CanonicalResponse, error) {
 	block, err := s.fetcher.CanonicalHead()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch canonical block: %v", err)

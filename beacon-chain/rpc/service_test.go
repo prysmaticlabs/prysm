@@ -141,14 +141,14 @@ func TestRPCMethods(t *testing.T) {
 	}
 }
 
-func TestCanonicalBlockAndState(t *testing.T) {
+func TestCanonicalHeadAndState(t *testing.T) {
 	cs := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:             "7362",
 		CanonicalFetcher: cs,
 	})
-	if _, err := rpcService.CanonicalBlockAndState(context.Background(), nil); err != nil {
-		t.Errorf("Unexpected error when calling CanonicalBlockAndState: %v", err)
+	if _, err := rpcService.CanonicalHeadAndState(context.Background(), nil); err != nil {
+		t.Errorf("Unexpected error when calling CanonicalHeadAndState: %v", err)
 	}
 
 	faulty := &faultyChainService{}
@@ -156,7 +156,7 @@ func TestCanonicalBlockAndState(t *testing.T) {
 		Port:             "7362",
 		CanonicalFetcher: faulty,
 	})
-	_, err := rpcService.CanonicalBlockAndState(context.Background(), nil)
+	_, err := rpcService.CanonicalHeadAndState(context.Background(), nil)
 	if !strings.Contains(err.Error(), "could not fetch canonical") {
 		t.Errorf("Expected: could not fetch canonical, received %v", err)
 	}
