@@ -36,6 +36,7 @@ func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
 
 type mockChainService struct {
 	slotExists bool
+	checkError bool
 }
 
 func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
@@ -51,6 +52,9 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 }
 
 func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
+	if ms.checkError {
+		return false, errors.New("mock check canonical block error")
+	}
 	return ms.slotExists, nil
 }
 
@@ -196,6 +200,18 @@ func TestBlockRequestBySlot(t *testing.T) {
 		exitRoutine <- true
 	}()
 
+	malformedRequest := &pb.BeaconBlockHashAnnounce{
+		Hash: []byte{'t', 'e', 's', 't'},
+	}
+
+	invalidmsg := p2p.Message{
+		Data: malformedRequest,
+		Peer: p2p.Peer{},
+	}
+
+	ss.blockRequestBySlot <- invalidmsg
+	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
+
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
 	}
@@ -208,7 +224,13 @@ func TestBlockRequestBySlot(t *testing.T) {
 	ss.blockRequestBySlot <- msg1
 	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 
+	ms.checkError = true
 	ms.slotExists = true
+
+	ss.blockRequestBySlot <- msg1
+	testutil.AssertLogsContain(t, hook, "Error checking db for block mock check canonical block error")
+
+	ms.checkError = false
 
 	ss.blockRequestBySlot <- msg1
 	ss.cancel()
