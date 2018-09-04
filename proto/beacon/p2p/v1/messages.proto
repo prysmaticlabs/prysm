@@ -111,10 +111,12 @@ message ValidatorRecord {
 message AttestationRecord {
   uint64 slot = 1;
   uint64 shard_id = 2;
-  bytes shard_block_hash = 3;
-  bytes attester_bitfield = 4;
-  repeated bytes oblique_parent_hashes = 5;
-  repeated uint64 aggregate_sig = 6;
+  uint64 justified_slot = 3;
+  bytes justified_block_hash = 4;
+  bytes shard_block_hash = 5;
+  bytes attester_bitfield = 6;
+  repeated bytes oblique_parent_hashes = 7;
+  repeated uint64 aggregate_sig = 8;
 }
 
 message CrosslinkRecord {
