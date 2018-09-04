@@ -25,7 +25,7 @@ type ChainService struct {
 	beaconDB                       ethdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
-	validator                      bool
+	isValidator                      bool
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	canonicalBlockFeed             *event.Feed
@@ -70,7 +70,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		cancel:                            cancel,
 		beaconDB:                          cfg.BeaconDB,
 		web3Service:                       cfg.Web3Service,
-		validator:                         isValidator,
+		isValidator:                         isValidator,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
 		incomingBlockChan:                 make(chan *types.Block, cfg.IncomingBlockBuf),
 		lastSlot:                          1, // TODO: Initialize from the db.
@@ -86,7 +86,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	if c.validator {
+	if c.isValidator {
 		log.Infof("Starting service as validator")
 	} else {
 		log.Infof("Starting service as observer")
@@ -292,11 +292,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Process block as a validator if beacon node has registered, else process block as an observer.
-			if c.validator {
-				canProcessBlock, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
-			} else {
-				canProcessBlock, err = c.chain.CanProcessBlock(nil, block, false)
-			}
+			canProcessBlock, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, c.isValidator)
 			if err != nil {
 				// We might receive a lot of blocks that fail validity conditions,
 				// so we create a debug level log instead of an error log.
