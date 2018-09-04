@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
@@ -24,6 +25,12 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+}
+
+type mockPOWChainService struct{}
+
+func (m *mockPOWChainService) LatestBlockHash() common.Hash {
+	return common.BytesToHash([]byte{})
 }
 
 type mockChainService struct {
@@ -137,10 +144,8 @@ func TestRPCMethods(t *testing.T) {
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:             "7362",
 		CanonicalFetcher: cs,
+		POWChainService:  &mockPOWChainService{},
 	})
-	if _, err := rpcService.ProposeBlock(context.Background(), nil); err == nil {
-		t.Error("Wanted error: unimplemented, received nil")
-	}
 	if _, err := rpcService.SignBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
 	}
@@ -188,6 +193,7 @@ func TestProposeBlock(t *testing.T) {
 		Port:             "6372",
 		CanonicalFetcher: mockChain,
 		ChainService:     mockChain,
+		POWChainService:  &mockPOWChainService{},
 	})
 	req := &pb.ProposeRequest{
 		SlotNumber: 5,

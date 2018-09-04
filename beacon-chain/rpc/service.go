@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -41,12 +42,17 @@ type chainService interface {
 	IncomingBlockFeed() *event.Feed
 }
 
+type powChainService interface {
+	LatestBlockHash() common.Hash
+}
+
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	fetcher            canonicalFetcher
 	chainService       chainService
+	powChainService    powChainService
 	port               string
 	listener           net.Listener
 	withCert           string
@@ -64,6 +70,7 @@ type Config struct {
 	SubscriptionBuf  int
 	CanonicalFetcher canonicalFetcher
 	ChainService     chainService
+	POWChainService  powChainService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -75,6 +82,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		cancel:             cancel,
 		fetcher:            cfg.CanonicalFetcher,
 		chainService:       cfg.ChainService,
+		powChainService:    cfg.POWChainService,
 		port:               cfg.Port,
 		withCert:           cfg.CertFlag,
 		withKey:            cfg.KeyFlag,
@@ -167,10 +175,12 @@ func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.Shu
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
 	// TODO: handle fields such as attestation bitmask, aggregate sig, and randao reveal.
+	powChainHash := s.powChainService.LatestBlockHash()
 	data := &pbp2p.BeaconBlock{
-		SlotNumber: req.GetSlotNumber(),
-		ParentHash: req.GetParentHash(),
-		Timestamp:  req.GetTimestamp(),
+		SlotNumber:  req.GetSlotNumber(),
+		PowChainRef: powChainHash[:],
+		ParentHash:  req.GetParentHash(),
+		Timestamp:   req.GetTimestamp(),
 	}
 	block := types.NewBlock(data)
 	h, err := block.Hash()

@@ -277,6 +277,14 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var web3Service *powchain.Web3Service
+	var isValidator = ctx.GlobalBool(utils.ValidatorFlag.Name)
+	if isValidator {
+		if err := b.services.FetchService(&web3Service); err != nil {
+			return err
+		}
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
@@ -287,6 +295,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SubscriptionBuf:  100,
 		CanonicalFetcher: chainService,
 		ChainService:     chainService,
+		POWChainService:  web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)
