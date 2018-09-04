@@ -15,7 +15,6 @@ import (
 
 // The fields below define the prefixing of keys in the db.
 var (
-
 	// CanonicalHeadLookupKey tracks the latest canonical head.
 	canonicalHeadLookupKey = []byte("latest-canonical-head")
 
@@ -32,7 +31,6 @@ var (
 	blockPrefix = []byte("block-") // blockPrefix + blockhash -> block
 
 	canonicalPrefix = []byte("canonical-") // canonicalPrefix + num(uint64 big endian) -> blockhash
-
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint64.

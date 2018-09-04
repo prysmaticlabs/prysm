@@ -496,7 +496,6 @@ func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
 
 // saveBlock puts the passed block into the beacon chain db.
 func (b *BeaconChain) saveBlock(block *types.Block) error {
-
 	hash, err := block.Hash()
 	if err != nil {
 		return err
@@ -544,13 +543,34 @@ func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 
 	block := &pb.BeaconBlock{}
 
-	if err := proto.Unmarshal(enc, block); err != nil {
-		return nil, err
-	}
-	return types.NewBlock(block), nil
+	err = proto.Unmarshal(enc, block)
+
+	return types.NewBlock(block), err
 }
 
 // removeBlock removes the block from the db.
 func (b *BeaconChain) removeBlock(hash [32]byte) error {
 	return b.db.Delete(blockKey(hash))
+}
+
+// hasCanonicalBlockForSlot checks the db if the canonical block for
+// this slot exists.
+func (b *BeaconChain) hasCanonicalBlockForSlot(slotnumber uint64) (bool, error) {
+	return b.db.Has(canonicalBlockKey(slotnumber))
+}
+
+// getCanonicalBlockForSlot retrieves the canonical block which is saved in the db
+// for that required slot number.
+func (b *BeaconChain) getCanonicalBlockForSlot(slotNumber uint64) (*types.Block, error) {
+	enc, err := b.db.Get(canonicalBlockKey(slotNumber))
+	if err != nil {
+		return nil, err
+	}
+
+	var blockhash [32]byte
+	copy(blockhash[:], enc)
+
+	block, err := b.getBlock(blockhash)
+
+	return block, err
 }
