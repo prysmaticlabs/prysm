@@ -27,7 +27,7 @@ type ChainService struct {
 	beaconDB                       ethdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
-	validator                      bool
+	isValidator                    bool
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	canonicalBlockFeed             *event.Feed
@@ -63,7 +63,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
 		web3Service:                    cfg.Web3Service,
-		validator:                      isValidator,
+		isValidator:                    isValidator,
 		latestProcessedBlock:           make(chan *types.Block, cfg.BeaconBlockBuf),
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
@@ -77,7 +77,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	if c.validator {
+	if c.isValidator {
 		log.Infof("Starting service as validator")
 	} else {
 		log.Infof("Starting service as observer")
@@ -252,7 +252,8 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Another routine will run that will continually compute
 			// the canonical block and states from this data structure using the
 			// fork choice rule.
-			var canProcess bool
+			var canProcessBlock bool
+			var canProcessAttestations bool
 			var err error
 			var blockVoteCache map[[32]byte]*types.VoteCache
 
@@ -276,38 +277,40 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Process block as a validator if beacon node has registered, else process block as an observer.
-			if c.validator {
-				canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
-			} else {
-				canProcess, err = c.chain.CanProcessBlock(nil, block, false)
-			}
+			canProcessBlock, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, c.isValidator)
 			if err != nil {
 				// We might receive a lot of blocks that fail validity conditions,
 				// so we create a debug level log instead of an error log.
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
-			// If we cannot process this block, we keep listening.
-			if !canProcess {
-				continue
-			}
-
 			// Process attestations as a beacon chain node.
 			var processedAttestations []*pb.AttestationRecord
 			for index, attestation := range block.Attestations() {
-				// Don't add invalid attestation to block vote cache.
-				if err := c.chain.processAttestation(index, block); err == nil {
+				if err := c.chain.processAttestation(index, block); err != nil {
+					canProcessAttestations = false
+					log.Errorf("could not process attestation for block %d because %v", block.SlotNumber(), err)
+				} else {
+					canProcessAttestations = true
 					processedAttestations = append(processedAttestations, attestation)
-					blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
-					if err != nil {
-						log.Debugf("could not calculate new block vote cache: %v", nil)
-					}
 				}
 			}
 
-			// If we cannot process this block, we keep listening.
-			if !canProcess {
+			// If we cannot process an attestation in this block, we keep listening.
+			if !canProcessAttestations {
 				continue
+			}
+			// If we cannot process this block, we keep listening.
+			if !canProcessBlock {
+				continue
+			}
+
+			// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
+			for index := range block.Attestations() {
+				blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
+				if err != nil {
+					log.Debugf("could not calculate new block vote cache: %v", nil)
+				}
 			}
 
 			if c.candidateBlock != nilBlock && receivedSlotNumber > c.candidateBlock.SlotNumber() && receivedSlotNumber > 1 {
