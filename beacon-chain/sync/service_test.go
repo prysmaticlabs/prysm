@@ -37,6 +37,7 @@ func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
 type mockChainService struct {
 	slotExists bool
 	checkError bool
+	getError   bool
 }
 
 func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
@@ -53,12 +54,15 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 
 func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
 	if ms.checkError {
-		return false, errors.New("mock check canonical block error")
+		return ms.slotExists, errors.New("mock check canonical block error")
 	}
 	return ms.slotExists, nil
 }
 
 func (ms *mockChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+	if ms.getError {
+		return nil, errors.New("mock get canonical block error")
+	}
 	if !ms.slotExists {
 		return nil, errors.New("invalid key")
 	}
@@ -186,7 +190,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	hook.Reset()
 }
 
-func TestBlockRequestBySlot(t *testing.T) {
+func TestBlockRequestErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
@@ -223,6 +227,63 @@ func TestBlockRequestBySlot(t *testing.T) {
 
 	ss.blockRequestBySlot <- msg1
 	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
+	hook.Reset()
+
+}
+
+func TestBlockRequestGetCanonicalError(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.BeaconBlockRequestBySlotNumber{
+		SlotNumber: 20,
+	}
+
+	msg1 := p2p.Message{
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+	ms.slotExists = true
+	ms.getError = true
+
+	ss.blockRequestBySlot <- msg1
+	testutil.AssertLogsContain(t, hook, "Error retrieving block from db mock get canonical block error")
+	hook.Reset()
+
+}
+
+func TestBlockRequestBySlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.BeaconBlockRequestBySlotNumber{
+		SlotNumber: 20,
+	}
+
+	msg1 := p2p.Message{
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
 
 	ms.checkError = true
 	ms.slotExists = true
