@@ -20,6 +20,7 @@ go_test(
     embed = [":go_default_library"],
     race = "off",  # TODO(#377): fix issues with race detection testing.
     deps = [
+        "//beacon-chain/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/testutil:go_default_library",

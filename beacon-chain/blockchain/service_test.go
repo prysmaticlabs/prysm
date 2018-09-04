@@ -87,6 +87,7 @@ func TestStartStop(t *testing.T) {
 	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
 		t.Errorf("incorrect recent block hashes")
 	}
+
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
 	}
@@ -254,7 +255,7 @@ func TestRunningChainService(t *testing.T) {
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AttestationRecord{{
 			Slot:             0,
-			AttesterBitfield: []byte{},
+			AttesterBitfield: []byte{'A', 'B'},
 			ShardId:          0,
 		}},
 	})
@@ -272,7 +273,7 @@ func TestRunningChainService(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Finished processing received block and states into DAG")
+	testutil.AssertLogsContain(t, hook, "Finished processing state for candidate block")
 }
 
 func TestUpdateHead(t *testing.T) {
@@ -310,48 +311,26 @@ func TestUpdateHead(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	parentHash := []byte{}
-	chainService.processedBlockHashesBySlot[4] = append(
-		chainService.processedBlockHashesBySlot[4],
-		parentHash,
-	)
+	parentHash := [32]byte{'a'}
 
 	block := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber:            64,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash,
+		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
 	})
 
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
+	chainService.candidateBlock = block
+	chainService.candidateActiveState = active
+	chainService.candidateCrystallizedState = crystallized
 
-	chainService.processedBlockHashesBySlot[64] = append(
-		chainService.processedBlockHashesBySlot[64],
-		h[:],
-	)
-	chainService.processedBlocksBySlot[64] = append(
-		chainService.processedBlocksBySlot[64],
-		block,
-	)
-	chainService.processedActiveStatesBySlot[64] = append(
-		chainService.processedActiveStatesBySlot[64],
-		active,
-	)
-	chainService.processedCrystallizedStatesBySlot[64] = append(
-		chainService.processedCrystallizedStatesBySlot[64],
-		crystallized,
-	)
-
-	chainService.lastSlot = 64
-	chainService.updateHead(65)
+	chainService.updateHead(64)
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 
-	chainService.lastSlot = 100
-	chainService.updateHead(101)
+	if chainService.candidateBlock != nilBlock {
+		t.Error("Candidate Block unable to be reset")
+	}
 }
 
 func TestProcessingBlockWithAttestations(t *testing.T) {
@@ -435,7 +414,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	}
 
 	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            1,
+		SlotNumber:            2,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
@@ -448,6 +427,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
+
 }
 
 func TestProcessingBlocks(t *testing.T) {
@@ -503,7 +483,7 @@ func TestProcessingBlocks(t *testing.T) {
 		CrystallizedStateHash: crystallizedStateHash[:],
 		Attestations: []*pb.AttestationRecord{{
 			Slot:             0,
-			AttesterBitfield: []byte{},
+			AttesterBitfield: []byte{0, 0},
 			ShardId:          0,
 		}},
 	})
@@ -530,8 +510,8 @@ func TestProcessingBlocks(t *testing.T) {
 		ParentHash: block1Hash[:],
 		SlotNumber: 2,
 		Attestations: []*pb.AttestationRecord{
-			{Slot: 1, AttesterBitfield: []byte{}, ShardId: 0},
-			{Slot: 1, AttesterBitfield: []byte{}, ShardId: 2},
+			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
 	chainService.incomingBlockChan <- block2
@@ -546,9 +526,9 @@ func TestProcessingBlocks(t *testing.T) {
 		ParentHash: block2Hash[:],
 		SlotNumber: 3,
 		Attestations: []*pb.AttestationRecord{
-			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 0},
-			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 2},
-			{Slot: 2, AttesterBitfield: []byte{}, ShardId: 4},
+			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+			{Slot: 2, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
 	chainService.incomingBlockChan <- block3
