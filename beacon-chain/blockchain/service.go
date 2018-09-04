@@ -279,17 +279,12 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Process attestations as a beacon chain node.
 			var processedAttestations []*pb.AttestationRecord
 			for index, attestation := range block.Attestations() {
-				// Don't add invalid attestation to block vote cache.
 				if err := c.chain.processAttestation(index, block); err != nil {
 					canProcessAttestations = false
 					log.Errorf("could not process attestation for block %d because %v", block.SlotNumber(), err)
 				} else {
 					canProcessAttestations = true
 					processedAttestations = append(processedAttestations, attestation)
-					blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
-					if err != nil {
-						log.Debugf("could not calculate new block vote cache: %v", nil)
-					}
 				}
 			}
 
@@ -300,6 +295,13 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// If we cannot process this block, we keep listening.
 			if !canProcessBlock {
 				continue
+			}
+
+			for index := range block.Attestations() {
+				blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
+				if err != nil {
+					log.Debugf("could not calculate new block vote cache: %v", nil)
+				}
 			}
 
 			if c.candidateBlock != nilBlock && receivedSlotNumber > c.candidateBlock.SlotNumber() && receivedSlotNumber > 1 {
