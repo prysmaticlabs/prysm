@@ -735,3 +735,108 @@ func TestSaveAndRemoveBlocks(t *testing.T) {
 		t.Fatalf("unable to remove block a second time %v", err)
 	}
 }
+
+func TestCheckBlockBySlotNumber(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := beaconChain.saveCanonicalSlotNumber(block.SlotNumber(), hash); err != nil {
+		t.Fatalf("unable to save canonical slot %v", err)
+	}
+
+	if err := beaconChain.saveBlock(block); err != nil {
+		t.Fatalf("unable to save block %v", err)
+	}
+
+	slotExists, err := beaconChain.hasCanonicalBlockForSlot(block.SlotNumber())
+	if err != nil {
+		t.Fatalf("unable to check for block by slot %v", err)
+	}
+
+	if !slotExists {
+		t.Error("slot does not exist despite blockhash of canonical block being saved in the db")
+	}
+
+	alternateblock := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("d"),
+	})
+
+	althash, err := alternateblock.Hash()
+	if err != nil {
+		t.Fatalf("unable to hash block %v", err)
+	}
+
+	if err := beaconChain.saveCanonicalSlotNumber(block.SlotNumber(), althash); err != nil {
+		t.Fatalf("unable to save canonical slot %v", err)
+	}
+
+	retrievedHash, err := beaconChain.db.Get(canonicalBlockKey(block.SlotNumber()))
+	if err != nil {
+		t.Fatalf("unable to retrieve blockhash %v", err)
+	}
+
+	if !bytes.Equal(retrievedHash, althash[:]) {
+		t.Errorf("unequal hashes between what was saved and what was retrieved %v, %v", retrievedHash, althash)
+	}
+}
+
+func TestGetBlockBySlotNumber(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("a"),
+	})
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := beaconChain.saveCanonicalSlotNumber(block.SlotNumber(), hash); err != nil {
+		t.Fatalf("unable to save canonical slot %v", err)
+	}
+
+	if err := beaconChain.saveBlock(block); err != nil {
+		t.Fatalf("unable to save block %v", err)
+	}
+
+	retblock, err := beaconChain.getCanonicalBlockForSlot(block.SlotNumber())
+	if err != nil {
+		t.Fatalf("unable to get block from db %v", err)
+	}
+
+	if !bytes.Equal(retblock.PowChainRef().Bytes(), block.PowChainRef().Bytes()) {
+		t.Error("canonical block saved different from block retrieved")
+	}
+
+	alternateblock := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber:  64,
+		PowChainRef: []byte("d"),
+	})
+
+	althash, err := alternateblock.Hash()
+	if err != nil {
+		t.Fatalf("unable to hash block %v", err)
+	}
+
+	if err := beaconChain.saveCanonicalSlotNumber(block.SlotNumber(), althash); err != nil {
+		t.Fatalf("unable to save canonical slot %v", err)
+	}
+
+	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
+		t.Fatal("there should be an error because block does not exist in the db")
+	}
+}
