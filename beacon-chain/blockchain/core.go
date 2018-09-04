@@ -536,10 +536,9 @@ func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 
 	block := &pb.BeaconBlock{}
 
-	if err := proto.Unmarshal(enc, block); err != nil {
-		return nil, err
-	}
-	return types.NewBlock(block), nil
+	err = proto.Unmarshal(enc, block)
+
+	return types.NewBlock(block), err
 }
 
 // removeBlock removes the block from the db.
@@ -565,8 +564,6 @@ func (b *BeaconChain) getCanonicalBlockForSlot(slotNumber uint64) (*types.Block,
 	copy(blockhash[:], enc)
 
 	block, err := b.getBlock(blockhash)
-	if err != nil {
-		return nil, err
-	}
-	return block, nil
+
+	return block, err
 }
