@@ -297,6 +297,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
+			// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
 			for index := range block.Attestations() {
 				blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
 				if err != nil {
