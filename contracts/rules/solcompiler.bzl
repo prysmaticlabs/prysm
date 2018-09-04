@@ -18,6 +18,25 @@ filegroup(
   visibility = ['//visibility:public'],
 )"""
 
+_SOLIDITY_COMPILER_BINARY_WIN64_BUILD = """
+package(default_visibility = ["//visibility:public"])
+
+exports_files(
+  ['solc.exe', 'msvcp140.dll'],
+  visibility = ['//visibility:public'],
+)
+
+exports_files(
+  ['sol2go.sh'],
+  visibility = ['//visibility:public'],
+)
+
+filegroup(
+  name = 'file',
+  srcs = ['solc', 'sol2go.sh', 'msvcp140.dll'],
+  visibility = ['//visibility:public'],
+)"""
+
 _SOLIDITY_SOL2GO = """
 #!/usr/bin/env bash
 
@@ -60,27 +79,32 @@ def _solc_fetch_impl(ctx):
           host = "linux_ppc64le"
       elif uname == "i686":
           host = "linux_386"
-    elif ctx.os.name == "mac os x":
-        host = "darwin_amd64"
-    elif ctx.os.name.startswith("windows"):
-        host = "windows_amd64"
-    elif ctx.os.name == "freebsd":
-        host = "freebsd_amd64"
-    else:
-        fail("Unsupported operating system: " + ctx.os.name)
+  elif ctx.os.name == "mac os x":
+    host = "darwin_amd64"
+  elif ctx.os.name.startswith("windows"):
+    host = "windows_amd64"
+  elif ctx.os.name == "freebsd":
+    host = "freebsd_amd64"
+  else:
+    fail("Unsupported operating system: " + ctx.os.name)
 
-    #Get the right url according to host
-    sdks = ctx.attr.sdks
-    if host not in sdks:
-      fail("Unsupported host {}".format(host))
-    url, sha256 = ctx.attr.sdks[host]
+  #Get the right url according to host
+  sdks = ctx.attr.sdks
+  if host not in sdks:
+    fail("Unsupported host {}".format(host))
+  url, sha256 = ctx.attr.sdks[host]
+  print(url)
 
-    #Code similar to http_file but make the file executable
+  #Code similar to http_file but make the file executable
+  if host == "windows_amd64":
+    ctx.download_and_extract(url=url, output="solidity_compiler/", sha256=sha256)
+    ctx.file("solidity_compiler/BUILD", _SOLIDITY_COMPILER_BINARY_WIN64_BUILD)
+  else:
     ctx.download(url=url, output="solidity_compiler/solc", sha256=sha256, executable=True)
-    ctx.file("WORKSPACE", "workspace(name = \"{name}\")".format(name = ctx.name))
     ctx.file("solidity_compiler/BUILD", _SOLIDITY_COMPILER_BINARY_BUILD)
-    external_dir = ctx.path('..')
-    ctx.file("solidity_compiler/sol2go.sh", _SOLIDITY_SOL2GO.format(external_dir=external_dir))
+  ctx.file("WORKSPACE", "workspace(name = \"{name}\")".format(name = ctx.name))
+  external_dir = ctx.path('..')
+  ctx.file("solidity_compiler/sol2go.sh", _SOLIDITY_SOL2GO.format(external_dir=external_dir))
 
 solc_fetch = repository_rule(
     _solc_fetch_impl,
