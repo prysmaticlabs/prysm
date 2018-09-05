@@ -102,7 +102,7 @@ func (s *Service) Stop() error {
 // From this, the validator client can deduce what slot interval the beacon
 // node is in and determine when exactly it is time to propose or attest.
 func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) (uint64, error) {
-	res, err := client.GenesisTimestampAndCanonicalState(s.ctx, &empty.Empty{})
+	res, err := client.GenesisTimeAndCanonicalState(s.ctx, &empty.Empty{})
 	if err != nil {
 		// If this RPC request fails, the entire system should fatal as it is critical for
 		// the validator to begin this way.
@@ -119,7 +119,7 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) (
 	if err != nil {
 		return 0, fmt.Errorf("cannot compute genesis timestamp: %v", err)
 	}
-	lastStateRecalcSeconds := crystallized.GetLastStateRecalc() * 8 * time.Second
+	lastStateRecalcSeconds := time.Duration(8*crystallized.GetLastStateRecalc()) * time.Second
 	crystallizedTimestamp := genesisTimestamp.Add(lastStateRecalcSeconds)
 	secondsSinceCrystallized := time.Since(crystallizedTimestamp).Seconds()
 	currentSlot := math.Floor(secondsSinceCrystallized / 8.0)

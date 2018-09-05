@@ -56,22 +56,22 @@ func (mr *MockBeaconServiceClientMockRecorder) FetchShuffledValidatorIndices(arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchShuffledValidatorIndices", reflect.TypeOf((*MockBeaconServiceClient)(nil).FetchShuffledValidatorIndices), varargs...)
 }
 
-// GenesisTimestampAndCanonicalState mocks base method
-func (m *MockBeaconServiceClient) GenesisTimestampAndCanonicalState(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.GenesisTimestampStateResponse, error) {
+// GenesisTimeAndCanonicalState mocks base method
+func (m *MockBeaconServiceClient) GenesisTimeAndCanonicalState(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.GenesisTimeAndStateResponse, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "GenesisTimestampAndCanonicalState", varargs...)
-	ret0, _ := ret[0].(*v10.GenesisTimestampStateResponse)
+	ret := m.ctrl.Call(m, "GenesisTimeAndCanonicalState", varargs...)
+	ret0, _ := ret[0].(*v10.GenesisTimeAndStateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GenesisTimestampAndCanonicalState indicates an expected call of GenesisTimestampAndCanonicalState
-func (mr *MockBeaconServiceClientMockRecorder) GenesisTimestampAndCanonicalState(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// GenesisTimeAndCanonicalState indicates an expected call of GenesisTimeAndCanonicalState
+func (mr *MockBeaconServiceClientMockRecorder) GenesisTimeAndCanonicalState(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenesisTimestampAndCanonicalState", reflect.TypeOf((*MockBeaconServiceClient)(nil).GenesisTimestampAndCanonicalState), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenesisTimeAndCanonicalState", reflect.TypeOf((*MockBeaconServiceClient)(nil).GenesisTimeAndCanonicalState), varargs...)
 }
 
 // LatestBeaconBlock mocks base method

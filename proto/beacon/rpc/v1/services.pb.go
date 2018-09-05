@@ -8,8 +8,8 @@ import fmt "fmt"
 import math "math"
 import empty "github.com/golang/protobuf/ptypes/empty"
 import timestamp "github.com/golang/protobuf/ptypes/timestamp"
-import v1 "proto/beacon/p2p/v1"
-import v11 "proto/sharding/p2p/v1"
+import v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import v11 "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 
 import (
 	context "golang.org/x/net/context"
