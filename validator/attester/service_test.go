@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -16,51 +16,41 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockBeaconService struct {
-	proposerChan chan bool
-	attesterChan chan bool
-}
+type mockAssigner struct{}
 
-func (m *mockBeaconService) AttesterAssignment() <-chan bool {
-	return m.attesterChan
-}
-
-func (m *mockBeaconService) ProposerAssignment() <-chan bool {
-	return m.proposerChan
+func (m *mockAssigner) AttesterAssignmentFeed() *event.Feed {
+	return new(event.Feed)
 }
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	b := &mockBeaconService{
-		attesterChan: make(chan bool),
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
 	}
-	at := NewAttester(context.Background(), b)
-	at.Start()
+	att := NewAttester(context.Background(), cfg)
+	att.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	at.Stop()
+	att.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestAttesterLoop(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	b := &mockBeaconService{
-		attesterChan: make(chan bool),
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
 	}
-	at := NewAttester(context.Background(), b)
+	att := NewAttester(context.Background(), cfg)
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		at.run(doneChan)
+		att.run(doneChan)
 		<-exitRoutine
 	}()
-	b.attesterChan <- true
-	testutil.AssertLogsContain(t, hook, "Performing attestation responsibility")
+	att.assignmentChan <- true
+	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
 	doneChan <- struct{}{}
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Attester context closed")

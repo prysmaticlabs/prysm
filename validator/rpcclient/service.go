@@ -76,7 +76,18 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// BeaconServiceClient return the proto RPC interface.
+// BeaconServiceClient initializes a new beacon gRPC service using
+// an underlying connection object.
+// This wrapper is important because the underlying gRPC connection is
+// only defined after the service .Start() function is called.
 func (s *Service) BeaconServiceClient() pb.BeaconServiceClient {
 	return pb.NewBeaconServiceClient(s.conn)
+}
+
+// ProposerServiceClient initializes a new proposer gRPC service using
+// an underlying connection object.
+// This wrapper is important because the underlying gRPC connection is
+// only defined after the service .Start() function is called.
+func (s *Service) ProposerServiceClient() pb.ProposerServiceClient {
+	return pb.NewProposerServiceClient(s.conn)
 }
