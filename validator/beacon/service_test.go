@@ -46,36 +46,20 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	return mockServiceClient
 }
 
-func TestChannelGetters(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
-	b.proposerChan <- false
-	proposerVal := <-b.ProposerAssignment()
-	if proposerVal {
-		t.Error("Expected false value from channel, received true")
-	}
-	b.attesterChan <- false
-	attesterVal := <-b.AttesterAssignment()
-	if attesterVal {
-		t.Error("Expected false value from channel, received true")
-	}
-}
-
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
-
-	// Testing default config values.
-	cfg := DefaultConfig()
-	if cfg.AttesterChanBuf != 5 && cfg.ProposerChanBuf != 5 {
-		t.Error("Default config values incorrect")
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	// Testing basic feeds.
+	if b.AttesterAssignmentFeed() == nil {
+		t.Error("AttesterAssignmentFeed empty")
 	}
-
+	if b.ProposerAssignmentFeed() == nil {
+		t.Error("ProposerAssignmentFeed empty")
+	}
 	b.Start()
-	// TODO: find a better way to test this. The problem is that start is nonblocking, and it ends
+	// TODO: find a better way to test this. The problem is that start is non-blocking, and it ends
 	// before the for loops of its inner goroutines begin.
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -87,17 +71,16 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 1, ProposerChanBuf: 1}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
 
 	// Create mock for the stream returned by LatestBeaconBlock.
 	stream := internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
 
-	// If the block's slot number from the stream matches the assigned attestation height,
+	// If the block's slot number from the stream matches the assigned attestation slot,
 	// trigger a log.
 	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{SlotNumber: 10}, nil)
 	stream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, io.EOF)
-	b.assignedHeight = 10
+	b.assignedSlot = 10
 	b.responsibility = "attester"
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
@@ -107,7 +90,6 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	).Return(stream, nil)
 
 	b.fetchBeaconBlocks(mockServiceClient)
-	<-b.attesterChan
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
 	testutil.AssertLogsContain(t, hook, "Assigned attestation slot number reached")
@@ -127,7 +109,6 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	).Return(stream, nil)
 
 	b.fetchBeaconBlocks(mockServiceClient)
-	<-b.proposerChan
 
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
 	testutil.AssertLogsContain(t, hook, "Assigned proposal slot number reached")
@@ -162,8 +143,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	b := NewBeaconValidator(context.Background(), &Config{AttesterChanBuf: 0, ProposerChanBuf: 0}, &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
 
 	// Creating a faulty stream will trigger error.
 	stream := internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
@@ -243,7 +223,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Could not fetch shuffled validator indices: something went wrong")
 
-	// Height should be assigned based on the result of ShuffleValidators.
+	// Slot should be assigned based on the result of ShuffleValidators.
 	validator1 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
 	validator2 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x1"), StartDynasty: 1, EndDynasty: 10}
 	validator3 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
@@ -260,9 +240,9 @@ func TestFetchCrystallizedState(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&pb.ShuffleResponse{
-		AssignedAttestationHeights: []uint64{0, 1, 2},
-		CutoffIndices:              []uint64{0, 1, 2},
-		ShuffledValidatorIndices:   []uint64{2, 1, 0},
+		AssignedAttestationSlots: []uint64{0, 1, 2},
+		CutoffIndices:            []uint64{0, 1, 2},
+		ShuffledValidatorIndices: []uint64{2, 1, 0},
 	}, nil)
 
 	b.fetchCrystallizedState(mockServiceClient)

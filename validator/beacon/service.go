@@ -5,57 +5,50 @@ import (
 	"context"
 	"io"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "beacon")
 
+type rpcClientService interface {
+	BeaconServiceClient() pb.BeaconServiceClient
+}
+
 // Service that interacts with a beacon node via RPC.
 type Service struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	rpcClient      types.RPCClient
-	validatorIndex int
-	assignedHeight uint64
-	responsibility string
-	attesterChan   chan bool
-	proposerChan   chan bool
-}
-
-// Config options for the beacon service.
-type Config struct {
-	AttesterChanBuf int
-	ProposerChanBuf int
-}
-
-// DefaultConfig options for the beacon validator service.
-func DefaultConfig() *Config {
-	return &Config{AttesterChanBuf: 5, ProposerChanBuf: 5}
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	rpcClient              rpcClientService
+	validatorIndex         int
+	assignedSlot           uint64
+	responsibility         string
+	attesterAssignmentFeed *event.Feed
+	proposerAssignmentFeed *event.Feed
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node.
-func NewBeaconValidator(ctx context.Context, cfg *Config, rpcClient types.RPCClient) *Service {
+func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		rpcClient:    rpcClient,
-		attesterChan: make(chan bool, cfg.AttesterChanBuf),
-		proposerChan: make(chan bool, cfg.ProposerChanBuf),
+		ctx:                    ctx,
+		cancel:                 cancel,
+		rpcClient:              rpcClient,
+		attesterAssignmentFeed: new(event.Feed),
+		proposerAssignmentFeed: new(event.Feed),
 	}
 }
 
 // Start the main routine for a beacon service.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	rpcClient := s.rpcClient.BeaconServiceClient()
-	go s.fetchBeaconBlocks(rpcClient)
-	go s.fetchCrystallizedState(rpcClient)
+	client := s.rpcClient.BeaconServiceClient()
+	go s.fetchBeaconBlocks(client)
+	go s.fetchCrystallizedState(client)
 }
 
 // Stop the main loop..
@@ -65,16 +58,16 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// AttesterAssignment returns a channel that is written to whenever it is the validator's
+// AttesterAssignmentFeed returns a feed that is written to whenever it is the validator's
 // slot to perform attestations.
-func (s *Service) AttesterAssignment() <-chan bool {
-	return s.attesterChan
+func (s *Service) AttesterAssignmentFeed() *event.Feed {
+	return s.attesterAssignmentFeed
 }
 
-// ProposerAssignment returns a channel that is written to whenever it is the validator's
+// ProposerAssignmentFeed returns a feed that is written to whenever it is the validator's
 // slot to proposer blocks.
-func (s *Service) ProposerAssignment() <-chan bool {
-	return s.proposerChan
+func (s *Service) ProposerAssignmentFeed() *event.Feed {
+	return s.proposerAssignmentFeed
 }
 
 func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
@@ -96,17 +89,17 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 		}
 		log.WithField("slotNumber", block.GetSlotNumber()).Info("Latest beacon block slot number")
 
-		// Based on the height determined from the latest crystallized state, check if
-		// it matches the latest received beacon height.
+		// Based on the slot determined from the latest crystallized state, check if
+		// it matches the latest received beacon slot.
 		if s.responsibility == "proposer" {
 			log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
 			s.responsibility = ""
-			s.proposerChan <- true
-		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedHeight {
+			s.proposerAssignmentFeed.Send(block)
+		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedSlot {
 			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
 			log.Info("Assigned attestation slot number reached")
 			s.responsibility = ""
-			s.attesterChan <- true
+			s.attesterAssignmentFeed.Send(block)
 		}
 	}
 }
@@ -185,27 +178,27 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		// If the condition above did not pass, the validator is an attester.
 		s.responsibility = "attester"
 
-		// Based on the cutoff and assigned heights, determine the beacon block
-		// height at which attester has to perform its responsibility.
-		currentAssignedHeights := res.GetAssignedAttestationHeights()
+		// Based on the cutoff and assigned slots, determine the beacon block
+		// slot at which attester has to perform its responsibility.
+		currentAssignedSlots := res.GetAssignedAttestationSlots()
 		currentCutoffs := res.GetCutoffIndices()
 
 		// The algorithm functions as follows:
-		// Given a list of heights: [0 19 38 57 12 31 50] and
+		// Given a list of slots: [0 19 38 57 12 31 50] and
 		// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
-		// if the validator index is between 0-142, it can attest at height 0, if it is
-		// between 142-285, that validator can attest at height 19, etc.
-		heightIndex := 0
+		// if the validator index is between 0-142, it can attest at slot 0, if it is
+		// between 142-285, that validator can attest at slot 19, etc.
+		slotIndex := 0
 		for i := 0; i < len(currentCutoffs)-1; i++ {
 			lowCutoff := currentCutoffs[i]
 			highCutoff := currentCutoffs[i+1]
 			if (uint64(s.validatorIndex) >= lowCutoff) && (uint64(s.validatorIndex) <= highCutoff) {
 				break
 			}
-			heightIndex++
+			slotIndex++
 		}
-		s.assignedHeight = currentAssignedHeights[heightIndex]
-		log.Debug("Validator selected as attester at slot number: %d", s.assignedHeight)
+		s.assignedSlot = currentAssignedSlots[slotIndex]
+		log.Debug("Validator selected as attester at slot number: %d", s.assignedSlot)
 	}
 }
 

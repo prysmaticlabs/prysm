@@ -2,8 +2,11 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 
 	"github.com/ethereum/go-ethereum/event"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -31,7 +34,11 @@ func (mp *mockP2P) Broadcast(msg interface{}) {}
 func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
 }
 
-type mockChainService struct{}
+type mockChainService struct {
+	slotExists bool
+	checkError bool
+	getError   bool
+}
 
 func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
 	return false
@@ -43,6 +50,23 @@ func (ms *mockChainService) HasStoredState() (bool, error) {
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
+	if ms.checkError {
+		return ms.slotExists, errors.New("mock check canonical block error")
+	}
+	return ms.slotExists, nil
+}
+
+func (ms *mockChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+	if ms.getError {
+		return nil, errors.New("mock get canonical block error")
+	}
+	if !ms.slotExists {
+		return nil, errors.New("invalid key")
+	}
+	return types.NewBlock(&pb.BeaconBlock{SlotNumber: slotnumber}), nil
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -166,6 +190,116 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	hook.Reset()
 }
 
+func TestBlockRequestErrors(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	malformedRequest := &pb.BeaconBlockHashAnnounce{
+		Hash: []byte{'t', 'e', 's', 't'},
+	}
+
+	invalidmsg := p2p.Message{
+		Data: malformedRequest,
+		Peer: p2p.Peer{},
+	}
+
+	ss.blockRequestBySlot <- invalidmsg
+	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
+
+	request1 := &pb.BeaconBlockRequestBySlotNumber{
+		SlotNumber: 20,
+	}
+
+	msg1 := p2p.Message{
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.blockRequestBySlot <- msg1
+	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
+	hook.Reset()
+
+}
+
+func TestBlockRequestGetCanonicalError(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.BeaconBlockRequestBySlotNumber{
+		SlotNumber: 20,
+	}
+
+	msg1 := p2p.Message{
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+	ms.slotExists = true
+	ms.getError = true
+
+	ss.blockRequestBySlot <- msg1
+	testutil.AssertLogsContain(t, hook, "Error retrieving block from db mock get canonical block error")
+	hook.Reset()
+
+}
+
+func TestBlockRequestBySlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
+	ms := &mockChainService{}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.BeaconBlockRequestBySlotNumber{
+		SlotNumber: 20,
+	}
+
+	msg1 := p2p.Message{
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ms.checkError = true
+	ms.slotExists = true
+
+	ss.blockRequestBySlot <- msg1
+	testutil.AssertLogsContain(t, hook, "Error checking db for block mock check canonical block error")
+
+	ms.checkError = false
+
+	ss.blockRequestBySlot <- msg1
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
+	hook.Reset()
+}
+
 type mockEmptyChainService struct {
 	hasStoredState bool
 }
@@ -184,6 +318,14 @@ func (ms *mockEmptyChainService) IncomingBlockFeed() *event.Feed {
 
 func (ms *mockEmptyChainService) setState(flag bool) {
 	ms.hasStoredState = flag
+}
+
+func (ms *mockEmptyChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
+	return false, nil
+}
+
+func (ms *mockEmptyChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+	return nil, nil
 }
 
 func TestStartEmptyState(t *testing.T) {

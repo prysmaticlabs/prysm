@@ -5,6 +5,7 @@ package ethereum.beacon.rpc.v1;
 import "proto/sharding/p2p/v1/messages.proto";
 import "proto/beacon/p2p/v1/messages.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 service BeaconService {
     rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
@@ -27,13 +28,16 @@ message ShuffleRequest {
 message ShuffleResponse {
     repeated uint64 shuffled_validator_indices = 1;
     repeated uint64 cutoff_indices = 2;
-    repeated uint64 assigned_attestation_heights = 3;
+    repeated uint64 assigned_attestation_slots = 3;
 }
 
 message ProposeRequest {
-  bytes randao_reveal = 1;
-  bytes attestation_bitmask = 2;
-  repeated uint32 attestation_aggregate_sig = 3;
+  bytes parent_hash = 1;
+  uint64 slot_number = 2;
+  bytes randao_reveal = 3;
+  bytes attestation_bitmask = 4;
+  repeated uint32 attestation_aggregate_sig = 5;
+  google.protobuf.Timestamp timestamp = 6;
 }
 
 message ProposeResponse {
