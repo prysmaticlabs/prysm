@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -17,11 +19,16 @@ import (
 
 var log = logrus.WithField("prefix", "rpc")
 
+type chainService interface {
+	IncomingBlockFeed() *event.Feed
+}
+
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	announcer          types.CanonicalEventAnnouncer
+	chainService       chainService
 	port               string
 	listener           net.Listener
 	withCert           string
@@ -37,16 +44,19 @@ type Config struct {
 	CertFlag        string
 	KeyFlag         string
 	SubscriptionBuf int
+	Announcer       types.CanonicalEventAnnouncer
+	ChainService    chainService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
 // interface.
-func NewRPCService(ctx context.Context, cfg *Config, announcer types.CanonicalEventAnnouncer) *Service {
+func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                ctx,
 		cancel:             cancel,
-		announcer:          announcer,
+		announcer:          cfg.Announcer,
+		chainService:       cfg.ChainService,
 		port:               cfg.Port,
 		withCert:           cfg.CertFlag,
 		withKey:            cfg.KeyFlag,
@@ -120,11 +130,21 @@ func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.Shu
 
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
-//
-// TODO: needs implementation.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
-	// TODO: implement.
-	return nil, errors.New("unimplemented")
+	// TODO: handle fields such as attestation bitmask, aggregate sig, and randao reveal.
+	data := &pbp2p.BeaconBlock{
+		SlotNumber: req.GetSlotNumber(),
+		ParentHash: req.GetParentHash(),
+		Timestamp:  req.GetTimestamp(),
+	}
+	block := types.NewBlock(data)
+	h, err := block.Hash()
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+	// We relay the received block from the proposer to the chain service for processing.
+	s.chainService.IncomingBlockFeed().Send(block)
+	return &pb.ProposeResponse{BlockHash: h[:]}, nil
 }
 
 // SignBlock is a function called by an attester in a sharding validator to sign off
