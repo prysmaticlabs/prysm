@@ -242,16 +242,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
-			// 3 steps:
-			// - Compute the active state for the block.
-			// - Compute the crystallized state for the block if cycle transition.
-			// - Store both states and the block into a data structure used for fork choice.
-			//
-			// Another routine will run that will continually compute
-			// the canonical block and states from this data structure using the
-			// fork choice rule.
 			var canProcessBlock bool
 			var canProcessAttestations bool
 			var err error

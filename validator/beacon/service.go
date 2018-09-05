@@ -57,7 +57,7 @@ func (s *Service) Start() {
 	// a validator can determine its assigned slot by keeping an internal
 	// ticker that starts at the current slot the beacon node is in. This current slot
 	// value is determined by taking the time differential between the genesis block
-	// time, and the current system time.
+	// time and the current system time.
 	//
 	// Note: this does not validate the current system time against a global
 	// NTP server, which will be important to do in production.
