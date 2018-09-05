@@ -42,6 +42,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 //
 // TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
+	// Genesis block starts at September 1, 2018.
 	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		return nil, err

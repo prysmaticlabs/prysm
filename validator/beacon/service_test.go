@@ -162,5 +162,5 @@ func TestListenForCrystallizedStates(t *testing.T) {
 
 	b.listenForCrystallizedStates(mockServiceClient)
 
-	testutil.AssertLogsContain(t, hook, "Validator selected as proposer of the next slot")
+	testutil.AssertLogsContain(t, hook, "Validator selected as proposer")
 }

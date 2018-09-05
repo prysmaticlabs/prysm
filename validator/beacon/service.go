@@ -112,17 +112,14 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) (
 	if err := s.processCrystallizedState(crystallized, client); err != nil {
 		return 0, fmt.Errorf("unable to process received crystallized state: %v", err)
 	}
-	// Compute the time since genesis based on the crystallized state last_state_recalc.
-	// Then, compute the difference between that value and the current system time
-	// to determine what slot we are in within that cycle.
+	// Determine what slot the beacon node is in by checking the number of seconds
+	// since the genesis block.
 	genesisTimestamp, err := ptypes.Timestamp(res.GetGenesisTimestamp())
 	if err != nil {
 		return 0, fmt.Errorf("cannot compute genesis timestamp: %v", err)
 	}
-	lastStateRecalcSeconds := time.Duration(8*crystallized.GetLastStateRecalc()) * time.Second
-	crystallizedTimestamp := genesisTimestamp.Add(lastStateRecalcSeconds)
-	secondsSinceCrystallized := time.Since(crystallizedTimestamp).Seconds()
-	currentSlot := math.Floor(secondsSinceCrystallized / 8.0)
+	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
+	currentSlot := math.Floor(secondsSinceGenesis / 8.0)
 	return uint64(currentSlot), nil
 }
 
@@ -135,6 +132,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time) {
 		case <-s.ctx.Done():
 			return
 		case <-ticker:
+			log.WithField("slotNumber", s.currentSlot).Info("New beacon node slot interval")
 			if s.responsibility == "proposer" && s.assignedSlot == s.currentSlot {
 				log.WithField("slotNumber", 0).Info("Assigned proposal slot number reached")
 				s.responsibility = ""
@@ -216,8 +214,8 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 	// TODO: This is a stub until the indices for slots loop is done above.
 	s.responsibility = "proposer"
 	// TODO: Determine the assigned slot.
-	s.assignedSlot = 15
-	log.Debug("Validator selected as proposer of the next slot")
+	s.assignedSlot = 10
+	log.WithField("assignedSlot", s.assignedSlot).Debug("Validator selected as proposer")
 	return nil
 }
 
