@@ -37,19 +37,6 @@ func (m *MockBeaconServiceServer) EXPECT() *MockBeaconServiceServerMockRecorder 
 	return m.recorder
 }
 
-// CanonicalHeadAndState mocks base method
-func (m *MockBeaconServiceServer) CanonicalHeadAndState(arg0 context.Context, arg1 *empty.Empty) (*v10.CanonicalResponse, error) {
-	ret := m.ctrl.Call(m, "CanonicalHeadAndState", arg0, arg1)
-	ret0, _ := ret[0].(*v10.CanonicalResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CanonicalHeadAndState indicates an expected call of CanonicalHeadAndState
-func (mr *MockBeaconServiceServerMockRecorder) CanonicalHeadAndState(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHeadAndState", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalHeadAndState), arg0, arg1)
-}
-
 // FetchShuffledValidatorIndices mocks base method
 func (m *MockBeaconServiceServer) FetchShuffledValidatorIndices(arg0 context.Context, arg1 *v10.ShuffleRequest) (*v10.ShuffleResponse, error) {
 	ret := m.ctrl.Call(m, "FetchShuffledValidatorIndices", arg0, arg1)
@@ -61,6 +48,19 @@ func (m *MockBeaconServiceServer) FetchShuffledValidatorIndices(arg0 context.Con
 // FetchShuffledValidatorIndices indicates an expected call of FetchShuffledValidatorIndices
 func (mr *MockBeaconServiceServerMockRecorder) FetchShuffledValidatorIndices(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchShuffledValidatorIndices", reflect.TypeOf((*MockBeaconServiceServer)(nil).FetchShuffledValidatorIndices), arg0, arg1)
+}
+
+// GenesisTimestampAndCanonicalState mocks base method
+func (m *MockBeaconServiceServer) GenesisTimestampAndCanonicalState(arg0 context.Context, arg1 *empty.Empty) (*v10.GenesisTimestampStateResponse, error) {
+	ret := m.ctrl.Call(m, "GenesisTimestampAndCanonicalState", arg0, arg1)
+	ret0, _ := ret[0].(*v10.GenesisTimestampStateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenesisTimestampAndCanonicalState indicates an expected call of GenesisTimestampAndCanonicalState
+func (mr *MockBeaconServiceServerMockRecorder) GenesisTimestampAndCanonicalState(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenesisTimestampAndCanonicalState", reflect.TypeOf((*MockBeaconServiceServer)(nil).GenesisTimestampAndCanonicalState), arg0, arg1)
 }
 
 // LatestBeaconBlock mocks base method

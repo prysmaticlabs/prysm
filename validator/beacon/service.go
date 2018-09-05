@@ -3,16 +3,14 @@ package beacon
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "beacon")
@@ -33,7 +31,8 @@ type Service struct {
 	proposerAssignmentFeed *event.Feed
 }
 
-// NewBeaconValidator instantiates a service that interacts with a beacon node.
+// NewBeaconValidator instantiates a service that interacts with a beacon node
+// via gRPC requests.
 func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
@@ -45,33 +44,32 @@ func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Servic
 	}
 }
 
-// Start the main routine for a beacon service.
+// Start the main routine for a beacon gRPC service.
 func (s *Service) Start() {
 	log.Info("Starting service")
 	client := s.rpcClient.BeaconServiceClient()
 
-	// First thing the validator does is request the current, canonical
-	// beacon chain head and crystallized state in case the beacon node is
+	// First thing the validator does is request the genesis block timestamp
+	// and the latest, canonical crystallized state from a beacon node. From here,
+	// a validator can determine its assigned slot by keeping an internal
+	// ticker that starts at the current slot the beacon node is in. This current slot
+	// value is determined by taking the time differential between the genesis block
+	// time, the latest crystallized state's time, and the current system time.
+	//
+	// Note: this does not validate the current system time against a global
+	// NTP server, which will be important to do in production.
 	// currently in a cycle we are supposed to participate in.
-	go func() {
-		res, err := client.CanonicalHeadAndState(s.ctx, &empty.Empty{})
-		if err != nil {
-			// If this RPC request fails, the entire system should fatal as it is critical for
-			// the validator to begin this way.
-			log.Fatalf("Could not fetch current canonical head and state from beacon node: %v", err)
-		}
-		if err := s.processCrystallizedState(res.GetCrystallizedState(), client); err != nil {
-			log.Fatalf("Unable to process received crystallized state: %v", err)
-		}
-		// We process the received canonical block to determine if we have to perform
-		// validator responsibilities right away.
-		s.processBeaconBlock(res.GetCanonicalBlock())
-	}()
+	s.fetchGenesisAndCanonicalState(client)
 
-	// Then, we start up some routines in the background that will constantly listen
-	// for the canonical head/state in order to keep performing validator responsibilities
-	// forever.
-	go s.listenForBeaconBlocks(client)
+	// Then, we kick off a routine that uses the ticker set in fetchGenesisAndCanonicalState
+	// to wait until the validator's assigned slot to perform proposals or attestations.
+	// TODO: Pass in the ticker.
+	go s.waitForAssignment()
+
+	// We then kick off a routine that listens for streams of cycle transitions
+	// coming from the beacon node. This will allow the validator client to recalculate
+	// when it has to perform its responsibilities appropriately using timestamps
+	// and the IndicesForSlots field inside the received crystallized state.
 	go s.listenForCrystallizedStates(client)
 }
 
@@ -82,57 +80,56 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// AttesterAssignmentFeed returns a feed that is written to whenever it is the validator's
-// slot to perform attestations.
-func (s *Service) AttesterAssignmentFeed() *event.Feed {
-	return s.attesterAssignmentFeed
-}
-
-// ProposerAssignmentFeed returns a feed that is written to whenever it is the validator's
-// slot to proposer blocks.
-func (s *Service) ProposerAssignmentFeed() *event.Feed {
-	return s.proposerAssignmentFeed
-}
-
-// listenForBeaconBlocks receives latest canonical blocks from the beacon node's RPC
-// server via gRPC streams.
-func (s *Service) listenForBeaconBlocks(client pb.BeaconServiceClient) {
-	stream, err := client.LatestBeaconBlock(s.ctx, &empty.Empty{})
+// fetchGenesisAndCanonicalState fetches both the genesis timestamp as well
+// as the latest canonical crystallized state from a beacon node. This allows
+// the validator to do the following:
+//
+// (1) determine if it should act as an attester/proposer and at what slot
+// and what shard
+//
+// (2) determine the difference between the genesis timestamp, latest crystallized
+// state timestamp, and the current system time.
+//
+// From this, the validator client can deduce what slot interval the beacon
+// node is in and determine when exactly it is time to propose or attest.
+func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
+	res, err := client.GenesisTimestampAndCanonicalState(s.ctx, &empty.Empty{})
 	if err != nil {
-		log.Errorf("Could not setup beacon chain block streaming client: %v", err)
-		return
+		// If this RPC request fails, the entire system should fatal as it is critical for
+		// the validator to begin this way.
+		log.Fatalf("could not fetch genesis time and latest canonical state from beacon node: %v", err)
 	}
-	for {
-		block, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Errorf("Could not receive latest beacon block from stream: %v", err)
-			continue
-		}
-		s.processBeaconBlock(block)
+	// TODO: Use the differential between the genesis and crystallized timestamps to
+	// determine what slot the beacon node is currently in and kick off a ticker within this
+	// service.
+	if err := s.processCrystallizedState(res.GetLatestCrystallizedState(), client); err != nil {
+		log.Fatalf("unable to process received crystallized state: %v", err)
 	}
 }
 
-// processBeaconBlock verifies if the slot number matches the validator's assigned
-// responsibility. If it does, it notifies the attester/proposer running service
-// that it is time to perform.
-func (s *Service) processBeaconBlock(block *pbp2p.BeaconBlock) {
-	log.WithField("slotNumber", block.GetSlotNumber()).Info("Latest beacon block slot number")
-
-	// Based on the slot determined from the latest crystallized state, check if
-	// it matches the latest received beacon slot.
-	if s.responsibility == "proposer" {
-		log.WithField("slotNumber", block.GetSlotNumber()).Info("Assigned proposal slot number reached")
-		s.responsibility = ""
-		s.proposerAssignmentFeed.Send(block)
-	} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedSlot {
-		// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
-		log.Info("Assigned attestation slot number reached")
-		s.responsibility = ""
-		s.attesterAssignmentFeed.Send(block)
+// waitForAssignment utilizes the computed time differential between genesis
+// and current canonical crystallized state to determine which slot interval
+// a beacon node is currently in. From here, a validator client can keep
+// an internal ticker for checking when it is time to propose or attest
+// to a block.
+func (s *Service) waitForAssignment() {
+	for {
+		// TODO: Utilize timestamp differentials from genesis and crystallized state
+		// to determine what slot interval the beacon node is currently in.
+		// Using this info, then trigger the if conditions below.
+		if s.responsibility == "proposer" {
+			log.WithField("slotNumber", 0).Info("Assigned proposal slot number reached")
+			s.responsibility = ""
+			// TODO: request latest canonical block and forward it to the proposer
+			// service.
+		} else if s.responsibility == "attester" {
+			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
+			log.Info("Assigned attestation slot number reached")
+			s.responsibility = ""
+			// TODO: request latest canonical block and forward it to the attester
+			// service.
+		}
+		time.Sleep(time.Second * 8)
 	}
 }
 
@@ -165,17 +162,6 @@ func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
 // whether a validator is a proposer/attester and the validator's assigned slot.
 func (s *Service) processCrystallizedState(crystallizedState *pbp2p.CrystallizedState, client pb.BeaconServiceClient) error {
 	var activeValidatorIndices []int
-	// After receiving the crystallized state, get its hash, and
-	// this attester's index in the list.
-	stateData, err := proto.Marshal(crystallizedState)
-	if err != nil {
-		return fmt.Errorf("Could not marshal crystallized state proto: %v", err)
-	}
-
-	var crystallizedStateHash [32]byte
-	h := blake2b.Sum512(stateData)
-	copy(crystallizedStateHash[:], h[:32])
-
 	dynasty := crystallizedState.GetCurrentDynasty()
 
 	for i, validator := range crystallizedState.GetValidators() {
@@ -184,6 +170,9 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 		}
 	}
 	isValidatorIndexSet := false
+
+	// We then iteratate over the activeValidatorIndices to determine what index
+	// this running validator client corresponds to.
 	for _, val := range activeValidatorIndices {
 		// TODO: Check the public key instead of withdrawal address. This will use BLS.
 		if isZeroAddress(crystallizedState.Validators[val].WithdrawalAddress) {
@@ -200,48 +189,27 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 		return nil
 	}
 
-	req := &pb.ShuffleRequest{
-		CrystallizedStateHash: crystallizedStateHash[:],
-	}
+	// TODO: Go through each of the indices for slots and determine which slot
+	// a validator is assigned into and at what index.
+	// indicesForSlots := res.GetIndicesForSlots()
 
-	res, err := client.FetchShuffledValidatorIndices(s.ctx, req)
-	if err != nil {
-		return fmt.Errorf("Could not fetch shuffled validator indices: %v", err)
-	}
-
-	shuffledIndices := res.GetShuffledValidatorIndices()
-	if uint64(s.validatorIndex) == shuffledIndices[len(shuffledIndices)-1] {
-		// The validator needs to propose the next block.
-		s.responsibility = "proposer"
-		log.Debug("Validator selected as proposer of the next slot")
-		return nil
-	}
-
-	// If the condition above did not pass, the validator is an attester.
-	s.responsibility = "attester"
-
-	// Based on the cutoff and assigned slots, determine the beacon block
-	// slot at which attester has to perform its responsibility.
-	currentAssignedSlots := res.GetAssignedAttestationSlots()
-	currentCutoffs := res.GetCutoffIndices()
-
-	// The algorithm functions as follows:
-	// Given a list of slots: [0 19 38 57 12 31 50] and
-	// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
-	// if the validator index is between 0-142, it can attest at slot 0, if it is
-	// between 142-285, that validator can attest at slot 19, etc.
-	slotIndex := 0
-	for i := 0; i < len(currentCutoffs)-1; i++ {
-		lowCutoff := currentCutoffs[i]
-		highCutoff := currentCutoffs[i+1]
-		if (uint64(s.validatorIndex) >= lowCutoff) && (uint64(s.validatorIndex) <= highCutoff) {
-			break
-		}
-		slotIndex++
-	}
-	s.assignedSlot = currentAssignedSlots[slotIndex]
-	log.Debug("Validator selected as attester at slot number: %d", s.assignedSlot)
+	// The validator needs to propose the next block.
+	// TODO: This is a stub until the indices for slots loop is done above.
+	s.responsibility = "proposer"
+	log.Debug("Validator selected as proposer of the next slot")
 	return nil
+}
+
+// AttesterAssignmentFeed returns a feed that is written to whenever it is the validator's
+// slot to perform attestations.
+func (s *Service) AttesterAssignmentFeed() *event.Feed {
+	return s.attesterAssignmentFeed
+}
+
+// ProposerAssignmentFeed returns a feed that is written to whenever it is the validator's
+// slot to proposer blocks.
+func (s *Service) ProposerAssignmentFeed() *event.Feed {
+	return s.proposerAssignmentFeed
 }
 
 // isZeroAddress compares a withdrawal address to an empty byte array.
