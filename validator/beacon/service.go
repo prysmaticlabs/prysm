@@ -59,6 +59,7 @@ func (s *Service) Start() {
 	// Note: this does not validate the current system time against a global
 	// NTP server, which will be important to do in production.
 	// currently in a cycle we are supposed to participate in.
+	// TODO: Return the ticker from here.
 	s.fetchGenesisAndCanonicalState(client)
 
 	// Then, we kick off a routine that uses the ticker set in fetchGenesisAndCanonicalState
@@ -99,9 +100,11 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 		// the validator to begin this way.
 		log.Fatalf("could not fetch genesis time and latest canonical state from beacon node: %v", err)
 	}
-	// TODO: Use the differential between the genesis and crystallized timestamps to
-	// determine what slot the beacon node is currently in and kick off a ticker within this
-	// service.
+	// Compute the time since genesis based on the crystallized state last_state_recalc.
+	// Then, compute the difference between that value and the current system time
+	// to determine what slot we are in within that cycle. Start a ticker that updates
+	// this slot the runs every 8 seconds and updates this slot accordingly.
+	// TODO: Implement here.
 	if err := s.processCrystallizedState(res.GetLatestCrystallizedState(), client); err != nil {
 		log.Fatalf("unable to process received crystallized state: %v", err)
 	}

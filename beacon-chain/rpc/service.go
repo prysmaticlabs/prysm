@@ -135,19 +135,14 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// CanonicalHeadAndState returns the latest block and crystallized state
-// determined as canonical in a beacon node. Validator clients send this request
+// GenesisTimeAndCanonicalState returns the genesis timestamp and crystallized state
+// determined as canonical. Validator clients send this request
 // once upon establishing a connection to the beacon node in order to determine
-// their role and assigned slot initially.
-func (s *Service) CanonicalHeadAndState(ctx context.Context, req *empty.Empty) (*pb.CanonicalResponse, error) {
-	block, err := s.fetcher.CanonicalHead()
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch canonical block: %v", err)
-	}
+// their role and assigned slot initially and setup an internal ticker.
+func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndCanonicalState, error) {
 	crystallized := s.fetcher.CanonicalCrystallizedState()
 	return &pb.CanonicalResponse{
-		CanonicalBlock:    block.Proto(),
-		CrystallizedState: crystallized.Proto(),
+		LatestCrystallizedState: crystallized.Proto(),
 	}, nil
 }
 
