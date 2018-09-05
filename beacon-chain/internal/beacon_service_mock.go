@@ -37,6 +37,19 @@ func (m *MockBeaconServiceServer) EXPECT() *MockBeaconServiceServerMockRecorder 
 	return m.recorder
 }
 
+// CanonicalHead mocks base method
+func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *empty.Empty) (*v1.BeaconBlock, error) {
+	ret := m.ctrl.Call(m, "CanonicalHead", arg0, arg1)
+	ret0, _ := ret[0].(*v1.BeaconBlock)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CanonicalHead indicates an expected call of CanonicalHead
+func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalHead), arg0, arg1)
+}
+
 // FetchShuffledValidatorIndices mocks base method
 func (m *MockBeaconServiceServer) FetchShuffledValidatorIndices(arg0 context.Context, arg1 *v10.ShuffleRequest) (*v10.ShuffleResponse, error) {
 	ret := m.ctrl.Call(m, "FetchShuffledValidatorIndices", arg0, arg1)

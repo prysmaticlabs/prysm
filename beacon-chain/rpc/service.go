@@ -135,6 +135,16 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// CanonicalHead of the current beacon chain. This method is requested on-demand
+// by a validator when it is their time to propose or attest.
+func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.BeaconBlock, error) {
+	block, err := s.fetcher.CanonicalHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get canonical head block: %v", err)
+	}
+	return block.Proto(), nil
+}
+
 // GenesisTimeAndCanonicalState returns the genesis timestamp and crystallized state
 // determined as canonical. Validator clients send this request
 // once upon establishing a connection to the beacon node in order to determine
