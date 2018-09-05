@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -148,27 +147,6 @@ func TestRPCMethods(t *testing.T) {
 	})
 	if _, err := rpcService.SignBlock(context.Background(), nil); err == nil {
 		t.Error("Wanted error: unimplemented, received nil")
-	}
-}
-
-func TestCanonicalHeadAndState(t *testing.T) {
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "7362",
-		CanonicalFetcher: cs,
-	})
-	if _, err := rpcService.CanonicalHeadAndState(context.Background(), nil); err != nil {
-		t.Errorf("Unexpected error when calling CanonicalHeadAndState: %v", err)
-	}
-
-	faulty := &faultyChainService{}
-	rpcService = NewRPCService(context.Background(), &Config{
-		Port:             "7362",
-		CanonicalFetcher: faulty,
-	})
-	_, err := rpcService.CanonicalHeadAndState(context.Background(), nil)
-	if !strings.Contains(err.Error(), "could not fetch canonical") {
-		t.Errorf("Expected: could not fetch canonical, received %v", err)
 	}
 }
 

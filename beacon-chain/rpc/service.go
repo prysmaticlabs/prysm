@@ -139,14 +139,14 @@ func (s *Service) Stop() error {
 // determined as canonical. Validator clients send this request
 // once upon establishing a connection to the beacon node in order to determine
 // their role and assigned slot initially and setup an internal ticker.
-func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndCanonicalState, error) {
+func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndStateResponse, error) {
 	genesis, err := types.NewGenesisBlock()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch genesis block: %v", err)
 	}
 	crystallized := s.fetcher.CanonicalCrystallizedState()
-	return &pb.CanonicalResponse{
-		GenesisTimestamp:        genesis.Timestamp(),
+	return &pb.GenesisTimeAndStateResponse{
+		GenesisTimestamp:        genesis.Proto().GetTimestamp(),
 		LatestCrystallizedState: crystallized.Proto(),
 	}, nil
 }
