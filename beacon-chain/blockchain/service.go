@@ -82,8 +82,9 @@ func (c *ChainService) Start() {
 	} else {
 		log.Infof("Starting service as observer")
 	}
-	// TODO: Fetch the slot: (block, state) DAGs from persistent storage
-	// to truly continue across sessions.
+	// TODO: Determine current slot from subtracting genesis from system time.
+	// Utilize this value to begin an updateHead routine.
+	// Trigger a block processing routine.
 	go c.blockProcessing(c.ctx.Done())
 }
 
