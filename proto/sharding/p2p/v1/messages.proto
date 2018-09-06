@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ethereum.sharding.p2p.v1;
 
+import "proto/beacon/p2p/v1/messages.proto";
+
 enum Topic {
   UNKNOWN = 0;
   COLLATION_BODY_REQUEST = 1;
@@ -36,4 +38,12 @@ message Signature {
   uint64 v = 1;
   uint64 r = 2;
   uint64 s = 3;
+}
+
+message BlockBroadcast {
+  ethereum.beacon.p2p.v1.BeaconBlock BeaconBlock = 1;
+}
+
+message AttestationBroadcast {
+  ethereum.beacon.p2p.v1.AttestationRecord AttestationRecord = 1;
 }
