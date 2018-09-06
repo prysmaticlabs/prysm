@@ -395,7 +395,7 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 
 // initCycle is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
-func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
+func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState, error) {
 	var blockVoteBalance uint64
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
@@ -470,6 +470,12 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		recentBlockHashes = append(recentBlockHashes, blockHashes[:])
 		// Drop the oldest block hash if the recent block hashes length is more than 2 * cycle length.
 		for len(recentBlockHashes) > 2*params.CycleLength {
+			// Delete attestation hash list that's corresponding to the block hash.
+			var h [32]byte
+			copy(h[:], recentBlockHashes[0])
+			if err := b.removeAttestationHashList(h); err != nil {
+				return nil, nil, err
+			}
 			recentBlockHashes = recentBlockHashes[1:]
 		}
 	}
@@ -480,7 +486,7 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		RecentBlockHashes:   recentBlockHashes,
 	}, aState.GetBlockVoteCache())
 
-	return newCrystallizedState, newActiveState
+	return newCrystallizedState, newActiveState, nil
 }
 
 func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {

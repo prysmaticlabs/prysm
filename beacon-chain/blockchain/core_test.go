@@ -594,7 +594,10 @@ func TestInitCycleNotFinalized(t *testing.T) {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	crystallized.SetStateRecalc(64)
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.initCycle(crystallized, active)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	if newCrystalled.LastFinalizedSlot() != 0 {
 		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -637,11 +640,17 @@ func TestInitCycleFinalized(t *testing.T) {
 	active.SetBlockVoteCache(blockVoteCache)
 
 	// justified block: 63, finalized block: 0, justified streak: 64
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.initCycle(crystallized, active)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	newActive.ReplaceBlockHashes(activeStateBlockHashes)
 	// justified block: 127, finalized block: 63, justified streak: 128
-	newCrystalled, newActive = b.initCycle(newCrystalled, newActive)
+	newCrystalled, newActive, err = b.initCycle(newCrystalled, newActive)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	if newCrystalled.LastFinalizedSlot() != 63 {
 		t.Errorf("Last finalized slot should be 63 but got: %d", newCrystalled.LastFinalizedSlot())

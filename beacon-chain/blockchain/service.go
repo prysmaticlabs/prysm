@@ -284,6 +284,18 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 					log.Errorf("could not process attestation for block %d because %v", block.SlotNumber(), err)
 				} else {
 					canProcessAttestations = true
+					// Save processed attestation to local db.
+					if err := c.chain.saveAttestation(types.NewAttestation(attestation)); err != nil {
+						log.Errorf("Can not save attestation: %v", err)
+					}
+					attestationHash, err := types.NewAttestation(attestation).Hash()
+					if err != nil {
+						log.Errorf("Can not hash attestation: %v", err)
+					}
+					if err := c.chain.saveAttestationHash(h, attestationHash); err != nil {
+						log.Errorf("Can not save attesstation hash: %v", err)
+					}
+
 					processedAttestations = append(processedAttestations, attestation)
 				}
 			}
@@ -334,7 +346,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			activeState := c.chain.ActiveState()
 			crystallizedState := c.chain.CrystallizedState()
 			if isTransition {
-				crystallizedState, activeState = c.chain.initCycle(crystallizedState, activeState)
+				crystallizedState, activeState, err = c.chain.initCycle(crystallizedState, activeState)
+				if err != nil {
+					log.Errorf("Initialize new cycle transition failed: %v", err)
+				}
 			}
 
 			activeState, err = c.chain.computeNewActiveState(processedAttestations, activeState, blockVoteCache, h)
