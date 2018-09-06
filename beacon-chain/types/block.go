@@ -2,15 +2,21 @@
 package types
 
 import (
+	"encoding/binary"
 	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
+
+var genesisTime = time.Unix(0, 0)
+var clock utils.Clock = &utils.RealClock{}
 
 // Block defines a beacon chain core primitive.
 type Block struct {
@@ -30,6 +36,8 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				PowChainRef:           []byte{0},
 				ActiveStateHash:       []byte{0},
 				CrystallizedStateHash: []byte{0},
+				// NOTE: this field only exists to determine the timestamp of the genesis block.
+				// As of the v2.1 spec, the timestamp of blocks after genesis are not used.
 				Timestamp:             ptypes.TimestampNow(),
 			},
 		}
@@ -42,7 +50,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 //
 // TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
-	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
+	protoGenesis, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
 		return nil, err
 	}
@@ -127,4 +135,126 @@ func (b *Block) Attestations() []*pb.AttestationRecord {
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
+}
+
+// isSlotValid compares the slot to the system clock to determine if the block is valid
+func (b *Block) isSlotValid() bool {
+	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
+	validTimeThreshold := genesisTime.Add(slotDuration)
+
+	return clock.Now().Before(validTimeThreshold)
+}
+
+// IsValid is called to decide if an incoming p2p block can be processed into the chain's block trie,
+// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a validator.
+func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
+	_, err := b.Hash()
+	if err != nil {
+		log.Debugf("Could not hash incoming block: %v", err)
+		return false
+	}
+
+	if b.SlotNumber() == 0 {
+		log.Debugf("Can not process a genesis block")
+		return false
+	}
+
+	if !b.isSlotValid() {
+		log.Debugf("slot of block is too high: %d", b.SlotNumber())
+		return false
+	}
+
+	for index := range b.Attestations() {
+		if !b.isAttestationValid(index, aState, cState) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isAttestationValid validates an attestation in a block
+func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState) bool {
+	// Validate attestation's slot number has is within range of incoming block number.
+	slotNumber := int(b.SlotNumber())
+	attestation := b.Attestations()[attestationIndex]
+	if int(attestation.Slot) > slotNumber {
+		log.Debugf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
+			attestation.Slot,
+			slotNumber)
+		return false
+	}
+	if int(attestation.Slot) < slotNumber-params.CycleLength {
+		log.Debugf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
+			attestation.Slot,
+			slotNumber-params.CycleLength)
+		return false
+	}
+
+	if attestation.JustifiedSlot != cState.LastJustifiedSlot() {
+		log.Debugf("attestation's last justified slot has to match crystallied state's last justified slot. Found: %d. Want: %d",
+			attestation.JustifiedSlot,
+			cState.LastJustifiedSlot())
+		return false
+	}
+
+	// TODO: Validate last justified block hash matches in the crystallizedState.
+
+	// Get all the block hashes up to cycle length.
+	parentHashes := aState.getSignedParentHashes(b, attestation)
+	attesterIndices, err := cState.GetAttesterIndices(attestation)
+	if err != nil {
+		log.Debugf("unable to get validator committee: %v", attesterIndices)
+		return false
+	}
+
+	// Verify attester bitfields matches crystallized state's prev computed bitfield.
+	if !b.areAttesterBitfieldsValid(attestation, attesterIndices) {
+		return false
+	}
+
+	// TODO: Generate validators aggregated pub key.
+
+	// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
+	// to verify with aggregated public key and aggregated attestation signature.
+	msg := make([]byte, binary.MaxVarintLen64)
+	var signedHashesStr []byte
+	for _, parentHash := range parentHashes {
+		signedHashesStr = append(signedHashesStr, parentHash[:]...)
+		signedHashesStr = append(signedHashesStr, byte(' '))
+	}
+	binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
+	msg = append(msg, signedHashesStr...)
+	binary.PutUvarint(msg, attestation.ShardId)
+	msg = append(msg, attestation.ShardBlockHash...)
+
+	msgHash := blake2b.Sum512(msg)
+
+	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
+		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
+
+	// TODO: Verify msgHash against aggregated pub key and aggregated signature.
+	return true
+}
+
+// areAttesterBitfieldsValid validates the attester bitfields are equal between attestation and crystallized state's calculation.
+func (b *Block) areAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndices []uint32) bool {
+	// Validate attester bit field has the correct length.
+	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
+			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+		return false
+	}
+
+	// Valid attestation can not have non-zero trailing bits.
+	lastBit := len(attesterIndices)
+	if lastBit%8 != 0 {
+		for i := 0; i < 8-lastBit%8; i++ {
+			if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+				log.Debugf("attestation has non-zero trailing bits")
+				return false
+			}
+		}
+	}
+	return true
 }
