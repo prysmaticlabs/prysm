@@ -42,13 +42,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 //
 // TODO: Add more default fields.
 func NewGenesisBlock() (*Block, error) {
-	// Genesis block starts at September 5, 2018.
-	dateString := "Wed, 05 Sep 2018 00:00:00 UTC"
-	genesisTime, err := time.Parse(time.RFC1123, dateString)
-	if err != nil {
-		return nil, err
-	}
-	protoGenesis, err := ptypes.TimestampProto(genesisTime)
+	protoGenesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		return nil, err
 	}
