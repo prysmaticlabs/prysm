@@ -676,6 +676,14 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	return types.NewBlock(b)
 }
 
+// NewAttestation is a helper method to create attestation with valid defaults.
+func NewAttestation(t *testing.T, b *pb.AttestationRecord) *types.Attestation {
+	if b == nil {
+		b = &pb.AttestationRecord{}
+	}
+	return types.NewAttestation(b)
+}
+
 func TestSaveAndRemoveBlocks(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -838,5 +846,71 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 
 	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
+	}
+}
+
+func TestSaveAndRemoveAttestations(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	attestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             1,
+		ShardId:          1,
+		AttesterBitfield: []byte{'A'},
+	})
+
+	hash, err := attestation.Hash()
+	if err != nil {
+		t.Fatalf("unable to generate hash of attestation %v", err)
+	}
+
+	if err := b.saveAttestation(attestation); err != nil {
+		t.Fatalf("unable to save attestation %v", err)
+	}
+
+	exist, err := b.hasAttestation(hash)
+	if err != nil {
+		t.Fatalf("unable to check attestation %v", err)
+	}
+	if !exist {
+		t.Fatal("saved attestation does not exist")
+	}
+
+	// Adding a different attestation with the same key
+	newAttestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             2,
+		ShardId:          2,
+		AttesterBitfield: []byte{'B'},
+	})
+
+	key := blockKey(hash)
+	marshalled, err := proto.Marshal(newAttestation.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	returnedAttestation, err := b.getAttestation(hash)
+	if err != nil {
+		t.Fatalf("block is unable to be retrieved")
+	}
+
+	if returnedAttestation.SlotNumber() != newAttestation.SlotNumber() {
+		t.Errorf("slotnumber does not match for saved and retrieved attestation")
+	}
+
+	if !bytes.Equal(returnedAttestation.AttesterBitfield(), newAttestation.AttesterBitfield()) {
+		t.Errorf("POW chain ref does not match for saved and retrieved blocks")
+	}
+
+	if err := b.removeAttestation(hash); err != nil {
+		t.Fatalf("error removing attestation %v", err)
+	}
+
+	if _, err := b.getAttestation(hash); err == nil {
+		t.Fatalf("attestation is able to be retrieved")
 	}
 }
