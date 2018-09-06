@@ -4,10 +4,11 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -28,6 +29,7 @@ type ChainService struct {
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
 	isValidator                    bool
+	currentSlot                    uint64
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	canonicalBlockFeed             *event.Feed
@@ -82,6 +84,12 @@ func (c *ChainService) Start() {
 	} else {
 		log.Infof("Starting service as observer")
 	}
+	genesisTimestamp := time.Unix(0, 0)
+	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
+	// Set the current slot.
+	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
+
+	go c.updateHead(time.Ticker(time.Second).C, c.ctx.Done())
 	// TODO: Determine current slot from subtracting genesis from system time.
 	// Utilize this value to begin an updateHead routine.
 	// Trigger a block processing routine.
@@ -168,63 +176,71 @@ func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.
 
 // updateHead applies the fork choice rule to the last received
 // slot.
-func (c *ChainService) updateHead(slot uint64) {
-	// Super naive fork choice rule: pick the first element at each slot
-	// level as canonical.
-	//
-	// TODO: Implement real fork choice rule here.
-	log.WithField("slotNumber", c.candidateBlock.SlotNumber()).Info("Applying fork choice rule")
-	if err := c.chain.SetActiveState(c.candidateActiveState); err != nil {
-		log.Errorf("Write active state to disk failed: %v", err)
+func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan struct{}) {
+	for {
+		select {
+		case <-done:
+			return
+		case <-slotInterval:
+			return
+			// Super naive fork choice rule: pick the first element at each slot
+			// level as canonical.
+			//
+			// TODO: Implement real fork choice rule here.
+			//log.WithField("slotNumber", c.candidateBlock.SlotNumber()).Info("Applying fork choice rule")
+			//if err := c.chain.SetActiveState(c.candidateActiveState); err != nil {
+			//log.Errorf("Write active state to disk failed: %v", err)
+			//}
+
+			//if err := c.chain.SetCrystallizedState(c.candidateCrystallizedState); err != nil {
+			//log.Errorf("Write crystallized state to disk failed: %v", err)
+			//}
+
+			//// TODO: Utilize this value in the fork choice rule.
+			//vals, err := casper.ShuffleValidatorsToCommittees(
+			//c.candidateCrystallizedState.DynastySeed(),
+			//c.candidateCrystallizedState.Validators(),
+			//c.candidateCrystallizedState.CurrentDynasty(),
+			//c.candidateCrystallizedState.CrosslinkingStartShard(),
+			//)
+
+			//if err != nil {
+			//log.Errorf("Unable to get validators by slot and by shard: %v", err)
+			//return
+			//}
+			//log.Debugf("Received %d validators by slot", len(vals))
+
+			//h, err := c.candidateBlock.Hash()
+			//if err != nil {
+			//log.Errorf("Unable to hash canonical block: %v", err)
+			//return
+			//}
+
+			//// Save canonical slotnumber to DB.
+			//if err := c.chain.saveCanonicalSlotNumber(c.candidateBlock.SlotNumber(), h); err != nil {
+			//log.Errorf("Unable to save slot number to db: %v", err)
+			//}
+
+			//// Save canonical block to DB.
+			//if err := c.chain.saveCanonicalBlock(c.candidateBlock); err != nil {
+			//log.Errorf("Unable to save block to db: %v", err)
+			//}
+			//log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
+
+			// We fire events that notify listeners of a new block (or crystallized state in
+			// the case of a state transition). This is useful for the beacon node's gRPC
+			// server to stream these events to beacon clients.
+			//transition := c.chain.IsCycleTransition(slot)
+			//if transition {
+			//c.canonicalCrystallizedStateFeed.Send(c.candidateCrystallizedState)
+			//}
+			//c.canonicalBlockFeed.Send(c.candidateBlock)
+
+			//c.candidateBlock = nilBlock
+			//c.candidateActiveState = nilActiveState
+			//c.candidateCrystallizedState = nilCrystallizedState
+		}
 	}
-
-	if err := c.chain.SetCrystallizedState(c.candidateCrystallizedState); err != nil {
-		log.Errorf("Write crystallized state to disk failed: %v", err)
-	}
-
-	// TODO: Utilize this value in the fork choice rule.
-	vals, err := casper.ShuffleValidatorsToCommittees(
-		c.candidateCrystallizedState.DynastySeed(),
-		c.candidateCrystallizedState.Validators(),
-		c.candidateCrystallizedState.CurrentDynasty(),
-		c.candidateCrystallizedState.CrosslinkingStartShard(),
-	)
-
-	if err != nil {
-		log.Errorf("Unable to get validators by slot and by shard: %v", err)
-		return
-	}
-	log.Debugf("Received %d validators by slot", len(vals))
-
-	h, err := c.candidateBlock.Hash()
-	if err != nil {
-		log.Errorf("Unable to hash canonical block: %v", err)
-		return
-	}
-
-	// Save canonical slotnumber to DB.
-	if err := c.chain.saveCanonicalSlotNumber(c.candidateBlock.SlotNumber(), h); err != nil {
-		log.Errorf("Unable to save slot number to db: %v", err)
-	}
-
-	// Save canonical block to DB.
-	if err := c.chain.saveCanonicalBlock(c.candidateBlock); err != nil {
-		log.Errorf("Unable to save block to db: %v", err)
-	}
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
-
-	// We fire events that notify listeners of a new block (or crystallized state in
-	// the case of a state transition). This is useful for the beacon node's gRPC
-	// server to stream these events to beacon clients.
-	transition := c.chain.IsCycleTransition(slot)
-	if transition {
-		c.canonicalCrystallizedStateFeed.Send(c.candidateCrystallizedState)
-	}
-	c.canonicalBlockFeed.Send(c.candidateBlock)
-
-	c.candidateBlock = nilBlock
-	c.candidateActiveState = nilActiveState
-	c.candidateCrystallizedState = nilCrystallizedState
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
@@ -235,16 +251,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
-			// 3 steps:
-			// - Compute the active state for the block.
-			// - Compute the crystallized state for the block if cycle transition.
-			// - Store both states and the block into a data structure used for fork choice.
-			//
-			// Another routine will run that will continually compute
-			// the canonical block and states from this data structure using the
-			// fork choice rule.
 			var canProcessBlock bool
 			var canProcessAttestations bool
 			var err error
@@ -306,48 +313,27 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				}
 			}
 
-			if c.candidateBlock != nilBlock && receivedSlotNumber > c.candidateBlock.SlotNumber() && receivedSlotNumber > 1 {
-				c.updateHead(receivedSlotNumber)
-			}
-
 			if err := c.chain.saveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 			}
 
 			log.Info("Finished processing received block")
 
-			// Do not proceed further, because a candidate has already been chosen.
-			if c.candidateBlock != nilBlock {
-				continue
-			}
+			//isTransition := c.chain.IsCycleTransition(receivedSlotNumber)
+			//activeState := c.chain.ActiveState()
+			//crystallizedState := c.chain.CrystallizedState()
+			//if isTransition {
+			//crystallizedState, activeState = c.chain.initCycle(crystallizedState, activeState)
+			//}
 
-			// 3 steps:
-			// - Compute the active state for the block.
-			// - Compute the crystallized state for the block if cycle transition.
-			// - Store both states and the block into a data structure used for fork choice
-			//
-			// This data structure will be used by the updateHead function to determine
-			// canonical blocks and states.
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
+			//activeState, err = c.chain.computeNewActiveState(processedAttestations, activeState, blockVoteCache, h)
+			//if err != nil {
+			//log.Errorf("Compute active state failed: %v", err)
+			//}
 
-			// Entering cycle transitions.
-			isTransition := c.chain.IsCycleTransition(receivedSlotNumber)
-			activeState := c.chain.ActiveState()
-			crystallizedState := c.chain.CrystallizedState()
-			if isTransition {
-				crystallizedState, activeState = c.chain.initCycle(crystallizedState, activeState)
-			}
-
-			activeState, err = c.chain.computeNewActiveState(processedAttestations, activeState, blockVoteCache, h)
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-			}
-
-			c.candidateBlock = block
-			c.candidateActiveState = activeState
-			c.candidateCrystallizedState = crystallizedState
-
-			log.Info("Finished processing state for candidate block")
+			//c.candidateBlock = block
+			//c.candidateActiveState = activeState
+			//c.candidateCrystallizedState = crystallizedState
 		}
 	}
 }
