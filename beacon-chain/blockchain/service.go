@@ -89,10 +89,7 @@ func (c *ChainService) Start() {
 	// Set the current slot.
 	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
 
-	go c.updateHead(time.Ticker(time.Second).C, c.ctx.Done())
-	// TODO: Determine current slot from subtracting genesis from system time.
-	// Utilize this value to begin an updateHead routine.
-	// Trigger a block processing routine.
+	go c.updateHead(time.NewTicker(time.Second*8).C, c.ctx.Done())
 	go c.blockProcessing(c.ctx.Done())
 }
 
@@ -182,7 +179,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 		case <-done:
 			return
 		case <-slotInterval:
-			return
+			c.currentSlot++
 			// Super naive fork choice rule: pick the first element at each slot
 			// level as canonical.
 			//
