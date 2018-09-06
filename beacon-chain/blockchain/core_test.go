@@ -914,3 +914,58 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 		t.Fatalf("attestation is able to be retrieved")
 	}
 }
+
+func TestSaveAndRemoveAttestationHashList(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+	})
+	blockHash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	attestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             1,
+		ShardId:          1,
+		AttesterBitfield: []byte{'A'},
+	})
+	attestationHash, err := attestation.Hash()
+	if err != nil {
+		t.Fatalf("unable to generate hash of attestation %v", err)
+	}
+
+	if err := b.saveAttestationHash(blockHash, attestationHash); err != nil {
+		t.Fatalf("unable to save attestation hash %v", err)
+	}
+
+	exist, err := b.hasAttestationHash(blockHash, attestationHash)
+	if err != nil {
+		t.Fatalf("unable to check for attestation hash %v", err)
+	}
+	if !exist {
+		t.Error("saved attestation hash does not exist")
+	}
+
+	// Negative test case: try with random attestation, exist should be false.
+	exist, err = b.hasAttestationHash(blockHash, [32]byte{'A'})
+	if err != nil {
+		t.Fatalf("unable to check for attestation hash %v", err)
+	}
+	if exist {
+		t.Error("attestation hash shouldn't have existed")
+	}
+
+	// Remove attestation list by deleting the block hash key.
+	if err := b.removeAttestationHashList(blockHash); err != nil {
+		t.Fatalf("remove attestation hash list failed %v", err)
+	}
+
+	// Negative test case: try with deleted block hash, this should fail.
+	_, err = b.hasAttestationHash(blockHash, attestationHash)
+	if err == nil {
+		t.Error("Block hash should't have existed in DB")
+	}
+}

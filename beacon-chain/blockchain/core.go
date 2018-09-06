@@ -613,9 +613,6 @@ func (b *BeaconChain) hasAttestationHash(blockHash [32]byte, attestationHash [32
 	if err != nil {
 		return false, err
 	}
-	if enc == nil {
-		return false, errors.New("beacon block hash does not exist")
-	}
 
 	attestationHashes := &pb.AttestationHashes{}
 	if err := proto.Unmarshal(enc, attestationHashes); err != nil {
@@ -634,10 +631,20 @@ func (b *BeaconChain) hasAttestationHash(blockHash [32]byte, attestationHash [32
 func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [32]byte) error {
 	key := attestationHashListKey(blockHash)
 
+	hasKey, err := b.db.Has(key)
+	if err != nil {
+		return err
+	}
+	if !hasKey {
+		if err := b.db.Put(key, []byte{}); err != nil {
+			return err
+		}
+	}
 	enc, err := b.db.Get(key)
 	if err != nil {
 		return err
 	}
+
 	attestationHashes := &pb.AttestationHashes{}
 	if err := proto.Unmarshal(enc, attestationHashes); err != nil {
 		return err
