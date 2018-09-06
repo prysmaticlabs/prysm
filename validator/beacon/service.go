@@ -116,7 +116,7 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	s.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
 
 	crystallized := res.GetLatestCrystallizedState()
-	if err := s.processCrystallizedState(crystallized, client); err != nil {
+	if err := s.processCrystallizedState(crystallized); err != nil {
 		log.Fatalf("unable to process received crystallized state: %v", err)
 	}
 }
@@ -177,7 +177,7 @@ func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
 			log.Errorf("Could not receive latest crystallized beacon state from stream: %v", err)
 			continue
 		}
-		if err := s.processCrystallizedState(crystallizedState, client); err != nil {
+		if err := s.processCrystallizedState(crystallizedState); err != nil {
 			log.Error(err)
 		}
 	}
@@ -185,7 +185,7 @@ func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
 
 // processCrystallizedState uses a received crystallized state to determine
 // whether a validator is a proposer/attester and the validator's assigned slot.
-func (s *Service) processCrystallizedState(crystallizedState *pbp2p.CrystallizedState, client pb.BeaconServiceClient) error {
+func (s *Service) processCrystallizedState(crystallizedState *pbp2p.CrystallizedState) error {
 	var activeValidatorIndices []int
 	dynasty := crystallizedState.GetCurrentDynasty()
 

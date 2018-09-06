@@ -66,24 +66,6 @@ func (m *mockChainService) CanonicalCrystallizedState() *types.CrystallizedState
 	return types.NewCrystallizedState(data)
 }
 
-type faultyChainService struct{}
-
-func (f *faultyChainService) CanonicalBlockFeed() *event.Feed {
-	return nil
-}
-
-func (f *faultyChainService) CanonicalCrystallizedStateFeed() *event.Feed {
-	return nil
-}
-
-func (f *faultyChainService) CanonicalHead() (*types.Block, error) {
-	return nil, errors.New("oops failed")
-}
-
-func (f *faultyChainService) CanonicalCrystallizedState() *types.CrystallizedState {
-	return nil
-}
-
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cs := newMockChainService()
