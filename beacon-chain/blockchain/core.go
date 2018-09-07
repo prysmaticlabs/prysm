@@ -633,29 +633,45 @@ func (b *BeaconChain) hasAttestationHash(blockHash [32]byte, attestationHash [32
 	return false, nil
 }
 
-// saveAttestationHash saves the attestation hash into the attestation hash list of the corresponding beacon block.
-func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [32]byte) error {
+// getAttestationHashList gets the attestation hash list of the beacon block from the db.
+func (b *BeaconChain) getAttestationHashList(blockHash [32]byte) ([][]byte, error) {
 	key := attestationHashListKey(blockHash)
 
 	hasKey, err := b.db.Has(key)
 	if err != nil {
-		return err
+		return [][]byte{}, err
 	}
 	if !hasKey {
 		if err := b.db.Put(key, []byte{}); err != nil {
-			return err
+			return [][]byte{}, err
 		}
 	}
 	enc, err := b.db.Get(key)
 	if err != nil {
-		return err
+		return [][]byte{}, err
 	}
 
 	attestationHashes := &pb.AttestationHashes{}
 	if err := proto.Unmarshal(enc, attestationHashes); err != nil {
-		return err
+		return [][]byte{}, err
 	}
-	attestationHashes.AttestationHash = append(attestationHashes.AttestationHash, attestationHash[:])
+	return attestationHashes.AttestationHash, nil
+}
+
+// removeAttestationHashList removes the attestation hash list of the beacon block from the db.
+func (b *BeaconChain) removeAttestationHashList(blockHash [32]byte) error {
+	return b.db.Delete(attestationHashListKey(blockHash))
+}
+
+// saveAttestationHash saves the attestation hash into the attestation hash list of the corresponding beacon block.
+func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [32]byte) error {
+	key := attestationHashListKey(blockHash)
+
+	hashes, err := b.getAttestationHashList(blockHash)
+	hashes = append(hashes, attestationHash[:])
+
+	attestationHashes := &pb.AttestationHashes{}
+	attestationHashes.AttestationHash = hashes
 
 	encodedState, err := proto.Marshal(attestationHashes)
 	if err != nil {
@@ -663,9 +679,4 @@ func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [3
 	}
 
 	return b.db.Put(key, encodedState)
-}
-
-// removeAttestationHashList removes the attestation hash list of the beacon block from the db.
-func (b *BeaconChain) removeAttestationHashList(blockHash [32]byte) error {
-	return b.db.Delete(attestationHashListKey(blockHash))
 }

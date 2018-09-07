@@ -904,7 +904,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 
 	returnedAttestation, err := b.getAttestation(hash)
 	if err != nil {
-		t.Fatalf("block is unable to be retrieved")
+		t.Fatalf("attestation is unable to be retrieved")
 	}
 
 	if returnedAttestation.SlotNumber() != newAttestation.SlotNumber() {
@@ -912,7 +912,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 	}
 
 	if !bytes.Equal(returnedAttestation.AttesterBitfield(), newAttestation.AttesterBitfield()) {
-		t.Errorf("POW chain ref does not match for saved and retrieved blocks")
+		t.Errorf("attester bitfield does not match for saved and retrieved attester")
 	}
 
 	if err := b.removeAttestation(hash); err != nil {
@@ -975,6 +975,6 @@ func TestSaveAndRemoveAttestationHashList(t *testing.T) {
 	// Negative test case: try with deleted block hash, this should fail.
 	_, err = b.hasAttestationHash(blockHash, attestationHash)
 	if err == nil {
-		t.Error("Block hash should't have existed in DB")
+		t.Error("attestation hash should't have existed in DB")
 	}
 }
