@@ -362,8 +362,8 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 // getAttesterIndices returns the attester committee of based from attestation's shard ID and slot number.
 func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
-	// TODO: IndicesForSlots will return default value because the spec for dynasty transition is not finalized.
-	shardCommitteeArray := b.CrystallizedState().IndicesForSlots()
+	// TODO: ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
+	shardCommitteeArray := b.CrystallizedState().ShardAndCommitteesForSlots()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
@@ -465,16 +465,16 @@ func (b *BeaconChain) stateRecalc(
 
 	// Construct new crystallized state for cycle transition.
 	newCrystallizedState := types.NewCrystallizedState(&pb.CrystallizedState{
-		Validators:             rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
-		LastStateRecalc:        lastStateRecalc + params.CycleLength,
-		IndicesForSlots:        cState.IndicesForSlots(), // TODO: Stub. This will be addresses by shuffling during dynasty transition.
-		LastJustifiedSlot:      justifiedSlot,
-		JustifiedStreak:        justifiedStreak,
-		LastFinalizedSlot:      finalizedSlot,
-		CrosslinkingStartShard: 0, // TODO: Stub. Need to see where this epoch left off.
-		CrosslinkRecords:       newCrossLinkRecords,
-		DynastySeedLastReset:   cState.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
-		TotalDeposits:          nextCycleBalance,
+		Validators:                 rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
+		LastStateRecalc:            lastStateRecalc + params.CycleLength,
+		ShardAndCommitteesForSlots: cState.ShardAndCommitteesForSlots(), // TODO: Stub. This will be addresses by shuffling during dynasty transition.
+		LastJustifiedSlot:          justifiedSlot,
+		JustifiedStreak:            justifiedStreak,
+		LastFinalizedSlot:          finalizedSlot,
+		CrosslinkingStartShard:     0, // TODO: Stub. Need to see where this epoch left off.
+		CrosslinkRecords:           newCrossLinkRecords,
+		DynastySeedLastReset:       cState.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
+		TotalDeposits:              nextCycleBalance,
 	})
 
 	var recentBlockHashes [][]byte

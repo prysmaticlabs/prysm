@@ -362,7 +362,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		LastStateRecalc: 0,
 		Validators:      validators,
 		CurrentDynasty:  5,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},

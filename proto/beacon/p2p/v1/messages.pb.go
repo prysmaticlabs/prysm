@@ -430,21 +430,21 @@ func (m *CrystallizedStateResponse) GetCrystallizedState() *CrystallizedState {
 }
 
 type CrystallizedState struct {
-	LastStateRecalc        uint64                    `protobuf:"varint,1,opt,name=last_state_recalc,json=lastStateRecalc,proto3" json:"last_state_recalc,omitempty"`
-	JustifiedStreak        uint64                    `protobuf:"varint,2,opt,name=justified_streak,json=justifiedStreak,proto3" json:"justified_streak,omitempty"`
-	LastJustifiedSlot      uint64                    `protobuf:"varint,3,opt,name=last_justified_slot,json=lastJustifiedSlot,proto3" json:"last_justified_slot,omitempty"`
-	LastFinalizedSlot      uint64                    `protobuf:"varint,4,opt,name=last_finalized_slot,json=lastFinalizedSlot,proto3" json:"last_finalized_slot,omitempty"`
-	CurrentDynasty         uint64                    `protobuf:"varint,5,opt,name=current_dynasty,json=currentDynasty,proto3" json:"current_dynasty,omitempty"`
-	CrosslinkingStartShard uint64                    `protobuf:"varint,6,opt,name=crosslinking_start_shard,json=crosslinkingStartShard,proto3" json:"crosslinking_start_shard,omitempty"`
-	TotalDeposits          uint64                    `protobuf:"varint,7,opt,name=total_deposits,json=totalDeposits,proto3" json:"total_deposits,omitempty"`
-	DynastySeed            []byte                    `protobuf:"bytes,8,opt,name=dynasty_seed,json=dynastySeed,proto3" json:"dynasty_seed,omitempty"`
-	DynastySeedLastReset   uint64                    `protobuf:"varint,9,opt,name=dynasty_seed_last_reset,json=dynastySeedLastReset,proto3" json:"dynasty_seed_last_reset,omitempty"`
-	CrosslinkRecords       []*CrosslinkRecord        `protobuf:"bytes,10,rep,name=crosslink_records,json=crosslinkRecords,proto3" json:"crosslink_records,omitempty"`
-	Validators             []*ValidatorRecord        `protobuf:"bytes,11,rep,name=validators,proto3" json:"validators,omitempty"`
-	IndicesForSlots        []*ShardAndCommitteeArray `protobuf:"bytes,12,rep,name=indices_for_slots,json=indicesForSlots,proto3" json:"indices_for_slots,omitempty"`
-	XXX_NoUnkeyedLiteral   struct{}                  `json:"-"`
-	XXX_unrecognized       []byte                    `json:"-"`
-	XXX_sizecache          int32                     `json:"-"`
+	LastStateRecalc            uint64                    `protobuf:"varint,1,opt,name=last_state_recalc,json=lastStateRecalc,proto3" json:"last_state_recalc,omitempty"`
+	JustifiedStreak            uint64                    `protobuf:"varint,2,opt,name=justified_streak,json=justifiedStreak,proto3" json:"justified_streak,omitempty"`
+	LastJustifiedSlot          uint64                    `protobuf:"varint,3,opt,name=last_justified_slot,json=lastJustifiedSlot,proto3" json:"last_justified_slot,omitempty"`
+	LastFinalizedSlot          uint64                    `protobuf:"varint,4,opt,name=last_finalized_slot,json=lastFinalizedSlot,proto3" json:"last_finalized_slot,omitempty"`
+	CurrentDynasty             uint64                    `protobuf:"varint,5,opt,name=current_dynasty,json=currentDynasty,proto3" json:"current_dynasty,omitempty"`
+	CrosslinkingStartShard     uint64                    `protobuf:"varint,6,opt,name=crosslinking_start_shard,json=crosslinkingStartShard,proto3" json:"crosslinking_start_shard,omitempty"`
+	TotalDeposits              uint64                    `protobuf:"varint,7,opt,name=total_deposits,json=totalDeposits,proto3" json:"total_deposits,omitempty"`
+	DynastySeed                []byte                    `protobuf:"bytes,8,opt,name=dynasty_seed,json=dynastySeed,proto3" json:"dynasty_seed,omitempty"`
+	DynastySeedLastReset       uint64                    `protobuf:"varint,9,opt,name=dynasty_seed_last_reset,json=dynastySeedLastReset,proto3" json:"dynasty_seed_last_reset,omitempty"`
+	CrosslinkRecords           []*CrosslinkRecord        `protobuf:"bytes,10,rep,name=crosslink_records,json=crosslinkRecords,proto3" json:"crosslink_records,omitempty"`
+	Validators                 []*ValidatorRecord        `protobuf:"bytes,11,rep,name=validators,proto3" json:"validators,omitempty"`
+	ShardAndCommitteesForSlots []*ShardAndCommitteeArray `protobuf:"bytes,12,rep,name=shard_and_committees_for_slots,json=shardAndCommitteesForSlots,proto3" json:"shard_and_committees_for_slots,omitempty"`
+	XXX_NoUnkeyedLiteral       struct{}                  `json:"-"`
+	XXX_unrecognized           []byte                    `json:"-"`
+	XXX_sizecache              int32                     `json:"-"`
 }
 
 func (m *CrystallizedState) Reset()         { *m = CrystallizedState{} }
@@ -548,9 +548,9 @@ func (m *CrystallizedState) GetValidators() []*ValidatorRecord {
 	return nil
 }
 
-func (m *CrystallizedState) GetIndicesForSlots() []*ShardAndCommitteeArray {
+func (m *CrystallizedState) GetShardAndCommitteesForSlots() []*ShardAndCommitteeArray {
 	if m != nil {
-		return m.IndicesForSlots
+		return m.ShardAndCommitteesForSlots
 	}
 	return nil
 }
