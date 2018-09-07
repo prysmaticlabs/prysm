@@ -346,6 +346,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			activeState := c.chain.ActiveState()
 			crystallizedState := c.chain.CrystallizedState()
 			if isTransition {
+				log.Info("Entering cycle transition")
 				crystallizedState, activeState, err = c.chain.initCycle(crystallizedState, activeState)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
