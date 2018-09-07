@@ -689,14 +689,6 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	return types.NewBlock(b)
 }
 
-// NewAttestation is a helper method to create attestation with valid defaults.
-func NewAttestation(t *testing.T, b *pb.AttestationRecord) *types.Attestation {
-	if b == nil {
-		b = &pb.AttestationRecord{}
-	}
-	return types.NewAttestation(b)
-}
-
 func TestSaveAndRemoveBlocks(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
@@ -861,6 +853,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 		t.Fatal("there should be an error because block does not exist in the db")
 	}
 }
+<<<<<<< HEAD
 
 func TestSaveAndRemoveAttestations(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
@@ -982,3 +975,5 @@ func TestSaveAndRemoveAttestationHashList(t *testing.T) {
 		t.Error("Block hash should't have existed in DB")
 	}
 }
+=======
+>>>>>>> parent of a8db99bf5... save attestations to db

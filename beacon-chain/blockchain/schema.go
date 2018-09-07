@@ -28,10 +28,9 @@ var (
 	genesisLookupKey = []byte("genesis")
 
 	// Data item prefixes.
-	blockPrefix             = []byte("block-")             // blockPrefix + blockhash -> block
-	canonicalPrefix         = []byte("canonical-")         // canonicalPrefix + num(uint64 big endian) -> blockhash
-	attestationPrefix       = []byte("attestation-")       // attestationPrefix + attestationHash -> attestation
-	attestationHashesPrefix = []byte("attestationHashes-") // attestationHashesPrefix + blockHash -> attestationHashes
+	blockPrefix = []byte("block-") // blockPrefix + blockhash -> block
+
+	canonicalPrefix = []byte("canonical-") // canonicalPrefix + num(uint64 big endian) -> blockhash
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint64.
@@ -41,7 +40,7 @@ func encodeSlotNumber(number uint64) []byte {
 	return enc
 }
 
-// blockKey = blockPrefix + blockHash.
+// blockKey = blockPrefix + hash.
 func blockKey(hash [32]byte) []byte {
 	return append(blockPrefix, hash[:]...)
 }
@@ -49,14 +48,4 @@ func blockKey(hash [32]byte) []byte {
 // canonicalBlockKey = canonicalPrefix + num(uint64 big endian)
 func canonicalBlockKey(slotnumber uint64) []byte {
 	return append(canonicalPrefix, encodeSlotNumber(slotnumber)...)
-}
-
-// attestationKey = attestationPrefix + attestationHash.
-func attestationKey(hash [32]byte) []byte {
-	return append(attestationPrefix, hash[:]...)
-}
-
-// attestationHashListKey = attestationHashesPrefix + blockHash.
-func attestationHashListKey(hash [32]byte) []byte {
-	return append(attestationHashesPrefix, hash[:]...)
 }

@@ -122,9 +122,13 @@ message AttestationRecord {
 message CrosslinkRecord {
   uint64 dynasty = 1;
   bytes blockhash = 2;
+<<<<<<< HEAD
   uint64 slot = 3;
 }
 
 message AttestationHashes {
   repeated bytes attestation_hash = 1;
 }
+=======
+}
+>>>>>>> parent of a8db99bf5... save attestations to db

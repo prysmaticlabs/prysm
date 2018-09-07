@@ -640,6 +640,7 @@ func (b *BeaconChain) getCanonicalBlockForSlot(slotNumber uint64) (*types.Block,
 
 	return block, err
 }
+<<<<<<< HEAD
 
 func (b *BeaconChain) hasAttestation(attestationHash [32]byte) (bool, error) {
 	return b.db.Has(attestationKey(attestationHash))
@@ -736,3 +737,5 @@ func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [3
 func (b *BeaconChain) removeAttestationHashList(blockHash [32]byte) error {
 	return b.db.Delete(attestationHashListKey(blockHash))
 }
+=======
+>>>>>>> parent of a8db99bf5... save attestations to db
