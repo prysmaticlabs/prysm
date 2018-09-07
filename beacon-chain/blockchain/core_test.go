@@ -589,12 +589,14 @@ func TestInitCycleNotFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
+	block := types.NewBlock(nil)
+
 	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	crystallized.SetStateRecalc(64)
-	newCrystalled, newActive, err := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
 	if err != nil {
 		t.Fatalf("Initialize new cycle transition failed: %v", err)
 	}
@@ -618,6 +620,8 @@ func TestInitCycleFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
+	block := types.NewBlock(nil)
+
 	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
@@ -640,14 +644,14 @@ func TestInitCycleFinalized(t *testing.T) {
 	active.SetBlockVoteCache(blockVoteCache)
 
 	// justified block: 63, finalized block: 0, justified streak: 64
-	newCrystalled, newActive, err := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
 	if err != nil {
 		t.Fatalf("Initialize new cycle transition failed: %v", err)
 	}
 
 	newActive.ReplaceBlockHashes(activeStateBlockHashes)
 	// justified block: 127, finalized block: 63, justified streak: 128
-	newCrystalled, newActive, err = b.initCycle(newCrystalled, newActive)
+	newCrystalled, newActive, err = b.stateRecalc(newCrystalled, newActive, block)
 	if err != nil {
 		t.Fatalf("Initialize new cycle transition failed: %v", err)
 	}
