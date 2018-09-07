@@ -633,15 +633,29 @@ func (b *BeaconChain) hasAttestationHash(blockHash [32]byte, attestationHash [32
 	return false, nil
 }
 
-// getAttestationHashList gets the attestation hash list of the beacon block from the db.
-func (b *BeaconChain) getAttestationHashList(blockHash [32]byte) ([][]byte, error) {
+// hasAttestationHashList checks if the attestation hash list is available.
+func (b *BeaconChain) hasAttestationHashList(blockHash [32]byte) (bool, error) {
 	key := attestationHashListKey(blockHash)
 
 	hasKey, err := b.db.Has(key)
 	if err != nil {
-		return [][]byte{}, err
+		return false, err
 	}
 	if !hasKey {
+		return false, nil
+	}
+	return true, nil
+}
+
+// getAttestationHashList gets the attestation hash list of the beacon block from the db.
+func (b *BeaconChain) getAttestationHashList(blockHash [32]byte) ([][]byte, error) {
+	key := attestationHashListKey(blockHash)
+
+	hasList, err := b.hasAttestationHashList(blockHash)
+	if err != nil {
+		return [][]byte{}, err
+	}
+	if !hasList {
 		if err := b.db.Put(key, []byte{}); err != nil {
 			return [][]byte{}, err
 		}
@@ -668,6 +682,9 @@ func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [3
 	key := attestationHashListKey(blockHash)
 
 	hashes, err := b.getAttestationHashList(blockHash)
+	if err != nil {
+		return err
+	}
 	hashes = append(hashes, attestationHash[:])
 
 	attestationHashes := &pb.AttestationHashes{}
