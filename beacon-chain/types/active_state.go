@@ -120,9 +120,9 @@ func (a *ActiveState) updateRecentBlockHashes(block *Block, parentSlot uint64) (
 	return update, nil
 }
 
-// DeriveActiveState returns the active state for `block` based on its own state.
+// CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
-func (a *ActiveState) DeriveActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
+func (a *ActiveState) CalculateNewActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
 	// Derive the new set of pending attestations
 	newPendingAttestations := a.updateAttestations(block.data.Attestations, cState.LastStateRecalc())
 
@@ -168,7 +168,7 @@ func (a *ActiveState) updateBlockVoteCache(block *Block, cState *CrystallizedSta
 		attestation := block.Attestations()[i]
 
 		parentHashes := a.getSignedParentHashes(block, attestation)
-		attesterIndices, err := cState.GetAttesterIndices(attestation)
+		attesterIndices, err := cState.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
 		}

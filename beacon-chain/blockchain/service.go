@@ -95,7 +95,6 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
-
 	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return false, err
@@ -263,6 +262,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
+			// If a candidate block exists and it is a lower slot, run theh fork choice rule.
 			if c.candidateBlock != nilBlock && block.SlotNumber() > c.candidateBlock.SlotNumber() {
 				c.updateHead()
 			}
@@ -284,7 +284,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
-				cState, err = cState.DeriveCrystallizedState(aState, block.SlotNumber())
+				cState, err = cState.CalculateNewCrystallizedState(aState, block.SlotNumber())
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
@@ -295,7 +295,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to get parent slot of block %x", blockHash)
 				return
 			}
-			aState, err = aState.DeriveActiveState(block, cState, parentSlot)
+			aState, err = aState.CalculateNewActiveState(block, cState, parentSlot)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 			}

@@ -167,8 +167,8 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalc()+params.CycleLength
 }
 
-// GetAttesterIndices fetches the attesters for a given attestation record.
-func (c *CrystallizedState) GetAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
+// getAttesterIndices fetches the attesters for a given attestation record.
+func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := c.LastStateRecalc()
 	// TODO: IndicesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := c.data.IndicesForSlots
@@ -181,9 +181,9 @@ func (c *CrystallizedState) GetAttesterIndices(attestation *pb.AttestationRecord
 	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
 }
 
-// DeriveCrystallizedState computes the new crystallized state, given the previous crystallized state
+// CalculateNewCrystallizedState computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
-func (c *CrystallizedState) DeriveCrystallizedState(aState *ActiveState, slotNumber uint64) (*CrystallizedState, error) {
+func (c *CrystallizedState) CalculateNewCrystallizedState(aState *ActiveState, slotNumber uint64) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
@@ -294,7 +294,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Attestat
 
 	shardAttestationBalance := map[shardAttestation]uint64{}
 	for _, attestation := range pendingAttestations {
-		indices, err := c.GetAttesterIndices(attestation)
+		indices, err := c.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
 		}

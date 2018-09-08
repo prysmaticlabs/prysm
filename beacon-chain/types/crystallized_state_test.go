@@ -37,7 +37,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 
 	aState := NewGenesisActiveState()
 
-	newCState, err := cState.DeriveCrystallizedState(aState, 0)
+	newCState, err := cState.CalculateNewCrystallizedState(aState, 0)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	}
 
 	aState := NewGenesisActiveState()
-	cState, err = cState.DeriveCrystallizedState(aState, 0)
+	cState, err = cState.CalculateNewCrystallizedState(aState, 0)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, voteCache)
 
-	cState, err = cState.DeriveCrystallizedState(aState, 0)
+	cState, err = cState.CalculateNewCrystallizedState(aState, 0)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
 
-	cState, err = cState.DeriveCrystallizedState(aState, 0)
+	cState, err = cState.CalculateNewCrystallizedState(aState, 0)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -133,19 +133,19 @@ func TestProcessCrosslinks(t *testing.T) {
 
 	// Set up validators.
 	validators := []*pb.ValidatorRecord{
-		{
-			Balance:      10000,
+		&pb.ValidatorRecord{
+			Balance: 10000,
 			StartDynasty: 0,
-			EndDynasty:   params.DefaultEndDynasty,
+			EndDynasty: params.DefaultEndDynasty,
 		},
 	}
 
 	// Set up pending attestations.
 	pAttestations := []*pb.AttestationRecord{
-		{
-			Slot:             0,
-			ShardId:          0,
-			ShardBlockHash:   []byte{'a'},
+		&pb.AttestationRecord{
+			Slot: 0,
+			ShardId: 0,
+			ShardBlockHash: []byte{'a'},
 			AttesterBitfield: []byte{'z', 'z'},
 		},
 	}
@@ -158,11 +158,11 @@ func TestProcessCrosslinks(t *testing.T) {
 
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		CrosslinkRecords: clRecords,
-		Validators:       validators,
-		CurrentDynasty:   5,
-		IndicesForSlots:  indicesForSlots,
+		Validators: validators,
+		CurrentDynasty: 5,
+		IndicesForSlots: indicesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations,50)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
