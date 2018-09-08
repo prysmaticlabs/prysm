@@ -63,7 +63,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 		crosslinkRecords = append(crosslinkRecords, &pb.CrosslinkRecord{
 			Dynasty:   0,
 			Blockhash: make([]byte, 0, 32),
-			Slot: 0,
+			Slot:      0,
 		})
 	}
 
@@ -274,9 +274,9 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 		newBlockhash := make([]byte, len(oldCL.Blockhash))
 		copy(newBlockhash, oldCL.Blockhash)
 		newCL := &pb.CrosslinkRecord{
-			Dynasty: oldCL.Dynasty,
+			Dynasty:   oldCL.Dynasty,
 			Blockhash: newBlockhash,
-			Slot: oldCL.Slot,
+			Slot:      oldCL.Slot,
 		}
 		new[i] = newCL
 	}
@@ -302,7 +302,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Attestat
 		shardBlockHash := [32]byte{}
 		copy(shardBlockHash[:], attestation.ShardBlockHash)
 		sa := shardAttestation{
-			shardID: attestation.ShardId,
+			shardID:        attestation.ShardId,
 			shardBlockHash: shardBlockHash,
 		}
 		if _, ok := shardAttestationBalance[sa]; !ok {
