@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -26,6 +27,7 @@ func TestAttestation(t *testing.T) {
 	attestation.AttesterBitfield()
 	attestation.ObliqueParentHashes()
 	attestation.AggregateSig()
+	attestation.Key()
 
 	emptyAttestation := &Attestation{}
 	if _, err := emptyAttestation.Marshal(); err == nil {
@@ -46,5 +48,8 @@ func TestAttestation(t *testing.T) {
 	attestationWithNilData := NewAttestation(nil)
 	if attestationWithNilData.ShardID() != 0 {
 		t.Errorf("mismatched attestation shard id: wanted 0, received %v", attestation.ShardID())
+	}
+	if !bytes.Equal(attestation.ShardBlockHash(), []byte{0}) {
+		t.Errorf("mismatched shard block hash")
 	}
 }

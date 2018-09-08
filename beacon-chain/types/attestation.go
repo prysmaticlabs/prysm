@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/encoding/binary"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -57,6 +58,24 @@ func (a *Attestation) Hash() ([32]byte, error) {
 	return hash, nil
 }
 
+// Key generates the blake2b hash of the following attestation fields:
+// slotNumber + shardID + blockHash + obliqueParentHash
+// This is used for attestation table look up in localDB.
+func (a *Attestation) Key() [32]byte {
+	key := make([]byte, binary.MaxVarintLen64)
+	binary.PutUvarint(key, a.SlotNumber())
+	binary.PutUvarint(key, a.ShardID())
+	key = append(key, a.ShardBlockHash()...)
+	for _, pHash := range a.ObliqueParentHashes() {
+		key = append(key, pHash[:]...)
+	}
+
+	var hash [32]byte
+	h := blake2b.Sum512(key)
+	copy(hash[:], h[:32])
+	return hash
+}
+
 // SlotNumber of the block, which this attestation is attesting to.
 func (a *Attestation) SlotNumber() uint64 {
 	return a.data.Slot
@@ -65,6 +84,11 @@ func (a *Attestation) SlotNumber() uint64 {
 // ShardID of the block, which this attestation is attesting to.
 func (a *Attestation) ShardID() uint64 {
 	return a.data.ShardId
+}
+
+// ShardBlockHash of the block, which this attestation is attesting to.
+func (a *Attestation) ShardBlockHash() []byte {
+	return a.data.ShardBlockHash
 }
 
 // JustifiedSlotNumber of the attestation should be earlier than the last justified slot in crystallized state.

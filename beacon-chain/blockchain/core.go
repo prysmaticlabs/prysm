@@ -393,9 +393,13 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 	return nil
 }
 
-// initCycle is called when a new cycle has been reached, beacon node
+// stateRecalc is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
-func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState, error) {
+func (b *BeaconChain) stateRecalc(
+	cState *types.CrystallizedState,
+	aState *types.ActiveState,
+	block *types.Block) (*types.CrystallizedState, *types.ActiveState, error) {
+
 	var blockVoteBalance uint64
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
@@ -426,8 +430,16 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		}
 	}
 
-	// TODO: Process Crosslink records here.
-	newCrossLinkRecords := []*pb.CrosslinkRecord{}
+	newCrossLinkRecords, err := b.processCrosslinks(
+		cState.CrosslinkRecords(),
+		cState.Validators(),
+		aState.PendingAttestations(),
+		cState.CurrentDynasty(),
+		block.SlotNumber(),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Remove attestations older than LastStateRecalc.
 	var newPendingAttestations []*pb.AttestationRecord
@@ -487,6 +499,67 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 	}, aState.GetBlockVoteCache())
 
 	return newCrystallizedState, newActiveState, nil
+}
+
+// processCrosslinks checks if the proposed shard block has recevied
+// 2/3 of the votes. If yes, we update crosslink record to point to
+// the proposed shard block with latest dynasty and slot numbers.
+func (b *BeaconChain) processCrosslinks(
+	crosslinkRecords []*pb.CrosslinkRecord,
+	validators []*pb.ValidatorRecord,
+	pendingAttestations []*pb.AttestationRecord,
+	dynasty uint64,
+	slot uint64) ([]*pb.CrosslinkRecord, error) {
+
+	type shardBlockHash struct {
+		id        uint64
+		blockHash []byte
+	}
+	shardBlockHashBalance := make(map[*shardBlockHash]uint64)
+
+	for _, attestation := range pendingAttestations {
+		sbh := shardBlockHash{
+			id:        attestation.ShardId,
+			blockHash: attestation.ShardBlockHash,
+		}
+		var keyExists bool
+		if _, ok := shardBlockHashBalance[&sbh]; ok {
+			keyExists = true
+		}
+		if !keyExists {
+			shardBlockHashBalance[&sbh] = 0
+		}
+
+		indices, err := b.getAttesterIndices(attestation)
+		if err != nil {
+			return nil, err
+		}
+
+		// find the total balance of the shard committee.
+		var totalBalances uint64
+		for _, attesterIndex := range indices {
+			totalBalances += validators[attesterIndex].Balance
+		}
+
+		// find the balance of votes cast in shard attestation.
+		var voteBalances uint64
+		for i, attesterIndex := range indices {
+			if utils.CheckBit(attestation.AttesterBitfield, i) {
+				voteBalances += validators[attesterIndex].Balance
+			}
+		}
+
+		// if 2/3 of committee voted on this crosslink, update the crosslink
+		// with latest dynasty number, shard block hash, and slot number.
+		if 3*voteBalances >= 2*totalBalances && dynasty > crosslinkRecords[attestation.ShardId].Dynasty {
+			crosslinkRecords[attestation.ShardId] = &pb.CrosslinkRecord{
+				Dynasty:   dynasty,
+				Blockhash: attestation.ShardBlockHash,
+				Slot:      slot,
+			}
+		}
+	}
+	return crosslinkRecords, nil
 }
 
 func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
@@ -580,11 +653,7 @@ func (b *BeaconChain) hasAttestation(attestationHash [32]byte) (bool, error) {
 
 // saveAttestation puts the attestation record into the beacon chain db.
 func (b *BeaconChain) saveAttestation(attestation *types.Attestation) error {
-	hash, err := attestation.Hash()
-	if err != nil {
-		return err
-	}
-
+	hash := attestation.Key()
 	key := attestationKey(hash)
 	encodedState, err := attestation.Marshal()
 	if err != nil {
