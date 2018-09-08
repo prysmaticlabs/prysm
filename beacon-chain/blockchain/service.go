@@ -244,14 +244,12 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			return
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
-			// 3 steps:
-			// - Compute the active state for the block.
-			// - Compute the crystallized state for the block if cycle transition.
-			// - Store both states and the block into a data structure used for fork choice.
-			//
-			// Another routine will run that will continually compute
-			// the canonical block and states from this data structure using the
-			// fork choice rule.
+			// 1. Validate the block
+			// 2. If a candidate block with a lower slot exists, run the fork choice rule
+			// 3. Save the block
+			// 4. If a candidate block exists, exit
+			// 4. Calculate the active and crystallized state for the block
+			// 5. Set the block as the new candidate block
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
 			blockHash, err := block.Hash()
@@ -279,15 +277,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			if c.candidateBlock != nilBlock {
 				continue
 			}
-
-			// 3 steps:
-			// - Compute the active state for the block.
-			// - Compute the crystallized state for the block if cycle transition.
-			// - Store both states and the block into a data structure used for fork choice
-			//
-			// This data structure will be used by the updateHead function to determine
-			// canonical blocks and states.
-			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
 
 			// Refetch active and crystallized state, in case `updateHead` was called.
 			aState = c.chain.ActiveState()
