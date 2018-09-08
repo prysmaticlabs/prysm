@@ -142,35 +142,9 @@ func (c *CrystallizedState) DynastySeed() [32]byte {
 	return h
 }
 
-// DynastySeedLastReset is the last finalized Slot that the crosslink seed was reset.
-func (c *CrystallizedState) DynastySeedLastReset() uint64 {
-	return c.data.DynastySeedLastReset
-}
-
 // Validators returns list of validators.
 func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 	return c.data.Validators
-}
-
-// ValidatorsLength returns the number of total validators.
-func (c *CrystallizedState) ValidatorsLength() int {
-	return len(c.data.Validators)
-}
-
-// SetValidators sets the validator set.
-func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
-	c.data.Validators = validators
-}
-
-// IndicesForSlots returns what active validators are part of the attester set
-// at what slot, and in what shard.
-func (c *CrystallizedState) IndicesForSlots() []*pb.ShardAndCommitteeArray {
-	return c.data.IndicesForSlots
-}
-
-// CrosslinkRecords returns records about the most recent cross link or each shard.
-func (c *CrystallizedState) CrosslinkRecords() []*pb.CrosslinkRecord {
-	return c.data.CrosslinkRecords
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,
@@ -183,7 +157,7 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 func (c *CrystallizedState) GetAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := c.LastStateRecalc()
 	// TODO: IndicesForSlots will return default value because the spec for dynasty transition is not finalized.
-	shardCommitteeArray := c.IndicesForSlots()
+	shardCommitteeArray := c.data.IndicesForSlots
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
@@ -265,7 +239,7 @@ func (c *CrystallizedState) DeriveCrystallizedState(aState *ActiveState) (*Cryst
 		LastFinalizedSlot:      finalizedSlot,
 		CrosslinkingStartShard: 0, // TODO: Stub. Need to see where this epoch left off.
 		CrosslinkRecords:       newCrossLinkRecords,
-		DynastySeedLastReset:   c.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
+		DynastySeedLastReset:   c.data.DynastySeedLastReset, // TODO: Stub. Dynasty transition is not finalized according to the spec.
 		TotalDeposits:          nextCycleBalance,
 	})
 
