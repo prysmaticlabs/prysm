@@ -295,7 +295,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
-				cState, err = cState.DeriveCrystallizedState(aState)
+				cState, err = cState.DeriveCrystallizedState(aState, block.SlotNumber())
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
