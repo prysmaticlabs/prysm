@@ -2,14 +2,9 @@ package blockchain
 
 import (
 	"bytes"
-	"context"
-	"errors"
 	"reflect"
 	"testing"
-	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -18,27 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-// FakeClock represents an mocked clock for testing purposes.
-type fakeClock struct{}
-
-// Now represents the mocked functionality of a Clock.Now().
-func (fakeClock) Now() time.Time {
-	return time.Date(1970, 2, 1, 1, 0, 0, 0, time.UTC)
-}
-
-type faultyFetcher struct{}
-
-func (f *faultyFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	return nil, errors.New("cannot fetch block")
-}
-
-type mockFetcher struct{}
-
-func (m *mockFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	block := gethTypes.NewBlock(&gethTypes.Header{}, nil, nil, nil)
-	return block, nil
-}
 
 type faultyDB struct{}
 

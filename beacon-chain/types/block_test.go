@@ -41,11 +41,11 @@ func TestBlockValidity(t *testing.T) {
 
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		IndicesForSlots: []*pb.ShardAndCommitteeArray{
-			&pb.ShardAndCommitteeArray{
+			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-					&pb.ShardAndCommittee{
-						ShardId: 0,
-						Committee: []uint32{0,1,2,3,4,5,6,7},
+					{
+						ShardId:   0,
+						Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7},
 					},
 				},
 			},
@@ -64,10 +64,10 @@ func TestBlockValidity(t *testing.T) {
 	b := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 1,
 		Attestations: []*pb.AttestationRecord{
-			&pb.AttestationRecord{
-				Slot: 0,
-				ShardId: 0,
-				JustifiedSlot: 0,
+			{
+				Slot:             0,
+				ShardId:          0,
+				JustifiedSlot:    0,
 				AttesterBitfield: []byte{8},
 			},
 		},

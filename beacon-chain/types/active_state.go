@@ -113,7 +113,7 @@ func (a *ActiveState) updateRecentBlockHashes(block *Block, parentSlot uint64) (
 	dist := block.SlotNumber() - parentSlot
 	existing := a.data.RecentBlockHashes
 	update := existing[dist:]
-	for ; len(update) < 2 * params.CycleLength; {
+	for len(update) < 2*params.CycleLength {
 		update = append(update, hash[:])
 	}
 
@@ -140,7 +140,7 @@ func (a *ActiveState) DeriveActiveState(block *Block, cState *CrystallizedState,
 
 	return NewActiveState(&pb.ActiveState{
 		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes: newRecentBlockHashes,
+		RecentBlockHashes:   newRecentBlockHashes,
 	}, newBlockVoteCache), nil
 }
 

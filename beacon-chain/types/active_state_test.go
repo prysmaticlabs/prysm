@@ -27,12 +27,12 @@ func TestUpdateAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
 
 	newAttestations := []*pb.AttestationRecord{
-		&pb.AttestationRecord{
-			Slot: 0,
+		{
+			Slot:    0,
 			ShardId: 0,
 		},
-		&pb.AttestationRecord{
-			Slot: 0,
+		{
+			Slot:    0,
 			ShardId: 1,
 		},
 	}
@@ -46,24 +46,24 @@ func TestUpdateAttestations(t *testing.T) {
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AttestationRecord{
-			&pb.AttestationRecord{
-				Slot: 0,
+			{
+				Slot:    0,
 				ShardId: 0,
 			},
-			&pb.AttestationRecord{
-				Slot: 0,
+			{
+				Slot:    0,
 				ShardId: 1,
 			},
 		},
 	}, nil)
 
 	newAttestations := []*pb.AttestationRecord{
-		&pb.AttestationRecord {
-			Slot: 10,
+		{
+			Slot:    10,
 			ShardId: 2,
 		},
-		&pb.AttestationRecord{
-			Slot: 9,
+		{
+			Slot:    9,
 			ShardId: 3,
 		},
 	}
@@ -102,7 +102,7 @@ func TestUpdateRecentBlockVoteCache(t *testing.T) {
 		t.Fatalf("failed to hash block: %v", err)
 	}
 	for i := 0; i < len(updated); i++ {
-		if i < len(updated) - 10 {
+		if i < len(updated)-10 {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %x got %x", []byte{0}, updated[i])
 			}

@@ -15,7 +15,7 @@ func (v *VoteCache) copy() *VoteCache {
 	copy(voterIndices, v.VoterIndices)
 
 	return &VoteCache{
-		VoterIndices: voterIndices,
+		VoterIndices:     voterIndices,
 		VoteTotalDeposit: v.VoteTotalDeposit,
 	}
 }

@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"golang.org/x/crypto/blake2b"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "types")
@@ -42,7 +42,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				CrystallizedStateHash: []byte{0},
 				// NOTE: this field only exists to determine the timestamp of the genesis block.
 				// As of the v2.1 spec, the timestamp of blocks after genesis are not used.
-				Timestamp:             ptypes.TimestampNow(),
+				Timestamp: ptypes.TimestampNow(),
 			},
 		}
 	}
