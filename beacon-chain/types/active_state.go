@@ -89,7 +89,7 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
 	return a.blockVoteCache
 }
 
-func (a *ActiveState) updateAttestations(new []*pb.AttestationRecord, lastStateRecalc uint64) []*pb.AttestationRecord {
+func (a *ActiveState) calculateNewAttestations(new []*pb.AttestationRecord, lastStateRecalc uint64) []*pb.AttestationRecord {
 	existing := a.data.PendingAttestations
 	update := make([]*pb.AttestationRecord, 0)
 	for i := 0; i < len(existing); i++ {
@@ -104,7 +104,7 @@ func (a *ActiveState) updateAttestations(new []*pb.AttestationRecord, lastStateR
 	return update
 }
 
-func (a *ActiveState) updateRecentBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
+func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
 	hash, err := block.Hash()
 	if err != nil {
 		return nil, err
@@ -120,48 +120,8 @@ func (a *ActiveState) updateRecentBlockHashes(block *Block, parentSlot uint64) (
 	return update, nil
 }
 
-// CalculateNewActiveState returns the active state for `block` based on its own state.
-// This method should not modify its own state.
-func (a *ActiveState) CalculateNewActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
-	// Derive the new set of pending attestations
-	newPendingAttestations := a.updateAttestations(block.data.Attestations, cState.LastStateRecalc())
-
-	// Derive the new value for RecentBlockHashes
-	newRecentBlockHashes, err := a.updateRecentBlockHashes(block, parentSlot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
-	}
-
-	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-	newBlockVoteCache, err := a.updateBlockVoteCache(block, cState)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update vote cache: %v", err)
-	}
-
-	return NewActiveState(&pb.ActiveState{
-		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes:   newRecentBlockHashes,
-	}, newBlockVoteCache), nil
-}
-
-// getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AttestationRecord) [][32]byte {
-	var signedParentHashes [][32]byte
-	start := block.SlotNumber() - attestation.Slot
-	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
-
-	recentBlockHashes := a.RecentBlockHashes()
-	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)
-
-	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
-		hashes := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, hashes)
-	}
-	return signedParentHashes
-}
-
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (a *ActiveState) updateBlockVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*VoteCache, error) {
+func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*VoteCache, error) {
 	new := voteCacheDeepCopy(a.GetBlockVoteCache())
 
 	for i := 0; i < len(block.Attestations()); i++ {
@@ -211,4 +171,44 @@ func (a *ActiveState) updateBlockVoteCache(block *Block, cState *CrystallizedSta
 	}
 
 	return new, nil
+}
+
+// CalculateNewActiveState returns the active state for `block` based on its own state.
+// This method should not modify its own state.
+func (a *ActiveState) CalculateNewActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
+	// Derive the new set of pending attestations
+	newPendingAttestations := a.calculateNewAttestations(block.data.Attestations, cState.LastStateRecalc())
+
+	// Derive the new value for RecentBlockHashes
+	newRecentBlockHashes, err := a.calculateNewBlockHashes(block, parentSlot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
+	}
+
+	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
+	newBlockVoteCache, err := a.calculateNewVoteCache(block, cState)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update vote cache: %v", err)
+	}
+
+	return NewActiveState(&pb.ActiveState{
+		PendingAttestations: newPendingAttestations,
+		RecentBlockHashes:   newRecentBlockHashes,
+	}, newBlockVoteCache), nil
+}
+
+// getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
+func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AttestationRecord) [][32]byte {
+	var signedParentHashes [][32]byte
+	start := block.SlotNumber() - attestation.Slot
+	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
+
+	recentBlockHashes := a.RecentBlockHashes()
+	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)
+
+	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
+		hashes := common.BytesToHash(obliqueParentHashes)
+		signedParentHashes = append(signedParentHashes, hashes)
+	}
+	return signedParentHashes
 }
