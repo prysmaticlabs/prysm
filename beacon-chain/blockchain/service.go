@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -111,12 +112,10 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
-
 	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
 	if err != nil {
 		return false, err
 	}
-
 	return hasCrystallized, nil
 }
 
@@ -181,16 +180,33 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
-			// TODO: get block stored by slot number and hash from DB
-			// TODO: check if blocks pending processing is full.
+			if len(c.blocksPendingProcessing) == 0 {
+				continue
+			}
 
-			block, _ := types.NewGenesisBlock()
+			// Naive fork choice rule: we pick the first block we processed for the previous slot
+			// as canonical.
+			// TODO: Use a better lookup key or abstract into a GetBlock method from DB.
+			hasBlock, err := c.beaconDB.Has(c.blocksPendingProcessing[0])
+			if err != nil {
+				continue
+			}
+			if !hasBlock {
+				continue
+			}
+			encoded, err := c.beaconDB.Get(c.blocksPendingProcessing[0])
+			if err != nil {
+				continue
+			}
+			blockProto := &pb.BeaconBlock{}
+			if err := proto.Unmarshal(encoded, blockProto); err != nil {
+				continue
+			}
+			block := types.NewBlock(blockProto)
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash incoming block: %v", err)
 			}
-			// Naive fork choice rule: we pick the first block we processed for the previous slot
-			// as canonical.
 
 			// Process attestations as a beacon chain node.
 			var processedAttestations []*pb.AttestationRecord
@@ -238,7 +254,6 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 				log.Errorf("Write crystallized state to disk failed: %v", err)
 			}
 
-			//// TODO: Utilize this value in the fork choice rule.
 			vals, err := casper.ShuffleValidatorsToCommittees(
 				crystallizedState.DynastySeed(),
 				crystallizedState.Validators(),
@@ -270,6 +285,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 				c.canonicalCrystallizedStateFeed.Send(crystallizedState)
 			}
 			c.canonicalBlockFeed.Send(block)
+
 			// Clear the blocks pending processing.
 			c.blocksPendingProcessing = [][]byte{}
 		}
