@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	blake2b "github.com/minio/blake2b-simd"
+	blake2b "golang.org/x/crypto/blake2b"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
