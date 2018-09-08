@@ -407,27 +407,41 @@ func TestCanProcessAttestations(t *testing.T) {
 	bc, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	// Process attestation on this block should fail because AttestationRecord's slot # > than block's slot #.
-	block := NewBlock(t, &pb.BeaconBlock{
+	// Initialize a parent block.
+	parentBlock := NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 1,
+	})
+	saveErr := bc.saveBlock(parentBlock)
+	if saveErr != nil {
+		t.Fatal("Cannot save block!")
+	}
+	parentHash, err := parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
+	}
+
+	// Process attestation on this block should fail because AttestationRecord's slot # > than block's parent's slot #.
+	block := NewBlock(t, &pb.BeaconBlock{
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 2, ShardId: 0},
 		},
+		ParentHash: parentHash[:],
 	})
 	if err := bc.processAttestation(0, block); err == nil {
-		t.Error("Process attestation should have failed because attestation slot # > block #")
+		t.Error("Process attestation should have failed because attestation slot # > parent block slot #")
 	}
 
-	// Process attestation on this should fail because AttestationRecord's slot # > than block's slot #.
-	block = NewBlock(t, &pb.BeaconBlock{
-		SlotNumber: 2 + params.CycleLength,
-		Attestations: []*pb.AttestationRecord{
-			{Slot: 1, ShardId: 0},
-		},
+	// Initialize another parent block.
+	parentBlock = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 2,
 	})
-
-	if err := bc.processAttestation(0, block); err == nil {
-		t.Error("Process attestation should have failed because attestation slot # < block # + cycle length")
+	saveErr = bc.saveBlock(parentBlock)
+	if saveErr != nil {
+		t.Fatal("Cannot save block!")
+	}
+	parentHash, err = parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
 
 	block = NewBlock(t, &pb.BeaconBlock{
@@ -435,6 +449,7 @@ func TestCanProcessAttestations(t *testing.T) {
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, ShardId: 0, ObliqueParentHashes: [][]byte{{'A'}, {'B'}, {'C'}}},
 		},
+		ParentHash: parentHash[:],
 	})
 	var recentBlockHashes [][]byte
 	for i := 0; i < params.CycleLength; i++ {
@@ -459,7 +474,6 @@ func TestCanProcessAttestations(t *testing.T) {
 	if err := bc.SetCrystallizedState(crystallized); err != nil {
 		t.Fatalf("unable to mutate crystallized state: %v", err)
 	}
-
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, there's no committee in shard 0")
 	}
@@ -485,8 +499,8 @@ func TestCanProcessAttestations(t *testing.T) {
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'A', 'B', 'C'}},
 		},
+		ParentHash: parentHash[:],
 	})
-
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, incorrect attester bit field length")
 	}
@@ -497,10 +511,10 @@ func TestCanProcessAttestations(t *testing.T) {
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'a'}},
 		},
+		ParentHash: parentHash[:],
 	})
 	// Process attestation should fail because the non-zero leading bits for votes.
 	// a is 01100001
-
 	if err := bc.processAttestation(0, block); err == nil {
 		t.Error("Process attestation should have failed, incorrect attester bit field length")
 	}
@@ -511,8 +525,8 @@ func TestCanProcessAttestations(t *testing.T) {
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
 		},
+		ParentHash: parentHash[:],
 	})
-
 	if err := bc.processAttestation(0, block); err != nil {
 		t.Error(err)
 	}
