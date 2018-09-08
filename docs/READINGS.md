@@ -119,7 +119,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 -   [Safe Notary Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728/3)
 -   [Cross Links Between Main and Shard Chains](https://ethresear.ch/t/cross-links-between-main-chain-and-shards/1860/2)
 
-**Shasper Talk from Conferences & Meet Ups in Order **
+**Shasper Talk from Conferences & Meet Ups in Order**
 
 -   [Latest Research and Sharding by Justin Drake from Tech Crunch](https://www.youtube.com/watch?v=J6xO7DH20Js)
 -   [Beacon Casper Chain by Vitalik and Justin Drake](https://www.youtube.com/watch?v=GAywmwGToUI)
