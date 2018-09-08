@@ -2,10 +2,10 @@
 package types
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/encoding/binary"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
