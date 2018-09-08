@@ -239,7 +239,7 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 // processAttestation processes the attestations for one shard in an incoming block.
 func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
 	// Validate attestation's slot number has is within range of incoming block's parent's slot number.
-	var parentBlock	*types.Block
+	var parentBlock *types.Block
 
 	hasParentBlock, err := b.hasBlock(block.ParentHash())
 	if err != nil {
