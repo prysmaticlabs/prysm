@@ -145,7 +145,7 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 		AttesterBitfield: []byte{'F'},
 	}
 
-	indices := []uint32{0,1,2,3,4,5,6,7}
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if !isValid {
@@ -155,10 +155,10 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 
 func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 	attestation := &pb.AttestationRecord{
-		AttesterBitfield: []byte{'F','F'},
+		AttesterBitfield: []byte{'F', 'F'},
 	}
 
-	indices := []uint32{0,1,2,3,4,5,6,7}
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if isValid {
@@ -171,7 +171,7 @@ func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 		AttesterBitfield: []byte{'F'},
 	}
 
-	indices := []uint32{0,1,2,3,4,5,6}
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if !isValid {
@@ -184,7 +184,7 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 		AttesterBitfield: []byte{'E'},
 	}
 
-	indices := []uint32{0,1,2,3,4,5,6}
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if isValid {

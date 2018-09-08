@@ -133,19 +133,19 @@ func TestProcessCrosslinks(t *testing.T) {
 
 	// Set up validators.
 	validators := []*pb.ValidatorRecord{
-		&pb.ValidatorRecord{
-			Balance: 10000,
+		{
+			Balance:      10000,
 			StartDynasty: 0,
-			EndDynasty: params.DefaultEndDynasty,
+			EndDynasty:   params.DefaultEndDynasty,
 		},
 	}
 
 	// Set up pending attestations.
 	pAttestations := []*pb.AttestationRecord{
-		&pb.AttestationRecord{
-			Slot: 0,
-			ShardId: 0,
-			ShardBlockHash: []byte{'a'},
+		{
+			Slot:             0,
+			ShardId:          0,
+			ShardBlockHash:   []byte{'a'},
 			AttesterBitfield: []byte{'z', 'z'},
 		},
 	}
@@ -158,11 +158,11 @@ func TestProcessCrosslinks(t *testing.T) {
 
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		CrosslinkRecords: clRecords,
-		Validators: validators,
-		CurrentDynasty: 5,
-		IndicesForSlots: indicesForSlots,
+		Validators:       validators,
+		CurrentDynasty:   5,
+		IndicesForSlots:  indicesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations,50)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}

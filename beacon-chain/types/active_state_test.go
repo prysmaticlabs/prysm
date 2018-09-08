@@ -139,9 +139,9 @@ func TestBlockVoteCache(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 1,
 		Attestations: []*pb.AttestationRecord{
-			&pb.AttestationRecord{
-				Slot: 0,
-				ShardId: 0,
+			{
+				Slot:             0,
+				ShardId:          0,
 				AttesterBitfield: []byte{'F', 'F'},
 			},
 		},
