@@ -44,7 +44,8 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		return nil, err
 	}
 
-	active, crystallized, err := types.NewGenesisStates()
+	active := types.NewGenesisActiveState()
+	crystallized, err := types.NewGenesisCrystallizedState()
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +63,9 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 			return nil, err
 		}
 		if err := beaconChain.db.Put(genesisLookupKey, genesisMarshall); err != nil {
+			return nil, err
+		}
+		if err := beaconChain.saveBlock(genesisBlock); err != nil {
 			return nil, err
 		}
 	}
@@ -195,9 +199,6 @@ func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) 
 // saveCanonicalBlock puts the passed block into the beacon chain db
 // and also saves a "latest-head" key mapping to the block in the db.
 func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
-	if err := b.saveBlock(block); err != nil {
-		return err
-	}
 	enc, err := block.Marshal()
 	if err != nil {
 		return err

@@ -3,10 +3,11 @@ package types
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/gogo/protobuf/proto"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -19,6 +20,61 @@ type CrystallizedState struct {
 // NewCrystallizedState creates a new crystallized state with a explicitly set data field.
 func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 	return &CrystallizedState{data: data}
+}
+
+// NewGenesisCrystallizedState initializes the crystallized state for slot 0.
+func NewGenesisCrystallizedState() (*CrystallizedState, error) {
+	// We seed the genesis crystallized state with a bunch of validators to
+	// bootstrap the system.
+	// TODO: Perform this task from some sort of genesis state json config instead.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
+		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validators = append(validators, validator)
+	}
+
+	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
+	seed := make([]byte, 0, 32)
+	committees, err := casper.ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Starting with 2 cycles (128 slots) with the same committees.
+	committees = append(committees, committees...)
+	indicesForSlots := append(committees, committees...)
+
+	// Bootstrap cross link records.
+	var crosslinkRecords []*pb.CrosslinkRecord
+	for i := 0; i < params.ShardCount; i++ {
+		crosslinkRecords = append(crosslinkRecords, &pb.CrosslinkRecord{
+			Dynasty:   0,
+			Blockhash: make([]byte, 0, 32),
+		})
+	}
+
+	// Calculate total deposit from boot strapped validators.
+	var totalDeposit uint64
+	for _, v := range validators {
+		totalDeposit += v.Balance
+	}
+
+	return &CrystallizedState{
+		data: &pb.CrystallizedState{
+			LastStateRecalc:        0,
+			JustifiedStreak:        0,
+			LastJustifiedSlot:      0,
+			LastFinalizedSlot:      0,
+			CurrentDynasty:         1,
+			CrosslinkingStartShard: 0,
+			TotalDeposits:          totalDeposit,
+			DynastySeed:            []byte{},
+			DynastySeedLastReset:   0,
+			CrosslinkRecords:       crosslinkRecords,
+			Validators:             validators,
+			IndicesForSlots:        indicesForSlots,
+		},
+	}, nil
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
@@ -123,6 +179,7 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalc()+params.CycleLength
 }
 
+// GetAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) GetAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := c.LastStateRecalc()
 	// TODO: IndicesForSlots will return default value because the spec for dynasty transition is not finalized.
@@ -136,8 +193,8 @@ func (c *CrystallizedState) GetAttesterIndices(attestation *pb.AttestationRecord
 	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
 }
 
-// DeriveCrystallizedState is called when a new cycle has been reached, beacon node
-// will re-compute active state and crystallized state during init cycle transition.
+// DeriveCrystallizedState computes the new crystallized state, given the previous crystallized state
+// and the current active state. This method is called during a cycle transition.
 func (c *CrystallizedState) DeriveCrystallizedState(aState *ActiveState) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
 	justifiedStreak := c.JustifiedStreak()
@@ -147,9 +204,10 @@ func (c *CrystallizedState) DeriveCrystallizedState(aState *ActiveState) (*Cryst
 	blockVoteCache := aState.GetBlockVoteCache()
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
+	recentBlockHashes := aState.RecentBlockHashes()
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := lastStateRecalc - params.CycleLength + i
-		blockHash := aState.RecentBlockHashes()[i]
+		blockHash := recentBlockHashes[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
 		} else {

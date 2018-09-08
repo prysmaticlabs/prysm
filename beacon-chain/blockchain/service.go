@@ -289,6 +289,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// canonical blocks and states.
 			// TODO: Using latest block hash for seed, this will eventually be replaced by randao.
 
+			// Refetch active and crystallized state, in case `updateHead` was called.
+			aState = c.chain.ActiveState()
+			cState = c.chain.CrystallizedState()
+
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
 				cState, err = cState.DeriveCrystallizedState(aState)

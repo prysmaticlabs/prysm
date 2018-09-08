@@ -108,3 +108,29 @@ func GetIndicesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64,
 	}
 	return shardCommittees[slot-lcs], nil
 }
+
+// AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
+// defined in the Crystallized State.
+func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndices []uint32) bool {
+	// Validate attester bit field has the correct length.
+	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
+			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+		return false
+	}
+
+	// Valid attestation can not have non-zero trailing bits.
+	lastBit := len(attesterIndices)
+	if lastBit%8 == 0 {
+		return true
+	}
+
+	for i := 0; i < 8-lastBit%8; i++ {
+		if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+			log.Debugf("attestation has non-zero trailing bits")
+			return false
+		}
+	}
+
+	return true
+}

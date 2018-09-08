@@ -7,15 +7,19 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
+	"github.com/sirupsen/logrus"
 )
 
-var genesisTime = time.Unix(0, 0)
+var log = logrus.WithField("prefix", "types")
+
+var genesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2019
 var clock utils.Clock = &utils.RealClock{}
 
 // Block defines a beacon chain core primitive.
@@ -142,7 +146,7 @@ func (b *Block) isSlotValid() bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 
-	return clock.Now().Before(validTimeThreshold)
+	return clock.Now().After(validTimeThreshold)
 }
 
 // IsValid is called to decide if an incoming p2p block can be processed into the chain's block trie,
@@ -191,7 +195,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		return false
 	}
 
-	if attestation.JustifiedSlot != cState.LastJustifiedSlot() {
+	if attestation.JustifiedSlot > cState.LastJustifiedSlot() {
 		log.Debugf("attestation's last justified slot has to match crystallied state's last justified slot. Found: %d. Want: %d",
 			attestation.JustifiedSlot,
 			cState.LastJustifiedSlot())
@@ -209,7 +213,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
-	if !b.areAttesterBitfieldsValid(attestation, attesterIndices) {
+	if !casper.AreAttesterBitfieldsValid(attestation, attesterIndices) {
 		return false
 	}
 
@@ -234,27 +238,5 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
 
 	// TODO: Verify msgHash against aggregated pub key and aggregated signature.
-	return true
-}
-
-// areAttesterBitfieldsValid validates the attester bitfields are equal between attestation and crystallized state's calculation.
-func (b *Block) areAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndices []uint32) bool {
-	// Validate attester bit field has the correct length.
-	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
-		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
-			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
-		return false
-	}
-
-	// Valid attestation can not have non-zero trailing bits.
-	lastBit := len(attesterIndices)
-	if lastBit%8 != 0 {
-		for i := 0; i < 8-lastBit%8; i++ {
-			if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
-				log.Debugf("attestation has non-zero trailing bits")
-				return false
-			}
-		}
-	}
 	return true
 }
