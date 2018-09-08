@@ -298,7 +298,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				cState, err = cState.DeriveCrystallizedState(aState)
 			}
 			if err != nil {
-				log.Errorf("Failed to calculate the new fork choice rule: %v", err)
+				log.Errorf("Failed to calculate the new crystallized state: %v", err)
 			}
 
 			parentSlot, err := c.getParentSlot(block)
