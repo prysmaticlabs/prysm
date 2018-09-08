@@ -82,6 +82,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 		crosslinkRecords = append(crosslinkRecords, &pb.CrosslinkRecord{
 			Dynasty:   0,
 			Blockhash: make([]byte, 0, 32),
+			Slot:      0,
 		})
 	}
 

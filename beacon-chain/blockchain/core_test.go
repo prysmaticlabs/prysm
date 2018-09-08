@@ -589,12 +589,17 @@ func TestInitCycleNotFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
+	block := types.NewBlock(nil)
+
 	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	crystallized.SetStateRecalc(64)
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	if newCrystalled.LastFinalizedSlot() != 0 {
 		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -614,6 +619,8 @@ func TestInitCycleNotFinalized(t *testing.T) {
 func TestInitCycleFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
+
+	block := types.NewBlock(nil)
 
 	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
@@ -637,11 +644,17 @@ func TestInitCycleFinalized(t *testing.T) {
 	active.SetBlockVoteCache(blockVoteCache)
 
 	// justified block: 63, finalized block: 0, justified streak: 64
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	newActive.ReplaceBlockHashes(activeStateBlockHashes)
 	// justified block: 127, finalized block: 63, justified streak: 128
-	newCrystalled, newActive = b.initCycle(newCrystalled, newActive)
+	newCrystalled, newActive, err = b.stateRecalc(newCrystalled, newActive, block)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	if newCrystalled.LastFinalizedSlot() != 63 {
 		t.Errorf("Last finalized slot should be 63 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -838,5 +851,52 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 
 	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
+	}
+}
+
+func TestProcessCrosslinks(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	// Set up crosslink record for every shard.
+	var clRecords []*pb.CrosslinkRecord
+	for i := 0; i < params.ShardCount; i++ {
+		clRecord := &pb.CrosslinkRecord{Dynasty: 1, Blockhash: []byte{'A'}, Slot: 1}
+		clRecords = append(clRecords, clRecord)
+	}
+
+	// Set up validators.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.ShardCount*params.MinCommiteeSize; i++ {
+		validator := &pb.ValidatorRecord{Balance: 10000, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}
+		validators = append(validators, validator)
+	}
+
+	// Set up pending attestations.
+	var pAttestations []*pb.AttestationRecord
+	for i := 0; i < 100; i++ {
+		pAttestation := &pb.AttestationRecord{Slot: 0, ShardId: 0, ShardBlockHash: []byte{'a'}, AttesterBitfield: []byte{'z', 'z'}}
+		pAttestations = append(pAttestations, pAttestation)
+	}
+
+	// Process crosslinks happened at slot 50 and dynasty 2.
+	newCrosslinks, err := beaconChain.processCrosslinks(
+		clRecords,
+		validators,
+		pAttestations,
+		5,
+		50)
+	if err != nil {
+		t.Fatalf("process crosslink failed %v", err)
+	}
+
+	if newCrosslinks[0].Dynasty != 5 {
+		t.Errorf("Dynasty did not change for new cross link. Wanted: 5. Got: %d", newCrosslinks[0].Dynasty)
+	}
+	if newCrosslinks[0].Slot != 50 {
+		t.Errorf("Slot did not change for new cross link. Wanted: 50. Got: %d", newCrosslinks[0].Slot)
+	}
+	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
+		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
 }
