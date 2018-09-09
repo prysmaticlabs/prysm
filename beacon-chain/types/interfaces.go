@@ -7,15 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
-
-// P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
-type P2P interface {
-	Subscribe(msg interface{}, channel interface{}) event.Subscription
-	Send(msg interface{}, peer p2p.Peer)
-	Broadcast(msg interface{})
-}
 
 // CanonicalEventAnnouncer defines a struct that pushes canonical blocks
 // and crystallized states to announcement channels once they are

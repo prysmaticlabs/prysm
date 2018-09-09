@@ -18,6 +18,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -61,7 +62,7 @@ type SyncService interface {
 type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
-	p2p                          types.P2P
+	p2p                          shared.P2P
 	chainService                 ChainService
 	syncService                  SyncService
 	blockBuf                     chan p2p.Message
@@ -75,7 +76,7 @@ type InitialSync struct {
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
-	beaconp2p types.P2P,
+	beaconp2p shared.P2P,
 	chainService ChainService,
 	syncService SyncService,
 ) *InitialSync {
