@@ -4,6 +4,7 @@ package proposer
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
@@ -11,6 +12,8 @@ import (
 	blake2b "github.com/minio/blake2b-simd"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,17 +36,20 @@ type Proposer struct {
 	assigner         assignmentAnnouncer
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
+	p2p              shared.P2P
+	attestationBuf   chan p2p.Message
 }
 
 // Config options for proposer service.
 type Config struct {
-	AssignmentBuf int
-	Assigner      assignmentAnnouncer
-	Client        rpcClientService
+	AssignmentBuf         int
+	AttestationBufferSize int
+	Assigner              assignmentAnnouncer
+	Client                rpcClientService
 }
 
 // NewProposer creates a new attester instance.
-func NewProposer(ctx context.Context, cfg *Config) *Proposer {
+func NewProposer(ctx context.Context, cfg *Config, validatorP2P shared.P2P) *Proposer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
 		ctx:              ctx,
@@ -51,6 +57,8 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 		assigner:         cfg.Assigner,
 		rpcClientService: cfg.Client,
 		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
+		p2p:              validatorP2P,
+		attestationBuf:   make(chan p2p.Message, cfg.AttestationBufferSize),
 	}
 }
 
@@ -70,8 +78,12 @@ func (p *Proposer) Stop() error {
 
 // run the main event loop that listens for a proposer assignment.
 func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
+	attestationSub := p.p2p.Subscribe(shardingp2p.AttestationBroadcast{}, p.attestationBuf)
 	sub := p.assigner.ProposerAssignmentFeed().Subscribe(p.assignmentChan)
+
+	defer attestationSub.Unsubscribe()
 	defer sub.Unsubscribe()
+
 	for {
 		select {
 		case <-done:
@@ -95,6 +107,17 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			}
 			latestBlockHash := blake2b.Sum512(data)
 
+			proposalBlock := &pbp2p.BeaconBlock{
+				ParentHash:   latestBlockHash[:],
+				SlotNumber:   latestBeaconBlock.GetSlotNumber() + 1,
+				RandaoReveal: []byte{},
+				Attestations: make([]*pbp2p.AttestationRecord, 0),
+			}
+
+			blockToBroadcast := &shardingp2p.BlockBroadcast{BeaconBlock: proposalBlock}
+
+			p.p2p.Broadcast(blockToBroadcast)
+
 			// TODO: Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
 				ParentHash:              latestBlockHash[:],
@@ -111,6 +134,14 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				continue
 			}
 			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
+		case msg := <-p.attestationBuf:
+			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)
+			// TODO: Handle this at p2p layer.
+			if !ok {
+				log.Error("Received malformed attestation p2p message")
+				continue
+			}
+
 		}
 	}
 }
