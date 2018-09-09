@@ -167,6 +167,12 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalc()+params.CycleLength
 }
 
+// IsDynastyTransition checks if a dynasty transition can be processed. At that point,
+// validator shuffle will occur.
+func (c *CrystallizedState) IsDynastyTransition(slotNumber uint64) bool {
+	return slotNumber - c.Dynas >=
+}
+
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := c.LastStateRecalc()

@@ -23,4 +23,6 @@ const (
 	// BootstrappedValidatorsCount is the number of validators we seed the first crystallized
 	// state with. This number has yet to be decided by research and is arbitrary for now.
 	BootstrappedValidatorsCount = 1000
+	// Minimal slots needed before dynasty transition happens.
+	MinDynastyLength = 256
 )
