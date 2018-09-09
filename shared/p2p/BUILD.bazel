@@ -33,6 +33,7 @@ go_test(
     srcs = [
         "feed_example_test.go",
         "feed_test.go",
+        "message_test.go",
         "options_test.go",
         "register_topic_example_test.go",
         "service_test.go",
@@ -44,6 +45,7 @@ go_test(
         "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_ipfs_go_log//:go_default_library",
         "@com_github_libp2p_go_floodsub//:go_default_library",
         "@com_github_libp2p_go_floodsub//pb:go_default_library",
         "@com_github_libp2p_go_libp2p_blankhost//:go_default_library",

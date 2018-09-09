@@ -14,7 +14,7 @@ func ExampleServer_Feed() {
 	}
 
 	// Let's wait for a puzzle from our peers then try to solve it.
-	feed := s.Feed(pb.Puzzle{})
+	feed := s.Feed(&pb.Puzzle{})
 
 	ch := make(chan Message, 5) // Small buffer size. I don't expect many puzzles.
 	sub := feed.Subscribe(ch)
