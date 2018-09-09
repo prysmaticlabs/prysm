@@ -196,6 +196,8 @@ func (c *ChainService) updateHead() {
 	c.candidateCrystallizedState = nilCrystallizedState
 }
 
+// doesPoWBlockExist checks if the referenced PoW block exists.
+// If the node is connected to a PoW chain, defaults to true.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	if c.web3Service == nil {
 		return true
@@ -238,10 +240,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Could not check existence of parent: %v", err)
-				continue
-			}
-			if !parentExists {
-				log.Errorf("parent does not exist: %x", block.ParentHash())
 				continue
 			}
 
