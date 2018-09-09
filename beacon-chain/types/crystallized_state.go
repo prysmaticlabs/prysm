@@ -83,7 +83,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 			CrosslinkingStartShard: 0,
 			TotalDeposits:          totalDeposit,
 			DynastySeed:            []byte{},
-			DynastySeedLastReset:   0,
+			DynastyStart:   0,
 			CrosslinkRecords:       crosslinkRecords,
 			Validators:             validators,
 			IndicesForSlots:        indicesForSlots,
@@ -261,7 +261,7 @@ func (c *CrystallizedState) CalculateNewCrystallizedState(aState *ActiveState, s
 		LastFinalizedSlot:      finalizedSlot,
 		CrosslinkingStartShard: 0, // TODO: Stub. Need to see where this epoch left off.
 		CrosslinkRecords:       newCrossLinkRecords,
-		DynastySeedLastReset:   c.data.DynastySeedLastReset, // TODO: Stub. Dynasty transition is not finalized according to the spec.
+		DynastyStart:   		c.data.DynastyStart, // TODO: Stub. Dynasty transition is not finalized according to the spec.
 		TotalDeposits:          nextCycleBalance,
 	})
 
