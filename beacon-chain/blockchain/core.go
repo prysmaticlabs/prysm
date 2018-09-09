@@ -222,18 +222,22 @@ func (b *BeaconChain) verifyBlockTimeStamp(block *types.Block) (bool, error) {
 // computeNewActiveState for every newly processed beacon block.
 func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord, activeState *types.ActiveState, blockVoteCache map[[32]byte]*types.VoteCache, blockHash [32]byte) (*types.ActiveState, error) {
 	// TODO: Insert recent block hash.
-	activeState.SetBlockVoteCache(blockVoteCache)
-	activeState.NewPendingAttestation(attestations)
-	blockHashes := activeState.RecentBlockHashes()
-	blockHashes = append(blockHashes, blockHash)
-
-	for len(blockHashes) > 2*params.CycleLength {
-		blockHashes = blockHashes[1:]
+	var recentBlockHashes [][]byte
+	for _, blockHashes := range activeState.RecentBlockHashes() {
+		recentBlockHashes = append(recentBlockHashes, blockHashes[:])
+	}
+	recentBlockHashes = append(recentBlockHashes, blockHash[:])
+	for len(recentBlockHashes) > 2*params.CycleLength {
+		recentBlockHashes = recentBlockHashes[1:]
 	}
 
-	activeState.ReplaceBlockHashes(blockHashes)
-
-	return activeState, nil
+	return types.NewActiveState(
+		&pb.ActiveState{
+			PendingAttestations: attestations,
+			RecentBlockHashes:   recentBlockHashes,
+		},
+		blockVoteCache,
+	), nil
 }
 
 // processAttestation processes the attestations for one shard in an incoming block.

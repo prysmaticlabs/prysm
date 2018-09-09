@@ -166,8 +166,14 @@ func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
 }
 
 // NewPendingAttestation inserts a new pending attestaton fields.
-func (a *ActiveState) NewPendingAttestation(record []*pb.AttestationRecord) {
-	a.data.PendingAttestations = append(a.data.PendingAttestations, record...)
+func (a *ActiveState) NewPendingAttestation(record []*pb.AttestationRecord) *ActiveState {
+	return &ActiveState{
+		data: &pb.ActiveState{
+			PendingAttestations: append(a.data.PendingAttestations, record...),
+			RecentBlockHashes:   a.data.RecentBlockHashes,
+		},
+		blockVoteCache: a.blockVoteCache,
+	}
 }
 
 // LatestPendingAttestation returns the latest pending attestaton fields.
@@ -195,12 +201,18 @@ func (a *ActiveState) RecentBlockHashes() [][32]byte {
 }
 
 // ReplaceBlockHashes replaces current block hashes with the input block hashes.
-func (a *ActiveState) ReplaceBlockHashes(blockHashes [][32]byte) {
+func (a ActiveState) ReplaceBlockHashes(blockHashes [][32]byte) *ActiveState {
 	var blockHashesBytes [][]byte
 	for _, blockHash := range blockHashes {
 		blockHashesBytes = append(blockHashesBytes, blockHash[:])
 	}
-	a.data.RecentBlockHashes = blockHashesBytes
+	return &ActiveState{
+		data: &pb.ActiveState{
+			PendingAttestations: a.data.PendingAttestations,
+			RecentBlockHashes:   blockHashesBytes,
+		},
+		blockVoteCache: a.blockVoteCache,
+	}
 }
 
 // IsVoteCacheEmpty returns false if vote cache of an input block hash doesn't exist.
@@ -215,13 +227,19 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
 }
 
 // SetBlockVoteCache resets the entire set of block vote cache.
-func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[[32]byte]*VoteCache) {
-	a.blockVoteCache = blockVoteCache
+func (a *ActiveState) SetBlockVoteCache(blockVoteCache map[[32]byte]*VoteCache) *ActiveState {
+	return &ActiveState{data: a.data, blockVoteCache: blockVoteCache}
 }
 
 // ClearRecentBlockHashes resets the most recent 64 block hashes.
-func (a *ActiveState) ClearRecentBlockHashes() {
-	a.data.RecentBlockHashes = [][]byte{}
+func (a *ActiveState) ClearRecentBlockHashes() *ActiveState {
+	return &ActiveState{
+		data: &pb.ActiveState{
+			RecentBlockHashes:   [][]byte{},
+			PendingAttestations: a.data.PendingAttestations,
+		},
+		blockVoteCache: a.blockVoteCache,
+	}
 }
 
 // Proto returns the underlying protobuf data within a state primitive.

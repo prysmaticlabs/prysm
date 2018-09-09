@@ -640,8 +640,8 @@ func TestInitCycleFinalized(t *testing.T) {
 		activeStateBlockHashes = append(activeStateBlockHashes, hash)
 	}
 
-	active.ReplaceBlockHashes(activeStateBlockHashes)
-	active.SetBlockVoteCache(blockVoteCache)
+	active = active.ReplaceBlockHashes(activeStateBlockHashes)
+	active = active.SetBlockVoteCache(blockVoteCache)
 
 	// justified block: 63, finalized block: 0, justified streak: 64
 	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
@@ -649,7 +649,7 @@ func TestInitCycleFinalized(t *testing.T) {
 		t.Fatalf("Initialize new cycle transition failed: %v", err)
 	}
 
-	newActive.ReplaceBlockHashes(activeStateBlockHashes)
+	newActive = newActive.ReplaceBlockHashes(activeStateBlockHashes)
 	// justified block: 127, finalized block: 63, justified streak: 128
 	newCrystalled, newActive, err = b.stateRecalc(newCrystalled, newActive, block)
 	if err != nil {
