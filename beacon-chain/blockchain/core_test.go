@@ -448,7 +448,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation on this crystallized state should fail because only committee is in shard 1.
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -467,7 +467,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation should work now, there's a committee in shard 0.
 	crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -559,7 +559,7 @@ func TestProcessAttestationBadSlot(t *testing.T) {
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastJustifiedSlot: 99,
 		LastStateRecalc:   0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -687,6 +687,14 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	}
 
 	return types.NewBlock(b)
+}
+
+// NewAttestation is a helper method to create attestation with valid defaults.
+func NewAttestation(t *testing.T, b *pb.AttestationRecord) *types.Attestation {
+	if b == nil {
+		b = &pb.AttestationRecord{}
+	}
+	return types.NewAttestation(b)
 }
 
 func TestSaveAndRemoveBlocks(t *testing.T) {
@@ -851,6 +859,120 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 
 	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
+	}
+}
+
+func TestSaveAndRemoveAttestations(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	attestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             1,
+		ShardId:          1,
+		AttesterBitfield: []byte{'A'},
+	})
+
+	hash := attestation.Key()
+	if err := b.saveAttestation(attestation); err != nil {
+		t.Fatalf("unable to save attestation %v", err)
+	}
+
+	exist, err := b.hasAttestation(hash)
+	if err != nil {
+		t.Fatalf("unable to check attestation %v", err)
+	}
+	if !exist {
+		t.Fatal("saved attestation does not exist")
+	}
+
+	// Adding a different attestation with the same key
+	newAttestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             2,
+		ShardId:          2,
+		AttesterBitfield: []byte{'B'},
+	})
+
+	key := blockKey(hash)
+	marshalled, err := proto.Marshal(newAttestation.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	returnedAttestation, err := b.getAttestation(hash)
+	if err != nil {
+		t.Fatalf("attestation is unable to be retrieved")
+	}
+
+	if returnedAttestation.SlotNumber() != newAttestation.SlotNumber() {
+		t.Errorf("slotnumber does not match for saved and retrieved attestation")
+	}
+
+	if !bytes.Equal(returnedAttestation.AttesterBitfield(), newAttestation.AttesterBitfield()) {
+		t.Errorf("attester bitfield does not match for saved and retrieved attester")
+	}
+
+	if err := b.removeAttestation(hash); err != nil {
+		t.Fatalf("error removing attestation %v", err)
+	}
+
+	if _, err := b.getAttestation(hash); err == nil {
+		t.Fatalf("attestation is able to be retrieved")
+	}
+}
+
+func TestSaveAndRemoveAttestationHashList(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+	})
+	blockHash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	attestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             1,
+		ShardId:          1,
+		AttesterBitfield: []byte{'A'},
+	})
+	attestationHash := attestation.Key()
+
+	if err := b.saveAttestationHash(blockHash, attestationHash); err != nil {
+		t.Fatalf("unable to save attestation hash %v", err)
+	}
+
+	exist, err := b.hasAttestationHash(blockHash, attestationHash)
+	if err != nil {
+		t.Fatalf("unable to check for attestation hash %v", err)
+	}
+	if !exist {
+		t.Error("saved attestation hash does not exist")
+	}
+
+	// Negative test case: try with random attestation, exist should be false.
+	exist, err = b.hasAttestationHash(blockHash, [32]byte{'A'})
+	if err != nil {
+		t.Fatalf("unable to check for attestation hash %v", err)
+	}
+	if exist {
+		t.Error("attestation hash shouldn't have existed")
+	}
+
+	// Remove attestation list by deleting the block hash key.
+	if err := b.removeAttestationHashList(blockHash); err != nil {
+		t.Fatalf("remove attestation hash list failed %v", err)
+	}
+
+	// Negative test case: try with deleted block hash, this should fail.
+	_, err = b.hasAttestationHash(blockHash, attestationHash)
+	if err == nil {
+		t.Error("attestation hash should't have existed in DB")
 	}
 }
 
