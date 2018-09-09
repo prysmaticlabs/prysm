@@ -197,7 +197,7 @@ func (c *ChainService) updateHead() {
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
-// If the node is connected to a PoW chain, defaults to true.
+// If the node is not connected to a PoW chain, defaults to true.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	if c.web3Service == nil {
 		return true

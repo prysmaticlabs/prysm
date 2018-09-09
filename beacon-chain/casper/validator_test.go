@@ -149,7 +149,7 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if !isValid {
-		t.Fatalf("expected validatoin to pass for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
 	}
 }
 
@@ -162,7 +162,7 @@ func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if isValid {
-		t.Fatalf("expected validatoin to fail for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
 	}
 }
 
@@ -175,7 +175,7 @@ func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if !isValid {
-		t.Fatalf("expected validatoin to pass for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
 	}
 }
 
@@ -188,6 +188,6 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if isValid {
-		t.Fatalf("expected validatoin to fail for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
 	}
 }
