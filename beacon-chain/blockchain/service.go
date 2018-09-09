@@ -30,6 +30,8 @@ type ChainService struct {
 	isValidator                    bool
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
+	incomingAttestationFeed        *event.Feed
+	incomingAttestationChan        chan *types.At
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
@@ -234,6 +236,9 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
+			// Listen for a newly received incoming block from the sync service.
+		case attestation := <-c.incomingAttestationChan:
+
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
 			// 3 steps:

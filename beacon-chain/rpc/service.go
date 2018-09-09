@@ -147,12 +147,10 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
 }
 
-// SignBlock is a function called by an attester in a sharding validator to sign off
+// AttestHead is a function called by an attester in a sharding validator to vote
 // on a block.
-//
-// TODO: needs implementation.
-func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
-	// TODO: implement.
+func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.AttestResponse, error) {
+	req.Attestation.
 	return nil, errors.New("unimplemented")
 }
 

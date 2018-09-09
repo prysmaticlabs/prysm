@@ -16,7 +16,7 @@ import (
 var log = logrus.WithField("prefix", "attester")
 
 type rpcClientService interface {
-	attesterServiceClient() pb.AttesterServiceClient
+	AttesterServiceClient() pb.AttesterServiceClient
 }
 
 type assignmentAnnouncer interface {
@@ -58,7 +58,7 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 // Start the main routine for an attester.
 func (a *Attester) Start() {
 	log.Info("Starting service")
-	client := a.rpcClientService.attesterServiceClient()
+	client := a.rpcClientService.AttesterServiceClient()
 	go a.run(a.ctx.Done(), client)
 }
 
