@@ -433,6 +433,30 @@ func TestCanProcessAttestations(t *testing.T) {
 
 	// Initialize another parent block.
 	parentBlock = NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: params.CycleLength+1,
+	})
+	saveErr = bc.saveBlock(parentBlock)
+	if saveErr != nil {
+		t.Fatal("Cannot save block!")
+	}
+	parentHash, err = parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
+	}
+
+	// Process attestation should fail because attestation slot # < parent block slot - CycleLength + 1 #
+	block = NewBlock(t, &pb.BeaconBlock{
+		Attestations: []*pb.AttestationRecord{
+			{Slot: 1, ShardId: 0},
+		},
+		ParentHash: parentHash[:],
+	})
+	if err := bc.processAttestation(0, block); err == nil {
+		t.Error("Process attestation should have failed because attestation slot # < parent block slot - CycleLength + 1 #")
+	}
+
+	// Initialize another parent block.
+	parentBlock = NewBlock(t, &pb.BeaconBlock{
 		SlotNumber: 2,
 	})
 	saveErr = bc.saveBlock(parentBlock)

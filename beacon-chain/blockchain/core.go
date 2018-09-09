@@ -264,9 +264,6 @@ func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Bloc
 			attestation.Slot,
 			parentSlotNumber)
 	}
-	if int(attestation.Slot) < 0 {
-		return fmt.Errorf("attestation slot number can't be lower than 0. Found: %v", attestation.Slot)
-	}
 	if int(attestation.Slot) < parentSlotNumber-params.CycleLength+1 {
 		return fmt.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %v, Needed greater than: %v",
 			attestation.Slot,
