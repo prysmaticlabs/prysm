@@ -448,7 +448,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation on this crystallized state should fail because only committee is in shard 1.
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -467,7 +467,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation should work now, there's a committee in shard 0.
 	crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -559,7 +559,7 @@ func TestProcessAttestationBadSlot(t *testing.T) {
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastJustifiedSlot: 99,
 		LastStateRecalc:   0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -589,12 +589,17 @@ func TestInitCycleNotFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
+	block := types.NewBlock(nil)
+
 	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 	crystallized.SetStateRecalc(64)
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	if newCrystalled.LastFinalizedSlot() != 0 {
 		t.Errorf("Last finalized slot should be 0 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -614,6 +619,8 @@ func TestInitCycleNotFinalized(t *testing.T) {
 func TestInitCycleFinalized(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
+
+	block := types.NewBlock(nil)
 
 	active, crystallized, err := types.NewGenesisStates()
 	if err != nil {
@@ -637,11 +644,17 @@ func TestInitCycleFinalized(t *testing.T) {
 	active.SetBlockVoteCache(blockVoteCache)
 
 	// justified block: 63, finalized block: 0, justified streak: 64
-	newCrystalled, newActive := b.initCycle(crystallized, active)
+	newCrystalled, newActive, err := b.stateRecalc(crystallized, active, block)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	newActive.ReplaceBlockHashes(activeStateBlockHashes)
 	// justified block: 127, finalized block: 63, justified streak: 128
-	newCrystalled, newActive = b.initCycle(newCrystalled, newActive)
+	newCrystalled, newActive, err = b.stateRecalc(newCrystalled, newActive, block)
+	if err != nil {
+		t.Fatalf("Initialize new cycle transition failed: %v", err)
+	}
 
 	if newCrystalled.LastFinalizedSlot() != 63 {
 		t.Errorf("Last finalized slot should be 63 but got: %d", newCrystalled.LastFinalizedSlot())
@@ -674,6 +687,14 @@ func NewBlock(t *testing.T, b *pb.BeaconBlock) *types.Block {
 	}
 
 	return types.NewBlock(b)
+}
+
+// NewAttestation is a helper method to create attestation with valid defaults.
+func NewAttestation(t *testing.T, b *pb.AttestationRecord) *types.Attestation {
+	if b == nil {
+		b = &pb.AttestationRecord{}
+	}
+	return types.NewAttestation(b)
 }
 
 func TestSaveAndRemoveBlocks(t *testing.T) {
@@ -838,5 +859,166 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 
 	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
+	}
+}
+
+func TestSaveAndRemoveAttestations(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	attestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             1,
+		ShardId:          1,
+		AttesterBitfield: []byte{'A'},
+	})
+
+	hash := attestation.Key()
+	if err := b.saveAttestation(attestation); err != nil {
+		t.Fatalf("unable to save attestation %v", err)
+	}
+
+	exist, err := b.hasAttestation(hash)
+	if err != nil {
+		t.Fatalf("unable to check attestation %v", err)
+	}
+	if !exist {
+		t.Fatal("saved attestation does not exist")
+	}
+
+	// Adding a different attestation with the same key
+	newAttestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             2,
+		ShardId:          2,
+		AttesterBitfield: []byte{'B'},
+	})
+
+	key := blockKey(hash)
+	marshalled, err := proto.Marshal(newAttestation.Proto())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.db.Put(key, marshalled); err != nil {
+		t.Fatal(err)
+	}
+
+	returnedAttestation, err := b.getAttestation(hash)
+	if err != nil {
+		t.Fatalf("attestation is unable to be retrieved")
+	}
+
+	if returnedAttestation.SlotNumber() != newAttestation.SlotNumber() {
+		t.Errorf("slotnumber does not match for saved and retrieved attestation")
+	}
+
+	if !bytes.Equal(returnedAttestation.AttesterBitfield(), newAttestation.AttesterBitfield()) {
+		t.Errorf("attester bitfield does not match for saved and retrieved attester")
+	}
+
+	if err := b.removeAttestation(hash); err != nil {
+		t.Fatalf("error removing attestation %v", err)
+	}
+
+	if _, err := b.getAttestation(hash); err == nil {
+		t.Fatalf("attestation is able to be retrieved")
+	}
+}
+
+func TestSaveAndRemoveAttestationHashList(t *testing.T) {
+	b, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	block := NewBlock(t, &pb.BeaconBlock{
+		SlotNumber: 0,
+	})
+	blockHash, err := block.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+
+	attestation := NewAttestation(t, &pb.AttestationRecord{
+		Slot:             1,
+		ShardId:          1,
+		AttesterBitfield: []byte{'A'},
+	})
+	attestationHash := attestation.Key()
+
+	if err := b.saveAttestationHash(blockHash, attestationHash); err != nil {
+		t.Fatalf("unable to save attestation hash %v", err)
+	}
+
+	exist, err := b.hasAttestationHash(blockHash, attestationHash)
+	if err != nil {
+		t.Fatalf("unable to check for attestation hash %v", err)
+	}
+	if !exist {
+		t.Error("saved attestation hash does not exist")
+	}
+
+	// Negative test case: try with random attestation, exist should be false.
+	exist, err = b.hasAttestationHash(blockHash, [32]byte{'A'})
+	if err != nil {
+		t.Fatalf("unable to check for attestation hash %v", err)
+	}
+	if exist {
+		t.Error("attestation hash shouldn't have existed")
+	}
+
+	// Remove attestation list by deleting the block hash key.
+	if err := b.removeAttestationHashList(blockHash); err != nil {
+		t.Fatalf("remove attestation hash list failed %v", err)
+	}
+
+	// Negative test case: try with deleted block hash, this should fail.
+	_, err = b.hasAttestationHash(blockHash, attestationHash)
+	if err == nil {
+		t.Error("attestation hash should't have existed in DB")
+	}
+}
+
+func TestProcessCrosslinks(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	// Set up crosslink record for every shard.
+	var clRecords []*pb.CrosslinkRecord
+	for i := 0; i < params.ShardCount; i++ {
+		clRecord := &pb.CrosslinkRecord{Dynasty: 1, Blockhash: []byte{'A'}, Slot: 1}
+		clRecords = append(clRecords, clRecord)
+	}
+
+	// Set up validators.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.ShardCount*params.MinCommiteeSize; i++ {
+		validator := &pb.ValidatorRecord{Balance: 10000, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}
+		validators = append(validators, validator)
+	}
+
+	// Set up pending attestations.
+	var pAttestations []*pb.AttestationRecord
+	for i := 0; i < 100; i++ {
+		pAttestation := &pb.AttestationRecord{Slot: 0, ShardId: 0, ShardBlockHash: []byte{'a'}, AttesterBitfield: []byte{'z', 'z'}}
+		pAttestations = append(pAttestations, pAttestation)
+	}
+
+	// Process crosslinks happened at slot 50 and dynasty 2.
+	newCrosslinks, err := beaconChain.processCrosslinks(
+		clRecords,
+		validators,
+		pAttestations,
+		5,
+		50)
+	if err != nil {
+		t.Fatalf("process crosslink failed %v", err)
+	}
+
+	if newCrosslinks[0].Dynasty != 5 {
+		t.Errorf("Dynasty did not change for new cross link. Wanted: 5. Got: %d", newCrosslinks[0].Dynasty)
+	}
+	if newCrosslinks[0].Slot != 50 {
+		t.Errorf("Slot did not change for new cross link. Wanted: 50. Got: %d", newCrosslinks[0].Slot)
+	}
+	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
+		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
 }

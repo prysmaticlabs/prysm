@@ -362,8 +362,8 @@ func (b *BeaconChain) getSignedParentHashes(block *types.Block, attestation *pb.
 // getAttesterIndices returns the attester committee of based from attestation's shard ID and slot number.
 func (b *BeaconChain) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	lastStateRecalc := b.CrystallizedState().LastStateRecalc()
-	// TODO: IndicesForSlots will return default value because the spec for dynasty transition is not finalized.
-	shardCommitteeArray := b.CrystallizedState().IndicesForSlots()
+	// TODO: ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
+	shardCommitteeArray := b.CrystallizedState().ShardAndCommitteesForSlots()
 	shardCommittee := shardCommitteeArray[attestation.Slot-lastStateRecalc].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
@@ -393,9 +393,13 @@ func (b *BeaconChain) validateAttesterBitfields(attestation *pb.AttestationRecor
 	return nil
 }
 
-// initCycle is called when a new cycle has been reached, beacon node
+// stateRecalc is called when a new cycle has been reached, beacon node
 // will re-compute active state and crystallized state during init cycle transition.
-func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.ActiveState) (*types.CrystallizedState, *types.ActiveState) {
+func (b *BeaconChain) stateRecalc(
+	cState *types.CrystallizedState,
+	aState *types.ActiveState,
+	block *types.Block) (*types.CrystallizedState, *types.ActiveState, error) {
+
 	var blockVoteBalance uint64
 	justifiedStreak := cState.JustifiedStreak()
 	justifiedSlot := cState.LastJustifiedSlot()
@@ -426,8 +430,16 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		}
 	}
 
-	// TODO: Process Crosslink records here.
-	newCrossLinkRecords := []*pb.CrosslinkRecord{}
+	newCrossLinkRecords, err := b.processCrosslinks(
+		cState.CrosslinkRecords(),
+		cState.Validators(),
+		aState.PendingAttestations(),
+		cState.CurrentDynasty(),
+		block.SlotNumber(),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Remove attestations older than LastStateRecalc.
 	var newPendingAttestations []*pb.AttestationRecord
@@ -453,16 +465,16 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 
 	// Construct new crystallized state for cycle transition.
 	newCrystallizedState := types.NewCrystallizedState(&pb.CrystallizedState{
-		Validators:             rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
-		LastStateRecalc:        lastStateRecalc + params.CycleLength,
-		IndicesForSlots:        cState.IndicesForSlots(), // TODO: Stub. This will be addresses by shuffling during dynasty transition.
-		LastJustifiedSlot:      justifiedSlot,
-		JustifiedStreak:        justifiedStreak,
-		LastFinalizedSlot:      finalizedSlot,
-		CrosslinkingStartShard: 0, // TODO: Stub. Need to see where this epoch left off.
-		CrosslinkRecords:       newCrossLinkRecords,
-		DynastySeedLastReset:   cState.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
-		TotalDeposits:          nextCycleBalance,
+		Validators:                 rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
+		LastStateRecalc:            lastStateRecalc + params.CycleLength,
+		ShardAndCommitteesForSlots: cState.ShardAndCommitteesForSlots(), // TODO: Stub. This will be addresses by shuffling during dynasty transition.
+		LastJustifiedSlot:          justifiedSlot,
+		JustifiedStreak:            justifiedStreak,
+		LastFinalizedSlot:          finalizedSlot,
+		CrosslinkingStartShard:     0, // TODO: Stub. Need to see where this epoch left off.
+		CrosslinkRecords:           newCrossLinkRecords,
+		DynastySeedLastReset:       cState.DynastySeedLastReset(), // TODO: Stub. Dynasty transition is not finalized according to the spec.
+		TotalDeposits:              nextCycleBalance,
 	})
 
 	var recentBlockHashes [][]byte
@@ -470,6 +482,7 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		recentBlockHashes = append(recentBlockHashes, blockHashes[:])
 		// Drop the oldest block hash if the recent block hashes length is more than 2 * cycle length.
 		for len(recentBlockHashes) > 2*params.CycleLength {
+			// Delete attestation hash list that's corresponding to the block hash.
 			recentBlockHashes = recentBlockHashes[1:]
 		}
 	}
@@ -480,7 +493,68 @@ func (b *BeaconChain) initCycle(cState *types.CrystallizedState, aState *types.A
 		RecentBlockHashes:   recentBlockHashes,
 	}, aState.GetBlockVoteCache())
 
-	return newCrystallizedState, newActiveState
+	return newCrystallizedState, newActiveState, nil
+}
+
+// processCrosslinks checks if the proposed shard block has recevied
+// 2/3 of the votes. If yes, we update crosslink record to point to
+// the proposed shard block with latest dynasty and slot numbers.
+func (b *BeaconChain) processCrosslinks(
+	crosslinkRecords []*pb.CrosslinkRecord,
+	validators []*pb.ValidatorRecord,
+	pendingAttestations []*pb.AttestationRecord,
+	dynasty uint64,
+	slot uint64) ([]*pb.CrosslinkRecord, error) {
+
+	type shardBlockHash struct {
+		id        uint64
+		blockHash []byte
+	}
+	shardBlockHashBalance := make(map[*shardBlockHash]uint64)
+
+	for _, attestation := range pendingAttestations {
+		sbh := shardBlockHash{
+			id:        attestation.ShardId,
+			blockHash: attestation.ShardBlockHash,
+		}
+		var keyExists bool
+		if _, ok := shardBlockHashBalance[&sbh]; ok {
+			keyExists = true
+		}
+		if !keyExists {
+			shardBlockHashBalance[&sbh] = 0
+		}
+
+		indices, err := b.getAttesterIndices(attestation)
+		if err != nil {
+			return nil, err
+		}
+
+		// find the total balance of the shard committee.
+		var totalBalances uint64
+		for _, attesterIndex := range indices {
+			totalBalances += validators[attesterIndex].Balance
+		}
+
+		// find the balance of votes cast in shard attestation.
+		var voteBalances uint64
+		for i, attesterIndex := range indices {
+			if utils.CheckBit(attestation.AttesterBitfield, i) {
+				voteBalances += validators[attesterIndex].Balance
+			}
+		}
+
+		// if 2/3 of committee voted on this crosslink, update the crosslink
+		// with latest dynasty number, shard block hash, and slot number.
+		if 3*voteBalances >= 2*totalBalances && dynasty > crosslinkRecords[attestation.ShardId].Dynasty {
+			crosslinkRecords[attestation.ShardId] = &pb.CrosslinkRecord{
+				Dynasty:   dynasty,
+				Blockhash: attestation.ShardBlockHash,
+				Slot:      slot,
+			}
+		}
+	}
+	return crosslinkRecords, nil
 }
 
 func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
@@ -566,4 +640,124 @@ func (b *BeaconChain) getCanonicalBlockForSlot(slotNumber uint64) (*types.Block,
 	block, err := b.getBlock(blockhash)
 
 	return block, err
+}
+
+func (b *BeaconChain) hasAttestation(attestationHash [32]byte) (bool, error) {
+	return b.db.Has(attestationKey(attestationHash))
+}
+
+// saveAttestation puts the attestation record into the beacon chain db.
+func (b *BeaconChain) saveAttestation(attestation *types.Attestation) error {
+	hash := attestation.Key()
+	key := attestationKey(hash)
+	encodedState, err := attestation.Marshal()
+	if err != nil {
+		return err
+	}
+	return b.db.Put(key, encodedState)
+}
+
+// getAttestation retrieves an attestation record from the db using its hash.
+func (b *BeaconChain) getAttestation(hash [32]byte) (*types.Attestation, error) {
+	key := attestationKey(hash)
+	enc, err := b.db.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	attestation := &pb.AttestationRecord{}
+
+	err = proto.Unmarshal(enc, attestation)
+
+	return types.NewAttestation(attestation), err
+}
+
+// removeAttestation removes the attestation from the db.
+func (b *BeaconChain) removeAttestation(blockHash [32]byte) error {
+	return b.db.Delete(attestationKey(blockHash))
+}
+
+// hasAttestationHash checks if the beacon block has the attestation.
+func (b *BeaconChain) hasAttestationHash(blockHash [32]byte, attestationHash [32]byte) (bool, error) {
+	enc, err := b.db.Get(attestationHashListKey(blockHash))
+	if err != nil {
+		return false, err
+	}
+
+	attestationHashes := &pb.AttestationHashes{}
+	if err := proto.Unmarshal(enc, attestationHashes); err != nil {
+		return false, err
+	}
+
+	for _, hash := range attestationHashes.AttestationHash {
+		if bytes.Equal(hash, attestationHash[:]) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// hasAttestationHashList checks if the attestation hash list is available.
+func (b *BeaconChain) hasAttestationHashList(blockHash [32]byte) (bool, error) {
+	key := attestationHashListKey(blockHash)
+
+	hasKey, err := b.db.Has(key)
+	if err != nil {
+		return false, err
+	}
+	if !hasKey {
+		return false, nil
+	}
+	return true, nil
+}
+
+// getAttestationHashList gets the attestation hash list of the beacon block from the db.
+func (b *BeaconChain) getAttestationHashList(blockHash [32]byte) ([][]byte, error) {
+	key := attestationHashListKey(blockHash)
+
+	hasList, err := b.hasAttestationHashList(blockHash)
+	if err != nil {
+		return [][]byte{}, err
+	}
+	if !hasList {
+		if err := b.db.Put(key, []byte{}); err != nil {
+			return [][]byte{}, err
+		}
+	}
+	enc, err := b.db.Get(key)
+	if err != nil {
+		return [][]byte{}, err
+	}
+
+	attestationHashes := &pb.AttestationHashes{}
+	if err := proto.Unmarshal(enc, attestationHashes); err != nil {
+		return [][]byte{}, err
+	}
+	return attestationHashes.AttestationHash, nil
+}
+
+// removeAttestationHashList removes the attestation hash list of the beacon block from the db.
+func (b *BeaconChain) removeAttestationHashList(blockHash [32]byte) error {
+	return b.db.Delete(attestationHashListKey(blockHash))
+}
+
+// saveAttestationHash saves the attestation hash into the attestation hash list of the corresponding beacon block.
+func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [32]byte) error {
+	key := attestationHashListKey(blockHash)
+
+	hashes, err := b.getAttestationHashList(blockHash)
+	if err != nil {
+		return err
+	}
+	hashes = append(hashes, attestationHash[:])
+
+	attestationHashes := &pb.AttestationHashes{}
+	attestationHashes.AttestationHash = hashes
+
+	encodedState, err := proto.Marshal(attestationHashes)
+	if err != nil {
+		return err
+	}
+
+	return b.db.Put(key, encodedState)
 }
