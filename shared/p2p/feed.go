@@ -1,9 +1,8 @@
 package p2p
 
 import (
-	"reflect"
-
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
 )
 
 // Feed is a one to many subscription feed of the argument type.
@@ -17,23 +16,15 @@ import (
 // contains information about the sender, aka the peer, and the message payload
 // itself.
 //
-//   feed, err := ps.Feed(MyMessage{})
+//   feed, err := ps.Feed(&pb.MyMessage{})
 //   ch := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
 //   sub := feed.Subscribe(ch)
 //
 //   // Wait until my message comes from a peer.
 //   msg := <- ch
 //   fmt.Printf("Message received: %v", msg.Data)
-func (s *Server) Feed(msg interface{}) *event.Feed {
-	var t reflect.Type
-
-	// Support passing reflect.Type as the msg.
-	switch msg.(type) {
-	case reflect.Type:
-		t = msg.(reflect.Type)
-	default:
-		t = reflect.TypeOf(msg)
-	}
+func (s *Server) Feed(msg proto.Message) *event.Feed {
+	t := messageType(msg)
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
