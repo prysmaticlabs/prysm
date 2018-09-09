@@ -4,7 +4,8 @@ package proposer
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"errors"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
@@ -14,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,6 +40,7 @@ type Proposer struct {
 	assignmentChan   chan *pbp2p.BeaconBlock
 	p2p              shared.P2P
 	attestationBuf   chan p2p.Message
+	blockMapping     map[uint64]*pbp2p.BeaconBlock
 }
 
 // Config options for proposer service.
@@ -59,6 +62,7 @@ func NewProposer(ctx context.Context, cfg *Config, validatorP2P shared.P2P) *Pro
 		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 		p2p:              validatorP2P,
 		attestationBuf:   make(chan p2p.Message, cfg.AttestationBufferSize),
+		blockMapping:     make(map[uint64]*pbp2p.BeaconBlock),
 	}
 }
 
@@ -74,6 +78,29 @@ func (p *Proposer) Stop() error {
 	defer p.cancel()
 	log.Info("Stopping service")
 	return nil
+}
+
+func (p *Proposer) SaveBlockToMemory(block *pbp2p.BeaconBlock) {
+	p.blockMapping[block.GetSlotNumber()] = block
+}
+
+func (p *Proposer) GetBlockFromMemory(slotnumber uint64) (*pbp2p.BeaconBlock, error) {
+	block := p.blockMapping[slotnumber]
+	if block.GetSlotNumber() != slotnumber {
+		return nil, errors.New("invalid block saved in memory")
+	}
+	return block, nil
+}
+
+func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord, records []*pbp2p.AttestationRecord) bool {
+	exists := false
+	for _, record := range records {
+		if reflect.DeepEqual(record, attestation) {
+			exists = true
+			break
+		}
+	}
+	return exists
 }
 
 // run the main event loop that listens for a proposer assignment.
@@ -116,6 +143,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 			blockToBroadcast := &shardingp2p.BlockBroadcast{BeaconBlock: proposalBlock}
 
+			p.SaveBlockToMemory(proposalBlock)
 			p.p2p.Broadcast(blockToBroadcast)
 
 			// TODO: Implement real proposals with randao reveals and attestation fields.
@@ -142,6 +170,16 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				continue
 			}
 
+			attestationRecord := data.GetAttestationRecord()
+			block, err := p.GetBlockFromMemory(attestationRecord.GetSlot())
+			if err != nil {
+				log.Errorf("Unable to retrieve block from memory %v", err)
+				continue
+			}
+			attestationExists := p.DoesAttestationExist(attestationRecord, block.GetAttestations())
+			if !attestationExists {
+				block.Attestations = append(block.Attestations, attestationRecord)
+			}
 		}
 	}
 }
