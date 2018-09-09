@@ -239,22 +239,14 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 // processAttestation processes the attestations for one shard in an incoming block.
 func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
 	// Validate attestation's slot number has is within range of incoming block's parent's slot number.
-	var parentBlock *types.Block
-
-	hasParentBlock, err := b.hasBlock(block.ParentHash())
-	if err != nil {
-		return fmt.Errorf("could not check existense of hash: %v", err)
-	}
-	if hasParentBlock {
-		parentBlock, err = b.getBlock(block.ParentHash())
-		if err != nil {
+	parentBlock, err := b.getBlock(block.ParentHash())
+	if parentBlock == nil {
+		if block.SlotNumber() <= 1 {
+			// Deal with genesis block
+			parentBlock = block
+		} else {
 			return fmt.Errorf("could not get parent block from parent hash: %v", err)
 		}
-	} else if block.SlotNumber() <= 1 {
-		// Deal with genesis block
-		parentBlock = block
-	} else {
-		return fmt.Errorf("could process block with invalid parent")
 	}
 
 	parentSlotNumber := int(parentBlock.SlotNumber())
