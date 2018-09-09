@@ -2,9 +2,9 @@ package attester
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"testing"
-	"errors"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
@@ -42,7 +42,7 @@ func TestLifecycle(t *testing.T) {
 	cfg := &Config{
 		AssignmentBuf: 0,
 		Assigner:      &mockAssigner{},
-		Client: &mockClient{ctrl},
+		Client:        &mockClient{ctrl},
 	}
 	att := NewAttester(context.Background(), cfg)
 	att.Start()
@@ -58,7 +58,7 @@ func TestAttesterLoop(t *testing.T) {
 	cfg := &Config{
 		AssignmentBuf: 0,
 		Assigner:      &mockAssigner{},
-		Client: &mockClient{ctrl},
+		Client:        &mockClient{ctrl},
 	}
 	att := NewAttester(context.Background(), cfg)
 
@@ -66,9 +66,9 @@ func TestAttesterLoop(t *testing.T) {
 	mockServiceClient.EXPECT().AttestHead(
 		gomock.Any(),
 		gomock.Any(),
-		).Return(&pb.AttestResponse{
+	).Return(&pb.AttestResponse{
 		AttestationHash: []byte{'A'},
-	},nil)
+	}, nil)
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
@@ -141,5 +141,5 @@ func TestAttesterErrorLoop(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "could not attest head")
 	doneChan <- struct{}{}
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "attester context closed")
+	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }

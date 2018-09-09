@@ -31,7 +31,7 @@ type ChainService struct {
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	incomingAttestationFeed        *event.Feed
-	incomingAttestationChan        chan *types.At
+	incomingAttestationChan        chan *types.Attestation
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
@@ -42,11 +42,12 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf   int
-	IncomingBlockBuf int
-	Chain            *BeaconChain
-	Web3Service      *powchain.Web3Service
-	BeaconDB         ethdb.Database
+	BeaconBlockBuf         int
+	IncomingBlockBuf       int
+	Chain                  *BeaconChain
+	Web3Service            *powchain.Web3Service
+	BeaconDB               ethdb.Database
+	IncomingAttestationBuf int
 }
 
 // NewChainService instantiates a new service instance that will
@@ -69,6 +70,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		latestProcessedBlock:           make(chan *types.Block, cfg.BeaconBlockBuf),
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
+		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
+		incomingAttestationFeed:        new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		candidateBlock:                 nilBlock,
@@ -103,10 +106,16 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// IncomingBlockFeed returns a feed that a sync service can send incoming p2p blocks into.
+// IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
 	return c.incomingBlockFeed
+}
+
+// IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
+// The chain service will subscribe to this feed in order to relay incoming attestations.
+func (c *ChainService) IncomingAttestationFeed() *event.Feed {
+	return c.incomingAttestationFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -229,8 +238,10 @@ func (c *ChainService) updateHead(slot uint64) {
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
-	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
-	defer sub.Unsubscribe()
+	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
+	defer subBlock.Unsubscribe()
+	defer subAttestation.Unsubscribe()
 	for {
 		select {
 		case <-done:
@@ -238,6 +249,13 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			return
 			// Listen for a newly received incoming block from the sync service.
 		case attestation := <-c.incomingAttestationChan:
+			h, err := attestation.Hash()
+			if err != nil {
+				log.Debugf("Could not hash incoming attestation: %v", err)
+			}
+			log.Info("Relaying attestation 0x%v to p2p service", h)
+
+			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
