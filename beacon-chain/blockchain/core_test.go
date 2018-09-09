@@ -448,7 +448,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation on this crystallized state should fail because only committee is in shard 1.
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -467,7 +467,7 @@ func TestCanProcessAttestations(t *testing.T) {
 	// Process attestation should work now, there's a committee in shard 0.
 	crystallized = types.NewCrystallizedState(&pb.CrystallizedState{
 		LastStateRecalc: 0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
@@ -559,7 +559,7 @@ func TestProcessAttestationBadSlot(t *testing.T) {
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
 		LastJustifiedSlot: 99,
 		LastStateRecalc:   0,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
