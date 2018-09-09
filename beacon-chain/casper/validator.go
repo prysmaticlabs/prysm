@@ -101,8 +101,8 @@ func GetAttestersTotalDeposit(attestations []*pb.AttestationRecord) uint64 {
 	return uint64(numOfBits) * params.DefaultBalance
 }
 
-// getShardAndCommitteesForSlot returns the attester set of a given slot.
-func getShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+// GetShardAndCommitteesForSlot returns the attester set of a given slot.
+func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
 	if !(lcs <= slot && slot < lcs+params.CycleLength*2) {
 		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lcs, lcs+params.CycleLength*2)
 	}
