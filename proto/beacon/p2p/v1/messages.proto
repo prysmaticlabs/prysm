@@ -124,3 +124,7 @@ message CrosslinkRecord {
   bytes blockhash = 2;
   uint64 slot = 3;
 }
+
+message AttestationHashes {
+  repeated bytes attestation_hash = 1;
+}
