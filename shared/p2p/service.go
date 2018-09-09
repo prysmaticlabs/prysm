@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -81,12 +82,12 @@ func (s *Server) Stop() error {
 //
 // The topics can originate from multiple sources. In other words, messages on
 // TopicA may come from direct peer communication or a pub/sub channel.
-func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Adapter) {
-	msgType := reflect.TypeOf(message)
+func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...Adapter) {
 	log.WithFields(logrus.Fields{
 		"topic": topic,
 	}).Debug("Subscribing to topic")
 
+	msgType := messageType(message)
 	s.topicMapping[msgType] = topic
 
 	sub, err := s.gsub.Subscribe(topic)
@@ -94,7 +95,7 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 		log.Errorf("Failed to subscribe to topic: %v", err)
 		return
 	}
-	feed := s.Feed(msgType)
+	feed := s.Feed(message)
 
 	// Reverse adapter order
 	for i := len(adapters)/2 - 1; i >= 0; i-- {
@@ -130,15 +131,15 @@ func (s *Server) RegisterTopic(topic string, message interface{}, adapters ...Ad
 			h(s.ctx, pMsg)
 		}
 	}()
-
 }
 
 func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
-		log.Error("Received message is not a protobuf message")
+		log.Errorf("Received message is not a protobuf message: %s", msgType)
 		return
 	}
+
 	if err := proto.Unmarshal(msg.Data, d); err != nil {
 		log.Errorf("Failed to decode data: %v", err)
 		return
@@ -147,17 +148,17 @@ func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.T
 	i := feed.Send(Message{Data: d})
 	log.WithFields(logrus.Fields{
 		"numSubs": i,
-	}).Debug("Sent a request to subs")
-
+		"msgType": fmt.Sprintf("%T", d),
+	}).Debug("Emit p2p message to feed subscribers")
 }
 
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
-func (s *Server) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscription {
 	return s.Feed(msg).Subscribe(channel)
 }
 
 // Send a message to a specific peer.
-func (s *Server) Send(msg interface{}, peer Peer) {
+func (s *Server) Send(msg proto.Message, peer Peer) {
 	// TODO
 	// https://github.com/prysmaticlabs/prysm/issues/175
 
@@ -170,12 +171,12 @@ func (s *Server) Send(msg interface{}, peer Peer) {
 }
 
 // Broadcast a message to the world.
-func (s *Server) Broadcast(msg interface{}) {
+func (s *Server) Broadcast(msg proto.Message) {
 	// TODO: https://github.com/prysmaticlabs/prysm/issues/176
-	topic := s.topicMapping[reflect.TypeOf(msg)]
+	topic := s.topicMapping[messageType(msg)]
 	log.WithFields(logrus.Fields{
 		"topic": topic,
-	}).Debugf("Broadcasting msg %s", msg)
+	}).Debugf("Broadcasting msg %+v", msg)
 
 	if topic == "" {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
