@@ -433,7 +433,7 @@ func TestCanProcessAttestations(t *testing.T) {
 
 	// Initialize another parent block.
 	parentBlock = NewBlock(t, &pb.BeaconBlock{
-		SlotNumber: params.CycleLength+1,
+		SlotNumber: params.CycleLength + 1,
 	})
 	saveErr = bc.saveBlock(parentBlock)
 	if saveErr != nil {
