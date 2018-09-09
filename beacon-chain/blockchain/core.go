@@ -483,11 +483,6 @@ func (b *BeaconChain) stateRecalc(
 		// Drop the oldest block hash if the recent block hashes length is more than 2 * cycle length.
 		for len(recentBlockHashes) > 2*params.CycleLength {
 			// Delete attestation hash list that's corresponding to the block hash.
-			var h [32]byte
-			copy(h[:], recentBlockHashes[0])
-			if err := b.removeAttestationHashList(h); err != nil {
-				return nil, nil, err
-			}
 			recentBlockHashes = recentBlockHashes[1:]
 		}
 	}
