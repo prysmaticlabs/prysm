@@ -10,10 +10,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestGetIndicesForSlot(t *testing.T) {
+func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	state := &pb.CrystallizedState{
 		LastStateRecalc: 1,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
+		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
 				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
@@ -23,19 +23,19 @@ func TestGetIndicesForSlot(t *testing.T) {
 				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
 			}},
 		}}
-	if _, err := GetIndicesForSlot(state.IndicesForSlots, state.LastStateRecalc, 1000); err == nil {
-		t.Error("getIndicesForSlot should have failed with invalid slot")
+	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 1000); err == nil {
+		t.Error("getShardAndCommitteesForSlot should have failed with invalid slot")
 	}
-	committee, err := GetIndicesForSlot(state.IndicesForSlots, state.LastStateRecalc, 1)
+	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 1)
 	if err != nil {
-		t.Errorf("getIndicesForSlot failed: %v", err)
+		t.Errorf("getShardAndCommitteesForSlot failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
-		t.Errorf("getIndicesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	committee, _ = GetIndicesForSlot(state.IndicesForSlots, state.LastStateRecalc, 2)
+	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 2)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
-		t.Errorf("getIndicesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
 }
 

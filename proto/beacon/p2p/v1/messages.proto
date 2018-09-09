@@ -16,7 +16,7 @@ enum Topic {
   ACTIVE_STATE_HASH_ANNOUNCE = 8;
   ACTIVE_STATE_REQUEST = 9;
   ACTIVE_STATE_RESPONSE = 10;
-} 
+}
 
 message BeaconBlockHashAnnounce {
   bytes hash = 1;
@@ -69,7 +69,7 @@ message CrystallizedState {
   uint64 dynasty_seed_last_reset = 9;
   repeated CrosslinkRecord crosslink_records = 10;
   repeated ValidatorRecord validators = 11;
-  repeated ShardAndCommitteeArray indices_for_slots = 12;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 12;
 }
 
 message ShardAndCommitteeArray {
@@ -123,4 +123,8 @@ message CrosslinkRecord {
   uint64 dynasty = 1;
   bytes blockhash = 2;
   uint64 slot = 3;
+}
+
+message AttestationHashes {
+  repeated bytes attestation_hash = 1;
 }
