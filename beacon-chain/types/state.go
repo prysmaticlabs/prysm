@@ -74,7 +74,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 
 	// Starting with 2 cycles (128 slots) with the same committees.
 	committees = append(committees, committees...)
-	indicesForSlots := append(committees, committees...)
+	ShardAndCommitteesForSlots := append(committees, committees...)
 
 	// Bootstrap cross link records.
 	var crosslinkRecords []*pb.CrosslinkRecord
@@ -82,6 +82,7 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 		crosslinkRecords = append(crosslinkRecords, &pb.CrosslinkRecord{
 			Dynasty:   0,
 			Blockhash: make([]byte, 0, 32),
+			Slot:      0,
 		})
 	}
 
@@ -93,18 +94,18 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 
 	crystallized := &CrystallizedState{
 		data: &pb.CrystallizedState{
-			LastStateRecalc:        0,
-			JustifiedStreak:        0,
-			LastJustifiedSlot:      0,
-			LastFinalizedSlot:      0,
-			CurrentDynasty:         1,
-			CrosslinkingStartShard: 0,
-			TotalDeposits:          totalDeposit,
-			DynastySeed:            []byte{},
-			DynastySeedLastReset:   0,
-			CrosslinkRecords:       crosslinkRecords,
-			Validators:             validators,
-			IndicesForSlots:        indicesForSlots,
+			LastStateRecalc:            0,
+			JustifiedStreak:            0,
+			LastJustifiedSlot:          0,
+			LastFinalizedSlot:          0,
+			CurrentDynasty:             1,
+			CrosslinkingStartShard:     0,
+			TotalDeposits:              totalDeposit,
+			DynastySeed:                []byte{},
+			DynastySeedLastReset:       0,
+			CrosslinkRecords:           crosslinkRecords,
+			Validators:                 validators,
+			ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
 		},
 	}
 	return active, crystallized, nil
@@ -338,15 +339,15 @@ func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 	c.data.Validators = validators
 }
 
-// IndicesForSlots returns what active validators are part of the attester set
+// ShardAndCommitteesForSlots returns what active validators are part of the attester set
 // at what slot, and in what shard.
-func (c *CrystallizedState) IndicesForSlots() []*pb.ShardAndCommitteeArray {
-	return c.data.IndicesForSlots
+func (c *CrystallizedState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray {
+	return c.data.ShardAndCommitteesForSlots
 }
 
-// ClearIndicesForSlots clears the IndicesForSlots set.
-func (c *CrystallizedState) ClearIndicesForSlots() {
-	c.data.IndicesForSlots = []*pb.ShardAndCommitteeArray{}
+// ClearShardAndCommitteesForSlots clears the ShardAndCommitteesForSlots set.
+func (c *CrystallizedState) ClearShardAndCommitteesForSlots() {
+	c.data.ShardAndCommitteesForSlots = []*pb.ShardAndCommitteeArray{}
 }
 
 // CrosslinkRecords returns records about the most recent cross link or each shard.
