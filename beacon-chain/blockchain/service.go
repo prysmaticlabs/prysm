@@ -196,30 +196,7 @@ func (c *ChainService) updateHead() {
 	c.candidateCrystallizedState = nilCrystallizedState
 }
 
-func (c *ChainService) getParentSlot(block *types.Block) (uint64, error) {
-	parentBlock, err := c.chain.getBlock(block.ParentHash())
-	if err != nil {
-		return 0, err
-	}
-
-	return parentBlock.SlotNumber(), nil
-}
-
-func (c *ChainService) doesParentExist(block *types.Block) bool {
-	parentExists, err := c.chain.hasBlock(block.ParentHash())
-	if err != nil {
-		log.Debugf("Could not check existence of parent hash: %v", err)
-		return false
-	}
-	if !parentExists {
-		log.Debugf("parent does not exist: %x", block.ParentHash())
-		return false
-	}
-
-	return true
-}
-
-func (c *ChainService) isPoWBlockValid(block *types.Block) bool {
+func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	if c.web3Service == nil {
 		return true
 	}
@@ -253,12 +230,22 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			cState := c.chain.CrystallizedState()
 			blockHash, err := block.Hash()
 			if err != nil {
-				log.Debugf("Failed to get hash of block: %v", err)
-				return
+				log.Errorf("Failed to get hash of block: %v", err)
+				continue
 			}
 
 			// Process block as a validator if beacon node has registered, else process block as an observer.
-			if !c.doesParentExist(block) || !c.isPoWBlockValid(block) || !block.IsValid(aState, cState) {
+			parentExists, err := c.chain.hasBlock(block.ParentHash())
+			if err != nil {
+				log.Errorf("Could not check existence of parent: %v", err)
+				continue
+			}
+			if !parentExists {
+				log.Errorf("parent does not exist: %x", block.ParentHash())
+				continue
+			}
+
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
 				continue
 			}
 
@@ -269,9 +256,10 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			if err := c.chain.saveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
+				continue
 			}
 
-			log.Info("Finished processing received block")
+			log.Info("Finished processing received block: %x", blockHash)
 
 			// Do not proceed further, because a candidate has already been chosen.
 			if c.candidateBlock != nilBlock {
@@ -288,23 +276,25 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
+				continue
 			}
 
-			parentSlot, err := c.getParentSlot(block)
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Failed to get parent slot of block %x", blockHash)
-				return
+				continue
 			}
-			aState, err = aState.CalculateNewActiveState(block, cState, parentSlot)
+			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
+				continue
 			}
 
 			c.candidateBlock = block
 			c.candidateActiveState = aState
 			c.candidateCrystallizedState = cState
 
-			log.Info("Finished processing state for candidate block")
+			log.Info("Finished processing state for candidate block: %x", blockHash)
 		}
 	}
 }

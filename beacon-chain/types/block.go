@@ -141,7 +141,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
-// isSlotValid compares the slot to the system clock to determine if the block is valid
+// isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
@@ -168,8 +168,9 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 		return false
 	}
 
-	for index := range b.Attestations() {
+	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, aState, cState) {
+			log.Debugf("attestation invalid: %v", attestation)
 			return false
 		}
 	}
