@@ -223,9 +223,9 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord
 	return nil, fmt.Errorf("unable to find attestation based on slot: %v, shardID: %v", attestation.Slot, attestation.ShardId)
 }
 
-// CalculateNewCrystallizedState computes the new crystallized state, given the previous crystallized state
+// NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
-func (c *CrystallizedState) CalculateNewCrystallizedState(aState *ActiveState, slotNumber uint64) (*CrystallizedState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, slotNumber uint64) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
