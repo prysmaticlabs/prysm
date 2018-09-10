@@ -47,7 +47,7 @@ func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 	// We seed the genesis crystallized state with a bunch of validators to
 	// bootstrap the system.
-	// TODO: Perform this task from some sort of genesis state json config instead.
+	// TODO(#493): Perform this task from some sort of genesis state json config instead.
 	validators := initialValidators()
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
@@ -170,7 +170,7 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	slotsStart := int64(c.LastStateRecalc()) - params.CycleLength
 	slotIndex := int64(attestation.Slot) - slotsStart
-	// TODO: ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
+	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
@@ -215,7 +215,6 @@ func (c *CrystallizedState) CalculateNewCrystallizedState(aState *ActiveState, s
 		}
 	}
 
-	// TODO: Utilize this value in the fork choice rule.
 	newShardAndCommitteesForSlots, err := c.calculateNewShardAndCommitteesForSlots()
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get validators by slot and by shard: %v", err)
@@ -226,7 +225,7 @@ func (c *CrystallizedState) CalculateNewCrystallizedState(aState *ActiveState, s
 		return nil, err
 	}
 
-	// TODO: Full rewards and penalties design is not finalized according to the spec.
+	// TODO(471): Update rewards and penalties scheme to align with latest spec.
 	rewardedValidators, _ := casper.CalculateRewards(
 		aState.PendingAttestations(),
 		c.Validators(),
@@ -242,15 +241,15 @@ func (c *CrystallizedState) CalculateNewCrystallizedState(aState *ActiveState, s
 
 	// Construct new crystallized state for cycle transition.
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
-		Validators:                 rewardedValidators, // TODO: Stub. Static validator set because dynasty transition is not finalized according to the spec.
+		Validators:                 rewardedValidators,
 		LastStateRecalc:            lastStateRecalc + params.CycleLength,
 		ShardAndCommitteesForSlots: newShardAndCommitteesForSlots,
 		LastJustifiedSlot:          justifiedSlot,
 		JustifiedStreak:            justifiedStreak,
 		LastFinalizedSlot:          finalizedSlot,
-		CrosslinkingStartShard:     0, // TODO: Stub. Need to see where this epoch left off.
+		CrosslinkingStartShard:     0, // TODO(#494): Stub. Need to see where this epoch left off.
 		CrosslinkRecords:           newCrossLinkRecords,
-		DynastySeedLastReset:       c.data.DynastySeedLastReset, // TODO: Stub. Dynasty transition is not finalized according to the spec.
+		DynastySeedLastReset:       c.data.DynastySeedLastReset, // TODO(#267): Stub. Need to implement dynasty transition.
 		TotalDeposits:              nextCycleBalance,
 	})
 
