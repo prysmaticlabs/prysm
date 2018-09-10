@@ -67,8 +67,9 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	// TODO: Fetch the slot: (block, state) DAGs from persistent storage
+	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
+	log.Infof("Starting service")
 	go c.blockProcessing(c.ctx.Done())
 }
 

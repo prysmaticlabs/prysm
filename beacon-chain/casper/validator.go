@@ -128,7 +128,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndice
 		return true
 	}
 
-	for i := 0; i < lastBit-remainingBits; i++ {
+	for i := 0; i < bitsInByte-remainingBits; i++ {
 		if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
 			log.Debugf("attestation has non-zero trailing bits")
 			return false

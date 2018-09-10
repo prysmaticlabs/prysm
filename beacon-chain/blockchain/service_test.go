@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"io/ioutil"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
@@ -31,7 +32,8 @@ func (f *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 }
 
 func (f *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	return nil, nil
+	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
+	return gethTypes.NewBlockWithHeader(head), nil
 }
 
 func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
@@ -40,6 +42,10 @@ func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 
 func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
+}
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func TestStartStop(t *testing.T) {
