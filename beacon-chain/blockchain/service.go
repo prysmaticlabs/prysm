@@ -185,8 +185,7 @@ func (c *ChainService) updateHead() {
 	// the case of a state transition). This is useful for the beacon node's gRPC
 	// server to stream these events to beacon clients.
 	cState := c.chain.CrystallizedState()
-	transition := cState.IsCycleTransition(c.candidateBlock.SlotNumber())
-	if transition {
+	if cState.IsCycleTransition(c.candidateBlock.SlotNumber()) {
 		c.canonicalCrystallizedStateFeed.Send(c.candidateCrystallizedState)
 	}
 	c.canonicalBlockFeed.Send(c.candidateBlock)
@@ -197,19 +196,14 @@ func (c *ChainService) updateHead() {
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
-// If the node is not connected to a PoW chain, defaults to true.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
-	if c.web3Service == nil {
-		return true
-	}
-
-	fetcher := c.web3Service.Client()
-	if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
+	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.PowChainRef())
+	if err != nil {
 		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 		return false
 	}
 
-	return true
+	return powBlock != nil
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {

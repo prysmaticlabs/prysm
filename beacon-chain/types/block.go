@@ -159,7 +159,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Debugf("Can not process a genesis block")
+		log.Debug("Can not process a genesis block")
 		return false
 	}
 
@@ -181,15 +181,15 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 // isAttestationValid validates an attestation in a block
 func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
-	slotNumber := int(b.SlotNumber())
+	slotNumber := b.SlotNumber()
 	attestation := b.Attestations()[attestationIndex]
-	if int(attestation.Slot) > slotNumber {
+	if attestation.Slot > slotNumber {
 		log.Debugf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
 			attestation.Slot,
 			slotNumber)
 		return false
 	}
-	if int(attestation.Slot) < slotNumber-params.CycleLength {
+	if attestation.Slot < slotNumber-params.CycleLength {
 		log.Debugf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
 			attestation.Slot,
 			slotNumber-params.CycleLength)
