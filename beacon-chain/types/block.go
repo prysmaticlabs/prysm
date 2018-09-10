@@ -149,8 +149,9 @@ func (b *Block) isSlotValid() bool {
 	return clock.Now().After(validTimeThreshold)
 }
 
-// IsValid is called to decide if an incoming p2p block can be processed into the chain's block trie,
-// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a validator.
+// IsValid is called to decide if an incoming p2p block can be processed.
+// It checks the slot against the system clock, and the validity of the included attestations.
+// Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
 func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	_, err := b.Hash()
 	if err != nil {
@@ -159,7 +160,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Debugf("Can not process a genesis block")
+		log.Debug("Can not process a genesis block")
 		return false
 	}
 
@@ -178,18 +179,20 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	return true
 }
 
-// isAttestationValid validates an attestation in a block
+// isAttestationValid validates an attestation in a block.
+// Attestations are cross-checked against validators in CrystallizedState.ShardAndCommitteesForSlots.
+// In addition, the signature is verified by constructing the list of parent hashes using ActiveState.RecentBlockHashes.
 func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
-	slotNumber := int(b.SlotNumber())
+	slotNumber := b.SlotNumber()
 	attestation := b.Attestations()[attestationIndex]
-	if int(attestation.Slot) > slotNumber {
+	if attestation.Slot > slotNumber {
 		log.Debugf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
 			attestation.Slot,
 			slotNumber)
 		return false
 	}
-	if int(attestation.Slot) < slotNumber-params.CycleLength {
+	if attestation.Slot < slotNumber-params.CycleLength {
 		log.Debugf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
 			attestation.Slot,
 			slotNumber-params.CycleLength)

@@ -8,6 +8,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+}
+
 func TestGenesisBlock(t *testing.T) {
 	b1, err1 := NewGenesisBlock()
 	b2, err2 := NewGenesisBlock()
@@ -37,8 +41,6 @@ func TestGenesisBlock(t *testing.T) {
 }
 
 func TestBlockValidity(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-
 	cState, err := NewGenesisCrystallizedState()
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)

@@ -9,6 +9,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+const bitsInByte = 8
+
 // RotateValidatorSet is called every dynasty transition. The primary functions are:
 // 1.) Go through queued validator indices and induct them to be active by setting start
 // dynasty to current cycle.
@@ -121,11 +123,12 @@ func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndice
 
 	// Valid attestation can not have non-zero trailing bits.
 	lastBit := len(attesterIndices)
-	if lastBit%8 == 0 {
+	remainingBits := lastBit % bitsInByte
+	if remainingBits == 0 {
 		return true
 	}
 
-	for i := 0; i < 8-lastBit%8; i++ {
+	for i := 0; i < lastBit-remainingBits; i++ {
 		if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
 			log.Debugf("attestation has non-zero trailing bits")
 			return false

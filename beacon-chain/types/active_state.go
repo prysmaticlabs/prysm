@@ -137,6 +137,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 			for _, oblique := range attestation.ObliqueParentHashes {
 				if bytes.Equal(h[:], oblique) {
 					skip = true
+					break
 				}
 			}
 			if skip {
@@ -158,6 +159,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 				for _, indexInCache := range update[h].VoterIndices {
 					if attesterIndex == indexInCache {
 						attesterExists = true
+						break
 					}
 				}
 				if !attesterExists {
