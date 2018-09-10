@@ -69,6 +69,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 func (c *ChainService) Start() {
 	// TODO: Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
+	log.Infof("Starting service")
 	go c.blockProcessing(c.ctx.Done())
 }
 
