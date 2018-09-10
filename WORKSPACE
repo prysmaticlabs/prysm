@@ -2,17 +2,14 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "io_bazel_rules_go",
-    # in order to be able to enable race detection we need to use a version
-    # < 0.13.0 until this bug is fixed: https://github.com/bazelbuild/rules_go/issues/1592
-    # We are using 0.12 here until bazelbuild/bazel-gazelle#272 is resolved, as we cannot import
-    # protobuf/ptypes normally until this issue is fixed
-    urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.12.1/rules_go-0.12.1.tar.gz"],
-    sha256 = "8b68d0630d63d95dacc0016c3bb4b76154fe34fca93efd65d1c366de3fcb4294",
+    urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.15.3/rules_go-0.15.3.tar.gz"],
+    sha256 = "97cf62bdef33519412167fd1e4b0810a318a7c234f5f8dc4f53e2da86241c492",
 )
 
 http_archive(
     name = "bazel_gazelle",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.12.0/bazel-gazelle-0.12.0.tar.gz"],
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.14.0/bazel-gazelle-0.14.0.tar.gz"],
+    sha256 = "c0a5739d12c6d05b6c1ad56f2200cb0b57c5a70e03ebd2f7b87ce88cabf09c7b",
 )
 
 git_repository(
@@ -95,8 +92,8 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    # Last updated August 15, 2018
-    commit = "c169d4b64d5360f5c1220a148c4438f7c90c8c96",
+    # Last updated September 09, 2018
+    commit = "f4b3f83362a4cf2928e57914af040aea76c8a7d6",
 )
 
 go_repository(
