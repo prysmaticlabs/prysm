@@ -52,7 +52,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 //
-// TODO: Add more default fields.
+// TODO(#495): Add more default fields.
 func NewGenesisBlock() (*Block, error) {
 	protoGenesis, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
@@ -149,8 +149,9 @@ func (b *Block) isSlotValid() bool {
 	return clock.Now().After(validTimeThreshold)
 }
 
-// IsValid is called to decide if an incoming p2p block can be processed into the chain's block trie,
-// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a validator.
+// IsValid is called to decide if an incoming p2p block can be processed.
+// It checks the slot against the system clock, and the validity of the included attestations.
+// Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
 func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	_, err := b.Hash()
 	if err != nil {
@@ -178,7 +179,9 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	return true
 }
 
-// isAttestationValid validates an attestation in a block
+// isAttestationValid validates an attestation in a block.
+// Attestations are cross-checked against validators in CrystallizedState.ShardAndCommitteesForSlots.
+// In addition, the signature is verified by constructing the list of parent hashes using ActiveState.RecentBlockHashes.
 func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
 	slotNumber := b.SlotNumber()
@@ -203,7 +206,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		return false
 	}
 
-	// TODO: Validate last justified block hash matches in the crystallizedState.
+	// TODO(#468): Validate last justified block hash matches in the crystallizedState.
 
 	// Get all the block hashes up to cycle length.
 	parentHashes := aState.getSignedParentHashes(b, attestation)
@@ -218,7 +221,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		return false
 	}
 
-	// TODO: Generate validators aggregated pub key.
+	// TODO(#258): Generate validators aggregated pub key.
 
 	// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
 	// to verify with aggregated public key and aggregated attestation signature.
@@ -238,6 +241,6 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
 		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
 
-	// TODO: Verify msgHash against aggregated pub key and aggregated signature.
+	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
 }
