@@ -7,14 +7,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
 // P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
 type P2P interface {
-	Subscribe(msg interface{}, channel interface{}) event.Subscription
-	Send(msg interface{}, peer p2p.Peer)
-	Broadcast(msg interface{})
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
 }
 
 // CanonicalEventAnnouncer defines a struct that pushes canonical blocks
