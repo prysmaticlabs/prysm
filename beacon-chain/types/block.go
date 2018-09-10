@@ -192,7 +192,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 			slotNumber)
 		return false
 	}
-	if attestation.Slot < slotNumber-params.CycleLength {
+	if int(attestation.Slot) < int(slotNumber)-params.CycleLength {
 		log.Debugf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
 			attestation.Slot,
 			slotNumber-params.CycleLength)
