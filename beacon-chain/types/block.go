@@ -52,7 +52,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 //
-// TODO: Add more default fields.
+// TODO(#495): Add more default fields.
 func NewGenesisBlock() (*Block, error) {
 	protoGenesis, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
@@ -206,7 +206,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		return false
 	}
 
-	// TODO: Validate last justified block hash matches in the crystallizedState.
+	// TODO(#468): Validate last justified block hash matches in the crystallizedState.
 
 	// Get all the block hashes up to cycle length.
 	parentHashes := aState.getSignedParentHashes(b, attestation)
@@ -221,7 +221,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		return false
 	}
 
-	// TODO: Generate validators aggregated pub key.
+	// TODO(#258): Generate validators aggregated pub key.
 
 	// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
 	// to verify with aggregated public key and aggregated attestation signature.
@@ -241,6 +241,6 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
 		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
 
-	// TODO: Verify msgHash against aggregated pub key and aggregated signature.
+	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
 }
