@@ -240,13 +240,11 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
 	// Validate attestation's slot number has is within range of incoming block's parent's slot number.
 	parentBlock, err := b.getBlock(block.ParentHash())
-	if parentBlock == nil {
-		if block.SlotNumber() <= 1 {
-			// Deal with genesis block
-			parentBlock = block
-		} else {
-			return fmt.Errorf("could not get parent block from parent hash: %v", err)
-		}
+	if parentBlock == nil && block.SlotNumber() <= 1 {
+		// Deal with genesis block.
+		parentBlock = block
+	} else if parentBlock == nil {
+		return fmt.Errorf("could not get parent block from parent hash: %v", err)
 	}
 
 	parentSlotNumber := int(parentBlock.SlotNumber())
