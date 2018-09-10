@@ -197,7 +197,7 @@ func (c *ChainService) updateHead() {
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
-// If the node is connected to a PoW chain, defaults to true.
+// If the node is not connected to a PoW chain, defaults to true.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	if c.web3Service == nil {
 		return true
@@ -252,12 +252,12 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				c.updateHead()
 			}
 
-			if err := c.chain.saveBlock(block); err != nil {
+			if err := c.chain.saveBlockAndAttestations(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
 
-			log.Info("Finished processing received block: %x", blockHash)
+			log.Infof("Finished processing received block: %x", blockHash)
 
 			// Do not proceed further, because a candidate has already been chosen.
 			if c.candidateBlock != nilBlock {
@@ -270,6 +270,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
+				log.Info("Entering cycle transition")
 				cState, err = cState.CalculateNewCrystallizedState(aState, block.SlotNumber())
 			}
 			if err != nil {
@@ -292,7 +293,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			c.candidateActiveState = aState
 			c.candidateCrystallizedState = cState
 
-			log.Info("Finished processing state for candidate block: %x", blockHash)
+			log.Infof("Finished processing state for candidate block: %x", blockHash)
 		}
 	}
 }

@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "active_state.go",
+        "attestation.go",
         "block.go",
         "crystallized_state.go",
         "interfaces.go",
@@ -33,6 +34,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "active_state_test.go",
+        "attestation_test.go",
         "block_test.go",
         "crystallized_state_test.go",
     ],

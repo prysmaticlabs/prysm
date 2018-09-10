@@ -151,16 +151,16 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Process crosslinks happened at slot 50 and dynasty 2.
-	indicesForSlots, err := initialIndicesForSlots(validators)
+	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(validators)
 	if err != nil {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
 
 	cState := NewCrystallizedState(&pb.CrystallizedState{
-		CrosslinkRecords: clRecords,
-		Validators:       validators,
-		CurrentDynasty:   5,
-		IndicesForSlots:  indicesForSlots,
+		CrosslinkRecords:           clRecords,
+		Validators:                 validators,
+		CurrentDynasty:             5,
+		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
 	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50)
 	if err != nil {

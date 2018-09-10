@@ -39,19 +39,10 @@ func TestGenesisBlock(t *testing.T) {
 func TestBlockValidity(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 
-	cState := NewCrystallizedState(&pb.CrystallizedState{
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
-			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-					{
-						ShardId:   0,
-						Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7},
-					},
-				},
-			},
-		},
-		LastJustifiedSlot: 0,
-	})
+	cState, err := NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatalf("failed to generate crystallized state: %v", err)
+	}
 
 	recentBlockHashes := make([][]byte, 2*params.CycleLength)
 	for i := 0; i < 2*params.CycleLength; i++ {
@@ -68,7 +59,7 @@ func TestBlockValidity(t *testing.T) {
 				Slot:             0,
 				ShardId:          0,
 				JustifiedSlot:    0,
-				AttesterBitfield: []byte{8},
+				AttesterBitfield: []byte{8, 8},
 			},
 		},
 	})

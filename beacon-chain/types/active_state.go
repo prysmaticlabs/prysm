@@ -89,17 +89,15 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
 	return a.blockVoteCache
 }
 
-func (a *ActiveState) calculateNewAttestations(new []*pb.AttestationRecord, lastStateRecalc uint64) []*pb.AttestationRecord {
+func (a *ActiveState) calculateNewAttestations(add []*pb.AttestationRecord, lastStateRecalc uint64) []*pb.AttestationRecord {
 	existing := a.data.PendingAttestations
-	update := make([]*pb.AttestationRecord, 0)
+	update := []*pb.AttestationRecord{}
 	for i := 0; i < len(existing); i++ {
 		if existing[i].GetSlot() >= lastStateRecalc {
 			update = append(update, existing[i])
 		}
 	}
-	for i := 0; i < len(new); i++ {
-		update = append(update, new[i])
-	}
+	update = append(update, add...)
 
 	return update
 }
@@ -122,7 +120,7 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
 func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*VoteCache, error) {
-	new := voteCacheDeepCopy(a.GetBlockVoteCache())
+	update := voteCacheDeepCopy(a.GetBlockVoteCache())
 
 	for i := 0; i < len(block.Attestations()); i++ {
 		attestation := block.Attestations()[i]
@@ -147,7 +145,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 
 			// Initialize vote cache of a given block hash if it doesn't exist already.
 			if !a.isVoteCacheEmpty(h) {
-				new[h] = newVoteCache()
+				update[h] = newVoteCache()
 			}
 
 			// Loop through attester indices, if the attester has voted but was not accounted for
@@ -157,29 +155,29 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 				if !utils.CheckBit(attestation.AttesterBitfield, i) {
 					continue
 				}
-				for _, indexInCache := range new[h].VoterIndices {
+				for _, indexInCache := range update[h].VoterIndices {
 					if attesterIndex == indexInCache {
 						attesterExists = true
 					}
 				}
 				if !attesterExists {
-					new[h].VoterIndices = append(new[h].VoterIndices, attesterIndex)
-					new[h].VoteTotalDeposit += cState.Validators()[attesterIndex].Balance
+					update[h].VoterIndices = append(update[h].VoterIndices, attesterIndex)
+					update[h].VoteTotalDeposit += cState.Validators()[attesterIndex].Balance
 				}
 			}
 		}
 	}
 
-	return new, nil
+	return update, nil
 }
 
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
-	// Derive the new set of pending attestations
+	// Derive the new set of pending attestations.
 	newPendingAttestations := a.calculateNewAttestations(block.data.Attestations, cState.LastStateRecalc())
 
-	// Derive the new value for RecentBlockHashes
+	// Derive the new value for RecentBlockHashes.
 	newRecentBlockHashes, err := a.calculateNewBlockHashes(block, parentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)

@@ -128,8 +128,8 @@ func (s *InitialSync) Stop() error {
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run(delaychan <-chan time.Time) {
-	blockSub := s.p2p.Subscribe(pb.BeaconBlockResponse{}, s.blockBuf)
-	crystallizedStateSub := s.p2p.Subscribe(pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
+	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
+	crystallizedStateSub := s.p2p.Subscribe(&pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
 	defer func() {
 		blockSub.Unsubscribe()
 		crystallizedStateSub.Unsubscribe()
