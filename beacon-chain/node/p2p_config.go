@@ -1,22 +1,23 @@
 package node
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-var topicMappings = map[pb.Topic]interface{}{
-	pb.Topic_BEACON_BLOCK_HASH_ANNOUNCE:          pb.BeaconBlockHashAnnounce{},
-	pb.Topic_BEACON_BLOCK_REQUEST:                pb.BeaconBlockRequest{},
-	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: pb.BeaconBlockRequestBySlotNumber{},
-	pb.Topic_BEACON_BLOCK_RESPONSE:               pb.BeaconBlockResponse{},
-	pb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE:    pb.CrystallizedStateHashAnnounce{},
-	pb.Topic_CRYSTALLIZED_STATE_REQUEST:          pb.CrystallizedStateRequest{},
-	pb.Topic_CRYSTALLIZED_STATE_RESPONSE:         pb.CrystallizedStateResponse{},
-	pb.Topic_ACTIVE_STATE_HASH_ANNOUNCE:          pb.ActiveStateHashAnnounce{},
-	pb.Topic_ACTIVE_STATE_REQUEST:                pb.ActiveStateRequest{},
-	pb.Topic_ACTIVE_STATE_RESPONSE:               pb.ActiveStateResponse{},
+var topicMappings = map[pb.Topic]proto.Message{
+	pb.Topic_BEACON_BLOCK_HASH_ANNOUNCE:          &pb.BeaconBlockHashAnnounce{},
+	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
+	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
+	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},
+	pb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE:    &pb.CrystallizedStateHashAnnounce{},
+	pb.Topic_CRYSTALLIZED_STATE_REQUEST:          &pb.CrystallizedStateRequest{},
+	pb.Topic_CRYSTALLIZED_STATE_RESPONSE:         &pb.CrystallizedStateResponse{},
+	pb.Topic_ACTIVE_STATE_HASH_ANNOUNCE:          &pb.ActiveStateHashAnnounce{},
+	pb.Topic_ACTIVE_STATE_REQUEST:                &pb.ActiveStateRequest{},
+	pb.Topic_ACTIVE_STATE_RESPONSE:               &pb.ActiveStateResponse{},
 }
 
 func configureP2P() (*p2p.Server, error) {
