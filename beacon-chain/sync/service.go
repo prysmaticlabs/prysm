@@ -124,9 +124,9 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 
 // run handles incoming block sync.
 func (ss *Service) run() {
-	announceBlockHashSub := ss.p2p.Subscribe(pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
-	blockSub := ss.p2p.Subscribe(pb.BeaconBlockResponse{}, ss.blockBuf)
-	blockRequestSub := ss.p2p.Subscribe(pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
+	announceBlockHashSub := ss.p2p.Subscribe(&pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
+	blockSub := ss.p2p.Subscribe(&pb.BeaconBlockResponse{}, ss.blockBuf)
+	blockRequestSub := ss.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
 
 	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
