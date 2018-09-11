@@ -11,6 +11,8 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_COLLATION_BODY_REQUEST:  &pb.CollationBodyRequest{},
 	pb.Topic_COLLATION_BODY_RESPONSE: &pb.CollationBodyResponse{},
 	pb.Topic_TRANSACTIONS:            &pb.Transaction{},
+	pb.Topic_BLOCK_BROADCAST:         &pb.BlockBroadcast{},
+	pb.Topic_ATTESTATION_BROADCAST:   &pb.AttestationBroadcast{},
 }
 
 func configureP2P() (*p2p.Server, error) {
