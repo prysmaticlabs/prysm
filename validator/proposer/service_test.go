@@ -1,10 +1,12 @@
 package proposer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -51,6 +53,164 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
+func TestSaveBlockToMemory(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p.SaveBlockToMemory(&pbp2p.BeaconBlock{SlotNumber: 5})
+	if p.blockMapping[5] == nil {
+		t.Error("Block does not exist when it is supposed to")
+	}
+}
+
+func TestGetBlockFromMemory(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p.SaveBlockToMemory(&pbp2p.BeaconBlock{SlotNumber: 5, ParentHash: []byte{'t', 'e', 's', 't'}})
+	block, err := p.GetBlockFromMemory(5)
+	if err != nil {
+		t.Fatalf("Unable to get block %v", err)
+	}
+
+	if !bytes.Equal(block.ParentHash, []byte{'t', 'e', 's', 't'}) {
+		t.Error("parent hash not the same as the one saved")
+	}
+
+	block, err = p.GetBlockFromMemory(1)
+	if err == nil {
+		t.Error("block is able to be retrieved despite not existing")
+	}
+
+	p.blockMapping[2] = &pbp2p.BeaconBlock{SlotNumber: 8}
+	block, err = p.GetBlockFromMemory(2)
+	if err == nil {
+		t.Error("block is regarded as valid despite being invalid")
+	}
+
+}
+func TestDoesAttestationExist(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+
+	records := []*pbp2p.AttestationRecord{
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'a'},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'b'},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'c'},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'d'},
+		}}
+
+	fakeAttestation := &pbp2p.AttestationRecord{
+		AttesterBitfield: []byte{'e'},
+	}
+
+	realAttestation := &pbp2p.AttestationRecord{
+		AttesterBitfield: []byte{'a'},
+	}
+
+	if p.DoesAttestationExist(fakeAttestation, records) {
+		t.Fatal("invalid attestation exists")
+	}
+
+	if !p.DoesAttestationExist(realAttestation, records) {
+		t.Fatal("valid attestation does not exists")
+	}
+
+}
+
+func TestAggregateSignatures(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+
+	records := []*pbp2p.AttestationRecord{
+		&pbp2p.AttestationRecord{
+			AggregateSig: []uint64{1},
+		},
+		&pbp2p.AttestationRecord{
+			AggregateSig: []uint64{4},
+		},
+		&pbp2p.AttestationRecord{
+			AggregateSig: []uint64{10},
+		},
+		&pbp2p.AttestationRecord{
+			AggregateSig: []uint64{9},
+		}}
+
+	aggregatedSig := []uint32{1, 4, 10, 9}
+	falseSig := []uint32{}
+
+	if !reflect.DeepEqual(aggregatedSig, p.AggregateAllSignatures(records)) {
+		t.Fatal("signatures have not been aggregated correctly")
+	}
+
+	if reflect.DeepEqual(falseSig, p.AggregateAllSignatures(records)) {
+		t.Fatal("signatures that are meant to be unequal are showing up as equal")
+	}
+
+}
+
+func TestGenerateBitmask(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+
+	records := []*pbp2p.AttestationRecord{
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{2},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{4},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{8},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{16},
+		}}
+	falseMask := []byte{20}
+	expectedMask := []byte{30}
+
+	if bytes.Equal(p.GenerateBitmask(records), falseMask) {
+		t.Fatalf("bitmasks that are equal are showing up as unequal %08b , %08b", p.GenerateBitmask(records), falseMask)
+	}
+	if !bytes.Equal(p.GenerateBitmask(records), expectedMask) {
+		t.Fatalf("bitmasks that are the same are showing up as unequal %08b , %08b", p.GenerateBitmask(records), expectedMask)
+	}
+}
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
