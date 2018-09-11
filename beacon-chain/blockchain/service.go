@@ -281,6 +281,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Failed to calculate the new dynasty: %v", err)
 				continue
+
 			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
