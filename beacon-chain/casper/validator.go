@@ -9,6 +9,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+const bitsInByte = 8
+
 // RotateValidatorSet is called every dynasty transition. The primary functions are:
 // 1.) Go through queued validator indices and induct them to be active by setting start
 // dynasty to current cycle.
@@ -107,4 +109,31 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lcs, lcs+params.CycleLength*2)
 	}
 	return shardCommittees[slot-lcs], nil
+}
+
+// AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
+// defined in the Crystallized State.
+func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndices []uint32) bool {
+	// Validate attester bit field has the correct length.
+	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
+			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+		return false
+	}
+
+	// Valid attestation can not have non-zero trailing bits.
+	lastBit := len(attesterIndices)
+	remainingBits := lastBit % bitsInByte
+	if remainingBits == 0 {
+		return true
+	}
+
+	for i := 0; i < bitsInByte-remainingBits; i++ {
+		if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+			log.Debugf("attestation has non-zero trailing bits")
+			return false
+		}
+	}
+
+	return true
 }
