@@ -3,14 +3,15 @@
 package proposer
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"reflect"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	blake2b "github.com/minio/blake2b-simd"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
@@ -89,18 +90,44 @@ func (p *Proposer) GetBlockFromMemory(slotnumber uint64) (*pbp2p.BeaconBlock, er
 	if block.GetSlotNumber() != slotnumber {
 		return nil, errors.New("invalid block saved in memory")
 	}
+	if block == nil {
+		return nil, errors.New("block does not exist")
+	}
 	return block, nil
 }
 
 func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord, records []*pbp2p.AttestationRecord) bool {
 	exists := false
 	for _, record := range records {
-		if reflect.DeepEqual(record, attestation) {
+		if bytes.Equal(record.GetAttesterBitfield(), attestation.GetAttesterBitfield()) {
 			exists = true
 			break
 		}
 	}
 	return exists
+}
+
+func (p *Proposer) AggregateAllSignatures(attestations []*pbp2p.AttestationRecord) []uint32 {
+	var agSig []uint32
+	for _, attestation := range attestations {
+		castedslice := make([]uint32, len(attestation.GetAggregateSig()))
+		for i, num := range attestation.GetAggregateSig() {
+			castedslice[i] = uint32(num)
+
+		}
+		agSig = append(agSig, castedslice...)
+	}
+	return agSig
+}
+
+func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AttestationRecord) []byte {
+	bitmask := make([]byte, len(attestations[0].GetAttesterBitfield()))
+	for _, attestation := range attestations {
+		for i, chunk := range attestation.GetAttesterBitfield() {
+			bitmask[i] = bitmask[i] | chunk
+		}
+	}
+	return bitmask
 }
 
 // run the main event loop that listens for a proposer assignment.
@@ -139,6 +166,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				SlotNumber:   latestBeaconBlock.GetSlotNumber() + 1,
 				RandaoReveal: []byte{},
 				Attestations: make([]*pbp2p.AttestationRecord, 0),
+				Timestamp:    ptypes.TimestampNow(),
 			}
 
 			blockToBroadcast := &shardingp2p.BlockBroadcast{BeaconBlock: proposalBlock}
@@ -146,22 +174,6 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			p.SaveBlockToMemory(proposalBlock)
 			p.p2p.Broadcast(blockToBroadcast)
 
-			// TODO: Implement real proposals with randao reveals and attestation fields.
-			req := &pb.ProposeRequest{
-				ParentHash:              latestBlockHash[:],
-				SlotNumber:              latestBeaconBlock.GetSlotNumber() + 1,
-				RandaoReveal:            []byte{},
-				AttestationBitmask:      []byte{},
-				AttestationAggregateSig: []uint32{},
-				Timestamp:               ptypes.TimestampNow(),
-			}
-
-			res, err := client.ProposeBlock(p.ctx, req)
-			if err != nil {
-				log.Errorf("Could not propose block: %v", err)
-				continue
-			}
-			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
 		case msg := <-p.attestationBuf:
 			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)
 			// TODO: Handle this at p2p layer.
@@ -179,6 +191,30 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			attestationExists := p.DoesAttestationExist(attestationRecord, block.GetAttestations())
 			if !attestationExists {
 				block.Attestations = append(block.Attestations, attestationRecord)
+			}
+
+			if block.GetTimestamp().GetSeconds()+params.SlotDuration > ptypes.TimestampNow().GetSeconds() {
+
+				// TODO: Implement real proposals with randao reveals and attestation fields.
+				agSig := p.AggregateAllSignatures(block.GetAttestations())
+				bitmask := p.GenerateBitmask(block.GetAttestations())
+
+				req := &pb.ProposeRequest{
+					ParentHash:              block.GetParentHash(),
+					SlotNumber:              block.GetSlotNumber(),
+					RandaoReveal:            []byte{},
+					AttestationBitmask:      bitmask,
+					AttestationAggregateSig: agSig,
+					Timestamp:               ptypes.TimestampNow(),
+				}
+
+				res, err := client.ProposeBlock(p.ctx, req)
+				if err != nil {
+					log.Errorf("Could not propose block: %v", err)
+					continue
+				}
+				log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
+				p.blockMapping[block.GetSlotNumber()] = nil
 			}
 		}
 	}
