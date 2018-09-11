@@ -176,7 +176,6 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 		case msg := <-p.attestationBuf:
 			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)
-			// TODO: Handle this at p2p layer.
 			if !ok {
 				log.Error("Received malformed attestation p2p message")
 				continue
