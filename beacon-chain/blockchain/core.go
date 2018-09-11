@@ -238,18 +238,26 @@ func (b *BeaconChain) computeNewActiveState(attestations []*pb.AttestationRecord
 
 // processAttestation processes the attestations for one shard in an incoming block.
 func (b *BeaconChain) processAttestation(attestationIndex int, block *types.Block) error {
-	// Validate attestation's slot number has is within range of incoming block number.
-	slotNumber := int(block.SlotNumber())
-	attestation := block.Attestations()[attestationIndex]
-	if int(attestation.Slot) > slotNumber {
-		return fmt.Errorf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
-			attestation.Slot,
-			slotNumber)
+	// Validate attestation's slot number has is within range of incoming block's parent's slot number.
+	parentBlock, err := b.getBlock(block.ParentHash())
+	if parentBlock == nil && block.SlotNumber() <= 1 {
+		// Deal with genesis block.
+		parentBlock = block
+	} else if parentBlock == nil {
+		return fmt.Errorf("could not get parent block from parent hash: %v", err)
 	}
-	if int(attestation.Slot) < slotNumber-params.CycleLength {
-		return fmt.Errorf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
+
+	parentSlotNumber := int(parentBlock.SlotNumber())
+	attestation := block.Attestations()[attestationIndex]
+	if int(attestation.Slot) > parentSlotNumber {
+		return fmt.Errorf("attestation slot number can't be higher than parent block's slot number. Found: %d, Needed lower than: %d",
 			attestation.Slot,
-			slotNumber-params.CycleLength)
+			parentSlotNumber)
+	}
+	if int(attestation.Slot) < parentSlotNumber-params.CycleLength+1 {
+		return fmt.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %v, Needed greater than: %v",
+			attestation.Slot,
+			parentSlotNumber-params.CycleLength+1)
 	}
 
 	if attestation.JustifiedSlot != b.CrystallizedState().LastJustifiedSlot() {
