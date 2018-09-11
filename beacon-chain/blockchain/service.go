@@ -18,9 +18,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "blockchain")
-var nilBlock = &types.Block{}
-var nilActiveState = &types.ActiveState{}
-var nilCrystallizedState = &types.CrystallizedState{}
 
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
@@ -33,6 +30,8 @@ type ChainService struct {
 	currentSlot                    uint64
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
+	incomingAttestationFeed        *event.Feed
+	incomingAttestationChan        chan *types.Attestation
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][]byte
@@ -40,11 +39,12 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf   int
-	IncomingBlockBuf int
-	Chain            *BeaconChain
-	Web3Service      *powchain.Web3Service
-	BeaconDB         ethdb.Database
+	BeaconBlockBuf         int
+	IncomingBlockBuf       int
+	Chain                  *BeaconChain
+	Web3Service            *powchain.Web3Service
+	BeaconDB               ethdb.Database
+	IncomingAttestationBuf int
 }
 
 // NewChainService instantiates a new service instance that will
@@ -59,6 +59,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:                    cfg.Web3Service,
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
+		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
+		incomingAttestationFeed:        new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][]byte{},
@@ -76,7 +78,7 @@ func (c *ChainService) Start() {
 	// TODO: This is faulty, the ticker should start from a very
 	// precise timestamp instead of rounding down to begin from a
 	// certain slot. We need to ensure validators and the beacon chain
-	// are properly synced at the correct timestamps for begininng
+	// are properly synced at the correct timestamps for beginning
 	// slot intervals.
 	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
 
@@ -98,10 +100,16 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// IncomingBlockFeed returns a feed that a sync service can send incoming p2p blocks into.
+// IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
 	return c.incomingBlockFeed
+}
+
+// IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
+// The chain service will subscribe to this feed in order to relay incoming attestations.
+func (c *ChainService) IncomingAttestationFeed() *event.Feed {
+	return c.incomingAttestationFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -212,7 +220,6 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 			}
 
 			log.Info("Applying fork choice rule")
-
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
 			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
@@ -284,12 +291,22 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
 	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
+	defer subAttestation.Unsubscribe()
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
+		case attestation := <-c.incomingAttestationChan:
+			h, err := attestation.Hash()
+			if err != nil {
+				log.Debugf("Could not hash incoming attestation: %v", err)
+			}
+			log.Info("Relaying attestation 0x%v to p2p service", h)
+
+			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 		case block := <-c.incomingBlockChan:
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
