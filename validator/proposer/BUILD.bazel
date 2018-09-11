@@ -28,6 +28,7 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/sharding/p2p/v1:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/testutil:go_default_library",
         "//validator/internal:go_default_library",

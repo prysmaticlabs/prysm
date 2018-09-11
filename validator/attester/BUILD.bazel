@@ -21,6 +21,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",  #keep
+        "//proto/sharding/p2p/v1:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
