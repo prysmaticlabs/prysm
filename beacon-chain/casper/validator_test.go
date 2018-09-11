@@ -139,3 +139,55 @@ func TestValidatorIndices(t *testing.T) {
 		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 }
+
+func TestAreAttesterBitfieldsValid(t *testing.T) {
+	attestation := &pb.AttestationRecord{
+		AttesterBitfield: []byte{'F'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if !isValid {
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
+	attestation := &pb.AttestationRecord{
+		AttesterBitfield: []byte{'F', 'F'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if isValid {
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
+	attestation := &pb.AttestationRecord{
+		AttesterBitfield: []byte{'F'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if !isValid {
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
+	attestation := &pb.AttestationRecord{
+		AttesterBitfield: []byte{'E'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if isValid {
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+	}
+}

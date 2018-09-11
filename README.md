@@ -74,7 +74,7 @@ Then, you can build and init a new instance of a local, Ethereum blockchain as f
 
 ```
 geth init /path/to/genesis.json --datadir /path/to/your/datadir
-geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*"
+geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*" --rpc
 ````
 
 It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.

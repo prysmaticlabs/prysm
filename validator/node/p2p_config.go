@@ -1,15 +1,16 @@
 package node
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 )
 
-var topicMappings = map[pb.Topic]interface{}{
-	pb.Topic_COLLATION_BODY_REQUEST:  pb.CollationBodyRequest{},
-	pb.Topic_COLLATION_BODY_RESPONSE: pb.CollationBodyResponse{},
-	pb.Topic_TRANSACTIONS:            pb.Transaction{},
+var topicMappings = map[pb.Topic]proto.Message{
+	pb.Topic_COLLATION_BODY_REQUEST:  &pb.CollationBodyRequest{},
+	pb.Topic_COLLATION_BODY_RESPONSE: &pb.CollationBodyResponse{},
+	pb.Topic_TRANSACTIONS:            &pb.Transaction{},
 }
 
 func configureP2P() (*p2p.Server, error) {
