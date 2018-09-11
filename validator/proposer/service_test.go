@@ -9,8 +9,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	"github.com/sirupsen/logrus"
@@ -36,6 +38,18 @@ func (m *mockAssigner) ProposerAssignmentFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+type mockP2P struct {
+}
+
+func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
+	return new(event.Feed).Subscribe(channel)
+}
+
+func (mp *mockP2P) Broadcast(msg proto.Message) {}
+
+func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
@@ -45,7 +59,7 @@ func TestLifecycle(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg)
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
 	p.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	p.Stop()
@@ -61,7 +75,7 @@ func TestProposerLoop(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg)
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
@@ -96,7 +110,7 @@ func TestProposerMarshalError(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg)
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
@@ -123,7 +137,7 @@ func TestProposerErrorLoop(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg)
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 

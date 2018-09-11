@@ -4,5 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/params",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//validator:__subpackages__",
+    ],
 )

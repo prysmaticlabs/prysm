@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	blake2b "github.com/minio/blake2b-simd"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -132,7 +132,7 @@ func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AttestationRecord) []by
 
 // run the main event loop that listens for a proposer assignment.
 func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
-	attestationSub := p.p2p.Subscribe(shardingp2p.AttestationBroadcast{}, p.attestationBuf)
+	attestationSub := p.p2p.Subscribe(&shardingp2p.AttestationBroadcast{}, p.attestationBuf)
 	sub := p.assigner.ProposerAssignmentFeed().Subscribe(p.assignmentChan)
 
 	defer attestationSub.Unsubscribe()

@@ -9,6 +9,8 @@ enum Topic {
   COLLATION_BODY_REQUEST = 1;
   COLLATION_BODY_RESPONSE = 2;
   TRANSACTIONS = 3;
+  BLOCK_BROADCAST = 4;
+  ATTESTATION_BROADCAST = 5;
 } 
 
 message CollationBodyRequest {

@@ -76,7 +76,7 @@ func (a *Attester) CreateAttestation(block *pbp2p.BeaconBlock) *pbp2p.Attestatio
 // run the main event loop that listens for an attester assignment.
 func (a *Attester) run(done <-chan struct{}) {
 	sub := a.assigner.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
-	blocksub := a.p2p.Subscribe(shardingp2p.BlockBroadcast{}, a.blockBuf)
+	blocksub := a.p2p.Subscribe(&shardingp2p.BlockBroadcast{}, a.blockBuf)
 	defer sub.Unsubscribe()
 	defer blocksub.Unsubscribe()
 
