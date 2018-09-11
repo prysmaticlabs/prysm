@@ -87,11 +87,13 @@ func (p *Proposer) SaveBlockToMemory(block *pbp2p.BeaconBlock) {
 
 func (p *Proposer) GetBlockFromMemory(slotnumber uint64) (*pbp2p.BeaconBlock, error) {
 	block := p.blockMapping[slotnumber]
-	if block.GetSlotNumber() != slotnumber {
-		return nil, errors.New("invalid block saved in memory")
-	}
+
 	if block == nil {
 		return nil, errors.New("block does not exist")
+	}
+
+	if block.GetSlotNumber() != slotnumber {
+		return nil, errors.New("invalid block saved in memory")
 	}
 	return block, nil
 }
@@ -173,6 +175,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 			p.SaveBlockToMemory(proposalBlock)
 			p.p2p.Broadcast(blockToBroadcast)
+			log.Infof("Block for slot %d has been broadcasted", blockToBroadcast.GetBeaconBlock().GetSlotNumber())
 
 		case msg := <-p.attestationBuf:
 			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)

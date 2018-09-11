@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -66,7 +67,34 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestProposerLoop(t *testing.T) {
+func TestProposerReceiveBeaconBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+
+	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		p.run(doneChan, mockServiceClient)
+		<-exitRoutine
+	}()
+	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block for slot %d has been broadcasted", 6))
+	doneChan <- struct{}{}
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Proposer context closed")
+}
+
+func TestProposerProcessAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -94,41 +122,22 @@ func TestProposerLoop(t *testing.T) {
 		<-exitRoutine
 	}()
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
-	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
-	doneChan <- struct{}{}
-	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Proposer context closed")
-}
-
-func TestProposerMarshalError(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	cfg := &Config{
-		AssignmentBuf: 0,
-		Assigner:      &mockAssigner{},
-		Client:        &mockClient{ctrl},
+	attestation := &shardingp2p.AttestationBroadcast{
+		AttestationRecord: &pbp2p.AttestationRecord{Slot: 6},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
+	p.attestationBuf <- msg
 
-	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 
-	doneChan := make(chan struct{})
-	exitRoutine := make(chan bool)
-	go func() {
-		p.run(doneChan, mockServiceClient)
-		<-exitRoutine
-	}()
-
-	p.assignmentChan <- nil
-	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
-func TestProposerErrorLoop(t *testing.T) {
+func TestProposerServiceErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -154,10 +163,31 @@ func TestProposerErrorLoop(t *testing.T) {
 		<-exitRoutine
 	}()
 
+	p.assignmentChan <- nil
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+
+	attestation := &shardingp2p.AttestationBroadcast{
+		AttestationRecord: &pbp2p.AttestationRecord{Slot: 5},
+	}
+	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
+	p.attestationBuf <- msg
+
+	attestation2 := &shardingp2p.AttestationBroadcast{
+		AttestationRecord: &pbp2p.AttestationRecord{Slot: 6},
+	}
+	msg2 := p2p.Message{Peer: p2p.Peer{}, Data: attestation2}
+	p.attestationBuf <- msg2
+
+	msg3 := p2p.Message{Peer: p2p.Peer{}, Data: &pbp2p.BeaconBlock{}}
+	p.attestationBuf <- msg3
+
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, "bad block proposed")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
+	testutil.AssertLogsContain(t, hook, "Could not propose block: bad block proposed")
+	testutil.AssertLogsContain(t, hook, "Unable to retrieve block from memory block does not exist")
+	testutil.AssertLogsContain(t, hook, "Received malformed attestation p2p message")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
