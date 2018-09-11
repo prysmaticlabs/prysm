@@ -3,7 +3,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 
@@ -21,6 +20,7 @@ var log = logrus.WithField("prefix", "rpc")
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
+	IncomingAttestationFeed() *event.Feed
 }
 
 // Service defining an RPC server for a beacon node.
@@ -147,13 +147,19 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
 }
 
-// SignBlock is a function called by an attester in a sharding validator to sign off
+// AttestHead is a function called by an attester in a sharding validator to vote
 // on a block.
-//
-// TODO: needs implementation.
-func (s *Service) SignBlock(ctx context.Context, req *pb.SignRequest) (*pb.SignResponse, error) {
-	// TODO: implement.
-	return nil, errors.New("unimplemented")
+func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.AttestResponse, error) {
+	attestation := types.NewAttestation(req.Attestation)
+	h, err := attestation.Hash()
+	if err != nil {
+		return nil, fmt.Errorf("could not hash attestation: %v", err)
+	}
+
+	// Relays the attestation to chain service.
+	s.chainService.IncomingAttestationFeed().Send(attestation)
+
+	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
 // LatestBeaconBlock streams the latest beacon chain data.
