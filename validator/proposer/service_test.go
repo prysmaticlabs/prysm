@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
@@ -241,9 +242,11 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
 	doneChan := make(chan struct{})
+	delayChan := make(chan time.Time)
 	exitRoutine := make(chan bool)
+
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		p.run(delayChan, doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
@@ -276,9 +279,11 @@ func TestProposerProcessAttestation(t *testing.T) {
 	}, nil)
 
 	doneChan := make(chan struct{})
+	delayChan := make(chan time.Time)
 	exitRoutine := make(chan bool)
+
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		p.run(delayChan, doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
@@ -289,6 +294,8 @@ func TestProposerProcessAttestation(t *testing.T) {
 	p.attestationBuf <- msg
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+
+	delayChan <- time.Time{}
 
 	doneChan <- struct{}{}
 	exitRoutine <- true
@@ -317,9 +324,11 @@ func TestProposerServiceErrors(t *testing.T) {
 	).Return(nil, errors.New("bad block proposed"))
 
 	doneChan := make(chan struct{})
+	delayChan := make(chan time.Time)
 	exitRoutine := make(chan bool)
+
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		p.run(delayChan, doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
 
@@ -337,6 +346,7 @@ func TestProposerServiceErrors(t *testing.T) {
 	}
 	msg2 := p2p.Message{Peer: p2p.Peer{}, Data: attestation2}
 	p.attestationBuf <- msg2
+	delayChan <- time.Time{}
 
 	msg3 := p2p.Message{Peer: p2p.Peer{}, Data: &pbp2p.BeaconBlock{}}
 	p.attestationBuf <- msg3

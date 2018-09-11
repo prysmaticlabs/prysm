@@ -7,6 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -63,9 +65,17 @@ func TestAttesterLoop(t *testing.T) {
 		att.run(doneChan)
 		<-exitRoutine
 	}()
+	block := &shardingp2p.BlockBroadcast{
+		BeaconBlock: &pbp2p.BeaconBlock{}}
+
 	att.assignmentChan <- true
+	att.blockBuf <- p2p.Message{Peer: p2p.Peer{}, Data: &shardingp2p.AttestationBroadcast{}}
+	att.blockBuf <- p2p.Message{Peer: p2p.Peer{}, Data: block}
+
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Attestation Broadcasted to network")
+	testutil.AssertLogsContain(t, hook, "Received malformed attestation p2p message")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }

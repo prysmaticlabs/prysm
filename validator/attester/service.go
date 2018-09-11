@@ -63,6 +63,7 @@ func (a *Attester) Stop() error {
 	return nil
 }
 
+// CreateAttestation will cause the attester to attest to the provided beacon block.
 func (a *Attester) CreateAttestation(block *pbp2p.BeaconBlock) *pbp2p.AttestationRecord {
 	attestation := &pbp2p.AttestationRecord{}
 	attestation.Slot = block.GetSlotNumber()
