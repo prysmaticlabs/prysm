@@ -237,7 +237,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-
 			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
 				continue
 			}
@@ -289,6 +288,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to get parent slot of block %x", blockHash)
 				continue
 			}
+
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)

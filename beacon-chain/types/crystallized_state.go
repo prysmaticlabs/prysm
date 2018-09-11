@@ -214,6 +214,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord
 	slotIndex := int64(attestation.Slot) - slotsStart
 	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
+	fmt.Println(slotIndex)
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {
