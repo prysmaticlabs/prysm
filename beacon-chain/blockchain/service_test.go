@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"io/ioutil"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
@@ -31,7 +32,8 @@ func (f *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 }
 
 func (f *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	return nil, nil
+	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
+	return gethTypes.NewBlockWithHeader(head), nil
 }
 
 func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
@@ -40,6 +42,10 @@ func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 
 func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
+}
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func TestStartStop(t *testing.T) {
@@ -121,10 +127,10 @@ func TestStartStop(t *testing.T) {
 	}
 	chainService.chain.SetCrystallizedState(crystallized)
 
-	parentBlock := NewBlock(t, nil)
+	parentBlock := types.NewBlock(nil)
 	parentHash, _ := parentBlock.Hash()
 
-	block := NewBlock(t, &pb.BeaconBlock{
+	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber:            2,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
@@ -221,7 +227,8 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
-	active, crystallized, err := types.NewGenesisStates()
+	active := types.NewGenesisActiveState()
+	crystallized, err := types.NewGenesisCrystallizedState()
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -247,7 +254,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	block := NewBlock(t, &pb.BeaconBlock{
+	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
@@ -295,41 +302,12 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
-	}
+	active := beaconChain.ActiveState()
+	activeHash, _ := active.Hash()
 
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 0,
-		Validators:      validators,
-		CurrentDynasty:  5,
-		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
-			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
-				},
-			},
-		},
-	})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
-		t.Fatalf("unable to mutate crystallized state: %v", err)
-	}
+	crystallized := beaconChain.CrystallizedState()
+	crystallizedHash, _ := crystallized.Hash()
 
-	var recentBlockHashes [][]byte
-	for i := 0; i < params.CycleLength+1; i++ {
-		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
-	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, make(map[[32]byte]*types.VoteCache))
-
-	if err := beaconChain.SetActiveState(active); err != nil {
-		t.Fatalf("unable to mutate active state: %v", err)
-	}
 	cfg := &Config{
 		BeaconBlockBuf: 0,
 		BeaconDB:       db.DB(),
@@ -345,21 +323,16 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	parentBlock := NewBlock(t, nil)
+	parentBlock := types.NewBlock(nil)
 	if err := chainService.SaveBlock(parentBlock); err != nil {
 		t.Fatal(err)
 	}
 	parentHash, _ := parentBlock.Hash()
 
-	activeStateHash, err := active.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash active state: %v", err)
-	}
-
-	block := NewBlock(t, &pb.BeaconBlock{
+	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber:            2,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
+		ActiveStateHash:       activeHash[:],
+		CrystallizedStateHash: crystallizedHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AttestationRecord{
@@ -401,7 +374,8 @@ func TestProcessingBlocks(t *testing.T) {
 
 	chainService, _ := NewChainService(ctx, cfg)
 
-	active, crystallized, err := types.NewGenesisStates()
+	active := types.NewGenesisActiveState()
+	crystallized, err := types.NewGenesisCrystallizedState()
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -419,7 +393,7 @@ func TestProcessingBlocks(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	block1 := NewBlock(t, &pb.BeaconBlock{
+	block1 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash:            parentHash[:],
 		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
@@ -437,10 +411,6 @@ func TestProcessingBlocks(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	if err := chainService.SaveBlock(block1); err != nil {
-		t.Fatal(err)
-	}
-
 	chainService.incomingBlockChan <- block1
 
 	block1Hash, err := block1.Hash()
@@ -449,7 +419,7 @@ func TestProcessingBlocks(t *testing.T) {
 	}
 
 	// Add 1 more attestation field for slot2
-	block2 := NewBlock(t, &pb.BeaconBlock{
+	block2 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block1Hash[:],
 		SlotNumber: 2,
 		Attestations: []*pb.AttestationRecord{
@@ -465,7 +435,7 @@ func TestProcessingBlocks(t *testing.T) {
 	}
 
 	// Add 1 more attestation field for slot3
-	block3 := NewBlock(t, &pb.BeaconBlock{
+	block3 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block2Hash[:],
 		SlotNumber: 3,
 		Attestations: []*pb.AttestationRecord{
@@ -479,9 +449,9 @@ func TestProcessingBlocks(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	// We should have 6 pending attestations from block 1 to block 3
-	if len(beaconChain.ActiveState().PendingAttestations()) != 6 {
-		t.Fatalf("Active state should have 6 pending attestation: %d", len(beaconChain.ActiveState().PendingAttestations()))
+	// We should have 3 pending attestations from blocks 1 and 2
+	if len(beaconChain.ActiveState().PendingAttestations()) != 3 {
+		t.Fatalf("Active state should have 3 pending attestation: %d", len(beaconChain.ActiveState().PendingAttestations()))
 	}
 }
 
@@ -514,7 +484,8 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 
 	chainService, _ := NewChainService(ctx, cfg)
 
-	active, crystallized, err := types.NewGenesisStates()
+	active := types.NewGenesisActiveState()
+	crystallized, err := types.NewGenesisCrystallizedState()
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -532,7 +503,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	block1 := NewBlock(t, &pb.BeaconBlock{
+	block1 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash:            parentHash[:],
 		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
@@ -550,16 +521,12 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	if err := chainService.SaveBlock(block1); err != nil {
-		t.Fatal(err)
-	}
-
 	chainService.incomingBlockChan <- block1
 
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "could not process attestation for block")
+	testutil.AssertLogsContain(t, hook, "attestation slot number can't be higher than block slot number")
 }
 
 func TestEnterCycleTransition(t *testing.T) {
@@ -591,28 +558,15 @@ func TestEnterCycleTransition(t *testing.T) {
 
 	chainService, _ := NewChainService(ctx, cfg)
 
-	active, crystallized, err := types.NewGenesisStates()
-	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
-	}
+	genesisBlock, _ := beaconChain.GenesisBlock()
+	active := beaconChain.ActiveState()
+	crystallized := beaconChain.CrystallizedState()
 
+	parentHash, _ := genesisBlock.Hash()
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	genesis, err := beaconChain.GenesisBlock()
-	if err != nil {
-		t.Fatalf("unable to get canonical head: %v", err)
-	}
-	if err := chainService.SaveBlock(genesis); err != nil {
-		t.Fatalf("save block should failed")
-	}
-
-	parentHash, err := genesis.Hash()
-	if err != nil {
-		t.Fatalf("unable to get hash of canonical head: %v", err)
-	}
-
-	block1 := NewBlock(t, &pb.BeaconBlock{
+	block1 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash:            parentHash[:],
 		SlotNumber:            64,
 		ActiveStateHash:       activeStateHash[:],
@@ -629,10 +583,6 @@ func TestEnterCycleTransition(t *testing.T) {
 		chainService.blockProcessing(chainService.ctx.Done())
 		<-exitRoutine
 	}()
-
-	if err := chainService.SaveBlock(block1); err != nil {
-		t.Fatal(err)
-	}
 
 	chainService.incomingBlockChan <- block1
 

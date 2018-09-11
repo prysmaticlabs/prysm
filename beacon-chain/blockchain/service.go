@@ -30,7 +30,6 @@ type ChainService struct {
 	beaconDB                       ethdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
-	isValidator                    bool
 	currentSlot                    uint64
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
@@ -52,19 +51,12 @@ type Config struct {
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	var isValidator bool
-	if cfg.Web3Service == nil {
-		isValidator = false
-	} else {
-		isValidator = true
-	}
 	return &ChainService{
 		ctx:                            ctx,
 		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
 		web3Service:                    cfg.Web3Service,
-		isValidator:                    isValidator,
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
@@ -75,11 +67,9 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	if c.isValidator {
-		log.Infof("Starting service as validator")
-	} else {
-		log.Infof("Starting service as observer")
-	}
+	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
+	// to truly continue across sessions.
+	log.Infof("Starting service")
 	genesisTimestamp := time.Unix(0, 0)
 	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
 	// Set the current slot.
@@ -170,8 +160,17 @@ func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.
 	return c.chain.getCanonicalBlockForSlot(slotnumber)
 }
 
-// updateHead applies the fork choice rule to the last received
-// slot.
+// doesPoWBlockExist checks if the referenced PoW block exists.
+func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
+	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.PowChainRef())
+	if err != nil {
+		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
+		return false
+	}
+
+	return powBlock != nil
+}
+
 func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan struct{}) {
 	for {
 		select {
@@ -179,9 +178,6 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 			return
 		case <-slotInterval:
 			c.currentSlot++
-
-			var canProcessAttestations bool
-			var blockVoteCache map[[32]byte]*types.VoteCache
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
@@ -213,72 +209,43 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 				log.Errorf("Could not hash incoming block: %v", err)
 			}
 
-			// Process attestations as a beacon chain node.
-			var processedAttestations []*pb.AttestationRecord
-			for index, attestation := range block.Attestations() {
-				if err := c.chain.processAttestation(index, block); err != nil {
-					canProcessAttestations = false
-					log.Errorf("could not process attestation for block %d because %v", block.SlotNumber(), err)
-				} else {
-					canProcessAttestations = true
-					// Save processed attestation to local db.
-					if err := c.chain.saveAttestation(types.NewAttestation(attestation)); err != nil {
-						log.Errorf("Can not save attestation: %v", err)
-					}
-					attestationHash, err := types.NewAttestation(attestation).Hash()
-					if err != nil {
-						log.Errorf("Can not hash attestation: %v", err)
-					}
-					if err := c.chain.saveAttestationHash(h, attestationHash); err != nil {
-						log.Errorf("Can not save attesstation hash: %v", err)
-					}
+			log.WithField("slotNumber", block.SlotNumber()).Info("Applying fork choice rule")
 
-					processedAttestations = append(processedAttestations, attestation)
-				}
-			}
+			aState := c.chain.ActiveState()
+			cState := c.chain.CrystallizedState()
+			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
 
-			// If we cannot process an attestation in this block, we keep listening.
-			if !canProcessAttestations {
-				continue
-			}
-
-			// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-			for index := range block.Attestations() {
-				blockVoteCache, err = c.chain.calculateBlockVoteCache(index, block)
-				if err != nil {
-					log.Debugf("could not calculate new block vote cache: %v", nil)
-				}
-			}
-
-			isTransition := c.chain.IsCycleTransition(c.currentSlot - 1)
-			activeState := c.chain.ActiveState()
-			crystallizedState := c.chain.CrystallizedState()
 			if isTransition {
-				crystallizedState, activeState, err = c.chain.stateRecalc(crystallizedState, activeState, block)
+				cState, err = cState.CalculateNewCrystallizedState(aState, block.SlotNumber())
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
 				}
 			}
 
-			activeState, err = c.chain.computeNewActiveState(processedAttestations, activeState, blockVoteCache, h)
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Errorf("Failed to get parent slot of block 0x%x", h)
+				continue
+			}
+			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
+				continue
 			}
 
-			log.WithField("slotNumber", block.SlotNumber()).Info("Applying fork choice rule")
-			if err := c.chain.SetActiveState(activeState); err != nil {
+			if err := c.chain.SetActiveState(aState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 			}
 
-			if err := c.chain.SetCrystallizedState(crystallizedState); err != nil {
+			if err := c.chain.SetCrystallizedState(cState); err != nil {
 				log.Errorf("Write crystallized state to disk failed: %v", err)
 			}
 
 			vals, err := casper.ShuffleValidatorsToCommittees(
-				crystallizedState.DynastySeed(),
-				crystallizedState.Validators(),
-				crystallizedState.CurrentDynasty(),
-				crystallizedState.CrosslinkingStartShard(),
+				cState.DynastySeed(),
+				cState.Validators(),
+				cState.CurrentDynasty(),
+				cState.CrosslinkingStartShard(),
 			)
 
 			if err != nil {
@@ -296,13 +263,14 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 			if err := c.chain.saveCanonicalBlock(block); err != nil {
 				log.Errorf("Unable to save block to db: %v", err)
 			}
+
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
 
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
 			if isTransition {
-				c.canonicalCrystallizedStateFeed.Send(crystallizedState)
+				c.canonicalCrystallizedStateFeed.Send(cState)
 			}
 			c.canonicalBlockFeed.Send(block)
 
@@ -321,45 +289,35 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 		case block := <-c.incomingBlockChan:
-			h, err := block.Hash()
+			aState := c.chain.ActiveState()
+			cState := c.chain.CrystallizedState()
+			blockHash, err := block.Hash()
 			if err != nil {
-				log.Debugf("Could not hash incoming block: %v", err)
-			}
-
-			receivedSlotNumber := block.SlotNumber()
-
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Received full block, processing validity conditions")
-
-			parentExists, err := c.chain.hasBlock(block.ParentHash())
-			if err != nil {
-				log.Debugf("Could not check existence of parent hash: %v", err)
-			}
-
-			// If parentHash does not exist, received block fails validity conditions.
-			if !parentExists && receivedSlotNumber > 0 {
+				log.Errorf("Failed to get hash of block: %v", err)
 				continue
 			}
 
 			// Process block as a validator if beacon node has registered, else process block as an observer.
-			canProcessBlock, err := c.chain.CanProcessBlock(c.web3Service.Client(), block, c.isValidator)
+			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
-				// We might receive a lot of blocks that fail validity conditions,
-				// so we create a debug level log instead of an error log.
-				log.Debugf("Incoming block failed validity conditions: %v", err)
-			}
-
-			// If we cannot process this block, we keep listening.
-			if !canProcessBlock {
+				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
 
-			if err := c.chain.saveBlock(block); err != nil {
-				log.Errorf("Failed to save block: %v", err)
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
+				continue
 			}
+
+			if err := c.chain.saveBlockAndAttestations(block); err != nil {
+				log.Errorf("Failed to save block: %v", err)
+				continue
+			}
+
+			log.Infof("Finished processing received block: %x", blockHash)
 
 			// We push the hash of the block we just stored to a pending processing slice the fork choice rule
 			// will utilize.
-			c.blocksPendingProcessing = append(c.blocksPendingProcessing, h[:])
+			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash[:])
 			log.Info("Finished processing received block")
 		}
 	}
