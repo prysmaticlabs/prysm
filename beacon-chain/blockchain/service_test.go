@@ -682,50 +682,55 @@ func TestEnterDynastyTransition(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 	var shardCommitteeForSlots []*pb.ShardAndCommitteeArray
-	for i := 0; i < 300; i ++ {
+	for i := 0; i < 300; i++ {
 		shardCommittee := &pb.ShardAndCommitteeArray{
 			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{ShardId: 0, Committee: []uint32{0,1,2,3}},
-				{ShardId: 1, Committee: []uint32{0,1,2,3}},
-				{ShardId: 2, Committee: []uint32{0,1,2,3}},
+				{ShardId: 0, Committee: []uint32{0, 1, 2, 3}},
+				{ShardId: 1, Committee: []uint32{0, 1, 2, 3}},
+				{ShardId: 2, Committee: []uint32{0, 1, 2, 3}},
+				{ShardId: 3, Committee: []uint32{0, 1, 2, 3}},
 			},
 		}
 		shardCommitteeForSlots = append(shardCommitteeForSlots, shardCommittee)
 	}
 
 	var validators []*pb.ValidatorRecord
-	for i := 0; i < 256; i++ {
+	for i := 0; i < 5; i++ {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
 	}
 
 	chainService, _ := NewChainService(ctx, cfg)
-
 	genesisBlock, _ := beaconChain.GenesisBlock()
-	active := beaconChain.ActiveState()
-	crystallized := beaconChain.CrystallizedState()
-	crystallized = types.NewCrystallizedState(
+	crystallized := types.NewCrystallizedState(
 		&pb.CrystallizedState{
-			DynastyStart: 1,
-			LastFinalizedSlot: 2,
+			DynastyStart:               1,
+			LastFinalizedSlot:          2,
 			ShardAndCommitteesForSlots: shardCommitteeForSlots,
-			Validators: validators,
+			Validators:                 validators,
 			CrosslinkRecords: []*pb.CrosslinkRecord{
+				{Slot: 2},
 				{Slot: 2},
 				{Slot: 2},
 				{Slot: 2},
 			},
 		},
-		)
+	)
 
 	var recentBlockhashes [][]byte
-	for i := 0; i < 256; i ++ {
+	for i := 0; i < 257; i++ {
 		recentBlockhashes = append(recentBlockhashes, []byte{'A'})
 	}
-	active = types.NewActiveState(
+	active := types.NewActiveState(
 		&pb.ActiveState{
 			RecentBlockHashes: recentBlockhashes,
+			PendingAttestations: []*pb.AttestationRecord{
+				{Slot: 100, AttesterBitfield: []byte{0}},
+				{Slot: 101, AttesterBitfield: []byte{0}},
+				{Slot: 102, AttesterBitfield: []byte{0}},
+				{Slot: 103, AttesterBitfield: []byte{0}},
+			},
 		}, nil,
-		)
+	)
 
 	parentHash, _ := genesisBlock.Hash()
 	activeStateHash, _ := active.Hash()

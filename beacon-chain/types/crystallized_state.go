@@ -211,10 +211,9 @@ func (c *CrystallizedState) IsDynastyTransition(slotNumber uint64) bool {
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
 	slotsStart := int64(c.LastStateRecalc()) - params.CycleLength
-	slotIndex := int64(attestation.Slot) - slotsStart
+	slotIndex := (int64(attestation.Slot) - slotsStart) % params.CycleLength
 	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
-	fmt.Println(slotIndex)
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
 		if attestation.ShardId == shardCommittee[i].ShardId {

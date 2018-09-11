@@ -271,7 +271,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
 				continue
 			}
-
 			// Entering Dynasty transitions.
 			if cState.IsDynastyTransition(block.SlotNumber()) {
 				log.Info("Entering dynasty transition")
