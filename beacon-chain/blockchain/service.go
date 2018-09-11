@@ -179,6 +179,8 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 		case <-slotInterval:
 			c.currentSlot++
 
+			log.WithField("slotNumber", c.currentSlot).Info("New beacon slot")
+
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
 			if len(c.blocksPendingProcessing) == 0 {
@@ -209,7 +211,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 				log.Errorf("Could not hash incoming block: %v", err)
 			}
 
-			log.WithField("slotNumber", block.SlotNumber()).Info("Applying fork choice rule")
+			log.Info("Applying fork choice rule")
 
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
