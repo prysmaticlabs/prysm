@@ -216,10 +216,13 @@ func TestGoodLogger(t *testing.T) {
 }
 
 func TestHeaderAfterValidation(t *testing.T) {
-	// User pubkeys with or without 0x should be OK.
 	testPubKeys := []string{
+		// User pubkeys with or without 0x should be OK.
 		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		"0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		// byte32 without the trailing zeros should be OK.
+		"0x04c4ed707d713d98bd9d8271f330afc9ab905806",
+		"04c4ed707d713d98bd9d8271f330afc9ab905806",
 	}
 
 	for _, tt := range testPubKeys {
