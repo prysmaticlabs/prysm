@@ -5,12 +5,12 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,6 +35,7 @@ type ChainService struct {
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][]byte
+	lock                           sync.Mutex
 }
 
 // Config options for the service.
@@ -82,8 +83,8 @@ func (c *ChainService) Start() {
 	// slot intervals.
 	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
 
-	go c.updateHead(time.NewTicker(time.Second*8).C, c.ctx.Done())
-	go c.blockProcessing(c.ctx.Done())
+	go c.updateHead(time.NewTicker(time.Second * 8).C)
+	go c.blockProcessing()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -179,10 +180,10 @@ func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	return powBlock != nil
 }
 
-func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan struct{}) {
+func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 	for {
 		select {
-		case <-done:
+		case <-c.ctx.Done():
 			return
 		case <-slotInterval:
 			c.currentSlot++
@@ -250,19 +251,6 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 				log.Errorf("Write crystallized state to disk failed: %v", err)
 			}
 
-			vals, err := casper.ShuffleValidatorsToCommittees(
-				cState.DynastySeed(),
-				cState.Validators(),
-				cState.CurrentDynasty(),
-				cState.CrosslinkingStartShard(),
-			)
-
-			if err != nil {
-				log.Errorf("Unable to get validators by slot and by shard: %v", err)
-				return
-			}
-			log.Debugf("Received %d validators by slot", len(vals))
-
 			// Save canonical block hash with slot number to DB.
 			if err := c.chain.saveCanonicalSlotNumber(block.SlotNumber(), h); err != nil {
 				log.Errorf("Unable to save slot number to db: %v", err)
@@ -284,19 +272,21 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time, done <-chan str
 			c.canonicalBlockFeed.Send(block)
 
 			// Clear the blocks pending processing.
+			c.lock.Lock()
 			c.blocksPendingProcessing = [][]byte{}
+			c.lock.Unlock()
 		}
 	}
 }
 
-func (c *ChainService) blockProcessing(done <-chan struct{}) {
+func (c *ChainService) blockProcessing() {
 	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
 	defer subAttestation.Unsubscribe()
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-done:
+		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 		case attestation := <-c.incomingAttestationChan:
@@ -336,7 +326,9 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 
 			// We push the hash of the block we just stored to a pending processing slice the fork choice rule
 			// will utilize.
+			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash[:])
+			c.lock.Unlock()
 			log.Info("Finished processing received block")
 		}
 	}

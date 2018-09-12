@@ -269,7 +269,7 @@ func TestRunningChainService(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
+		chainService.blockProcessing()
 		<-exitRoutine
 	}()
 	if err := chainService.SaveBlock(block); err != nil {
@@ -319,7 +319,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
+		chainService.blockProcessing()
 		<-exitRoutine
 	}()
 
@@ -407,7 +407,7 @@ func TestProcessingBlocks(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
+		chainService.blockProcessing()
 		<-exitRoutine
 	}()
 
@@ -512,7 +512,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
+		chainService.blockProcessing()
 		<-exitRoutine
 	}()
 
