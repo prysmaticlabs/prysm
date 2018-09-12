@@ -27,6 +27,8 @@ type ChainService struct {
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
+	incomingAttestationFeed        *event.Feed
+	incomingAttestationChan        chan *types.Attestation
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
@@ -37,11 +39,12 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf   int
-	IncomingBlockBuf int
-	Chain            *BeaconChain
-	Web3Service      *powchain.Web3Service
-	BeaconDB         ethdb.Database
+	BeaconBlockBuf         int
+	IncomingBlockBuf       int
+	Chain                  *BeaconChain
+	Web3Service            *powchain.Web3Service
+	BeaconDB               ethdb.Database
+	IncomingAttestationBuf int
 }
 
 // NewChainService instantiates a new service instance that will
@@ -57,6 +60,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		latestProcessedBlock:           make(chan *types.Block, cfg.BeaconBlockBuf),
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
+		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
+		incomingAttestationFeed:        new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		candidateBlock:                 nilBlock,
@@ -87,10 +92,16 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// IncomingBlockFeed returns a feed that a sync service can send incoming p2p blocks into.
+// IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
 	return c.incomingBlockFeed
+}
+
+// IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
+// The chain service will subscribe to this feed in order to relay incoming attestations.
+func (c *ChainService) IncomingAttestationFeed() *event.Feed {
+	return c.incomingAttestationFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -208,13 +219,25 @@ func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 }
 
 func (c *ChainService) blockProcessing(done <-chan struct{}) {
-	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
-	defer sub.Unsubscribe()
+	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
+	defer subBlock.Unsubscribe()
+	defer subAttestation.Unsubscribe()
 	for {
 		select {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
+			// Listen for a newly received incoming block from the sync service.
+		case attestation := <-c.incomingAttestationChan:
+			h, err := attestation.Hash()
+			if err != nil {
+				log.Debugf("Could not hash incoming attestation: %v", err)
+			}
+			log.Info("Relaying attestation 0x%v to p2p service", h)
+
+			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
+
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
 			// 1. Validate the block
@@ -237,7 +260,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-
 			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
 				continue
 			}
@@ -266,11 +288,21 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
 				log.Info("Entering cycle transition")
-				cState, err = cState.CalculateNewCrystallizedState(aState, block.SlotNumber())
+				cState, err = cState.NewStateRecalculations(aState, block.SlotNumber())
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
 				continue
+			}
+			// Entering Dynasty transitions.
+			if cState.IsDynastyTransition(block.SlotNumber()) {
+				log.Info("Entering dynasty transition")
+				cState, err = cState.NewDynastyRecalculations(block.ParentHash())
+			}
+			if err != nil {
+				log.Errorf("Failed to calculate the new dynasty: %v", err)
+				continue
+
 			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
@@ -278,6 +310,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to get parent slot of block %x", blockHash)
 				continue
 			}
+
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)

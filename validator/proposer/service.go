@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	blake2b "github.com/minio/blake2b-simd"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
+	blake2b "golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "proposer")

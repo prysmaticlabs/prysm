@@ -31,15 +31,21 @@ func (m *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockChainService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 type mockAnnouncer struct {
-	blockFeed *event.Feed
-	stateFeed *event.Feed
+	blockFeed       *event.Feed
+	stateFeed       *event.Feed
+	attestationFeed *event.Feed
 }
 
 func newMockAnnouncer() *mockAnnouncer {
 	return &mockAnnouncer{
-		blockFeed: new(event.Feed),
-		stateFeed: new(event.Feed),
+		blockFeed:       new(event.Feed),
+		stateFeed:       new(event.Feed),
+		attestationFeed: new(event.Feed),
 	}
 }
 
@@ -97,14 +103,6 @@ func TestInsecureEndpoint(t *testing.T) {
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
-}
-
-func TestRPCMethods(t *testing.T) {
-	announcer := newMockAnnouncer()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "7362", Announcer: announcer})
-	if _, err := rpcService.SignBlock(context.Background(), nil); err == nil {
-		t.Error("Wanted error: unimplemented, received nil")
-	}
 }
 
 func TestFetchShuffledValidatorIndices(t *testing.T) {
@@ -245,4 +243,24 @@ func TestLatestCrystallizedState(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
+}
+
+func TestAttestHead(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.AttestRequest{
+		Attestation: &pbp2p.AttestationRecord{
+			Slot:           999,
+			ShardId:        1,
+			ShardBlockHash: []byte{'a'},
+		},
+	}
+	if _, err := rpcService.AttestHead(context.Background(), req); err != nil {
+		t.Errorf("Could not attest head correctly: %v", err)
+	}
 }
