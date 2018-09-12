@@ -15,11 +15,15 @@ import (
 var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
-	ContainsBlock(h [32]byte) bool
-	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
-	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
-	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+}
+
+// DB is the interface for the DB service.
+type beaconDB interface {
+	HasInitialState() bool
+	HasBlock([32]byte) bool
+	HasBlockForSlot(uint64) bool
+	GetBlockBySlot(uint64) (*types.Block, error)
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -38,6 +42,7 @@ type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	p2p                   types.P2P
+	db                    beaconDB
 	chainService          chainService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
@@ -62,12 +67,13 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService, db beaconDB) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
 		cancel:                cancel,
 		p2p:                   beaconp2p,
+		db:                    db,
 		chainService:          cs,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
@@ -78,11 +84,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs cha
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
-	stored, err := ss.chainService.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-		return
-	}
+	stored := ss.db.HasInitialState()
 
 	if !stored {
 		// TODO: Resume sync after completion of initial sync.
@@ -113,7 +115,7 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
-	if ss.chainService.ContainsBlock(h) {
+	if ss.db.HasBlock(h) {
 		return
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
@@ -156,7 +158,7 @@ func (ss *Service) run() {
 			if err != nil {
 				log.Errorf("Could not hash received block: %v", err)
 			}
-			if ss.chainService.ContainsBlock(h) {
+			if ss.db.HasBlock(h) {
 				continue
 			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
@@ -169,16 +171,11 @@ func (ss *Service) run() {
 				continue
 			}
 
-			blockExists, err := ss.chainService.CheckForCanonicalBlockBySlot(request.GetSlotNumber())
-			if err != nil {
-				log.Errorf("Error checking db for block %v", err)
-				continue
-			}
-			if !blockExists {
+			if !ss.db.HasBlockForSlot(request.GetSlotNumber()) {
 				continue
 			}
 
-			block, err := ss.chainService.GetCanonicalBlockBySlotNumber(request.GetSlotNumber())
+			block, err := ss.db.GetBlockBySlot(request.GetSlotNumber())
 			if err != nil {
 				log.Errorf("Error retrieving block from db %v", err)
 				continue

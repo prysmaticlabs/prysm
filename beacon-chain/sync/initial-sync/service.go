@@ -44,9 +44,9 @@ func DefaultConfig() Config {
 	}
 }
 
-// ChainService is the interface for the blockchain package's ChainService struct.
-type ChainService interface {
-	HasStoredState() (bool, error)
+// DB is the interface for the DB service.
+type DB interface {
+	HasInitialState() bool
 	SaveBlock(*types.Block) error
 }
 
@@ -62,7 +62,7 @@ type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
 	p2p                          types.P2P
-	chainService                 ChainService
+	db 				DB
 	syncService                  SyncService
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
@@ -76,7 +76,7 @@ type InitialSync struct {
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
 	beaconp2p types.P2P,
-	chainService ChainService,
+	db DB,
 	syncService SyncService,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
@@ -88,7 +88,7 @@ func NewInitialSyncService(ctx context.Context,
 		ctx:                  ctx,
 		cancel:               cancel,
 		p2p:                  beaconp2p,
-		chainService:         chainService,
+		db: 		db,
 		syncService:          syncService,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
@@ -98,11 +98,8 @@ func NewInitialSyncService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
-	stored, err := s.chainService.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-		return
-	}
+
+	stored := s.db.HasInitialState()
 
 	if stored {
 		// TODO: Bail out of the sync service if the chain is only partially synced.
@@ -235,7 +232,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	}
 	log.WithField("blockhash", fmt.Sprintf("%x", h)).Debug("Crystallized state hash exists locally")
 
-	if err := s.writeBlockToDB(block); err != nil {
+	if err := s.db.SaveBlock(block); err != nil {
 		return err
 	}
 
@@ -260,16 +257,10 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 	}
 
 	if (s.currentSlotNumber + 1) == block.SlotNumber() {
-
-		if err := s.writeBlockToDB(block); err != nil {
+		if err := s.db.SaveBlock(block); err != nil {
 			return err
 		}
 		s.currentSlotNumber = block.SlotNumber()
 	}
 	return nil
-}
-
-// writeBlockToDB saves the corresponding block to the local DB.
-func (s *InitialSync) writeBlockToDB(block *types.Block) error {
-	return s.chainService.SaveBlock(block)
 }

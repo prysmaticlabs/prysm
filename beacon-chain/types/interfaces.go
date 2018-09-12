@@ -26,34 +26,6 @@ type CanonicalEventAnnouncer interface {
 	CanonicalCrystallizedStateFeed() *event.Feed
 }
 
-// ChainService is the interface for the local beacon chain.
-type ChainService interface {
-	BlockChainService
-}
-
-// BlockChainService is the interface for block related functions in local beacon chain.
-type BlockChainService interface {
-	ProcessedBlockHashes() [][32]byte
-	ProcessBlock(b *Block)
-	HasStoredState() (bool, error)
-	ContainsBlock(h [32]byte) bool
-	SaveBlock(b *Block) error
-}
-
-// CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.
-type CrystallizedStateChainService interface {
-	ProcessedCrystallizedStateHashes() [][32]byte
-	ProcessCrystallizedState(c *CrystallizedState) error
-	ContainsCrystallizedState(h [32]byte) bool
-}
-
-// ActiveStateChainService is the interface for active state related functions in local beacon chain.
-type ActiveStateChainService interface {
-	ProcessedActiveStateHashes() [][32]byte
-	ProcessActiveState(a *ActiveState) error
-	ContainsActiveState(h [32]byte) bool
-}
-
 // StateFetcher defines a struct that can fetch the latest canonical beacon state of a node.
 type StateFetcher interface {
 	CurrentActiveState() *ActiveState

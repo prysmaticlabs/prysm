@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["log.go"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
+    importpath = "github.com/prysmaticlabs/prysm/shared/testutils",
     visibility = ["//visibility:public"],
     deps = ["@com_github_sirupsen_logrus//hooks/test:go_default_library"],
 )

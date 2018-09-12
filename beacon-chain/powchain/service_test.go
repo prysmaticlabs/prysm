@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -253,7 +253,7 @@ func TestHeaderAfterValidation(t *testing.T) {
 			web3Service.cancel()
 			exitRoutine <- true
 
-			testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")
+			testutils.AssertLogsContain(t, hook, "Validator registered in VRC with public key")
 
 			if !web3Service.validatorRegistered {
 				t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
