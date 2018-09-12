@@ -260,7 +260,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-
 			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
 				continue
 			}
@@ -289,11 +288,21 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
 				log.Info("Entering cycle transition")
-				cState, err = cState.CalculateNewCrystallizedState(aState, block.SlotNumber())
+				cState, err = cState.NewStateRecalculations(aState, block.SlotNumber())
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
 				continue
+			}
+			// Entering Dynasty transitions.
+			if cState.IsDynastyTransition(block.SlotNumber()) {
+				log.Info("Entering dynasty transition")
+				cState, err = cState.NewDynastyRecalculations(block.ParentHash())
+			}
+			if err != nil {
+				log.Errorf("Failed to calculate the new dynasty: %v", err)
+				continue
+
 			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
@@ -301,6 +310,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to get parent slot of block %x", blockHash)
 				continue
 			}
+
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)

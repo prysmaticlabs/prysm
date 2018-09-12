@@ -654,3 +654,116 @@ func TestEnterCycleTransition(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Entering cycle transition")
 }
+
+func TestEnterDynastyTransition(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+	}
+
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db.DB(),
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+	var shardCommitteeForSlots []*pb.ShardAndCommitteeArray
+	for i := 0; i < 300; i++ {
+		shardCommittee := &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{ShardId: 0, Committee: []uint32{0, 1, 2, 3}},
+				{ShardId: 1, Committee: []uint32{0, 1, 2, 3}},
+				{ShardId: 2, Committee: []uint32{0, 1, 2, 3}},
+				{ShardId: 3, Committee: []uint32{0, 1, 2, 3}},
+			},
+		}
+		shardCommitteeForSlots = append(shardCommitteeForSlots, shardCommittee)
+	}
+
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 5; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
+	}
+
+	chainService, _ := NewChainService(ctx, cfg)
+	genesisBlock, _ := beaconChain.GenesisBlock()
+	crystallized := types.NewCrystallizedState(
+		&pb.CrystallizedState{
+			DynastyStart:               1,
+			LastFinalizedSlot:          2,
+			ShardAndCommitteesForSlots: shardCommitteeForSlots,
+			Validators:                 validators,
+			CrosslinkRecords: []*pb.CrosslinkRecord{
+				{Slot: 2},
+				{Slot: 2},
+				{Slot: 2},
+				{Slot: 2},
+			},
+		},
+	)
+
+	var recentBlockhashes [][]byte
+	for i := 0; i < 257; i++ {
+		recentBlockhashes = append(recentBlockhashes, []byte{'A'})
+	}
+	active := types.NewActiveState(
+		&pb.ActiveState{
+			RecentBlockHashes: recentBlockhashes,
+			PendingAttestations: []*pb.AttestationRecord{
+				{Slot: 100, AttesterBitfield: []byte{0}},
+				{Slot: 101, AttesterBitfield: []byte{0}},
+				{Slot: 102, AttesterBitfield: []byte{0}},
+				{Slot: 103, AttesterBitfield: []byte{0}},
+			},
+		}, nil,
+	)
+
+	parentHash, _ := genesisBlock.Hash()
+	activeStateHash, _ := active.Hash()
+	crystallizedStateHash, _ := crystallized.Hash()
+	if err := chainService.chain.SetCrystallizedState(crystallized); err != nil {
+		t.Fatalf("unable to save crystallized state %v", err)
+	}
+	if err := chainService.chain.SetActiveState(active); err != nil {
+		t.Fatalf("unable to save active state %v", err)
+	}
+
+	block1 := types.NewBlock(&pb.BeaconBlock{
+		ParentHash:            parentHash[:],
+		SlotNumber:            params.MinDynastyLength + 1,
+		ActiveStateHash:       activeStateHash[:],
+		CrystallizedStateHash: crystallizedStateHash[:],
+		Attestations: []*pb.AttestationRecord{{
+			Slot:             200,
+			AttesterBitfield: []byte{0},
+			ShardId:          0,
+		}},
+	})
+
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
+
+	chainService.incomingBlockChan <- block1
+
+	chainService.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Entering dynasty transition")
+}

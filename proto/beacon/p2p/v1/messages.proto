@@ -66,7 +66,7 @@ message CrystallizedState {
   uint64 crosslinking_start_shard = 6;
   uint64 total_deposits = 7;
   bytes dynasty_seed = 8;
-  uint64 dynasty_seed_last_reset = 9;
+  uint64 dynasty_start = 9;
   repeated CrosslinkRecord crosslink_records = 10;
   repeated ValidatorRecord validators = 11;
   repeated ShardAndCommitteeArray shard_and_committees_for_slots = 12;
