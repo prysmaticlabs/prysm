@@ -8,10 +8,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	"github.com/sirupsen/logrus"
@@ -35,18 +33,6 @@ type mockAssigner struct{}
 
 func (m *mockAssigner) AttesterAssignmentFeed() *event.Feed {
 	return new(event.Feed)
-}
-
-type mockP2P struct {
-}
-
-func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
-	return new(event.Feed).Subscribe(channel)
-}
-
-func (mp *mockP2P) Broadcast(msg proto.Message) {}
-
-func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
 func TestLifecycle(t *testing.T) {
