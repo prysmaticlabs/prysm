@@ -282,3 +282,43 @@ func TestNewDynastyRecalculations(t *testing.T) {
 		t.Errorf("Incorrect dynasty seed, wanted A, got: %v", newCState.DynastySeed())
 	}
 }
+
+func TestNewDynastyRecalculationsTable(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatalf("Failed to initialize crystallized state: %v", err)
+	}
+
+	shardCount = params.ShardCount
+	var crossLinkNextShardTests = []struct {
+		in  uint64
+		out uint64
+	}{
+		{0, 1},
+		{1, 2},
+		{2, 3},
+		{3, 4},
+		{4, 5},
+		{5, 6},
+		{6, 7},
+		{7, 8},
+		{8, 9},
+		{9, 10},
+		{params.ShardCount - 1, 0},
+	}
+
+	for _, shardID := range crossLinkNextShardTests {
+		var shardCommitteesForSlot []*pb.ShardAndCommitteeArray
+		for i := 0; i < params.CycleLength; i++ {
+			shardCommitteesForSlot = append(shardCommitteesForSlot, &pb.ShardAndCommitteeArray{ArrayShardAndCommittee: []*pb.ShardAndCommittee{{ShardId: shardID.in}}})
+		}
+		cState.data.ShardAndCommitteesForSlots = shardCommitteesForSlot
+		newCState, err := cState.NewDynastyRecalculations([32]byte{'A'})
+		if err != nil {
+			t.Fatalf("Dynasty calculation failed %v", err)
+		}
+		if newCState.CrosslinkingStartShard() != shardID.out {
+			t.Errorf("Crosslink next shard do not match. Wanted: %d, Got: %d", shardID.out, newCState.CrosslinkingStartShard())
+		}
+	}
+}
