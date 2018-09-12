@@ -11,7 +11,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -59,7 +58,7 @@ func TestLifecycle(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	att := NewAttester(context.Background(), cfg, &mockP2P{})
+	att := NewAttester(context.Background(), cfg)
 	att.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	att.Stop()
@@ -75,7 +74,7 @@ func TestAttesterLoop(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	att := NewAttester(context.Background(), cfg, &mockP2P{})
+	att := NewAttester(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
 	mockServiceClient.EXPECT().AttestHead(
@@ -91,19 +90,12 @@ func TestAttesterLoop(t *testing.T) {
 		att.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	block := &shardingp2p.BlockBroadcast{
-		BeaconBlock: &pbp2p.BeaconBlock{}}
 
 	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
-	att.blockBuf <- p2p.Message{Peer: p2p.Peer{}, Data: &shardingp2p.AttestationBroadcast{}}
-	att.blockBuf <- p2p.Message{Peer: p2p.Peer{}, Data: block}
 
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
-	testutil.AssertLogsContain(t, hook, "could not attest head")
 	doneChan <- struct{}{}
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Attestation Broadcasted to network")
-	testutil.AssertLogsContain(t, hook, "Received malformed attestation p2p message")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
 
@@ -116,7 +108,7 @@ func TestAttesterMarshalError(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewAttester(context.Background(), cfg, &mockP2P{})
+	p := NewAttester(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
 
@@ -143,7 +135,7 @@ func TestAttesterErrorLoop(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewAttester(context.Background(), cfg, &mockP2P{})
+	p := NewAttester(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
 
@@ -165,7 +157,5 @@ func TestAttesterErrorLoop(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "could not attest head")
 	doneChan <- struct{}{}
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Attestation Broadcasted to network")
-	testutil.AssertLogsContain(t, hook, "Received malformed attestation p2p message")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
