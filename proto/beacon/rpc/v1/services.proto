@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
-import "proto/sharding/p2p/v1/messages.proto";
 import "proto/beacon/p2p/v1/messages.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
@@ -14,7 +13,7 @@ service BeaconService {
 }
 
 service AttesterService {
-    rpc SignBlock(SignRequest) returns (SignResponse);
+    rpc AttestHead(AttestRequest) returns (AttestResponse);
 }
 
 service ProposerService {
@@ -44,11 +43,10 @@ message ProposeResponse {
     bytes block_hash = 1;
 }
 
-message SignRequest {
-    bytes block_hash = 1;
-    ethereum.sharding.p2p.v1.Signature signature = 2;
+message AttestRequest {
+    ethereum.beacon.p2p.v1.AttestationRecord attestation = 1;
 }
 
-message SignResponse {
-    bool signed = 1;
+message AttestResponse {
+    bytes attestation_hash = 1;
 }
