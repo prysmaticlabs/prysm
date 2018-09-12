@@ -117,7 +117,7 @@ func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
 }
 
 func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
-	blockReqSub := sim.p2p.Subscribe(pb.BeaconBlockRequest{}, sim.blockRequestChan)
+	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 
 	// Check if we saved a simulated block in the DB from a previous session.

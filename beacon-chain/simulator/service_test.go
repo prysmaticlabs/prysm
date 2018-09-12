@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -25,13 +26,13 @@ func init() {
 
 type mockP2P struct{}
 
-func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(msg interface{}) {}
+func (mp *mockP2P) Broadcast(msg proto.Message) {}
 
-func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {}
+func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {}
 
 type mockPOWChainService struct{}
 

@@ -2,26 +2,26 @@ package p2p
 
 import (
 	"reflect"
+	"sync"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
+	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
 func TestFeed_ReturnsSameFeed(t *testing.T) {
 	tests := []struct {
-		a    interface{}
-		b    interface{}
+		a    proto.Message
+		b    proto.Message
 		want bool
 	}{
 		// Equality tests
-		{a: 1, b: 2, want: true},
-		{a: 'a', b: 'b', want: true},
-		{a: struct{ c int }{c: 1}, b: struct{ c int }{c: 2}, want: true},
-		{a: struct{ c string }{c: "a"}, b: struct{ c string }{c: "b"}, want: true},
-		{a: reflect.TypeOf(struct{ c int }{c: 1}), b: struct{ c int }{c: 2}, want: true},
+		{a: &testpb.TestMessage{}, b: &testpb.TestMessage{}, want: true},
+		{a: &testpb.Puzzle{}, b: &testpb.Puzzle{}, want: true},
 		// Inequality tests
-		{a: 1, b: '2', want: false},
-		{a: 'a', b: 1, want: false},
-		{a: struct{ c int }{c: 1}, b: struct{ c int64 }{c: 2}, want: false},
-		{a: struct{ c string }{c: "a"}, b: struct{ c float64 }{c: 3.4}, want: false},
+		{a: &testpb.TestMessage{}, b: &testpb.Puzzle{}, want: false},
+		{a: &testpb.Puzzle{}, b: &testpb.TestMessage{}, want: false},
 	}
 
 	s, _ := NewServer()
@@ -37,12 +37,12 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 }
 
 func TestFeed_ConcurrentWrite(t *testing.T) {
-	s, err := NewServer()
-	if err != nil {
-		t.Fatalf("could not create server %v", err)
+	s := Server{
+		feeds: make(map[reflect.Type]*event.Feed),
+		mutex: &sync.Mutex{},
 	}
 
 	for i := 0; i < 5; i++ {
-		go s.Feed("a")
+		go s.Feed(&testpb.TestMessage{})
 	}
 }

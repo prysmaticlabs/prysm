@@ -124,9 +124,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
-			// public key is the second topic from validatorRegistered log and strip off 0x
-			pubKeyLog := VRClog.Topics[1].Hex()[2:]
-			if pubKeyLog == w.pubKey {
+			// public key is the second topic from validatorRegistered log
+			pubKeyLog := VRClog.Topics[1].Hex()
+			// Support user pubKeys with or without the leading 0x
+			if pubKeyLog == w.pubKey || pubKeyLog[2:] == w.pubKey {
 				log.WithFields(logrus.Fields{
 					"publicKey": pubKeyLog,
 				}).Info("Validator registered in VRC with public key")
