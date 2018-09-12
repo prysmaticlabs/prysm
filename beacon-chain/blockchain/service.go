@@ -228,14 +228,18 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-			// Listen for a newly received incoming block from the sync service.
+		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-c.incomingAttestationChan:
 			h, err := attestation.Hash()
 			if err != nil {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
-			log.Info("Relaying attestation 0x%v to p2p service", h)
+			if err := c.chain.saveAttestation(attestation); err != nil {
+				log.Errorf("Could not check existence of parent: %v", err)
+				continue
+			}
 
+			log.Info("Relaying attestation 0x%v to p2p service", h)
 			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 
 		// Listen for a newly received incoming block from the sync service.
@@ -260,7 +264,15 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
+			// Get parent slot number.
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Errorf("Could not get parent block: %v", err)
+				continue
+			}
+
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState, parentBlock.SlotNumber()) {
+				log.Errorf("Block 0x%v is invalid. Skipping.", blockHash)
 				continue
 			}
 
@@ -302,7 +314,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			if err != nil {
 				log.Errorf("Failed to calculate the new dynasty: %v", err)
 				continue
-
 			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())

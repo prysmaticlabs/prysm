@@ -18,6 +18,7 @@ type chainService interface {
 	ContainsBlock(h [32]byte) bool
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
+	IncomingAttestationFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
 	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
 }
@@ -151,17 +152,28 @@ func (ss *Service) run() {
 				log.Errorf("Received malformed beacon block p2p message")
 				continue
 			}
+
 			block := types.NewBlock(response.Block)
-			h, err := block.Hash()
+			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash received block: %v", err)
 			}
-			if ss.chainService.ContainsBlock(h) {
+			if ss.chainService.ContainsBlock(blockHash) {
 				continue
 			}
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
-			// We send out a message over a feed.
+			log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
 			ss.chainService.IncomingBlockFeed().Send(block)
+
+			// Check if there's attestation attached with block response.
+			var attestation *types.Attestation
+			var attestationHash [32]byte
+			if response.Attestation != nil {
+				attestation = types.NewAttestation(response.Attestation)
+				attestationHash = attestation.Key()
+				log.WithField("attestationHash", fmt.Sprintf("0x%x", attestationHash)).Debug("Sending newly attestation to subscribers")
+			}
+			ss.chainService.IncomingAttestationFeed().Send(attestation)
+
 		case msg := <-ss.blockRequestBySlot:
 			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 			if !ok {
