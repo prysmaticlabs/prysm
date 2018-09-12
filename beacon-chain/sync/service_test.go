@@ -52,6 +52,10 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockChainService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
 	if ms.checkError {
 		return ms.slotExists, errors.New("mock check canonical block error")
@@ -313,6 +317,10 @@ func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
 }
 
 func (ms *mockEmptyChainService) IncomingBlockFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockEmptyChainService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 

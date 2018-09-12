@@ -152,7 +152,7 @@ func (b *Block) isSlotValid() bool {
 // IsValid is called to decide if an incoming p2p block can be processed.
 // It checks the slot against the system clock, and the validity of the included attestations.
 // Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
-func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
+func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Debugf("Could not hash incoming block: %v", err)
@@ -168,17 +168,6 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		log.Debugf("slot of block is too high: %d", b.SlotNumber())
 		return false
 	}
-
-	parentSlotCommittee, err := casper.GetShardAndCommitteesForSlot(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalc() - params.CycleLength,
-		b.SlotNumber()-1)
-	if err != nil {
-		log.Debugf("unable to get validator committee for parent slot: ", err)
-		return false
-	}
-
-	proposerIndex := uint64(len(parentSlotCommittee.ArrayShardAndCommittee[0].Committee)) % parentSlot
 
 	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, aState, cState) {

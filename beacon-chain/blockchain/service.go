@@ -3,12 +3,16 @@ package blockchain
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,6 +39,7 @@ type ChainService struct {
 	candidateBlock                 *types.Block
 	candidateActiveState           *types.ActiveState
 	candidateCrystallizedState     *types.CrystallizedState
+	proposerAttestation            map[uint64]*types.Attestation
 }
 
 // Config options for the service.
@@ -67,6 +72,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		candidateBlock:                 nilBlock,
 		candidateActiveState:           nilActiveState,
 		candidateCrystallizedState:     nilCrystallizedState,
+		proposerAttestation:            make(map[uint64]*types.Attestation),
 	}, nil
 }
 
@@ -239,6 +245,16 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
+			// If there's only 1 flipped bit in an attestation's bitfield, we can assume it's coming from proposer.
+			// Save the attestation with proposer index as key.
+			var bitset int
+			for _, bitfield := range attestation.AttesterBitfield() {
+				bitset += int(utils.BitSetCount(bitfield))
+			}
+			if bitset == 1 {
+				c.proposerAttestation[binary.BigEndian.Uint64(attestation.AttesterBitfield())] = attestation
+			}
+
 			log.Info("Relaying attestation 0x%v to p2p service", h)
 			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 
@@ -271,8 +287,27 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState, parentBlock.SlotNumber()) {
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
 				log.Errorf("Block 0x%v is invalid. Skipping.", blockHash)
+				continue
+			}
+
+			// Check if proposer has attested for the incoming block.
+			parentSlotCommittee, err := casper.GetShardAndCommitteesForSlot(
+				cState.ShardAndCommitteesForSlots(),
+				cState.LastStateRecalc()-params.CycleLength,
+				parentBlock.SlotNumber())
+			if err != nil {
+				log.Debugf("unable to get validator committee for parent slot: ", err)
+				continue
+			}
+
+			// Get proposer index number corresponding to bit field.
+			proposerIndex := uint64(len(parentSlotCommittee.ArrayShardAndCommittee[0].Committee)) % parentBlock.SlotNumber() * 2
+
+			// Check if we have received the proposer attestation.
+			if _, ok := c.proposerAttestation[proposerIndex]; !ok {
+				log.Errorf("Incoming block does not have a valid proposer attestation")
 				continue
 			}
 
@@ -313,12 +348,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new dynasty: %v", err)
-				continue
-			}
-
-			parentBlock, err := c.chain.getBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Failed to get parent slot of block %x", blockHash)
 				continue
 			}
 
