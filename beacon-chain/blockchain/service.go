@@ -274,7 +274,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering Dynasty transitions.
 			if cState.IsDynastyTransition(block.SlotNumber()) {
 				log.Info("Entering dynasty transition")
-				cState, err = cState.NewDynastyRecalculations(block.ParentHash(), block.SlotNumber())
+				cState, err = cState.NewDynastyRecalculations(block.ParentHash())
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new dynasty: %v", err)

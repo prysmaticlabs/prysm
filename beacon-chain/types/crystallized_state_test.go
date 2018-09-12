@@ -236,7 +236,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
 	}
 	cState.data.Validators = validators
-	if _, err := cState.NewDynastyRecalculations([32]byte{'A'}, 0); err == nil {
+	if _, err := cState.NewDynastyRecalculations([32]byte{'A'}); err == nil {
 		t.Errorf("Dynasty calculation should have failed with invalid validator count")
 	}
 }
@@ -250,9 +250,9 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	// Create shard committee for every slot.
 	var shardCommitteesForSlot []*pb.ShardAndCommitteeArray
 	for i := 0; i < params.CycleLength; i++ {
-		// Only 100 shards gets crosslinked by validators this dynasty.
+		// Only 10 shards gets crosslinked by validators this dynasty.
 		var shardCommittees []*pb.ShardAndCommittee
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10; i++ {
 			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{ShardId: uint64(i)})
 		}
 		shardCommitteesForSlot = append(shardCommitteesForSlot, &pb.ShardAndCommitteeArray{ArrayShardAndCommittee: shardCommittees})
@@ -260,8 +260,10 @@ func TestNewDynastyRecalculations(t *testing.T) {
 
 	cState.data.ShardAndCommitteesForSlots = shardCommitteesForSlot
 	cState.data.CurrentDynasty = 1
+	cState.data.LastStateRecalc = 65
 
-	newCState, err := cState.NewDynastyRecalculations([32]byte{'A'}, 65)
+	shardCount = 10
+	newCState, err := cState.NewDynastyRecalculations([32]byte{'A'})
 
 	if err != nil {
 		t.Fatalf("Dynasty calculation failed %v", err)
@@ -273,8 +275,8 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	if newCState.DynastyStart() != 65 {
 		t.Errorf("Incorrect dynasty start slot number, wanted 65, got: %d", newCState.DynastyStart())
 	}
-	if newCState.CrosslinkingStartShard() != 100 {
-		t.Errorf("Incorrect dynasty crosslink start shard number, wanted 100, got: %d", newCState.CrosslinkingStartShard())
+	if newCState.CrosslinkingStartShard() != 0 {
+		t.Errorf("Incorrect dynasty crosslink start shard number, wanted 0, got: %d", newCState.CrosslinkingStartShard())
 	}
 	if newCState.DynastySeed() != [32]byte{'A'} {
 		t.Errorf("Incorrect dynasty seed, wanted A, got: %v", newCState.DynastySeed())

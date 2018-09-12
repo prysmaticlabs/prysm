@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+var shardCount = params.ShardCount
+
 // CrystallizedState contains fields of every Slot state,
 // it changes every Slot.
 type CrystallizedState struct {
@@ -58,7 +60,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 
 	// Bootstrap cross link records.
 	var crosslinkRecords []*pb.CrosslinkRecord
-	for i := 0; i < params.ShardCount; i++ {
+	for i := 0; i < shardCount; i++ {
 		crosslinkRecords = append(crosslinkRecords, &pb.CrosslinkRecord{
 			Dynasty:   0,
 			Blockhash: make([]byte, 0, 32),
@@ -296,11 +298,11 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, slotNumb
 }
 
 // NewDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.
-func (c *CrystallizedState) NewDynastyRecalculations(seed [32]byte, slotNumber uint64) (*CrystallizedState, error) {
+func (c *CrystallizedState) NewDynastyRecalculations(seed [32]byte) (*CrystallizedState, error) {
 	lastSlot := len(c.data.ShardAndCommitteesForSlots) - 1
 	lastCommitteeFromLastSlot := len(c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee) - 1
-	crosslinkLastShard := c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].ShardId % params.ShardCount
-	crosslinkNextShard := crosslinkLastShard + 1
+	crosslinkLastShard := c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].ShardId
+	crosslinkNextShard := (crosslinkLastShard + 1) % uint64(shardCount)
 	dynasty := c.CurrentDynasty() + 1
 
 	newShardCommitteeArray, err := casper.ShuffleValidatorsToCommittees(
@@ -322,8 +324,8 @@ func (c *CrystallizedState) NewDynastyRecalculations(seed [32]byte, slotNumber u
 		LastFinalizedSlot:          c.data.LastFinalizedSlot,
 		TotalDeposits:              c.data.TotalDeposits,
 		CrosslinkRecords:           c.data.CrosslinkRecords,
+		DynastyStart:               c.data.LastStateRecalc,
 		CrosslinkingStartShard:     crosslinkNextShard,
-		DynastyStart:               slotNumber,
 		DynastySeed:                seed[:],
 		CurrentDynasty:             dynasty,
 		ShardAndCommitteesForSlots: append(c.data.ShardAndCommitteesForSlots[:params.CycleLength], newShardCommitteeArray...),
