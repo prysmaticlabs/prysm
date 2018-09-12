@@ -171,8 +171,8 @@ func (ss *Service) run() {
 				attestation = types.NewAttestation(response.Attestation)
 				attestationHash = attestation.Key()
 				log.WithField("attestationHash", fmt.Sprintf("0x%x", attestationHash)).Debug("Sending newly attestation to subscribers")
+				ss.chainService.IncomingAttestationFeed().Send(attestation)
 			}
-			ss.chainService.IncomingAttestationFeed().Send(attestation)
 
 		case msg := <-ss.blockRequestBySlot:
 			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
