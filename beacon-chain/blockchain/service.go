@@ -10,10 +10,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,7 +32,7 @@ type ChainService struct {
 	incomingAttestationChan        chan *types.Attestation
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
-	blocksPendingProcessing        [][]byte
+	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
 }
 
@@ -64,7 +62,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingAttestationFeed:        new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
-		blocksPendingProcessing:        [][]byte{},
+		blocksPendingProcessing:        [][32]byte{},
 	}, nil
 }
 
@@ -198,23 +196,11 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			// Naive fork choice rule: we pick the first block we processed for the previous slot
 			// as canonical.
-			// TODO: Use a better lookup key or abstract into a GetBlock method from DB.
-			hasBlock, err := c.beaconDB.Has(c.blocksPendingProcessing[0])
+			block, err := c.chain.getBlock(c.blocksPendingProcessing[0])
 			if err != nil {
-				continue
+				log.Errorf("Could not get block: %v", err)
 			}
-			if !hasBlock {
-				continue
-			}
-			encoded, err := c.beaconDB.Get(c.blocksPendingProcessing[0])
-			if err != nil {
-				continue
-			}
-			blockProto := &pb.BeaconBlock{}
-			if err := proto.Unmarshal(encoded, blockProto); err != nil {
-				continue
-			}
-			block := types.NewBlock(blockProto)
+
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash incoming block: %v", err)
@@ -273,7 +259,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			// Clear the blocks pending processing.
 			c.lock.Lock()
-			c.blocksPendingProcessing = [][]byte{}
+			c.blocksPendingProcessing = [][32]byte{}
 			c.lock.Unlock()
 		}
 	}
@@ -327,7 +313,7 @@ func (c *ChainService) blockProcessing() {
 			// We push the hash of the block we just stored to a pending processing slice the fork choice rule
 			// will utilize.
 			c.lock.Lock()
-			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash[:])
+			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
 			log.Info("Finished processing received block")
 		}

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -238,6 +239,13 @@ func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
 // getBlock retrieves a block from the db using its hash.
 func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 	key := blockKey(hash)
+	has, err := b.db.Has(key)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, errors.New("block not found")
+	}
 	enc, err := b.db.Get(key)
 	if err != nil {
 		return nil, err
