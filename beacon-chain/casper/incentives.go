@@ -30,3 +30,11 @@ func CalculateRewards(attestations []*pb.AttestationRecord, validators []*pb.Val
 	}
 	return validators, nil
 }
+
+func OfflinePenalty() error {
+	return nil
+}
+
+func UpdateValidatorRewards() {
+
+}
