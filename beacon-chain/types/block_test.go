@@ -101,7 +101,7 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 		t.Errorf("attestation slot number can't be higher than parent block's slot number")
 	}
 
-	if isAttestationSlotNumberValid(1, params.CycleLength + 1) {
+	if isAttestationSlotNumberValid(1, params.CycleLength+1) {
 		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
 	}
 
