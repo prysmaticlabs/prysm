@@ -179,16 +179,10 @@ func (s *ShardEthereum) registerAttesterService() error {
 		return err
 	}
 
-	var validatorp2p *p2p.Server
-	if err := s.services.FetchService(&validatorp2p); err != nil {
-		return err
-	}
-
 	att := attester.NewAttester(context.TODO(), &attester.Config{
-		Assigner:        beaconService,
-		AssignmentBuf:   100,
-		BlockBufferSize: 100,
-	}, validatorp2p)
+		Assigner:      beaconService,
+		AssignmentBuf: 100,
+	})
 	return s.services.RegisterService(att)
 }
 

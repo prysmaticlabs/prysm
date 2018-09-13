@@ -165,13 +165,18 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
 
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
 	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
 		BeaconDB:         b.db.DB(),
 		Web3Service:      web3Service,
 		Chain:            beaconChain,
 		BeaconBlockBuf:   10,
 		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
-	})
+	}, p2pService)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
