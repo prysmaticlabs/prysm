@@ -46,8 +46,9 @@ func TestLifecycle(t *testing.T) {
 	}
 	att := NewAttester(context.Background(), cfg)
 	att.Start()
-	testutil.AssertLogsContain(t, hook, "Starting service")
 	att.Stop()
+
+	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
@@ -77,9 +78,11 @@ func TestAttesterLoop(t *testing.T) {
 		<-exitRoutine
 	}()
 	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 33}
-	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
+
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
 
@@ -104,9 +107,10 @@ func TestAttesterMarshalError(t *testing.T) {
 	}()
 
 	p.assignmentChan <- nil
-	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
 
@@ -137,9 +141,10 @@ func TestAttesterErrorLoop(t *testing.T) {
 	}()
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
-	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
-	testutil.AssertLogsContain(t, hook, "could not attest head")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
+	testutil.AssertLogsContain(t, hook, "could not attest head")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
