@@ -145,7 +145,7 @@ func (b *Block) isSlotValid() bool {
 // IsValid is called to decide if an incoming p2p block can be processed.
 // It checks the slot against the system clock, and the validity of the included attestations.
 // Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
-func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
+func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Debugf("Could not hash incoming block: %v", err)
@@ -163,7 +163,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 	}
 
 	for index, attestation := range b.Attestations() {
-		if !b.isAttestationValid(index, aState, cState) {
+		if !b.isAttestationValid(index, aState, cState, parentSlot) {
 			log.Debugf("attestation invalid: %v", attestation)
 			return false
 		}
@@ -175,20 +175,11 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState) bool {
 // isAttestationValid validates an attestation in a block.
 // Attestations are cross-checked against validators in CrystallizedState.ShardAndCommitteesForSlots.
 // In addition, the signature is verified by constructing the list of parent hashes using ActiveState.RecentBlockHashes.
-func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState) bool {
+func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
-	slotNumber := b.SlotNumber()
 	attestation := b.Attestations()[attestationIndex]
-	if attestation.Slot > slotNumber {
-		log.Debugf("attestation slot number can't be higher than block slot number. Found: %d, Needed lower than: %d",
-			attestation.Slot,
-			slotNumber)
-		return false
-	}
-	if int(attestation.Slot) < int(slotNumber)-params.CycleLength {
-		log.Debugf("attestation slot number can't be lower than block slot number by one CycleLength. Found: %v, Needed greater than: %v",
-			attestation.Slot,
-			slotNumber-params.CycleLength)
+
+	if !isAttestationSlotNumberValid(attestation.Slot, parentSlot) {
 		return false
 	}
 
@@ -235,5 +226,29 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
+	return true
+}
+
+func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {
+	if attestationSlot > parentSlot {
+		log.Debugf("attestation slot number can't be higher than parent block's slot number. Found: %d, Needed lower than: %d",
+			attestationSlot,
+			parentSlot)
+		fmt.Printf("attestation slot number can't be higher than parent block's slot number. Found: %d, Needed lower than: %d\n",
+			attestationSlot,
+			parentSlot)
+		return false
+	}
+
+	if parentSlot >= params.CycleLength-1 && attestationSlot < parentSlot-params.CycleLength+1 {
+		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
+			attestationSlot,
+			parentSlot-params.CycleLength+1)
+		fmt.Printf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d\n",
+			attestationSlot,
+			parentSlot-params.CycleLength+1)
+		return false
+	}
+
 	return true
 }

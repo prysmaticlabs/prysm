@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -445,19 +446,29 @@ func TestProcessingBlocks(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	genesis, err := beaconChain.GenesisBlock()
-	if err != nil {
-		t.Fatalf("unable to get canonical head: %v", err)
-	}
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
 
-	parentHash, err := genesis.Hash()
+	// Initialize a parent block.
+	block0 := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 3,
+	})
+	fmt.Println("...saving block0")
+	if saveErr := beaconChain.saveBlock(block0); saveErr != nil {
+		t.Fatalf("Cannot save block: %v", saveErr)
+	}
+	fmt.Println("...saved")
+	block0Hash, err := block0.Hash()
 	if err != nil {
-		t.Fatalf("unable to get hash of canonical head: %v", err)
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
-		ParentHash:            parentHash[:],
-		SlotNumber:            1,
+		ParentHash:            block0Hash[:],
+		SlotNumber:            4,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		Attestations: []*pb.AttestationRecord{{
@@ -467,14 +478,9 @@ func TestProcessingBlocks(t *testing.T) {
 		}},
 	})
 
-	exitRoutine := make(chan bool)
-	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
-		<-exitRoutine
-	}()
-
-	chainService.incomingBlockChan <- block1
-
+	//if saveErr := chainService.SaveBlock(block1); saveErr != nil {
+	//	t.Fatalf("Cannot save block: %v", saveErr)
+	//}
 	block1Hash, err := block1.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of block 1: %v", err)
@@ -483,33 +489,53 @@ func TestProcessingBlocks(t *testing.T) {
 	// Add 1 more attestation field for slot2
 	block2 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block1Hash[:],
-		SlotNumber: 2,
+		SlotNumber: 5,
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
-	chainService.incomingBlockChan <- block2
-
+	//if saveErr := chainService.SaveBlock(block2); saveErr != nil {
+	//	t.Fatalf("Cannot save block: %v", saveErr)
+	//}
 	block2Hash, err := block2.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of block 1: %v", err)
 	}
 
+
+
+	//parentBlock, err := chainService.chain.getBlock(block2.ParentHash())
+	//log.Info(parentBlock.SlotNumber())
+
+
 	// Add 1 more attestation field for slot3
 	block3 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block2Hash[:],
-		SlotNumber: 3,
+		SlotNumber: 6,
 		Attestations: []*pb.AttestationRecord{
 			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 			{Slot: 2, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
+	//if saveErr := chainService.SaveBlock(block3); saveErr != nil {
+	//	t.Fatalf("Cannot save block: %v", saveErr)
+	//}
+
+	//parentBlock, err = chainService.chain.getBlock(block3.ParentHash())
+	//log.Info(parentBlock.SlotNumber())
+
+	chainService.incomingBlockChan <- block1
+
+	chainService.incomingBlockChan <- block2
+
+
 	chainService.incomingBlockChan <- block3
 
 	chainService.cancel()
 	exitRoutine <- true
+
 
 	// We should have 3 pending attestations from blocks 1 and 2
 	if len(beaconChain.ActiveState().PendingAttestations()) != 3 {
@@ -560,14 +586,16 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	genesis, err := beaconChain.GenesisBlock()
-	if err != nil {
-		t.Fatalf("unable to get canonical head: %v", err)
+	// Initialize a parent block.
+	parentBlock := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 5,
+	})
+	if saveErr := beaconChain.saveBlock(parentBlock); saveErr != nil {
+		t.Fatalf("Cannot save block: %v", saveErr)
 	}
-
-	parentHash, err := genesis.Hash()
+	parentHash, err := parentBlock.Hash()
 	if err != nil {
-		t.Fatalf("unable to get hash of canonical head: %v", err)
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
@@ -593,7 +621,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "attestation slot number can't be higher than block slot number")
+	testutil.AssertLogsContain(t, hook, "attestation slot number can't be higher than parent block's slot number. Found: 10, Needed lower than: 5")
 }
 
 func TestEnterCycleTransition(t *testing.T) {
@@ -704,7 +732,6 @@ func TestEnterDynastyTransition(t *testing.T) {
 	}
 
 	chainService, _ := NewChainService(ctx, cfg)
-	genesisBlock, _ := beaconChain.GenesisBlock()
 	crystallized := types.NewCrystallizedState(
 		&pb.CrystallizedState{
 			DynastyStart:               1,
@@ -736,7 +763,18 @@ func TestEnterDynastyTransition(t *testing.T) {
 		}, nil,
 	)
 
-	parentHash, _ := genesisBlock.Hash()
+	// Initialize a parent block.
+	parentBlock := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 202,
+	})
+	if saveErr := beaconChain.saveBlock(parentBlock); saveErr != nil {
+		t.Fatalf("Cannot save block: %v", saveErr)
+	}
+	parentHash, err := parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Failed to compute parent block's hash: %v", err)
+	}
+
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 	if err := chainService.chain.SetCrystallizedState(crystallized); err != nil {

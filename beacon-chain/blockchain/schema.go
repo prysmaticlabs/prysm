@@ -31,7 +31,10 @@ var (
 	blockPrefix             = []byte("block-")             // blockPrefix + blockhash -> block
 	canonicalPrefix         = []byte("canonical-")         // canonicalPrefix + num(uint64 big endian) -> blockhash
 	attestationPrefix       = []byte("attestation-")       // attestationPrefix + attestationHash -> attestation
-	attestationHashesPrefix = []byte("attestationHashes-") // attestationHashesPrefix + blockHash -> attestationHashes
+	//attestationHashesPrefix = []byte("") // attestationHashesPrefix + blockHash -> attestationHashes
+	attestationHashesPrefix = []byte("") // attestationHashesPrefix + blockHash -> attestationHashes
+	attestationHashesSuffix = []byte(" ") // attestationHashesPrefix + blockHash -> attestationHashes
+	//attestationHashesSuffix = []byte("attestationHashes-") // attestationHashesPrefix + blockHash -> attestationHashes
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint64.
@@ -58,5 +61,6 @@ func attestationKey(hash [32]byte) []byte {
 
 // attestationHashListKey = attestationHashesPrefix + blockHash.
 func attestationHashListKey(hash [32]byte) []byte {
-	return append(attestationHashesPrefix, hash[:]...)
+	ret := append(attestationHashesPrefix, hash[:]...)
+	return append(ret, attestationHashesSuffix[:]...)
 }

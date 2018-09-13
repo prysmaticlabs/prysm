@@ -249,6 +249,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
 			blockHash, err := block.Hash()
+			fmt.Printf("PROCESSING BLOCK: hash: %v, slot: %d ", blockHash, block.SlotNumber())
 			if err != nil {
 				log.Errorf("Failed to get hash of block: %v", err)
 				continue
@@ -260,9 +261,30 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
+			// Get parent slot number.
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Errorf("Could not get parent block: %v", err)
 				continue
 			}
+			fmt.Printf("(STILL PROCESSING) parent block: hash: %v, slot: %d \n", block.ParentHash(), parentBlock.SlotNumber())
+
+			parentHash := block.ParentHash()
+			log.Info(parentHash)
+
+			parentBlock, err = c.chain.getBlock(parentHash)
+			parentHash, err = parentBlock.Hash()
+			log.Info(parentHash)
+
+
+
+
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState, parentBlock.SlotNumber()) {
+				continue
+			}
+
+			parentBlock, err = c.chain.getBlock(block.ParentHash())
+			log.Info(parentBlock.SlotNumber())
 
 			// If a candidate block exists and it is a lower slot, run theh fork choice rule.
 			if c.candidateBlock != nilBlock && block.SlotNumber() > c.candidateBlock.SlotNumber() {
@@ -273,6 +295,9 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
+
+			parentBlock, err = c.chain.getBlock(block.ParentHash())
+			log.Info(parentBlock.SlotNumber())
 
 			log.Infof("Finished processing received block: %x", blockHash)
 
@@ -303,12 +328,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Failed to calculate the new dynasty: %v", err)
 				continue
 
-			}
-
-			parentBlock, err := c.chain.getBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Failed to get parent slot of block %x", blockHash)
-				continue
 			}
 
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())

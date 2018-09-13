@@ -86,11 +86,12 @@ func TestBlockValidity(t *testing.T) {
 		},
 	})
 
-	if !b.isAttestationValid(0, aState, cState) {
+	parentSlot := uint64(1)
+	if !b.isAttestationValid(0, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(aState, cState) {
+	if !b.IsValid(aState, cState, parentSlot) {
 		t.Fatalf("failed block validation")
 	}
 }
