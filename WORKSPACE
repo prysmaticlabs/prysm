@@ -569,3 +569,9 @@ go_repository(
     commit = "073f507db72de824e981aa0f15f158175a8d6be1",
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
+
+go_repository(
+    name = "com_github_boltdb_bolt",
+    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    importpath = "github.com/boltdb/bolt",
+)

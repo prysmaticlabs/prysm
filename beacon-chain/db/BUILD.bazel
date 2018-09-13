@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "db.go",
+        "schema.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/types:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["db_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/types:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
+    ],
+)

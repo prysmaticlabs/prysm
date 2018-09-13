@@ -10,6 +10,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/rpc:go_default_library",
         "//beacon-chain/simulator:go_default_library",
@@ -19,9 +20,9 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/database:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/p2p:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
@@ -36,7 +37,7 @@ go_test(
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil:go_default_library",
+        "//shared/testutils:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
     ],

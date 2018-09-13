@@ -1,5 +1,5 @@
-// Package testutil defines the testing utils such as asserting logs.
-package testutil
+// Package testutils defines the testing utils such as asserting logs.
+package testutils
 
 import (
 	"strings"

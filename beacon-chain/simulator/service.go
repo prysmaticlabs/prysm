@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
@@ -26,7 +24,7 @@ type Simulator struct {
 	p2p                    types.P2P
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
-	beaconDB               ethdb.Database
+	beaconDB               *db.DB
 	validator              bool
 	delay                  time.Duration
 	slotNum                uint64
@@ -43,7 +41,7 @@ type Config struct {
 	Validator       bool
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
-	BeaconDB        ethdb.Database
+	BeaconDB        *db.DB
 }
 
 // DefaultConfig options for the simulator.
@@ -88,32 +86,13 @@ func (sim *Simulator) Stop() error {
 	if len(sim.broadcastedBlockHashes) > 0 {
 		lastBlockHash := sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1]
 		lastBlock := sim.broadcastedBlocks[lastBlockHash]
-		encoded, err := lastBlock.Marshal()
-		if err != nil {
-			return err
-		}
-		return sim.beaconDB.Put([]byte("last-simulated-block"), encoded)
+		return sim.beaconDB.TrackSimulatedBlock(lastBlock)
 	}
 	return nil
 }
 
 func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
-	hasSimulated, err := sim.beaconDB.Has([]byte("last-simulated-block"))
-	if err != nil {
-		return nil, fmt.Errorf("Could not determine if a previous simulation occurred: %v", err)
-	}
-	if !hasSimulated {
-		return nil, nil
-	}
-	enc, err := sim.beaconDB.Get([]byte("last-simulated-block"))
-	if err != nil {
-		return nil, fmt.Errorf("Could not fetch simulated block from db: %v", err)
-	}
-	lastSimulatedBlockProto := &pb.BeaconBlock{}
-	if err = proto.Unmarshal(enc, lastSimulatedBlockProto); err != nil {
-		return nil, fmt.Errorf("Could not unmarshal simulated block from db: %v", err)
-	}
-	return types.NewBlock(lastSimulatedBlockProto), nil
+	return sim.beaconDB.GetLastSimulatedBlock()
 }
 
 func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
