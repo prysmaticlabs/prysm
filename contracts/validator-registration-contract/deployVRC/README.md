@@ -31,7 +31,7 @@ To use UTC JSON with IPC:
 ```
 bazel run //deployVRC --\
   --ipcPath /path/to/your/geth.ipc \
-  --UTCPath /path/to/your/keystore/UTCJSON \
+  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```
 
@@ -40,7 +40,7 @@ To use UTC JSON with RPC:
 ```
 bazel run //deployVRC --\
   --httpPath http://localhost:8545/  \
-  --UTCPath /path/to/your/keystore/UTCJSON \
+  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```
 
@@ -48,7 +48,7 @@ or
 
 ```
 bazel run //deployVRC --\
-  --UTCPath /path/to/your/keystore/UTCJSON \
+  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```
 
