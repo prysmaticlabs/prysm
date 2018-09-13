@@ -13,7 +13,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -171,7 +170,7 @@ func TestProposerProcessAttestation(t *testing.T) {
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &shardingp2p.AttestationBroadcast{
+	attestation := &pbp2p.AttestationBroadcast{
 		AttestationRecord: &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}},
 	}
 	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
@@ -224,7 +223,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &shardingp2p.AttestationBroadcast{
+	attestation := &pbp2p.AttestationBroadcast{
 		AttestationRecord: &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}},
 	}
 	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}

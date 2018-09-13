@@ -4,11 +4,13 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,6 +37,7 @@ type ChainService struct {
 	candidateBlock                 *types.Block
 	candidateActiveState           *types.ActiveState
 	candidateCrystallizedState     *types.CrystallizedState
+	p2p                            shared.P2P
 }
 
 // Config options for the service.
@@ -49,7 +52,7 @@ type Config struct {
 
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
+func NewChainService(ctx context.Context, cfg *Config, beaconp2p shared.P2P) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
@@ -67,6 +70,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		candidateBlock:                 nilBlock,
 		candidateActiveState:           nilActiveState,
 		candidateCrystallizedState:     nilCrystallizedState,
+		p2p: beaconp2p,
 	}, nil
 }
 
@@ -234,9 +238,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			if err != nil {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
-			log.Info("Relaying attestation 0x%v to p2p service", h)
 
-			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
+			c.p2p.Broadcast(&pb.AttestationBroadcast{
+				AttestationRecord: attestation.Proto(),
+			})
+			log.Info("Relaying attestation 0x%v to p2p service", h)
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:

@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -97,6 +96,8 @@ func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord) bo
 	return exists
 }
 
+// Adds a pending attestation to the memory so that it can be included in the next
+// proposed block.
 func (p *Proposer) AddPendingAttestation(attestation *pbp2p.AttestationRecord) {
 	p.pendingAttestation = append(p.pendingAttestation, attestation)
 }
@@ -115,8 +116,9 @@ func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AttestationRecord) []by
 	return []byte{}
 }
 
+// processAttestation processes incoming broadcasted attestations from the beacon node.
 func (p *Proposer) processAttestation(done <-chan struct{}) {
-	attestationSub := p.p2p.Subscribe(&shardingp2p.AttestationBroadcast{}, p.attestationBuf)
+	attestationSub := p.p2p.Subscribe(&pbp2p.AttestationBroadcast{}, p.attestationBuf)
 	defer attestationSub.Unsubscribe()
 
 	for {
@@ -125,7 +127,7 @@ func (p *Proposer) processAttestation(done <-chan struct{}) {
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
 		case msg := <-p.attestationBuf:
-			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)
+			data, ok := msg.Data.(*pbp2p.AttestationBroadcast)
 			if !ok {
 				log.Error("Received malformed attestation p2p message")
 				continue

@@ -10,11 +10,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -42,6 +44,18 @@ func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 
 func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
+}
+
+type mockP2P struct {
+}
+
+func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
+	return new(event.Feed).Subscribe(channel)
+}
+
+func (mp *mockP2P) Broadcast(msg proto.Message) {}
+
+func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
 func init() {
@@ -72,7 +86,7 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
-	chainService, err := NewChainService(ctx, cfg)
+	chainService, err := NewChainService(ctx, cfg, &mockP2P{})
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -84,7 +98,7 @@ func TestStartStop(t *testing.T) {
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
 	}
-	chainService, err = NewChainService(ctx, cfg)
+	chainService, err = NewChainService(ctx, cfg, &mockP2P{})
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -110,7 +124,7 @@ func TestStartStop(t *testing.T) {
 	chainService.CanonicalBlockFeed()
 	chainService.CanonicalCrystallizedStateFeed()
 
-	chainService, _ = NewChainService(ctx, cfg)
+	chainService, _ = NewChainService(ctx, cfg, &mockP2P{})
 
 	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}}, make(map[[32]byte]*types.VoteCache))
 
@@ -184,7 +198,7 @@ func TestFaultyStop(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 
-	chainService, err := NewChainService(ctx, cfg)
+	chainService, err := NewChainService(ctx, cfg, &mockP2P{})
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
@@ -242,7 +256,7 @@ func TestRunningChainService(t *testing.T) {
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
 	}
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 
 	genesis, err := beaconChain.GenesisBlock()
 	if err != nil {
@@ -309,7 +323,7 @@ func TestUpdateHead(t *testing.T) {
 		Chain:            beaconChain,
 		Web3Service:      web3Service,
 	}
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState()
@@ -373,7 +387,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -430,7 +444,7 @@ func TestProcessingBlocks(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState()
@@ -545,7 +559,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState()
@@ -619,7 +633,7 @@ func TestEnterCycleTransition(t *testing.T) {
 		Web3Service:    web3Service,
 	}
 
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 
 	genesisBlock, _ := beaconChain.GenesisBlock()
 	active := beaconChain.ActiveState()
@@ -699,7 +713,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
 	}
 
-	chainService, _ := NewChainService(ctx, cfg)
+	chainService, _ := NewChainService(ctx, cfg, &mockP2P{})
 	genesisBlock, _ := beaconChain.GenesisBlock()
 	crystallized := types.NewCrystallizedState(
 		&pb.CrystallizedState{

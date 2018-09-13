@@ -16,6 +16,7 @@ enum Topic {
   ACTIVE_STATE_HASH_ANNOUNCE = 8;
   ACTIVE_STATE_REQUEST = 9;
   ACTIVE_STATE_RESPONSE = 10;
+  ATTESTATION_BROADCAST = 11;
 }
 
 message BeaconBlockHashAnnounce {
@@ -127,4 +128,8 @@ message CrosslinkRecord {
 
 message AttestationHashes {
   repeated bytes attestation_hash = 1;
+}
+
+message AttestationBroadcast {
+  AttestationRecord AttestationRecord = 1;
 }
