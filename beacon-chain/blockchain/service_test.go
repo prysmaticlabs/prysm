@@ -97,7 +97,11 @@ func TestStartStop(t *testing.T) {
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
 	}
-	if chainService.ContainsBlock([32]byte{}) {
+	blockExists, err := chainService.ContainsBlock([32]byte{})
+	if err != nil {
+		t.Fatalf("unable to check if block exists: %v", err)
+	}
+	if blockExists {
 		t.Errorf("chain is not empty")
 	}
 	hasState, err := chainService.HasStoredState()
