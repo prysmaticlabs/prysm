@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
@@ -189,6 +188,62 @@ func TestProposerProcessAttestation(t *testing.T) {
 	}
 }
 
+func TestFullProposalOfBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+	mockServiceClient.EXPECT().ProposeBlock(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.ProposeResponse{
+		BlockHash: []byte("hi"),
+	}, nil)
+
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go p.run(doneChan, mockServiceClient)
+
+	go func() {
+		p.processAttestation(doneChan)
+		<-exitRoutine
+	}()
+
+	p.pendingAttestation = []*pbp2p.AttestationRecord{
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'a'},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'b'},
+		}}
+
+	attestation := &shardingp2p.AttestationBroadcast{
+		AttestationRecord: &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}},
+	}
+	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
+	p.attestationBuf <- msg
+
+	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+
+	doneChan <- struct{}{}
+	doneChan <- struct{}{}
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
+	testutil.AssertLogsContain(t, hook, "Proposer context closed")
+	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
+	testutil.AssertLogsContain(t, hook, "Proposer context closed")
+
+}
+
 func TestProposerServiceErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
@@ -209,40 +264,26 @@ func TestProposerServiceErrors(t *testing.T) {
 	).Return(nil, errors.New("bad block proposed"))
 
 	doneChan := make(chan struct{})
-	delayChan := make(chan time.Time)
 	exitRoutine := make(chan bool)
 
+	go p.run(doneChan, mockServiceClient)
+
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		p.processAttestation(doneChan)
 		<-exitRoutine
 	}()
 
+	p.attestationBuf <- p2p.Message{Data: nil}
 	p.assignmentChan <- nil
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 9}
 
-	attestation := &shardingp2p.AttestationBroadcast{
-		AttestationRecord: &pbp2p.AttestationRecord{Slot: 5},
-	}
-	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
-	p.attestationBuf <- msg
-
-	attestation2 := &shardingp2p.AttestationBroadcast{
-		AttestationRecord: &pbp2p.AttestationRecord{Slot: 6},
-	}
-	msg2 := p2p.Message{Peer: p2p.Peer{}, Data: attestation2}
-	p.attestationBuf <- msg2
-	delayChan <- time.Time{}
-
-	msg3 := p2p.Message{Peer: p2p.Peer{}, Data: &pbp2p.BeaconBlock{}}
-	p.attestationBuf <- msg3
-
-	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	doneChan <- struct{}{}
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
-	testutil.AssertLogsContain(t, hook, "Could not propose block: bad block proposed")
-	testutil.AssertLogsContain(t, hook, "Unable to retrieve block from memory block does not exist")
 	testutil.AssertLogsContain(t, hook, "Received malformed attestation p2p message")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
+	testutil.AssertLogsContain(t, hook, "Could not propose block: bad block proposed")
 }
