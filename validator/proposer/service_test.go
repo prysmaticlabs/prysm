@@ -47,8 +47,9 @@ func TestLifecycle(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 	p.Start()
-	testutil.AssertLogsContain(t, hook, "Starting service")
 	p.Stop()
+
+	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
@@ -80,10 +81,11 @@ func TestProposerLoop(t *testing.T) {
 		<-exitRoutine
 	}()
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
-	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
@@ -108,9 +110,10 @@ func TestProposerMarshalError(t *testing.T) {
 	}()
 
 	p.assignmentChan <- nil
-	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
@@ -141,9 +144,10 @@ func TestProposerErrorLoop(t *testing.T) {
 	}()
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
-	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, "bad block proposed")
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	testutil.AssertLogsContain(t, hook, "bad block proposed")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
