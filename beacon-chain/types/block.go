@@ -228,6 +228,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 	msg = append(msg, signedHashesStr...)
 	binary.PutUvarint(msg, attestation.ShardId)
 	msg = append(msg, attestation.ShardBlockHash...)
+	binary.PutUvarint(msg, attestation.JustifiedSlot)
 
 	msgHash := blake2b.Sum512(msg)
 
