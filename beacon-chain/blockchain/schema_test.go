@@ -8,7 +8,7 @@ import (
 func TestBlockKeys(t *testing.T) {
 
 	testhash := [32]byte{1, 2, 4, 5, 6, 7, 8, 9, 10}
-	testkey := append(blockPrefix, testhash[:]...)
+	testkey := append(testhash[:], blockSuffix...)
 	generatedKey := blockKey(testhash)
 
 	if !bytes.Equal(testkey, generatedKey) {
@@ -16,7 +16,7 @@ func TestBlockKeys(t *testing.T) {
 	}
 
 	testslotnumber := uint64(4)
-	expectedKey := append(canonicalPrefix, encodeSlotNumber(testslotnumber)...)
+	expectedKey := append(encodeSlotNumber(testslotnumber)[:], canonicalSuffix...)
 	generatedkey := canonicalBlockKey(testslotnumber)
 
 	if !bytes.Equal(generatedkey, expectedKey) {

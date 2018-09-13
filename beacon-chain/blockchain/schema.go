@@ -13,7 +13,7 @@ import (
 // also the genesis block using the genesis lookup key.
 // The canonical head is stored using the canonical head lookup key.
 
-// The fields below define the prefixing of keys in the db.
+// The fields below define the suffix of keys in the db.
 var (
 	// CanonicalHeadLookupKey tracks the latest canonical head.
 	canonicalHeadLookupKey = []byte("latest-canonical-head")
@@ -28,13 +28,10 @@ var (
 	genesisLookupKey = []byte("genesis")
 
 	// Data item prefixes.
-	blockPrefix             = []byte("block-")             // blockPrefix + blockhash -> block
-	canonicalPrefix         = []byte("canonical-")         // canonicalPrefix + num(uint64 big endian) -> blockhash
-	attestationPrefix       = []byte("attestation-")       // attestationPrefix + attestationHash -> attestation
-	//attestationHashesPrefix = []byte("") // attestationHashesPrefix + blockHash -> attestationHashes
-	attestationHashesPrefix = []byte("") // attestationHashesPrefix + blockHash -> attestationHashes
-	attestationHashesSuffix = []byte(" ") // attestationHashesPrefix + blockHash -> attestationHashes
-	//attestationHashesSuffix = []byte("attestationHashes-") // attestationHashesPrefix + blockHash -> attestationHashes
+	blockSuffix             = []byte("-block")             // blockhash + blockPrefix -> block
+	canonicalSuffix         = []byte("-canonical")         // num(uint64 big endian) + cannoicalSuffix -> blockhash
+	attestationSuffix       = []byte("-attestation")       // attestationHash + attestationSuffix -> attestation
+	attestationHashesSuffix = []byte("-attestationHashes") // blockHash + attestationHashesPrefix -> attestationHashes
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint64.
@@ -46,21 +43,20 @@ func encodeSlotNumber(number uint64) []byte {
 
 // blockKey = blockPrefix + blockHash.
 func blockKey(hash [32]byte) []byte {
-	return append(blockPrefix, hash[:]...)
+	return append(hash[:], blockSuffix...)
 }
 
 // canonicalBlockKey = canonicalPrefix + num(uint64 big endian)
 func canonicalBlockKey(slotnumber uint64) []byte {
-	return append(canonicalPrefix, encodeSlotNumber(slotnumber)...)
+	return append(encodeSlotNumber(slotnumber)[:], canonicalSuffix...)
 }
 
 // attestationKey = attestationPrefix + attestationHash.
 func attestationKey(hash [32]byte) []byte {
-	return append(attestationPrefix, hash[:]...)
+	return append(hash[:], attestationSuffix...)
 }
 
 // attestationHashListKey = attestationHashesPrefix + blockHash.
 func attestationHashListKey(hash [32]byte) []byte {
-	ret := append(attestationHashesPrefix, hash[:]...)
-	return append(ret, attestationHashesSuffix[:]...)
+	return append(hash[:], attestationHashesSuffix...)
 }
