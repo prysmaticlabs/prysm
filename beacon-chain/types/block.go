@@ -31,18 +31,14 @@ type Block struct {
 // Return block with default fields if data is nil.
 func NewBlock(data *pb.BeaconBlock) *Block {
 	if data == nil {
+		//It is assumed when data==nil, you're asking for a Genesis Block
 		return &Block{
 			data: &pb.BeaconBlock{
 				ParentHash:            []byte{0},
-				SlotNumber:            0,
 				RandaoReveal:          []byte{0},
-				Attestations:          []*pb.AttestationRecord{},
 				PowChainRef:           []byte{0},
 				ActiveStateHash:       []byte{0},
 				CrystallizedStateHash: []byte{0},
-				// NOTE: this field only exists to determine the timestamp of the genesis block.
-				// As of the v2.1 spec, the timestamp of blocks after genesis are not used.
-				Timestamp: ptypes.TimestampNow(),
 			},
 		}
 	}
@@ -51,19 +47,16 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-//
-// TODO(#495): Add more default fields.
 func NewGenesisBlock() (*Block, error) {
 	protoGenesis, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
 		return nil, err
 	}
-	return &Block{
-		data: &pb.BeaconBlock{
-			Timestamp:  protoGenesis,
-			ParentHash: []byte{},
-		},
-	}, nil
+
+	gb := NewBlock(nil)
+	gb.data.Timestamp = protoGenesis
+
+	return gb, nil
 }
 
 // Proto returns the underlying protobuf data within a block primitive.

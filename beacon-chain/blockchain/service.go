@@ -126,8 +126,8 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine.
-func (c *ChainService) ContainsBlock(h [32]byte) bool {
-	return false
+func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return c.chain.hasBlock(h)
 }
 
 // CurrentCrystallizedState of the canonical chain.
@@ -246,7 +246,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-
 
 			log.Info("Relaying attestation 0x%v to p2p service", h)
 			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.

@@ -40,8 +40,8 @@ type mockChainService struct {
 	getError   bool
 }
 
-func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
-	return false
+func (ms *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return false, nil
 }
 
 func (ms *mockChainService) HasStoredState() (bool, error) {
@@ -308,8 +308,8 @@ type mockEmptyChainService struct {
 	hasStoredState bool
 }
 
-func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) bool {
-	return false
+func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return false, nil
 }
 
 func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
