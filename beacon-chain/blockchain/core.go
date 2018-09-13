@@ -404,18 +404,18 @@ func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [3
 	if err != nil {
 		return err
 	}
-	fmt.Println("Immediately read before saving attestation to DB")
-	block, err := b.getBlock(blockHash)
-	bh, _ := block.Hash()
-	fmt.Printf("...and its slot becomes %d, hash becomes %v\n", block.SlotNumber(), bh)
+	//fmt.Println("Immediately read before saving attestation to DB")
+	//block, err := b.getBlock(blockHash)
+	//bh, _ := block.Hash()
+	//fmt.Printf("...and its slot becomes %d, hash becomes %v\n", block.SlotNumber(), bh)
 
 	//key = []byte("jietest")
-	fmt.Printf("Saved attestation with db key: %v\n", key)
+	//fmt.Printf("Saved attestation with db key: %v\n", key)
 	b.db.Put(key, encodedState)
 
-	fmt.Println("Immediately read block after saving attestation to DB")
-	block, err = b.getBlock(blockHash)
-	bh, _ = block.Hash()
-	fmt.Printf("...and its slot becomes %d, hash becomes %v\n", block.SlotNumber(), bh)
+	//fmt.Println("Immediately read block after saving attestation to DB")
+	//block, err = b.getBlock(blockHash)
+	//bh, _ = block.Hash()
+	//fmt.Printf("...and its slot becomes %d, hash becomes %v\n", block.SlotNumber(), bh)
 	return nil
 }

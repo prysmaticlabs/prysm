@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -452,15 +451,12 @@ func TestProcessingBlocks(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	// Initialize a parent block.
 	block0 := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber: 3,
 	})
-	fmt.Println("...saving block0")
 	if saveErr := beaconChain.saveBlock(block0); saveErr != nil {
 		t.Fatalf("Cannot save block: %v", saveErr)
 	}
-	fmt.Println("...saved")
 	block0Hash, err := block0.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
@@ -477,10 +473,6 @@ func TestProcessingBlocks(t *testing.T) {
 			ShardId:          0,
 		}},
 	})
-
-	//if saveErr := chainService.SaveBlock(block1); saveErr != nil {
-	//	t.Fatalf("Cannot save block: %v", saveErr)
-	//}
 	block1Hash, err := block1.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of block 1: %v", err)
@@ -494,20 +486,10 @@ func TestProcessingBlocks(t *testing.T) {
 			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
-
-	//if saveErr := chainService.SaveBlock(block2); saveErr != nil {
-	//	t.Fatalf("Cannot save block: %v", saveErr)
-	//}
 	block2Hash, err := block2.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of block 1: %v", err)
 	}
-
-
-
-	//parentBlock, err := chainService.chain.getBlock(block2.ParentHash())
-	//log.Info(parentBlock.SlotNumber())
-
 
 	// Add 1 more attestation field for slot3
 	block3 := types.NewBlock(&pb.BeaconBlock{
@@ -519,18 +501,8 @@ func TestProcessingBlocks(t *testing.T) {
 			{Slot: 2, AttesterBitfield: []byte{0, 0}, ShardId: 0},
 		}})
 
-	//if saveErr := chainService.SaveBlock(block3); saveErr != nil {
-	//	t.Fatalf("Cannot save block: %v", saveErr)
-	//}
-
-	//parentBlock, err = chainService.chain.getBlock(block3.ParentHash())
-	//log.Info(parentBlock.SlotNumber())
-
 	chainService.incomingBlockChan <- block1
-
 	chainService.incomingBlockChan <- block2
-
-
 	chainService.incomingBlockChan <- block3
 
 	chainService.cancel()
@@ -586,14 +558,13 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	// Initialize a parent block.
-	parentBlock := types.NewBlock(&pb.BeaconBlock{
+	block0 := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber: 5,
 	})
-	if saveErr := beaconChain.saveBlock(parentBlock); saveErr != nil {
+	if saveErr := beaconChain.saveBlock(block0); saveErr != nil {
 		t.Fatalf("Cannot save block: %v", saveErr)
 	}
-	parentHash, err := parentBlock.Hash()
+	parentHash, err := block0.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
@@ -764,13 +735,13 @@ func TestEnterDynastyTransition(t *testing.T) {
 	)
 
 	// Initialize a parent block.
-	parentBlock := types.NewBlock(&pb.BeaconBlock{
+	block0 := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber: 202,
 	})
-	if saveErr := beaconChain.saveBlock(parentBlock); saveErr != nil {
+	if saveErr := beaconChain.saveBlock(block0); saveErr != nil {
 		t.Fatalf("Cannot save block: %v", saveErr)
 	}
-	parentHash, err := parentBlock.Hash()
+	block0Hash, err := block0.Hash()
 	if err != nil {
 		t.Fatalf("Failed to compute parent block's hash: %v", err)
 	}
@@ -785,7 +756,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 	}
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
-		ParentHash:            parentHash[:],
+		ParentHash:            block0Hash[:],
 		SlotNumber:            params.MinDynastyLength + 1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],

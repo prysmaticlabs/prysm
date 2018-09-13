@@ -95,3 +95,21 @@ func TestBlockValidity(t *testing.T) {
 		t.Fatalf("failed block validation")
 	}
 }
+
+func TestIsAttestationSlotNumberValid(t *testing.T) {
+	if isAttestationSlotNumberValid(2, 1) {
+		t.Errorf("attestation slot number can't be higher than parent block's slot number")
+	}
+
+	if isAttestationSlotNumberValid(1, params.CycleLength + 1) {
+		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
+	}
+
+	if !isAttestationSlotNumberValid(2, 2) {
+		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
+	}
+
+	if !isAttestationSlotNumberValid(2, 10) {
+		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
+	}
+}
