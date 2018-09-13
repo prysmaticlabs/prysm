@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 	"testing"
 	"time"
 
@@ -54,52 +53,6 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
-func TestSaveBlockToMemory(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	cfg := &Config{
-		AssignmentBuf: 0,
-		Assigner:      &mockAssigner{},
-		Client:        &mockClient{ctrl},
-	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
-	p.SaveBlockToMemory(&pbp2p.BeaconBlock{SlotNumber: 5})
-	if p.blockMapping[5] == nil {
-		t.Error("Block does not exist when it is supposed to")
-	}
-}
-
-func TestGetBlockFromMemory(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	cfg := &Config{
-		AssignmentBuf: 0,
-		Assigner:      &mockAssigner{},
-		Client:        &mockClient{ctrl},
-	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
-	p.SaveBlockToMemory(&pbp2p.BeaconBlock{SlotNumber: 5, ParentHash: []byte{'t', 'e', 's', 't'}})
-	block, err := p.GetBlockFromMemory(5)
-	if err != nil {
-		t.Fatalf("Unable to get block %v", err)
-	}
-
-	if !bytes.Equal(block.ParentHash, []byte{'t', 'e', 's', 't'}) {
-		t.Error("parent hash not the same as the one saved")
-	}
-
-	block, err = p.GetBlockFromMemory(1)
-	if err == nil {
-		t.Error("block is able to be retrieved despite not existing")
-	}
-
-	p.blockMapping[2] = &pbp2p.BeaconBlock{SlotNumber: 8}
-	block, err = p.GetBlockFromMemory(2)
-	if err == nil {
-		t.Error("block is regarded as valid despite being invalid")
-	}
-
-}
 func TestDoesAttestationExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -110,7 +63,7 @@ func TestDoesAttestationExist(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg, &mockP2P{})
 
-	records := []*pbp2p.AttestationRecord{
+	p.pendingAttestation = []*pbp2p.AttestationRecord{
 		&pbp2p.AttestationRecord{
 			AttesterBitfield: []byte{'a'},
 		},
@@ -132,85 +85,14 @@ func TestDoesAttestationExist(t *testing.T) {
 		AttesterBitfield: []byte{'a'},
 	}
 
-	if p.DoesAttestationExist(fakeAttestation, records) {
+	if p.DoesAttestationExist(fakeAttestation) {
 		t.Fatal("invalid attestation exists")
 	}
 
-	if !p.DoesAttestationExist(realAttestation, records) {
+	if !p.DoesAttestationExist(realAttestation) {
 		t.Fatal("valid attestation does not exists")
 	}
 
-}
-
-func TestAggregateSignatures(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	cfg := &Config{
-		AssignmentBuf: 0,
-		Assigner:      &mockAssigner{},
-		Client:        &mockClient{ctrl},
-	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
-
-	records := []*pbp2p.AttestationRecord{
-		&pbp2p.AttestationRecord{
-			AggregateSig: []uint64{1},
-		},
-		&pbp2p.AttestationRecord{
-			AggregateSig: []uint64{4},
-		},
-		&pbp2p.AttestationRecord{
-			AggregateSig: []uint64{10},
-		},
-		&pbp2p.AttestationRecord{
-			AggregateSig: []uint64{9},
-		}}
-
-	aggregatedSig := []uint32{1, 4, 10, 9}
-	falseSig := []uint32{}
-
-	if !reflect.DeepEqual(aggregatedSig, p.AggregateAllSignatures(records)) {
-		t.Fatal("signatures have not been aggregated correctly")
-	}
-
-	if reflect.DeepEqual(falseSig, p.AggregateAllSignatures(records)) {
-		t.Fatal("signatures that are meant to be unequal are showing up as equal")
-	}
-
-}
-
-func TestGenerateBitmask(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	cfg := &Config{
-		AssignmentBuf: 0,
-		Assigner:      &mockAssigner{},
-		Client:        &mockClient{ctrl},
-	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
-
-	records := []*pbp2p.AttestationRecord{
-		&pbp2p.AttestationRecord{
-			AttesterBitfield: []byte{2},
-		},
-		&pbp2p.AttestationRecord{
-			AttesterBitfield: []byte{4},
-		},
-		&pbp2p.AttestationRecord{
-			AttesterBitfield: []byte{8},
-		},
-		&pbp2p.AttestationRecord{
-			AttesterBitfield: []byte{16},
-		}}
-	falseMask := []byte{20}
-	expectedMask := []byte{30}
-
-	if bytes.Equal(p.GenerateBitmask(records), falseMask) {
-		t.Fatalf("bitmasks that are equal are showing up as unequal %08b , %08b", p.GenerateBitmask(records), falseMask)
-	}
-	if !bytes.Equal(p.GenerateBitmask(records), expectedMask) {
-		t.Fatalf("bitmasks that are the same are showing up as unequal %08b , %08b", p.GenerateBitmask(records), expectedMask)
-	}
 }
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -241,13 +123,18 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 	p := NewProposer(context.Background(), cfg, &mockP2P{})
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+	mockServiceClient.EXPECT().ProposeBlock(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.ProposeResponse{
+		BlockHash: []byte("hi"),
+	}, nil)
 
 	doneChan := make(chan struct{})
-	delayChan := make(chan time.Time)
 	exitRoutine := make(chan bool)
 
 	go func() {
-		p.run(delayChan, doneChan, mockServiceClient)
+		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
@@ -270,40 +157,36 @@ func TestProposerProcessAttestation(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg, &mockP2P{})
 
-	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
-
-	// Expect first call to go through correctly.
-	mockServiceClient.EXPECT().ProposeBlock(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&pb.ProposeResponse{
-		BlockHash: []byte("hi"),
-	}, nil)
-
 	doneChan := make(chan struct{})
-	delayChan := make(chan time.Time)
 	exitRoutine := make(chan bool)
 
 	go func() {
-		p.run(delayChan, doneChan, mockServiceClient)
+		p.processAttestation(doneChan)
 		<-exitRoutine
 	}()
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	p.pendingAttestation = []*pbp2p.AttestationRecord{
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'a'},
+		},
+		&pbp2p.AttestationRecord{
+			AttesterBitfield: []byte{'b'},
+		}}
+
 	attestation := &shardingp2p.AttestationBroadcast{
-		AttestationRecord: &pbp2p.AttestationRecord{Slot: 6},
+		AttestationRecord: &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}},
 	}
 	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
 	p.attestationBuf <- msg
 
-	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-
-	delayChan <- time.Time{}
-
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
+	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
+
+	if !bytes.Equal(p.pendingAttestation[2].GetAttesterBitfield(), []byte{'c'}) {
+		t.Errorf("attestation was unable to be saved %v", p.pendingAttestation[2].GetAttesterBitfield())
+	}
 }
 
 func TestProposerServiceErrors(t *testing.T) {
@@ -330,7 +213,7 @@ func TestProposerServiceErrors(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	go func() {
-		p.run(delayChan, doneChan, mockServiceClient)
+		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
 

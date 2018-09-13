@@ -5,13 +5,11 @@ package proposer
 import (
 	"bytes"
 	"context"
-	"errors"
-	"time"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	shardingp2p "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
@@ -35,15 +33,15 @@ type assignmentAnnouncer interface {
 // in Ethereum 2.0. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	assigner         assignmentAnnouncer
-	rpcClientService rpcClientService
-	assignmentChan   chan *pbp2p.BeaconBlock
-	p2p              shared.P2P
-	attestationBuf   chan p2p.Message
-	blockMapping     map[uint64]*pbp2p.BeaconBlock
-	currentSlot      uint64
+	ctx                context.Context
+	cancel             context.CancelFunc
+	assigner           assignmentAnnouncer
+	rpcClientService   rpcClientService
+	assignmentChan     chan *pbp2p.BeaconBlock
+	p2p                shared.P2P
+	attestationBuf     chan p2p.Message
+	pendingAttestation []*pbp2p.AttestationRecord
+	mutex              *sync.Mutex
 }
 
 // Config options for proposer service.
@@ -58,15 +56,15 @@ type Config struct {
 func NewProposer(ctx context.Context, cfg *Config, validatorP2P shared.P2P) *Proposer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
-		ctx:              ctx,
-		cancel:           cancel,
-		assigner:         cfg.Assigner,
-		rpcClientService: cfg.Client,
-		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
-		p2p:              validatorP2P,
-		attestationBuf:   make(chan p2p.Message, cfg.AttestationBufferSize),
-		blockMapping:     make(map[uint64]*pbp2p.BeaconBlock),
-		currentSlot:      0,
+		ctx:                ctx,
+		cancel:             cancel,
+		assigner:           cfg.Assigner,
+		rpcClientService:   cfg.Client,
+		assignmentChan:     make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
+		p2p:                validatorP2P,
+		attestationBuf:     make(chan p2p.Message, cfg.AttestationBufferSize),
+		pendingAttestation: make([]*pbp2p.AttestationRecord, 0),
+		mutex:              &sync.Mutex{},
 	}
 }
 
@@ -74,11 +72,10 @@ func NewProposer(ctx context.Context, cfg *Config, validatorP2P shared.P2P) *Pro
 func (p *Proposer) Start() {
 	log.Info("Starting service")
 	client := p.rpcClientService.ProposerServiceClient()
-	ticker := time.NewTicker(params.SlotDuration)
-	go func() {
-		p.run(ticker.C, p.ctx.Done(), client)
-		ticker.Stop()
-	}()
+
+	go p.run(p.ctx.Done(), client)
+	go p.processAttestation(p.ctx.Done())
+
 }
 
 // Stop the main loop.
@@ -88,30 +85,10 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
-// SaveBlockToMemory will save the block to memory so that the received
-// attestations can be aggregated in it.
-func (p *Proposer) SaveBlockToMemory(block *pbp2p.BeaconBlock) {
-	p.blockMapping[block.GetSlotNumber()] = block
-}
-
-// GetBlockFromMemory will retrieve the block to memory.
-func (p *Proposer) GetBlockFromMemory(slotnumber uint64) (*pbp2p.BeaconBlock, error) {
-	block := p.blockMapping[slotnumber]
-
-	if block == nil {
-		return nil, errors.New("block does not exist")
-	}
-
-	if block.GetSlotNumber() != slotnumber {
-		return nil, errors.New("invalid block saved in memory")
-	}
-	return block, nil
-}
-
 // DoesAttestationExist checks if an attester has already attested to a block.
-func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord, records []*pbp2p.AttestationRecord) bool {
+func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord) bool {
 	exists := false
-	for _, record := range records {
+	for _, record := range p.pendingAttestation {
 		if bytes.Equal(record.GetAttesterBitfield(), attestation.GetAttesterBitfield()) {
 			exists = true
 			break
@@ -120,39 +97,55 @@ func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord, re
 	return exists
 }
 
+func (p *Proposer) AddPendingAttestation(attestation *pbp2p.AttestationRecord) {
+	p.pendingAttestation = append(p.pendingAttestation, attestation)
+}
+
 // AggregateAllSignatures aggregates all the signatures of the attesters. This is currently a
 // stub for now till BLS/other singature schemes are implemented.
 func (p *Proposer) AggregateAllSignatures(attestations []*pbp2p.AttestationRecord) []uint32 {
-	var agSig []uint32
-	for _, attestation := range attestations {
-		castedslice := make([]uint32, len(attestation.GetAggregateSig()))
-		for i, num := range attestation.GetAggregateSig() {
-			castedslice[i] = uint32(num)
-
-		}
-		agSig = append(agSig, castedslice...)
-	}
-	return agSig
+	// TODO: Implement Signature Aggregation.
+	return []uint32{}
 }
 
 // GenerateBitmask creates the attestation bitmask from all the attester bitfields in the
 // attestation records.
 func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AttestationRecord) []byte {
-	bitmask := make([]byte, len(attestations[0].GetAttesterBitfield()))
-	for _, attestation := range attestations {
-		for i, chunk := range attestation.GetAttesterBitfield() {
-			bitmask[i] = bitmask[i] | chunk
+	// TODO: Implement bitmask where all attesters bitfields are aggregated.
+	return []byte{}
+}
+
+func (p *Proposer) processAttestation(done <-chan struct{}) {
+	attestationSub := p.p2p.Subscribe(&shardingp2p.AttestationBroadcast{}, p.attestationBuf)
+	defer attestationSub.Unsubscribe()
+
+	for {
+		select {
+		case <-done:
+			log.Debug("Proposer context closed, exiting goroutine")
+			return
+		case msg := <-p.attestationBuf:
+			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)
+			if !ok {
+				log.Error("Received malformed attestation p2p message")
+				continue
+			}
+
+			attestationRecord := data.GetAttestationRecord()
+			attestationExists := p.DoesAttestationExist(attestationRecord)
+
+			if !attestationExists {
+				p.AddPendingAttestation(attestationRecord)
+				log.Info("Attestation stored in memory")
+			}
 		}
+
 	}
-	return bitmask
 }
 
 // run the main event loop that listens for a proposer assignment.
-func (p *Proposer) run(delayChan <-chan time.Time, done <-chan struct{}, client pb.ProposerServiceClient) {
-	attestationSub := p.p2p.Subscribe(&shardingp2p.AttestationBroadcast{}, p.attestationBuf)
+func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 	sub := p.assigner.ProposerAssignmentFeed().Subscribe(p.assignmentChan)
-
-	defer attestationSub.Unsubscribe()
 	defer sub.Unsubscribe()
 
 	for {
@@ -178,35 +171,16 @@ func (p *Proposer) run(delayChan <-chan time.Time, done <-chan struct{}, client 
 			}
 			latestBlockHash := blake2b.Sum512(data)
 
-			proposalBlock := &pbp2p.BeaconBlock{
-				ParentHash:   latestBlockHash[:],
-				SlotNumber:   latestBeaconBlock.GetSlotNumber() + 1,
-				RandaoReveal: []byte{},
-				Attestations: make([]*pbp2p.AttestationRecord, 0),
-				Timestamp:    ptypes.TimestampNow(),
-			}
+			// To prevent any unaccounted attestations from being added.
+			p.mutex.Lock()
 
-			blockToBroadcast := &shardingp2p.BlockBroadcast{BeaconBlock: proposalBlock}
-
-			p.SaveBlockToMemory(proposalBlock)
-			p.currentSlot = proposalBlock.GetSlotNumber()
-			p.p2p.Broadcast(blockToBroadcast)
-			log.Infof("Block for slot %d has been broadcasted", blockToBroadcast.GetBeaconBlock().GetSlotNumber())
-
-		case <-delayChan:
-
-			block := p.blockMapping[p.currentSlot]
-
-			// If it has already been more than or equal to 8s since the block has been proposed, it
-			// is sent by grpc to the beacon node
-
-			agSig := p.AggregateAllSignatures(block.GetAttestations())
-			bitmask := p.GenerateBitmask(block.GetAttestations())
+			agSig := p.AggregateAllSignatures(p.pendingAttestation)
+			bitmask := p.GenerateBitmask(p.pendingAttestation)
 
 			// TODO: Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
-				ParentHash:              block.GetParentHash(),
-				SlotNumber:              block.GetSlotNumber(),
+				ParentHash:              latestBlockHash[:],
+				SlotNumber:              latestBeaconBlock.GetSlotNumber() + 1,
 				RandaoReveal:            []byte{},
 				AttestationBitmask:      bitmask,
 				AttestationAggregateSig: agSig,
@@ -218,28 +192,10 @@ func (p *Proposer) run(delayChan <-chan time.Time, done <-chan struct{}, client 
 				log.Errorf("Could not propose block: %v", err)
 				continue
 			}
+
 			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
-			p.blockMapping[block.GetSlotNumber()] = nil
-
-		case msg := <-p.attestationBuf:
-			data, ok := msg.Data.(*shardingp2p.AttestationBroadcast)
-			if !ok {
-				log.Error("Received malformed attestation p2p message")
-				continue
-			}
-
-			attestationRecord := data.GetAttestationRecord()
-			block, err := p.GetBlockFromMemory(attestationRecord.GetSlot())
-			if err != nil {
-				log.Errorf("Unable to retrieve block from memory %v", err)
-				continue
-			}
-			attestationExists := p.DoesAttestationExist(attestationRecord, block.GetAttestations())
-
-			if !attestationExists {
-				block.Attestations = append(block.Attestations, attestationRecord)
-			}
-
+			p.pendingAttestation = nil
+			p.mutex.Unlock()
 		}
 	}
 }
