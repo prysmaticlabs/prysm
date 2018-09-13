@@ -29,6 +29,26 @@ func TestGenesisBlock(t *testing.T) {
 		t.Fatalf("genesis block hash should be identical: %x %x", h1, h2)
 	}
 
+	if b1.data.ParentHash == nil {
+		t.Fatalf("genesis block missing ParentHash field")
+	}
+
+	if b1.data.RandaoReveal == nil {
+		t.Fatalf("genesis block missing RandaoReveal field")
+	}
+
+	if b1.data.PowChainRef == nil {
+		t.Fatalf("genesis block missing PowChainRef field")
+	}
+
+	if b1.data.ActiveStateHash == nil {
+		t.Fatalf("genesis block missing ActiveStateHash field")
+	}
+
+	if b1.data.CrystallizedStateHash == nil {
+		t.Fatalf("genesis block missing CrystallizedStateHash field")
+	}
+
 	b3 := NewBlock(nil)
 	h3, err3 := b3.Hash()
 	if err3 != nil {
