@@ -18,13 +18,20 @@ INFO[0039] New contract deployed at 0x559eDab2b5896C2Bc37951325666ed08CD41099d
 ### Step 2: Launch Beacon Chain Node
 Launch beacon chain node with account holder's public key and the VRC address we just deployed
 ```
-./bazel-bin/path/to/your/beacon-chain/binary --vrcaddr 0x527580dd995c0ab81d01f9993eb39166796877a1 --pubkey aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c
-
+bazel run //beacon-chain --\
+  --vrcaddr 0x527580dd995c0ab81d01f9993eb39166796877a1 \
+  --pubkey aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c \
+  --web3provider  ws://127.0.0.1:8546 \
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+  --validator
 ```
 
 ### Step 3: Deposit 32 ETH
 
 Send a transaction to the deposit function in VRC with 32 ETH and beacon chain node account holder's public key as argument.
+Since the signature scheme and the logic to do the actual signing and validating isn't there yet, it's ok to use a random byte32 as pub key
+as long as pub key matches the one you used to launch beacon chain node. (ex: aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c)
 
 
 ### Step 4: Wait for Deposit Tx Block to be Mined
@@ -35,4 +42,3 @@ INFO[0000] Starting beacon node
 INFO[0000] Starting web3 PoW chain service at ws://127.0.0.1:8546
 INFO[0152] Validator registered in VRC with public key: aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c
 ```
-

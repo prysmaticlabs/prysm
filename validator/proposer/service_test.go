@@ -223,8 +223,9 @@ func TestLifecycle(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg, &mockP2P{})
 	p.Start()
-	testutil.AssertLogsContain(t, hook, "Starting service")
 	p.Stop()
+
+	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
@@ -250,10 +251,11 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 		<-exitRoutine
 	}()
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
-	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block for slot %d has been broadcasted", 6))
 	doneChan <- struct{}{}
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
