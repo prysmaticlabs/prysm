@@ -300,7 +300,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	return newCrystallizedState, nil
 }
 
-// NewDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.
+// newDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.
 func (c *CrystallizedState) newDynastyRecalculations(seed [32]byte) (*CrystallizedState, error) {
 	lastSlot := len(c.data.ShardAndCommitteesForSlots) - 1
 	lastCommitteeFromLastSlot := len(c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee) - 1
