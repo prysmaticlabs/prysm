@@ -27,6 +27,10 @@ type Block struct {
 	data *pb.BeaconBlock
 }
 
+type chainSearchService interface {
+	ContainsBlock(h [32]byte) (bool, error)
+}
+
 // NewBlock explicitly sets the data field of a block.
 // Return block with default fields if data is nil.
 func NewBlock(data *pb.BeaconBlock) *Block {
@@ -147,7 +151,10 @@ func (b *Block) isSlotValid() bool {
 // 2.) Ensure pow_chain_ref processed.
 // 3.) Ensure local time is large enough to process this block's slot.
 // 4.) Verify that the parent block's proposer's attestation is included.
-func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
+// IsValid is called to decide if an incoming p2p block can be processed.
+// It checks the slot against the system clock, and the validity of the included attestations.
+// Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
+func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Errorf("Could not hash incoming block: %v", err)
@@ -179,8 +186,8 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 	}
 
 	for index, attestation := range b.Attestations() {
-		if !b.isAttestationValid(index, aState, cState, parentSlot) {
-			log.Errorf("Attestation invalid: %v", attestation)
+		if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
+			log.Debugf("attestation invalid: %v", attestation)
 			return false
 		}
 	}
@@ -191,7 +198,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 // isAttestationValid validates an attestation in a block.
 // Attestations are cross-checked against validators in CrystallizedState.ShardAndCommitteesForSlots.
 // In addition, the signature is verified by constructing the list of parent hashes using ActiveState.RecentBlockHashes.
-func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
+func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
 	attestation := b.Attestations()[attestationIndex]
 
@@ -199,14 +206,27 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 		return false
 	}
 
-	if attestation.JustifiedSlot > cState.LastJustifiedSlot() {
-		log.Debugf("attestation's last justified slot has to match crystallied state's last justified slot. Found: %d. Want: %d",
+	if (attestation.JustifiedSlot <= cState.LastJustifiedSlot()) == false {
+		log.Debugf("attestation's justified slot has to be earlier or equal to crystallied state's last justified slot. Found: %d. Want <=: %d",
 			attestation.JustifiedSlot,
 			cState.LastJustifiedSlot())
 		return false
 	}
 
-	// TODO(#468): Validate last justified block hash matches in the crystallizedState.
+	hash := [32]byte{}
+	copy(attestation.JustifiedBlockHash[:], hash[:32])
+	blockInChain, err := chain.ContainsBlock(hash)
+	if err != nil {
+		//need to figure out what would be the "correct" way of going about a database error, how should we terminate?
+		log.Debugf("unable to determine if attestation's justified block hash is in the current chain: %s", err)
+		return false
+	}
+
+	if !blockInChain {
+		log.Debugf("attestation's justified block hash has to be in the current chain.  Justified block hash: %v",
+			attestation.JustifiedBlockHash)
+		return false
+	}
 
 	// Get all the block hashes up to cycle length.
 	parentHashes := aState.getSignedParentHashes(b, attestation)
