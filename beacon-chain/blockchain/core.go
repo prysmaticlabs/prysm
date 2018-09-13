@@ -66,11 +66,9 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err := beaconChain.db.Put(genesisLookupKey, genesisMarshall); err != nil {
 			return nil, err
 		}
-		fmt.Println("...saving genesis block")
 		if err := beaconChain.saveBlock(genesisBlock); err != nil {
 			return nil, err
 		}
-		fmt.Println("...saved")
 	}
 	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
@@ -186,24 +184,18 @@ func (b *BeaconChain) saveBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Saved block (slot %d) with db key: %v\n", block.SlotNumber(), key)
 	return b.db.Put(key, encodedState)
 }
 
 func (b *BeaconChain) saveBlockAndAttestations(block *types.Block) error {
-	fmt.Println("...saving block automatically after processing it")
 	err := b.saveBlock(block)
 	if err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
 	}
-	fmt.Println("...saved")
 	blockHash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("failed to get the hash for the block: %v", err)
 	}
-	fmt.Println("Immediately read block after saving block to DB")
-	bk, err := b.getBlock(blockHash)
-	fmt.Printf("...and its slot becomes %d\n", bk.SlotNumber())
 
 	for _, attestation := range block.Attestations() {
 		// Save processed attestation to local db.
@@ -250,13 +242,10 @@ func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("...reading block with db key: %v\n", key)
 
 	block := &pb.BeaconBlock{}
 
 	err = proto.Unmarshal(enc, block)
-	fmt.Printf("...reading finished, and its slot is : %d\n", block.SlotNumber)
-
 
 	return types.NewBlock(block), err
 }
@@ -404,18 +393,6 @@ func (b *BeaconChain) saveAttestationHash(blockHash [32]byte, attestationHash [3
 	if err != nil {
 		return err
 	}
-	//fmt.Println("Immediately read before saving attestation to DB")
-	//block, err := b.getBlock(blockHash)
-	//bh, _ := block.Hash()
-	//fmt.Printf("...and its slot becomes %d, hash becomes %v\n", block.SlotNumber(), bh)
 
-	//key = []byte("jietest")
-	//fmt.Printf("Saved attestation with db key: %v\n", key)
-	b.db.Put(key, encodedState)
-
-	//fmt.Println("Immediately read block after saving attestation to DB")
-	//block, err = b.getBlock(blockHash)
-	//bh, _ = block.Hash()
-	//fmt.Printf("...and its slot becomes %d, hash becomes %v\n", block.SlotNumber(), bh)
-	return nil
+	return b.db.Put(key, encodedState)
 }

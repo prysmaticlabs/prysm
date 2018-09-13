@@ -459,7 +459,7 @@ func TestProcessingBlocks(t *testing.T) {
 	}
 	block0Hash, err := block0.Hash()
 	if err != nil {
-		t.Fatalf("Failed to compute parent block's hash: %v", err)
+		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
@@ -507,7 +507,6 @@ func TestProcessingBlocks(t *testing.T) {
 
 	chainService.cancel()
 	exitRoutine <- true
-
 
 	// We should have 3 pending attestations from blocks 1 and 2
 	if len(beaconChain.ActiveState().PendingAttestations()) != 3 {
@@ -566,7 +565,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 	}
 	parentHash, err := block0.Hash()
 	if err != nil {
-		t.Fatalf("Failed to compute parent block's hash: %v", err)
+		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
@@ -734,7 +733,6 @@ func TestEnterDynastyTransition(t *testing.T) {
 		}, nil,
 	)
 
-	// Initialize a parent block.
 	block0 := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber: 202,
 	})
@@ -743,7 +741,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 	}
 	block0Hash, err := block0.Hash()
 	if err != nil {
-		t.Fatalf("Failed to compute parent block's hash: %v", err)
+		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
 	activeStateHash, _ := active.Hash()
