@@ -38,7 +38,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				RandaoReveal:          []byte{0},
 				PowChainRef:           []byte{0},
 				ActiveStateHash:       []byte{0},
-				CrystallizedStateHash: []byte{0},				
+				CrystallizedStateHash: []byte{0},
 			},
 		}
 	}
