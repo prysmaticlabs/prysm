@@ -110,7 +110,7 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
+func (ss *Service)  ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 	blockExists, err := ss.chainService.ContainsBlock(h)
@@ -148,12 +148,14 @@ func (ss *Service) run() {
 				log.Error("Received malformed beacon block hash announcement p2p message")
 				continue
 			}
-			ss.ReceiveBlockHash(data, msg.Peer)
+			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
+				log.Errorf("Received block hash failed: %v", err)
+			}
 		case msg := <-ss.blockBuf:
 			response, ok := msg.Data.(*pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
-				log.Errorf("Received malformed beacon block p2p message")
+				log.Error("Received malformed beacon block p2p message")
 				continue
 			}
 			block := types.NewBlock(response.Block)
