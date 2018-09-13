@@ -110,7 +110,7 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service)  ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
+func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 	blockExists, err := ss.chainService.ContainsBlock(h)
