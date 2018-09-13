@@ -15,7 +15,7 @@ import (
 var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
-	ContainsBlock(h [32]byte) bool
+	ContainsBlock(h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
@@ -110,15 +110,20 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) {
+func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
-	if ss.chainService.ContainsBlock(h) {
-		return
+	blockExists, err := ss.chainService.ContainsBlock(h)
+	if err != nil {
+		return err
+	}
+	if blockExists {
+		return nil
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
+	return nil
 }
 
 // run handles incoming block sync.
@@ -143,12 +148,14 @@ func (ss *Service) run() {
 				log.Error("Received malformed beacon block hash announcement p2p message")
 				continue
 			}
-			ss.ReceiveBlockHash(data, msg.Peer)
+			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
+				log.Errorf("Received block hash failed: %v", err)
+			}
 		case msg := <-ss.blockBuf:
 			response, ok := msg.Data.(*pb.BeaconBlockResponse)
 			// TODO: Handle this at p2p layer.
 			if !ok {
-				log.Errorf("Received malformed beacon block p2p message")
+				log.Error("Received malformed beacon block p2p message")
 				continue
 			}
 			block := types.NewBlock(response.Block)
@@ -156,7 +163,12 @@ func (ss *Service) run() {
 			if err != nil {
 				log.Errorf("Could not hash received block: %v", err)
 			}
-			if ss.chainService.ContainsBlock(h) {
+			blockExists, err := ss.chainService.ContainsBlock(h)
+			if err != nil {
+				log.Errorf("Can not check for block in DB: %v", err)
+				continue
+			}
+			if blockExists {
 				continue
 			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
