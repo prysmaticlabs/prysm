@@ -239,7 +239,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
 	}
 	cState.data.Validators = validators
-	if _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {
+	if _, _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {
 		t.Errorf("Dynasty calculation should have failed with invalid validator count")
 	}
 }
@@ -266,16 +266,12 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	cState.data.LastStateRecalc = 65
 
 	shardCount = 10
-	newCState, err := cState.newDynastyRecalculations([32]byte{'A'})
-
+	currentDynasty, _, err := cState.newDynastyRecalculations([32]byte{'A'})
 	if err != nil {
 		t.Fatalf("Dynasty calculation failed %v", err)
 	}
 
-	if newCState.CurrentDynasty() != 2 {
-		t.Errorf("Incorrect dynasty number, wanted 2, got: %d", newCState.CurrentDynasty())
-	}
-	if newCState.DynastyStart() != 65 {
-		t.Errorf("Incorrect dynasty start slot number, wanted 65, got: %d", newCState.DynastyStart())
+	if currentDynasty != 2 {
+		t.Errorf("Incorrect dynasty number, wanted 2, got: %d", currentDynasty)
 	}
 }
