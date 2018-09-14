@@ -16,6 +16,7 @@ const (
 
 var log = logrus.WithField("prefix", "tracer")
 
+// New creates and initializes a new tracing adapter
 func New(name, endpoint string, disable bool) (p2p.Adapter, error) {
 	if disable {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.NeverSample()})

@@ -164,7 +164,7 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) error {
 
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
-	ctx, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
+	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
 	sendBlockRequestSpan.End()
 	return nil
@@ -198,7 +198,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	ctx, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
 	// We send out a message over a feed.
 	ss.chainService.IncomingBlockFeed().Send(block)
@@ -237,7 +237,7 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 		return
 	}
 
-	ctx, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
 	ss.p2p.Send(block.Proto(), msg.Peer)
 	sendBlockSpan.End()
