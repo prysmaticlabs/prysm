@@ -17,4 +17,5 @@ go_test(
     name = "go_default_test",
     srcs = ["tracer_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/p2p:go_default_library"],
 )
