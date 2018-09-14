@@ -260,7 +260,14 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
+			// Get parent slot number.
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Errorf("Could not get parent block: %v", err)
+				continue
+			}
+
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState, parentBlock.SlotNumber()) {
 				continue
 			}
 
@@ -292,12 +299,6 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
-				continue
-			}
-
-			parentBlock, err := c.chain.getBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Failed to get parent slot of block %x", blockHash)
 				continue
 			}
 
