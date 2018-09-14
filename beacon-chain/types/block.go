@@ -206,7 +206,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 		return false
 	}
 
-	if (attestation.JustifiedSlot <= cState.LastJustifiedSlot()) == false {
+	if !(attestation.JustifiedSlot <= cState.LastJustifiedSlot()) {
 		log.Debugf("attestation's justified slot has to be earlier or equal to crystallied state's last justified slot. Found: %d. Want <=: %d",
 			attestation.JustifiedSlot,
 			cState.LastJustifiedSlot())
@@ -218,7 +218,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	blockInChain, err := chain.ContainsBlock(hash)
 	if err != nil {
 		//need to figure out what would be the "correct" way of going about a database error, how should we terminate?
-		log.Debugf("unable to determine if attestation's justified block hash is in the current chain: %s", err)
+		log.Debugf("unable to determine if attestation justified block is in the DB: %s", err)
 		return false
 	}
 
