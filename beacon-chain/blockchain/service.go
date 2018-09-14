@@ -130,6 +130,15 @@ func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
 	return c.chain.hasBlock(h)
 }
 
+// GetBlockSlotNumber returns the slot number of a block.
+func (c *ChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	block, err := c.chain.getBlock(h)
+	if err != nil {
+		return 0, fmt.Errorf("could not get block from DB: %v", err)
+	}
+	return block.SlotNumber(), nil
+}
+
 // CurrentCrystallizedState of the canonical chain.
 func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	return c.chain.CrystallizedState()
@@ -162,11 +171,6 @@ func (c *ChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, er
 // has been saved in the db.
 func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	return c.chain.getCanonicalBlockForSlot(slotnumber)
-}
-
-// CurrentShardID returns the shardID which proposer is proposing by using get shards and committees.
-func (c *ChainService) CurrentShardID() (*types.Block, error) {
-	return c.chain
 }
 
 // updateHead applies the fork choice rule to the last received slot.
@@ -273,9 +277,9 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 			// Get parent slot number.
-			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			parentSlotNumber, err := c.GetBlockSlotNumber(block.ParentHash())
 			if err != nil {
-				log.Errorf("Could not get parent block: %v", err)
+				log.Errorf("Could not get parent block slot number: %v", err)
 				continue
 			}
 
@@ -295,7 +299,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			}
 
 			// Get proposer index number corresponding to bit field.
-			proposerIndex := uint64(len(parentSlotCommittee.ArrayShardAndCommittee[0].Committee)) % parentBlock.SlotNumber() * 2
+			proposerIndex := uint64(len(parentSlotCommittee.ArrayShardAndCommittee[0].Committee)) % parentSlotNumber * 2
 
 			// If a candidate block exists and it is a lower slot, run theh fork choice rule.
 			if c.candidateBlock != nilBlock && block.SlotNumber() > c.candidateBlock.SlotNumber() {
@@ -337,7 +341,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
+			aState, err = aState.CalculateNewActiveState(block, cState, parentSlotNumber)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 				continue

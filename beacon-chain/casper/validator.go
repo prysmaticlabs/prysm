@@ -2,7 +2,6 @@ package casper
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -136,4 +135,19 @@ func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndice
 	}
 
 	return true
+}
+
+// GetProposerIndexAndShard returns the index and the shardID of a proposer from a given slot.
+func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (uint64, uint64, error) {
+	slotCommittees, err := GetShardAndCommitteesForSlot(
+		shardCommittees,
+		lcs-params.CycleLength,
+		slot)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].ShardId
+	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	return proposerShardID, proposerIndex, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -120,4 +121,22 @@ func (a *Attestation) ObliqueParentHashes() [][32]byte {
 // AggregateSig represents the aggregated signature from all the validators attesting to this block.
 func (a *Attestation) AggregateSig() []uint64 {
 	return a.data.AggregateSig
+}
+
+// AttestationMsg hashes parentHashes + shardID + slotNumber + shardBlockHash + justifiedSlot
+// into a message to use for verifying with aggregated public key and signature.
+func AttestationMsg(parentHashes [][32]byte, blockHash[]byte, slot uint64, shardID uint64, justifiedSlot uint64) [32]byte {
+	msg := make([]byte, binary.MaxVarintLen64)
+	binary.PutUvarint(msg, slot % params.CycleLength)
+	for _, parentHash := range parentHashes {
+		msg = append(msg, parentHash[:]...)
+	}
+	binary.PutUvarint(msg, shardID)
+	msg = append(msg, blockHash...)
+	msg = make([]byte, justifiedSlot)
+
+	var hashMsg [32]byte
+	h := blake2b.Sum512(msg)
+	copy(hashMsg[:], h[:32])
+	return hashMsg
 }

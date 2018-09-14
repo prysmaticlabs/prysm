@@ -2,7 +2,6 @@
 package types
 
 import (
-	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -216,23 +215,15 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 
 	// TODO(#258): Generate validators aggregated pub key.
 
-	// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
-	// to verify with aggregated public key and aggregated attestation signature.
-	msg := make([]byte, binary.MaxVarintLen64)
-	var signedHashesStr []byte
-	for _, parentHash := range parentHashes {
-		signedHashesStr = append(signedHashesStr, parentHash[:]...)
-		signedHashesStr = append(signedHashesStr, byte(' '))
-	}
-	binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
-	msg = append(msg, signedHashesStr...)
-	binary.PutUvarint(msg, attestation.ShardId)
-	msg = append(msg, attestation.ShardBlockHash...)
-
-	msgHash := blake2b.Sum512(msg)
+	attestationMsg := AttestationMsg(
+		parentHashes,
+		attestation.ShardBlockHash,
+		attestation.Slot,
+		attestation.ShardId,
+		attestation.JustifiedSlot)
 
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
-		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
+		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
