@@ -295,21 +295,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
 				log.Info("Entering cycle transition")
-				cState, err = cState.NewStateRecalculations(aState, block.SlotNumber())
+				cState, err = cState.NewStateRecalculations(aState, block)
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
 				continue
-			}
-			// Entering Dynasty transitions.
-			if cState.IsDynastyTransition(block.SlotNumber()) {
-				log.Info("Entering dynasty transition")
-				cState, err = cState.NewDynastyRecalculations(block.ParentHash())
-			}
-			if err != nil {
-				log.Errorf("Failed to calculate the new dynasty: %v", err)
-				continue
-
 			}
 
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
