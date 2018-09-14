@@ -42,4 +42,15 @@ var (
 		Usage: "HTTP-RPC server end point to use to connect to mainchain.",
 		Value: "http://localhost:8545/",
 	}
+	// DisableTracingFlag defines a flag to disable p2p message tracing
+	DisableTracingFlag = cli.BoolFlag{
+		Name:  "disable-tracing",
+		Usage: "Disable request tracing",
+	}
+	// TracingEndpointFlag flag defines the http enpoint for serving traces to Jaeger
+	TracingEndpointFlag = cli.StringFlag{
+		Name:  "tracing-endpoint",
+		Usage: "Tracing endpoint defines where beacon chain traces are exposed to Jaeger.",
+		Value: "http://127.0.0.1:14268",
+	}
 )

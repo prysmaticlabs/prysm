@@ -89,6 +89,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}
 
 	msg := p2p.Message{
+		Ctx:  context.Background(),
 		Peer: p2p.Peer{},
 		Data: hashAnnounce,
 	}
@@ -127,6 +128,7 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	msg := p2p.Message{
+		Ctx:  context.Background(),
 		Peer: p2p.Peer{},
 		Data: responseBlock,
 	}
@@ -163,6 +165,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	msg1 := p2p.Message{
+		Ctx:  context.Background(),
 		Peer: p2p.Peer{},
 		Data: responseBlock1,
 	}
@@ -177,6 +180,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	msg2 := p2p.Message{
+		Ctx:  context.Background(),
 		Peer: p2p.Peer{},
 		Data: responseBlock2,
 	}
@@ -209,6 +213,7 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	invalidmsg := p2p.Message{
+		Ctx:  context.Background(),
 		Data: malformedRequest,
 		Peer: p2p.Peer{},
 	}
@@ -221,6 +226,7 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	msg1 := p2p.Message{
+		Ctx:  context.Background(),
 		Data: request1,
 		Peer: p2p.Peer{},
 	}
@@ -250,6 +256,7 @@ func TestBlockRequestGetCanonicalError(t *testing.T) {
 	}
 
 	msg1 := p2p.Message{
+		Ctx:  context.Background(),
 		Data: request1,
 		Peer: p2p.Peer{},
 	}
@@ -281,6 +288,7 @@ func TestBlockRequestBySlot(t *testing.T) {
 	}
 
 	msg1 := p2p.Message{
+		Ctx:  context.Background(),
 		Data: request1,
 		Peer: p2p.Peer{},
 	}

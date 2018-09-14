@@ -119,7 +119,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			}
 
 			var h Handler = func(ctx context.Context, pMsg Message) {
-				s.emit(feed, msg, msgType)
+				s.emit(pMsg.Ctx, feed, msg, msgType)
 			}
 
 			pMsg := Message{}
@@ -133,7 +133,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}()
 }
 
-func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
+func (s *Server) emit(ctx context.Context, feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
 		log.Errorf("Received message is not a protobuf message: %s", msgType)
@@ -145,7 +145,7 @@ func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.T
 		return
 	}
 
-	i := feed.Send(Message{Data: d})
+	i := feed.Send(Message{Ctx: ctx, Data: d})
 	log.WithFields(logrus.Fields{
 		"numSubs": i,
 		"msgType": fmt.Sprintf("%T", d),

@@ -70,6 +70,8 @@ VERSION:
 		utils.KeyFlag,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
+		cmd.DisableTracingFlag,
+		cmd.TracingEndpointFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,

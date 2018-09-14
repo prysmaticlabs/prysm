@@ -65,6 +65,8 @@ VERSION:
 		types.BeaconRPCProviderFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
+		cmd.DisableTracingFlag,
+		cmd.TracingEndpointFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
