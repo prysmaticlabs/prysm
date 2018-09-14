@@ -64,13 +64,12 @@ message CrystallizedState {
   uint64 last_justified_slot = 3;
   uint64 last_finalized_slot = 4;
   uint64 current_dynasty = 5;
-  uint64 crosslinking_start_shard = 6;
-  uint64 total_deposits = 7;
-  bytes dynasty_seed = 8;
-  uint64 dynasty_start = 9;
-  repeated CrosslinkRecord crosslink_records = 10;
-  repeated ValidatorRecord validators = 11;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 12;
+  uint64 total_deposits = 6;
+  bytes dynasty_seed = 7;
+  uint64 dynasty_start = 8;
+  repeated CrosslinkRecord crosslink_records = 9;
+  repeated ValidatorRecord validators = 10;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 11;
 }
 
 message ShardAndCommitteeArray {

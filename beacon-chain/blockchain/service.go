@@ -3,13 +3,10 @@ package blockchain
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
@@ -276,32 +273,18 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-			// Get parent slot number.
-			parentSlotNumber, err := c.GetBlockSlotNumber(block.ParentHash())
+
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
-				log.Errorf("Could not get parent block slot number: %v", err)
+				log.Errorf("Could not get parent block: %v", err)
 				continue
 			}
 
-			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
-				log.Errorf("Block 0x%v is invalid. Skipping.", blockHash)
+			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState, parentBlock.SlotNumber()) {
 				continue
 			}
 
-			// Check if proposer has attested for the incoming block.
-			parentSlotCommittee, err := casper.GetShardAndCommitteesForSlot(
-				cState.ShardAndCommitteesForSlots(),
-				cState.LastStateRecalc()-params.CycleLength,
-				parentBlock.SlotNumber())
-			if err != nil {
-				log.Debugf("unable to get validator committee for parent slot: ", err)
-				continue
-			}
-
-			// Get proposer index number corresponding to bit field.
-			proposerIndex := uint64(len(parentSlotCommittee.ArrayShardAndCommittee[0].Committee)) % parentSlotNumber * 2
-
-			// If a candidate block exists and it is a lower slot, run theh fork choice rule.
+			// If a candidate block exists and it is a lower slot, run the fork choice rule.
 			if c.candidateBlock != nilBlock && block.SlotNumber() > c.candidateBlock.SlotNumber() {
 				c.updateHead()
 			}
@@ -325,23 +308,14 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 			// Entering cycle transitions.
 			if cState.IsCycleTransition(block.SlotNumber()) {
 				log.Info("Entering cycle transition")
-				cState, err = cState.NewStateRecalculations(aState, block.SlotNumber())
+				cState, err = cState.NewStateRecalculations(aState, block)
 			}
 			if err != nil {
 				log.Errorf("Failed to calculate the new crystallized state: %v", err)
 				continue
 			}
-			// Entering Dynasty transitions.
-			if cState.IsDynastyTransition(block.SlotNumber()) {
-				log.Info("Entering dynasty transition")
-				cState, err = cState.NewDynastyRecalculations(block.ParentHash())
-			}
-			if err != nil {
-				log.Errorf("Failed to calculate the new dynasty: %v", err)
-				continue
-			}
 
-			aState, err = aState.CalculateNewActiveState(block, cState, parentSlotNumber)
+			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 				continue

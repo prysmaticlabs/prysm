@@ -56,6 +56,14 @@ func (ms *mockChainService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return types.NewCrystallizedState(nil)
+}
+
+func (ms *mockChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	return 0, nil
+}
+
 func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
 	if ms.checkError {
 		return ms.slotExists, errors.New("mock check canonical block error")
@@ -334,6 +342,14 @@ func (ms *mockEmptyChainService) CheckForCanonicalBlockBySlot(slotnumber uint64)
 
 func (ms *mockEmptyChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	return nil, nil
+}
+
+func (ms *mockEmptyChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return types.NewCrystallizedState(nil)
+}
+
+func (ms *mockEmptyChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	return 0, nil
 }
 
 func TestStartEmptyState(t *testing.T) {

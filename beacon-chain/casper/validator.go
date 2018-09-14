@@ -2,6 +2,7 @@ package casper
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -94,9 +95,7 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 func GetAttestersTotalDeposit(attestations []*pb.AttestationRecord) uint64 {
 	var numOfBits int
 	for _, attestation := range attestations {
-		for _, byte := range attestation.AttesterBitfield {
-			numOfBits += int(utils.BitSetCount(byte))
-		}
+		numOfBits += int(utils.BitSetCount(attestation.AttesterBitfield))
 	}
 	// Assume there's no slashing condition, the following logic will change later phase.
 	return uint64(numOfBits) * params.DefaultBalance
@@ -139,9 +138,15 @@ func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndice
 
 // GetProposerIndexAndShard returns the index and the shardID of a proposer from a given slot.
 func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (uint64, uint64, error) {
+	if lcs < params.CycleLength {
+		lcs = 0
+	} else {
+		lcs = lcs - params.CycleLength
+	}
+
 	slotCommittees, err := GetShardAndCommitteesForSlot(
 		shardCommittees,
-		lcs-params.CycleLength,
+		lcs,
 		slot)
 	if err != nil {
 		return 0, 0, err
