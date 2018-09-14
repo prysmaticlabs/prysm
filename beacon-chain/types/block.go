@@ -52,12 +52,15 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock() *Block {
+func NewGenesisBlock(activeStateHash [32]byte, crystallizedStateHash [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
+
+	gb.data.ActiveStateHash = activeStateHash[:]
+	gb.data.CrystallizedStateHash = crystallizedStateHash[:]
 	return gb
 }
 

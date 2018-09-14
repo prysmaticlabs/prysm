@@ -70,13 +70,16 @@ func TestNewBeaconChain(t *testing.T) {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 
-	if !reflect.DeepEqual(beaconChain.ActiveState(), aState) {
+	types.NewGenesisBlock([32]byte{}, [32]byte{})
+
+	if !proto.Equal(beaconChain.ActiveState().Proto(), aState.Proto()) {
 		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), aState)
 	}
 
-	if !reflect.DeepEqual(beaconChain.CrystallizedState(), cState) {
+	if !proto.Equal(beaconChain.CrystallizedState().Proto(), cState.Proto()) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), cState)
 	}
+
 	if _, err := beaconChain.GenesisBlock(); err != nil {
 		t.Errorf("Getting new beaconchain genesis failed: %v", err)
 	}
