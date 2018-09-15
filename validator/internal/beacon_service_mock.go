@@ -5,13 +5,14 @@ package internal
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
-	reflect "reflect"
 )
 
 // MockBeaconServiceClient is a mock of BeaconServiceClient interface

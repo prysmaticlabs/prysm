@@ -99,14 +99,14 @@ func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AggregatedAttestation
 	return exists
 }
 
-// Adds a pending attestation to the memory so that it can be included in the next
-// proposed block.
+// AddPendingAttestation adds a pending attestation to the memory so that it can be included
+// in the next proposed block.
 func (p *Proposer) AddPendingAttestation(attestation *pbp2p.AggregatedAttestation) {
 	p.pendingAttestation = append(p.pendingAttestation, attestation)
 }
 
 // AggregateAllSignatures aggregates all the signatures of the attesters. This is currently a
-// stub for now till BLS/other singature schemes are implemented.
+// stub for now till BLS/other signature schemes are implemented.
 func (p *Proposer) AggregateAllSignatures(attestations []*pbp2p.AggregatedAttestation) []uint32 {
 	// TODO: Implement Signature Aggregation.
 	return []uint32{}

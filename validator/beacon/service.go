@@ -73,6 +73,8 @@ func (s *Service) ProposerAssignmentFeed() *event.Feed {
 	return s.proposerAssignmentFeed
 }
 
+// ProcessedAttestationFeed returns a feed that is wriiten to whenever a validator receives an
+// attestation from the beacon node.
 func (s *Service) ProcessedAttestationFeed() *event.Feed {
 	return s.processedAttestationFeed
 }

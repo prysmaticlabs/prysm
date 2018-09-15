@@ -48,9 +48,8 @@ func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
 }
 
 type mockAnnouncer struct {
-	blockFeed       *event.Feed
-	stateFeed       *event.Feed
-	attestationFeed *event.Feed
+	blockFeed *event.Feed
+	stateFeed *event.Feed
 }
 
 func newMockAnnouncer() *mockAnnouncer {
