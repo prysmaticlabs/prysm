@@ -26,7 +26,7 @@ type Server struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	mutex        *sync.Mutex
-	feeds        map[reflect.Type]*event.Feed
+	feeds        map[reflect.Type]Feed
 	host         host.Host
 	gsub         *floodsub.PubSub
 	topicMapping map[reflect.Type]string
@@ -51,7 +51,7 @@ func NewServer() (*Server, error) {
 	return &Server{
 		ctx:          ctx,
 		cancel:       cancel,
-		feeds:        make(map[reflect.Type]*event.Feed),
+		feeds:        make(map[reflect.Type]Feed),
 		host:         host,
 		gsub:         gsub,
 		mutex:        &sync.Mutex{},
@@ -133,7 +133,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}()
 }
 
-func (s *Server) emit(feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
+func (s *Server) emit(feed Feed, msg *floodsub.Message, msgType reflect.Type) {
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
 		log.Errorf("Received message is not a protobuf message: %s", msgType)
