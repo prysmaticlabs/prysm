@@ -21,14 +21,15 @@ type rpcClientService interface {
 
 // Service that interacts with a beacon node via RPC.
 type Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	rpcClient              rpcClientService
-	validatorIndex         int
-	assignedSlot           uint64
-	responsibility         string
-	attesterAssignmentFeed *event.Feed
-	proposerAssignmentFeed *event.Feed
+	ctx                      context.Context
+	cancel                   context.CancelFunc
+	rpcClient                rpcClientService
+	validatorIndex           int
+	assignedSlot             uint64
+	responsibility           string
+	attesterAssignmentFeed   *event.Feed
+	proposerAssignmentFeed   *event.Feed
+	processedAttestationFeed *event.Feed
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node.
@@ -49,6 +50,7 @@ func (s *Service) Start() {
 	client := s.rpcClient.BeaconServiceClient()
 	go s.fetchBeaconBlocks(client)
 	go s.fetchCrystallizedState(client)
+	go s.fetchProcessedAttestations(client)
 }
 
 // Stop the main loop..
@@ -68,6 +70,10 @@ func (s *Service) AttesterAssignmentFeed() *event.Feed {
 // slot to proposer blocks.
 func (s *Service) ProposerAssignmentFeed() *event.Feed {
 	return s.proposerAssignmentFeed
+}
+
+func (s *Service) ProcessedAttestationFeed() *event.Feed {
+	return s.processedAttestationFeed
 }
 
 func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
@@ -199,6 +205,29 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		}
 		s.assignedSlot = currentAssignedSlots[slotIndex]
 		log.Debug("Validator selected as attester at slot number: %d", s.assignedSlot)
+	}
+}
+
+// fetchProcessedAttestations fetches processed attestations from the beacon node.
+func (s *Service) fetchProcessedAttestations(client pb.BeaconServiceClient) {
+	stream, err := client.LatestAttestation(s.ctx, &empty.Empty{})
+	if err != nil {
+		log.Errorf("Could not setup beacon chain attestation streaming client: %v", err)
+		return
+	}
+	for {
+		attestation, err := stream.Recv()
+
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Errorf("Could not receive latest attestation from stream: %v", err)
+			continue
+		}
+		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
+		s.processedAttestationFeed.Send(attestation)
 	}
 }
 

@@ -12,8 +12,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	blake2b "golang.org/x/crypto/blake2b"
 )
@@ -28,6 +26,10 @@ type assignmentAnnouncer interface {
 	ProposerAssignmentFeed() *event.Feed
 }
 
+type rpcAttestationService interface {
+	ProcessedAttestationFeed() *event.Feed
+}
+
 // Proposer holds functionality required to run a block proposer
 // in Ethereum 2.0. Must satisfy the Service interface defined in
 // sharding/service.go.
@@ -37,8 +39,8 @@ type Proposer struct {
 	assigner           assignmentAnnouncer
 	rpcClientService   rpcClientService
 	assignmentChan     chan *pbp2p.BeaconBlock
-	p2p                shared.P2P
-	attestationBuf     chan p2p.Message
+	attestationService rpcAttestationService
+	attestationChan    chan *pbp2p.AttestationRecord
 	pendingAttestation []*pbp2p.AttestationRecord
 	mutex              *sync.Mutex
 }
@@ -48,20 +50,21 @@ type Config struct {
 	AssignmentBuf         int
 	AttestationBufferSize int
 	Assigner              assignmentAnnouncer
+	AttesterFeed          rpcAttestationService
 	Client                rpcClientService
 }
 
 // NewProposer creates a new attester instance.
-func NewProposer(ctx context.Context, cfg *Config, validatorP2P shared.P2P) *Proposer {
+func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
 		ctx:                ctx,
 		cancel:             cancel,
 		assigner:           cfg.Assigner,
 		rpcClientService:   cfg.Client,
+		attestationService: cfg.AttesterFeed,
 		assignmentChan:     make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
-		p2p:                validatorP2P,
-		attestationBuf:     make(chan p2p.Message, cfg.AttestationBufferSize),
+		attestationChan:    make(chan *pbp2p.AttestationRecord, cfg.AttestationBufferSize),
 		pendingAttestation: make([]*pbp2p.AttestationRecord, 0),
 		mutex:              &sync.Mutex{},
 	}
@@ -118,7 +121,7 @@ func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AttestationRecord) []by
 
 // processAttestation processes incoming broadcasted attestations from the beacon node.
 func (p *Proposer) processAttestation(done <-chan struct{}) {
-	attestationSub := p.p2p.Subscribe(&pbp2p.AttestationBroadcast{}, p.attestationBuf)
+	attestationSub := p.attestationService.ProcessedAttestationFeed().Subscribe(p.attestationChan)
 	defer attestationSub.Unsubscribe()
 
 	for {
@@ -126,16 +129,9 @@ func (p *Proposer) processAttestation(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
-		case msg := <-p.attestationBuf:
-			data, ok := msg.Data.(*pbp2p.AttestationBroadcast)
-			if !ok {
-				log.Error("Received malformed attestation p2p message")
-				continue
-			}
+		case attestationRecord := <-p.attestationChan:
 
-			attestationRecord := data.GetAttestationRecord()
 			attestationExists := p.DoesAttestationExist(attestationRecord)
-
 			if !attestationExists {
 				p.AddPendingAttestation(attestationRecord)
 				log.Info("Attestation stored in memory")

@@ -197,17 +197,13 @@ func (s *ShardEthereum) registerProposerService() error {
 		return err
 	}
 
-	var validatorp2p *p2p.Server
-	if err := s.services.FetchService(&validatorp2p); err != nil {
-		return err
-	}
-
 	prop := proposer.NewProposer(context.TODO(), &proposer.Config{
 		Assigner:              beaconService,
 		Client:                rpcService,
 		AssignmentBuf:         100,
 		AttestationBufferSize: 100,
-	}, validatorp2p)
+		AttesterFeed:          beaconService,
+	})
 	return s.services.RegisterService(prop)
 }
 
