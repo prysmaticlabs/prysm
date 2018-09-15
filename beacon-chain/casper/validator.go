@@ -92,7 +92,7 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 }
 
 // GetAttestersTotalDeposit from the pending attestations.
-func GetAttestersTotalDeposit(attestations []*pb.AttestationRecord) uint64 {
+func GetAttestersTotalDeposit(attestations []*pb.AggregatedAttestation) uint64 {
 	var numOfBits int
 	for _, attestation := range attestations {
 		numOfBits += int(utils.BitSetCount(attestation.AttesterBitfield))
@@ -111,7 +111,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
 // defined in the Crystallized State.
-func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndices []uint32) bool {
+func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
 	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
 		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",

@@ -14,15 +14,15 @@ import (
 // Attestation is the primary source of load on the beacon chain, it's used to
 // attest to some parent block in the chain and block hash in a shard.
 type Attestation struct {
-	data *pb.AttestationRecord
+	data *pb.AggregatedAttestation
 }
 
 // NewAttestation explicitly sets the data field of a attestation.
 // Return attestation with default fields if data is nil.
-func NewAttestation(data *pb.AttestationRecord) *Attestation {
+func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 	if data == nil {
 		return &Attestation{
-			data: &pb.AttestationRecord{
+			data: &pb.AggregatedAttestation{
 				Slot:                0,
 				ShardId:             0,
 				JustifiedSlot:       0,
@@ -38,7 +38,7 @@ func NewAttestation(data *pb.AttestationRecord) *Attestation {
 }
 
 // Proto returns the underlying protobuf data.
-func (a *Attestation) Proto() *pb.AttestationRecord {
+func (a *Attestation) Proto() *pb.AggregatedAttestation {
 	return a.data
 }
 

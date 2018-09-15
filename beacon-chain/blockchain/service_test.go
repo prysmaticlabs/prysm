@@ -264,7 +264,7 @@ func TestRunningChainService(t *testing.T) {
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: []byte{128, 0},
 			ShardId:          0,
@@ -397,7 +397,7 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 		CrystallizedStateHash: crystallizedHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
 		},
 	})
@@ -467,7 +467,7 @@ func TestProcessingBlocks(t *testing.T) {
 		SlotNumber:            4,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: []byte{16, 0},
 			ShardId:          0,
@@ -482,7 +482,7 @@ func TestProcessingBlocks(t *testing.T) {
 	block2 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block1Hash[:],
 		SlotNumber: 5,
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{Slot: 0, AttesterBitfield: []byte{8, 0}, ShardId: 0},
 			{Slot: 1, AttesterBitfield: []byte{8, 0}, ShardId: 0},
 		}})
@@ -495,7 +495,7 @@ func TestProcessingBlocks(t *testing.T) {
 	block3 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block2Hash[:],
 		SlotNumber: 6,
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{Slot: 0, AttesterBitfield: []byte{4, 0}, ShardId: 0},
 			{Slot: 1, AttesterBitfield: []byte{4, 0}, ShardId: 0},
 			{Slot: 2, AttesterBitfield: []byte{4, 0}, ShardId: 0},
@@ -573,7 +573,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             10,
 			AttesterBitfield: []byte{},
 			ShardId:          0,
@@ -636,7 +636,7 @@ func TestEnterCycleTransition(t *testing.T) {
 		SlotNumber:            64,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: []byte{128, 0},
 			ShardId:          0,
@@ -725,7 +725,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 	active := types.NewActiveState(
 		&pb.ActiveState{
 			RecentBlockHashes: recentBlockhashes,
-			PendingAttestations: []*pb.AttestationRecord{
+			PendingAttestations: []*pb.AggregatedAttestation{
 				{Slot: 100, AttesterBitfield: []byte{0}},
 				{Slot: 101, AttesterBitfield: []byte{0}},
 				{Slot: 102, AttesterBitfield: []byte{0}},
@@ -759,7 +759,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 		SlotNumber:            params.MinDynastyLength + 1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             200,
 			AttesterBitfield: []byte{32},
 			ShardId:          0,

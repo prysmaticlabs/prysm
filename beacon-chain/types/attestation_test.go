@@ -9,7 +9,7 @@ import (
 )
 
 func TestAttestation(t *testing.T) {
-	data := &pb.AttestationRecord{
+	data := &pb.AggregatedAttestation{
 		Slot:                0,
 		ShardId:             0,
 		JustifiedSlot:       0,

@@ -124,7 +124,7 @@ func (b *Block) AttestationCount() int {
 }
 
 // Attestations returns an array of attestations in the block.
-func (b *Block) Attestations() []*pb.AttestationRecord {
+func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 
@@ -163,7 +163,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		return false
 	}
 
-	// verify proposer from last slot is in one of the AttestationRecord.
+	// verify proposer from last slot is in one of the AggregatedAttestation.
 	var proposerAttested bool
 	_, proposerIndex, err := casper.GetProposerIndexAndShard(
 		cState.ShardAndCommitteesForSlots(),

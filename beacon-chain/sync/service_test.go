@@ -138,7 +138,7 @@ func TestProcessBlock(t *testing.T) {
 		PowChainRef: []byte{1, 2, 3, 4, 5},
 		ParentHash:  make([]byte, 32),
 	}
-	attestation := &pb.AttestationRecord{
+	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
 		ShardId:        0,
 		ShardBlockHash: []byte{'A'},
