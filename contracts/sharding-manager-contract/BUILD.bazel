@@ -5,7 +5,6 @@ go_library(
     srcs = ["sharding_manager.go"],
     importpath = "github.com/prysmaticlabs/prysm/contracts/sharding-manager-contract",
     visibility = ["//client:__subpackages__"],
-    tags =["manual"],
     deps = [
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",
