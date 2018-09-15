@@ -89,7 +89,7 @@ func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
 			latestBlockHash := blake2b.Sum512(data)
 
 			req := &pb.AttestRequest{
-				Attestation: &pbp2p.AttestationRecord{
+				Attestation: &pbp2p.AggregatedAttestation{
 					Slot:             latestBeaconBlock.GetSlotNumber(),
 					ShardId:          a.shardID,
 					ShardBlockHash:   latestBlockHash[:],

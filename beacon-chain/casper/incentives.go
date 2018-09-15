@@ -11,7 +11,7 @@ var log = logrus.WithField("prefix", "casper")
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
-func CalculateRewards(attestations []*pb.AttestationRecord, validators []*pb.ValidatorRecord, dynasty uint64, totalDeposit uint64) ([]*pb.ValidatorRecord, error) {
+func CalculateRewards(attestations []*pb.AggregatedAttestation, validators []*pb.ValidatorRecord, dynasty uint64, totalDeposit uint64) ([]*pb.ValidatorRecord, error) {
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 	attesterDeposits := GetAttestersTotalDeposit(attestations)
 

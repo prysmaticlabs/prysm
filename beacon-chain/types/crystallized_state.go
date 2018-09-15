@@ -81,7 +81,6 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			CurrentDynasty:             1,
-			CrosslinkingStartShard:     0,
 			TotalDeposits:              totalDeposit,
 			DynastySeed:                []byte{},
 			DynastyStart:               0,
@@ -123,11 +122,6 @@ func (c *CrystallizedState) LastStateRecalc() uint64 {
 // JustifiedStreak returns number of consecutive justified slots ending at head.
 func (c *CrystallizedState) JustifiedStreak() uint64 {
 	return c.data.JustifiedStreak
-}
-
-// CrosslinkingStartShard returns next shard that crosslinking assignment will start from.
-func (c *CrystallizedState) CrosslinkingStartShard() uint64 {
-	return c.data.CrosslinkingStartShard
 }
 
 // LastJustifiedSlot return the last justified slot of the beacon chain.
@@ -183,9 +177,9 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalc()+params.CycleLength
 }
 
-// IsDynastyTransition checks if a dynasty transition can be processed. At that point,
+// isDynastyTransition checks if a dynasty transition can be processed. At that point,
 // validator shuffle will occur.
-func (c *CrystallizedState) IsDynastyTransition(slotNumber uint64) bool {
+func (c *CrystallizedState) isDynastyTransition(slotNumber uint64) bool {
 	if c.LastFinalizedSlot() <= c.DynastyStart() {
 		return false
 	}
@@ -211,7 +205,7 @@ func (c *CrystallizedState) IsDynastyTransition(slotNumber uint64) bool {
 }
 
 // getAttesterIndices fetches the attesters for a given attestation record.
-func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
+func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
 	slotsStart := int64(c.LastStateRecalc()) - params.CycleLength
 	slotIndex := (int64(attestation.Slot) - slotsStart) % params.CycleLength
 	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
@@ -227,13 +221,17 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord
 
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, slotNumber uint64) (*CrystallizedState, error) {
+// We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
 	lastStateRecalc := c.LastStateRecalc()
+	currentDynasty := c.CurrentDynasty()
+	dynastyStart := c.DynastyStart()
 	blockVoteCache := aState.GetBlockVoteCache()
+	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	recentBlockHashes := aState.RecentBlockHashes()
@@ -259,7 +257,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, slotNumb
 		}
 	}
 
-	newCrossLinkRecords, err := c.processCrosslinks(aState.PendingAttestations(), slotNumber)
+	newCrossLinkRecords, err := c.processCrosslinks(aState.PendingAttestations(), lastStateRecalc+params.CycleLength)
 	if err != nil {
 		return nil, err
 	}
@@ -278,13 +276,21 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, slotNumb
 		nextCycleBalance += c.Validators()[index].Balance
 	}
 
-	// Construct new crystallized state for cycle transition.
+	c.data.LastFinalizedSlot = finalizedSlot
+	// Entering new dynasty transition.
+	if c.isDynastyTransition(block.SlotNumber()) {
+		log.Info("Entering dynasty transition")
+		dynastyStart = lastStateRecalc
+		currentDynasty, ShardAndCommitteesForSlots, err = c.newDynastyRecalculations(block.ParentHash())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Construct new crystallized state after cycle and dynasty transition.
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
-		ShardAndCommitteesForSlots: c.data.ShardAndCommitteesForSlots,
-		CrosslinkingStartShard:     c.data.CrosslinkingStartShard,
-		DynastyStart:               c.data.DynastyStart,
-		CurrentDynasty:             c.data.CurrentDynasty,
 		DynastySeed:                c.data.DynastySeed,
+		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
 		Validators:                 rewardedValidators,
 		LastStateRecalc:            lastStateRecalc + params.CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
@@ -292,45 +298,32 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, slotNumb
 		LastFinalizedSlot:          finalizedSlot,
 		CrosslinkRecords:           newCrossLinkRecords,
 		TotalDeposits:              nextCycleBalance,
+		DynastyStart:               dynastyStart,
+		CurrentDynasty:             currentDynasty,
 	})
 
 	return newCrystallizedState, nil
 }
 
-// NewDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.
-func (c *CrystallizedState) NewDynastyRecalculations(seed [32]byte) (*CrystallizedState, error) {
+// newDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.
+func (c *CrystallizedState) newDynastyRecalculations(seed [32]byte) (uint64, []*pb.ShardAndCommitteeArray, error) {
 	lastSlot := len(c.data.ShardAndCommitteesForSlots) - 1
 	lastCommitteeFromLastSlot := len(c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee) - 1
 	crosslinkLastShard := c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].ShardId
 	crosslinkNextShard := (crosslinkLastShard + 1) % uint64(shardCount)
-	dynasty := c.CurrentDynasty() + 1
+	nextDynasty := c.CurrentDynasty() + 1
 
 	newShardCommitteeArray, err := casper.ShuffleValidatorsToCommittees(
 		seed,
 		c.data.Validators,
-		dynasty,
+		nextDynasty,
 		crosslinkNextShard,
 	)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
-	// Construct new crystallized state for dynasty transition.
-	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
-		Validators:                 c.data.Validators,
-		LastStateRecalc:            c.data.LastStateRecalc,
-		LastJustifiedSlot:          c.data.LastJustifiedSlot,
-		JustifiedStreak:            c.data.JustifiedStreak,
-		LastFinalizedSlot:          c.data.LastFinalizedSlot,
-		TotalDeposits:              c.data.TotalDeposits,
-		CrosslinkRecords:           c.data.CrosslinkRecords,
-		DynastyStart:               c.data.LastStateRecalc,
-		CrosslinkingStartShard:     crosslinkNextShard,
-		DynastySeed:                seed[:],
-		CurrentDynasty:             dynasty,
-		ShardAndCommitteesForSlots: append(c.data.ShardAndCommitteesForSlots[:params.CycleLength], newShardCommitteeArray...),
-	})
-	return newCrystallizedState, nil
+	return nextDynasty, append(c.data.ShardAndCommitteesForSlots[:params.CycleLength], newShardCommitteeArray...), nil
 }
 
 type shardAttestation struct {
@@ -358,7 +351,7 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 // processCrosslinks checks if the proposed shard block has recevied
 // 2/3 of the votes. If yes, we update crosslink record to point to
 // the proposed shard block with latest dynasty and slot numbers.
-func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AttestationRecord, slot uint64) ([]*pb.CrosslinkRecord, error) {
+func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64) ([]*pb.CrosslinkRecord, error) {
 	validators := c.data.Validators
 	dynasty := c.data.CurrentDynasty
 	crosslinkRecords := copyCrosslinks(c.data.CrosslinkRecords)
