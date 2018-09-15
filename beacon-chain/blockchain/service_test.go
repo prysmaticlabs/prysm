@@ -769,8 +769,8 @@ func TestIncomingAttestation(t *testing.T) {
 
 	attestation := types.NewAttestation(
 		&pb.AggregatedAttestation{
-			Slot: 1,
-			ShardId: 1,
+			Slot:           1,
+			ShardId:        1,
 			ShardBlockHash: []byte{'A'},
 		})
 

@@ -191,3 +191,24 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
 	}
 }
+
+func TestGetProposerIndexAndShard(t *testing.T) {
+	shardCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 99, Committee: []uint32{0, 1, 2, 3, 4}},
+		}},
+	}
+	if _, _, err := GetProposerIndexAndShard(shardCommittees, 100, 0); err == nil {
+		t.Error("GetProposerIndexAndShard should have failed with invalid lcs")
+	}
+	shardID, index, err := GetProposerIndexAndShard(shardCommittees, 0, 0)
+	if err != nil {
+		t.Fatalf("GetProposerIndexAndShard failed with %v", err)
+	}
+	if shardID != 99 {
+		t.Errorf("Invalid shard ID. Wanted 99, got %d", shardID)
+	}
+	if index != 0 {
+		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
+	}
+}

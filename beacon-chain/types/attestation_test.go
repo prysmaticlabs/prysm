@@ -52,4 +52,7 @@ func TestAttestation(t *testing.T) {
 	if !bytes.Equal(attestation.ShardBlockHash(), []byte{0}) {
 		t.Errorf("mismatched shard block hash")
 	}
+	if err := attestation.VerifyAttestation(0); err != nil {
+		t.Errorf("verify attestation failed: %v", err)
+	}
 }
