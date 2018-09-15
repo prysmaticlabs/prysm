@@ -152,12 +152,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				return
 			}
 		case msg := <-s.blockBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.BeaconBlockResponse)
 
 			if data.Block.GetSlotNumber() > highestObservedSlot {
 				highestObservedSlot = data.Block.GetSlotNumber()
@@ -186,12 +181,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 			s.requestNextBlock()
 		case msg := <-s.crystallizedStateBuf:
-			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed crystallized state p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.CrystallizedStateResponse)
 
 			if s.initialCrystallizedStateHash == [32]byte{} {
 				continue
