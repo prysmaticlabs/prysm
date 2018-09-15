@@ -244,11 +244,11 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
 			if err := c.chain.saveAttestation(attestation); err != nil {
-				log.Errorf("Could not check existence of parent: %v", err)
+				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
 
-			log.Info("Relaying attestation 0x%v to p2p service", h)
+			log.Infof("Relaying attestation 0x%x to subscriber", h)
 			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 
 		// Listen for a newly received incoming block from the sync service.
