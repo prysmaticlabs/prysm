@@ -32,6 +32,7 @@ message BeaconBlockRequestBySlotNumber{
 
 message BeaconBlockResponse {
   BeaconBlock block = 1;
+  AggregatedAttestation attestation = 2;
 }
 
 message BeaconBlock {
@@ -42,7 +43,7 @@ message BeaconBlock {
   bytes active_state_hash = 5;
   bytes crystallized_state_hash = 6;
   google.protobuf.Timestamp timestamp = 7;
-  repeated AttestationRecord attestations = 8;
+  repeated AggregatedAttestation attestations = 8;
 }
 
 message CrystallizedStateHashAnnounce {
@@ -93,7 +94,7 @@ message ActiveStateResponse {
 }
 
 message ActiveState {
-  repeated AttestationRecord pending_attestations = 1;
+  repeated AggregatedAttestation pending_attestations = 1;
   repeated bytes recent_block_hashes = 2;
 }
 
@@ -107,7 +108,7 @@ message ValidatorRecord {
   uint64 end_dynasty = 7;
 }
 
-message AttestationRecord {
+message AggregatedAttestation {
   uint64 slot = 1;
   uint64 shard_id = 2;
   uint64 justified_slot = 3;

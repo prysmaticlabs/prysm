@@ -29,7 +29,7 @@ func NewGenesisActiveState() *ActiveState {
 
 	return &ActiveState{
 		data: &pb.ActiveState{
-			PendingAttestations: []*pb.AttestationRecord{},
+			PendingAttestations: []*pb.AggregatedAttestation{},
 			RecentBlockHashes:   recentBlockHashes,
 		},
 		blockVoteCache: make(map[[32]byte]*VoteCache),
@@ -65,7 +65,7 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
-func (a *ActiveState) PendingAttestations() []*pb.AttestationRecord {
+func (a *ActiveState) PendingAttestations() []*pb.AggregatedAttestation {
 	return a.data.PendingAttestations
 }
 
@@ -89,9 +89,9 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
 	return a.blockVoteCache
 }
 
-func (a *ActiveState) calculateNewAttestations(add []*pb.AttestationRecord, lastStateRecalc uint64) []*pb.AttestationRecord {
+func (a *ActiveState) calculateNewAttestations(add []*pb.AggregatedAttestation, lastStateRecalc uint64) []*pb.AggregatedAttestation {
 	existing := a.data.PendingAttestations
-	update := []*pb.AttestationRecord{}
+	update := []*pb.AggregatedAttestation{}
 	for i := 0; i < len(existing); i++ {
 		if existing[i].GetSlot() >= lastStateRecalc {
 			update = append(update, existing[i])
@@ -198,7 +198,7 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AttestationRecord) [][32]byte {
+func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) [][32]byte {
 	var signedParentHashes [][32]byte
 	start := block.SlotNumber() - attestation.Slot
 	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
