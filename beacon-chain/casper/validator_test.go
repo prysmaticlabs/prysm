@@ -67,7 +67,7 @@ func TestRotateValidatorSet(t *testing.T) {
 
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
-	pendingAttestation := &pb.AttestationRecord{
+	pendingAttestation := &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{255},
 	}
 
@@ -79,7 +79,7 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	// Setting bit field to 01010101.
-	pendingAttestation = &pb.AttestationRecord{
+	pendingAttestation = &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{85},
 	}
 
@@ -141,7 +141,7 @@ func TestValidatorIndices(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValid(t *testing.T) {
-	attestation := &pb.AttestationRecord{
+	attestation := &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{'F'},
 	}
 
@@ -154,7 +154,7 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
-	attestation := &pb.AttestationRecord{
+	attestation := &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{'F', 'F'},
 	}
 
@@ -167,7 +167,7 @@ func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
-	attestation := &pb.AttestationRecord{
+	attestation := &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{'F'},
 	}
 
@@ -180,7 +180,7 @@ func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
-	attestation := &pb.AttestationRecord{
+	attestation := &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{'E'},
 	}
 
@@ -189,5 +189,26 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if isValid {
 		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestGetProposerIndexAndShard(t *testing.T) {
+	shardCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 99, Committee: []uint32{0, 1, 2, 3, 4}},
+		}},
+	}
+	if _, _, err := GetProposerIndexAndShard(shardCommittees, 100, 0); err == nil {
+		t.Error("GetProposerIndexAndShard should have failed with invalid lcs")
+	}
+	shardID, index, err := GetProposerIndexAndShard(shardCommittees, 0, 0)
+	if err != nil {
+		t.Fatalf("GetProposerIndexAndShard failed with %v", err)
+	}
+	if shardID != 99 {
+		t.Errorf("Invalid shard ID. Wanted 99, got %d", shardID)
+	}
+	if index != 0 {
+		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
 	}
 }

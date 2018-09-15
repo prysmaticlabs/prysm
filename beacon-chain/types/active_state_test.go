@@ -26,7 +26,7 @@ func TestGenesisActiveState(t *testing.T) {
 func TestUpdateAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
 
-	newAttestations := []*pb.AttestationRecord{
+	newAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:    0,
 			ShardId: 0,
@@ -45,7 +45,7 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
+		PendingAttestations: []*pb.AggregatedAttestation{
 			{
 				Slot:    0,
 				ShardId: 0,
@@ -57,7 +57,7 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 		},
 	}, nil)
 
-	newAttestations := []*pb.AttestationRecord{
+	newAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:    10,
 			ShardId: 2,
@@ -138,7 +138,7 @@ func TestBlockVoteCache(t *testing.T) {
 	}
 	block := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 1,
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
 				ShardId:          0,
@@ -185,7 +185,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 	}
 
 	aState := NewActiveState(&pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
+		PendingAttestations: []*pb.AggregatedAttestation{
 			{
 				Slot:    0,
 				ShardId: 0,

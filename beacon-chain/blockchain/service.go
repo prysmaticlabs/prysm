@@ -127,6 +127,15 @@ func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
 	return c.chain.hasBlock(h)
 }
 
+// GetBlockSlotNumber returns the slot number of a block.
+func (c *ChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	block, err := c.chain.getBlock(h)
+	if err != nil {
+		return 0, fmt.Errorf("could not get block from DB: %v", err)
+	}
+	return block.SlotNumber(), nil
+}
+
 // CurrentCrystallizedState of the canonical chain.
 func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	return c.chain.CrystallizedState()
@@ -228,14 +237,18 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-			// Listen for a newly received incoming block from the sync service.
+		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-c.incomingAttestationChan:
 			h, err := attestation.Hash()
 			if err != nil {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
-			log.Info("Relaying attestation 0x%v to p2p service", h)
+			if err := c.chain.saveAttestation(attestation); err != nil {
+				log.Errorf("Could not save attestation: %v", err)
+				continue
+			}
 
+			log.Infof("Relaying attestation 0x%x to subscriber", h)
 			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 
 		// Listen for a newly received incoming block from the sync service.
@@ -260,7 +273,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-			// Get parent slot number.
+
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Could not get parent block: %v", err)
@@ -271,7 +284,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			// If a candidate block exists and it is a lower slot, run theh fork choice rule.
+			// If a candidate block exists and it is a lower slot, run the fork choice rule.
 			if c.candidateBlock != nilBlock && block.SlotNumber() > c.candidateBlock.SlotNumber() {
 				c.updateHead()
 			}
