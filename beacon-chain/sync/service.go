@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -19,8 +20,11 @@ type chainService interface {
 	ContainsBlock(h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
+	IncomingAttestationFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
 	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+	GetBlockSlotNumber(h [32]byte) (uint64, error)
+	CurrentCrystallizedState() *types.CrystallizedState
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -159,12 +163,14 @@ func (ss *Service) run() {
 				log.Error("Received malformed beacon block p2p message")
 				continue
 			}
+
 			block := types.NewBlock(response.Block)
-			h, err := block.Hash()
+			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash received block: %v", err)
 			}
-			blockExists, err := ss.chainService.ContainsBlock(h)
+
+			blockExists, err := ss.chainService.ContainsBlock(blockHash)
 			if err != nil {
 				log.Errorf("Can not check for block in DB: %v", err)
 				continue
@@ -172,9 +178,30 @@ func (ss *Service) run() {
 			if blockExists {
 				continue
 			}
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
-			// We send out a message over a feed.
+
+			// Verify attestation coming from proposer then forward block to the subscribers.
+			attestation := types.NewAttestation(response.Attestation)
+			cState := ss.chainService.CurrentCrystallizedState()
+			parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+			if err != nil {
+				log.Errorf("Failed to get parent slot: %v", err)
+				continue
+			}
+			proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+			if err != nil {
+				log.Errorf("Failed to get proposer shard ID: %v", err)
+				continue
+			}
+			if err := attestation.VerifyAttestation(proposerShardID); err != nil {
+				log.Errorf("Failed to verify proposer attestation: %v", err)
+				continue
+			}
+
+			log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
 			ss.chainService.IncomingBlockFeed().Send(block)
+			log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+			ss.chainService.IncomingAttestationFeed().Send(attestation)
+
 		case msg := <-ss.blockRequestBySlot:
 			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 			if !ok {

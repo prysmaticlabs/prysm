@@ -235,10 +235,10 @@ func (m *ProposeResponse) GetBlockHash() []byte {
 }
 
 type AttestRequest struct {
-	Attestation          *v1.AttestationRecord `protobuf:"bytes,1,opt,name=attestation" json:"attestation,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
-	XXX_unrecognized     []byte                `json:"-"`
-	XXX_sizecache        int32                 `json:"-"`
+	Attestation          *v1.AggregatedAttestation `protobuf:"bytes,1,opt,name=attestation,proto3" json:"attestation,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
+	XXX_unrecognized     []byte                    `json:"-"`
+	XXX_sizecache        int32                     `json:"-"`
 }
 
 func (m *AttestRequest) Reset()         { *m = AttestRequest{} }
@@ -265,7 +265,7 @@ func (m *AttestRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AttestRequest proto.InternalMessageInfo
 
-func (m *AttestRequest) GetAttestation() *v1.AttestationRecord {
+func (m *AttestRequest) GetAttestation() *v1.AggregatedAttestation {
 	if m != nil {
 		return m.Attestation
 	}

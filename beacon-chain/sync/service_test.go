@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -50,6 +51,22 @@ func (ms *mockChainService) HasStoredState() (bool, error) {
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func (ms *mockChainService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	cState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cState
+}
+
+func (ms *mockChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	return 0, nil
 }
 
 func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
@@ -121,9 +138,15 @@ func TestProcessBlock(t *testing.T) {
 		PowChainRef: []byte{1, 2, 3, 4, 5},
 		ParentHash:  make([]byte, 32),
 	}
+	attestation := &pb.AggregatedAttestation{
+		Slot:           0,
+		ShardId:        0,
+		ShardBlockHash: []byte{'A'},
+	}
 
 	responseBlock := &pb.BeaconBlockResponse{
-		Block: data,
+		Block:       data,
+		Attestation: attestation,
 	}
 
 	msg := p2p.Message{
@@ -316,6 +339,10 @@ func (ms *mockEmptyChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockEmptyChainService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 func (ms *mockEmptyChainService) setState(flag bool) {
 	ms.hasStoredState = flag
 }
@@ -326,6 +353,14 @@ func (ms *mockEmptyChainService) CheckForCanonicalBlockBySlot(slotnumber uint64)
 
 func (ms *mockEmptyChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	return nil, nil
+}
+
+func (ms *mockEmptyChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return types.NewCrystallizedState(nil)
+}
+
+func (ms *mockEmptyChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	return 0, nil
 }
 
 func TestStartEmptyState(t *testing.T) {

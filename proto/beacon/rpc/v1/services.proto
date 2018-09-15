@@ -45,7 +45,7 @@ message ProposeResponse {
 }
 
 message AttestRequest {
-    ethereum.beacon.p2p.v1.AttestationRecord attestation = 1;
+    ethereum.beacon.p2p.v1.AggregatedAttestation attestation = 1;
 }
 
 message AttestResponse {
