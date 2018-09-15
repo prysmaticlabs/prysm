@@ -35,6 +35,10 @@ func (m *mockChainService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 type mockAnnouncer struct {
 	blockFeed       *event.Feed
 	stateFeed       *event.Feed

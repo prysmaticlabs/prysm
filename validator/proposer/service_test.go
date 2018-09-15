@@ -59,7 +59,7 @@ func TestDoesAttestationExist(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p := NewProposer(context.Background(), cfg)
 
 	p.pendingAttestation = []*pbp2p.AttestationRecord{
 		&pbp2p.AttestationRecord{
@@ -101,7 +101,7 @@ func TestLifecycle(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p := NewProposer(context.Background(), cfg)
 	p.Start()
 	p.Stop()
 
@@ -118,7 +118,7 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 	mockServiceClient.EXPECT().ProposeBlock(
@@ -153,7 +153,7 @@ func TestProposerProcessAttestation(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p := NewProposer(context.Background(), cfg)
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
@@ -170,11 +170,8 @@ func TestProposerProcessAttestation(t *testing.T) {
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.AttestationBroadcast{
-		AttestationRecord: &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}},
-	}
-	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
-	p.attestationBuf <- msg
+	attestation := &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}}
+	p.attestationChan <- attestation
 
 	doneChan <- struct{}{}
 	exitRoutine <- true
@@ -196,7 +193,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p := NewProposer(context.Background(), cfg)
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 	mockServiceClient.EXPECT().ProposeBlock(
 		gomock.Any(),
@@ -223,11 +220,8 @@ func TestFullProposalOfBlock(t *testing.T) {
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.AttestationBroadcast{
-		AttestationRecord: &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}},
-	}
-	msg := p2p.Message{Peer: p2p.Peer{}, Data: attestation}
-	p.attestationBuf <- msg
+	attestation := &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}}
+	p.attestationChan <- attestation
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
 
@@ -252,7 +246,7 @@ func TestProposerServiceErrors(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewProposer(context.Background(), cfg, &mockP2P{})
+	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
@@ -272,7 +266,7 @@ func TestProposerServiceErrors(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	p.attestationBuf <- p2p.Message{Data: nil}
+	p.attestationChan <- &pbp2p.AttestationRecord{}
 	p.assignmentChan <- nil
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 9}
 

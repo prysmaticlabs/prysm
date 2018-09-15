@@ -8,8 +8,6 @@ go_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
-        "//shared:go_default_library",
-        "//shared/p2p:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
