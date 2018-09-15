@@ -35,7 +35,7 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	stateStream := internal.NewMockBeaconService_LatestCrystallizedStateClient(fc.ctrl)
 	stateStream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
 	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
-	attesterStream.EXPECT().Recv().Return(&pbp2p.AttestationRecord{}, io.EOF)
+	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 
 	mockServiceClient.EXPECT().LatestBeaconBlock(
 		gomock.Any(),
@@ -294,8 +294,8 @@ func TestFetchProcessedAttestations(t *testing.T) {
 	stream := internal.NewMockBeaconService_LatestAttestationClient(ctrl)
 
 	// Testing if an attestation is received,triggering a log.
-	stream.EXPECT().Recv().Return(&pbp2p.AttestationRecord{Slot: 10}, nil)
-	stream.EXPECT().Recv().Return(&pbp2p.AttestationRecord{}, io.EOF)
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{Slot: 10}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(
@@ -309,8 +309,8 @@ func TestFetchProcessedAttestations(t *testing.T) {
 
 	// Testing an error coming from the stream.
 	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.AttestationRecord{}, errors.New("stream error"))
-	stream.EXPECT().Recv().Return(&pbp2p.AttestationRecord{}, io.EOF)
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, errors.New("stream error"))
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 
 	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(

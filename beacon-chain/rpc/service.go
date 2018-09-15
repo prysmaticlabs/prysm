@@ -37,7 +37,7 @@ type Service struct {
 	grpcServer            *grpc.Server
 	canonicalBlockChan    chan *types.Block
 	canonicalStateChan    chan *types.CrystallizedState
-	proccessedAttestation chan *pbp2p.AttestationRecord
+	proccessedAttestation chan *pbp2p.AggregatedAttestation
 }
 
 // Config options for the beacon node RPC server.
@@ -64,7 +64,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withKey:               cfg.KeyFlag,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
-		proccessedAttestation: make(chan *pbp2p.AttestationRecord, cfg.SubscriptionBuf),
+		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
 	}
 }
 

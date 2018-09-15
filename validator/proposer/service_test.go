@@ -53,25 +53,25 @@ func TestDoesAttestationExist(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 
-	p.pendingAttestation = []*pbp2p.AttestationRecord{
-		&pbp2p.AttestationRecord{
+	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'a'},
 		},
-		&pbp2p.AttestationRecord{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'b'},
 		},
-		&pbp2p.AttestationRecord{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'c'},
 		},
-		&pbp2p.AttestationRecord{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'d'},
 		}}
 
-	fakeAttestation := &pbp2p.AttestationRecord{
+	fakeAttestation := &pbp2p.AggregatedAttestation{
 		AttesterBitfield: []byte{'e'},
 	}
 
-	realAttestation := &pbp2p.AttestationRecord{
+	realAttestation := &pbp2p.AggregatedAttestation{
 		AttesterBitfield: []byte{'a'},
 	}
 
@@ -157,15 +157,15 @@ func TestProposerProcessAttestation(t *testing.T) {
 		p.processAttestation(doneChan)
 		<-exitRoutine
 	}()
-	p.pendingAttestation = []*pbp2p.AttestationRecord{
-		&pbp2p.AttestationRecord{
+	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'a'},
 		},
-		&pbp2p.AttestationRecord{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}}
+	attestation := &pbp2p.AggregatedAttestation{AttesterBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
 	doneChan <- struct{}{}
@@ -208,15 +208,15 @@ func TestFullProposalOfBlock(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	p.pendingAttestation = []*pbp2p.AttestationRecord{
-		&pbp2p.AttestationRecord{
+	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'a'},
 		},
-		&pbp2p.AttestationRecord{
+		&pbp2p.AggregatedAttestation{
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.AttestationRecord{AttesterBitfield: []byte{'c'}}
+	attestation := &pbp2p.AggregatedAttestation{AttesterBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
@@ -263,7 +263,7 @@ func TestProposerServiceErrors(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	p.attestationChan <- &pbp2p.AttestationRecord{}
+	p.attestationChan <- &pbp2p.AggregatedAttestation{}
 	p.assignmentChan <- nil
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 9}
 

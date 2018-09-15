@@ -305,7 +305,7 @@ func TestLatestAttestation(t *testing.T) {
 	exitRoutine := make(chan bool)
 
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.AttestationRecord{}).Return(errors.New("something wrong"))
+	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
@@ -313,10 +313,10 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.proccessedAttestation <- &pbp2p.AttestationRecord{}
+	rpcService.proccessedAttestation <- &pbp2p.AggregatedAttestation{}
 
 	mockStream = internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.AttestationRecord{}).Return(nil)
+	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(nil)
 
 	// Tests a good stream.
 	go func(tt *testing.T) {
@@ -325,7 +325,7 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.proccessedAttestation <- &pbp2p.AttestationRecord{}
+	rpcService.proccessedAttestation <- &pbp2p.AggregatedAttestation{}
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true

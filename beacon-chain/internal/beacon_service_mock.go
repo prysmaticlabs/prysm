@@ -343,7 +343,7 @@ func (mr *MockBeaconService_LatestAttestationServerMockRecorder) RecvMsg(arg0 in
 }
 
 // Send mocks base method
-func (m *MockBeaconService_LatestAttestationServer) Send(arg0 *v1.AttestationRecord) error {
+func (m *MockBeaconService_LatestAttestationServer) Send(arg0 *v1.AggregatedAttestation) error {
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0

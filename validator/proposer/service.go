@@ -40,8 +40,8 @@ type Proposer struct {
 	rpcClientService   rpcClientService
 	assignmentChan     chan *pbp2p.BeaconBlock
 	attestationService rpcAttestationService
-	attestationChan    chan *pbp2p.AttestationRecord
-	pendingAttestation []*pbp2p.AttestationRecord
+	attestationChan    chan *pbp2p.AggregatedAttestation
+	pendingAttestation []*pbp2p.AggregatedAttestation
 	mutex              *sync.Mutex
 }
 
@@ -64,8 +64,8 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 		rpcClientService:   cfg.Client,
 		attestationService: cfg.AttesterFeed,
 		assignmentChan:     make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
-		attestationChan:    make(chan *pbp2p.AttestationRecord, cfg.AttestationBufferSize),
-		pendingAttestation: make([]*pbp2p.AttestationRecord, 0),
+		attestationChan:    make(chan *pbp2p.AggregatedAttestation, cfg.AttestationBufferSize),
+		pendingAttestation: make([]*pbp2p.AggregatedAttestation, 0),
 		mutex:              &sync.Mutex{},
 	}
 }
@@ -88,7 +88,7 @@ func (p *Proposer) Stop() error {
 }
 
 // DoesAttestationExist checks if an attester has already attested to a block.
-func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord) bool {
+func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AggregatedAttestation) bool {
 	exists := false
 	for _, record := range p.pendingAttestation {
 		if bytes.Equal(record.GetAttesterBitfield(), attestation.GetAttesterBitfield()) {
@@ -101,20 +101,20 @@ func (p *Proposer) DoesAttestationExist(attestation *pbp2p.AttestationRecord) bo
 
 // Adds a pending attestation to the memory so that it can be included in the next
 // proposed block.
-func (p *Proposer) AddPendingAttestation(attestation *pbp2p.AttestationRecord) {
+func (p *Proposer) AddPendingAttestation(attestation *pbp2p.AggregatedAttestation) {
 	p.pendingAttestation = append(p.pendingAttestation, attestation)
 }
 
 // AggregateAllSignatures aggregates all the signatures of the attesters. This is currently a
 // stub for now till BLS/other singature schemes are implemented.
-func (p *Proposer) AggregateAllSignatures(attestations []*pbp2p.AttestationRecord) []uint32 {
+func (p *Proposer) AggregateAllSignatures(attestations []*pbp2p.AggregatedAttestation) []uint32 {
 	// TODO: Implement Signature Aggregation.
 	return []uint32{}
 }
 
 // GenerateBitmask creates the attestation bitmask from all the attester bitfields in the
 // attestation records.
-func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AttestationRecord) []byte {
+func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AggregatedAttestation) []byte {
 	// TODO: Implement bitmask where all attesters bitfields are aggregated.
 	return []byte{}
 }
