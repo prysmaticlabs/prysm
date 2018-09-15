@@ -54,16 +54,16 @@ func TestDoesAttestationExist(t *testing.T) {
 	p := NewProposer(context.Background(), cfg)
 
 	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'a'},
 		},
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'b'},
 		},
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'c'},
 		},
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'d'},
 		}}
 
@@ -158,10 +158,10 @@ func TestProposerProcessAttestation(t *testing.T) {
 		<-exitRoutine
 	}()
 	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'a'},
 		},
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'b'},
 		}}
 
@@ -209,10 +209,10 @@ func TestFullProposalOfBlock(t *testing.T) {
 	}()
 
 	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'a'},
 		},
-		&pbp2p.AggregatedAttestation{
+		{
 			AttesterBitfield: []byte{'b'},
 		}}
 
