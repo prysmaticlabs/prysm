@@ -106,6 +106,8 @@ func (c *ChainService) IncomingAttestationFeed() *event.Feed {
 	return c.incomingAttestationFeed
 }
 
+// ProcessedAttestationFeed returns a feed that will be used to stream attestations that have been
+// processed by the beacon node to its rpc clients.
 func (c *ChainService) ProcessedAttestationFeed() *event.Feed {
 	return c.processedAttestationFeed
 }
