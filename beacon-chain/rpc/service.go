@@ -206,6 +206,7 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 	}
 }
 
+// LatestAttestation streams the latest processed attestations to the rpc clients.
 func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
 	sub := s.chainService.ProcessedAttestationFeed().Subscribe(s.proccessedAttestation)
 	defer sub.Unsubscribe()
@@ -222,5 +223,4 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 			return nil
 		}
 	}
-	return nil
 }
