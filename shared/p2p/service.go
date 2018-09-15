@@ -160,10 +160,10 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 
 // Send a message to a specific peer.
 func (s *Server) Send(msg proto.Message, peer Peer) {
-	// TODO(175)
+	// TODO(#175)
 	// https://github.com/prysmaticlabs/prysm/issues/175
 
-	// TODO(175): Remove debug log after send is implemented.
+	// TODO(#175): Remove debug log after send is implemented.
 	_ = peer
 	log.Debug("Broadcasting to everyone rather than sending a single peer")
 	s.Broadcast(msg)
@@ -171,7 +171,7 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg proto.Message) {
-	// TODO(176): https://github.com/prysmaticlabs/prysm/issues/176
+	// TODO(#176): https://github.com/prysmaticlabs/prysm/issues/176
 	topic := s.topicMapping[messageType(msg)]
 	log.WithFields(logrus.Fields{
 		"topic": topic,
