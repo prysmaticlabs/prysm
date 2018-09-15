@@ -36,11 +36,12 @@ type Service struct {
 func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                    ctx,
-		cancel:                 cancel,
-		rpcClient:              rpcClient,
-		attesterAssignmentFeed: new(event.Feed),
-		proposerAssignmentFeed: new(event.Feed),
+		ctx:                      ctx,
+		cancel:                   cancel,
+		rpcClient:                rpcClient,
+		attesterAssignmentFeed:   new(event.Feed),
+		proposerAssignmentFeed:   new(event.Feed),
+		processedAttestationFeed: new(event.Feed),
 	}
 }
 
