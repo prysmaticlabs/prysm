@@ -206,7 +206,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 		return false
 	}
 
-	if !(attestation.JustifiedSlot <= cState.LastJustifiedSlot()) {
+	if attestation.JustifiedSlot > cState.LastJustifiedSlot() {
 		log.Debugf("attestation's justified slot has to be earlier or equal to crystallied state's last justified slot. Found: %d. Want <=: %d",
 			attestation.JustifiedSlot,
 			cState.LastJustifiedSlot())
