@@ -145,7 +145,7 @@ func (b *Block) isSlotValid() bool {
 // 1.) Ensure parent processed.
 // 2.) Ensure pow_chain_ref processed.
 // 3.) Ensure local time is large enough to process this block's slot.
-// 4.) Attestation from proposer of block was included with the block in the network message.
+// 4.) Verify that the parent block's proposer's attestation is included.
 func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	_, err := b.Hash()
 	if err != nil {
@@ -164,6 +164,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 	}
 
 	// verify proposer from last slot is in one of the AttestationRecord.
+	var proposerAttested bool
 	_, proposerIndex, err := casper.GetProposerIndexAndShard(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalc(),
@@ -178,11 +179,11 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 			return false
 		}
 		if utils.BitSetCount(attestation.AttesterBitfield) == 1 && utils.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
-			return true
+			proposerAttested = true
 		}
 	}
 
-	return false
+	return proposerAttested
 }
 
 // isAttestationValid validates an attestation in a block.

@@ -130,37 +130,6 @@ func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.P
 	return nil
 }
 
-// verifyAttestation verifies incoming attestation with the block, when a block is produced,
-// it is broadcasted at the network layer along with the attestation from its proposer.
-func (ss *Service) verifyAttestation(parentHash [32]byte, attestation *types.Attestation) error {
-
-	// Verify the attestation attached with block response.
-	// Get proposer index and shardID.
-	cState := ss.chainService.CurrentCrystallizedState()
-	parentSlotNumber, err := ss.chainService.GetBlockSlotNumber(parentHash)
-	if err != nil {
-		return fmt.Errorf("failed to get parent slot number: %v", err)
-	}
-	_, proposerShardID, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlotNumber)
-	if err != nil {
-		return fmt.Errorf("failed to get proposer shard ID and index: %v", err)
-	}
-
-	attestationMsg := types.AttestationMsg(
-		attestation.ObliqueParentHashes(),
-		attestation.ShardBlockHash(),
-		attestation.SlotNumber(),
-		proposerShardID,
-		attestation.JustifiedSlotNumber())
-
-	log.WithField("attestationMsg", fmt.Sprintf("0x%x", attestationMsg)).Debug("Constructed attestation message for incoming block")
-
-	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
-
-	log.Info("successfully verified attestation with incoming block")
-	return nil
-}
-
 // run handles incoming block sync.
 func (ss *Service) run() {
 	announceBlockHashSub := ss.p2p.Subscribe(&pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
@@ -209,17 +178,28 @@ func (ss *Service) run() {
 				continue
 			}
 
-			// Verify attestation coming from proposer then forward it to the subscribers.
-			if response.Attestation != nil {
-				attestation := types.NewAttestation(response.Attestation)
-				if err := ss.verifyAttestation(block.ParentHash(), attestation); err != nil {
-					log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
-					ss.chainService.IncomingAttestationFeed().Send(attestation)
-				}
+			// Verify attestation coming from proposer then forward block to the subscribers.
+			attestation := types.NewAttestation(response.Attestation)
+			cState := ss.chainService.CurrentCrystallizedState()
+			parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+			if err != nil {
+				log.Errorf("Failed to get parent slot: %v", err)
+				continue
+			}
+			proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+			if err != nil {
+				log.Errorf("Failed to get proposer shard ID: %v", err)
+				continue
+			}
+			if err := attestation.VerifyAttestation(proposerShardID); err != nil {
+				log.Errorf("Failed to verify proposer attestation: %v", err)
+				continue
 			}
 
 			log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
 			ss.chainService.IncomingBlockFeed().Send(block)
+			log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+			ss.chainService.IncomingAttestationFeed().Send(attestation)
 
 		case msg := <-ss.blockRequestBySlot:
 			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)

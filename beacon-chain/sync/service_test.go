@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -57,7 +58,11 @@ func (ms *mockChainService) IncomingAttestationFeed() *event.Feed {
 }
 
 func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return types.NewCrystallizedState(nil)
+	cState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cState
 }
 
 func (ms *mockChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
@@ -133,9 +138,15 @@ func TestProcessBlock(t *testing.T) {
 		PowChainRef: []byte{1, 2, 3, 4, 5},
 		ParentHash:  make([]byte, 32),
 	}
+	attestation := &pb.AttestationRecord{
+		Slot:           0,
+		ShardId:        0,
+		ShardBlockHash: []byte{'A'},
+	}
 
 	responseBlock := &pb.BeaconBlockResponse{
-		Block: data,
+		Block:       data,
+		Attestation: attestation,
 	}
 
 	msg := p2p.Message{
