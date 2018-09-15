@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -13,15 +14,15 @@ import (
 // Attestation is the primary source of load on the beacon chain, it's used to
 // attest to some parent block in the chain and block hash in a shard.
 type Attestation struct {
-	data *pb.AttestationRecord
+	data *pb.AggregatedAttestation
 }
 
 // NewAttestation explicitly sets the data field of a attestation.
 // Return attestation with default fields if data is nil.
-func NewAttestation(data *pb.AttestationRecord) *Attestation {
+func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 	if data == nil {
 		return &Attestation{
-			data: &pb.AttestationRecord{
+			data: &pb.AggregatedAttestation{
 				Slot:                0,
 				ShardId:             0,
 				JustifiedSlot:       0,
@@ -37,7 +38,7 @@ func NewAttestation(data *pb.AttestationRecord) *Attestation {
 }
 
 // Proto returns the underlying protobuf data.
-func (a *Attestation) Proto() *pb.AttestationRecord {
+func (a *Attestation) Proto() *pb.AggregatedAttestation {
 	return a.data
 }
 
@@ -120,4 +121,44 @@ func (a *Attestation) ObliqueParentHashes() [][32]byte {
 // AggregateSig represents the aggregated signature from all the validators attesting to this block.
 func (a *Attestation) AggregateSig() []uint64 {
 	return a.data.AggregateSig
+}
+
+// VerifyAttestation verifies the proposer's attestation of the block.
+// Proposers broadcast the attestation along with the block to its peers.
+func (a *Attestation) VerifyAttestation(proposerShardID uint64) error {
+
+	// Verify the attestation attached with block response.
+	// Get proposer index and shardID.
+
+	attestationMsg := AttestationMsg(
+		a.ObliqueParentHashes(),
+		a.ShardBlockHash(),
+		a.SlotNumber(),
+		proposerShardID,
+		a.JustifiedSlotNumber())
+
+	log.Infof("Constructed attestation message for incoming block 0x%x", attestationMsg)
+
+	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
+
+	log.Info("successfully verified attestation with incoming block")
+	return nil
+}
+
+// AttestationMsg hashes parentHashes + shardID + slotNumber + shardBlockHash + justifiedSlot
+// into a message to use for verifying with aggregated public key and signature.
+func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shardID uint64, justifiedSlot uint64) [32]byte {
+	msg := make([]byte, binary.MaxVarintLen64)
+	binary.PutUvarint(msg, slot%params.CycleLength)
+	for _, parentHash := range parentHashes {
+		msg = append(msg, parentHash[:]...)
+	}
+	binary.PutUvarint(msg, shardID)
+	msg = append(msg, blockHash...)
+	binary.PutUvarint(msg, justifiedSlot)
+
+	var hashMsg [32]byte
+	h := blake2b.Sum512(msg)
+	copy(hashMsg[:], h[:32])
+	return hashMsg
 }

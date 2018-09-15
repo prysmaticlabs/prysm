@@ -264,9 +264,9 @@ func TestRunningChainService(t *testing.T) {
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
-			AttesterBitfield: []byte{'A', 'B'},
+			AttesterBitfield: []byte{128, 0},
 			ShardId:          0,
 		}},
 	})
@@ -283,6 +283,21 @@ func TestRunningChainService(t *testing.T) {
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
+
+	hash, err := block.Hash()
+	if err != nil {
+		t.Fatal("Can not hash the block")
+	}
+	slot, err := chainService.GetBlockSlotNumber(hash)
+	if err != nil {
+		t.Fatal("Can not get block slot number")
+	}
+	if slot != block.SlotNumber() {
+		t.Errorf("Block slot number mismatched, wanted 1, got slot %d", block.SlotNumber())
+	}
+	if _, err := chainService.GetBlockSlotNumber([32]byte{}); err == nil {
+		t.Fatal("Get block slot number should have failed with nil hash")
+	}
 
 	testutil.AssertLogsContain(t, hook, "Finished processing state for candidate block")
 }
@@ -345,69 +360,6 @@ func TestUpdateHead(t *testing.T) {
 	}
 }
 
-func TestProcessingBlockWithAttestations(t *testing.T) {
-	ctx := context.Background()
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-
-	}
-	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
-	if err != nil {
-		t.Fatalf("unable to set up web3 service: %v", err)
-	}
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
-
-	active := beaconChain.ActiveState()
-	activeHash, _ := active.Hash()
-
-	crystallized := beaconChain.CrystallizedState()
-	crystallizedHash, _ := crystallized.Hash()
-
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
-	}
-
-	chainService, _ := NewChainService(ctx, cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
-		<-exitRoutine
-	}()
-
-	parentBlock := types.NewBlock(nil)
-	if err := chainService.SaveBlock(parentBlock); err != nil {
-		t.Fatal(err)
-	}
-	parentHash, _ := parentBlock.Hash()
-
-	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:            2,
-		ActiveStateHash:       activeHash[:],
-		CrystallizedStateHash: crystallizedHash[:],
-		ParentHash:            parentHash[:],
-		PowChainRef:           []byte("a"),
-		Attestations: []*pb.AttestationRecord{
-			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
-		},
-	})
-
-	chainService.incomingBlockChan <- block
-	chainService.cancel()
-	exitRoutine <- true
-
-}
-
 func TestProcessingBlocks(t *testing.T) {
 	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
@@ -467,9 +419,9 @@ func TestProcessingBlocks(t *testing.T) {
 		SlotNumber:            4,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
-			AttesterBitfield: []byte{0, 0},
+			AttesterBitfield: []byte{16, 0},
 			ShardId:          0,
 		}},
 	})
@@ -482,9 +434,9 @@ func TestProcessingBlocks(t *testing.T) {
 	block2 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block1Hash[:],
 		SlotNumber: 5,
-		Attestations: []*pb.AttestationRecord{
-			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
-			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+		Attestations: []*pb.AggregatedAttestation{
+			{Slot: 0, AttesterBitfield: []byte{8, 0}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{8, 0}, ShardId: 0},
 		}})
 	block2Hash, err := block2.Hash()
 	if err != nil {
@@ -495,10 +447,10 @@ func TestProcessingBlocks(t *testing.T) {
 	block3 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash: block2Hash[:],
 		SlotNumber: 6,
-		Attestations: []*pb.AttestationRecord{
-			{Slot: 0, AttesterBitfield: []byte{0, 0}, ShardId: 0},
-			{Slot: 1, AttesterBitfield: []byte{0, 0}, ShardId: 0},
-			{Slot: 2, AttesterBitfield: []byte{0, 0}, ShardId: 0},
+		Attestations: []*pb.AggregatedAttestation{
+			{Slot: 0, AttesterBitfield: []byte{4, 0}, ShardId: 0},
+			{Slot: 1, AttesterBitfield: []byte{4, 0}, ShardId: 0},
+			{Slot: 2, AttesterBitfield: []byte{4, 0}, ShardId: 0},
 		}})
 
 	chainService.incomingBlockChan <- block1
@@ -573,7 +525,7 @@ func TestProcessAttestationBadBlock(t *testing.T) {
 		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             10,
 			AttesterBitfield: []byte{},
 			ShardId:          0,
@@ -636,9 +588,9 @@ func TestEnterCycleTransition(t *testing.T) {
 		SlotNumber:            64,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
-			AttesterBitfield: []byte{0, 0},
+			AttesterBitfield: []byte{128, 0},
 			ShardId:          0,
 		}},
 	})
@@ -708,6 +660,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 			LastFinalizedSlot:          2,
 			ShardAndCommitteesForSlots: shardCommitteeForSlots,
 			Validators:                 validators,
+			LastStateRecalc:            150,
 			CrosslinkRecords: []*pb.CrosslinkRecord{
 				{Slot: 2},
 				{Slot: 2},
@@ -724,7 +677,7 @@ func TestEnterDynastyTransition(t *testing.T) {
 	active := types.NewActiveState(
 		&pb.ActiveState{
 			RecentBlockHashes: recentBlockhashes,
-			PendingAttestations: []*pb.AttestationRecord{
+			PendingAttestations: []*pb.AggregatedAttestation{
 				{Slot: 100, AttesterBitfield: []byte{0}},
 				{Slot: 101, AttesterBitfield: []byte{0}},
 				{Slot: 102, AttesterBitfield: []byte{0}},
@@ -758,9 +711,9 @@ func TestEnterDynastyTransition(t *testing.T) {
 		SlotNumber:            params.MinDynastyLength + 1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
-		Attestations: []*pb.AttestationRecord{{
+		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             200,
-			AttesterBitfield: []byte{0},
+			AttesterBitfield: []byte{32},
 			ShardId:          0,
 		}},
 	})
@@ -777,4 +730,53 @@ func TestEnterDynastyTransition(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Entering dynasty transition")
+}
+
+func TestIncomingAttestation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+	}
+
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db.DB(),
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+
+	chainService, _ := NewChainService(ctx, cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(chainService.ctx.Done())
+		<-exitRoutine
+	}()
+
+	attestation := types.NewAttestation(
+		&pb.AggregatedAttestation{
+			Slot:           1,
+			ShardId:        1,
+			ShardBlockHash: []byte{'A'},
+		})
+
+	chainService.incomingAttestationChan <- attestation
+	chainService.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Relaying attestation")
 }

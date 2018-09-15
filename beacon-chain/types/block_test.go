@@ -76,12 +76,12 @@ func TestBlockValidity(t *testing.T) {
 
 	b := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 1,
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
 				ShardId:          0,
 				JustifiedSlot:    0,
-				AttesterBitfield: []byte{8, 8},
+				AttesterBitfield: []byte{64, 0},
 			},
 		},
 	})

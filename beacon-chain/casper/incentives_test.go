@@ -22,7 +22,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 
 	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
-	testAttesterBitfield := []*pb.AttestationRecord{{AttesterBitfield: []byte{200, 148, 146, 179, 49}}}
+	testAttesterBitfield := []*pb.AggregatedAttestation{{AttesterBitfield: []byte{200, 148, 146, 179, 49}}}
 	rewardedValidators, err := CalculateRewards(
 		testAttesterBitfield,
 		data.Validators,
