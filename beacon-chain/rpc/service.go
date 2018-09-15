@@ -202,3 +202,7 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 		}
 	}
 }
+
+func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
+	return nil
+}
