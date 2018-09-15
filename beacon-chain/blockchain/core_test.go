@@ -396,7 +396,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 		AttesterBitfield: []byte{'B'},
 	})
 
-	key := blockKey(hash)
+	key := attestationKey(hash)
 	marshalled, err := proto.Marshal(newAttestation.Proto())
 	if err != nil {
 		t.Fatal(err)
