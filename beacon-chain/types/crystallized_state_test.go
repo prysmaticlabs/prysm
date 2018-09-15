@@ -36,8 +36,9 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	aState := NewGenesisActiveState()
+	block := NewBlock(nil)
 
-	newCState, err := cState.CalculateNewCrystallizedState(aState, 0)
+	newCState, err := cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
@@ -66,7 +67,9 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	}
 
 	aState := NewGenesisActiveState()
-	cState, err = cState.CalculateNewCrystallizedState(aState, 0)
+	block := NewBlock(nil)
+
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -88,7 +91,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, voteCache)
 
-	cState, err = cState.CalculateNewCrystallizedState(aState, 0)
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -105,7 +108,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
 
-	cState, err = cState.CalculateNewCrystallizedState(aState, 0)
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -141,7 +144,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Set up pending attestations.
-	pAttestations := []*pb.AttestationRecord{
+	pAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:             0,
 			ShardId:          0,
@@ -175,5 +178,100 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
+	}
+}
+
+func TestIsDynastyTransition(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatalf("Failed to initialize crystallized state: %v", err)
+	}
+	cState.data.DynastyStart = 1
+	if cState.isDynastyTransition(0) {
+		t.Errorf("Is Dynasty transtion should be false, dynasty start greater than finalized slot")
+	}
+	cState.data.LastFinalizedSlot = 2
+	if cState.isDynastyTransition(1) {
+		t.Errorf("Is Dynasty transtion should be false, MinDynastyLength has not reached")
+	}
+	shardCommitteeForSlots := []*pb.ShardAndCommitteeArray{{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 0},
+			{ShardId: 1},
+			{ShardId: 2},
+		},
+	},
+	}
+	cState.data.ShardAndCommitteesForSlots = shardCommitteeForSlots
+
+	crosslinkRecords := []*pb.CrosslinkRecord{
+		{Slot: 1},
+		{Slot: 1},
+		{Slot: 1},
+	}
+	cState.data.CrosslinkRecords = crosslinkRecords
+
+	if cState.isDynastyTransition(params.MinDynastyLength + 1) {
+		t.Errorf("Is Dynasty transtion should be false, crosslink records dynasty is higher than current slot")
+	}
+
+	crosslinkRecords = []*pb.CrosslinkRecord{
+		{Slot: 2},
+		{Slot: 2},
+		{Slot: 2},
+	}
+	cState.data.CrosslinkRecords = crosslinkRecords
+
+	if !cState.isDynastyTransition(params.MinDynastyLength + 1) {
+		t.Errorf("Dynasty transition failed should have been true")
+	}
+}
+
+func TestNewDynastyRecalculationsInvalid(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatalf("Failed to initialize crystallized state: %v", err)
+	}
+
+	// Negative test case, shuffle validators with more than MaxValidators.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < params.MaxValidators+1; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
+	}
+	cState.data.Validators = validators
+	if _, _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {
+		t.Errorf("Dynasty calculation should have failed with invalid validator count")
+	}
+}
+
+func TestNewDynastyRecalculations(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatalf("Failed to initialize crystallized state: %v", err)
+	}
+
+	// Create shard committee for every slot.
+	var shardCommitteesForSlot []*pb.ShardAndCommitteeArray
+	for i := 0; i < params.CycleLength; i++ {
+		// Only 10 shards gets crosslinked by validators this dynasty.
+		var shardCommittees []*pb.ShardAndCommittee
+		for i := 0; i < 10; i++ {
+			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{ShardId: uint64(i)})
+		}
+		shardCommitteesForSlot = append(shardCommitteesForSlot, &pb.ShardAndCommitteeArray{ArrayShardAndCommittee: shardCommittees})
+	}
+
+	cState.data.ShardAndCommitteesForSlots = shardCommitteesForSlot
+	cState.data.CurrentDynasty = 1
+	cState.data.LastStateRecalc = 65
+
+	shardCount = 10
+	currentDynasty, _, err := cState.newDynastyRecalculations([32]byte{'A'})
+	if err != nil {
+		t.Fatalf("Dynasty calculation failed %v", err)
+	}
+
+	if currentDynasty != 2 {
+		t.Errorf("Incorrect dynasty number, wanted 2, got: %d", currentDynasty)
 	}
 }

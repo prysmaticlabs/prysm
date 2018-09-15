@@ -129,8 +129,17 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 
 // ContainsBlock checks if a block for the hash exists in the chain.
 // This method must be safe to call from a goroutine.
-func (c *ChainService) ContainsBlock(h [32]byte) bool {
-	return false
+func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return c.chain.hasBlock(h)
+}
+
+// GetBlockSlotNumber returns the slot number of a block.
+func (c *ChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	block, err := c.chain.getBlock(h)
+	if err != nil {
+		return 0, fmt.Errorf("could not get block from DB: %v", err)
+	}
+	return block.SlotNumber(), nil
 }
 
 // CurrentCrystallizedState of the canonical chain.
@@ -275,13 +284,18 @@ func (c *ChainService) blockProcessing() {
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
+		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-c.incomingAttestationChan:
 			h, err := attestation.Hash()
 			if err != nil {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
-			log.Info("Relaying attestation 0x%v to p2p service", h)
+			if err := c.chain.saveAttestation(attestation); err != nil {
+				log.Errorf("Could not save attestation: %v", err)
+				continue
+			}
 
+			log.Infof("Relaying attestation 0x%x to subscriber", h)
 			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
 		case block := <-c.incomingBlockChan:
 			aState := c.chain.ActiveState()
@@ -299,7 +313,9 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			if !parentExists || !c.doesPoWBlockExist(block) || !block.IsValid(aState, cState) {
+			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Errorf("Could not get parent block: %v", err)
 				continue
 			}
 

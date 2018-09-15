@@ -29,6 +29,26 @@ func TestGenesisBlock(t *testing.T) {
 		t.Fatalf("genesis block hash should be identical: %x %x", h1, h2)
 	}
 
+	if b1.data.ParentHash == nil {
+		t.Fatalf("genesis block missing ParentHash field")
+	}
+
+	if b1.data.RandaoReveal == nil {
+		t.Fatalf("genesis block missing RandaoReveal field")
+	}
+
+	if b1.data.PowChainRef == nil {
+		t.Fatalf("genesis block missing PowChainRef field")
+	}
+
+	if b1.data.ActiveStateHash == nil {
+		t.Fatalf("genesis block missing ActiveStateHash field")
+	}
+
+	if b1.data.CrystallizedStateHash == nil {
+		t.Fatalf("genesis block missing CrystallizedStateHash field")
+	}
+
 	b3 := NewBlock(nil)
 	h3, err3 := b3.Hash()
 	if err3 != nil {
@@ -56,21 +76,40 @@ func TestBlockValidity(t *testing.T) {
 
 	b := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 1,
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
 				ShardId:          0,
 				JustifiedSlot:    0,
-				AttesterBitfield: []byte{8, 8},
+				AttesterBitfield: []byte{64, 0},
 			},
 		},
 	})
 
-	if !b.isAttestationValid(0, aState, cState) {
+	parentSlot := uint64(1)
+	if !b.isAttestationValid(0, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(aState, cState) {
+	if !b.IsValid(aState, cState, parentSlot) {
 		t.Fatalf("failed block validation")
+	}
+}
+
+func TestIsAttestationSlotNumberValid(t *testing.T) {
+	if isAttestationSlotNumberValid(2, 1) {
+		t.Errorf("attestation slot number can't be higher than parent block's slot number")
+	}
+
+	if isAttestationSlotNumberValid(1, params.CycleLength+1) {
+		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
+	}
+
+	if !isAttestationSlotNumberValid(2, 2) {
+		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
+	}
+
+	if !isAttestationSlotNumberValid(2, 10) {
+		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
 	}
 }

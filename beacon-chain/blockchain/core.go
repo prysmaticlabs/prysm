@@ -308,7 +308,7 @@ func (b *BeaconChain) getAttestation(hash [32]byte) (*types.Attestation, error) 
 		return nil, err
 	}
 
-	attestation := &pb.AttestationRecord{}
+	attestation := &pb.AggregatedAttestation{}
 
 	err = proto.Unmarshal(enc, attestation)
 
