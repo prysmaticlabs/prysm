@@ -3,7 +3,6 @@ package types
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )

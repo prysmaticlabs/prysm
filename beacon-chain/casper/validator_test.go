@@ -1,13 +1,13 @@
 package casper
 
 import (
-	"github.com/prysmaticlabs/prysm/shared"
 	"math"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 )
 
 func TestRotateValidatorSet(t *testing.T) {

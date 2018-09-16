@@ -52,3 +52,80 @@ func (mr *MockAttesterServiceClientMockRecorder) AttestHead(arg0, arg1 interface
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestHead", reflect.TypeOf((*MockAttesterServiceClient)(nil).AttestHead), varargs...)
 }
+
+// MockValidatorServiceClient is a mock of ValidatorServiceClient interface
+type MockValidatorServiceClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockValidatorServiceClientMockRecorder
+}
+
+// MockValidatorServiceClientMockRecorder is the mock recorder for MockValidatorServiceClient
+type MockValidatorServiceClientMockRecorder struct {
+	mock *MockValidatorServiceClient
+}
+
+// NewMockValidatorServiceClient creates a new mock instance
+func NewMockValidatorServiceClient(ctrl *gomock.Controller) *MockValidatorServiceClient {
+	mock := &MockValidatorServiceClient{ctrl: ctrl}
+	mock.recorder = &MockValidatorServiceClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRecorder {
+	return m.recorder
+}
+
+// GetValidatorIndex mocks base method
+func (m *MockValidatorServiceClient) GetValidatorIndex(arg0 context.Context, arg1 *v1.PublicKey, arg2 ...grpc.CallOption) (*v1.IndexResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetValidatorIndex", varargs...)
+	ret0, _ := ret[0].(*v1.IndexResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetValidatorIndex indicates an expected call of GetValidatorIndex
+func (mr *MockValidatorServiceClientMockRecorder) GetValidatorIndex(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorIndex", reflect.TypeOf((*MockValidatorServiceClient)(nil).GetValidatorIndex), varargs...)
+}
+
+// GetValidatorShardID mocks base method
+func (m *MockValidatorServiceClient) GetValidatorShardID(arg0 context.Context, arg1 *v1.PublicKey, arg2 ...grpc.CallOption) (*v1.ShardIDResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetValidatorShardID", varargs...)
+	ret0, _ := ret[0].(*v1.ShardIDResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetValidatorShardID indicates an expected call of GetValidatorShardID
+func (mr *MockValidatorServiceClientMockRecorder) GetValidatorShardID(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorShardID", reflect.TypeOf((*MockValidatorServiceClient)(nil).GetValidatorShardID), varargs...)
+}
+
+// GetValidatorSlot mocks base method
+func (m *MockValidatorServiceClient) GetValidatorSlot(arg0 context.Context, arg1 *v1.PublicKey, arg2 ...grpc.CallOption) (*v1.SlotResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetValidatorSlot", varargs...)
+	ret0, _ := ret[0].(*v1.SlotResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetValidatorSlot indicates an expected call of GetValidatorSlot
+func (mr *MockValidatorServiceClientMockRecorder) GetValidatorSlot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorSlot", reflect.TypeOf((*MockValidatorServiceClient)(nil).GetValidatorSlot), varargs...)
+}

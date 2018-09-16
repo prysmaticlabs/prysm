@@ -4,12 +4,12 @@ package attester
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 	blake2b "golang.org/x/crypto/blake2b"
 )

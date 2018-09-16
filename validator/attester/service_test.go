@@ -29,6 +29,10 @@ func (mc *mockClient) AttesterServiceClient() pb.AttesterServiceClient {
 	return internal.NewMockAttesterServiceClient(mc.ctrl)
 }
 
+func (mc *mockClient) ValidatorServiceClient() pb.ValidatorServiceClient {
+	return internal.NewMockValidatorServiceClient(mc.ctrl)
+}
+
 type mockAssigner struct{}
 
 func (m *mockAssigner) AttesterAssignmentFeed() *event.Feed {
@@ -63,18 +67,20 @@ func TestAttesterLoop(t *testing.T) {
 	}
 	att := NewAttester(context.Background(), cfg)
 
-	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
-	mockServiceClient.EXPECT().AttestHead(
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
+	mockServiceAttester.EXPECT().AttestHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&pb.AttestResponse{
 		AttestationHash: []byte{'A'},
 	}, nil)
 
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
+
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		att.run(doneChan, mockServiceClient)
+		att.run(doneChan, mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 33}
@@ -97,12 +103,14 @@ func TestAttesterMarshalError(t *testing.T) {
 	}
 	p := NewAttester(context.Background(), cfg)
 
-	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
+
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		p.run(doneChan, mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 
@@ -125,10 +133,12 @@ func TestAttesterErrorLoop(t *testing.T) {
 	}
 	p := NewAttester(context.Background(), cfg)
 
-	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
+
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
 
 	// Expect call to throw an error.
-	mockServiceClient.EXPECT().AttestHead(
+	mockServiceAttester.EXPECT().AttestHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("could not attest head"))
@@ -136,7 +146,7 @@ func TestAttesterErrorLoop(t *testing.T) {
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		p.run(doneChan, mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 
