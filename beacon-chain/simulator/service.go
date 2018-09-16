@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,7 +24,7 @@ var log = logrus.WithField("prefix", "simulator")
 type Simulator struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	p2p                    types.P2P
+	p2p                    shared.P2P
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
 	beaconDB               ethdb.Database
@@ -39,7 +40,7 @@ type Simulator struct {
 type Config struct {
 	Delay           time.Duration
 	BlockRequestBuf int
-	P2P             types.P2P
+	P2P             shared.P2P
 	Validator       bool
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
@@ -209,7 +210,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto()}
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: nil}
 			sim.p2p.Send(res, msg.Peer)
 		}
 	}

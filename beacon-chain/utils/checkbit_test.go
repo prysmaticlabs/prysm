@@ -36,8 +36,8 @@ func TestBitSetCount(t *testing.T) {
 		{a: 49, b: 3},  //00110001
 	}
 	for _, tt := range tests {
-		if int(BitSetCount(tt.a)) != tt.b {
-			t.Errorf("BitSetCount(%d) = %v, want = %d", tt.a, int(BitSetCount(tt.a)), tt.b)
+		if int(BitSetCount([]byte{tt.a})) != tt.b {
+			t.Errorf("BitSetCount(%d) = %v, want = %d", tt.a, int(BitSetCount([]byte{tt.a})), tt.b)
 		}
 	}
 }

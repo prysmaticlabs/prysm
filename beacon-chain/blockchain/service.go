@@ -29,6 +29,7 @@ type ChainService struct {
 	incomingBlockChan              chan *types.Block
 	incomingAttestationFeed        *event.Feed
 	incomingAttestationChan        chan *types.Attestation
+	processedAttestationFeed       *event.Feed
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
@@ -62,6 +63,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:              new(event.Feed),
 		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
 		incomingAttestationFeed:        new(event.Feed),
+		processedAttestationFeed:       new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		candidateBlock:                 nilBlock,
@@ -104,6 +106,12 @@ func (c *ChainService) IncomingAttestationFeed() *event.Feed {
 	return c.incomingAttestationFeed
 }
 
+// ProcessedAttestationFeed returns a feed that will be used to stream attestations that have been
+// processed by the beacon node to its rpc clients.
+func (c *ChainService) ProcessedAttestationFeed() *event.Feed {
+	return c.processedAttestationFeed
+}
+
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
 // persisted to the db.
 func (c *ChainService) HasStoredState() (bool, error) {
@@ -125,6 +133,15 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 // This method must be safe to call from a goroutine.
 func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
 	return c.chain.hasBlock(h)
+}
+
+// GetBlockSlotNumber returns the slot number of a block.
+func (c *ChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+	block, err := c.chain.getBlock(h)
+	if err != nil {
+		return 0, fmt.Errorf("could not get block from DB: %v", err)
+	}
+	return block.SlotNumber(), nil
 }
 
 // CurrentCrystallizedState of the canonical chain.
@@ -228,15 +245,19 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-			// Listen for a newly received incoming block from the sync service.
+		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-c.incomingAttestationChan:
 			h, err := attestation.Hash()
 			if err != nil {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
-			log.Info("Relaying attestation 0x%v to p2p service", h)
+			if err := c.chain.saveAttestation(attestation); err != nil {
+				log.Errorf("Could not save attestation: %v", err)
+				continue
+			}
 
-			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
+			c.processedAttestationFeed.Send(attestation.Proto)
+			log.Info("Relaying attestation 0x%v to proposers through grpc", h)
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
@@ -260,7 +281,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-			// Get parent slot number.
+
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Could not get parent block: %v", err)
@@ -271,7 +292,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			// If a candidate block exists and it is a lower slot, run theh fork choice rule.
+			// If a candidate block exists and it is a lower slot, run the fork choice rule.
 			if c.candidateBlock != nilBlock && block.SlotNumber() > c.candidateBlock.SlotNumber() {
 				c.updateHead()
 			}
