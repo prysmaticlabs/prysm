@@ -175,14 +175,14 @@ func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 
 // CheckForCanonicalBlockBySlot checks if the canonical block for that slot exists
 // in the db.
-func (c *ChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
-	return c.chain.hasCanonicalBlockForSlot(slotnumber)
+func (c *ChainService) CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, error) {
+	return c.chain.hasCanonicalBlockForSlot(slotNumber)
 }
 
 // GetCanonicalBlockBySlotNumber retrieves the canonical block for that slot which
 // has been saved in the db.
-func (c *ChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
-	return c.chain.getCanonicalBlockForSlot(slotnumber)
+func (c *ChainService) GetCanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
+	return c.chain.getCanonicalBlockForSlot(slotNumber)
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
@@ -275,7 +275,8 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			}
 			c.canonicalBlockFeed.Send(block)
 
-			// Clear the blocks pending processing.
+			// Clear the blocks pending processing, mutex lock for thread safety
+			// in updating this slice.
 			c.lock.Lock()
 			c.blocksPendingProcessing = [][32]byte{}
 			c.lock.Unlock()
@@ -332,8 +333,8 @@ func (c *ChainService) blockProcessing() {
 
 			log.Infof("Finished processing received block: %x", blockHash)
 
-			// We push the hash of the block we just stored to a pending processing slice the fork choice rule
-			// will utilize.
+			// We push the hash of the block we just stored to a pending processing
+			// slice the fork choice rule will utilize.
 			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
