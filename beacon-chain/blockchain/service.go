@@ -29,6 +29,7 @@ type ChainService struct {
 	incomingBlockChan              chan *types.Block
 	incomingAttestationFeed        *event.Feed
 	incomingAttestationChan        chan *types.Attestation
+	processedAttestationFeed       *event.Feed
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	latestProcessedBlock           chan *types.Block
@@ -62,6 +63,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:              new(event.Feed),
 		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
 		incomingAttestationFeed:        new(event.Feed),
+		processedAttestationFeed:       new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		candidateBlock:                 nilBlock,
@@ -102,6 +104,12 @@ func (c *ChainService) IncomingBlockFeed() *event.Feed {
 // The chain service will subscribe to this feed in order to relay incoming attestations.
 func (c *ChainService) IncomingAttestationFeed() *event.Feed {
 	return c.incomingAttestationFeed
+}
+
+// ProcessedAttestationFeed returns a feed that will be used to stream attestations that have been
+// processed by the beacon node to its rpc clients.
+func (c *ChainService) ProcessedAttestationFeed() *event.Feed {
+	return c.processedAttestationFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -248,8 +256,8 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			log.Infof("Relaying attestation 0x%x to subscriber", h)
-			// TODO: Send attestation to P2P and broadcast attestation to rest of the peers.
+			c.processedAttestationFeed.Send(attestation.Proto)
+			log.Info("Relaying attestation 0x%v to proposers through grpc", h)
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
