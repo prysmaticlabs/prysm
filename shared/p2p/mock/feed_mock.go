@@ -5,9 +5,10 @@
 package mock_p2p
 
 import (
+	reflect "reflect"
+
 	event "github.com/ethereum/go-ethereum/event"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockFeed is a mock of Feed interface
