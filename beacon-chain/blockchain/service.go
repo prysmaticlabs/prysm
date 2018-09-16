@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
@@ -76,14 +77,14 @@ func (c *ChainService) Start() {
 	genesisTimestamp := time.Unix(0, 0)
 	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
 	// Set the current slot.
-	// TODO: This is faulty, the ticker should start from a very
+	// TODO(#511): This is faulty, the ticker should start from a very
 	// precise timestamp instead of rounding down to begin from a
 	// certain slot. We need to ensure validators and the beacon chain
 	// are properly synced at the correct timestamps for beginning
 	// slot intervals.
-	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
+	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
 
-	go c.updateHead(time.NewTicker(time.Second * 8).C)
+	go c.updateHead(time.NewTicker(time.Second * params.SlotDuration).C)
 	go c.blockProcessing()
 }
 
