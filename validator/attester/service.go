@@ -17,6 +17,7 @@ var log = logrus.WithField("prefix", "attester")
 
 type rpcClientService interface {
 	AttesterServiceClient() pb.AttesterServiceClient
+	ValidatorServiceClient() pb.ValidatorServiceClient
 }
 
 type assignmentAnnouncer interface {
@@ -32,6 +33,7 @@ type Attester struct {
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
 	shardID          uint64
+	pubKey           uint64
 }
 
 // Config options for an attester service.
@@ -58,8 +60,9 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 // Start the main routine for an attester.
 func (a *Attester) Start() {
 	log.Info("Starting service")
-	client := a.rpcClientService.AttesterServiceClient()
-	go a.run(a.ctx.Done(), client)
+	attester := a.rpcClientService.AttesterServiceClient()
+	validator := a.rpcClientService.ValidatorServiceClient()
+	go a.run(a.ctx.Done(), attester, validator)
 }
 
 // Stop the main loop.
@@ -70,7 +73,7 @@ func (a *Attester) Stop() error {
 }
 
 // run the main event loop that listens for an attester assignment.
-func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
+func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
 	sub := a.assigner.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
 	defer sub.Unsubscribe()
 	for {
@@ -81,6 +84,24 @@ func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
 		case latestBeaconBlock := <-a.assignmentChan:
 			log.Info("Performing attester responsibility")
 
+		    pubKeyReq := &pb.PublicKey{
+		    	PublicKey: a.pubKey,
+			}
+
+			shardID, err := validator.GetValidatorShardID(a.ctx, pubKeyReq)
+			if err != nil {
+				log.Errorf("Could not get attester Shard ID: %v", err)
+				continue
+			}
+			a.shardID = shardID.ShardId
+
+			attesterIndex, err := validator.GetValidatorIndex(a.ctx, pubKeyReq)
+			if err != nil {
+				log.Errorf("Could not get attester index: %v", err)
+				continue
+			}
+			bitField := []byte{uint(attesterIndex.Index >> 1)}
+
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
 				log.Errorf("Could not marshal latest beacon block: %v", err)
@@ -88,7 +109,7 @@ func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
 			}
 			latestBlockHash := blake2b.Sum512(data)
 
-			req := &pb.AttestRequest{
+			attestReq := &pb.AttestRequest{
 				Attestation: &pbp2p.AggregatedAttestation{
 					Slot:             latestBeaconBlock.GetSlotNumber(),
 					ShardId:          a.shardID,
@@ -98,7 +119,7 @@ func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
 				},
 			}
 
-			res, err := client.AttestHead(a.ctx, req)
+			res, err := attester.AttestHead(a.ctx, attestReq)
 			if err != nil {
 				log.Errorf("could not attest head: %v", err)
 				continue

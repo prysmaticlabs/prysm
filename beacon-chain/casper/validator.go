@@ -2,7 +2,6 @@ package casper
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -155,4 +154,57 @@ func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs 
 	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].ShardId
 	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
 	return proposerShardID, proposerIndex, nil
+}
+
+// GetValidatorIndex returns the index of the validator given an input public key.
+func GetValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
+	activeValidators := ActiveValidatorIndices(validators, dynasty)
+
+	for _, index := range activeValidators {
+		if validators[index].PublicKey == pubKey {
+			return index, nil
+		}
+	}
+
+	return 0, fmt.Errorf("can't find validator index for public key %d", pubKey)
+}
+
+// GetValidatorShardID returns the shard ID of the validator currently participates in.
+func GetValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+	index, err := GetValidatorIndex(pubKey, dynasty, validators)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, slotCommittee := range shardCommittees {
+		for _, committee := range slotCommittee.ArrayShardAndCommittee {
+			for _, validator := range committee.Committee {
+				if validator == index {
+					return committee.ShardId, nil
+				}
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("can't find shard ID for validator with public key %d", pubKey)
+}
+
+// GetValidatorSlot returns the slot number of when the validator gets to attest or proposer.
+func GetValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+	index, err := GetValidatorIndex(pubKey, dynasty, validators)
+	if err != nil {
+		return 0, err
+	}
+
+	for slot, slotCommittee := range shardCommittees {
+		for _, committee := range slotCommittee.ArrayShardAndCommittee {
+			for _, validator := range committee.Committee {
+				if validator == index {
+					return uint64(slot), nil
+				}
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
 }
