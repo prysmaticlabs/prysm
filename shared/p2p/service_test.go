@@ -24,8 +24,13 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+type testService interface {
+	Start()
+	Stop() error
+}
+
 // Ensure that server implements service.
-var _ = shared.Service(&Server{})
+var _ = testService(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
