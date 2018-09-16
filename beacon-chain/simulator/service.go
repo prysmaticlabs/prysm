@@ -198,12 +198,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, h)
 
 		case msg := <-sim.blockRequestChan:
-			data, ok := msg.Data.(*pb.BeaconBlockRequest)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block request p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.BeaconBlockRequest)
 			var h [32]byte
 			copy(h[:], data.Hash[:32])
 
