@@ -22,7 +22,7 @@ var log = logrus.WithField("prefix", "rpc")
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
-HEAD	CurrentCrystallizedState() *types.CrystallizedState
+	CurrentCrystallizedState() *types.CrystallizedState
 	ProcessedAttestationFeed() *event.Feed
 }
 
@@ -256,8 +256,9 @@ func (s *Service) GetValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb
 	}
 
 	return &pb.IndexResponse{Index: index}, nil
+}
 
-	// LatestAttestation streams the latest processed attestations to the rpc clients.
+// LatestAttestation streams the latest processed attestations to the rpc clients.
 func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
 	sub := s.chainService.ProcessedAttestationFeed().Subscribe(s.proccessedAttestation)
 	defer sub.Unsubscribe()

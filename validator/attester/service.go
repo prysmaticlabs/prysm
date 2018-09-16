@@ -4,6 +4,7 @@ package attester
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/gogo/protobuf/proto"
@@ -85,8 +86,8 @@ func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, 
 		case latestBeaconBlock := <-a.assignmentChan:
 			log.Info("Performing attester responsibility")
 
-		    pubKeyReq := &pb.PublicKey{
-		    	PublicKey: a.pubKey,
+			pubKeyReq := &pb.PublicKey{
+				PublicKey: a.pubKey,
 			}
 
 			shardID, err := validator.GetValidatorShardID(a.ctx, pubKeyReq)
@@ -101,7 +102,7 @@ func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, 
 				log.Errorf("Could not get attester index: %v", err)
 				continue
 			}
-			bitField := []byte{uint(attesterIndex.Index >> 1)}
+			attesterBitfield := shared.SetBitfield(int(attesterIndex.Index))
 
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
@@ -114,8 +115,8 @@ func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, 
 				Attestation: &pbp2p.AggregatedAttestation{
 					Slot:             latestBeaconBlock.GetSlotNumber(),
 					ShardId:          a.shardID,
+					AttesterBitfield: attesterBitfield,
 					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
-					AttesterBitfield: []byte{},           // TODO: Need to find which index this attester represents.
 					AggregateSig:     []uint64{},         // TODO: Need Signature verification scheme/library
 				},
 			}

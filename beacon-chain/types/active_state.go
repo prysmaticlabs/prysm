@@ -3,11 +3,11 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -153,7 +153,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 			// in the cache, then we add attester's index and balance to the block cache.
 			for i, attesterIndex := range attesterIndices {
 				var attesterExists bool
-				if !utils.CheckBit(attestation.AttesterBitfield, i) {
+				if !shared.CheckBit(attestation.AttesterBitfield, i) {
 					continue
 				}
 				for _, indexInCache := range update[h].VoterIndices {

@@ -2,8 +2,8 @@ package casper
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +20,7 @@ func CalculateRewards(attestations []*pb.AggregatedAttestation, validators []*pb
 	if attesterFactor >= totalFactor {
 		log.Debug("Applying rewards and penalties for the validators from last cycle")
 		for i, attesterIndex := range activeValidators {
-			voted := utils.CheckBit(attestations[len(attestations)-1].AttesterBitfield, int(attesterIndex))
+			voted := shared.CheckBit(attestations[len(attestations)-1].AttesterBitfield, int(attesterIndex))
 			if voted {
 				validators[i].Balance += params.AttesterReward
 			} else {

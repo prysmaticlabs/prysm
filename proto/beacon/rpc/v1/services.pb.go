@@ -8,7 +8,7 @@ import fmt "fmt"
 import math "math"
 import empty "github.com/golang/protobuf/ptypes/empty"
 import timestamp "github.com/golang/protobuf/ptypes/timestamp"
-import v1 "proto/beacon/p2p/v1"
+import v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
 import (
 	context "golang.org/x/net/context"
@@ -47,7 +47,10 @@ func (m *ShuffleRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 }
 func (dst *ShuffleRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_ShuffleRequest.Merge(dst, src)
-}g
+}
+func (m *ShuffleRequest) XXX_Size() int {
+	return xxx_messageInfo_ShuffleRequest.Size(m)
+}
 func (m *ShuffleRequest) XXX_DiscardUnknown() {
 	xxx_messageInfo_ShuffleRequest.DiscardUnknown(m)
 }

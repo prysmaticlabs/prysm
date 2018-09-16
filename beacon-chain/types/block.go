@@ -3,6 +3,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -178,7 +179,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 			log.Debugf("attestation invalid: %v", attestation)
 			return false
 		}
-		if utils.BitSetCount(attestation.AttesterBitfield) == 1 && utils.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
+		if shared.BitSetCount(attestation.AttesterBitfield) == 1 && shared.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
 			proposerAttested = true
 		}
 	}

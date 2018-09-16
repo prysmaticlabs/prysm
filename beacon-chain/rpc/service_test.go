@@ -47,6 +47,14 @@ func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
 	return m.attestationFeed
 }
 
+func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	cState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		log.Error("Can't get crystallized state")
+	}
+	return cState
+}
+
 type mockAnnouncer struct {
 	blockFeed *event.Feed
 	stateFeed *event.Feed

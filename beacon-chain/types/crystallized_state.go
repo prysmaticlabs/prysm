@@ -2,12 +2,12 @@ package types
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -382,7 +382,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		// find the balance of votes cast in shard attestation.
 		var voteBalance uint64
 		for i, attesterIndex := range indices {
-			if utils.CheckBit(attestation.AttesterBitfield, i) {
+			if shared.CheckBit(attestation.AttesterBitfield, i) {
 				voteBalance += validators[attesterIndex].Balance
 			}
 		}
