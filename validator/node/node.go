@@ -198,9 +198,11 @@ func (s *ShardEthereum) registerProposerService() error {
 	}
 
 	prop := proposer.NewProposer(context.TODO(), &proposer.Config{
-		Assigner:      beaconService,
-		Client:        rpcService,
-		AssignmentBuf: 100,
+		Assigner:              beaconService,
+		Client:                rpcService,
+		AssignmentBuf:         100,
+		AttestationBufferSize: 100,
+		AttesterFeed:          beaconService,
 	})
 	return s.services.RegisterService(prop)
 }
