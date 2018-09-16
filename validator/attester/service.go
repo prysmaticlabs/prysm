@@ -76,6 +76,7 @@ func (a *Attester) Stop() error {
 func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
 	sub := a.assigner.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
 	defer sub.Unsubscribe()
+
 	for {
 		select {
 		case <-done:
@@ -113,9 +114,9 @@ func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, 
 				Attestation: &pbp2p.AggregatedAttestation{
 					Slot:             latestBeaconBlock.GetSlotNumber(),
 					ShardId:          a.shardID,
-					ShardBlockHash:   latestBlockHash[:],
-					AttesterBitfield: []byte{},   // TODO: Need to find which index this attester represents.
-					AggregateSig:     []uint64{}, // TODO: Need Signature verification scheme/library
+					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
+					AttesterBitfield: []byte{},           // TODO: Need to find which index this attester represents.
+					AggregateSig:     []uint64{},         // TODO: Need Signature verification scheme/library
 				},
 			}
 

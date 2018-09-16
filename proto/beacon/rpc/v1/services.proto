@@ -10,6 +10,7 @@ service BeaconService {
     rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
     rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
+    rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.AggregatedAttestation);
 }
 
 service AttesterService {

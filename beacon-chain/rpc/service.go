@@ -22,22 +22,24 @@ var log = logrus.WithField("prefix", "rpc")
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
-	CurrentCrystallizedState() *types.CrystallizedState
+HEAD	CurrentCrystallizedState() *types.CrystallizedState
+	ProcessedAttestationFeed() *event.Feed
 }
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
-	announcer          types.CanonicalEventAnnouncer
-	chainService       chainService
-	port               string
-	listener           net.Listener
-	withCert           string
-	withKey            string
-	grpcServer         *grpc.Server
-	canonicalBlockChan chan *types.Block
-	canonicalStateChan chan *types.CrystallizedState
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	announcer             types.CanonicalEventAnnouncer
+	chainService          chainService
+	port                  string
+	listener              net.Listener
+	withCert              string
+	withKey               string
+	grpcServer            *grpc.Server
+	canonicalBlockChan    chan *types.Block
+	canonicalStateChan    chan *types.CrystallizedState
+	proccessedAttestation chan *pbp2p.AggregatedAttestation
 }
 
 // Config options for the beacon node RPC server.
@@ -55,15 +57,16 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		announcer:          cfg.Announcer,
-		chainService:       cfg.ChainService,
-		port:               cfg.Port,
-		withCert:           cfg.CertFlag,
-		withKey:            cfg.KeyFlag,
-		canonicalBlockChan: make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan: make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		ctx:                   ctx,
+		cancel:                cancel,
+		announcer:             cfg.Announcer,
+		chainService:          cfg.ChainService,
+		port:                  cfg.Port,
+		withCert:              cfg.CertFlag,
+		withKey:               cfg.KeyFlag,
+		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
 	}
 }
 
@@ -253,4 +256,22 @@ func (s *Service) GetValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb
 	}
 
 	return &pb.IndexResponse{Index: index}, nil
+
+	// LatestAttestation streams the latest processed attestations to the rpc clients.
+func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
+	sub := s.chainService.ProcessedAttestationFeed().Subscribe(s.proccessedAttestation)
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case attestation := <-s.proccessedAttestation:
+			log.Info("Sending attestation to RPC clients")
+			if err := stream.Send(attestation); err != nil {
+				return err
+			}
+		case <-s.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
+			return nil
+		}
+	}
 }
