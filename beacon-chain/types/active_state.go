@@ -155,7 +155,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 		if err != nil {
 			return nil, err
 		}
-		
+
 		attesterIndices, err := cState.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
@@ -227,14 +227,15 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 	}, newBlockVoteCache), nil
 }
 
-func (a *ActiveState) getBlockHash(block *Block, slot uint64) ([32]byte, error) {
+// getBlockHash by looking at the current block and returning the block hash at the given slot number. If the slot number is not within the cycleLength*2 range, then this method returns an error.
+func (a *ActiveState) getBlockHash(currentBlock *Block, slot uint64) ([32]byte, error) {
 	//hashes are filled from the end of the array backwards towards the beginning
-	relativeSlotPosition := slot - (block.SlotNumber() - (params.CycleLength * 2))
+	relativeSlotPosition := slot - (currentBlock.SlotNumber() - (params.CycleLength * 2))
 
-	if (relativeSlotPosition < 0 || relativeSlotPosition > params.CycleLength * 2) {
+	if relativeSlotPosition < 0 || relativeSlotPosition > params.CycleLength*2 {
 		return [32]byte{}, fmt.Errorf("requested slot hash is out of recent hashes bounds in ActiveState: Requested: %d Currnt Slot Number: %d",
 			slot,
-			block.SlotNumber())
+			currentBlock.SlotNumber())
 	}
 
 	return a.RecentBlockHashes()[relativeSlotPosition], nil
