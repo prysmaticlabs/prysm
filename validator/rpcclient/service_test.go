@@ -52,3 +52,31 @@ func TestBeaconServiceClient(t *testing.T) {
 		t.Error("Beacon service client function does not implement interface")
 	}
 }
+
+func TestProposerServiceClient(t *testing.T) {
+	rpcClientService := NewRPCClient(
+		context.Background(),
+		&Config{
+			Endpoint: "merkle tries",
+		},
+	)
+	rpcClientService.conn = nil
+	client := rpcClientService.ProposerServiceClient()
+	if _, ok := client.(pb.ProposerServiceClient); !ok {
+		t.Error("Beacon service client function does not implement interface")
+	}
+}
+
+func TestAttesterServiceClient(t *testing.T) {
+	rpcClientService := NewRPCClient(
+		context.Background(),
+		&Config{
+			Endpoint: "merkle tries",
+		},
+	)
+	rpcClientService.conn = nil
+	client := rpcClientService.AttesterServiceClient()
+	if _, ok := client.(pb.AttesterServiceClient); !ok {
+		t.Error("Beacon service client function does not implement interface")
+	}
+}

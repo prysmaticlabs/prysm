@@ -179,9 +179,15 @@ func (s *ShardEthereum) registerAttesterService() error {
 		return err
 	}
 
+	var rpcService *rpcclient.Service
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
+
 	att := attester.NewAttester(context.TODO(), &attester.Config{
 		Assigner:      beaconService,
 		AssignmentBuf: 100,
+		Client:        rpcService,
 	})
 	return s.services.RegisterService(att)
 }
