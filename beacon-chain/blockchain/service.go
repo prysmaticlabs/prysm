@@ -229,7 +229,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
 
 			if isTransition {
-				cState, err = cState.CalculateNewCrystallizedState(aState, block.SlotNumber())
+				cState, err = cState.NewStateRecalculations(aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
 				}
@@ -308,8 +308,6 @@ func (c *ChainService) blockProcessing() {
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
-			aState := c.chain.ActiveState()
-			cState := c.chain.CrystallizedState()
 			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Failed to get hash of block: %v", err)
@@ -322,10 +320,7 @@ func (c *ChainService) blockProcessing() {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
 			}
-
-			parentBlock, err := c.chain.getBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Could not get parent block: %v", err)
+			if !parentExists {
 				continue
 			}
 
