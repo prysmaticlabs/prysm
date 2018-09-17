@@ -91,3 +91,11 @@ func (s *Service) BeaconServiceClient() pb.BeaconServiceClient {
 func (s *Service) ProposerServiceClient() pb.ProposerServiceClient {
 	return pb.NewProposerServiceClient(s.conn)
 }
+
+// AttesterServiceClient initializes a new attester gRPC service using
+// an underlying connection object.
+// This wrapper is important because the underlying gRPC connection is
+// only defined after the service .Start() function is called.
+func (s *Service) AttesterServiceClient() pb.AttesterServiceClient {
+	return pb.NewAttesterServiceClient(s.conn)
+}

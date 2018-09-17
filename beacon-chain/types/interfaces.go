@@ -7,14 +7,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
 // P2P defines a struct that can subscribe to feeds, request data, and broadcast data.
 type P2P interface {
-	Subscribe(msg interface{}, channel interface{}) event.Subscription
-	Send(msg interface{}, peer p2p.Peer)
-	Broadcast(msg interface{})
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
 }
 
 // ChainService is the interface for the local beacon chain.
@@ -27,8 +28,9 @@ type BlockChainService interface {
 	ProcessedBlockHashes() [][32]byte
 	ProcessBlock(b *Block)
 	HasStoredState() (bool, error)
-	ContainsBlock(h [32]byte) bool
+	ContainsBlock(h [32]byte) (bool, error)
 	SaveBlock(b *Block) error
+	GetBlockSlotNumber(h [32]byte) (uint64, error)
 }
 
 // CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.

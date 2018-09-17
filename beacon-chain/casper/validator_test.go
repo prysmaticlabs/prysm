@@ -67,7 +67,7 @@ func TestRotateValidatorSet(t *testing.T) {
 
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
-	pendingAttestation := &pb.AttestationRecord{
+	pendingAttestation := &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{255},
 	}
 
@@ -79,7 +79,7 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	// Setting bit field to 01010101.
-	pendingAttestation = &pb.AttestationRecord{
+	pendingAttestation = &pb.AggregatedAttestation{
 		AttesterBitfield: []byte{85},
 	}
 
@@ -137,5 +137,78 @@ func TestValidatorIndices(t *testing.T) {
 	}
 	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{4, 5}) {
 		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
+	}
+}
+
+func TestAreAttesterBitfieldsValid(t *testing.T) {
+	attestation := &pb.AggregatedAttestation{
+		AttesterBitfield: []byte{'F'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if !isValid {
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
+	attestation := &pb.AggregatedAttestation{
+		AttesterBitfield: []byte{'F', 'F'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if isValid {
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
+	attestation := &pb.AggregatedAttestation{
+		AttesterBitfield: []byte{'F'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if !isValid {
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
+	attestation := &pb.AggregatedAttestation{
+		AttesterBitfield: []byte{'E'},
+	}
+
+	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
+
+	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	if isValid {
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+	}
+}
+
+func TestGetProposerIndexAndShard(t *testing.T) {
+	shardCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 99, Committee: []uint32{0, 1, 2, 3, 4}},
+		}},
+	}
+	if _, _, err := GetProposerIndexAndShard(shardCommittees, 100, 0); err == nil {
+		t.Error("GetProposerIndexAndShard should have failed with invalid lcs")
+	}
+	shardID, index, err := GetProposerIndexAndShard(shardCommittees, 0, 0)
+	if err != nil {
+		t.Fatalf("GetProposerIndexAndShard failed with %v", err)
+	}
+	if shardID != 99 {
+		t.Errorf("Invalid shard ID. Wanted 99, got %d", shardID)
+	}
+	if index != 0 {
+		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
 	}
 }

@@ -74,7 +74,7 @@ Then, you can build and init a new instance of a local, Ethereum blockchain as f
 
 ```
 geth init /path/to/genesis.json --datadir /path/to/your/datadir
-geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*"
+geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*" --rpc
 ````
 
 It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
@@ -129,7 +129,7 @@ bazel run //beacon-chain --\
   --verbosity debug
 ```
 
-Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/VALIDATOR_REGISTER.md)
+Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/VALIDATOR_REGISTRATION.md)
 
 If you don't want to deposit ETH and become a validator, one option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
 in validator duties such as proposing or attesting blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.

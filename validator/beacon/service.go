@@ -23,15 +23,16 @@ type rpcClientService interface {
 
 // Service that interacts with a beacon node via RPC.
 type Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	rpcClient              rpcClientService
-	validatorIndex         int
-	assignedSlot           uint64
-	currentSlot            uint64
-	responsibility         string
-	attesterAssignmentFeed *event.Feed
-	proposerAssignmentFeed *event.Feed
+	ctx                      context.Context
+	cancel                   context.CancelFunc
+	rpcClient                rpcClientService
+	validatorIndex           int
+	assignedSlot             uint64
+	currentSlot              uint64
+	responsibility           string
+	attesterAssignmentFeed   *event.Feed
+	proposerAssignmentFeed   *event.Feed
+	processedAttestationFeed *event.Feed
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node
@@ -39,11 +40,12 @@ type Service struct {
 func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                    ctx,
-		cancel:                 cancel,
-		rpcClient:              rpcClient,
-		attesterAssignmentFeed: new(event.Feed),
-		proposerAssignmentFeed: new(event.Feed),
+		ctx:                      ctx,
+		cancel:                   cancel,
+		rpcClient:                rpcClient,
+		attesterAssignmentFeed:   new(event.Feed),
+		proposerAssignmentFeed:   new(event.Feed),
+		processedAttestationFeed: new(event.Feed),
 	}
 }
 
@@ -74,6 +76,7 @@ func (s *Service) Start() {
 	// when it has to perform its responsibilities appropriately using timestamps
 	// and the IndicesForSlots field inside the received crystallized state.
 	go s.listenForCrystallizedStates(client)
+	go s.listenForProcessedAttestions(client)
 }
 
 // Stop the main loop..
@@ -119,6 +122,10 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	if err := s.processCrystallizedState(crystallized); err != nil {
 		log.Fatalf("unable to process received crystallized state: %v", err)
 	}
+}
+
+func (s *Service) ProcessedAttestationFeed() *event.Feed {
+	return s.processedAttestationFeed
 }
 
 // waitForAssignment kicks off once the validator determines the currentSlot of the
@@ -237,6 +244,30 @@ func (s *Service) AttesterAssignmentFeed() *event.Feed {
 // slot to proposer blocks.
 func (s *Service) ProposerAssignmentFeed() *event.Feed {
 	return s.proposerAssignmentFeed
+}
+
+// listenForProcessedAttestations receives processed attestations from the
+// the beacon node's RPC server via gRPC streams.
+func (s *Service) listenForProcessedAttestions(client pb.BeaconServiceClient) {
+	stream, err := client.LatestAttestation(s.ctx, &empty.Empty{})
+	if err != nil {
+		log.Errorf("Could not setup beacon chain attestation streaming client: %v", err)
+		return
+	}
+	for {
+		attestation, err := stream.Recv()
+
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Errorf("Could not receive latest attestation from stream: %v", err)
+			continue
+		}
+		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
+		s.processedAttestationFeed.Send(attestation)
+	}
 }
 
 // isZeroAddress compares a withdrawal address to an empty byte array.

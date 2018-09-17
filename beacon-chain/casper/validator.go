@@ -9,6 +9,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+const bitsInByte = 8
+
 // RotateValidatorSet is called every dynasty transition. The primary functions are:
 // 1.) Go through queued validator indices and induct them to be active by setting start
 // dynasty to current cycle.
@@ -90,21 +92,67 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 }
 
 // GetAttestersTotalDeposit from the pending attestations.
-func GetAttestersTotalDeposit(attestations []*pb.AttestationRecord) uint64 {
+func GetAttestersTotalDeposit(attestations []*pb.AggregatedAttestation) uint64 {
 	var numOfBits int
 	for _, attestation := range attestations {
-		for _, byte := range attestation.AttesterBitfield {
-			numOfBits += int(utils.BitSetCount(byte))
-		}
+		numOfBits += int(utils.BitSetCount(attestation.AttesterBitfield))
 	}
 	// Assume there's no slashing condition, the following logic will change later phase.
 	return uint64(numOfBits) * params.DefaultBalance
 }
 
-// GetIndicesForSlot returns the attester set of a given slot.
-func GetIndicesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+// GetShardAndCommitteesForSlot returns the attester set of a given slot.
+func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
 	if !(lcs <= slot && slot < lcs+params.CycleLength*2) {
 		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lcs, lcs+params.CycleLength*2)
 	}
 	return shardCommittees[slot-lcs], nil
+}
+
+// AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
+// defined in the Crystallized State.
+func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
+	// Validate attester bit field has the correct length.
+	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
+			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+		return false
+	}
+
+	// Valid attestation can not have non-zero trailing bits.
+	lastBit := len(attesterIndices)
+	remainingBits := lastBit % bitsInByte
+	if remainingBits == 0 {
+		return true
+	}
+
+	for i := 0; i < bitsInByte-remainingBits; i++ {
+		if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+			log.Debugf("attestation has non-zero trailing bits")
+			return false
+		}
+	}
+
+	return true
+}
+
+// GetProposerIndexAndShard returns the index and the shardID of a proposer from a given slot.
+func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (uint64, uint64, error) {
+	if lcs < params.CycleLength {
+		lcs = 0
+	} else {
+		lcs = lcs - params.CycleLength
+	}
+
+	slotCommittees, err := GetShardAndCommitteesForSlot(
+		shardCommittees,
+		lcs,
+		slot)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].ShardId
+	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	return proposerShardID, proposerIndex, nil
 }

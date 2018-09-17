@@ -3,12 +3,13 @@ package sync
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -25,13 +26,13 @@ func init() {
 type mockP2P struct {
 }
 
-func (mp *mockP2P) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(msg interface{}) {}
+func (mp *mockP2P) Broadcast(msg proto.Message) {}
 
-func (mp *mockP2P) Send(msg interface{}, peer p2p.Peer) {
+func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
 type mockChainService struct {
@@ -40,8 +41,8 @@ type mockChainService struct {
 	getError   bool
 }
 
-func (ms *mockChainService) ContainsBlock(h [32]byte) bool {
-	return false
+func (ms *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return false, nil
 }
 
 func (ms *mockChainService) HasStoredState() (bool, error) {
@@ -52,6 +53,22 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockChainService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	cState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cState
+}
+
+func (ms *mockChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
+	return 0, nil
+}
+
 func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
 	if ms.checkError {
 		return ms.slotExists, errors.New("mock check canonical block error")
@@ -59,7 +76,7 @@ func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (boo
 	return ms.slotExists, nil
 }
 
-func (ms *mockChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+func (ms *mockChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	if ms.getError {
 		return nil, errors.New("mock get canonical block error")
 	}
@@ -121,9 +138,15 @@ func TestProcessBlock(t *testing.T) {
 		PowChainRef: []byte{1, 2, 3, 4, 5},
 		ParentHash:  make([]byte, 32),
 	}
+	attestation := &pb.AggregatedAttestation{
+		Slot:           0,
+		ShardId:        0,
+		ShardBlockHash: []byte{'A'},
+	}
 
 	responseBlock := &pb.BeaconBlockResponse{
-		Block: data,
+		Block:       data,
+		Attestation: attestation,
 	}
 
 	msg := p2p.Message{
@@ -304,8 +327,8 @@ type mockEmptyChainService struct {
 	hasStoredState bool
 }
 
-func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) bool {
-	return false
+func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return false, nil
 }
 
 func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
@@ -313,6 +336,10 @@ func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
 }
 
 func (ms *mockEmptyChainService) IncomingBlockFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockEmptyChainService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
@@ -324,8 +351,16 @@ func (ms *mockEmptyChainService) CheckForCanonicalBlockBySlot(slotnumber uint64)
 	return false, nil
 }
 
-func (ms *mockEmptyChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+func (ms *mockEmptyChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	return nil, nil
+}
+
+func (ms *mockEmptyChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	return types.NewCrystallizedState(nil)
+}
+
+func (ms *mockEmptyChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
+	return 0, nil
 }
 
 func TestStartEmptyState(t *testing.T) {

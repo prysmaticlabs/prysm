@@ -18,6 +18,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -61,7 +62,7 @@ type SyncService interface {
 type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
-	p2p                          types.P2P
+	p2p                          shared.P2P
 	chainService                 ChainService
 	syncService                  SyncService
 	blockBuf                     chan p2p.Message
@@ -75,7 +76,7 @@ type InitialSync struct {
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
-	beaconp2p types.P2P,
+	beaconp2p shared.P2P,
 	chainService ChainService,
 	syncService SyncService,
 ) *InitialSync {
@@ -128,8 +129,8 @@ func (s *InitialSync) Stop() error {
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run(delaychan <-chan time.Time) {
-	blockSub := s.p2p.Subscribe(pb.BeaconBlockResponse{}, s.blockBuf)
-	crystallizedStateSub := s.p2p.Subscribe(pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
+	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
+	crystallizedStateSub := s.p2p.Subscribe(&pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
 	defer func() {
 		blockSub.Unsubscribe()
 		crystallizedStateSub.Unsubscribe()
@@ -152,12 +153,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				return
 			}
 		case msg := <-s.blockBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.BeaconBlockResponse)
 
 			if data.Block.GetSlotNumber() > highestObservedSlot {
 				highestObservedSlot = data.Block.GetSlotNumber()
@@ -186,12 +182,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 			s.requestNextBlock()
 		case msg := <-s.crystallizedStateBuf:
-			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed crystallized state p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.CrystallizedStateResponse)
 
 			if s.initialCrystallizedStateHash == [32]byte{} {
 				continue
