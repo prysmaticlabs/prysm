@@ -14,8 +14,6 @@
 // Read more about gossipsub at https://github.com/vyzo/gerbil-simsub
 package p2p
 
-import "context"
-
 // Use this file for interfaces only!
 
 // Adapter is used to create middleware.
@@ -26,4 +24,4 @@ type Adapter func(Handler) Handler
 // Handler is a callback used in the adapter/middleware stack chain.
 //
 // See http://godoc.org/github.com/prysmaticlabs/prysm/shared/p2p#Server.RegisterTopic
-type Handler func(context.Context, Message)
+type Handler func(Message)

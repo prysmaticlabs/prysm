@@ -19,7 +19,6 @@ func TestNodeObserver_Builds(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
-	set.String("tracing-endpoint", "127.0.0.1:34753", "tracing endpoint")
 	set.Bool("simulator", true, "want to be a simulator?")
 
 	context := cli.NewContext(app, set, nil)
@@ -40,7 +39,6 @@ func TestNodeValidator_Builds(t *testing.T) {
 		set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 		tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 		set.String("datadir", tmp, "node data directory")
-		set.String("tracing-endpoint", "127.0.0.1:34753", "tracing endpoint")
 		set.Bool("validator", true, "want to be a validator?")
 
 		context := cli.NewContext(app, set, nil)
@@ -69,7 +67,6 @@ func TestNodeStart(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
-	set.String("tracing-endpoint", "127.0.0.1:34753", "tracing endpoint")
 	set.Bool("simulator", true, "want to be a simulator?")
 
 	context := cli.NewContext(app, set, nil)
@@ -91,7 +88,6 @@ func TestNodeClose(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
-	set.String("tracing-endpoint", "127.0.0.1:34753", "tracing endpoint")
 
 	context := cli.NewContext(app, set, nil)
 

@@ -45,7 +45,7 @@ func TestBroadcast(t *testing.T) {
 func TestEmitFailsNonProtobuf(t *testing.T) {
 	s, _ := NewServer()
 	hook := logTest.NewGlobal()
-	s.emit(context.Background(), nil /*feed*/, nil /*msg*/, reflect.TypeOf(""))
+	s.emit(Message{}, nil /*feed*/, nil /*msg*/, reflect.TypeOf(""))
 	want := "Received message is not a protobuf message: string"
 	if hook.LastEntry().Message != want {
 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
@@ -61,7 +61,7 @@ func TestEmitFailsUnmarshal(t *testing.T) {
 		},
 	}
 
-	s.emit(context.Background(), nil /*feed*/, msg, reflect.TypeOf(testpb.TestMessage{}))
+	s.emit(Message{}, nil /*feed*/, msg, reflect.TypeOf(testpb.TestMessage{}))
 	want := "Failed to decode data:"
 	if !strings.Contains(hook.LastEntry().Message, want) {
 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
@@ -215,9 +215,9 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 
 	i := 0
 	var testAdapter Adapter = func(next Handler) Handler {
-		return func(ctx context.Context, msg Message) {
+		return func(msg Message) {
 			i++
-			next(ctx, msg)
+			next(msg)
 		}
 	}
 

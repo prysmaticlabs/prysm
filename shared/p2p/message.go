@@ -9,7 +9,7 @@ import (
 
 // Message represents a message received from an external peer.
 type Message struct {
-	// Ctx message context
+	// Ctx message context.
 	Ctx context.Context
 	// Peer represents the sender of the message.
 	Peer Peer

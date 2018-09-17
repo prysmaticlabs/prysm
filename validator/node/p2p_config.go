@@ -22,8 +22,10 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		return nil, err
 	}
 
-	traceAdapter, err := tracer.New("validator", ctx.GlobalString(cmd.TracingEndpointFlag.Name),
-		ctx.GlobalBool(cmd.DisableTracingFlag.Name))
+	traceAdapter, err := tracer.New("validator",
+		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
+		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
+		ctx.GlobalBool(cmd.EnableTracingFlag.Name))
 	if err != nil {
 		return nil, err
 	}

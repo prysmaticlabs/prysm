@@ -1,7 +1,6 @@
 package tracer
 
 import (
-	"context"
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -10,15 +9,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const (
-	defaultSamplingFraction = 0.25
-)
-
 var log = logrus.WithField("prefix", "tracer")
 
-// New creates and initializes a new tracing adapter
-func New(name, endpoint string, disable bool) (p2p.Adapter, error) {
-	if disable {
+// New creates and initializes a new tracing adapter.
+func New(name, endpoint string, sampleFraction float64, enable bool) (p2p.Adapter, error) {
+	if !enable {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.NeverSample()})
 		return adapter, nil
 	}
@@ -27,8 +22,7 @@ func New(name, endpoint string, disable bool) (p2p.Adapter, error) {
 		return nil, errors.New("tracing service name cannot be empty")
 	}
 
-	// TODO: make sampling fraction configurable?
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(defaultSamplingFraction)})
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(sampleFraction)})
 
 	log.Infof("Starting Jaeger exporter endpoint at address = %s", endpoint)
 	exporter, err := jaeger.NewExporter(jaeger.Options{
@@ -46,10 +40,10 @@ func New(name, endpoint string, disable bool) (p2p.Adapter, error) {
 }
 
 var adapter p2p.Adapter = func(next p2p.Handler) p2p.Handler {
-	return func(ctx context.Context, msg p2p.Message) {
-		ctx, messageSpan := trace.StartSpan(ctx, "handleP2pMessage")
-		msg.Ctx = ctx
-		next(ctx, msg)
+	return func(msg p2p.Message) {
+		var messageSpan *trace.Span
+		msg.Ctx, messageSpan = trace.StartSpan(msg.Ctx, "handleP2pMessage")
+		next(msg)
 		messageSpan.End()
 	}
 }

@@ -1,7 +1,6 @@
 package p2p_test
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
@@ -12,19 +11,19 @@ import (
 // may choose not to call next. For example, in the case of a rate
 // limiter or blacklisting condition.
 func reqLogger(next p2p.Handler) p2p.Handler {
-	return func(ctx context.Context, msg p2p.Message) {
+	return func(msg p2p.Message) {
 		fmt.Printf("Received message from %v\n", msg.Peer)
-		next(ctx, msg)
+		next(msg)
 	}
 }
 
 // Functions can return an adapter in order to capture configuration.
 func adapterWithParams(i int) p2p.Adapter {
 	return func(next p2p.Handler) p2p.Handler {
-		return func(ctx context.Context, msg p2p.Message) {
+		return func(msg p2p.Message) {
 			fmt.Printf("Magic number is %d\n", i)
 			i++
-			next(ctx, msg)
+			next(msg)
 		}
 	}
 }

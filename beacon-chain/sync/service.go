@@ -124,9 +124,7 @@ func (ss *Service) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
-			if err := ss.receiveBlockHash(msg); err != nil {
-				log.Errorf("Received block hash failed: %v", err)
-			}
+			ss.receiveBlockHash(msg)
 		case msg := <-ss.blockBuf:
 			ss.receiveBlock(msg)
 		case msg := <-ss.blockRequestBySlot:
@@ -138,7 +136,7 @@ func (ss *Service) run() {
 // receiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) receiveBlockHash(msg p2p.Message) error {
+func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlockHash")
 	defer receiveBlockSpan.End()
 
@@ -146,7 +144,7 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) error {
 	// TODO: Handle this at p2p layer.
 	if !ok {
 		log.Error("Received malformed beacon block hash announcement p2p message")
-		return nil
+		return
 	}
 
 	var h [32]byte
@@ -156,10 +154,10 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) error {
 	blockExists, err := ss.chainService.ContainsBlock(h)
 	containsBlockSpan.End()
 	if err != nil {
-		return err
+		log.Errorf("Received block hash failed: %v", err)
 	}
 	if blockExists {
-		return nil
+		return
 	}
 
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
@@ -167,7 +165,6 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) error {
 	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
 	sendBlockRequestSpan.End()
-	return nil
 }
 
 // receiveBlock processes a block from the p2p layer.

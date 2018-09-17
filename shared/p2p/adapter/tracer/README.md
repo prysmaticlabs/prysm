@@ -5,8 +5,8 @@
  - [Go](https://golang.org/) 1.11+ (For execution traces collected by pprof)
 
 ##### Using Jaeger
-Tracing is enabled by default, to disable, you can use the option `--disable-tracing`
-Jaeger endpoint can be configured with the `--tracing-endpoint` option and defaults to `http://127.0.0.1:14268`
+Tracing is disabled by default, to enable, you can use the option `--enable-tracing`.
+Jaeger endpoint can be configured with the `--tracing-endpoint` option and defaults to `http://127.0.0.1:14268`.
 
 Run Jaeger:
 ```sh
@@ -16,8 +16,9 @@ $ docker run -d --name jaeger   -e COLLECTOR_ZIPKIN_HTTP_PORT=9411   -p 5775:577
 This will start the UI at `http://localhost:16686`
 
 ##### Using the Go tool
+Tracing is disabled by default, to enable, you can use the option `--enable-tracing`.
+Run the application using the `--pprof` option to enable pprof (for trace collection).
 
-Run the application using the `--pprof` option to enable pprof
 To collect traces for 5 seconds:
 ```sh
 $ curl http://localhost:6060/debug/pprof/trace?seconds=5 -o trace.out

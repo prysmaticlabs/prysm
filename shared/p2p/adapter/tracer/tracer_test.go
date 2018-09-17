@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewTracer(t *testing.T) {
-	a, err := New("test", "test:1234", true)
+	a, err := New("test", "test:1234", 0.25, false)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -16,7 +16,7 @@ func TestNewTracer(t *testing.T) {
 		t.Error("Expected tracing adapter")
 	}
 
-	a, err = New("test", "127.0.0.1:43755", false)
+	a, err = New("test", "127.0.0.1:43755", 0.25, true)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
 	}
@@ -25,20 +25,20 @@ func TestNewTracer(t *testing.T) {
 	}
 
 	i := 0
-	h := a(func(context.Context, p2p.Message) { i++ })
-	h(context.Background(), p2p.Message{})
+	h := a(func(p2p.Message) { i++ })
+	h(p2p.Message{Ctx: context.Background()})
 	if i != 1 {
 		t.Error("Expected next handler to be called")
 	}
 }
 
 func TestNewTracerBad(t *testing.T) {
-	_, err := New("", "test:1234", false)
+	_, err := New("", "test:1234", 0.25, true)
 	if err == nil {
 		t.Errorf("Expected error with empty name")
 	}
 
-	_, err = New("test", "", false)
+	_, err = New("test", "", 0.25, true)
 	if err == nil {
 		t.Errorf("Expected error with empty endpoint")
 	}
