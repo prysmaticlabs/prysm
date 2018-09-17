@@ -7,7 +7,8 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service BeaconService {
-    rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
+    rpc GenesisTimeAndCanonicalState(google.protobuf.Empty) returns (GenesisTimeAndStateResponse);
+    rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
     rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.AggregatedAttestation);
@@ -19,6 +20,11 @@ service AttesterService {
 
 service ProposerService {
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
+}
+
+message GenesisTimeAndStateResponse {
+  google.protobuf.Timestamp genesis_timestamp = 1;
+  ethereum.beacon.p2p.v1.CrystallizedState latest_crystallized_state = 2;
 }
 
 message ShuffleRequest {

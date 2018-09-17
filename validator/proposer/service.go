@@ -177,14 +177,14 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 			// TODO: Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
-				ParentHash:              latestBlockHash[:],
+				ParentHash: latestBlockHash[:],
+				// TODO: Fix to be the actual, timebased slot number instead.
 				SlotNumber:              latestBeaconBlock.GetSlotNumber() + 1,
 				RandaoReveal:            []byte{},
 				AttestationBitmask:      bitmask,
 				AttestationAggregateSig: agSig,
 				Timestamp:               ptypes.TimestampNow(),
 			}
-
 			res, err := client.ProposeBlock(p.ctx, req)
 			if err != nil {
 				log.Errorf("Could not propose block: %v", err)

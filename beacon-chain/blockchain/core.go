@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -112,6 +113,15 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
+	has, err := b.db.Has(canonicalHeadLookupKey)
+	if err != nil {
+		return nil, err
+	}
+	// If there has not been a canonical head stored yet, we
+	// return the genesis block of the chain.
+	if !has {
+		return b.GenesisBlock()
+	}
 	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
@@ -121,7 +131,6 @@ func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
 		return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 	}
 	return types.NewBlock(block), nil
-
 }
 
 // ActiveState contains the current state of attestations and changes every block.
@@ -218,10 +227,10 @@ func (b *BeaconChain) saveBlockAndAttestations(block *types.Block) error {
 // saved in the db. This will alow for canonical blocks to be retrieved from the db
 // by using their slotnumber as a key, and then using the retrieved blockhash to get
 // the block from the db.
-// prefix + slotnumber -> blockhash
-// prefix + blockhash -> block
-func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) error {
-	return b.db.Put(canonicalBlockKey(slotnumber), hash[:])
+// prefix + slotNumber -> blockhash
+// prefix + blockHash -> block
+func (b *BeaconChain) saveCanonicalSlotNumber(slotNumber uint64, hash [32]byte) error {
+	return b.db.Put(canonicalBlockKey(slotNumber), hash[:])
 }
 
 // saveCanonicalBlock puts the passed block into the beacon chain db
@@ -238,6 +247,13 @@ func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
 // getBlock retrieves a block from the db using its hash.
 func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 	key := blockKey(hash)
+	has, err := b.db.Has(key)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, errors.New("block not found")
+	}
 	enc, err := b.db.Get(key)
 	if err != nil {
 		return nil, err
@@ -257,13 +273,13 @@ func (b *BeaconChain) removeBlock(hash [32]byte) error {
 
 // hasCanonicalBlockForSlot checks the db if the canonical block for
 // this slot exists.
-func (b *BeaconChain) hasCanonicalBlockForSlot(slotnumber uint64) (bool, error) {
-	return b.db.Has(canonicalBlockKey(slotnumber))
+func (b *BeaconChain) hasCanonicalBlockForSlot(slotNumber uint64) (bool, error) {
+	return b.db.Has(canonicalBlockKey(slotNumber))
 }
 
-// getCanonicalBlockForSlot retrieves the canonical block which is saved in the db
+// canonicalBlockForSlot retrieves the canonical block which is saved in the db
 // for that required slot number.
-func (b *BeaconChain) getCanonicalBlockForSlot(slotNumber uint64) (*types.Block, error) {
+func (b *BeaconChain) canonicalBlockForSlot(slotNumber uint64) (*types.Block, error) {
 	enc, err := b.db.Get(canonicalBlockKey(slotNumber))
 	if err != nil {
 		return nil, err

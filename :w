@@ -154,8 +154,7 @@ func (b *BeaconNode) registerP2P() error {
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-	devMode := ctx.GlobalBool(utils.DevFlag.Name)
-	if !devMode {
+	if ctx.GlobalBool(utils.DevFlag.Name) {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
@@ -172,7 +171,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		Chain:            beaconChain,
 		BeaconBlockBuf:   10,
 		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
-		DevMode:          devMode,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)

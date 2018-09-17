@@ -21,9 +21,9 @@ type chainService interface {
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
-	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
-	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
-	GetBlockSlotNumber(h [32]byte) (uint64, error)
+	CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, error)
+	CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error)
+	BlockSlotNumberByHash(h [32]byte) (uint64, error)
 	CurrentCrystallizedState() *types.CrystallizedState
 }
 
@@ -171,12 +171,16 @@ func (ss *Service) run() {
 			// Verify attestation coming from proposer then forward block to the subscribers.
 			attestation := types.NewAttestation(response.Attestation)
 			cState := ss.chainService.CurrentCrystallizedState()
-			parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+			parentSlot, err := ss.chainService.BlockSlotNumberByHash(block.ParentHash())
 			if err != nil {
 				log.Errorf("Failed to get parent slot: %v", err)
 				continue
 			}
-			proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+			proposerShardID, _, err := casper.GetProposerIndexAndShard(
+				cState.ShardAndCommitteesForSlots(),
+				cState.LastStateRecalc(),
+				parentSlot,
+			)
 			if err != nil {
 				log.Errorf("Failed to get proposer shard ID: %v", err)
 				continue
@@ -207,7 +211,7 @@ func (ss *Service) run() {
 				continue
 			}
 
-			block, err := ss.chainService.GetCanonicalBlockBySlotNumber(request.GetSlotNumber())
+			block, err := ss.chainService.CanonicalBlockBySlotNumber(request.GetSlotNumber())
 			if err != nil {
 				log.Errorf("Error retrieving block from db %v", err)
 				continue
