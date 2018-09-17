@@ -1,8 +1,9 @@
 package shared
 
 import (
-	"github.com/steakknife/hamming"
 	"math"
+
+	"github.com/steakknife/hamming"
 )
 
 // CheckBit checks if a bit in a bit field is one.
