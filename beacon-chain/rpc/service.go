@@ -241,6 +241,9 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 			if err := stream.Send(state.Proto()); err != nil {
 				return err
 			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
 		case <-s.ctx.Done():
 			log.Debug("RPC context closed, exiting goroutine")
 			return nil
@@ -260,6 +263,9 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 			if err := stream.Send(attestation); err != nil {
 				return err
 			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
 		case <-s.ctx.Done():
 			log.Debug("RPC context closed, exiting goroutine")
 			return nil
