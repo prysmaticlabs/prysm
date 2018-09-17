@@ -74,8 +74,7 @@ func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
 	log.Infof("Starting service")
-	genesisTimestamp := time.Unix(0, 0)
-	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
+	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
 	// Set the current slot.
 	// TODO(#511): This is faulty, the ticker should start from a very
 	// precise timestamp instead of rounding down to begin from a
