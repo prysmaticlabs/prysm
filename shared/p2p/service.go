@@ -26,7 +26,7 @@ type Server struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	mutex        *sync.Mutex
-	feeds        map[reflect.Type]*event.Feed
+	feeds        map[reflect.Type]Feed
 	host         host.Host
 	gsub         *floodsub.PubSub
 	topicMapping map[reflect.Type]string
@@ -51,7 +51,7 @@ func NewServer() (*Server, error) {
 	return &Server{
 		ctx:          ctx,
 		cancel:       cancel,
-		feeds:        make(map[reflect.Type]*event.Feed),
+		feeds:        make(map[reflect.Type]Feed),
 		host:         host,
 		gsub:         gsub,
 		mutex:        &sync.Mutex{},
@@ -133,7 +133,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}()
 }
 
-func (s *Server) emit(pMsg Message, feed *event.Feed, msg *floodsub.Message, msgType reflect.Type) {
+func (s *Server) emit(pMsg Message, feed Feed, msg *floodsub.Message, msgType reflect.Type) {
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
 		log.Errorf("Received message is not a protobuf message: %s", msgType)
@@ -151,6 +151,7 @@ func (s *Server) emit(pMsg Message, feed *event.Feed, msg *floodsub.Message, msg
 	log.WithFields(logrus.Fields{
 		"numSubs": i,
 		"msgType": fmt.Sprintf("%T", d),
+		"msgName": proto.MessageName(d),
 	}).Debug("Emit p2p message to feed subscribers")
 }
 
@@ -161,12 +162,10 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 
 // Send a message to a specific peer.
 func (s *Server) Send(msg proto.Message, peer Peer) {
-	// TODO
+	// TODO(#175)
 	// https://github.com/prysmaticlabs/prysm/issues/175
 
-	// TODO: Support passing value and pointer type messages.
-
-	// TODO: Remove debug log after send is implemented.
+	// TODO(#175): Remove debug log after send is implemented.
 	_ = peer
 	log.Debug("Broadcasting to everyone rather than sending a single peer")
 	s.Broadcast(msg)
@@ -174,7 +173,7 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg proto.Message) {
-	// TODO: https://github.com/prysmaticlabs/prysm/issues/176
+	// TODO(#176): https://github.com/prysmaticlabs/prysm/issues/176
 	topic := s.topicMapping[messageType(msg)]
 	log.WithFields(logrus.Fields{
 		"topic": topic,
@@ -184,7 +183,6 @@ func (s *Server) Broadcast(msg proto.Message) {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
 	}
 
-	// TODO: Next assertion may fail if your msg is not a pointer to a msg.
 	m, ok := msg.(proto.Message)
 	if !ok {
 		log.Errorf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg)

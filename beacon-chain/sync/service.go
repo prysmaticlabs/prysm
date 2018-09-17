@@ -6,8 +6,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -19,8 +21,11 @@ type chainService interface {
 	ContainsBlock(h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
+	IncomingAttestationFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
 	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+	GetBlockSlotNumber(h [32]byte) (uint64, error)
+	CurrentCrystallizedState() *types.CrystallizedState
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -38,7 +43,7 @@ type chainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	p2p                   types.P2P
+	p2p                   shared.P2P
 	chainService          chainService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
@@ -63,7 +68,7 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs chainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
@@ -140,13 +145,7 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlockHash")
 	defer receiveBlockSpan.End()
 
-	data, ok := msg.Data.(*pb.BeaconBlockHashAnnounce)
-	// TODO: Handle this at p2p layer.
-	if !ok {
-		log.Error("Received malformed beacon block hash announcement p2p message")
-		return
-	}
-
+	data := msg.Data.(*pb.BeaconBlockHashAnnounce)
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 
@@ -172,20 +171,15 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlock")
 	defer receiveBlockSpan.End()
 
-	response, ok := msg.Data.(*pb.BeaconBlockResponse)
-	// TODO: Handle this at p2p layer.
-	if !ok {
-		log.Error("Received malformed beacon block p2p message")
-		return
-	}
+	response := msg.Data.(*pb.BeaconBlockResponse)
 	block := types.NewBlock(response.Block)
-	h, err := block.Hash()
+	blockHash, err := block.Hash()
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 	}
 
 	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.chainService.ContainsBlock(h)
+	blockExists, err := ss.chainService.ContainsBlock(blockHash)
 	containsBlockSpan.End()
 	if err != nil {
 		log.Errorf("Can not check for block in DB: %v", err)
@@ -195,11 +189,33 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
+	// Verify attestation coming from proposer then forward block to the subscribers.
+	attestation := types.NewAttestation(response.Attestation)
+	cState := ss.chainService.CurrentCrystallizedState()
+	parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+	if err != nil {
+		log.Errorf("Failed to get parent slot: %v", err)
+		return
+	}
+	proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+	if err != nil {
+		log.Errorf("Failed to get proposer shard ID: %v", err)
+		return
+	}
+	if err := attestation.VerifyAttestation(proposerShardID); err != nil {
+		log.Errorf("Failed to verify proposer attestation: %v", err)
+		return
+	}
+
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
-	// We send out a message over a feed.
+	log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
 	ss.chainService.IncomingBlockFeed().Send(block)
 	sendBlockSpan.End()
+
+	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+	ss.chainService.IncomingAttestationFeed().Send(attestation)
+	sendAttestationSpan.End()
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.
