@@ -63,7 +63,7 @@ func (a *Attester) Start() {
 	log.Info("Starting service")
 	attester := a.rpcClientService.AttesterServiceClient()
 	validator := a.rpcClientService.ValidatorServiceClient()
-	go a.run(a.ctx.Done(), attester, validator)
+	go a.run(attester, validator)
 }
 
 // Stop the main loop.
@@ -74,13 +74,13 @@ func (a *Attester) Stop() error {
 }
 
 // run the main event loop that listens for an attester assignment.
-func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
+func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
 	sub := a.assigner.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
 	defer sub.Unsubscribe()
 
 	for {
 		select {
-		case <-done:
+		case <-a.ctx.Done():
 			log.Debug("Attester context closed, exiting goroutine")
 			return
 		case latestBeaconBlock := <-a.assignmentChan:
@@ -90,14 +90,14 @@ func (a *Attester) run(done <-chan struct{}, attester pb.AttesterServiceClient, 
 				PublicKey: a.pubKey,
 			}
 
-			shardID, err := validator.GetValidatorShardID(a.ctx, pubKeyReq)
+			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {
 				log.Errorf("Could not get attester Shard ID: %v", err)
 				continue
 			}
 			a.shardID = shardID.ShardId
 
-			attesterIndex, err := validator.GetValidatorIndex(a.ctx, pubKeyReq)
+			attesterIndex, err := validator.ValidatorIndex(a.ctx, pubKeyReq)
 			if err != nil {
 				log.Errorf("Could not get attester index: %v", err)
 				continue

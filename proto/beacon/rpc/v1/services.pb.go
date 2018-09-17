@@ -860,9 +860,9 @@ var _ProposerService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ValidatorServiceClient interface {
-	GetValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error)
-	GetValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error)
-	GetValidatorSlot(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponse, error)
+	ValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error)
+	ValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error)
+	ValidatorSlot(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponse, error)
 }
 
 type validatorServiceClient struct {
@@ -873,27 +873,27 @@ func NewValidatorServiceClient(cc *grpc.ClientConn) ValidatorServiceClient {
 	return &validatorServiceClient{cc}
 }
 
-func (c *validatorServiceClient) GetValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error) {
+func (c *validatorServiceClient) ValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error) {
 	out := new(ShardIDResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/GetValidatorShardID", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorShardID", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *validatorServiceClient) GetValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error) {
+func (c *validatorServiceClient) ValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error) {
 	out := new(IndexResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/GetValidatorIndex", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorIndex", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *validatorServiceClient) GetValidatorSlot(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponse, error) {
+func (c *validatorServiceClient) ValidatorSlot(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponse, error) {
 	out := new(SlotResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/GetValidatorSlot", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorSlot", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -902,65 +902,65 @@ func (c *validatorServiceClient) GetValidatorSlot(ctx context.Context, in *Publi
 
 // ValidatorServiceServer is the server API for ValidatorService service.
 type ValidatorServiceServer interface {
-	GetValidatorShardID(context.Context, *PublicKey) (*ShardIDResponse, error)
-	GetValidatorIndex(context.Context, *PublicKey) (*IndexResponse, error)
-	GetValidatorSlot(context.Context, *PublicKey) (*SlotResponse, error)
+	ValidatorShardID(context.Context, *PublicKey) (*ShardIDResponse, error)
+	ValidatorIndex(context.Context, *PublicKey) (*IndexResponse, error)
+	ValidatorSlot(context.Context, *PublicKey) (*SlotResponse, error)
 }
 
 func RegisterValidatorServiceServer(s *grpc.Server, srv ValidatorServiceServer) {
 	s.RegisterService(&_ValidatorService_serviceDesc, srv)
 }
 
-func _ValidatorService_GetValidatorShardID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ValidatorService_ValidatorShardID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublicKey)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ValidatorServiceServer).GetValidatorShardID(ctx, in)
+		return srv.(ValidatorServiceServer).ValidatorShardID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/GetValidatorShardID",
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorShardID",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ValidatorServiceServer).GetValidatorShardID(ctx, req.(*PublicKey))
+		return srv.(ValidatorServiceServer).ValidatorShardID(ctx, req.(*PublicKey))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ValidatorService_GetValidatorIndex_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ValidatorService_ValidatorIndex_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublicKey)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ValidatorServiceServer).GetValidatorIndex(ctx, in)
+		return srv.(ValidatorServiceServer).ValidatorIndex(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/GetValidatorIndex",
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorIndex",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ValidatorServiceServer).GetValidatorIndex(ctx, req.(*PublicKey))
+		return srv.(ValidatorServiceServer).ValidatorIndex(ctx, req.(*PublicKey))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ValidatorService_GetValidatorSlot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ValidatorService_ValidatorSlot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublicKey)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ValidatorServiceServer).GetValidatorSlot(ctx, in)
+		return srv.(ValidatorServiceServer).ValidatorSlot(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/GetValidatorSlot",
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorSlot",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ValidatorServiceServer).GetValidatorSlot(ctx, req.(*PublicKey))
+		return srv.(ValidatorServiceServer).ValidatorSlot(ctx, req.(*PublicKey))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -970,16 +970,16 @@ var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*ValidatorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetValidatorShardID",
-			Handler:    _ValidatorService_GetValidatorShardID_Handler,
+			MethodName: "ValidatorShardID",
+			Handler:    _ValidatorService_ValidatorShardID_Handler,
 		},
 		{
-			MethodName: "GetValidatorIndex",
-			Handler:    _ValidatorService_GetValidatorIndex_Handler,
+			MethodName: "ValidatorIndex",
+			Handler:    _ValidatorService_ValidatorIndex_Handler,
 		},
 		{
-			MethodName: "GetValidatorSlot",
-			Handler:    _ValidatorService_GetValidatorSlot_Handler,
+			MethodName: "ValidatorSlot",
+			Handler:    _ValidatorService_ValidatorSlot_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

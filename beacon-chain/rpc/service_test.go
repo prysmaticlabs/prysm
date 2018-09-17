@@ -50,7 +50,7 @@ func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
 func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	cState, err := types.NewGenesisCrystallizedState()
 	if err != nil {
-		log.Error("Can't get crystallized state")
+		return nil
 	}
 	return cState
 }

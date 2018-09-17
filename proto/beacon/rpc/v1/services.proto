@@ -22,9 +22,9 @@ service ProposerService {
 }
 
 service ValidatorService {
-    rpc GetValidatorShardID(PublicKey) returns (ShardIDResponse);
-    rpc GetValidatorIndex(PublicKey) returns (IndexResponse);
-    rpc GetValidatorSlot(PublicKey) returns (SlotResponse);
+    rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
+    rpc ValidatorIndex(PublicKey) returns (IndexResponse);
+    rpc ValidatorSlot(PublicKey) returns (SlotResponse);
 }
 
 message ShuffleRequest {

@@ -77,15 +77,13 @@ func TestAttesterLoop(t *testing.T) {
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
 
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		att.run(doneChan, mockServiceAttester, mockServiceValidator)
+		att.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 33}
 
-	doneChan <- struct{}{}
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
@@ -107,15 +105,13 @@ func TestAttesterMarshalError(t *testing.T) {
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
 
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		p.run(doneChan, mockServiceAttester, mockServiceValidator)
+		p.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 
 	p.assignmentChan <- nil
-	doneChan <- struct{}{}
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
@@ -143,15 +139,13 @@ func TestAttesterErrorLoop(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, errors.New("could not attest head"))
 
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		p.run(doneChan, mockServiceAttester, mockServiceValidator)
+		p.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
-	doneChan <- struct{}{}
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")

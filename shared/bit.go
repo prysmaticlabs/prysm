@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"github.com/steakknife/hamming"
 	"math"
 )
 
@@ -23,14 +24,12 @@ func CheckBit(bitfield []byte, index int) bool {
 func BitSetCount(bytes []byte) int {
 	var total int
 	for _, b := range bytes {
-		b = (b & 0x55) + ((b >> 1) & 0x55)
-		b = (b & 0x33) + ((b >> 2) & 0x33)
-		total += int((b + (b >> 4)) & 0xF)
+		total += hamming.CountBitsByte(b)
 	}
 	return total
 }
 
-// BitLength returns the length of the bitfield for a giben number of attesters in bytes.
+// BitLength returns the length of the bitfield in bytes.
 func BitLength(b int) int {
 	return (b + 7) / 8
 }

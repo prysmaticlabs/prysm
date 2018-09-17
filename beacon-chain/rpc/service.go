@@ -208,12 +208,12 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 	}
 }
 
-// GetValidatorShardID is called by a validator to get the shard ID of where it's suppose
+// ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
-func (s *Service) GetValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
+func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
 	cState := s.chainService.CurrentCrystallizedState()
 
-	shardID, err := casper.GetValidatorShardID(
+	shardID, err := casper.ValidatorShardID(
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
@@ -225,12 +225,12 @@ func (s *Service) GetValidatorShardID(ctx context.Context, req *pb.PublicKey) (*
 	return &pb.ShardIDResponse{ShardId: shardID}, nil
 }
 
-// GetValidatorSlot is called by a validator to get the slot number of when it's suppose
+// ValidatorSlot is called by a validator to get the slot number of when it's suppose
 // to proposer or attest.
-func (s *Service) GetValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponse, error) {
+func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponse, error) {
 	cState := s.chainService.CurrentCrystallizedState()
 
-	slot, err := casper.GetValidatorSlot(
+	slot, err := casper.ValidatorSlot(
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
@@ -242,12 +242,12 @@ func (s *Service) GetValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.
 	return &pb.SlotResponse{Slot: slot}, nil
 }
 
-// GetValidatorIndex is called by a validator to get its index location that corresponds
+// ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
-func (s *Service) GetValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
+func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
 	cState := s.chainService.CurrentCrystallizedState()
 
-	index, err := casper.GetValidatorIndex(
+	index, err := casper.ValidatorIndex(
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators())

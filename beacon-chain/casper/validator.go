@@ -158,8 +158,8 @@ func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs 
 	return proposerShardID, proposerIndex, nil
 }
 
-// GetValidatorIndex returns the index of the validator given an input public key.
-func GetValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
+// ValidatorIndex returns the index of the validator given an input public key.
+func ValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 
 	for _, index := range activeValidators {
@@ -171,9 +171,9 @@ func GetValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.Validator
 	return 0, fmt.Errorf("can't find validator index for public key %d", pubKey)
 }
 
-// GetValidatorShardID returns the shard ID of the validator currently participates in.
-func GetValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
-	index, err := GetValidatorIndex(pubKey, dynasty, validators)
+// ValidatorShardID returns the shard ID of the validator currently participates in.
+func ValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
 		return 0, err
 	}
@@ -191,9 +191,9 @@ func GetValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.Validat
 	return 0, fmt.Errorf("can't find shard ID for validator with public key %d", pubKey)
 }
 
-// GetValidatorSlot returns the slot number of when the validator gets to attest or proposer.
-func GetValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
-	index, err := GetValidatorIndex(pubKey, dynasty, validators)
+// ValidatorSlot returns the slot number of when the validator gets to attest or proposer.
+func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
 		return 0, err
 	}
