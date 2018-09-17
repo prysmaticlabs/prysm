@@ -217,11 +217,13 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			block, err := c.chain.getBlock(c.blocksPendingProcessing[0])
 			if err != nil {
 				log.Errorf("Could not get block: %v", err)
+				continue
 			}
 
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash incoming block: %v", err)
+				continue
 			}
 
 			log.Info("Applying fork choice rule")
@@ -233,12 +235,13 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 				cState, err = cState.NewStateRecalculations(aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
+					continue
 				}
 			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
-				log.Errorf("Failed to get parent slot of block 0x%x", h)
+				log.Errorf("Failed to get parent of block 0x%x", h)
 				continue
 			}
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
@@ -249,20 +252,24 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			if err := c.chain.SetActiveState(aState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
+				continue
 			}
 
 			if err := c.chain.SetCrystallizedState(cState); err != nil {
 				log.Errorf("Write crystallized state to disk failed: %v", err)
+				continue
 			}
 
 			// Save canonical block hash with slot number to DB.
 			if err := c.chain.saveCanonicalSlotNumber(block.SlotNumber(), h); err != nil {
 				log.Errorf("Unable to save slot number to db: %v", err)
+				continue
 			}
 
 			// Save canonical block to DB.
 			if err := c.chain.saveCanonicalBlock(block); err != nil {
 				log.Errorf("Unable to save block to db: %v", err)
+				continue
 			}
 
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")

@@ -362,12 +362,75 @@ func TestUpdateHead(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// If blocks pending processing is empty, the updateHead routine does nothing.
+	chainService.blocksPendingProcessing = [][32]byte{}
+	timeChan <- time.Now()
+	chainService.cancel()
+	exitRoutine <- true
+
+	chainService, _ = NewChainService(ctx, cfg)
+	go func() {
+		chainService.updateHead(timeChan)
+		<-exitRoutine
+	}()
+
+	// If blocks pending processing contains a hash of a block that does not exist
+	// in persistent storage, we expect an error log to be thrown as
+	// that is unexpected behavior given the block should have been saved during
+	// processing.
+	fakeBlock := types.NewBlock(&pb.BeaconBlock{SlotNumber: 100})
+	fakeBlockHash, err := fakeBlock.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	chainService.blocksPendingProcessing = [][32]byte{}
+	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, fakeBlockHash)
+	timeChan <- time.Now()
+	chainService.cancel()
+	exitRoutine <- true
+
+	// Inexistent parent hash should log an error in updateHead.
+	noParentBlock := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 64,
+	})
+	noParentBlockHash, err := noParentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+
+	chainService, _ = NewChainService(ctx, cfg)
+	go func() {
+		chainService.updateHead(timeChan)
+		<-exitRoutine
+	}()
+
+	if err := chainService.SaveBlock(noParentBlock); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.blocksPendingProcessing = [][32]byte{}
+	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, noParentBlockHash)
+
+	timeChan <- time.Now()
+	chainService.cancel()
+	exitRoutine <- true
+
+	// Now we test the correct, end-to-end updateHead functionality.
+	chainService, _ = NewChainService(ctx, cfg)
+	chainService.currentSlot = 64
+	go func() {
+		chainService.updateHead(timeChan)
+		<-exitRoutine
+	}()
+
 	chainService.blocksPendingProcessing = [][32]byte{}
 	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, hash)
 
 	timeChan <- time.Now()
 	chainService.cancel()
 	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Could not get block")
+	testutil.AssertLogsContain(t, hook, "Failed to get parent of block")
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")
 }
 
