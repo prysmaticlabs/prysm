@@ -316,6 +316,10 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
+			if !c.doesPoWBlockExist(block) {
+				continue
+			}
+
 			// Process block as a validator if beacon node has registered, else process block as an observer.
 			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
