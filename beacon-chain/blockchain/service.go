@@ -324,6 +324,7 @@ func (c *ChainService) blockProcessing() {
 			}
 
 			if !c.doesPoWBlockExist(block) {
+				log.Debugf("Proof-of-Work chain reference in block does not exist")
 				continue
 			}
 
@@ -334,6 +335,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 			if !parentExists {
+				log.Debugf("Block points to nil parent", err)
 				continue
 			}
 
