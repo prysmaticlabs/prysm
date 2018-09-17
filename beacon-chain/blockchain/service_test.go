@@ -418,7 +418,7 @@ func TestBlockSlotNumberByHash(t *testing.T) {
 	if slot != 1 {
 		t.Errorf("Expected slot 1, received %d", slot)
 	}
-	slot, err = chainService.BlockSlotNumberByHash([32]byte{})
+	_, err = chainService.BlockSlotNumberByHash([32]byte{})
 	if !strings.Contains(err.Error(), "could not get block from DB") {
 		t.Errorf("Received incorrect error, expected could not get block from DB, received %v", err)
 	}
