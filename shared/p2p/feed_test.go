@@ -5,7 +5,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
@@ -38,7 +37,7 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 
 func TestFeed_ConcurrentWrite(t *testing.T) {
 	s := Server{
-		feeds: make(map[reflect.Type]*event.Feed),
+		feeds: make(map[reflect.Type]Feed),
 		mutex: &sync.Mutex{},
 	}
 
