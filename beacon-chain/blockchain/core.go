@@ -227,10 +227,10 @@ func (b *BeaconChain) saveBlockAndAttestations(block *types.Block) error {
 // saved in the db. This will alow for canonical blocks to be retrieved from the db
 // by using their slotnumber as a key, and then using the retrieved blockhash to get
 // the block from the db.
-// prefix + slotnumber -> blockhash
-// prefix + blockhash -> block
-func (b *BeaconChain) saveCanonicalSlotNumber(slotnumber uint64, hash [32]byte) error {
-	return b.db.Put(canonicalBlockKey(slotnumber), hash[:])
+// prefix + slotNumber -> blockhash
+// prefix + blockHash -> block
+func (b *BeaconChain) saveCanonicalSlotNumber(slotNumber uint64, hash [32]byte) error {
+	return b.db.Put(canonicalBlockKey(slotNumber), hash[:])
 }
 
 // saveCanonicalBlock puts the passed block into the beacon chain db
@@ -273,8 +273,8 @@ func (b *BeaconChain) removeBlock(hash [32]byte) error {
 
 // hasCanonicalBlockForSlot checks the db if the canonical block for
 // this slot exists.
-func (b *BeaconChain) hasCanonicalBlockForSlot(slotnumber uint64) (bool, error) {
-	return b.db.Has(canonicalBlockKey(slotnumber))
+func (b *BeaconChain) hasCanonicalBlockForSlot(slotNumber uint64) (bool, error) {
+	return b.db.Has(canonicalBlockKey(slotNumber))
 }
 
 // canonicalBlockForSlot retrieves the canonical block which is saved in the db

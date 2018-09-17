@@ -62,6 +62,7 @@ type Service struct {
 	canonicalBlockChan    chan *types.Block
 	canonicalStateChan    chan *types.CrystallizedState
 	proccessedAttestation chan *pbp2p.AggregatedAttestation
+	devMode               bool
 }
 
 // Config options for the beacon node RPC server.
@@ -73,6 +74,7 @@ type Config struct {
 	CanonicalFetcher canonicalFetcher
 	ChainService     chainService
 	POWChainService  powChainService
+	DevMode          bool
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -91,6 +93,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
+		devMode:               cfg.DevMode,
 	}
 }
 
@@ -187,8 +190,12 @@ func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.Shu
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
-	// TODO: handle fields such as attestation bitmask, aggregate sig, and randao reveal.
-	powChainHash := s.powChainService.LatestBlockHash()
+	var powChainHash common.Hash
+	if s.devMode {
+		powChainHash = common.BytesToHash([]byte("stub"))
+	} else {
+		powChainHash = s.powChainService.LatestBlockHash()
+	}
 	data := &pbp2p.BeaconBlock{
 		SlotNumber:  req.GetSlotNumber(),
 		PowChainRef: powChainHash[:],
@@ -219,27 +226,6 @@ func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.At
 	s.chainService.IncomingAttestationFeed().Send(attestation)
 
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
-}
-
-// LatestBeaconBlock streams the latest beacon chain data.
-func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
-	// Right now, this streams every announced block received via p2p. It should only stream
-	// finalized blocks that are canonical in the beacon node after applying the fork choice
-	// rule.
-	sub := s.fetcher.CanonicalBlockFeed().Subscribe(s.canonicalBlockChan)
-	defer sub.Unsubscribe()
-	for {
-		select {
-		case block := <-s.canonicalBlockChan:
-			log.Info("Sending latest canonical block to RPC clients")
-			if err := stream.Send(block.Proto()); err != nil {
-				return err
-			}
-		case <-s.ctx.Done():
-			log.Debug("RPC context closed, exiting goroutine")
-			return nil
-		}
-	}
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.

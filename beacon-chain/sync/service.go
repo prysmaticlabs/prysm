@@ -21,8 +21,8 @@ type chainService interface {
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
-	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
-	CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+	CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, error)
+	CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error)
 	BlockSlotNumberByHash(h [32]byte) (uint64, error)
 	CurrentCrystallizedState() *types.CrystallizedState
 }
@@ -176,7 +176,11 @@ func (ss *Service) run() {
 				log.Errorf("Failed to get parent slot: %v", err)
 				continue
 			}
-			proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+			proposerShardID, _, err := casper.GetProposerIndexAndShard(
+				cState.ShardAndCommitteesForSlots(),
+				cState.LastStateRecalc(),
+				parentSlot,
+			)
 			if err != nil {
 				log.Errorf("Failed to get proposer shard ID: %v", err)
 				continue

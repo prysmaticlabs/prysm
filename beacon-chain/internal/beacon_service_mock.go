@@ -88,18 +88,6 @@ func (mr *MockBeaconServiceServerMockRecorder) LatestAttestation(arg0, arg1 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestAttestation", reflect.TypeOf((*MockBeaconServiceServer)(nil).LatestAttestation), arg0, arg1)
 }
 
-// LatestBeaconBlock mocks base method
-func (m *MockBeaconServiceServer) LatestBeaconBlock(arg0 *empty.Empty, arg1 v10.BeaconService_LatestBeaconBlockServer) error {
-	ret := m.ctrl.Call(m, "LatestBeaconBlock", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// LatestBeaconBlock indicates an expected call of LatestBeaconBlock
-func (mr *MockBeaconServiceServerMockRecorder) LatestBeaconBlock(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestBeaconBlock", reflect.TypeOf((*MockBeaconServiceServer)(nil).LatestBeaconBlock), arg0, arg1)
-}
-
 // LatestCrystallizedState mocks base method
 func (m *MockBeaconServiceServer) LatestCrystallizedState(arg0 *empty.Empty, arg1 v10.BeaconService_LatestCrystallizedStateServer) error {
 	ret := m.ctrl.Call(m, "LatestCrystallizedState", arg0, arg1)
