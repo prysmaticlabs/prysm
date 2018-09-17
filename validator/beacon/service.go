@@ -69,8 +69,8 @@ func (s *Service) Start() {
 
 	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
 	// to wait until the validator's assigned slot to perform proposals or attestations.
-	tickerLength := time.Second * time.Duration(params.SlotDuration)
-	go s.waitForAssignment(time.NewTicker(tickerLength).C, client)
+	slotTicker := time.NewTicker(time.Second * time.Duration(params.SlotDuration))
+	go s.waitForAssignment(slotTicker.C, client)
 
 	// We then kick off a routine that listens for streams of cycle transitions
 	// coming from the beacon node. This will allow the validator client to recalculate
@@ -165,6 +165,9 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 
 // listenForCrystallizedStates receives the latest canonical crystallized state
 // from the beacon node's RPC server via gRPC streams.
+// TODO: Rename to listen for assignment instead, which is streamed from a beacon node
+// upon every new cycle transition and will include the validator's index in the
+// assignment bitfield as well as the assigned shard ID.
 func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
 	stream, err := client.LatestCrystallizedState(s.ctx, &empty.Empty{})
 	if err != nil {
