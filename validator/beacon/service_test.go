@@ -36,6 +36,11 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
 	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		&empty.Empty{},
+	).Return(attesterStream, nil)
+
 	mockServiceClient.EXPECT().LatestCrystallizedState(
 		gomock.Any(),
 		&empty.Empty{},
@@ -74,10 +79,12 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 		GenesisTimestamp:        ptypes.TimestampNow(),
 	}, nil)
 
+	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(
 		gomock.Any(),
 		&empty.Empty{},
 	).Return(attesterStream, nil)
+	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 	return mockServiceClient
 }
 
@@ -174,7 +181,7 @@ func TestListenForCrystallizedStates(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator selected as proposer")
 }
 
-func TestFetchProcessedAttestations(t *testing.T) {
+func TestListenForProcessedAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -193,7 +200,7 @@ func TestFetchProcessedAttestations(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchProcessedAttestations(mockServiceClient)
+	b.listenForProcessedAttestations(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Latest attestation slot number")
 
@@ -208,7 +215,7 @@ func TestFetchProcessedAttestations(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
-	b.fetchProcessedAttestations(mockServiceClient)
+	b.listenForProcessedAttestations(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "stream error")
 
@@ -219,7 +226,7 @@ func TestFetchProcessedAttestations(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, errors.New("stream creation failed"))
 
-	b.fetchProcessedAttestations(mockServiceClient)
+	b.listenForProcessedAttestations(mockServiceClient)
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
 	testutil.AssertLogsContain(t, hook, "Could not receive latest attestation from stream")
 }

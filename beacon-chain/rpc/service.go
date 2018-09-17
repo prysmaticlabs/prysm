@@ -49,24 +49,11 @@ type powChainService interface {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-<<<<<<< HEAD
-	ctx                context.Context
-	cancel             context.CancelFunc
-	fetcher            canonicalFetcher
-	chainService       chainService
-	powChainService    powChainService
-	port               string
-	listener           net.Listener
-	withCert           string
-	withKey            string
-	grpcServer         *grpc.Server
-	canonicalBlockChan chan *types.Block
-	canonicalStateChan chan *types.CrystallizedState
-=======
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	announcer             types.CanonicalEventAnnouncer
+	fetcher               canonicalFetcher
 	chainService          chainService
+	powChainService       powChainService
 	port                  string
 	listener              net.Listener
 	withCert              string
@@ -75,7 +62,6 @@ type Service struct {
 	canonicalBlockChan    chan *types.Block
 	canonicalStateChan    chan *types.CrystallizedState
 	proccessedAttestation chan *pbp2p.AggregatedAttestation
->>>>>>> revamp-processing
 }
 
 // Config options for the beacon node RPC server.
@@ -94,16 +80,16 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		fetcher:            cfg.CanonicalFetcher,
-		chainService:       cfg.ChainService,
-		powChainService:    cfg.POWChainService,
-		port:               cfg.Port,
-		withCert:           cfg.CertFlag,
-		withKey:            cfg.KeyFlag,
-		canonicalBlockChan: make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan: make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		ctx:                   ctx,
+		cancel:                cancel,
+		fetcher:               cfg.CanonicalFetcher,
+		chainService:          cfg.ChainService,
+		powChainService:       cfg.POWChainService,
+		port:                  cfg.Port,
+		withCert:              cfg.CertFlag,
+		withKey:               cfg.KeyFlag,
+		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
 	}
 }

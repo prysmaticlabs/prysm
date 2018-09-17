@@ -40,9 +40,9 @@ func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
 	return m.attestationFeed
 }
 
-type mockAnnouncer struct {
-	blockFeed *event.Feed
-	stateFeed *event.Feed
+type mockChainService struct {
+	blockFeed       *event.Feed
+	stateFeed       *event.Feed
 	attestationFeed *event.Feed
 }
 
@@ -52,8 +52,8 @@ func (m *mockChainService) IncomingBlockFeed() *event.Feed {
 
 func newMockChainService() *mockChainService {
 	return &mockChainService{
-		blockFeed: new(event.Feed),
-		stateFeed: new(event.Feed),
+		blockFeed:       new(event.Feed),
+		stateFeed:       new(event.Feed),
 		attestationFeed: new(event.Feed),
 	}
 }
@@ -130,21 +130,6 @@ func TestInsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-<<<<<<< HEAD
-func TestRPCMethods(t *testing.T) {
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "7362",
-		CanonicalFetcher: cs,
-		POWChainService:  &mockPOWChainService{},
-	})
-	if _, err := rpcService.SignBlock(context.Background(), nil); err == nil {
-		t.Error("Wanted error: unimplemented, received nil")
-	}
-}
-
-=======
->>>>>>> revamp-processing
 func TestFetchShuffledValidatorIndices(t *testing.T) {
 	cs := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -176,69 +161,6 @@ func TestProposeBlock(t *testing.T) {
 	if _, err := rpcService.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
 	}
-}
-
-func TestLatestBeaconBlockContextClosed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "6663",
-		SubscriptionBuf:  0,
-		CanonicalFetcher: cs,
-	})
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
-	go func(tt *testing.T) {
-		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.cancel()
-	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
-}
-
-func TestLatestBeaconBlock(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "7771",
-		SubscriptionBuf:  0,
-		CanonicalFetcher: cs,
-	})
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	exitRoutine := make(chan bool)
-
-	mockStream := internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.BeaconBlock{}).Return(errors.New("something wrong"))
-	// Tests a faulty stream.
-	go func(tt *testing.T) {
-		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
-			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
-
-	mockStream = internal.NewMockBeaconService_LatestBeaconBlockServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.BeaconBlock{}).Return(nil)
-
-	// Tests a good stream.
-	go func(tt *testing.T) {
-		if err := rpcService.LatestBeaconBlock(&empty.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
-	testutil.AssertLogsContain(t, hook, "Sending latest canonical block to RPC clients")
-	rpcService.cancel()
-	exitRoutine <- true
 }
 
 func TestLatestCrystallizedStateContextClosed(t *testing.T) {
@@ -305,11 +227,9 @@ func TestLatestCrystallizedState(t *testing.T) {
 }
 
 func TestAttestHead(t *testing.T) {
-	announcer := newMockAnnouncer()
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
-		Announcer:    announcer,
 		ChainService: mockChain,
 	})
 	req := &pb.AttestRequest{

@@ -76,7 +76,7 @@ func (s *Service) Start() {
 	// when it has to perform its responsibilities appropriately using timestamps
 	// and the IndicesForSlots field inside the received crystallized state.
 	go s.listenForCrystallizedStates(client)
-	go s.listenForProcessedAttestions(client)
+	go s.listenForProcessedAttestations(client)
 }
 
 // Stop the main loop..
@@ -122,10 +122,6 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	if err := s.processCrystallizedState(crystallized); err != nil {
 		log.Fatalf("unable to process received crystallized state: %v", err)
 	}
-}
-
-func (s *Service) ProcessedAttestationFeed() *event.Feed {
-	return s.processedAttestationFeed
 }
 
 // waitForAssignment kicks off once the validator determines the currentSlot of the
@@ -234,21 +230,9 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 	return nil
 }
 
-// AttesterAssignmentFeed returns a feed that is written to whenever it is the validator's
-// slot to perform attestations.
-func (s *Service) AttesterAssignmentFeed() *event.Feed {
-	return s.attesterAssignmentFeed
-}
-
-// ProposerAssignmentFeed returns a feed that is written to whenever it is the validator's
-// slot to proposer blocks.
-func (s *Service) ProposerAssignmentFeed() *event.Feed {
-	return s.proposerAssignmentFeed
-}
-
 // listenForProcessedAttestations receives processed attestations from the
 // the beacon node's RPC server via gRPC streams.
-func (s *Service) listenForProcessedAttestions(client pb.BeaconServiceClient) {
+func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) {
 	stream, err := client.LatestAttestation(s.ctx, &empty.Empty{})
 	if err != nil {
 		log.Errorf("Could not setup beacon chain attestation streaming client: %v", err)
@@ -268,6 +252,24 @@ func (s *Service) listenForProcessedAttestions(client pb.BeaconServiceClient) {
 		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
 		s.processedAttestationFeed.Send(attestation)
 	}
+}
+
+// AttesterAssignmentFeed returns a feed that is written to whenever it is the validator's
+// slot to perform attestations.
+func (s *Service) AttesterAssignmentFeed() *event.Feed {
+	return s.attesterAssignmentFeed
+}
+
+// ProposerAssignmentFeed returns a feed that is written to whenever it is the validator's
+// slot to proposer blocks.
+func (s *Service) ProposerAssignmentFeed() *event.Feed {
+	return s.proposerAssignmentFeed
+}
+
+// ProcessedAttestationFeed returns a feed that is written to whenever an attestation
+// is processed by a beacon node.
+func (s *Service) ProcessedAttestationFeed() *event.Feed {
+	return s.processedAttestationFeed
 }
 
 // isZeroAddress compares a withdrawal address to an empty byte array.
