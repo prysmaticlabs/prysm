@@ -2,8 +2,10 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +47,24 @@ func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
+type faultyClient struct{}
+
+func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	return new(event.Feed).Subscribe(ch), nil
+}
+
+func (f *faultyClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, errors.New("failed")
+}
+
+func (f *faultyClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
+	return new(event.Feed).Subscribe(ch), nil
+}
+
+func (f *faultyClient) LatestBlockHash() common.Hash {
+	return common.BytesToHash([]byte{'A'})
+}
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
@@ -81,6 +101,8 @@ func TestStartStop(t *testing.T) {
 	chainService.IncomingBlockFeed()
 	chainService.IncomingAttestationFeed()
 	chainService.ProcessedAttestationFeed()
+	chainService.CanonicalBlockBySlotNumber(0)
+	chainService.CheckForCanonicalBlockBySlot(0)
 
 	// Test the start function.
 	chainService.Start()
@@ -292,6 +314,96 @@ func TestRunningChainService(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Finished processing received block")
+}
+
+func TestBlockSlotNumberByHash(t *testing.T) {
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+
+	}
+	endpoint := "ws://127.0.0.1"
+	client := &mockClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db.DB(),
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+	chainService, _ := NewChainService(ctx, cfg)
+
+	block := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 1,
+	})
+	hash, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	slot, err := chainService.BlockSlotNumberByHash(hash)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if slot != 1 {
+		t.Errorf("Expected slot 1, received %d", slot)
+	}
+	slot, err = chainService.BlockSlotNumberByHash([32]byte{})
+	if !strings.Contains(err.Error(), "could not get block from DB") {
+		t.Errorf("Received incorrect error, expected could not get block from DB, received %v", err)
+	}
+}
+
+func TestDoesPOWBlockExist(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+
+	}
+	endpoint := "ws://127.0.0.1"
+	client := &faultyClient{}
+	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+	cfg := &Config{
+		BeaconBlockBuf:   0,
+		IncomingBlockBuf: 0,
+		BeaconDB:         db.DB(),
+		Chain:            beaconChain,
+		Web3Service:      web3Service,
+	}
+	chainService, _ := NewChainService(ctx, cfg)
+	block := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 10,
+	})
+
+	// Using a faulty client should throw error.
+	exists := chainService.doesPoWBlockExist(block)
+	if exists {
+		t.Error("Block corresponding to nil powchain reference should not exist")
+	}
+	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }
 
 func TestUpdateHead(t *testing.T) {

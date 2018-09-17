@@ -142,8 +142,8 @@ func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
 	return c.chain.hasBlock(h)
 }
 
-// GetBlockSlotNumber returns the slot number of a block.
-func (c *ChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+// BlockSlotNumberByHash returns the slot number of a block.
+func (c *ChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
 	block, err := c.chain.getBlock(h)
 	if err != nil {
 		return 0, fmt.Errorf("could not get block from DB: %v", err)
@@ -179,10 +179,10 @@ func (c *ChainService) CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, er
 	return c.chain.hasCanonicalBlockForSlot(slotNumber)
 }
 
-// GetCanonicalBlockBySlotNumber retrieves the canonical block for that slot which
+// CanonicalBlockBySlotNumber retrieves the canonical block for that slot which
 // has been saved in the db.
-func (c *ChainService) GetCanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
-	return c.chain.getCanonicalBlockForSlot(slotNumber)
+func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
+	return c.chain.canonicalBlockForSlot(slotNumber)
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
