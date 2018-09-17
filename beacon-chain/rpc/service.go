@@ -164,26 +164,6 @@ func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.E
 	}, nil
 }
 
-// FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
-// assigned attestation slots at a given crystallized state hash.
-// This function can be called by validators to fetch a historical list of shuffled
-// validators ata point in time corresponding to a certain crystallized state.
-func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
-	var shuffledIndices []uint64
-	// Simulator always pushes out a validator list of length 100. By having index 0
-	// as the last index, the validator will always be a proposer in the validator code.
-	// TODO: Implement the real method by fetching the crystallized state in the request
-	// from persistent disk storage and shuffling the indices appropriately.
-	for i := 99; i >= 0; i-- {
-		shuffledIndices = append(shuffledIndices, uint64(i))
-	}
-	// For now, this will cause validators to always pick the validator as a proposer.
-	shuffleRes := &pb.ShuffleResponse{
-		ShuffledValidatorIndices: shuffledIndices,
-	}
-	return shuffleRes, nil
-}
-
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
@@ -219,27 +199,6 @@ func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.At
 	s.chainService.IncomingAttestationFeed().Send(attestation)
 
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
-}
-
-// LatestBeaconBlock streams the latest beacon chain data.
-func (s *Service) LatestBeaconBlock(req *empty.Empty, stream pb.BeaconService_LatestBeaconBlockServer) error {
-	// Right now, this streams every announced block received via p2p. It should only stream
-	// finalized blocks that are canonical in the beacon node after applying the fork choice
-	// rule.
-	sub := s.fetcher.CanonicalBlockFeed().Subscribe(s.canonicalBlockChan)
-	defer sub.Unsubscribe()
-	for {
-		select {
-		case block := <-s.canonicalBlockChan:
-			log.Info("Sending latest canonical block to RPC clients")
-			if err := stream.Send(block.Proto()); err != nil {
-				return err
-			}
-		case <-s.ctx.Done():
-			log.Debug("RPC context closed, exiting goroutine")
-			return nil
-		}
-	}
 }
 
 // LatestCrystallizedState streams the latest beacon crystallized state.

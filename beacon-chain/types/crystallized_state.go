@@ -28,7 +28,13 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 func initialValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validator := &pb.ValidatorRecord{
+			StartDynasty:      0,
+			EndDynasty:        params.DefaultEndDynasty,
+			Balance:           params.DefaultBalance,
+			WithdrawalAddress: []byte{},
+			PublicKey:         0,
+		}
 		validators = append(validators, validator)
 	}
 	return validators

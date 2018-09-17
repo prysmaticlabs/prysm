@@ -7,6 +7,9 @@ import (
 	"math"
 )
 
+// SlotDuration in seconds.
+var SlotDuration = 8
+
 // DefaultConfig returns pointer to a Config value with same defaults.
 func DefaultConfig() *Config {
 	return &Config{

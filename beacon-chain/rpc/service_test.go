@@ -130,21 +130,6 @@ func TestInsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestFetchShuffledValidatorIndices(t *testing.T) {
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "6372",
-		CanonicalFetcher: cs,
-	})
-	res, err := rpcService.FetchShuffledValidatorIndices(context.Background(), &pb.ShuffleRequest{})
-	if err != nil {
-		t.Fatalf("Could not call RPC method: %v", err)
-	}
-	if len(res.ShuffledValidatorIndices) != 100 {
-		t.Errorf("Expected 100 validators in the shuffled indices, received %d", len(res.ShuffledValidatorIndices))
-	}
-}
-
 func TestProposeBlock(t *testing.T) {
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{

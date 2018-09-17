@@ -56,24 +56,6 @@ func (mr *MockBeaconServiceClientMockRecorder) CanonicalHead(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceClient)(nil).CanonicalHead), varargs...)
 }
 
-// FetchShuffledValidatorIndices mocks base method
-func (m *MockBeaconServiceClient) FetchShuffledValidatorIndices(arg0 context.Context, arg1 *v10.ShuffleRequest, arg2 ...grpc.CallOption) (*v10.ShuffleResponse, error) {
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "FetchShuffledValidatorIndices", varargs...)
-	ret0, _ := ret[0].(*v10.ShuffleResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FetchShuffledValidatorIndices indicates an expected call of FetchShuffledValidatorIndices
-func (mr *MockBeaconServiceClientMockRecorder) FetchShuffledValidatorIndices(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchShuffledValidatorIndices", reflect.TypeOf((*MockBeaconServiceClient)(nil).FetchShuffledValidatorIndices), varargs...)
-}
-
 // GenesisTimeAndCanonicalState mocks base method
 func (m *MockBeaconServiceClient) GenesisTimeAndCanonicalState(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.GenesisTimeAndStateResponse, error) {
 	varargs := []interface{}{arg0, arg1}
@@ -108,24 +90,6 @@ func (m *MockBeaconServiceClient) LatestAttestation(arg0 context.Context, arg1 *
 func (mr *MockBeaconServiceClientMockRecorder) LatestAttestation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestAttestation", reflect.TypeOf((*MockBeaconServiceClient)(nil).LatestAttestation), varargs...)
-}
-
-// LatestBeaconBlock mocks base method
-func (m *MockBeaconServiceClient) LatestBeaconBlock(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (v10.BeaconService_LatestBeaconBlockClient, error) {
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "LatestBeaconBlock", varargs...)
-	ret0, _ := ret[0].(v10.BeaconService_LatestBeaconBlockClient)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LatestBeaconBlock indicates an expected call of LatestBeaconBlock
-func (mr *MockBeaconServiceClientMockRecorder) LatestBeaconBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestBeaconBlock", reflect.TypeOf((*MockBeaconServiceClient)(nil).LatestBeaconBlock), varargs...)
 }
 
 // LatestCrystallizedState mocks base method

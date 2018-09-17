@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -68,8 +69,8 @@ func (s *Service) Start() {
 
 	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
 	// to wait until the validator's assigned slot to perform proposals or attestations.
-	// TODO: Use a parameter instead of a fixed 8.
-	go s.waitForAssignment(time.NewTicker(8*time.Second).C, client)
+	tickerLength := time.Second * time.Duration(params.SlotDuration)
+	go s.waitForAssignment(time.NewTicker(tickerLength).C, client)
 
 	// We then kick off a routine that listens for streams of cycle transitions
 	// coming from the beacon node. This will allow the validator client to recalculate
@@ -219,7 +220,6 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 
 	// TODO: Go through each of the indices for slots and determine which slot
 	// a validator is assigned into and at what index.
-	// indicesForSlots := res.GetIndicesForSlots()
 
 	// The validator needs to propose the next block.
 	// TODO: This is a stub until the indices for slots loop is done above.
