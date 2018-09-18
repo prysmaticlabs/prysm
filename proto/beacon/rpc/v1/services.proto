@@ -21,6 +21,12 @@ service ProposerService {
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
 }
 
+service ValidatorService {
+    rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
+    rpc ValidatorIndex(PublicKey) returns (IndexResponse);
+    rpc ValidatorSlot(PublicKey) returns (SlotResponse);
+}
+
 message ShuffleRequest {
   bytes crystallized_state_hash = 1;
 }
@@ -50,4 +56,20 @@ message AttestRequest {
 
 message AttestResponse {
     bytes attestation_hash = 1;
+}
+
+message PublicKey {
+    uint64 public_key = 1;
+}
+
+message ShardIDResponse {
+    uint64 shard_id = 1;
+}
+
+message IndexResponse {
+    uint32 index = 1;
+}
+
+message SlotResponse {
+    uint64 slot = 1;
 }

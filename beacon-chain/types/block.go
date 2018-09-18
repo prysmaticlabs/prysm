@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
@@ -172,8 +173,9 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		log.Errorf("Can not get proposer index %v", err)
 		return false
 	}
-	if !(utils.BitSetCount(b.Attestations()[0].AttesterBitfield) == 1 && utils.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex))) {
+	if !(shared.BitSetCount(b.Attestations()[0].AttesterBitfield) == 1 && shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex))) {
 		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+		return false
 	}
 
 	for index, attestation := range b.Attestations() {
