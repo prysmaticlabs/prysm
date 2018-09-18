@@ -293,11 +293,9 @@ func TestLatestAttestation(t *testing.T) {
 }
 
 func TestValidatorSlot(t *testing.T) {
-	announcer := newMockAnnouncer()
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
-		Announcer:    announcer,
 		ChainService: mockChain,
 	})
 	req := &pb.PublicKey{
@@ -309,11 +307,9 @@ func TestValidatorSlot(t *testing.T) {
 }
 
 func TestValidatorIndex(t *testing.T) {
-	announcer := newMockAnnouncer()
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
-		Announcer:    announcer,
 		ChainService: mockChain,
 	})
 	req := &pb.PublicKey{
@@ -325,11 +321,9 @@ func TestValidatorIndex(t *testing.T) {
 }
 
 func TestValidatorShardID(t *testing.T) {
-	announcer := newMockAnnouncer()
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
-		Announcer:    announcer,
 		ChainService: mockChain,
 	})
 	req := &pb.PublicKey{
