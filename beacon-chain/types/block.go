@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
@@ -179,7 +180,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 			log.Debugf("attestation invalid: %v", attestation)
 			return false
 		}
-		if utils.BitSetCount(attestation.AttesterBitfield) == 1 && utils.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
+		if shared.BitSetCount(attestation.AttesterBitfield) == 1 && shared.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
 			proposerAttested = true
 		}
 	}

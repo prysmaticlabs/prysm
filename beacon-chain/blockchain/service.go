@@ -208,6 +208,11 @@ func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	return powBlock != nil
 }
 
+// updateHead applies the fork choice rule to the beacon chain
+// at the start of each new slot interval. The function looks
+// at an in-memory slice of block hashes pending processing and
+// selects the best block according to the in-protocol fork choice
+// rule as canonical. This block is then persisted to storage.
 func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 	for {
 		select {
