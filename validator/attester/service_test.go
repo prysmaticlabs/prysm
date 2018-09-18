@@ -29,6 +29,10 @@ func (mc *mockClient) AttesterServiceClient() pb.AttesterServiceClient {
 	return internal.NewMockAttesterServiceClient(mc.ctrl)
 }
 
+func (mc *mockClient) ValidatorServiceClient() pb.ValidatorServiceClient {
+	return internal.NewMockValidatorServiceClient(mc.ctrl)
+}
+
 type mockAssigner struct{}
 
 func (m *mockAssigner) AttesterAssignmentFeed() *event.Feed {
@@ -63,23 +67,35 @@ func TestAttesterLoop(t *testing.T) {
 	}
 	att := NewAttester(context.Background(), cfg)
 
-	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
-	mockServiceClient.EXPECT().AttestHead(
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
+	mockServiceValidator.EXPECT().ValidatorShardID(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.ShardIDResponse{
+		ShardId: 100,
+	}, nil)
+	mockServiceValidator.EXPECT().ValidatorIndex(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.IndexResponse{
+		Index: 0,
+	}, nil)
+
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
+	mockServiceAttester.EXPECT().AttestHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&pb.AttestResponse{
 		AttestationHash: []byte{'A'},
 	}, nil)
 
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		att.run(doneChan, mockServiceClient)
+		att.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 33}
-
-	doneChan <- struct{}{}
+	att.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
@@ -90,31 +106,33 @@ func TestAttesterMarshalError(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+	ctx := context.Background()
 	cfg := &Config{
 		AssignmentBuf: 0,
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewAttester(context.Background(), cfg)
+	att := NewAttester(ctx, cfg)
 
-	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
 
-	doneChan := make(chan struct{})
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
+
 	exitRoutine := make(chan bool)
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		att.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 
-	p.assignmentChan <- nil
-	doneChan <- struct{}{}
+	att.assignmentChan <- nil
+	att.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
+	testutil.AssertLogsContain(t, hook, "could not marshal latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
 
-func TestAttesterErrorLoop(t *testing.T) {
+func TestAttesterErrorCantAttestHead(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -123,28 +141,114 @@ func TestAttesterErrorLoop(t *testing.T) {
 		Assigner:      &mockAssigner{},
 		Client:        &mockClient{ctrl},
 	}
-	p := NewAttester(context.Background(), cfg)
+	att := NewAttester(context.Background(), cfg)
 
-	mockServiceClient := internal.NewMockAttesterServiceClient(ctrl)
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
+	mockServiceValidator.EXPECT().ValidatorShardID(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.ShardIDResponse{
+		ShardId: 100,
+	}, nil)
+	mockServiceValidator.EXPECT().ValidatorIndex(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.IndexResponse{
+		Index: 0,
+	}, nil)
 
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
 	// Expect call to throw an error.
-	mockServiceClient.EXPECT().AttestHead(
+	mockServiceAttester.EXPECT().AttestHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("could not attest head"))
 
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 	go func() {
-		p.run(doneChan, mockServiceClient)
+		att.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
 
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
-	doneChan <- struct{}{}
+	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
+	att.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
 	testutil.AssertLogsContain(t, hook, "could not attest head")
+	testutil.AssertLogsContain(t, hook, "Attester context closed")
+}
+
+func TestAttesterErrorCantGetShardID(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	att := NewAttester(context.Background(), cfg)
+
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
+	mockServiceValidator.EXPECT().ValidatorShardID(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, errors.New("could not get attester Shard ID"))
+
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		att.run(mockServiceAttester, mockServiceValidator)
+		<-exitRoutine
+	}()
+
+	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
+	att.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
+	testutil.AssertLogsContain(t, hook, "could not get attester Shard ID")
+	testutil.AssertLogsContain(t, hook, "Attester context closed")
+}
+
+func TestAttesterErrorCantGetAttesterIndex(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+	}
+	att := NewAttester(context.Background(), cfg)
+
+	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
+	mockServiceValidator.EXPECT().ValidatorShardID(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.ShardIDResponse{
+		ShardId: 100,
+	}, nil)
+	mockServiceValidator.EXPECT().ValidatorIndex(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, errors.New("could not get attester index"))
+
+	mockServiceAttester := internal.NewMockAttesterServiceClient(ctrl)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		att.run(mockServiceAttester, mockServiceValidator)
+		<-exitRoutine
+	}()
+
+	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
+	att.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing attester responsibility")
+	testutil.AssertLogsContain(t, hook, "could not get attester index")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
