@@ -9,7 +9,6 @@ func CheckBit(bitfield []byte, index int) bool {
 	} else {
 		chunkLocation++
 	}
-
 	field := bitfield[chunkLocation-1] >> (8 - uint(indexLocation))
 	return field%2 != 0
 }

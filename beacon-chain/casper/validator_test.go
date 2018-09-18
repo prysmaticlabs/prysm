@@ -192,23 +192,32 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	}
 }
 
-func TestGetProposerIndexAndShard(t *testing.T) {
+func TestProposerShardAndIndex(t *testing.T) {
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{ShardId: 99, Committee: []uint32{0, 1, 2, 3, 4}},
+			{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4}},
+			{ShardId: 1, Committee: []uint32{5, 6, 7, 8, 9}},
+		}},
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 2, Committee: []uint32{10, 11, 12, 13, 14}},
+			{ShardId: 3, Committee: []uint32{15, 16, 17, 18, 19}},
+		}},
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 4, Committee: []uint32{20, 21, 22, 23, 24}},
+			{ShardId: 5, Committee: []uint32{25, 26, 27, 28, 29}},
 		}},
 	}
-	if _, _, err := GetProposerIndexAndShard(shardCommittees, 100, 0); err == nil {
-		t.Error("GetProposerIndexAndShard should have failed with invalid lcs")
+	if _, _, err := ProposerShardAndIndex(shardCommittees, 100, 0); err == nil {
+		t.Error("ProposerShardAndIndex should have failed with invalid lcs")
 	}
-	shardID, index, err := GetProposerIndexAndShard(shardCommittees, 0, 0)
+	shardID, index, err := ProposerShardAndIndex(shardCommittees, 65, 67)
 	if err != nil {
-		t.Fatalf("GetProposerIndexAndShard failed with %v", err)
+		t.Fatalf("ProposerShardAndIndex failed with %v", err)
 	}
-	if shardID != 99 {
-		t.Errorf("Invalid shard ID. Wanted 99, got %d", shardID)
+	if shardID != 4 {
+		t.Errorf("Invalid shard ID. Wanted 4, got %d", shardID)
 	}
-	if index != 0 {
-		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
+	if index != 2 {
+		t.Errorf("Invalid proposer index. Wanted 2, got %d", index)
 	}
 }

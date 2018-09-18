@@ -263,11 +263,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	}
 
 	// TODO(471): Update rewards and penalties scheme to align with latest spec.
-	rewardedValidators, _ := casper.CalculateRewards(
-		aState.PendingAttestations(),
-		c.Validators(),
-		c.CurrentDynasty(),
-		c.TotalDeposits())
+	var rewardedValidators []*pb.ValidatorRecord
+	if len(block.Attestations()) != 0 {
+		rewardedValidators, _ = casper.CalculateRewards(
+			block.Attestations(),
+			c.Validators(),
+			c.CurrentDynasty(),
+			c.TotalDeposits())
+	}
 
 	// Get all active validators and calculate total balance for next cycle.
 	var nextCycleBalance uint64
