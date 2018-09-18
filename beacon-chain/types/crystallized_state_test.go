@@ -36,7 +36,17 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	aState := NewGenesisActiveState()
-	block := NewBlock(nil)
+	block := NewBlock(&pb.BeaconBlock{
+		ParentHash:            []byte{},
+		SlotNumber:            0,
+		ActiveStateHash:       []byte{},
+		CrystallizedStateHash: []byte{},
+		Attestations: []*pb.AggregatedAttestation{{
+			Slot:             0,
+			AttesterBitfield: []byte{0},
+			ShardId:          0,
+		}},
+	})
 
 	newCState, err := cState.NewStateRecalculations(aState, block)
 	if err != nil {
