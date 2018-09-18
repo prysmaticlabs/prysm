@@ -32,18 +32,36 @@ func (m *mockPOWChainService) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{})
 }
 
-func (m *mockChainService) IncomingAttestationFeed() *event.Feed {
-	return new(event.Feed)
+type faultyChainService struct{}
+
+func (f *faultyChainService) CanonicalHead() (*types.Block, error) {
+	return nil, errors.New("failed")
 }
 
-func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
-	return m.attestationFeed
+func (f *faultyChainService) CanonicalCrystallizedState() *types.CrystallizedState {
+	return nil
+}
+
+func (f *faultyChainService) CanonicalBlockFeed() *event.Feed {
+	return nil
+}
+
+func (f *faultyChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+	return nil
 }
 
 type mockChainService struct {
 	blockFeed       *event.Feed
 	stateFeed       *event.Feed
 	attestationFeed *event.Feed
+}
+
+func (m *mockChainService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
+	return m.attestationFeed
 }
 
 func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
@@ -56,14 +74,6 @@ func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
 
 func (m *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
-}
-
-func newMockChainService() *mockChainService {
-	return &mockChainService{
-		blockFeed:       new(event.Feed),
-		stateFeed:       new(event.Feed),
-		attestationFeed: new(event.Feed),
-	}
 }
 
 func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
@@ -82,6 +92,14 @@ func (m *mockChainService) CanonicalHead() (*types.Block, error) {
 func (m *mockChainService) CanonicalCrystallizedState() *types.CrystallizedState {
 	data := &pbp2p.CrystallizedState{}
 	return types.NewCrystallizedState(data)
+}
+
+func newMockChainService() *mockChainService {
+	return &mockChainService{
+		blockFeed:       new(event.Feed),
+		stateFeed:       new(event.Feed),
+		attestationFeed: new(event.Feed),
+	}
 }
 
 func TestLifecycle(t *testing.T) {
@@ -136,6 +154,50 @@ func TestInsecureEndpoint(t *testing.T) {
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
+}
+
+func TestCanonicalHead(t *testing.T) {
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "6372",
+		CanonicalFetcher: mockChain,
+		ChainService:     mockChain,
+		POWChainService:  &mockPOWChainService{},
+	})
+	if _, err := rpcService.CanonicalHead(context.Background(), &empty.Empty{}); err != nil {
+		t.Errorf("Could not call CanonicalHead correctly: %v", err)
+	}
+
+	rpcService = NewRPCService(context.Background(), &Config{
+		Port:             "6372",
+		CanonicalFetcher: &faultyChainService{},
+		ChainService:     &mockChainService{},
+		POWChainService:  &mockPOWChainService{},
+	})
+	if _, err := rpcService.CanonicalHead(context.Background(), &empty.Empty{}); err == nil {
+		t.Error("Expected error from faulty chain service, received nil")
+	}
+}
+
+func TestGenesisTimeAndCanonicalState(t *testing.T) {
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "6372",
+		CanonicalFetcher: mockChain,
+		ChainService:     mockChain,
+		POWChainService:  &mockPOWChainService{},
+	})
+	res, err := rpcService.GenesisTimeAndCanonicalState(context.Background(), &empty.Empty{})
+	if err != nil {
+		t.Errorf("Could not call GenesisTimeAndCanonicalState correctly: %v", err)
+	}
+	genesis, err := types.NewGenesisBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
+		t.Errorf("Received different genesis timestamp, wanted: %v, received: %v", genesis.Proto().GetTimestamp(), res.GenesisTimestamp)
+	}
 }
 
 func TestProposeBlock(t *testing.T) {

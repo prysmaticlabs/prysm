@@ -232,7 +232,8 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
-		cState.ShardAndCommitteesForSlots())
+		cState.ShardAndCommitteesForSlots(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
 	}
@@ -249,7 +250,8 @@ func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.Slo
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
-		cState.ShardAndCommitteesForSlots())
+		cState.ShardAndCommitteesForSlots(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
 	}
@@ -265,7 +267,8 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	index, err := casper.ValidatorIndex(
 		req.PublicKey,
 		cState.CurrentDynasty(),
-		cState.Validators())
+		cState.Validators(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}

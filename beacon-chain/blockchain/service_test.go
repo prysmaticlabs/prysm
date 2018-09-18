@@ -103,6 +103,8 @@ func TestStartStop(t *testing.T) {
 	chainService.ProcessedAttestationFeed()
 	chainService.CanonicalBlockBySlotNumber(0)
 	chainService.CheckForCanonicalBlockBySlot(0)
+	chainService.CanonicalHead()
+	chainService.CanonicalCrystallizedState()
 
 	// Test the start function.
 	chainService.Start()
