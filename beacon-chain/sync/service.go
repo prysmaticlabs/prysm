@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -41,7 +42,7 @@ type chainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	p2p                   types.P2P
+	p2p                   shared.P2P
 	chainService          chainService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
@@ -66,7 +67,7 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs chainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
@@ -146,23 +147,12 @@ func (ss *Service) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockHashAnnounce)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block hash announcement p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.BeaconBlockHashAnnounce)
 			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
 				log.Errorf("Received block hash failed: %v", err)
 			}
 		case msg := <-ss.blockBuf:
-			response, ok := msg.Data.(*pb.BeaconBlockResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block p2p message")
-				continue
-			}
-
+			response := msg.Data.(*pb.BeaconBlockResponse)
 			block := types.NewBlock(response.Block)
 			blockHash, err := block.Hash()
 			if err != nil {
