@@ -46,6 +46,14 @@ type mockChainService struct {
 	attestationFeed *event.Feed
 }
 
+func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
+	cState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		return nil
+	}
+	return cState
+}
+
 func (m *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
@@ -282,4 +290,52 @@ func TestLatestAttestation(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
+}
+
+func TestValidatorSlot(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.PublicKey{
+		PublicKey: 0,
+	}
+	if _, err := rpcService.ValidatorSlot(context.Background(), req); err != nil {
+		t.Errorf("Could not get validator slot: %v", err)
+	}
+}
+
+func TestValidatorIndex(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.PublicKey{
+		PublicKey: 0,
+	}
+	if _, err := rpcService.ValidatorIndex(context.Background(), req); err != nil {
+		t.Errorf("Could not get validator index: %v", err)
+	}
+}
+
+func TestValidatorShardID(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.PublicKey{
+		PublicKey: 0,
+	}
+	if _, err := rpcService.ValidatorShardID(context.Background(), req); err != nil {
+		t.Errorf("Could not get validator shard ID: %v", err)
+	}
 }

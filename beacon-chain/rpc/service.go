@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -40,6 +41,7 @@ type canonicalFetcher interface {
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
+	CurrentCrystallizedState() *types.CrystallizedState
 	ProcessedAttestationFeed() *event.Feed
 }
 
@@ -219,6 +221,56 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 			return nil
 		}
 	}
+}
+
+// ValidatorShardID is called by a validator to get the shard ID of where it's suppose
+// to proposer or attest.
+func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
+	cState := s.chainService.CurrentCrystallizedState()
+
+	shardID, err := casper.ValidatorShardID(
+		req.PublicKey,
+		cState.CurrentDynasty(),
+		cState.Validators(),
+		cState.ShardAndCommitteesForSlots())
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
+	}
+
+	return &pb.ShardIDResponse{ShardId: shardID}, nil
+}
+
+// ValidatorSlot is called by a validator to get the slot number of when it's suppose
+// to proposer or attest.
+func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponse, error) {
+	cState := s.chainService.CurrentCrystallizedState()
+
+	slot, err := casper.ValidatorSlot(
+		req.PublicKey,
+		cState.CurrentDynasty(),
+		cState.Validators(),
+		cState.ShardAndCommitteesForSlots())
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
+	}
+
+	return &pb.SlotResponse{Slot: slot}, nil
+}
+
+// ValidatorIndex is called by a validator to get its index location that corresponds
+// to the attestation bit fields.
+func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
+	cState := s.chainService.CurrentCrystallizedState()
+
+	index, err := casper.ValidatorIndex(
+		req.PublicKey,
+		cState.CurrentDynasty(),
+		cState.Validators())
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator index: %v", err)
+	}
+
+	return &pb.IndexResponse{Index: index}, nil
 }
 
 // LatestAttestation streams the latest processed attestations to the rpc clients.
