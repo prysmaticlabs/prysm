@@ -9,14 +9,16 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
-	blake2b "golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "attester")
 
 type rpcClientService interface {
 	AttesterServiceClient() pb.AttesterServiceClient
+	ValidatorServiceClient() pb.ValidatorServiceClient
 }
 
 type assignmentAnnouncer interface {
@@ -58,8 +60,9 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 // Start the main routine for an attester.
 func (a *Attester) Start() {
 	log.Info("Starting service")
-	client := a.rpcClientService.AttesterServiceClient()
-	go a.run(a.ctx.Done(), client)
+	attester := a.rpcClientService.AttesterServiceClient()
+	validator := a.rpcClientService.ValidatorServiceClient()
+	go a.run(attester, validator)
 }
 
 // Stop the main loop.
@@ -70,12 +73,13 @@ func (a *Attester) Stop() error {
 }
 
 // run the main event loop that listens for an attester assignment.
-func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
+func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
 	sub := a.assigner.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
 	defer sub.Unsubscribe()
+
 	for {
 		select {
-		case <-done:
+		case <-a.ctx.Done():
 			log.Debug("Attester context closed, exiting goroutine")
 			return
 		case latestBeaconBlock := <-a.assignmentChan:
@@ -83,22 +87,40 @@ func (a *Attester) run(done <-chan struct{}, client pb.AttesterServiceClient) {
 
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
-				log.Errorf("Could not marshal latest beacon block: %v", err)
+				log.Errorf("could not marshal latest beacon block: %v", err)
 				continue
 			}
 			latestBlockHash := blake2b.Sum512(data)
 
-			req := &pb.AttestRequest{
-				Attestation: &pbp2p.AttestationRecord{
+			pubKeyReq := &pb.PublicKey{
+				PublicKey: 0,
+			}
+			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
+			if err != nil {
+				log.Errorf("could not get attester Shard ID: %v", err)
+				continue
+			}
+
+			a.shardID = shardID.ShardId
+
+			attesterIndex, err := validator.ValidatorIndex(a.ctx, pubKeyReq)
+			if err != nil {
+				log.Errorf("could not get attester index: %v", err)
+				continue
+			}
+			attesterBitfield := shared.SetBitfield(int(attesterIndex.Index))
+
+			attestReq := &pb.AttestRequest{
+				Attestation: &pbp2p.AggregatedAttestation{
 					Slot:             latestBeaconBlock.GetSlotNumber(),
 					ShardId:          a.shardID,
-					ShardBlockHash:   latestBlockHash[:],
-					AttesterBitfield: []byte{},   // TODO: Need to find which index this attester represents.
-					AggregateSig:     []uint64{}, // TODO: Need Signature verification scheme/library
+					AttesterBitfield: attesterBitfield,
+					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
+					AggregateSig:     []uint64{},         // TODO: Need Signature verification scheme/library
 				},
 			}
 
-			res, err := client.AttestHead(a.ctx, req)
+			res, err := attester.AttestHead(a.ctx, attestReq)
 			if err != nil {
 				log.Errorf("could not attest head: %v", err)
 				continue

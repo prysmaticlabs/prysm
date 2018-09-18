@@ -10,6 +10,7 @@ service BeaconService {
     rpc LatestBeaconBlock(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
     rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
+    rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.AggregatedAttestation);
 }
 
 service AttesterService {
@@ -18,6 +19,12 @@ service AttesterService {
 
 service ProposerService {
     rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
+}
+
+service ValidatorService {
+    rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
+    rpc ValidatorIndex(PublicKey) returns (IndexResponse);
+    rpc ValidatorSlot(PublicKey) returns (SlotResponse);
 }
 
 message ShuffleRequest {
@@ -44,9 +51,25 @@ message ProposeResponse {
 }
 
 message AttestRequest {
-    ethereum.beacon.p2p.v1.AttestationRecord attestation = 1;
+    ethereum.beacon.p2p.v1.AggregatedAttestation attestation = 1;
 }
 
 message AttestResponse {
     bytes attestation_hash = 1;
+}
+
+message PublicKey {
+    uint64 public_key = 1;
+}
+
+message ShardIDResponse {
+    uint64 shard_id = 1;
+}
+
+message IndexResponse {
+    uint32 index = 1;
+}
+
+message SlotResponse {
+    uint64 slot = 1;
 }

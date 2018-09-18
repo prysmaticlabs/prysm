@@ -6,8 +6,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -15,11 +17,14 @@ import (
 var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
-	ContainsBlock(h [32]byte) bool
+	ContainsBlock(h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
+	IncomingAttestationFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
 	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+	GetBlockSlotNumber(h [32]byte) (uint64, error)
+	CurrentCrystallizedState() *types.CrystallizedState
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -37,7 +42,7 @@ type chainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	p2p                   types.P2P
+	p2p                   shared.P2P
 	chainService          chainService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
@@ -62,7 +67,7 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs chainService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
@@ -110,15 +115,20 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 // ReceiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) {
+func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
-	if ss.chainService.ContainsBlock(h) {
-		return
+	blockExists, err := ss.chainService.ContainsBlock(h)
+	if err != nil {
+		return err
+	}
+	if blockExists {
+		return nil
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
+	return nil
 }
 
 // run handles incoming block sync.
@@ -137,31 +147,50 @@ func (ss *Service) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockHashAnnounce)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block hash announcement p2p message")
-				continue
+			data := msg.Data.(*pb.BeaconBlockHashAnnounce)
+			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
+				log.Errorf("Received block hash failed: %v", err)
 			}
-			ss.ReceiveBlockHash(data, msg.Peer)
 		case msg := <-ss.blockBuf:
-			response, ok := msg.Data.(*pb.BeaconBlockResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Errorf("Received malformed beacon block p2p message")
-				continue
-			}
+			response := msg.Data.(*pb.BeaconBlockResponse)
 			block := types.NewBlock(response.Block)
-			h, err := block.Hash()
+			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash received block: %v", err)
 			}
-			if ss.chainService.ContainsBlock(h) {
+
+			blockExists, err := ss.chainService.ContainsBlock(blockHash)
+			if err != nil {
+				log.Errorf("Can not check for block in DB: %v", err)
 				continue
 			}
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Sending newly received block to subscribers")
-			// We send out a message over a feed.
+			if blockExists {
+				continue
+			}
+
+			// Verify attestation coming from proposer then forward block to the subscribers.
+			attestation := types.NewAttestation(response.Attestation)
+			cState := ss.chainService.CurrentCrystallizedState()
+			parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+			if err != nil {
+				log.Errorf("Failed to get parent slot: %v", err)
+				continue
+			}
+			proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+			if err != nil {
+				log.Errorf("Failed to get proposer shard ID: %v", err)
+				continue
+			}
+			if err := attestation.VerifyAttestation(proposerShardID); err != nil {
+				log.Errorf("Failed to verify proposer attestation: %v", err)
+				continue
+			}
+
+			log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
 			ss.chainService.IncomingBlockFeed().Send(block)
+			log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+			ss.chainService.IncomingAttestationFeed().Send(attestation)
+
 		case msg := <-ss.blockRequestBySlot:
 			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 			if !ok {
