@@ -23,8 +23,8 @@ type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
-	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
-	GetBlockSlotNumber(h [32]byte) (uint64, error)
+	CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+	BlockSlotNumberByHash(h [32]byte) (uint64, error)
 	CurrentCrystallizedState() *types.CrystallizedState
 }
 
@@ -192,7 +192,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	attestation := types.NewAttestation(response.Attestation)
 	cState := ss.chainService.CurrentCrystallizedState()
-	parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+	parentSlot, err := ss.chainService.BlockSlotNumberByHash(block.ParentHash())
 	if err != nil {
 		log.Errorf("Failed to get parent slot: %v", err)
 		return
@@ -243,7 +243,7 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	}
 
 	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := ss.chainService.GetCanonicalBlockBySlotNumber(request.GetSlotNumber())
+	block, err := ss.chainService.CanonicalBlockBySlotNumber(request.GetSlotNumber())
 	getBlockSpan.End()
 	if err != nil {
 		log.Errorf("Error retrieving block from db %v", err)

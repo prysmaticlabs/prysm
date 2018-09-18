@@ -65,7 +65,7 @@ func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState 
 	return cState
 }
 
-func (ms *mockChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+func (ms *mockChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
 	return 0, nil
 }
 
@@ -76,7 +76,7 @@ func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (boo
 	return ms.slotExists, nil
 }
 
-func (ms *mockChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+func (ms *mockChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	if ms.getError {
 		return nil, errors.New("mock get canonical block error")
 	}
@@ -359,7 +359,7 @@ func (ms *mockEmptyChainService) CheckForCanonicalBlockBySlot(slotnumber uint64)
 	return false, nil
 }
 
-func (ms *mockEmptyChainService) GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
+func (ms *mockEmptyChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
 	return nil, nil
 }
 
@@ -367,7 +367,7 @@ func (ms *mockEmptyChainService) CurrentCrystallizedState() *types.CrystallizedS
 	return types.NewCrystallizedState(nil)
 }
 
-func (ms *mockEmptyChainService) GetBlockSlotNumber(h [32]byte) (uint64, error) {
+func (ms *mockEmptyChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
 	return 0, nil
 }
 
