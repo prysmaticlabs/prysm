@@ -120,8 +120,8 @@ func (a *ActiveState) calculateNewAttestations(add []*pb.AggregatedAttestation, 
 //   [0xF, 0x7, 0x0, 0x0, 0x5]
 //
 // Where 0x0 is an empty or missing hash where no block was produced in the
-// alloted slot. When storing (or at least when computing the hash of the
-// active state), the list should be backfilled as such:
+// alloted slot. When storing the list (or at least when computing the hash of
+// the active state), the list should be backfilled as such:
 //
 //   [0xF, 0x7, 0x5, 0x5, 0x5]
 //
