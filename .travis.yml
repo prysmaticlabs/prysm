@@ -11,6 +11,11 @@ matrix:
         - 
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
+      env: 
+        - todos
+      script:
+          - ./scripts/check-todo.sh
+    - os: linux
       env:
         - coverage
       script:
