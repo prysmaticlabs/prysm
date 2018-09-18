@@ -337,3 +337,51 @@ func TestLatestAttestation(t *testing.T) {
 	rpcService.cancel()
 	exitRoutine <- true
 }
+
+func TestValidatorSlot(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.PublicKey{
+		PublicKey: 0,
+	}
+	if _, err := rpcService.ValidatorSlot(context.Background(), req); err != nil {
+		t.Errorf("Could not get validator slot: %v", err)
+	}
+}
+
+func TestValidatorIndex(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.PublicKey{
+		PublicKey: 0,
+	}
+	if _, err := rpcService.ValidatorIndex(context.Background(), req); err != nil {
+		t.Errorf("Could not get validator index: %v", err)
+	}
+}
+
+func TestValidatorShardID(t *testing.T) {
+	announcer := newMockAnnouncer()
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		Announcer:    announcer,
+		ChainService: mockChain,
+	})
+	req := &pb.PublicKey{
+		PublicKey: 0,
+	}
+	if _, err := rpcService.ValidatorShardID(context.Background(), req); err != nil {
+		t.Errorf("Could not get validator shard ID: %v", err)
+	}
+}

@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -56,6 +57,24 @@ func TestByteLength(t *testing.T) {
 	for _, tt := range tests {
 		if BitLength(tt.a) != tt.b {
 			t.Errorf("BitLength(%d) = %d, want = %d", tt.a, BitLength(tt.a), tt.b)
+		}
+	}
+}
+
+func TestBitSet(t *testing.T) {
+	tests := []struct {
+		a int
+		b []byte
+	}{
+		{a: 0, b: []byte{128}},    //10000000
+		{a: 1, b: []byte{64}},     //01000000
+		{a: 5, b: []byte{4}},      //00000100
+		{a: 10, b: []byte{0, 32}}, //00000000 00100000
+		{a: 100, b: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8}},
+	}
+	for _, tt := range tests {
+		if !bytes.Equal(SetBitfield(tt.a), tt.b) {
+			t.Errorf("SetBitfield(%v) = %d, want = %v", tt.a, SetBitfield(tt.a), tt.b)
 		}
 	}
 }

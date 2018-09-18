@@ -212,3 +212,94 @@ func TestGetProposerIndexAndShard(t *testing.T) {
 		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
 	}
 }
+
+func TestValidatorIndex(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 10; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: 0})
+	}
+	if _, err := ValidatorIndex(100, 0, validators); err == nil {
+		t.Fatalf("ValidatorIndex should have failed,  there's no validator with pubkey 100")
+	}
+	validators[5].PublicKey = 100
+	index, err := ValidatorIndex(100, 0, validators)
+	if err != nil {
+		t.Fatalf("call ValidatorIndex failed: %v", err)
+	}
+	if index != 5 {
+		t.Errorf("Incorrect validator index. Wanted 5, Got %v", index)
+	}
+}
+
+func TestValidatorShardID(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 21; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: 0})
+	}
+	shardCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
+			{ShardId: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
+			{ShardId: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
+		}},
+	}
+	validators[19].PublicKey = 100
+	shardID, err := ValidatorShardID(100, 0, validators, shardCommittees)
+	if err != nil {
+		t.Fatalf("call ValidatorShardID failed: %v", err)
+	}
+	if shardID != 2 {
+		t.Errorf("Incorrect validator shard ID. Wanted 2, Got %v", shardID)
+	}
+
+	validators[19].PublicKey = 0
+	if _, err := ValidatorShardID(100, 0, validators, shardCommittees); err == nil {
+		t.Fatalf("ValidatorShardID should have failed, there's no validator with pubkey 100")
+	}
+
+	validators[20].PublicKey = 100
+	if _, err := ValidatorShardID(100, 0, validators, shardCommittees); err == nil {
+		t.Fatalf("ValidatorShardID should have failed, validator indexed at 20 is not in the committee")
+	}
+}
+
+func TestValidatorSlot(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 61; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: 0})
+	}
+	shardCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
+			{ShardId: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
+			{ShardId: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
+		}},
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 3, Committee: []uint32{20, 21, 22, 23, 24, 25, 26}},
+			{ShardId: 4, Committee: []uint32{27, 28, 29, 30, 31, 32, 33}},
+			{ShardId: 5, Committee: []uint32{34, 35, 36, 37, 38, 39}},
+		}},
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{ShardId: 6, Committee: []uint32{40, 41, 42, 43, 44, 45, 46}},
+			{ShardId: 7, Committee: []uint32{47, 48, 49, 50, 51, 52, 53}},
+			{ShardId: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
+		}},
+	}
+	if _, err := ValidatorSlot(100, 0, validators, shardCommittees); err == nil {
+		t.Fatalf("ValidatorSlot should have failed, there's no validator with pubkey 100")
+	}
+
+	validators[59].PublicKey = 100
+	slot, err := ValidatorSlot(100, 0, validators, shardCommittees)
+	if err != nil {
+		t.Fatalf("call ValidatorSlot failed: %v", err)
+	}
+	if slot != 2 {
+		t.Errorf("Incorrect validator slot ID. Wanted 1, Got %v", slot)
+	}
+
+	validators[60].PublicKey = 101
+	if _, err := ValidatorSlot(101, 0, validators, shardCommittees); err == nil {
+		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
+	}
+}

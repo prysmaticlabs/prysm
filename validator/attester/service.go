@@ -11,7 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
-	blake2b "golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "attester")
@@ -34,7 +34,6 @@ type Attester struct {
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
 	shardID          uint64
-	pubKey           uint64
 }
 
 // Config options for an attester service.
@@ -86,30 +85,30 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 		case latestBeaconBlock := <-a.assignmentChan:
 			log.Info("Performing attester responsibility")
 
-			pubKeyReq := &pb.PublicKey{
-				PublicKey: a.pubKey,
-			}
-
-			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
+			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
-				log.Errorf("Could not get attester Shard ID: %v", err)
+				log.Errorf("could not marshal latest beacon block: %v", err)
 				continue
 			}
+			latestBlockHash := blake2b.Sum512(data)
+
+			pubKeyReq := &pb.PublicKey{
+				PublicKey: 0,
+			}
+			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
+			if err != nil {
+				log.Errorf("could not get attester Shard ID: %v", err)
+				continue
+			}
+
 			a.shardID = shardID.ShardId
 
 			attesterIndex, err := validator.ValidatorIndex(a.ctx, pubKeyReq)
 			if err != nil {
-				log.Errorf("Could not get attester index: %v", err)
+				log.Errorf("could not get attester index: %v", err)
 				continue
 			}
 			attesterBitfield := shared.SetBitfield(int(attesterIndex.Index))
-
-			data, err := proto.Marshal(latestBeaconBlock)
-			if err != nil {
-				log.Errorf("Could not marshal latest beacon block: %v", err)
-				continue
-			}
-			latestBlockHash := blake2b.Sum512(data)
 
 			attestReq := &pb.AttestRequest{
 				Attestation: &pbp2p.AggregatedAttestation{
