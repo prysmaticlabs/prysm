@@ -242,7 +242,7 @@ func (a *ActiveState) getBlockHash(currentBlock *Block, slot uint64) ([32]byte, 
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AttestationRecord) (signedParentHashes [params.CycleLength][32]byte, err error) {
+func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) (signedParentHashes [params.CycleLength][32]byte, err error) {
 	loc := 0
 
 	for i := 1; i <= (params.CycleLength - len(attestation.ObliqueParentHashes)); i++ {

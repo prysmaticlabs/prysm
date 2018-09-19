@@ -240,7 +240,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	// TODO(#258): Generate validators aggregated pub key.
 
 	attestationMsg := AttestationMsg(
-		parentHashes,
+		parentHashes[:],
 		attestation.ShardBlockHash,
 		attestation.Slot,
 		attestation.ShardId,
