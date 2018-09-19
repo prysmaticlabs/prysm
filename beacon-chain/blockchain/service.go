@@ -232,6 +232,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			}
 
 			log.Info("Applying fork choice rule")
+
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
 			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
@@ -340,13 +341,28 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 			if !parentExists {
-				log.Debugf("Block points to nil parent", err)
+				log.Debugf("Block points to nil parent: %v", err)
+				continue
+			}
+			parent, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Debugf("Could not get parent block: %v", err)
 				continue
 			}
 
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
-			if valid := block.IsValid(aState, cState, block.SlotNumber()-1); !valid {
+			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
+
+			if isTransition {
+				cState, err = cState.NewStateRecalculations(aState, block)
+				if err != nil {
+					log.Errorf("Initialize new cycle transition failed: %v", err)
+					continue
+				}
+			}
+
+			if valid := block.IsValid(aState, cState, parent.SlotNumber()); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
 				continue
 			}
