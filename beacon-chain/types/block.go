@@ -171,6 +171,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		log.Errorf("Can not get proposer index %v", err)
 		return false
 	}
+	log.Infof("Proposer index: %v", proposerIndex)
 	if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
 		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false
@@ -237,7 +238,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 }
 
 func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {
-	if attestationSlot > parentSlot {
+	if parentSlot != 0 && attestationSlot > parentSlot {
 		log.Debugf("attestation slot number can't be higher than parent block's slot number. Found: %d, Needed lower than: %d",
 			attestationSlot,
 			parentSlot)
