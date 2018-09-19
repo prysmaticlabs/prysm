@@ -1,13 +1,15 @@
 package types
 
 import (
+	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestGenesisActiveState(t *testing.T) {
+func TestGenesisActiveState_HashEquality(t *testing.T) {
 	aState1 := NewGenesisActiveState()
 	aState2 := NewGenesisActiveState()
 
@@ -20,6 +22,26 @@ func TestGenesisActiveState(t *testing.T) {
 
 	if h1 != h2 {
 		t.Fatalf("Hash of two genesis crystallized states should be equal: %x", h1)
+	}
+}
+
+func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
+	as := NewGenesisActiveState()
+	want, got := len(as.data.RecentBlockHashes), 2*params.CycleLength
+	if want != got {
+		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
+	}
+
+	want = cap(as.data.RecentBlockHashes)
+	if want != got {
+		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
+	}
+
+	zero := make([]byte, 0, 32)
+	for _, h := range as.data.RecentBlockHashes {
+		if !bytes.Equal(h, zero) {
+			t.Errorf("Unexpected non-zero hash data: %v", h)
+		}
 	}
 }
 
@@ -109,6 +131,42 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 		} else if !areBytesEqual(updated[i], hash[:]) {
 			t.Fatalf("update failed: expected %x got %x", hash[:], updated[i])
 		}
+	}
+}
+
+func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
+	interestingData := [][]byte{
+		[]byte("hello"),
+		[]byte("world"),
+		[]byte("block"),
+		[]byte("hash"),
+	}
+
+	s := NewGenesisActiveState()
+	for i, d := range interestingData {
+		s.data.RecentBlockHashes[i] = d
+	}
+	original := make([][]byte, 2*params.CycleLength)
+	copy(original, s.data.RecentBlockHashes)
+
+	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
+		t.Fatal("setup data should be equal!")
+	}
+
+	block := &Block{
+		data: &pb.BeaconBlock{
+			SlotNumber: 2,
+		},
+	}
+
+	result, _ := s.calculateNewBlockHashes(block, 0 /*parentSlot*/)
+
+	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
+		t.Error("data has mutated from the original")
+	}
+
+	if reflect.DeepEqual(result, original) {
+		t.Error("the resulting data did not change from the original")
 	}
 }
 
