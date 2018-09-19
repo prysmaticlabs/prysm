@@ -350,14 +350,14 @@ func TestRunningChainService(t *testing.T) {
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             currentSlot,
 			AttesterBitfield: []byte{128, 0},
-			ShardId:          0,
+			ShardId:          1,
 		}},
 	})
 
-	//blockNoParent := types.NewBlock(&pb.BeaconBlock{
-	//SlotNumber:  currentSlot,
-	//PowChainRef: []byte("a"),
-	//})
+	blockNoParent := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber:  currentSlot,
+		PowChainRef: []byte("a"),
+	})
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -369,11 +369,11 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//chainService.incomingBlockChan <- blockNoParent
+	chainService.incomingBlockChan <- blockNoParent
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
-	//testutil.AssertLogsContain(t, hook, "Block points to nil parent")
+	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
 	testutil.AssertLogsContain(t, hook, "Finished processing received block")
 }
 
