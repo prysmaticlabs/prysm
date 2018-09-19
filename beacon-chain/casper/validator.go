@@ -210,3 +210,20 @@ func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorReco
 
 	return 0, fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
 }
+
+func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+	var totalDeposit uint64
+	activeValidators := ActiveValidatorIndices(validators, dynasty)
+
+	for _, index := range activeValidators {
+		totalDeposit += validators[index].GetBalance()
+	}
+	return totalDeposit
+}
+
+func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
+	depositInEth := totalDeposit / params.EtherDenomination
+
+	return depositInEth
+}

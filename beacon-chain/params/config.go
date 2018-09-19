@@ -25,4 +25,8 @@ const (
 	BootstrappedValidatorsCount = 1000
 	// MinDynastyLength is the slots needed before dynasty transition happens.
 	MinDynastyLength = 256
+	// EtherDenomination is the denomination of ether in wei.
+	EtherDenomination = 1e18
+	// BaseRewardQuotient is the base reward quotient which will be awarded to validators.
+	BaseRewardQuotient = 1
 )
