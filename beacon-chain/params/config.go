@@ -27,6 +27,10 @@ const (
 	MinDynastyLength = 256
 	// EtherDenomination is the denomination of ether in wei.
 	EtherDenomination = 1e18
-	// BaseRewardQuotient is the base reward quotient which will be awarded to validators.
-	BaseRewardQuotient = 1
+	// BaseRewardQuotient is where 1/BaseRewardQuotient is the per-slot interest rate which will,
+	// compound to an annual rate of 3.88% for 10 million eth staked.
+	BaseRewardQuotient = 32768
+	// SqrtDropTime is a constant set to reflect the amount of time it will take for the quadratic leak to
+	// cut nonparticipating validators’ deposits by 39.4%.
+	SqrtDropTime = 1048576
 )
