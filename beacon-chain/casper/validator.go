@@ -92,11 +92,6 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
-// ValidatorsTotalDeposit from the active attesters.
-func ValidatorsTotalDeposit(validatorIndices []uint32) uint64 {
-	return uint64(len(validatorIndices) * params.DefaultBalance)
-}
-
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
 	if lastStateRecalc < params.CycleLength {
