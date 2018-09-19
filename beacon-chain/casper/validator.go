@@ -100,11 +100,13 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 		lastStateRecalc = lastStateRecalc - params.CycleLength
 	}
 
-	if !(slot >= lastStateRecalc && slot < lastStateRecalc+params.CycleLength*2) {
+	lowerBound := lastStateRecalc
+	upperBound := lastStateRecalc + params.CycleLength*2
+	if !(slot >= lowerBound && slot < upperBound) {
 		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
 			slot,
-			lastStateRecalc,
-			lastStateRecalc+params.CycleLength*2,
+			lowerBound,
+			upperBound,
 		)
 	}
 

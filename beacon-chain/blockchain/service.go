@@ -346,7 +346,7 @@ func (c *ChainService) blockProcessing() {
 
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
-			if valid := block.IsValid(aState, cState, c.currentSlot-1); !valid {
+			if valid := block.IsValid(aState, cState, block.SlotNumber()-1); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
 				continue
 			}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"strings"
 	"testing"
@@ -337,8 +338,11 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
+	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
+
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:            1,
+		SlotNumber:            currentSlot,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
@@ -351,7 +355,7 @@ func TestRunningChainService(t *testing.T) {
 	})
 
 	blockNoParent := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  1,
+		SlotNumber:  currentSlot,
 		PowChainRef: []byte("a"),
 	})
 
