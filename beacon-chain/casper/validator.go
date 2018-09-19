@@ -92,8 +92,8 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
-// GetAttestersTotalDeposit from the active attesters.
-func GetAttestersTotalDeposit(validatorIndices []uint32) uint64 {
+// AttestersTotalDeposit from the active attesters.
+func AttestersTotalDeposit(validatorIndices []uint32) uint64 {
 	return uint64(len(validatorIndices) * params.DefaultBalance)
 }
 
