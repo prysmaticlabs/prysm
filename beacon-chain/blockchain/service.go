@@ -233,22 +233,25 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			log.Info("Applying fork choice rule")
 
-			aState := c.chain.ActiveState()
-			cState := c.chain.CrystallizedState()
-
-			for block.SlotNumber()-cState.LastStateRecalc() >= params.CycleLength {
-				cState, err = cState.NewStateRecalculations(aState, block)
-				if err != nil {
-					log.Errorf("Initialize new cycle transition failed: %v", err)
-					continue
-				}
-			}
-
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Failed to get parent of block 0x%x", h)
 				continue
 			}
+
+			cState := c.chain.CrystallizedState()
+			aState := c.chain.ActiveState()
+			var stateTransitioned bool
+
+			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
+				cState, err = cState.NewStateRecalculations(aState, block)
+				if err != nil {
+					log.Errorf("Initialize new cycle transition failed: %v", err)
+					continue
+				}
+				stateTransitioned = true
+			}
+
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
@@ -260,9 +263,11 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 				continue
 			}
 
-			if err := c.chain.SetCrystallizedState(cState); err != nil {
-				log.Errorf("Write crystallized state to disk failed: %v", err)
-				continue
+			if stateTransitioned {
+				if err := c.chain.SetCrystallizedState(cState); err != nil {
+					log.Errorf("Write crystallized state to disk failed: %v", err)
+					continue
+				}
 			}
 
 			// Save canonical block hash with slot number to DB.
@@ -282,7 +287,9 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			c.canonicalCrystallizedStateFeed.Send(cState)
+			if stateTransitioned {
+				c.canonicalCrystallizedStateFeed.Send(cState)
+			}
 			c.canonicalBlockFeed.Send(block)
 
 			// Clear the blocks pending processing, mutex lock for thread safety
@@ -349,15 +356,6 @@ func (c *ChainService) blockProcessing() {
 
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
-			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
-
-			if isTransition {
-				cState, err = cState.NewStateRecalculations(aState, block)
-				if err != nil {
-					log.Errorf("Initialize new cycle transition failed: %v", err)
-					continue
-				}
-			}
 
 			if valid := block.IsValid(aState, cState, parent.SlotNumber()); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
