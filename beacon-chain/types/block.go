@@ -211,7 +211,7 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 	parentHashes := aState.getSignedParentHashes(b, attestation)
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
-		log.Debugf("unable to get validator committee: %v", attesterIndices)
+		log.Debugf("Unable to get validator committee: %v", attesterIndices)
 		return false
 	}
 
