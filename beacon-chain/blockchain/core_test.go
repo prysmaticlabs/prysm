@@ -338,7 +338,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 		t.Fatalf("unable to save block %v", err)
 	}
 
-	retblock, err := beaconChain.getCanonicalBlockForSlot(block.SlotNumber())
+	retblock, err := beaconChain.canonicalBlockForSlot(block.SlotNumber())
 	if err != nil {
 		t.Fatalf("unable to get block from db %v", err)
 	}
@@ -361,7 +361,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 		t.Fatalf("unable to save canonical slot %v", err)
 	}
 
-	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
+	if _, err = beaconChain.canonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
 	}
 }
