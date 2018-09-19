@@ -27,7 +27,9 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		testAttesterBitfield,
 		data.Validators,
 		data.CurrentDynasty,
-		data.TotalDeposits)
+		data.TotalDeposits,
+		1000)
+
 	if err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}

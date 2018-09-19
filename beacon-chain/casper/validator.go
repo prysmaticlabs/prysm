@@ -99,6 +99,12 @@ func ValidatorsTotalDeposit(validatorIndices []uint32) uint64 {
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+	if lastStateRecalc < params.CycleLength {
+		lastStateRecalc = 0
+	} else {
+		lastStateRecalc = lastStateRecalc - params.CycleLength
+	}
+
 	if !(lastStateRecalc <= slot && slot < lastStateRecalc+params.CycleLength*2) {
 		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lastStateRecalc, lastStateRecalc+params.CycleLength*2)
 	}
@@ -135,12 +141,6 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
 func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
-	if lastStateRecalc < params.CycleLength {
-		lastStateRecalc = 0
-	} else {
-		lastStateRecalc = lastStateRecalc - params.CycleLength
-	}
-
 	slotCommittees, err := GetShardAndCommitteesForSlot(
 		shardCommittees,
 		lastStateRecalc,

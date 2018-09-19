@@ -224,6 +224,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
+	var totalParticipatedDeposits uint64
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
@@ -240,9 +241,11 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		blockHash := recentBlockHashes[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
+			totalParticipatedDeposits += blockVoteCache[blockHash].VoteTotalDeposit
 		} else {
 			blockVoteBalance = 0
 		}
+		// TODO: This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
 				justifiedSlot = slot
@@ -269,7 +272,8 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			block.Attestations(),
 			c.Validators(),
 			c.CurrentDynasty(),
-			c.TotalDeposits())
+			c.TotalDeposits(),
+			totalParticipatedDeposits)
 	}
 
 	// Get all active validators and calculate total balance for next cycle.
