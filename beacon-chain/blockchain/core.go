@@ -169,6 +169,10 @@ func (b *BeaconChain) PersistCrystallizedState() error {
 	return b.db.Put(crystallizedStateLookupKey, encodedState)
 }
 
+func (b *BeaconChain) saveCrystallizedStateForBlock(state *types.CrystallizedState, block *types.Block) error {
+	return nil
+}
+
 func (b *BeaconChain) hasBlock(blockhash [32]byte) (bool, error) {
 	return b.db.Has(blockKey(blockhash))
 }
