@@ -344,6 +344,13 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
+			aState := c.chain.ActiveState()
+			cState := c.chain.CrystallizedState()
+			if valid := block.IsValid(aState, cState, c.currentSlot-1); !valid {
+				log.Debugf("Block failed validity conditions: %v", err)
+				continue
+			}
+
 			if err := c.chain.saveBlockAndAttestations(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue

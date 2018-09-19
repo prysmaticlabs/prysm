@@ -143,8 +143,6 @@ func (b *Block) isSlotValid() bool {
 }
 
 // IsValid is called to decide if an incoming p2p block can be processed. It checks for following conditions:
-// 1.) Ensure parent processed.
-// 2.) Ensure pow_chain_ref processed.
 // 3.) Ensure local time is large enough to process this block's slot.
 // 4.) Verify that the parent block's proposer's attestation is included.
 func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
