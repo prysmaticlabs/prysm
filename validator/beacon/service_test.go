@@ -112,6 +112,64 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
+func TestWaitForAssignmentProposer(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+
+	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().CanonicalHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
+
+	exitRoutine := make(chan bool)
+	timeChan := make(chan time.Time)
+	go func() {
+		b.waitForAssignment(timeChan, mockServiceClient)
+		<-exitRoutine
+	}()
+
+	b.responsibility = "proposer"
+	b.assignedSlot = 40
+	b.currentSlot = 40
+	timeChan <- time.Now()
+	b.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "New beacon node slot interval")
+}
+
+func TestWaitForAssignmentAttester(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+
+	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().CanonicalHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
+
+	exitRoutine := make(chan bool)
+	timeChan := make(chan time.Time)
+	go func() {
+		b.waitForAssignment(timeChan, mockServiceClient)
+		<-exitRoutine
+	}()
+
+	b.responsibility = "attester"
+	b.assignedSlot = 40
+	b.currentSlot = 40
+	timeChan <- time.Now()
+	b.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "New beacon node slot interval")
+}
+
 func TestListenForCrystallizedStates(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
