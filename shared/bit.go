@@ -1,4 +1,10 @@
-package utils
+package shared
+
+import (
+	"math"
+
+	"github.com/steakknife/hamming"
+)
 
 // CheckBit checks if a bit in a bit field is one.
 func CheckBit(bitfield []byte, index int) bool {
@@ -19,14 +25,26 @@ func CheckBit(bitfield []byte, index int) bool {
 func BitSetCount(bytes []byte) int {
 	var total int
 	for _, b := range bytes {
-		b = (b & 0x55) + ((b >> 1) & 0x55)
-		b = (b & 0x33) + ((b >> 2) & 0x33)
-		total += int((b + (b >> 4)) & 0xF)
+		total += hamming.CountBitsByte(b)
 	}
 	return total
 }
 
-// BitLength returns the length of the bitfield for a giben number of attesters in bytes.
+// BitLength returns the length of the bitfield in bytes.
 func BitLength(b int) int {
 	return (b + 7) / 8
+}
+
+// SetBitfield takes an index and returns bitfield with the index flipped.
+func SetBitfield(index int) []byte {
+	chunkLocation := index / 8
+	indexLocation := math.Pow(2, 7-float64(index%8))
+	var bitfield []byte
+
+	for i := 0; i < chunkLocation; i++ {
+		bitfield = append(bitfield, byte(0))
+	}
+	bitfield = append(bitfield, byte(indexLocation))
+
+	return bitfield
 }

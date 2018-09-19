@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
@@ -163,9 +164,8 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		return false
 	}
 
-	// verify proposer from last slot is in one of the AggregatedAttestation.
-	var proposerAttested bool
-	_, proposerIndex, err := casper.GetProposerIndexAndShard(
+	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
+	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalc(),
 		parentSlot)
@@ -173,17 +173,19 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		log.Errorf("Can not get proposer index %v", err)
 		return false
 	}
+	if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
+		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+		return false
+	}
+
 	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, aState, cState, parentSlot) {
-			log.Debugf("attestation invalid: %v", attestation)
+			log.Errorf("Attestation invalid: %v", attestation)
 			return false
-		}
-		if utils.BitSetCount(attestation.AttesterBitfield) == 1 && utils.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
-			proposerAttested = true
 		}
 	}
 
-	return proposerAttested
+	return true
 }
 
 // isAttestationValid validates an attestation in a block.

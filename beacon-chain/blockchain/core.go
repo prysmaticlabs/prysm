@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -238,6 +239,13 @@ func (b *BeaconChain) saveCanonicalBlock(block *types.Block) error {
 // getBlock retrieves a block from the db using its hash.
 func (b *BeaconChain) getBlock(hash [32]byte) (*types.Block, error) {
 	key := blockKey(hash)
+	has, err := b.db.Has(key)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, errors.New("block not found")
+	}
 	enc, err := b.db.Get(key)
 	if err != nil {
 		return nil, err
@@ -261,9 +269,9 @@ func (b *BeaconChain) hasCanonicalBlockForSlot(slotnumber uint64) (bool, error) 
 	return b.db.Has(canonicalBlockKey(slotnumber))
 }
 
-// getCanonicalBlockForSlot retrieves the canonical block which is saved in the db
+// canonicalBlockForSlot retrieves the canonical block which is saved in the db
 // for that required slot number.
-func (b *BeaconChain) getCanonicalBlockForSlot(slotNumber uint64) (*types.Block, error) {
+func (b *BeaconChain) canonicalBlockForSlot(slotNumber uint64) (*types.Block, error) {
 	enc, err := b.db.Get(canonicalBlockKey(slotNumber))
 	if err != nil {
 		return nil, err
