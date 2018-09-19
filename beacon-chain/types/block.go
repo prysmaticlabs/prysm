@@ -138,7 +138,6 @@ func (b *Block) Timestamp() (time.Time, error) {
 func (b *Block) isSlotValid() bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
-
 	return clock.Now().After(validTimeThreshold)
 }
 
