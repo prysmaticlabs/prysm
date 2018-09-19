@@ -34,6 +34,8 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	blockStream.EXPECT().Recv().Return(&pbp2p.BeaconBlock{}, io.EOF)
 	stateStream := internal.NewMockBeaconService_LatestCrystallizedStateClient(fc.ctrl)
 	stateStream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
+	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
+	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 
 	mockServiceClient.EXPECT().LatestBeaconBlock(
 		gomock.Any(),
@@ -43,6 +45,10 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 		gomock.Any(),
 		&empty.Empty{},
 	).Return(stateStream, nil)
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		&empty.Empty{},
+	).Return(attesterStream, nil)
 	return mockServiceClient
 }
 
@@ -57,6 +63,9 @@ func TestLifecycle(t *testing.T) {
 	}
 	if b.ProposerAssignmentFeed() == nil {
 		t.Error("ProposerAssignmentFeed empty")
+	}
+	if b.ProcessedAttestationFeed() == nil {
+		t.Error("ProcessedAttestationFeed empty")
 	}
 	b.Start()
 	// TODO: find a better way to test this. The problem is that start is non-blocking, and it ends
@@ -273,4 +282,54 @@ func TestFetchCrystallizedState(t *testing.T) {
 	b.fetchCrystallizedState(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Validator selected as proposer of the next slot")
+}
+
+func TestFetchProcessedAttestations(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+
+	// Create mock for the stream returned by LatestAttestation.
+	stream := internal.NewMockBeaconService_LatestAttestationClient(ctrl)
+
+	// Testing if an attestation is received,triggering a log.
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{Slot: 10}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+
+	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+
+	b.fetchProcessedAttestations(mockServiceClient)
+
+	testutil.AssertLogsContain(t, hook, "Latest attestation slot number")
+
+	// Testing an error coming from the stream.
+	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, errors.New("stream error"))
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+
+	b.fetchProcessedAttestations(mockServiceClient)
+
+	testutil.AssertLogsContain(t, hook, "stream error")
+
+	// Creating a faulty stream will trigger error.
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, errors.New("stream creation failed"))
+
+	b.fetchProcessedAttestations(mockServiceClient)
+	testutil.AssertLogsContain(t, hook, "stream creation failed")
+	testutil.AssertLogsContain(t, hook, "Could not receive latest attestation from stream")
 }

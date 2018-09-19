@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -21,21 +22,24 @@ var log = logrus.WithField("prefix", "rpc")
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
+	CurrentCrystallizedState() *types.CrystallizedState
+	ProcessedAttestationFeed() *event.Feed
 }
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
-	announcer          types.CanonicalEventAnnouncer
-	chainService       chainService
-	port               string
-	listener           net.Listener
-	withCert           string
-	withKey            string
-	grpcServer         *grpc.Server
-	canonicalBlockChan chan *types.Block
-	canonicalStateChan chan *types.CrystallizedState
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	announcer             types.CanonicalEventAnnouncer
+	chainService          chainService
+	port                  string
+	listener              net.Listener
+	withCert              string
+	withKey               string
+	grpcServer            *grpc.Server
+	canonicalBlockChan    chan *types.Block
+	canonicalStateChan    chan *types.CrystallizedState
+	proccessedAttestation chan *pbp2p.AggregatedAttestation
 }
 
 // Config options for the beacon node RPC server.
@@ -53,15 +57,16 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		announcer:          cfg.Announcer,
-		chainService:       cfg.ChainService,
-		port:               cfg.Port,
-		withCert:           cfg.CertFlag,
-		withKey:            cfg.KeyFlag,
-		canonicalBlockChan: make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan: make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		ctx:                   ctx,
+		cancel:                cancel,
+		announcer:             cfg.Announcer,
+		chainService:          cfg.ChainService,
+		port:                  cfg.Port,
+		withCert:              cfg.CertFlag,
+		withKey:               cfg.KeyFlag,
+		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
 	}
 }
 
@@ -194,6 +199,75 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 		case state := <-s.canonicalStateChan:
 			log.Info("Sending crystallized state to RPC clients")
 			if err := stream.Send(state.Proto()); err != nil {
+				return err
+			}
+		case <-s.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
+			return nil
+		}
+	}
+}
+
+// ValidatorShardID is called by a validator to get the shard ID of where it's suppose
+// to proposer or attest.
+func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
+	cState := s.chainService.CurrentCrystallizedState()
+
+	shardID, err := casper.ValidatorShardID(
+		req.PublicKey,
+		cState.CurrentDynasty(),
+		cState.Validators(),
+		cState.ShardAndCommitteesForSlots())
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
+	}
+
+	return &pb.ShardIDResponse{ShardId: shardID}, nil
+}
+
+// ValidatorSlot is called by a validator to get the slot number of when it's suppose
+// to proposer or attest.
+func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponse, error) {
+	cState := s.chainService.CurrentCrystallizedState()
+
+	slot, err := casper.ValidatorSlot(
+		req.PublicKey,
+		cState.CurrentDynasty(),
+		cState.Validators(),
+		cState.ShardAndCommitteesForSlots())
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
+	}
+
+	return &pb.SlotResponse{Slot: slot}, nil
+}
+
+// ValidatorIndex is called by a validator to get its index location that corresponds
+// to the attestation bit fields.
+func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
+	cState := s.chainService.CurrentCrystallizedState()
+
+	index, err := casper.ValidatorIndex(
+		req.PublicKey,
+		cState.CurrentDynasty(),
+		cState.Validators())
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator index: %v", err)
+	}
+
+	return &pb.IndexResponse{Index: index}, nil
+}
+
+// LatestAttestation streams the latest processed attestations to the rpc clients.
+func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
+	sub := s.chainService.ProcessedAttestationFeed().Subscribe(s.proccessedAttestation)
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case attestation := <-s.proccessedAttestation:
+			log.Info("Sending attestation to RPC clients")
+			if err := stream.Send(attestation); err != nil {
 				return err
 			}
 		case <-s.ctx.Done():

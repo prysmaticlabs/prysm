@@ -569,3 +569,9 @@ go_repository(
     commit = "073f507db72de824e981aa0f15f158175a8d6be1",
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
+
+go_repository(
+    name = "com_github_steakknife_hamming",
+    commit = "c99c65617cd3d686aea8365fe563d6542f01d940",
+    importpath = "github.com/steakknife/hamming",
+)

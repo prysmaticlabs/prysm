@@ -2,7 +2,6 @@
 package types
 
 import (
-	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
@@ -125,7 +125,7 @@ func (b *Block) AttestationCount() int {
 }
 
 // Attestations returns an array of attestations in the block.
-func (b *Block) Attestations() []*pb.AttestationRecord {
+func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 
@@ -142,34 +142,49 @@ func (b *Block) isSlotValid() bool {
 	return clock.Now().After(validTimeThreshold)
 }
 
-// IsValid is called to decide if an incoming p2p block can be processed.
-// It checks the slot against the system clock, and the validity of the included attestations.
-// Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
+// IsValid is called to decide if an incoming p2p block can be processed. It checks for following conditions:
+// 1.) Ensure parent processed.
+// 2.) Ensure pow_chain_ref processed.
+// 3.) Ensure local time is large enough to process this block's slot.
+// 4.) Verify that the parent block's proposer's attestation is included.
 func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	_, err := b.Hash()
 	if err != nil {
-		log.Debugf("Could not hash incoming block: %v", err)
+		log.Errorf("Could not hash incoming block: %v", err)
 		return false
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Debug("Can not process a genesis block")
+		log.Error("Can not process a genesis block")
 		return false
 	}
 
 	if !b.isSlotValid() {
-		log.Debugf("slot of block is too high: %d", b.SlotNumber())
+		log.Errorf("Slot of block is too high: %d", b.SlotNumber())
 		return false
 	}
 
+	// verify proposer from last slot is in one of the AggregatedAttestation.
+	var proposerAttested bool
+	_, proposerIndex, err := casper.GetProposerIndexAndShard(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalc(),
+		parentSlot)
+	if err != nil {
+		log.Errorf("Can not get proposer index %v", err)
+		return false
+	}
 	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, aState, cState, parentSlot) {
 			log.Debugf("attestation invalid: %v", attestation)
 			return false
 		}
+		if shared.BitSetCount(attestation.AttesterBitfield) == 1 && shared.CheckBit(attestation.AttesterBitfield, int(proposerIndex)) {
+			proposerAttested = true
+		}
 	}
 
-	return true
+	return proposerAttested
 }
 
 // isAttestationValid validates an attestation in a block.
@@ -207,26 +222,18 @@ func (b *Block) isAttestationValid(attestationIndex int, aState *ActiveState, cS
 
 	// TODO(#258): Generate validators aggregated pub key.
 
-	// Hash parentHashes + shardID + slotNumber + shardBlockHash into a message to use to
-	// to verify with aggregated public key and aggregated attestation signature.
-	msg := make([]byte, binary.MaxVarintLen64)
-	var signedHashesStr []byte
-	for _, parentHash := range parentHashes {
-		signedHashesStr = append(signedHashesStr, parentHash[:]...)
-		signedHashesStr = append(signedHashesStr, byte(' '))
-	}
-	binary.PutUvarint(msg, attestation.Slot%params.CycleLength)
-	msg = append(msg, signedHashesStr...)
-	binary.PutUvarint(msg, attestation.ShardId)
-	msg = append(msg, attestation.ShardBlockHash...)
-	binary.PutUvarint(msg, attestation.JustifiedSlot)
-
-	msgHash := blake2b.Sum512(msg)
+	attestationMsg := AttestationMsg(
+		parentHashes,
+		attestation.ShardBlockHash,
+		attestation.Slot,
+		attestation.ShardId,
+		attestation.JustifiedSlot)
 
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
-		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, msgHash)
+		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
+
 	return true
 }
 

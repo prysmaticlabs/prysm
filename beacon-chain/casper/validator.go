@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 )
 
 const bitsInByte = 8
@@ -92,12 +93,10 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 }
 
 // GetAttestersTotalDeposit from the pending attestations.
-func GetAttestersTotalDeposit(attestations []*pb.AttestationRecord) uint64 {
+func GetAttestersTotalDeposit(attestations []*pb.AggregatedAttestation) uint64 {
 	var numOfBits int
 	for _, attestation := range attestations {
-		for _, byte := range attestation.AttesterBitfield {
-			numOfBits += int(utils.BitSetCount(byte))
-		}
+		numOfBits += int(shared.BitSetCount(attestation.AttesterBitfield))
 	}
 	// Assume there's no slashing condition, the following logic will change later phase.
 	return uint64(numOfBits) * params.DefaultBalance
@@ -113,11 +112,11 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
 // defined in the Crystallized State.
-func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndices []uint32) bool {
+func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
-	if utils.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+	if shared.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
 		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
-			len(attestation.AttesterBitfield), utils.BitLength(len(attesterIndices)))
+			len(attestation.AttesterBitfield), shared.BitLength(len(attesterIndices)))
 		return false
 	}
 
@@ -129,11 +128,85 @@ func AreAttesterBitfieldsValid(attestation *pb.AttestationRecord, attesterIndice
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		if utils.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+		if shared.CheckBit(attestation.AttesterBitfield, lastBit+i) {
 			log.Debugf("attestation has non-zero trailing bits")
 			return false
 		}
 	}
 
 	return true
+}
+
+// GetProposerIndexAndShard returns the index and the shardID of a proposer from a given slot.
+func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (uint64, uint64, error) {
+	if lcs < params.CycleLength {
+		lcs = 0
+	} else {
+		lcs = lcs - params.CycleLength
+	}
+
+	slotCommittees, err := GetShardAndCommitteesForSlot(
+		shardCommittees,
+		lcs,
+		slot)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].ShardId
+	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	return proposerShardID, proposerIndex, nil
+}
+
+// ValidatorIndex returns the index of the validator given an input public key.
+func ValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
+	activeValidators := ActiveValidatorIndices(validators, dynasty)
+
+	for _, index := range activeValidators {
+		if validators[index].PublicKey == pubKey {
+			return index, nil
+		}
+	}
+
+	return 0, fmt.Errorf("can't find validator index for public key %d", pubKey)
+}
+
+// ValidatorShardID returns the shard ID of the validator currently participates in.
+func ValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+	index, err := ValidatorIndex(pubKey, dynasty, validators)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, slotCommittee := range shardCommittees {
+		for _, committee := range slotCommittee.ArrayShardAndCommittee {
+			for _, validator := range committee.Committee {
+				if validator == index {
+					return committee.ShardId, nil
+				}
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("can't find shard ID for validator with public key %d", pubKey)
+}
+
+// ValidatorSlot returns the slot number of when the validator gets to attest or proposer.
+func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+	index, err := ValidatorIndex(pubKey, dynasty, validators)
+	if err != nil {
+		return 0, err
+	}
+
+	for slot, slotCommittee := range shardCommittees {
+		for _, committee := range slotCommittee.ArrayShardAndCommittee {
+			for _, validator := range committee.Committee {
+				if validator == index {
+					return uint64(slot), nil
+				}
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
 }
