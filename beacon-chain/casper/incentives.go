@@ -13,15 +13,10 @@ var log = logrus.WithField("prefix", "casper")
 // based on FFG incentive structure.
 func CalculateRewards(attestations []*pb.AggregatedAttestation, validators []*pb.ValidatorRecord, dynasty uint64, totalDeposit uint64) ([]*pb.ValidatorRecord, error) {
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
-	attesterDeposits := AttestersTotalDeposit(activeValidators)
+	attesterDeposits := ValidatorsTotalDeposit(activeValidators)
 	attesterBitfield := attestations[len(attestations)-1].AttesterBitfield
 	attesterFactor := attesterDeposits * 3
 	totalFactor := uint64(totalDeposit * 2)
-
-	// Pad 0s to the rest of attesterBitfield bitfield up to default validator length.
-	for len(attesterBitfield)*8 < params.BootstrappedValidatorsCount {
-		attesterBitfield = append(attesterBitfield, byte(0))
-	}
 
 	if attesterFactor >= totalFactor {
 		log.Debug("Applying rewards and penalties for the validators from last cycle")

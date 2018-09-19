@@ -35,6 +35,11 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
 
+	var attesterBitfield []byte
+	for len(attesterBitfield)*8 < params.BootstrappedValidatorsCount {
+		attesterBitfield = append(attesterBitfield, byte(0))
+	}
+
 	aState := NewGenesisActiveState()
 	block := NewBlock(&pb.BeaconBlock{
 		ParentHash:            []byte{},
@@ -43,7 +48,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		CrystallizedStateHash: []byte{},
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
-			AttesterBitfield: []byte{0},
+			AttesterBitfield: attesterBitfield,
 			ShardId:          0,
 		}},
 	})

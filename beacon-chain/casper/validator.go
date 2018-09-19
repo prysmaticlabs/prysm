@@ -92,8 +92,8 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
-// AttestersTotalDeposit from the active attesters.
-func AttestersTotalDeposit(validatorIndices []uint32) uint64 {
+// ValidatorsTotalDeposit from the active attesters.
+func ValidatorsTotalDeposit(validatorIndices []uint32) uint64 {
 	return uint64(len(validatorIndices) * params.DefaultBalance)
 }
 
@@ -135,6 +135,11 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
 func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
+	if lastStateRecalc < params.CycleLength {
+		lastStateRecalc = 0
+	} else {
+		lastStateRecalc = lastStateRecalc - params.CycleLength
+	}
 
 	slotCommittees, err := GetShardAndCommitteesForSlot(
 		shardCommittees,
