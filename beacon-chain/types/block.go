@@ -173,7 +173,7 @@ func (b *Block) IsValid(aState *ActiveState, cState *CrystallizedState, parentSl
 		log.Errorf("Can not get proposer index %v", err)
 		return false
 	}
-	if !(shared.BitSetCount(b.Attestations()[0].AttesterBitfield) == 1 && shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex))) {
+	if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
 		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false
 	}
