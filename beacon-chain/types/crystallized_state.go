@@ -245,7 +245,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		} else {
 			blockVoteBalance = 0
 		}
-		// TODO: This should have been total balance of the validators in the slot committee.
+		// TODO(#542): This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
 				justifiedSlot = slot
