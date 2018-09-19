@@ -235,9 +235,8 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
-			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
 
-			if isTransition {
+			for block.SlotNumber()-cState.LastStateRecalc() >= params.CycleLength {
 				cState, err = cState.NewStateRecalculations(aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
@@ -283,9 +282,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if isTransition {
-				c.canonicalCrystallizedStateFeed.Send(cState)
-			}
+			c.canonicalCrystallizedStateFeed.Send(cState)
 			c.canonicalBlockFeed.Send(block)
 
 			// Clear the blocks pending processing, mutex lock for thread safety
