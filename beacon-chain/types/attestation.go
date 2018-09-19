@@ -123,9 +123,9 @@ func (a *Attestation) AggregateSig() []uint64 {
 	return a.data.AggregateSig
 }
 
-// VerifyAttestation verifies the proposer's attestation of the block.
+// VerifyProposerAttestation verifies the proposer's attestation of the block.
 // Proposers broadcast the attestation along with the block to its peers.
-func (a *Attestation) VerifyAttestation(proposerShardID uint64) error {
+func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID uint64) error {
 
 	// Verify the attestation attached with block response.
 	// Get proposer index and shardID.
@@ -137,9 +137,10 @@ func (a *Attestation) VerifyAttestation(proposerShardID uint64) error {
 		proposerShardID,
 		a.JustifiedSlotNumber())
 
-	log.Infof("Constructed attestation message for incoming block 0x%x", attestationMsg)
+	log.Infof("Constructing attestation message for incoming block 0x%x", attestationMsg)
 
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
+	log.Infof("Verifying attestation with public key 0x%x", pubKey)
 
 	log.Info("successfully verified attestation with incoming block")
 	return nil
