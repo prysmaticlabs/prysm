@@ -148,7 +148,7 @@ func (s *ShardEthereum) registerP2P() error {
 // can spin up a transaction pool that will relay incoming transactions via an
 // event feed. For our first releases, this can just relay test/fake transaction data
 // the proposer can serialize into collation blobs.
-// TODO: design this txpool system for our first release.
+// TODO(161): design this txpool system for our first release.
 func (s *ShardEthereum) registerTXPool() error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
