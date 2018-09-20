@@ -202,6 +202,7 @@ func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorReco
 	return 0, fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
 }
 
+// TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
 func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
@@ -212,6 +213,7 @@ func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecor
 	return totalDeposit
 }
 
+// TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	depositInEth := totalDeposit / params.EtherDenomination

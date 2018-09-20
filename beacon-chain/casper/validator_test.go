@@ -312,3 +312,20 @@ func TestValidatorSlot(t *testing.T) {
 		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
 	}
 }
+
+func TestTotalActiveValidatorDeposit(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 10; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, Balance: 1e18})
+	}
+
+	totalDeposit := TotalActiveValidatorDeposit(0, validators)
+	if totalDeposit != 10e18 {
+		t.Fatalf("incorrect total deposit calculated %d", totalDeposit)
+	}
+
+	totalDepositETH := TotalActiveValidatorDepositInEth(0, validators)
+	if totalDepositETH != 10 {
+		t.Fatalf("incorrect total deposit in ETH calculated %d", totalDepositETH)
+	}
+}
