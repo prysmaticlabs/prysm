@@ -575,3 +575,21 @@ go_repository(
     commit = "c99c65617cd3d686aea8365fe563d6542f01d940",
     importpath = "github.com/steakknife/hamming",
 )
+
+go_repository(
+    name = "io_opencensus_go",
+    commit = "f21fe3feadc5461b952191052818685a410428d4",
+    importpath = "go.opencensus.io",
+)
+
+go_repository(
+    name = "org_golang_google_api",
+    commit = "7ca32eb868bf53ea2fc406698eb98583a8073d19",
+    importpath = "google.golang.org/api",
+)
+
+go_repository(
+    name = "org_golang_x_sync",
+    commit = "1d60e4601c6fd243af51cc01ddf169918a5407ca",
+    importpath = "golang.org/x/sync",
+)

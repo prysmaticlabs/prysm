@@ -158,35 +158,12 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // once upon establishing a connection to the beacon node in order to determine
 // their role and assigned slot initially and setup an internal ticker.
 func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndStateResponse, error) {
-	genesis, err := types.NewGenesisBlock()
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch genesis block: %v", err)
-	}
+	genesis := types.NewGenesisBlock()
 	crystallized := s.fetcher.CanonicalCrystallizedState()
 	return &pb.GenesisTimeAndStateResponse{
 		GenesisTimestamp:        genesis.Proto().GetTimestamp(),
 		LatestCrystallizedState: crystallized.Proto(),
 	}, nil
-}
-
-// FetchShuffledValidatorIndices retrieves the shuffled validator indices, cutoffs, and
-// assigned attestation slots at a given crystallized state hash.
-// This function can be called by validators to fetch a historical list of shuffled
-// validators ata point in time corresponding to a certain crystallized state.
-func (s *Service) FetchShuffledValidatorIndices(ctx context.Context, req *pb.ShuffleRequest) (*pb.ShuffleResponse, error) {
-	var shuffledIndices []uint64
-	// Simulator always pushes out a validator list of length 100. By having index 0
-	// as the last index, the validator will always be a proposer in the validator code.
-	// TODO: Implement the real method by fetching the crystallized state in the request
-	// from persistent disk storage and shuffling the indices appropriately.
-	for i := 99; i >= 0; i-- {
-		shuffledIndices = append(shuffledIndices, uint64(i))
-	}
-	// For now, this will cause validators to always pick the validator as a proposer.
-	shuffleRes := &pb.ShuffleResponse{
-		ShuffledValidatorIndices: shuffledIndices,
-	}
-	return shuffleRes, nil
 }
 
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
@@ -262,7 +239,8 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
-		cState.ShardAndCommitteesForSlots())
+		cState.ShardAndCommitteesForSlots(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
 	}
@@ -279,7 +257,8 @@ func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.Slo
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
-		cState.ShardAndCommitteesForSlots())
+		cState.ShardAndCommitteesForSlots(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
 	}
@@ -295,7 +274,8 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	index, err := casper.ValidatorIndex(
 		req.PublicKey,
 		cState.CurrentDynasty(),
-		cState.Validators())
+		cState.Validators(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}

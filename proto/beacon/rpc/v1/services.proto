@@ -10,7 +10,6 @@ service BeaconService {
     rpc GenesisTimeAndCanonicalState(google.protobuf.Empty) returns (GenesisTimeAndStateResponse);
     rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
-    rpc FetchShuffledValidatorIndices(ShuffleRequest) returns (ShuffleResponse);
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.AggregatedAttestation);
 }
 
@@ -31,16 +30,6 @@ service ValidatorService {
 message GenesisTimeAndStateResponse {
   google.protobuf.Timestamp genesis_timestamp = 1;
   ethereum.beacon.p2p.v1.CrystallizedState latest_crystallized_state = 2;
-}
-
-message ShuffleRequest {
-  bytes crystallized_state_hash = 1;
-}
-
-message ShuffleResponse {
-    repeated uint64 shuffled_validator_indices = 1;
-    repeated uint64 cutoff_indices = 2;
-    repeated uint64 assigned_attestation_slots = 3;
 }
 
 message ProposeRequest {

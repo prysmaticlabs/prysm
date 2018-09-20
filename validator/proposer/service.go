@@ -42,7 +42,7 @@ type Proposer struct {
 	attestationService rpcAttestationService
 	attestationChan    chan *pbp2p.AggregatedAttestation
 	pendingAttestation []*pbp2p.AggregatedAttestation
-	mutex              *sync.Mutex
+	lock               sync.Mutex
 }
 
 // Config options for proposer service.
@@ -66,7 +66,7 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 		assignmentChan:     make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 		attestationChan:    make(chan *pbp2p.AggregatedAttestation, cfg.AttestationBufferSize),
 		pendingAttestation: make([]*pbp2p.AggregatedAttestation, 0),
-		mutex:              &sync.Mutex{},
+		lock:               sync.Mutex{},
 	}
 }
 
@@ -130,7 +130,6 @@ func (p *Proposer) processAttestation(done <-chan struct{}) {
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
 		case attestationRecord := <-p.attestationChan:
-
 			attestationExists := p.DoesAttestationExist(attestationRecord)
 			if !attestationExists {
 				p.AddPendingAttestation(attestationRecord)
@@ -151,10 +150,6 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
-
-		// TODO: On the beacon node side, calculate active and crystallized and update the
-		// active/crystallize state hash values in the proposed block.
-
 		// When we receive an assignment on a slot, we leverage the fields
 		// from the latest canonical beacon block to perform a proposal responsibility.
 		case latestBeaconBlock := <-p.assignmentChan:
@@ -170,7 +165,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			latestBlockHash := blake2b.Sum512(data)
 
 			// To prevent any unaccounted attestations from being added.
-			p.mutex.Lock()
+			p.lock.Lock()
 
 			agSig := p.AggregateAllSignatures(p.pendingAttestation)
 			bitmask := p.GenerateBitmask(p.pendingAttestation)
@@ -193,7 +188,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
 			p.pendingAttestation = nil
-			p.mutex.Unlock()
+			p.lock.Unlock()
 		}
 	}
 }

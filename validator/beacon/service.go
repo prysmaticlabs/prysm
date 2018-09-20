@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,7 +50,7 @@ func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Servic
 	}
 }
 
-// Start the main routine for a beacon gRPC service.
+// Start the main routine for a beacon client service.
 func (s *Service) Start() {
 	log.Info("Starting service")
 	client := s.rpcClient.BeaconServiceClient()
@@ -68,8 +69,8 @@ func (s *Service) Start() {
 
 	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
 	// to wait until the validator's assigned slot to perform proposals or attestations.
-	// TODO: Use a parameter instead of a fixed 8.
-	go s.waitForAssignment(time.NewTicker(8*time.Second).C, client)
+	slotTicker := time.NewTicker(time.Second * time.Duration(params.DefaultConfig().SlotDuration))
+	go s.waitForAssignment(slotTicker.C, client)
 
 	// We then kick off a routine that listens for streams of cycle transitions
 	// coming from the beacon node. This will allow the validator client to recalculate
@@ -164,6 +165,9 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 
 // listenForCrystallizedStates receives the latest canonical crystallized state
 // from the beacon node's RPC server via gRPC streams.
+// TODO(#545): Rename to listen for assignment instead, which is streamed from a beacon node
+// upon every new cycle transition and will include the validator's index in the
+// assignment bitfield as well as the assigned shard ID.
 func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
 	stream, err := client.LatestCrystallizedState(s.ctx, &empty.Empty{})
 	if err != nil {
@@ -202,7 +206,7 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 	// We then iteratate over the activeValidatorIndices to determine what index
 	// this running validator client corresponds to.
 	for _, val := range activeValidatorIndices {
-		// TODO: Check the public key instead of withdrawal address. This will use BLS.
+		// TODO(#258): Check the public key instead of withdrawal address. This will use BLS.
 		if isZeroAddress(crystallizedState.Validators[val].WithdrawalAddress) {
 			s.validatorIndex = val
 			isValidatorIndexSet = true
@@ -217,14 +221,10 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 		return nil
 	}
 
-	// TODO: Go through each of the indices for slots and determine which slot
-	// a validator is assigned into and at what index.
-	// indicesForSlots := res.GetIndicesForSlots()
-
 	// The validator needs to propose the next block.
-	// TODO: This is a stub until the indices for slots loop is done above.
+	// TODO(#545): Determine this from a gRPC stream from the beacon node
+	// instead.
 	s.responsibility = "proposer"
-	// TODO: Determine the assigned slot.
 	s.assignedSlot = s.currentSlot + 2
 	log.WithField("assignedSlot", s.assignedSlot).Info("Validator selected as proposer")
 	return nil

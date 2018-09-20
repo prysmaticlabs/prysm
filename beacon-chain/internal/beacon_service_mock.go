@@ -50,19 +50,6 @@ func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalHead), arg0, arg1)
 }
 
-// FetchShuffledValidatorIndices mocks base method
-func (m *MockBeaconServiceServer) FetchShuffledValidatorIndices(arg0 context.Context, arg1 *v10.ShuffleRequest) (*v10.ShuffleResponse, error) {
-	ret := m.ctrl.Call(m, "FetchShuffledValidatorIndices", arg0, arg1)
-	ret0, _ := ret[0].(*v10.ShuffleResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FetchShuffledValidatorIndices indicates an expected call of FetchShuffledValidatorIndices
-func (mr *MockBeaconServiceServerMockRecorder) FetchShuffledValidatorIndices(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchShuffledValidatorIndices", reflect.TypeOf((*MockBeaconServiceServer)(nil).FetchShuffledValidatorIndices), arg0, arg1)
-}
-
 // GenesisTimeAndCanonicalState mocks base method
 func (m *MockBeaconServiceServer) GenesisTimeAndCanonicalState(arg0 context.Context, arg1 *empty.Empty) (*v10.GenesisTimeAndStateResponse, error) {
 	ret := m.ctrl.Call(m, "GenesisTimeAndCanonicalState", arg0, arg1)

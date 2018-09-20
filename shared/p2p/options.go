@@ -15,7 +15,7 @@ var port int32 = 9000
 var portRange int32 = 100
 
 // buildOptions for the libp2p host.
-// TODO: Expand on these options and provide the option configuration via flags.
+// TODO(287): Expand on these options and provide the option configuration via flags.
 // Currently, this is a random port and a (seemingly) consistent private key
 // identity.
 func buildOptions() []libp2p.Option {

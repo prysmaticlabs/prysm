@@ -78,6 +78,7 @@ func (c *ChainService) Start() {
 	// to truly continue across sessions.
 	log.Infof("Starting service")
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+
 	// Set the current slot.
 	// TODO(#511): This is faulty, the ticker should start from a very
 	// precise timestamp instead of rounding down to begin from a
