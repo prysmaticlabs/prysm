@@ -45,7 +45,7 @@ func TestBroadcast(t *testing.T) {
 	msg := &shardpb.CollationBodyRequest{}
 	s.Broadcast(msg)
 
-	// TODO: test that topic was published
+	// TODO(543): test that topic was published
 }
 
 func TestEmitFailsNonProtobuf(t *testing.T) {
@@ -197,6 +197,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 }
 
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
+	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer()
 	if err != nil {
@@ -237,6 +238,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 }
 
 func TestRegisterTopic_WithAdapters(t *testing.T) {
+	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer()
 	if err != nil {
