@@ -7,8 +7,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -205,7 +205,7 @@ func (c *CrystallizedState) isDynastyTransition(slotNumber uint64) bool {
 }
 
 // getAttesterIndices fetches the attesters for a given attestation record.
-func (c *CrystallizedState) getAttesterIndices(attestation *pb.AttestationRecord) ([]uint32, error) {
+func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
 	slotsStart := int64(c.LastStateRecalc()) - params.CycleLength
 	slotIndex := (int64(attestation.Slot) - slotsStart) % params.CycleLength
 	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
@@ -351,7 +351,7 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 // processCrosslinks checks if the proposed shard block has recevied
 // 2/3 of the votes. If yes, we update crosslink record to point to
 // the proposed shard block with latest dynasty and slot numbers.
-func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AttestationRecord, slot uint64) ([]*pb.CrosslinkRecord, error) {
+func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64) ([]*pb.CrosslinkRecord, error) {
 	validators := c.data.Validators
 	dynasty := c.data.CurrentDynasty
 	crosslinkRecords := copyCrosslinks(c.data.CrosslinkRecords)
@@ -382,7 +382,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Attestat
 		// find the balance of votes cast in shard attestation.
 		var voteBalance uint64
 		for i, attesterIndex := range indices {
-			if utils.CheckBit(attestation.AttesterBitfield, i) {
+			if shared.CheckBit(attestation.AttesterBitfield, i) {
 				voteBalance += validators[attesterIndex].Balance
 			}
 		}

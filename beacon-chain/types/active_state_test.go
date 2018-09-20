@@ -1,13 +1,15 @@
 package types
 
 import (
+	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestGenesisActiveState(t *testing.T) {
+func TestGenesisActiveState_HashEquality(t *testing.T) {
 	aState1 := NewGenesisActiveState()
 	aState2 := NewGenesisActiveState()
 
@@ -23,10 +25,30 @@ func TestGenesisActiveState(t *testing.T) {
 	}
 }
 
+func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
+	as := NewGenesisActiveState()
+	want, got := len(as.data.RecentBlockHashes), 2*params.CycleLength
+	if want != got {
+		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
+	}
+
+	want = cap(as.data.RecentBlockHashes)
+	if want != got {
+		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
+	}
+
+	zero := make([]byte, 0, 32)
+	for _, h := range as.data.RecentBlockHashes {
+		if !bytes.Equal(h, zero) {
+			t.Errorf("Unexpected non-zero hash data: %v", h)
+		}
+	}
+}
+
 func TestUpdateAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
 
-	newAttestations := []*pb.AttestationRecord{
+	newAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:    0,
 			ShardId: 0,
@@ -45,7 +67,7 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
+		PendingAttestations: []*pb.AggregatedAttestation{
 			{
 				Slot:    0,
 				ShardId: 0,
@@ -57,7 +79,7 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 		},
 	}, nil)
 
-	newAttestations := []*pb.AttestationRecord{
+	newAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:    10,
 			ShardId: 2,
@@ -112,6 +134,42 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	}
 }
 
+func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
+	interestingData := [][]byte{
+		[]byte("hello"),
+		[]byte("world"),
+		[]byte("block"),
+		[]byte("hash"),
+	}
+
+	s := NewGenesisActiveState()
+	for i, d := range interestingData {
+		s.data.RecentBlockHashes[i] = d
+	}
+	original := make([][]byte, 2*params.CycleLength)
+	copy(original, s.data.RecentBlockHashes)
+
+	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
+		t.Fatal("setup data should be equal!")
+	}
+
+	block := &Block{
+		data: &pb.BeaconBlock{
+			SlotNumber: 2,
+		},
+	}
+
+	result, _ := s.calculateNewBlockHashes(block, 0 /*parentSlot*/)
+
+	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
+		t.Error("data has mutated from the original")
+	}
+
+	if reflect.DeepEqual(result, original) {
+		t.Error("the resulting data did not change from the original")
+	}
+}
+
 func TestBlockVoteCacheNoAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
 	cState, err := NewGenesisCrystallizedState()
@@ -138,7 +196,7 @@ func TestBlockVoteCache(t *testing.T) {
 	}
 	block := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 1,
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
 				ShardId:          0,
@@ -185,7 +243,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 	}
 
 	aState := NewActiveState(&pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
+		PendingAttestations: []*pb.AggregatedAttestation{
 			{
 				Slot:    0,
 				ShardId: 0,

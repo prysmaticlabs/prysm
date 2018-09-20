@@ -23,7 +23,7 @@ import (
 //   // Wait until my message comes from a peer.
 //   msg := <- ch
 //   fmt.Printf("Message received: %v", msg.Data)
-func (s *Server) Feed(msg proto.Message) *event.Feed {
+func (s *Server) Feed(msg proto.Message) Feed {
 	t := messageType(msg)
 
 	s.mutex.Lock()
@@ -33,4 +33,17 @@ func (s *Server) Feed(msg proto.Message) *event.Feed {
 	}
 
 	return s.feeds[t]
+}
+
+// Feed implements one-to-many subscriptions where the carrier of events is a channel.
+// Values sent to a Feed are delivered to all subscribed channels simultaneously.
+//
+// Feeds can only be used with a single type. The type is determined by the first Send or
+// Subscribe operation. Subsequent calls to these methods panic if the type does not
+// match.
+//
+// Implemented by https://github.com/ethereum/go-ethereum/blob/HEAD/event/feed.go
+type Feed interface {
+	Subscribe(channel interface{}) event.Subscription
+	Send(value interface{}) (nsent int)
 }

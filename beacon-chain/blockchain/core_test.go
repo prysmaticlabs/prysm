@@ -151,7 +151,7 @@ func TestSetActiveState(t *testing.T) {
 	defer db.Close()
 
 	data := &pb.ActiveState{
-		PendingAttestations: []*pb.AttestationRecord{
+		PendingAttestations: []*pb.AggregatedAttestation{
 			{Slot: 0, ShardBlockHash: []byte{1}}, {Slot: 1, ShardBlockHash: []byte{2}},
 		},
 		RecentBlockHashes: [][]byte{
@@ -338,7 +338,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 		t.Fatalf("unable to save block %v", err)
 	}
 
-	retblock, err := beaconChain.getCanonicalBlockForSlot(block.SlotNumber())
+	retblock, err := beaconChain.canonicalBlockForSlot(block.SlotNumber())
 	if err != nil {
 		t.Fatalf("unable to get block from db %v", err)
 	}
@@ -361,7 +361,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 		t.Fatalf("unable to save canonical slot %v", err)
 	}
 
-	if _, err = beaconChain.getCanonicalBlockForSlot(block.SlotNumber()); err == nil {
+	if _, err = beaconChain.canonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
 	}
 }
@@ -370,7 +370,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 	b, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
-	attestation := types.NewAttestation(&pb.AttestationRecord{
+	attestation := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:             1,
 		ShardId:          1,
 		AttesterBitfield: []byte{'A'},
@@ -390,7 +390,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 	}
 
 	// Adding a different attestation with the same key
-	newAttestation := types.NewAttestation(&pb.AttestationRecord{
+	newAttestation := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:             2,
 		ShardId:          2,
 		AttesterBitfield: []byte{'B'},
@@ -440,7 +440,7 @@ func TestSaveAndRemoveAttestationHashList(t *testing.T) {
 		t.Error(err)
 	}
 
-	attestation := types.NewAttestation(&pb.AttestationRecord{
+	attestation := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:             1,
 		ShardId:          1,
 		AttesterBitfield: []byte{'A'},

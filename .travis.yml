@@ -22,7 +22,7 @@ matrix:
         - ./scripts/coverage.sh
         - bash <(curl -s https://codecov.io/bash)
     - os: linux
-      env: V=0.16.0
+      env: V=0.17.1
       before_install:
         # Install Bazel
          - |
@@ -70,7 +70,7 @@ matrix:
         # Shutdown must be last.
         - bazel shutdown
     - os: osx
-      env: V=0.16.0
+      env: V=0.17.1
       before_install:
         # Install Bazel
          - |

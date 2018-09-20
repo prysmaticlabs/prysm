@@ -144,7 +144,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Set up pending attestations.
-	pAttestations := []*pb.AttestationRecord{
+	pAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:             0,
 			ShardId:          0,
