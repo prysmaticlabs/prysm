@@ -50,6 +50,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock() *Block {
 	// Genesis time here is static so error can be safely ignored.
+	/* #nosec */
 	protoGenesis, _ := ptypes.TimestampProto(GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
