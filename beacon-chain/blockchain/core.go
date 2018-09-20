@@ -56,10 +56,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 	if !hasGenesis {
 		log.Info("No genesis block found on disk, initializing genesis block")
-		genesisBlock, err := types.NewGenesisBlock()
-		if err != nil {
-			return nil, err
-		}
+		genesisBlock := types.NewGenesisBlock()
 		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
 		if err != nil {
 			return nil, err
@@ -108,7 +105,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		}
 		return types.NewBlock(block), nil
 	}
-	return types.NewGenesisBlock()
+	return types.NewGenesisBlock(), nil
 }
 
 // CanonicalHead fetches the latest head stored in persistent storage.

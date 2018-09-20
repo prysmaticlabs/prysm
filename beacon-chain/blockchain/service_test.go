@@ -501,10 +501,7 @@ func TestUpdateHead(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	genesis, err := types.NewGenesisBlock()
-	if err != nil {
-		t.Fatalf("Could not create genesis block: %v", err)
-	}
+	genesis := types.NewGenesisBlock()
 	genesisHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)

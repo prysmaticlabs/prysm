@@ -191,10 +191,7 @@ func TestGenesisTimeAndCanonicalState(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call GenesisTimeAndCanonicalState correctly: %v", err)
 	}
-	genesis, err := types.NewGenesisBlock()
-	if err != nil {
-		t.Fatal(err)
-	}
+	genesis := types.NewGenesisBlock()
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
 		t.Errorf("Received different genesis timestamp, wanted: %v, received: %v", genesis.Proto().GetTimestamp(), res.GenesisTimestamp)
 	}
