@@ -107,7 +107,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	}, voteCache)
 
 	cState.data.Validators = []*pb.ValidatorRecord{
-		&pb.ValidatorRecord{Balance: 2e18,
+		{Balance: 2e18,
 			StartDynasty: 0,
 			EndDynasty:   2},
 	}

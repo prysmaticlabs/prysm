@@ -1,9 +1,10 @@
 package casper
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"math"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -98,7 +99,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 func TestRewardQuotient(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		&pb.ValidatorRecord{Balance: 1e18,
+		{Balance: 1e18,
 			StartDynasty: 0,
 			EndDynasty:   2},
 	}
@@ -111,7 +112,7 @@ func TestRewardQuotient(t *testing.T) {
 
 func TestSlotMaxInterestRate(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		&pb.ValidatorRecord{Balance: 1e18,
+		{Balance: 1e18,
 			StartDynasty: 0,
 			EndDynasty:   2},
 	}
