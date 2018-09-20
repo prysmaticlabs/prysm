@@ -41,5 +41,4 @@ func ExampleServer_RegisterTopic() {
 	ch := make(chan p2p.Message)
 	sub := s.Subscribe(message, ch)
 	defer sub.Unsubscribe()
-	// TODO: Show more of how the chan is used.
 }
