@@ -233,9 +233,10 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	dynastyStart := c.DynastyStart()
 	blockVoteCache := aState.GetBlockVoteCache()
 	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
+	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
+	recentBlockHashes := aState.RecentBlockHashes()
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
-	recentBlockHashes := aState.RecentBlockHashes()
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := lastStateRecalc - params.CycleLength + i
 		blockHash := recentBlockHashes[i]
@@ -265,15 +266,23 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		return nil, err
 	}
 
-	// TODO(471): Update rewards and penalties scheme to align with latest spec.
 	var rewardedValidators []*pb.ValidatorRecord
-	if len(block.Attestations()) != 0 {
-		rewardedValidators, _ = casper.CalculateRewards(
+
+	// walk through all the slots from LastStateRecalc to LastStateRecalc + cycleLength - 1.
+	for i := uint64(0); i < params.CycleLength; i++ {
+		slot := lastStateRecalc + i
+		blockhash := recentBlockHashes[slot]
+		totalParticipatedDeposits := blockVoteCache[blockhash].VoteTotalDeposit
+		rewardedValidators, err = casper.CalculateRewards(
 			block.Attestations(),
 			c.Validators(),
 			c.CurrentDynasty(),
-			c.TotalDeposits(),
-			totalParticipatedDeposits)
+			totalParticipatedDeposits,
+			timeSinceFinality)
+		if err != nil {
+			log.Errorf("rewards unable to be calculated for slot %d, %v", slot, err)
+		}
+
 	}
 
 	// Get all active validators and calculate total balance for next cycle.

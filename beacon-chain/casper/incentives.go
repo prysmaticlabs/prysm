@@ -18,7 +18,8 @@ func CalculateRewards(
 	validators []*pb.ValidatorRecord,
 	dynasty uint64,
 	totalDeposit uint64,
-	totalParticipatedDeposit uint64) ([]*pb.ValidatorRecord, error) {
+	totalParticipatedDeposit uint64,
+	timeSinceFinality uint64) ([]*pb.ValidatorRecord, error) {
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 	attesterBitfield := attestations[len(attestations)-1].AttesterBitfield
 	attesterFactor := totalParticipatedDeposit * 3
