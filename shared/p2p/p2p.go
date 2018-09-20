@@ -8,13 +8,10 @@
 //
 // This communication is abstracted through the Feed, Broadcast, and Send.
 //
-// Pub/sub topic has a specific message type that is used for that topic. The
-// mappings for these topics are outlined here: (TODO).
+// Pub/sub topic has a specific message type that is used for that topic.
 //
 // Read more about gossipsub at https://github.com/vyzo/gerbil-simsub
 package p2p
-
-import "context"
 
 // Use this file for interfaces only!
 
@@ -26,4 +23,4 @@ type Adapter func(Handler) Handler
 // Handler is a callback used in the adapter/middleware stack chain.
 //
 // See http://godoc.org/github.com/prysmaticlabs/prysm/shared/p2p#Server.RegisterTopic
-type Handler func(context.Context, Message)
+type Handler func(Message)

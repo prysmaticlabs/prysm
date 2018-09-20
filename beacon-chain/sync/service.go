@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "sync")
@@ -112,25 +113,6 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 	return ss.blockAnnouncementFeed
 }
 
-// ReceiveBlockHash accepts a block hash.
-// New hashes are forwarded to other peers in the network (unimplemented), and
-// the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
-	var h [32]byte
-	copy(h[:], data.Hash[:32])
-	blockExists, err := ss.chainService.ContainsBlock(h)
-	if err != nil {
-		return err
-	}
-	if blockExists {
-		return nil
-	}
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
-	// Request the full block data from peer that sent the block hash.
-	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, peer)
-	return nil
-}
-
 // run handles incoming block sync.
 func (ss *Service) run() {
 	announceBlockHashSub := ss.p2p.Subscribe(&pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
@@ -147,75 +129,130 @@ func (ss *Service) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-ss.announceBlockHashBuf:
-			data := msg.Data.(*pb.BeaconBlockHashAnnounce)
-			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
-				log.Errorf("Received block hash failed: %v", err)
-			}
+			ss.receiveBlockHash(msg)
 		case msg := <-ss.blockBuf:
-			response := msg.Data.(*pb.BeaconBlockResponse)
-			block := types.NewBlock(response.Block)
-			blockHash, err := block.Hash()
-			if err != nil {
-				log.Errorf("Could not hash received block: %v", err)
-			}
-
-			blockExists, err := ss.chainService.ContainsBlock(blockHash)
-			if err != nil {
-				log.Errorf("Can not check for block in DB: %v", err)
-				continue
-			}
-			if blockExists {
-				continue
-			}
-
-			// Verify attestation coming from proposer then forward block to the subscribers.
-			attestation := types.NewAttestation(response.Attestation)
-			cState := ss.chainService.CurrentCrystallizedState()
-			parentSlot, err := ss.chainService.BlockSlotNumberByHash(block.ParentHash())
-			if err != nil {
-				log.Errorf("Failed to get parent slot: %v", err)
-				continue
-			}
-			proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
-			if err != nil {
-				log.Errorf("Failed to get proposer shard ID: %v", err)
-				continue
-			}
-			// TODO(#258): stubbing public key with empty 32 bytes.
-			if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
-				log.Errorf("Failed to verify proposer attestation: %v", err)
-				continue
-			}
-
-			log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
-			ss.chainService.IncomingBlockFeed().Send(block)
-			log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
-			ss.chainService.IncomingAttestationFeed().Send(attestation)
-
+			ss.receiveBlock(msg)
 		case msg := <-ss.blockRequestBySlot:
-			request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
-			if !ok {
-				log.Error("Received malformed beacon block request p2p message")
-				continue
-			}
-
-			blockExists, err := ss.chainService.CheckForCanonicalBlockBySlot(request.GetSlotNumber())
-			if err != nil {
-				log.Errorf("Error checking db for block %v", err)
-				continue
-			}
-			if !blockExists {
-				continue
-			}
-
-			block, err := ss.chainService.CanonicalBlockBySlotNumber(request.GetSlotNumber())
-			if err != nil {
-				log.Errorf("Error retrieving block from db %v", err)
-				continue
-			}
-
-			log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
-			ss.p2p.Send(block.Proto(), msg.Peer)
+			ss.handleBlockRequestBySlot(msg)
 		}
 	}
+}
+
+// receiveBlockHash accepts a block hash.
+// New hashes are forwarded to other peers in the network (unimplemented), and
+// the contents of the block are requested if the local chain doesn't have the block.
+func (ss *Service) receiveBlockHash(msg p2p.Message) {
+	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlockHash")
+	defer receiveBlockSpan.End()
+
+	data := msg.Data.(*pb.BeaconBlockHashAnnounce)
+	var h [32]byte
+	copy(h[:], data.Hash[:32])
+
+	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
+	blockExists, err := ss.chainService.ContainsBlock(h)
+	containsBlockSpan.End()
+	if err != nil {
+		log.Errorf("Received block hash failed: %v", err)
+	}
+	if blockExists {
+		return
+	}
+
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
+	// Request the full block data from peer that sent the block hash.
+	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
+	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
+	sendBlockRequestSpan.End()
+}
+
+// receiveBlock processes a block from the p2p layer.
+func (ss *Service) receiveBlock(msg p2p.Message) {
+	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlock")
+	defer receiveBlockSpan.End()
+
+	response := msg.Data.(*pb.BeaconBlockResponse)
+	block := types.NewBlock(response.Block)
+	blockHash, err := block.Hash()
+	if err != nil {
+		log.Errorf("Could not hash received block: %v", err)
+	}
+
+	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
+	blockExists, err := ss.chainService.ContainsBlock(blockHash)
+	containsBlockSpan.End()
+	if err != nil {
+		log.Errorf("Can not check for block in DB: %v", err)
+		return
+	}
+	if blockExists {
+		return
+	}
+
+	// Verify attestation coming from proposer then forward block to the subscribers.
+	attestation := types.NewAttestation(response.Attestation)
+	cState := ss.chainService.CurrentCrystallizedState()
+	parentSlot, err := ss.chainService.BlockSlotNumberByHash(block.ParentHash())
+	if err != nil {
+		log.Errorf("Failed to get parent slot: %v", err)
+		return
+	}
+	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+	if err != nil {
+		log.Errorf("Failed to get proposer shard ID: %v", err)
+		return
+	}
+	// TODO(#258): stubbing public key with empty 32 bytes.
+	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
+		log.Errorf("Failed to verify proposer attestation: %v", err)
+		return
+	}
+
+	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
+	ss.chainService.IncomingBlockFeed().Send(block)
+	sendBlockSpan.End()
+
+	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+	ss.chainService.IncomingAttestationFeed().Send(attestation)
+	sendAttestationSpan.End()
+}
+
+// handleBlockRequestBySlot processes a block request from the p2p layer.
+// if found, the block is sent to the requesting peer.
+func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
+	ctx, blockRequestSpan := trace.StartSpan(msg.Ctx, "blockRequestBySlot")
+	defer blockRequestSpan.End()
+
+	request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
+	// TODO: Handle this at p2p layer.
+	if !ok {
+		log.Error("Received malformed beacon block request p2p message")
+		return
+	}
+
+	ctx, checkForBlockSpan := trace.StartSpan(ctx, "checkForBlockBySlot")
+	blockExists, err := ss.chainService.CheckForCanonicalBlockBySlot(request.GetSlotNumber())
+	checkForBlockSpan.End()
+	if err != nil {
+		log.Errorf("Error checking db for block %v", err)
+		return
+	}
+	if !blockExists {
+		return
+	}
+
+	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
+	block, err := ss.chainService.CanonicalBlockBySlotNumber(request.GetSlotNumber())
+	getBlockSpan.End()
+	if err != nil {
+		log.Errorf("Error retrieving block from db %v", err)
+		return
+	}
+
+	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
+	ss.p2p.Send(block.Proto(), msg.Peer)
+	sendBlockSpan.End()
 }

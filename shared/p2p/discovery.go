@@ -21,7 +21,7 @@ var mDNSTag = mdns.ServiceTag
 // startDiscovery protocols. Currently, this supports discovery via multicast
 // DNS peer discovery.
 //
-// TODO: add other discovery protocols such as DHT, etc.
+// TODO(287): add other discovery protocols such as DHT, etc.
 func startDiscovery(ctx context.Context, host host.Host) error {
 	mdnsService, err := mdns.NewMdnsService(ctx, host, discoveryInterval, mDNSTag)
 	if err != nil {
