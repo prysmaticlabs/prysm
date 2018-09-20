@@ -2,7 +2,10 @@ package node
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
+	"github.com/urfave/cli"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -20,14 +23,22 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_ACTIVE_STATE_RESPONSE:               &pb.ActiveStateResponse{},
 }
 
-func configureP2P() (*p2p.Server, error) {
+func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	s, err := p2p.NewServer()
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(437, 438): Define default adapters for logging, monitoring, etc.
-	var adapters []p2p.Adapter
+	traceAdapter, err := tracer.New("beacon-chain",
+		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
+		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
+		ctx.GlobalBool(cmd.EnableTracingFlag.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(437): Define default adapters for logging, monitoring, etc.
+	adapters := []p2p.Adapter{traceAdapter}
 	for k, v := range topicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
 	}
