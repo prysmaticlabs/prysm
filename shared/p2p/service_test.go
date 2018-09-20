@@ -45,13 +45,13 @@ func TestBroadcast(t *testing.T) {
 	msg := &shardpb.CollationBodyRequest{}
 	s.Broadcast(msg)
 
-	// TODO: test that topic was published
+	// TODO(543): test that topic was published
 }
 
 func TestEmitFailsNonProtobuf(t *testing.T) {
 	s, _ := NewServer()
 	hook := logTest.NewGlobal()
-	s.emit(&event.Feed{}, nil /*msg*/, reflect.TypeOf(""))
+	s.emit(Message{}, &event.Feed{}, nil /*msg*/, reflect.TypeOf(""))
 	want := "Received message is not a protobuf message: string"
 	if hook.LastEntry().Message != want {
 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
@@ -67,7 +67,7 @@ func TestEmitFailsUnmarshal(t *testing.T) {
 		},
 	}
 
-	s.emit(&event.Feed{}, msg, messageType(&testpb.TestMessage{}))
+	s.emit(Message{}, &event.Feed{}, msg, reflect.TypeOf(testpb.TestMessage{}))
 	want := "Failed to decode data:"
 	if !strings.Contains(hook.LastEntry().Message, want) {
 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
@@ -94,7 +94,7 @@ func TestEmit(t *testing.T) {
 	feed.EXPECT().Send(gomock.AssignableToTypeOf(Message{})).Times(1).Do(func(m Message) {
 		got = m
 	})
-	s.emit(feed, msg, messageType(&testpb.TestMessage{}))
+	s.emit(Message{}, feed, msg, messageType(&testpb.TestMessage{}))
 	if !proto.Equal(p, got.Data) {
 		t.Error("feed was not called with the correct data")
 	}
@@ -197,6 +197,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 }
 
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
+	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer()
 	if err != nil {
@@ -237,6 +238,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 }
 
 func TestRegisterTopic_WithAdapters(t *testing.T) {
+	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer()
 	if err != nil {
@@ -247,9 +249,9 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 
 	i := 0
 	var testAdapter Adapter = func(next Handler) Handler {
-		return func(ctx context.Context, msg Message) {
+		return func(msg Message) {
 			i++
-			next(ctx, msg)
+			next(msg)
 		}
 	}
 
