@@ -1,6 +1,8 @@
 package casper
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"math"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,10 +23,9 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		LastFinalizedSlot: 3,
 	}
 
-	// Binary representation of bitfield: 11001000 10010100 10010010 10110011 00110001
-	testAttesterBitfield := []*pb.AggregatedAttestation{{AttesterBitfield: []byte{200, 148, 146, 179, 49}}}
 	rewardedValidators, err := CalculateRewards(
-		testAttesterBitfield,
+		0,
+		[]uint32{},
 		data.Validators,
 		data.CurrentDynasty,
 		data.TotalDeposits,
@@ -41,5 +42,53 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 	if rewardedValidators[29].Balance != uint64(31) {
 		t.Fatalf("validator balance not updated: %d", rewardedValidators[29].Balance)
+	}
+}
+
+func TestRewardQuotient(t *testing.T) {
+	validators := []*pb.ValidatorRecord{
+		&pb.ValidatorRecord{Balance: 1e18,
+			StartDynasty: 0,
+			EndDynasty:   2},
+	}
+	rewQuotient := RewardQuotient(0, validators)
+
+	if rewQuotient != params.BaseRewardQuotient {
+		t.Errorf("incorrect reward quotient: %f", rewQuotient)
+	}
+}
+
+func TestSlotMaxInterestRate(t *testing.T) {
+	validators := []*pb.ValidatorRecord{
+		&pb.ValidatorRecord{Balance: 1e18,
+			StartDynasty: 0,
+			EndDynasty:   2},
+	}
+
+	interestRate := SlotMaxInterestRate(0, validators)
+
+	if interestRate != 1/float64(params.BaseRewardQuotient) {
+		t.Errorf("incorrect interest rate generated %f", interestRate)
+	}
+
+}
+
+func TestQuadraticPenaltyQuotient(t *testing.T) {
+	penaltyQuotient := QuadraticPenaltyQuotient()
+
+	if penaltyQuotient != math.Pow(math.Pow(2, 17), 0.5) {
+		t.Errorf("incorrect penalty quotient %f", penaltyQuotient)
+	}
+}
+
+func TestQuadraticPenalty(t *testing.T) {
+	numOfSlots := uint64(4)
+	penalty := QuadraticPenalty(numOfSlots)
+	penaltyQuotient := uint64(math.Pow(math.Pow(2, 17), 0.5))
+
+	expectedPenalty := (numOfSlots * numOfSlots / 2) / penaltyQuotient
+
+	if expectedPenalty != penalty {
+		t.Errorf("quadric penalty is not the expected amount for %d slots %d", numOfSlots, penalty)
 	}
 }

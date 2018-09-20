@@ -272,8 +272,15 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := lastStateRecalc + i
 		blockhash := recentBlockHashes[slot]
-		voterIndices := blockVoteCache[blockhash].VoterIndices
-		totalParticipatedDeposits := blockVoteCache[blockhash].VoteTotalDeposit
+		var voterIndices []uint32
+
+		if _, ok := blockVoteCache[blockhash]; ok {
+			voterIndices = blockVoteCache[blockhash].VoterIndices
+			totalParticipatedDeposits = blockVoteCache[blockhash].VoteTotalDeposit
+		} else {
+			continue
+		}
+
 		rewardedValidators, err = casper.CalculateRewards(
 			slot,
 			voterIndices,

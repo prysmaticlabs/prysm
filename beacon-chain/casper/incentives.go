@@ -21,8 +21,8 @@ func CalculateRewards(
 	timeSinceFinality uint64) ([]*pb.ValidatorRecord, error) {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
-	rewardQuotient := RewardQuotient(dynasty, validators)
-	PenaltyQuotient := QuadraticPenaltyQuotient()
+	rewardQuotient := uint64(RewardQuotient(dynasty, validators))
+	PenaltyQuotient := uint64(QuadraticPenaltyQuotient())
 	depositFactor := int64(2*totalParticipatedDeposit-totalDeposit) / int64(totalDeposit)
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
@@ -70,9 +70,9 @@ func CalculateRewards(
 	return validators, nil
 }
 
-func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
-	return params.BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
+	return params.BaseRewardQuotient * math.Pow(float64(totalDepositETH), 0.5)
 }
 
 func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
@@ -80,13 +80,13 @@ func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float
 	return 1 / rewardQuotient
 }
 
-func QuadraticPenaltyQuotient() uint64 {
+func QuadraticPenaltyQuotient() float64 {
 	dropTimeFactor := float64(params.SqrtDropTime / params.SlotDuration)
-	return uint64(math.Pow(dropTimeFactor, 0.5))
+	return math.Pow(dropTimeFactor, 0.5)
 }
 
 func QuadraticPenalty(numberOfSlots uint64) uint64 {
 	slotFactor := (numberOfSlots * numberOfSlots) / 2
 	penaltyQuotient := QuadraticPenaltyQuotient()
-	return slotFactor / penaltyQuotient
+	return slotFactor / uint64(penaltyQuotient)
 }
