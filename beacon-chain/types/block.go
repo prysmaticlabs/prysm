@@ -217,7 +217,6 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	copy(attestation.JustifiedBlockHash[:], hash[:32])
 	blockInChain, err := chain.ContainsBlock(hash)
 	if err != nil {
-		//need to figure out what would be the "correct" way of going about a database error, how should we terminate?
 		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
 		return false
 	}
