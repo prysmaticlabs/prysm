@@ -4,6 +4,7 @@ package testutil
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus/hooks/test"
 )
@@ -34,5 +35,31 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 		t.Fatalf("log not found: %s", want)
 	} else if !flag && match {
 		t.Fatalf("unwanted log found: %s", want)
+	}
+}
+
+func WaitForLog(t *testing.T, hook *test.Hook, want string) {
+	t.Logf("scanning for: %s", want)
+
+	match := false
+	ticker := time.NewTicker(1 * time.Second)
+
+	for {
+		entries := hook.AllEntries()
+		if match {
+			ticker.Stop()
+			break
+		}
+		if len(ticker.C) != 0 {
+			ticker.Stop()
+			t.Fatalf("log not found: %s", want)
+			break
+		}
+		for _, e := range entries {
+			if strings.Contains(e.Message, want) {
+				match = true
+				t.Logf("log: %s", e.Message)
+			}
+		}
 	}
 }
