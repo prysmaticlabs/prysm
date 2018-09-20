@@ -38,6 +38,8 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 	}
 }
 
+// WaitForLog scans for log entries in a way that prevents
+// race conditions from causing failed tests.
 func WaitForLog(t *testing.T, hook *test.Hook, want string) {
 	t.Logf("scanning for: %s", want)
 
