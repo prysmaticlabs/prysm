@@ -20,14 +20,10 @@ func CheckBit(bitfield []byte, index int) bool {
 	return field%2 != 0
 }
 
-// BitSetCount counts the number of 1s in a byte using the following algo:
-// https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-func BitSetCount(bytes []byte) int {
-	var total int
-	for _, b := range bytes {
-		total += hamming.CountBitsByte(b)
-	}
-	return total
+// BitSetCount counts the number of 1s in a byte using Hamming weight.
+// See: https://en.wikipedia.org/wiki/Hamming_weight
+func BitSetCount(b []byte) int {
+	return hamming.CountBitsBytes(b)
 }
 
 // BitLength returns the length of the bitfield in bytes.
