@@ -242,6 +242,12 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
 					continue
 				}
+				c.canonicalCrystallizedStateFeed.Send(cState)
+
+				if err := c.chain.SetCrystallizedState(cState); err != nil {
+					log.Errorf("Write crystallized state to disk failed: %v", err)
+					continue
+				}
 			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
@@ -257,11 +263,6 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			if err := c.chain.SetActiveState(aState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
-				continue
-			}
-
-			if err := c.chain.SetCrystallizedState(cState); err != nil {
-				log.Errorf("Write crystallized state to disk failed: %v", err)
 				continue
 			}
 
@@ -282,9 +283,6 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if isTransition {
-				c.canonicalCrystallizedStateFeed.Send(cState)
-			}
 			c.canonicalBlockFeed.Send(block)
 
 			// Clear the blocks pending processing, mutex lock for thread safety
