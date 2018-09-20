@@ -23,7 +23,7 @@ func CalculateRewards(
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 	rewardQuotient := uint64(RewardQuotient(dynasty, validators))
 	PenaltyQuotient := uint64(QuadraticPenaltyQuotient())
-	depositFactor := int64(2*totalParticipatedDeposit-totalDeposit) / int64(totalDeposit)
+	depositFactor := (totalParticipatedDeposit - totalDeposit) / totalDeposit
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
 	if timeSinceFinality <= (params.CycleLength) {
@@ -33,9 +33,9 @@ func CalculateRewards(
 			for _, voterIndice := range voterIndices {
 				if voterIndice == validatorIndice {
 					voted = true
-					balance := validators[voterIndice].GetBalance()
-					newbalance := int64(balance) + int64(balance/rewardQuotient)*depositFactor
-					validators[voterIndice].Balance = uint64(newbalance)
+					balance := validators[validatorIndice].GetBalance()
+					newbalance := uint64(balance + (balance/rewardQuotient)*depositFactor)
+					validators[voterIndice].Balance = newbalance
 					break
 				}
 			}
@@ -70,9 +70,9 @@ func CalculateRewards(
 	return validators, nil
 }
 
-func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
+func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
-	return params.BaseRewardQuotient * math.Pow(float64(totalDepositETH), 0.5)
+	return params.BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
 }
 
 func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
@@ -80,9 +80,9 @@ func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float
 	return 1 / rewardQuotient
 }
 
-func QuadraticPenaltyQuotient() float64 {
+func QuadraticPenaltyQuotient() uint64 {
 	dropTimeFactor := float64(params.SqrtDropTime / params.SlotDuration)
-	return math.Pow(dropTimeFactor, 0.5)
+	return uint64(math.Pow(dropTimeFactor, 0.5))
 }
 
 func QuadraticPenalty(numberOfSlots uint64) uint64 {

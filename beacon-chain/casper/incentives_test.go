@@ -8,41 +8,92 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
+func NewValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
+
+	for i := 0; i < 10; i++ {
+		validator := &pb.ValidatorRecord{Balance: 1e18, StartDynasty: 1, EndDynasty: 10}
 		validators = append(validators, validator)
 	}
+	return validators
+}
+
+func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
+	validators := NewValidators()
+	defaultBalance := uint64(1e18)
+
+	rewQuotient := RewardQuotient(1, validators)
+	participatedDeposit := 4 * defaultBalance
+	totalDeposit := 10 * defaultBalance
+	depositFactor := (2*participatedDeposit - totalDeposit) / totalDeposit
+	penaltyQuotient := QuadraticPenaltyQuotient()
+	timeSinceFinality := uint64(5)
 
 	data := &pb.CrystallizedState{
 		Validators:        validators,
 		CurrentDynasty:    1,
-		TotalDeposits:     100,
+		TotalDeposits:     totalDeposit,
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}
 
 	rewardedValidators, err := CalculateRewards(
-		0,
-		[]uint32{},
+		5,
+		[]uint32{2, 3, 6, 9},
 		data.Validators,
 		data.CurrentDynasty,
-		data.TotalDeposits,
-		1000)
+		participatedDeposit,
+		timeSinceFinality)
 
 	if err != nil {
 		t.Fatalf("could not compute validator rewards and penalties: %v", err)
 	}
-	if rewardedValidators[0].Balance != uint64(33) {
-		t.Fatalf("validator balance not updated: %d", rewardedValidators[0].Balance)
+
+	expectedBalance := defaultBalance - defaultBalance/uint64(rewQuotient)
+
+	if rewardedValidators[0].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
 	}
-	if rewardedValidators[7].Balance != uint64(31) {
-		t.Fatalf("validator balance not updated: %d", rewardedValidators[7].Balance)
+
+	expectedBalance = uint64(defaultBalance + (defaultBalance/rewQuotient)*depositFactor)
+
+	if rewardedValidators[6].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
 	}
-	if rewardedValidators[29].Balance != uint64(31) {
-		t.Fatalf("validator balance not updated: %d", rewardedValidators[29].Balance)
+
+	if rewardedValidators[9].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[9].Balance, expectedBalance)
 	}
+
+	validators = NewValidators()
+	timeSinceFinality = 168
+
+	rewardedValidators, err = CalculateRewards(
+		5,
+		[]uint32{1, 2, 7, 8},
+		validators,
+		data.CurrentDynasty,
+		participatedDeposit,
+		timeSinceFinality)
+
+	if rewardedValidators[1].Balance != defaultBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[1].Balance, defaultBalance)
+	}
+
+	if rewardedValidators[7].Balance != defaultBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[7].Balance, defaultBalance)
+	}
+
+	expectedBalance = defaultBalance - (defaultBalance/rewQuotient + defaultBalance*timeSinceFinality/penaltyQuotient)
+
+	if rewardedValidators[0].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
+	}
+
+	if rewardedValidators[9].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[9].Balance, expectedBalance)
+	}
+
 }
 
 func TestRewardQuotient(t *testing.T) {
@@ -54,7 +105,7 @@ func TestRewardQuotient(t *testing.T) {
 	rewQuotient := RewardQuotient(0, validators)
 
 	if rewQuotient != params.BaseRewardQuotient {
-		t.Errorf("incorrect reward quotient: %f", rewQuotient)
+		t.Errorf("incorrect reward quotient: %d", rewQuotient)
 	}
 }
 
@@ -76,8 +127,8 @@ func TestSlotMaxInterestRate(t *testing.T) {
 func TestQuadraticPenaltyQuotient(t *testing.T) {
 	penaltyQuotient := QuadraticPenaltyQuotient()
 
-	if penaltyQuotient != math.Pow(math.Pow(2, 17), 0.5) {
-		t.Errorf("incorrect penalty quotient %f", penaltyQuotient)
+	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 17), 0.5)) {
+		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
 }
 
