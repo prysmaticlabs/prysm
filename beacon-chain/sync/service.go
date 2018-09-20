@@ -197,12 +197,13 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		log.Errorf("Failed to get parent slot: %v", err)
 		return
 	}
-	proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
 		return
 	}
-	if err := attestation.VerifyAttestation(proposerShardID); err != nil {
+	// TODO(#258): stubbing public key with empty 32 bytes.
+	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
 		log.Errorf("Failed to verify proposer attestation: %v", err)
 		return
 	}
