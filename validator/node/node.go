@@ -51,7 +51,7 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerP2P(); err != nil {
+	if err := shardEthereum.registerP2P(ctx); err != nil {
 		return nil, err
 	}
 
@@ -136,8 +136,8 @@ func (s *ShardEthereum) startDB(ctx *cli.Context) error {
 }
 
 // registerP2P attaches a p2p server to the ShardEthereum instance.
-func (s *ShardEthereum) registerP2P() error {
-	shardp2p, err := configureP2P()
+func (s *ShardEthereum) registerP2P(ctx *cli.Context) error {
+	shardp2p, err := configureP2P(ctx)
 	if err != nil {
 		return fmt.Errorf("could not register shardp2p service: %v", err)
 	}
@@ -148,7 +148,7 @@ func (s *ShardEthereum) registerP2P() error {
 // can spin up a transaction pool that will relay incoming transactions via an
 // event feed. For our first releases, this can just relay test/fake transaction data
 // the proposer can serialize into collation blobs.
-// TODO: design this txpool system for our first release.
+// TODO(161): design this txpool system for our first release.
 func (s *ShardEthereum) registerTXPool() error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {

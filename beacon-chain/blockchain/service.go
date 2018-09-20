@@ -29,9 +29,6 @@ type ChainService struct {
 	currentSlot                    uint64
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
-	incomingAttestationFeed        *event.Feed
-	incomingAttestationChan        chan *types.Attestation
-	processedAttestationFeed       *event.Feed
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
@@ -40,12 +37,11 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf         int
-	IncomingBlockBuf       int
-	Chain                  *BeaconChain
-	Web3Service            *powchain.Web3Service
-	BeaconDB               ethdb.Database
-	IncomingAttestationBuf int
+	BeaconBlockBuf   int
+	IncomingBlockBuf int
+	Chain            *BeaconChain
+	Web3Service      *powchain.Web3Service
+	BeaconDB         ethdb.Database
 }
 
 // NewChainService instantiates a new service instance that will
@@ -60,9 +56,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:                    cfg.Web3Service,
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
-		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
-		incomingAttestationFeed:        new(event.Feed),
-		processedAttestationFeed:       new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
@@ -73,7 +66,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
-	log.Infof("Starting service")
+	log.Info("Starting service")
 	genesisTimestamp := time.Unix(0, 0)
 	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
 	// Set the current slot.
@@ -92,7 +85,7 @@ func (c *ChainService) Start() {
 func (c *ChainService) Stop() error {
 	defer c.cancel()
 	log.Info("Stopping service")
-	log.Infof("Persisting current active and crystallized states before closing")
+	log.Info("Persisting current active and crystallized states before closing")
 	if err := c.chain.PersistActiveState(); err != nil {
 		return fmt.Errorf("Error persisting active state: %v", err)
 	}
@@ -106,18 +99,6 @@ func (c *ChainService) Stop() error {
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
 	return c.incomingBlockFeed
-}
-
-// IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
-// The chain service will subscribe to this feed in order to relay incoming attestations.
-func (c *ChainService) IncomingAttestationFeed() *event.Feed {
-	return c.incomingAttestationFeed
-}
-
-// ProcessedAttestationFeed returns a feed that will be used to stream attestations that have been
-// processed by the beacon node to its rpc clients.
-func (c *ChainService) ProcessedAttestationFeed() *event.Feed {
-	return c.processedAttestationFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -140,21 +121,6 @@ func (c *ChainService) SaveBlock(block *types.Block) error {
 // This method must be safe to call from a goroutine.
 func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
 	return c.chain.hasBlock(h)
-}
-
-// ContainsAttestation checks if an attestation has already been aggregated.
-func (c *ChainService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	attestation, err := c.chain.getAttestation(h)
-	if err != nil {
-		return false, fmt.Errorf("could not get attestation from DB: %v", err)
-	}
-	savedAttestationBitfield := attestation.AttesterBitfield()
-	for i:=0; i < len(bitfield); i ++ {
-		if bitfield[i] & savedAttestationBitfield[i] != 0 {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 // BlockSlotNumberByHash returns the slot number of a block.
@@ -313,27 +279,12 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 func (c *ChainService) blockProcessing() {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
-	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
-	defer subAttestation.Unsubscribe()
 	defer subBlock.Unsubscribe()
 	for {
 		select {
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		// Listen for a newly received incoming attestation from the sync service.
-		case attestation := <-c.incomingAttestationChan:
-			h, err := attestation.Hash()
-			if err != nil {
-				log.Debugf("Could not hash incoming attestation: %v", err)
-			}
-			if err := c.chain.saveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
-				continue
-			}
-
-			c.processedAttestationFeed.Send(attestation.Proto)
-			log.Info("Relaying attestation 0x%v to proposers through grpc", h)
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
@@ -359,7 +310,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			if err := c.chain.saveBlockAndAttestations(block); err != nil {
+			if err := c.chain.saveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
@@ -373,29 +324,5 @@ func (c *ChainService) blockProcessing() {
 			c.lock.Unlock()
 			log.Info("Finished processing received block")
 		}
-	}
-}
-
-func (c *ChainService) attestationProcessing() {
-	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
-	defer subAttestation.Unsubscribe()
-	for {
-		select {
-		case <-c.ctx.Done():
-			log.Debug("Chain service context closed, exiting goroutine")
-			return
-			// Listen for a newly received incoming attestation from the sync service.
-		case attestation := <-c.incomingAttestationChan:
-			h, err := attestation.Hash()
-			if err != nil {
-				log.Debugf("Could not hash incoming attestation: %v", err)
-			}
-			if err := c.chain.saveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
-				continue
-			}
-
-			c.processedAttestationFeed.Send(attestation.Proto)
-			log.Info("Relaying attestation 0x%v to proposers through grpc", h)}
 	}
 }
