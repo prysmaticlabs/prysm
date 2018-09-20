@@ -272,15 +272,17 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	for i := uint64(0); i < params.CycleLength; i++ {
 		slot := lastStateRecalc + i
 		blockhash := recentBlockHashes[slot]
+		voterIndices := blockVoteCache[blockhash].VoterIndices
 		totalParticipatedDeposits := blockVoteCache[blockhash].VoteTotalDeposit
 		rewardedValidators, err = casper.CalculateRewards(
-			block.Attestations(),
+			slot,
+			voterIndices,
 			c.Validators(),
 			c.CurrentDynasty(),
 			totalParticipatedDeposits,
 			timeSinceFinality)
 		if err != nil {
-			log.Errorf("rewards unable to be calculated for slot %d, %v", slot, err)
+			log.Errorf("rewards unable to be assigned for slot %d, %v", slot, err)
 		}
 
 	}
