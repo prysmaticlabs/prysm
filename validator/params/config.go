@@ -7,13 +7,11 @@ import (
 	"math"
 )
 
-// SlotDuration in seconds.
-var SlotDuration = 8
-
 // DefaultConfig returns pointer to a Config value with same defaults.
 func DefaultConfig() *Config {
 	return &Config{
 		CollationSizeLimit: DefaultCollationSizeLimit(),
+		SlotDuration:       8,
 	}
 }
 
@@ -26,4 +24,5 @@ func DefaultCollationSizeLimit() int64 {
 // Config contains configs for node to participate in the sharded universe.
 type Config struct {
 	CollationSizeLimit int64 // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
+	SlotDuration       int   // SlotDuration in seconds.
 }

@@ -69,7 +69,7 @@ func (s *Service) Start() {
 
 	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
 	// to wait until the validator's assigned slot to perform proposals or attestations.
-	slotTicker := time.NewTicker(time.Second * time.Duration(params.SlotDuration))
+	slotTicker := time.NewTicker(time.Second * time.Duration(params.DefaultConfig().SlotDuration))
 	go s.waitForAssignment(slotTicker.C, client)
 
 	// We then kick off a routine that listens for streams of cycle transitions
