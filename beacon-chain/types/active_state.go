@@ -23,7 +23,7 @@ type ActiveState struct {
 
 // NewGenesisActiveState initializes the active state for slot 0.
 func NewGenesisActiveState() *ActiveState {
-	// Bootstrap recent block hashes to all 0s for first 2 cycles (128 slots).
+	// Bootstrap recent block hashes to all 0s for first 2 cycles.
 	var recentBlockHashes [][]byte
 	for i := 0; i < 2*params.CycleLength; i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
@@ -104,15 +104,39 @@ func (a *ActiveState) calculateNewAttestations(add []*pb.AggregatedAttestation, 
 	return update
 }
 
+// calculateNewBlockHashes builds a new slice of recent block hashes with the
+// provided block and the parent slot number.
+//
+// The algorithm is:
+//   1) shift the array by block.SlotNumber - parentSlot (i.e. truncate the
+//     first by the number of slots that have occurred between the block and
+//     its parent).
+//
+//   2) fill the array with the block hash for all values between the parent
+//     slot and the block slot.
+//
+// Computation of the active state hash depends on this feature that slots with
+// missing blocks have the block hash of the next block hash in the chain.
+//
+// For example, if we have a segment of recent block hashes that look like this
+//   [0xF, 0x7, 0x0, 0x0, 0x5]
+//
+// Where 0x0 is an empty or missing hash where no block was produced in the
+// alloted slot. When storing the list (or at least when computing the hash of
+// the active state), the list should be backfilled as such:
+//
+//   [0xF, 0x7, 0x5, 0x5, 0x5]
+//
+// This method does not mutate the active state.
 func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
 	hash, err := block.Hash()
 	if err != nil {
 		return nil, err
 	}
 
-	dist := block.SlotNumber() - parentSlot
+	distance := block.SlotNumber() - parentSlot
 	existing := a.data.RecentBlockHashes
-	update := existing[dist:]
+	update := existing[distance:]
 	for len(update) < 2*params.CycleLength {
 		update = append(update, hash[:])
 	}

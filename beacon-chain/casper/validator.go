@@ -92,22 +92,19 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 	return indices[:int(attesterCount)], indices[len(indices)-1], nil
 }
 
-// GetAttestersTotalDeposit from the pending attestations.
-func GetAttestersTotalDeposit(attestations []*pb.AggregatedAttestation) uint64 {
-	var numOfBits int
-	for _, attestation := range attestations {
-		numOfBits += int(shared.BitSetCount(attestation.AttesterBitfield))
-	}
-	// Assume there's no slashing condition, the following logic will change later phase.
-	return uint64(numOfBits) * params.DefaultBalance
-}
-
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
-func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	if !(lcs <= slot && slot < lcs+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lcs, lcs+params.CycleLength*2)
+func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+	if lastStateRecalc < params.CycleLength {
+		lastStateRecalc = 0
+	} else {
+		lastStateRecalc = lastStateRecalc - params.CycleLength
 	}
-	return shardCommittees[slot-lcs], nil
+
+	if !(lastStateRecalc <= slot && slot < lastStateRecalc+params.CycleLength*2) {
+		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lastStateRecalc, lastStateRecalc+params.CycleLength*2)
+	}
+
+	return shardCommittees[slot-lastStateRecalc], nil
 }
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
@@ -137,17 +134,11 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	return true
 }
 
-// GetProposerIndexAndShard returns the index and the shardID of a proposer from a given slot.
-func GetProposerIndexAndShard(shardCommittees []*pb.ShardAndCommitteeArray, lcs uint64, slot uint64) (uint64, uint64, error) {
-	if lcs < params.CycleLength {
-		lcs = 0
-	} else {
-		lcs = lcs - params.CycleLength
-	}
-
+// ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
+func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
 	slotCommittees, err := GetShardAndCommitteesForSlot(
 		shardCommittees,
-		lcs,
+		lastStateRecalc,
 		slot)
 	if err != nil {
 		return 0, 0, err
