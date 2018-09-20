@@ -18,6 +18,7 @@ var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
 	ContainsBlock(h [32]byte) (bool, error)
+	ContainsAttestation(bitfield []byte, h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
@@ -48,6 +49,7 @@ type Service struct {
 	announceBlockHashBuf  chan p2p.Message
 	blockBuf              chan p2p.Message
 	blockRequestBySlot    chan p2p.Message
+	attestationBuf        chan p2p.Message
 }
 
 // Config allows the channel's buffer sizes to be changed.
@@ -55,6 +57,7 @@ type Config struct {
 	BlockHashBufferSize    int
 	BlockBufferSize        int
 	BlockRequestBufferSize int
+	AttestationBufferSize int
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -63,6 +66,7 @@ func DefaultConfig() Config {
 		BlockHashBufferSize:    100,
 		BlockBufferSize:        100,
 		BlockRequestBufferSize: 100,
+		AttestationBufferSize: 100,
 	}
 }
 
@@ -78,6 +82,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs ch
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
 		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
+		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
 	}
 }
 
@@ -136,10 +141,12 @@ func (ss *Service) run() {
 	announceBlockHashSub := ss.p2p.Subscribe(&pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(&pb.BeaconBlockResponse{}, ss.blockBuf)
 	blockRequestSub := ss.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
+	attestationSub := ss.p2p.Subscribe(&pb.AggregatedAttestation{}, ss.attestationBuf)
 
 	defer announceBlockHashSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
 	defer blockRequestSub.Unsubscribe()
+	defer attestationSub.Unsubscribe()
 
 	for {
 		select {
@@ -151,6 +158,23 @@ func (ss *Service) run() {
 			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
 				log.Errorf("Received block hash failed: %v", err)
 			}
+
+		case msg := <-ss.attestationBuf:
+			data := msg.Data.(*pb.AggregatedAttestation)
+			// Check if it's a valid attestation and drop it?
+			attestation := types.NewAttestation(data)
+			attestationHash := attestation.Key()
+
+			attestationExists, err := ss.chainService.ContainsAttestation(attestation.AttesterBitfield(), attestationHash)
+			if err != nil {
+				log.Errorf("Can not check for attestation in DB: %v", err)
+				continue
+			}
+			if attestationExists {
+				continue
+			}
+			ss.chainService.IncomingAttestationFeed().Send(attestation)
+
 		case msg := <-ss.blockBuf:
 			response := msg.Data.(*pb.BeaconBlockResponse)
 			block := types.NewBlock(response.Block)

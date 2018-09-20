@@ -142,6 +142,21 @@ func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
 	return c.chain.hasBlock(h)
 }
 
+// ContainsAttestation checks if an attestation has already been aggregated.
+func (c *ChainService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
+	attestation, err := c.chain.getAttestation(h)
+	if err != nil {
+		return false, fmt.Errorf("could not get attestation from DB: %v", err)
+	}
+	savedAttestationBitfield := attestation.AttesterBitfield()
+	for i:=0; i < len(bitfield); i ++ {
+		if bitfield[i] & savedAttestationBitfield[i] != 0 {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // BlockSlotNumberByHash returns the slot number of a block.
 func (c *ChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
 	block, err := c.chain.getBlock(h)
@@ -297,10 +312,10 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 }
 
 func (c *ChainService) blockProcessing() {
-	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
 	defer subAttestation.Unsubscribe()
-	defer sub.Unsubscribe()
+	defer subBlock.Unsubscribe()
 	for {
 		select {
 		case <-c.ctx.Done():
@@ -358,5 +373,29 @@ func (c *ChainService) blockProcessing() {
 			c.lock.Unlock()
 			log.Info("Finished processing received block")
 		}
+	}
+}
+
+func (c *ChainService) attestationProcessing() {
+	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
+	defer subAttestation.Unsubscribe()
+	for {
+		select {
+		case <-c.ctx.Done():
+			log.Debug("Chain service context closed, exiting goroutine")
+			return
+			// Listen for a newly received incoming attestation from the sync service.
+		case attestation := <-c.incomingAttestationChan:
+			h, err := attestation.Hash()
+			if err != nil {
+				log.Debugf("Could not hash incoming attestation: %v", err)
+			}
+			if err := c.chain.saveAttestation(attestation); err != nil {
+				log.Errorf("Could not save attestation: %v", err)
+				continue
+			}
+
+			c.processedAttestationFeed.Send(attestation.Proto)
+			log.Info("Relaying attestation 0x%v to proposers through grpc", h)}
 	}
 }
