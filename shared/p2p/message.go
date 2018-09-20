@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
@@ -8,6 +9,8 @@ import (
 
 // Message represents a message received from an external peer.
 type Message struct {
+	// Ctx message context.
+	Ctx context.Context
 	// Peer represents the sender of the message.
 	Peer Peer
 	// Data can be any type of message found in sharding/p2p/proto package.
