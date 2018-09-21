@@ -117,7 +117,7 @@ func (b *BeaconNode) Start() {
 				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
 			}
 		}
-		debug.Exit() // Ensure trace and CPU profile data are flushed.
+		debug.Exit(b.ctx) // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the beacon node")
 	}()
 
@@ -309,17 +309,26 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var web3Service *powchain.Web3Service
+	var isValidator = ctx.GlobalBool(utils.ValidatorFlag.Name)
+	if isValidator {
+		if err := b.services.FetchService(&web3Service); err != nil {
+			return err
+		}
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:            port,
-		CertFlag:        cert,
-		KeyFlag:         key,
-		SubscriptionBuf: 100,
-		ChainService:    chainService,
-		Service:         attestationService,
-		Announcer:       chainService,
+		Port:             port,
+		CertFlag:         cert,
+		KeyFlag:          key,
+		SubscriptionBuf:  100,
+		CanonicalFetcher: chainService,
+		ChainService:     chainService,
+		Service:          attestationService,
+		POWChainService:  web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)

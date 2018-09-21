@@ -26,13 +26,13 @@ type ChainService struct {
 	beaconDB                       ethdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
-	currentSlot                    uint64
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
+	genesisTimestamp               time.Time
 }
 
 // Config options for the service.
@@ -50,6 +50,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
+		genesisTimestamp:               types.GenesisTime,
 		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
@@ -67,16 +68,6 @@ func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
 	log.Info("Starting service")
-	genesisTimestamp := time.Unix(0, 0)
-	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
-	// Set the current slot.
-	// TODO(#511): This is faulty, the ticker should start from a very
-	// precise timestamp instead of rounding down to begin from a
-	// certain slot. We need to ensure validators and the beacon chain
-	// are properly synced at the correct timestamps for beginning
-	// slot intervals.
-	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
-
 	go c.updateHead(time.NewTicker(time.Second * params.SlotDuration).C)
 	go c.blockProcessing()
 }
@@ -93,6 +84,22 @@ func (c *ChainService) Stop() error {
 		return fmt.Errorf("Error persisting crystallized state: %v", err)
 	}
 	return nil
+}
+
+// CurrentBeaconSlot based on the seconds since genesis.
+func (c *ChainService) CurrentBeaconSlot() uint64 {
+	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
+	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+}
+
+// CanonicalHead of the current beacon chain.
+func (c *ChainService) CanonicalHead() (*types.Block, error) {
+	return c.chain.CanonicalHead()
+}
+
+// CanonicalCrystallizedState of the current beacon chain's head.
+func (c *ChainService) CanonicalCrystallizedState() *types.CrystallizedState {
+	return c.chain.CrystallizedState()
 }
 
 // IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
@@ -188,9 +195,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 		case <-c.ctx.Done():
 			return
 		case <-slotInterval:
-			c.currentSlot++
-
-			log.WithField("slotNumber", c.currentSlot).Info("New beacon slot")
+			log.WithField("slotNumber", c.CurrentBeaconSlot()).Info("New beacon slot")
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
@@ -213,23 +218,26 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			}
 
 			log.Info("Applying fork choice rule")
-			aState := c.chain.ActiveState()
-			cState := c.chain.CrystallizedState()
-			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
-
-			if isTransition {
-				cState, err = cState.NewStateRecalculations(aState, block)
-				if err != nil {
-					log.Errorf("Initialize new cycle transition failed: %v", err)
-					continue
-				}
-			}
 
 			parentBlock, err := c.chain.getBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Failed to get parent of block 0x%x", h)
 				continue
 			}
+
+			cState := c.chain.CrystallizedState()
+			aState := c.chain.ActiveState()
+			var stateTransitioned bool
+
+			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
+				cState, err = cState.NewStateRecalculations(aState, block)
+				if err != nil {
+					log.Errorf("Initialize new cycle transition failed: %v", err)
+					continue
+				}
+				stateTransitioned = true
+			}
+
 			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
@@ -241,9 +249,11 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 				continue
 			}
 
-			if err := c.chain.SetCrystallizedState(cState); err != nil {
-				log.Errorf("Write crystallized state to disk failed: %v", err)
-				continue
+			if stateTransitioned {
+				if err := c.chain.SetCrystallizedState(cState); err != nil {
+					log.Errorf("Write crystallized state to disk failed: %v", err)
+					continue
+				}
 			}
 
 			// Save canonical block hash with slot number to DB.
@@ -263,7 +273,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if isTransition {
+			if stateTransitioned {
 				c.canonicalCrystallizedStateFeed.Send(cState)
 			}
 			c.canonicalBlockFeed.Send(block)
@@ -306,7 +316,20 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 			if !parentExists {
-				log.Debugf("Block points to nil parent", err)
+				log.Debugf("Block points to nil parent: %v", err)
+				continue
+			}
+			parent, err := c.chain.getBlock(block.ParentHash())
+			if err != nil {
+				log.Debugf("Could not get parent block: %v", err)
+				continue
+			}
+
+			aState := c.chain.ActiveState()
+			cState := c.chain.CrystallizedState()
+
+			if valid := block.IsValid(c, aState, cState, parent.SlotNumber()); !valid {
+				log.Debugf("Block failed validity conditions: %v", err)
 				continue
 			}
 

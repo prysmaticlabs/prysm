@@ -55,10 +55,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 	if !hasGenesis {
 		log.Info("No genesis block found on disk, initializing genesis block")
-		genesisBlock, err := types.NewGenesisBlock()
-		if err != nil {
-			return nil, err
-		}
+		genesisBlock := types.NewGenesisBlock()
 		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
 		if err != nil {
 			return nil, err
@@ -107,11 +104,20 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		}
 		return types.NewBlock(block), nil
 	}
-	return types.NewGenesisBlock()
+	return types.NewGenesisBlock(), nil
 }
 
 // CanonicalHead fetches the latest head stored in persistent storage.
 func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
+	has, err := b.db.Has(canonicalHeadLookupKey)
+	if err != nil {
+		return nil, err
+	}
+	// If there has not been a canonical head stored yet, we
+	// return the genesis block of the chain.
+	if !has {
+		return b.GenesisBlock()
+	}
 	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {
 		return nil, err
@@ -121,7 +127,6 @@ func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
 		return nil, fmt.Errorf("cannot unmarshal proto: %v", err)
 	}
 	return types.NewBlock(block), nil
-
 }
 
 // ActiveState contains the current state of attestations and changes every block.

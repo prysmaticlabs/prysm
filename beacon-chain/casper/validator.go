@@ -100,8 +100,14 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 		lastStateRecalc = lastStateRecalc - params.CycleLength
 	}
 
-	if !(lastStateRecalc <= slot && slot < lastStateRecalc+params.CycleLength*2) {
-		return nil, fmt.Errorf("can not return attester set of given slot, input slot %v has to be in between %v and %v", slot, lastStateRecalc, lastStateRecalc+params.CycleLength*2)
+	lowerBound := lastStateRecalc
+	upperBound := lastStateRecalc + params.CycleLength*2
+	if !(slot >= lowerBound && slot < upperBound) {
+		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
+			slot,
+			lowerBound,
+			upperBound,
+		)
 	}
 
 	return shardCommittees[slot-lastStateRecalc], nil
@@ -200,4 +206,23 @@ func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorReco
 	}
 
 	return 0, fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
+}
+
+// TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
+func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+	var totalDeposit uint64
+	activeValidators := ActiveValidatorIndices(validators, dynasty)
+
+	for _, index := range activeValidators {
+		totalDeposit += validators[index].GetBalance()
+	}
+	return totalDeposit
+}
+
+// TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
+func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
+	depositInEth := totalDeposit / params.EtherDenomination
+
+	return depositInEth
 }

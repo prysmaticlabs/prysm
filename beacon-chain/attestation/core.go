@@ -88,10 +88,7 @@ func (h *Handler) hasAttestationHashList(blockHash [32]byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !hasKey {
-		return false, nil
-	}
-	return true, nil
+	return hasKey, nil
 }
 
 // getAttestationHashList gets the attestation hash list of the beacon block from the db.

@@ -66,8 +66,8 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 }
 
 // ContainsAttestation checks if an attestation has already been received and aggregated.
-func (a *Service) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	attestation, err := a.handler.getAttestation(h)
+func (a *Service) ContainsAttestation(bitfield []byte, hash [32]byte) (bool, error) {
+	attestation, err := a.handler.getAttestation(hash)
 	if err != nil {
 		return false, fmt.Errorf("could not get attestation from DB: %v", err)
 	}

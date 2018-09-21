@@ -69,9 +69,6 @@ func TestNewBeaconChain(t *testing.T) {
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
-	if _, err := types.NewGenesisBlock(); err != nil {
-		t.Errorf("Creating a new genesis block failed %v", err)
-	}
 
 	if !reflect.DeepEqual(beaconChain.ActiveState(), aState) {
 		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), aState)
