@@ -137,6 +137,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 		case <-ticker:
 			log.WithField("slotNumber", s.currentSlot).Info("New beacon node slot interval")
 			if s.responsibility == "proposer" && s.assignedSlot == s.currentSlot {
+				s.currentSlot++
 				log.WithField("slotNumber", s.currentSlot).Info("Assigned proposal slot number reached")
 				s.responsibility = ""
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
@@ -146,7 +147,9 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				}
 				// We forward the latest canonical block to the proposer service via a feed.
 				s.proposerAssignmentFeed.Send(block)
+				continue
 			} else if s.responsibility == "attester" && s.assignedSlot == s.currentSlot {
+				s.currentSlot++
 				log.Info("Assigned attestation slot number reached")
 				s.responsibility = ""
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
@@ -156,8 +159,8 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				}
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
+				continue
 			}
-			// Increase the current slot by one every 8 seconds.
 			s.currentSlot++
 		}
 	}
