@@ -1,6 +1,7 @@
 package types
 
-// VoteCache is a helper cache to track which validators voted for this block hash and total deposit supported for this block hash.
+// VoteCache is a helper cache to track which validators voted
+// for a certain block hash and total deposit supported for such block hash.
 type VoteCache struct {
 	VoterIndices     []uint32
 	VoteTotalDeposit uint64

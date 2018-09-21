@@ -23,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "initialsync")
+var log = logrus.WithField("prefix", "initial-sync")
 
 // Config defines the configurable properties of InitialSync.
 //

@@ -5,10 +5,12 @@ import (
 )
 
 var (
-	// ValidatorFlag determines if a node will run as validator. Participant should have deposited 32ETH and ready to perform proposer and attester duties.
-	ValidatorFlag = cli.BoolFlag{
-		Name:  "validator",
-		Usage: "Whether or not to run the node as beacon chain validator",
+	// DevFlag enables a local-development version of the beacon chain that stubs out
+	// a web3 PoW chain and other items related to signature verification. This allows
+	// a user to advance a beacon chain locally.
+	DevFlag = cli.BoolFlag{
+		Name:  "dev",
+		Usage: "Run the beacon chain in local development mode",
 	}
 	// SimulatorFlag determines if a node will run only as a simulator service.
 	SimulatorFlag = cli.BoolFlag{

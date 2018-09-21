@@ -28,7 +28,13 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 func initialValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validator := &pb.ValidatorRecord{
+			StartDynasty:      0,
+			EndDynasty:        params.DefaultEndDynasty,
+			Balance:           params.DefaultBalance,
+			WithdrawalAddress: []byte{},
+			PublicKey:         0,
+		}
 		validators = append(validators, validator)
 	}
 	return validators
@@ -81,7 +87,6 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			CurrentDynasty:             1,
-			TotalDeposits:              totalDeposit,
 			DynastySeed:                []byte{},
 			DynastyStart:               0,
 			CrosslinkRecords:           crosslinkRecords,
@@ -139,9 +144,12 @@ func (c *CrystallizedState) CurrentDynasty() uint64 {
 	return c.data.CurrentDynasty
 }
 
-// TotalDeposits returns total balance of deposits.
+// TotalDeposits returns total balance of the deposits of the active validators.
 func (c *CrystallizedState) TotalDeposits() uint64 {
-	return c.data.TotalDeposits
+	dynasty := c.data.CurrentDynasty
+	validators := c.data.Validators
+	totalDeposit := casper.TotalActiveValidatorDeposit(dynasty, validators)
+	return totalDeposit
 }
 
 // DynastyStart returns the last dynasty start number.
@@ -224,7 +232,8 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
-	var totalParticipatedDeposits uint64
+	var rewardedValidators []*pb.ValidatorRecord
+
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
@@ -233,18 +242,32 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	dynastyStart := c.DynastyStart()
 	blockVoteCache := aState.GetBlockVoteCache()
 	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
+	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
+	recentBlockHashes := aState.RecentBlockHashes()
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
-	recentBlockHashes := aState.RecentBlockHashes()
 	for i := uint64(0); i < params.CycleLength; i++ {
+		var voterIndices []uint32
+
 		slot := lastStateRecalc - params.CycleLength + i
 		blockHash := recentBlockHashes[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
-			totalParticipatedDeposits += blockVoteCache[blockHash].VoteTotalDeposit
+			voterIndices = blockVoteCache[blockHash].VoterIndices
+
+			// Apply Rewards for each slot.
+			rewardedValidators = casper.CalculateRewards(
+				slot,
+				voterIndices,
+				c.Validators(),
+				c.CurrentDynasty(),
+				blockVoteBalance,
+				timeSinceFinality)
+
 		} else {
 			blockVoteBalance = 0
 		}
+
 		// TODO(#542): This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
@@ -263,17 +286,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newCrossLinkRecords, err := c.processCrosslinks(aState.PendingAttestations(), lastStateRecalc+params.CycleLength)
 	if err != nil {
 		return nil, err
-	}
-
-	// TODO(471): Update rewards and penalties scheme to align with latest spec.
-	var rewardedValidators []*pb.ValidatorRecord
-	if len(block.Attestations()) != 0 {
-		rewardedValidators, _ = casper.CalculateRewards(
-			block.Attestations(),
-			c.Validators(),
-			c.CurrentDynasty(),
-			c.TotalDeposits(),
-			totalParticipatedDeposits)
 	}
 
 	// Get all active validators and calculate total balance for next cycle.
@@ -304,7 +316,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		JustifiedStreak:            justifiedStreak,
 		LastFinalizedSlot:          finalizedSlot,
 		CrosslinkRecords:           newCrossLinkRecords,
-		TotalDeposits:              nextCycleBalance,
 		DynastyStart:               dynastyStart,
 		CurrentDynasty:             currentDynasty,
 	})
