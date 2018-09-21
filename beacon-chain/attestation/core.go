@@ -2,6 +2,7 @@ package attestation
 
 import (
 	"bytes"
+
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"

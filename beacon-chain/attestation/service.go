@@ -12,9 +12,9 @@ import (
 
 var log = logrus.WithField("prefix", "attestation")
 
-// AttestationService represents a service that handles the internal
+// Service represents a service that handles the internal
 // logic of managing aggregated attestation.
-type AttestationService struct {
+type Service struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	handler       *Handler
@@ -31,11 +31,11 @@ type Config struct {
 	BroadcastAttestationBuf int
 }
 
-// NewAttestationService instantiates a new service instance that will
+// NewService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewAttestationService(ctx context.Context, cfg *Config) *AttestationService {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
-	return &AttestationService{
+	return &Service{
 		ctx:           ctx,
 		cancel:        cancel,
 		handler:       cfg.Handler,
@@ -47,13 +47,13 @@ func NewAttestationService(ctx context.Context, cfg *Config) *AttestationService
 }
 
 // Start an attestation service's main event loop.
-func (a *AttestationService) Start() {
+func (a *Service) Start() {
 	log.Info("Starting service")
 	go a.aggregateAttestations()
 }
 
 // Stop the Attestation service's main event loop and associated goroutines.
-func (a *AttestationService) Stop() error {
+func (a *Service) Stop() error {
 	defer a.cancel()
 	log.Info("Stopping service")
 	return nil
@@ -61,12 +61,12 @@ func (a *AttestationService) Stop() error {
 
 // IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
 // The attestation service will subscribe to this feed in order to relay incoming attestations.
-func (a *AttestationService) IncomingAttestationFeed() *event.Feed {
+func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
 // ContainsAttestation checks if an attestation has already been received and aggregated.
-func (a *AttestationService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
+func (a *Service) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
 	attestation, err := a.handler.getAttestation(h)
 	if err != nil {
 		return false, fmt.Errorf("could not get attestation from DB: %v", err)
@@ -82,7 +82,7 @@ func (a *AttestationService) ContainsAttestation(bitfield []byte, h [32]byte) (b
 
 // aggregateAttestations aggregates the newly broadcasted attestation that was
 // received from sync service.
-func (a *AttestationService) aggregateAttestations() {
+func (a *Service) aggregateAttestations() {
 	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
 	defer incomingSub.Unsubscribe()
 

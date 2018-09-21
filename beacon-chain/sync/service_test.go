@@ -53,10 +53,6 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockChainService) IncomingAttestationFeed() *event.Feed {
-	return new(event.Feed)
-}
-
 func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	cState, err := types.NewGenesisCrystallizedState()
 	if err != nil {
@@ -84,6 +80,16 @@ func (ms *mockChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*type
 		return nil, errors.New("invalid key")
 	}
 	return types.NewBlock(&pb.BeaconBlock{SlotNumber: slotnumber}), nil
+}
+
+type mockService struct{}
+
+func (ms *mockService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
+	return true, nil
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -124,7 +130,7 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, Service: &mockService{}}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
@@ -166,7 +172,7 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, Service: &mockService{}}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
@@ -182,7 +188,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
-		Block: data1,
+		Block:       data1,
+		Attestation: &pb.AggregatedAttestation{},
 	}
 
 	msg1 := p2p.Message{
@@ -197,7 +204,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
-		Block: data2,
+		Block:       data2,
+		Attestation: &pb.AggregatedAttestation{},
 	}
 
 	msg2 := p2p.Message{

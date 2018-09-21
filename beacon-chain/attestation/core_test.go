@@ -4,37 +4,12 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 )
-
-type faultyDB struct{}
-
-func (f *faultyDB) Get(k []byte) ([]byte, error) {
-	return []byte{}, nil
-}
-
-func (f *faultyDB) Has(k []byte) (bool, error) {
-	return true, nil
-}
-
-func (f *faultyDB) Put(k []byte, v []byte) error {
-	return nil
-}
-
-func (f *faultyDB) Delete(k []byte) error {
-	return nil
-}
-
-func (f *faultyDB) Close() {}
-
-func (f *faultyDB) NewBatch() ethdb.Batch {
-	return nil
-}
 
 func startInMemoryAttestationDB(t *testing.T) (*Handler, *database.DB) {
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}

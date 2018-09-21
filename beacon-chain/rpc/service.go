@@ -47,13 +47,13 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port               string
-	CertFlag           string
-	KeyFlag            string
-	SubscriptionBuf    int
-	Announcer          types.CanonicalEventAnnouncer
-	ChainService       chainService
-	AttestationService attestationService
+	Port            string
+	CertFlag        string
+	KeyFlag         string
+	SubscriptionBuf int
+	Announcer       types.CanonicalEventAnnouncer
+	ChainService    chainService
+	Service         attestationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -65,7 +65,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		cancel:              cancel,
 		announcer:           cfg.Announcer,
 		chainService:        cfg.ChainService,
-		attestationService:  cfg.AttestationService,
+		attestationService:  cfg.Service,
 		port:                cfg.Port,
 		withCert:            cfg.CertFlag,
 		withKey:             cfg.KeyFlag,

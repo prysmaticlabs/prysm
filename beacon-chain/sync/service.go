@@ -64,7 +64,7 @@ type Config struct {
 	BlockRequestBufferSize int
 	AttestationBufferSize  int
 	ChainService           chainService
-	AttestationService     attestationService
+	Service                attestationService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -85,7 +85,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P) *Serv
 		cancel:                cancel,
 		p2p:                   beaconp2p,
 		chainService:          cfg.ChainService,
-		attestationService:    cfg.AttestationService,
+		attestationService:    cfg.Service,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -284,7 +284,7 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 	a := types.NewAttestation(data)
 	h := a.Key()
 
-	ctx, containsAttestationSpan := trace.StartSpan(ctx, "containsAttestation")
+	_, containsAttestationSpan := trace.StartSpan(ctx, "containsAttestation")
 	containsAttestationSpan.End()
 	attestationExists, err := ss.attestationService.ContainsAttestation(a.AttesterBitfield(), h)
 	if err != nil {

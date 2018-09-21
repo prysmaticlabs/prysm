@@ -70,6 +70,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerService(); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
 	}
@@ -179,13 +183,13 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerAttestationService() error {
+func (b *BeaconNode) registerService() error {
 	handler, err := attestation.NewHandler(b.db.DB())
 	if err != nil {
 		return fmt.Errorf("could not register attestation service: %v", err)
 	}
 
-	attestationService := attestation.NewAttestationService(context.TODO(), &attestation.Config{
+	attestationService := attestation.NewService(context.TODO(), &attestation.Config{
 		Handler: handler,
 	})
 
@@ -225,14 +229,14 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	var attestationService *attestation.AttestationService
+	var attestationService *attestation.Service
 	if err := b.services.FetchService(&attestationService); err != nil {
 		return err
 	}
 
 	cfg := rbcsync.DefaultConfig()
 	cfg.ChainService = chainService
-	cfg.AttestationService = attestationService
+	cfg.Service = attestationService
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg, p2pService)
 	return b.services.RegisterService(syncService)
@@ -300,7 +304,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var attestationService *attestation.AttestationService
+	var attestationService *attestation.Service
 	if err := b.services.FetchService(&attestationService); err != nil {
 		return err
 	}
@@ -314,7 +318,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		KeyFlag:         key,
 		SubscriptionBuf: 100,
 		ChainService:    chainService,
-		AttestationService: attestationService,
+		Service:         attestationService,
 		Announcer:       chainService,
 	})
 

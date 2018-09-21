@@ -2,11 +2,12 @@ package attestation
 
 import (
 	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"testing"
 )
 
 func TestIncomingAttestations(t *testing.T) {
@@ -27,7 +28,7 @@ func TestIncomingAttestations(t *testing.T) {
 		Handler:               attestationHandler,
 	}
 
-	attestationService := NewAttestationService(context.Background(), cfg)
+	attestationService := NewService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	go func() {

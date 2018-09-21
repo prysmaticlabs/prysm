@@ -27,26 +27,26 @@ func init() {
 
 type mockChainService struct{}
 
-type mockAttestationService struct {
-	attestationFeed *event.Feed
-}
-
-func newMockAttestationService() *mockAttestationService {
-	return &mockAttestationService{
-		attestationFeed: new(event.Feed),
-	}
-}
-
 func (m *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockAttestationService) IncomingAttestationFeed() *event.Feed {
+type mockService struct {
+	attestationFeed *event.Feed
+}
+
+func newMockService() *mockService {
+	return &mockService{
+		attestationFeed: new(event.Feed),
+	}
+}
+
+func (m *mockService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockAttestationService) ProcessedAttestationFeed() *event.Feed {
-	return m.attestationFeed
+func (m *mockService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
+	return true, nil
 }
 
 func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
@@ -268,10 +268,12 @@ func TestLatestCrystallizedState(t *testing.T) {
 func TestAttestHead(t *testing.T) {
 	announcer := newMockAnnouncer()
 	mockChain := &mockChainService{}
+	mockService := &mockService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		Announcer:    announcer,
 		ChainService: mockChain,
+		Service:      mockService,
 	})
 	req := &pb.AttestRequest{
 		Attestation: &pbp2p.AggregatedAttestation{
@@ -287,8 +289,8 @@ func TestAttestHead(t *testing.T) {
 
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	attestationService := newMockAttestationService()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: attestationService})
+	attestationService := newMockService()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, Service: attestationService})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -306,8 +308,8 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 
 func TestLatestAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
-	attestationService := newMockAttestationService()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: attestationService})
+	attestationService := newMockService()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, Service: attestationService})
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
