@@ -338,26 +338,31 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
+	if err := chainService.SaveBlock(genesis); err != nil {
+		t.Fatalf("could not save genesis to disl: %v", err)
+	}
+
+	//secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+	//currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:            currentSlot,
+		SlotNumber:            1,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:             currentSlot,
-			AttesterBitfield: []byte{128, 0},
-			ShardId:          1,
+			JustifiedBlockHash: parentHash[:],
+			Slot:               1,
+			AttesterBitfield:   []byte{128, 0},
+			ShardId:            1,
 		}},
 	})
 
-	blockNoParent := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  currentSlot,
-		PowChainRef: []byte("a"),
-	})
+	//blockNoParent := types.NewBlock(&pb.BeaconBlock{
+	//SlotNumber:  currentSlot,
+	//PowChainRef: []byte("a"),
+	//})
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -369,12 +374,12 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService.incomingBlockChan <- blockNoParent
+	//chainService.incomingBlockChan <- blockNoParent
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
 	testutil.WaitForLog(t, hook, "Chain service context closed, exiting goroutine")
-	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
+	//testutil.AssertLogsContain(t, hook, "Block points to nil parent")
 	testutil.AssertLogsContain(t, hook, "Finished processing received block")
 }
 
