@@ -396,9 +396,9 @@ func TestRunningChainService(t *testing.T) {
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:             currentSlot,
-			AttesterBitfield: []byte{128, 0},
-			ShardId:          shardID,
+			Slot:               currentSlot,
+			AttesterBitfield:   []byte{128, 0},
+			ShardId:            shardID,
 			JustifiedBlockHash: parentHash[:],
 		}},
 	})
@@ -418,7 +418,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//chainService.incomingBlockChan <- blockNoParent
+	chainService.incomingBlockChan <- blockNoParent
 	chainService.incomingBlockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
