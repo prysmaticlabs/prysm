@@ -29,7 +29,6 @@ type Service struct {
 	rpcClient                rpcClientService
 	validatorIndex           int
 	assignedSlot             uint64
-	currentSlot              uint64
 	responsibility           string
 	attesterAssignmentFeed   *event.Feed
 	proposerAssignmentFeed   *event.Feed

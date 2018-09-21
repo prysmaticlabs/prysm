@@ -242,6 +242,48 @@ func TestFaultyStop(t *testing.T) {
 	}
 }
 
+func TestCurrentBeaconSlot(t *testing.T) {
+	ctx := context.Background()
+	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
+	db, err := database.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+
+	}
+	endpoint := "ws://127.0.0.1"
+	client := &faultyClient{}
+	web3Service, err := powchain.NewWeb3Service(
+		ctx,
+		&powchain.Web3ServiceConfig{
+			Endpoint: endpoint,
+			Pubkey:   "",
+			VrcAddr:  common.Address{},
+		},
+		client,
+		client,
+		client,
+	)
+	if err != nil {
+		t.Fatalf("unable to set up web3 service: %v", err)
+	}
+	beaconChain, err := NewBeaconChain(db.DB())
+	if err != nil {
+		t.Fatalf("could not register blockchain service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       db.DB(),
+		Chain:          beaconChain,
+		Web3Service:    web3Service,
+	}
+	chainService, _ := NewChainService(ctx, cfg)
+	chainService.genesisTimestamp = time.Now()
+	if chainService.CurrentBeaconSlot() != 0 {
+		t.Errorf("Expected us to be in the 0th slot, received %v", chainService.CurrentBeaconSlot())
+	}
+}
+
 func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
@@ -585,7 +627,6 @@ func TestUpdateHead(t *testing.T) {
 
 	// Now we test the correct, end-to-end updateHead functionality.
 	chainService, _ = NewChainService(ctx, cfg)
-	chainService.currentSlot = 64
 	go func() {
 		chainService.updateHead(timeChan)
 		<-exitRoutine

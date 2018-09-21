@@ -26,7 +26,6 @@ type ChainService struct {
 	beaconDB                       ethdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
-	currentSlot                    uint64
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	incomingAttestationFeed        *event.Feed
@@ -36,6 +35,7 @@ type ChainService struct {
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
+	genesisTimestamp               time.Time
 }
 
 // Config options for the service.
@@ -54,6 +54,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
+		genesisTimestamp:               types.GenesisTime,
 		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
@@ -74,16 +75,6 @@ func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
 	log.Infof("Starting service")
-	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-
-	// Set the current slot.
-	// TODO(#511): This is faulty, the ticker should start from a very
-	// precise timestamp instead of rounding down to begin from a
-	// certain slot. We need to ensure validators and the beacon chain
-	// are properly synced at the correct timestamps for beginning
-	// slot intervals.
-	c.currentSlot = uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
-
 	go c.updateHead(time.NewTicker(time.Second * params.SlotDuration).C)
 	go c.blockProcessing()
 }
@@ -100,6 +91,12 @@ func (c *ChainService) Stop() error {
 		return fmt.Errorf("Error persisting crystallized state: %v", err)
 	}
 	return nil
+}
+
+// CurrentBeaconSlot based on the seconds since genesis.
+func (c *ChainService) CurrentBeaconSlot() uint64 {
+	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
+	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }
 
 // CanonicalHead of the current beacon chain.
@@ -217,9 +214,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 		case <-c.ctx.Done():
 			return
 		case <-slotInterval:
-			c.currentSlot++
-
-			log.WithField("slotNumber", c.currentSlot).Info("New beacon slot")
+			log.WithField("slotNumber", c.CurrentBeaconSlot()).Info("New beacon slot")
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
@@ -244,7 +239,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			log.Info("Applying fork choice rule")
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
-			isTransition := cState.IsCycleTransition(c.currentSlot - 1)
+			isTransition := cState.IsCycleTransition(c.CurrentBeaconSlot() - 1)
 
 			if isTransition {
 				cState, err = cState.NewStateRecalculations(aState, block)
