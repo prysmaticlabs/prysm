@@ -225,6 +225,8 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
 	var totalParticipatedDeposits uint64
+	var rewardedValidators []*pb.ValidatorRecord
+
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
@@ -238,14 +240,32 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
+		var voterIndices []uint32
+		var err error
+
 		slot := lastStateRecalc - params.CycleLength + i
 		blockHash := recentBlockHashes[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
-			totalParticipatedDeposits += blockVoteCache[blockHash].VoteTotalDeposit
+			voterIndices = blockVoteCache[blockHash].VoterIndices
+			totalParticipatedDeposits = blockVoteCache[blockHash].VoteTotalDeposit
+
+			// Apply Rewards for each slot.
+			rewardedValidators, err = casper.CalculateRewards(
+				slot,
+				voterIndices,
+				c.Validators(),
+				c.CurrentDynasty(),
+				totalParticipatedDeposits,
+				timeSinceFinality)
+			if err != nil {
+				log.Errorf("rewards unable to be assigned for slot %d, %v", slot, err)
+			}
+
 		} else {
 			blockVoteBalance = 0
 		}
+
 		// TODO(#542): This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
@@ -264,34 +284,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newCrossLinkRecords, err := c.processCrosslinks(aState.PendingAttestations(), lastStateRecalc+params.CycleLength)
 	if err != nil {
 		return nil, err
-	}
-
-	var rewardedValidators []*pb.ValidatorRecord
-
-	// walk through all the slots from LastStateRecalc to LastStateRecalc + cycleLength - 1.
-	for i := uint64(0); i < params.CycleLength; i++ {
-		slot := lastStateRecalc + i
-		blockhash := recentBlockHashes[slot]
-		var voterIndices []uint32
-
-		if _, ok := blockVoteCache[blockhash]; ok {
-			voterIndices = blockVoteCache[blockhash].VoterIndices
-			totalParticipatedDeposits = blockVoteCache[blockhash].VoteTotalDeposit
-		} else {
-			continue
-		}
-
-		rewardedValidators, err = casper.CalculateRewards(
-			slot,
-			voterIndices,
-			c.Validators(),
-			c.CurrentDynasty(),
-			totalParticipatedDeposits,
-			timeSinceFinality)
-		if err != nil {
-			log.Errorf("rewards unable to be assigned for slot %d, %v", slot, err)
-		}
-
 	}
 
 	// Get all active validators and calculate total balance for next cycle.
