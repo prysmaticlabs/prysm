@@ -339,7 +339,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	if err := chainService.SaveBlock(genesis); err != nil {
-		t.Fatalf("could not save genesis to disl: %v", err)
+		t.Fatalf("could not save genesis to disk: %v", err)
 	}
 
 	//secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
