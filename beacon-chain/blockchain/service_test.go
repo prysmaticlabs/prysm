@@ -341,7 +341,10 @@ func TestRunningChainService(t *testing.T) {
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
 	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
 
-	t.Log(parentHash[:])
+	slotsStart := int64(crystallized.LastStateRecalc()) - params.CycleLength
+	slotIndex := (int64(currentSlot) - slotsStart) % params.CycleLength
+	shardID := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].ShardId
+
 	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber:            currentSlot,
 		ActiveStateHash:       activeStateHash[:],
@@ -351,7 +354,7 @@ func TestRunningChainService(t *testing.T) {
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             currentSlot,
 			AttesterBitfield: []byte{128, 0},
-			ShardId:          1,
+			ShardId:          shardID,
 			JustifiedBlockHash: parentHash[:],
 		}},
 	})

@@ -197,7 +197,6 @@ func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *C
 func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
 	attestation := b.Attestations()[attestationIndex]
-
 	if !isAttestationSlotNumberValid(attestation.Slot, parentSlot) {
 		return false
 	}
@@ -210,8 +209,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	}
 
 	hash := [32]byte{}
-	copy(attestation.JustifiedBlockHash[:], hash[:32])
-	fmt.Println(attestation)
+	copy(hash[:], attestation.JustifiedBlockHash)
 	blockInChain, err := chain.ContainsBlock(hash)
 	if err != nil {
 		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
