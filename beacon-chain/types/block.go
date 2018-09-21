@@ -19,7 +19,7 @@ import (
 
 var log = logrus.WithField("prefix", "types")
 
-// GenesisTime used by the protocol.
+// GenesisTime in the protocol.
 var GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 var clock utils.Clock = &utils.RealClock{}
 
@@ -52,16 +52,13 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock() (*Block, error) {
-	protoGenesis, err := ptypes.TimestampProto(GenesisTime)
-	if err != nil {
-		return nil, err
-	}
-
+func NewGenesisBlock() *Block {
+	// Genesis time here is static so error can be safely ignored.
+	// #nosec G104
+	protoGenesis, _ := ptypes.TimestampProto(GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
-
-	return gb, nil
+	return gb
 }
 
 // Proto returns the underlying protobuf data within a block primitive.
