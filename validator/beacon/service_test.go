@@ -144,7 +144,6 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 	b.responsibility = "proposer"
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
-	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
@@ -174,7 +173,6 @@ func TestWaitForAssignmentProposerError(t *testing.T) {
 	b.responsibility = "proposer"
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
-	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
@@ -204,7 +202,6 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 	b.responsibility = "attester"
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
-	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
@@ -234,7 +231,6 @@ func TestWaitForAssignmentAttesterError(t *testing.T) {
 	b.responsibility = "attester"
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
-	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
