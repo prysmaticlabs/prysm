@@ -332,7 +332,7 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to get canonical head: %v", err)
 	}
-
+	beaconChain.saveBlock(genesis)
 	parentHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
@@ -341,6 +341,7 @@ func TestRunningChainService(t *testing.T) {
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
 	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
 
+	t.Log(parentHash[:])
 	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber:            currentSlot,
 		ActiveStateHash:       activeStateHash[:],
@@ -351,6 +352,7 @@ func TestRunningChainService(t *testing.T) {
 			Slot:             currentSlot,
 			AttesterBitfield: []byte{128, 0},
 			ShardId:          1,
+			JustifiedBlockHash: parentHash[:],
 		}},
 	})
 

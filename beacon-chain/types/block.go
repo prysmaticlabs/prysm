@@ -211,6 +211,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 
 	hash := [32]byte{}
 	copy(attestation.JustifiedBlockHash[:], hash[:32])
+	fmt.Println(attestation)
 	blockInChain, err := chain.ContainsBlock(hash)
 	if err != nil {
 		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
