@@ -159,7 +159,8 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-	if ctx.GlobalBool(utils.ValidatorFlag.Name) {
+	devMode := ctx.GlobalBool(utils.DevFlag.Name)
+	if !devMode {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
@@ -176,6 +177,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		Chain:            beaconChain,
 		BeaconBlockBuf:   10,
 		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
+		DevMode:          devMode,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
@@ -197,7 +199,7 @@ func (b *BeaconNode) registerService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
-	if !ctx.GlobalBool(utils.ValidatorFlag.Name) {
+	if ctx.GlobalBool(utils.DevFlag.Name) {
 		return nil
 	}
 
@@ -272,8 +274,8 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	var isValidator = ctx.GlobalBool(utils.ValidatorFlag.Name)
-	if isValidator {
+	var devMode = ctx.GlobalBool(utils.DevFlag.Name)
+	if !devMode {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
@@ -292,7 +294,7 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 		P2P:             p2pService,
 		Web3Service:     web3Service,
 		ChainService:    chainService,
-		Validator:       isValidator,
+		DevMode:         devMode,
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
@@ -310,8 +312,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	var isValidator = ctx.GlobalBool(utils.ValidatorFlag.Name)
-	if isValidator {
+	var devMode = ctx.GlobalBool(utils.DevFlag.Name)
+	if !devMode {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
@@ -321,14 +323,15 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		SubscriptionBuf:  100,
-		CanonicalFetcher: chainService,
-		ChainService:     chainService,
-		Service:          attestationService,
-		POWChainService:  web3Service,
+		Port:               port,
+		CertFlag:           cert,
+		KeyFlag:            key,
+		SubscriptionBuf:    100,
+		CanonicalFetcher:   chainService,
+		ChainService:       chainService,
+		AttestationService: attestationService,
+		POWChainService:    web3Service,
+		DevMode:            devMode,
 	})
 
 	return b.services.RegisterService(rpcService)

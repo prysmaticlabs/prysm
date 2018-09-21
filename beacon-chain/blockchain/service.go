@@ -32,6 +32,7 @@ type ChainService struct {
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
+	devMode                        bool
 	genesisTimestamp               time.Time
 }
 
@@ -42,6 +43,7 @@ type Config struct {
 	Chain            *BeaconChain
 	Web3Service      *powchain.Web3Service
 	BeaconDB         ethdb.Database
+	DevMode          bool
 }
 
 // NewChainService instantiates a new service instance that will
@@ -60,6 +62,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
+		devMode:                        cfg.DevMode,
 	}, nil
 }
 
@@ -304,7 +307,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			if !c.doesPoWBlockExist(block) {
+			if !c.devMode && !c.doesPoWBlockExist(block) {
 				log.Debugf("Proof-of-Work chain reference in block does not exist")
 				continue
 			}

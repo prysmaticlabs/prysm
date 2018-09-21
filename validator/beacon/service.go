@@ -3,6 +3,7 @@ package beacon
 import (
 	"bytes"
 	"context"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
 	"io"
 	"math"
 	"time"
@@ -140,6 +141,8 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 			return
 		case <-ticker:
 			log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New beacon node slot interval")
+		    fmt.Println(s.responsibility)
+		    fmt.Println(s.assignedSlot)
 			if s.responsibility == "proposer" && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
 				s.responsibility = ""

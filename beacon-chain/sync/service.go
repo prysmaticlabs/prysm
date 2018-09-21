@@ -21,8 +21,8 @@ type chainService interface {
 	ContainsBlock(h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
-	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
-	CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
+	CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, error)
+	CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error)
 	BlockSlotNumberByHash(h [32]byte) (uint64, error)
 	CurrentCrystallizedState() *types.CrystallizedState
 }

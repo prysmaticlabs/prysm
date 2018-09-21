@@ -15,8 +15,10 @@ import (
 // ActiveState contains fields of current state of beacon chain,
 // it changes every block.
 type ActiveState struct {
-	data           *pb.ActiveState
-	blockVoteCache map[[32]byte]*VoteCache //blockVoteCache is not part of protocol state, it is used as a helper cache for cycle init calculations.
+	data *pb.ActiveState
+	// blockVoteCache is not part of protocol state, it is
+	// used as a helper cache for cycle init calculations.
+	blockVoteCache map[[32]byte]*VoteCache
 }
 
 // NewGenesisActiveState initializes the active state for slot 0.
