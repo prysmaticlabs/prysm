@@ -232,7 +232,6 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
-	var totalParticipatedDeposits uint64
 	var rewardedValidators []*pb.ValidatorRecord
 
 	justifiedStreak := c.JustifiedStreak()
@@ -255,7 +254,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
 			voterIndices = blockVoteCache[blockHash].VoterIndices
-			totalParticipatedDeposits = blockVoteCache[blockHash].VoteTotalDeposit
 
 			// Apply Rewards for each slot.
 			rewardedValidators = casper.CalculateRewards(
@@ -263,7 +261,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 				voterIndices,
 				c.Validators(),
 				c.CurrentDynasty(),
-				totalParticipatedDeposits,
+				blockVoteBalance,
 				timeSinceFinality)
 
 		} else {

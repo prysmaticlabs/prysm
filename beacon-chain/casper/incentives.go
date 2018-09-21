@@ -24,7 +24,7 @@ func CalculateRewards(
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 	rewardQuotient := uint64(rewardQuotient(dynasty, validators))
-	PenaltyQuotient := uint64(quadraticPenaltyQuotient())
+	penaltyQuotient := uint64(quadraticPenaltyQuotient())
 	depositFactor := (totalParticipatedDeposit - totalDeposit) / totalDeposit
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
@@ -62,7 +62,7 @@ func CalculateRewards(
 
 			if !voted {
 				newBalance := validators[validatorIndex].GetBalance()
-				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/PenaltyQuotient
+				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/penaltyQuotient
 				validators[validatorIndex].Balance = newBalance
 			}
 		}
