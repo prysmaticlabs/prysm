@@ -12,12 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -178,6 +179,19 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
+func (b *BeaconNode) registerAttestationService() error {
+	handler, err := attestation.NewHandler(b.db.DB())
+	if err != nil {
+		return fmt.Errorf("could not register attestation service: %v", err)
+	}
+
+	attestationService := attestation.NewAttestationService(context.TODO(), &attestation.Config{
+		Handler: handler,
+	})
+
+	return b.services.RegisterService(attestationService)
+}
+
 func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 	if !ctx.GlobalBool(utils.ValidatorFlag.Name) {
 		return nil
@@ -211,7 +225,16 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
+	var attestationService *attestation.AttestationService
+	if err := b.services.FetchService(&attestationService); err != nil {
+		return err
+	}
+
+	cfg := rbcsync.DefaultConfig()
+	cfg.ChainService = chainService
+	cfg.AttestationService = attestationService
+
+	syncService := rbcsync.NewSyncService(context.Background(), cfg, p2pService)
 	return b.services.RegisterService(syncService)
 }
 
@@ -277,6 +300,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var attestationService *attestation.AttestationService
+	if err := b.services.FetchService(&attestationService); err != nil {
+		return err
+	}
+
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
@@ -286,6 +314,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		KeyFlag:         key,
 		SubscriptionBuf: 100,
 		ChainService:    chainService,
+		AttestationService: attestationService,
 		Announcer:       chainService,
 	})
 

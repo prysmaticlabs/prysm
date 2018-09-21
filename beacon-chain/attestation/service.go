@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/bazel-go-ethereum/event"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
 )
@@ -15,21 +15,20 @@ var log = logrus.WithField("prefix", "attestation")
 // AttestationService represents a service that handles the internal
 // logic of managing aggregated attestation.
 type AttestationService struct {
-	ctx                      context.Context
-	cancel                   context.CancelFunc
-	core                     *AttestationHandler
-	broadcastFeed            *event.Feed
-	broadcastChan            chan *types.Attestation
-	receiveFeed              *event.Feed
-	receiveChan              chan *types.Attestation
-	processedAttestationFeed *event.Feed
+	ctx           context.Context
+	cancel        context.CancelFunc
+	handler       *Handler
+	broadcastFeed *event.Feed
+	broadcastChan chan *types.Attestation
+	incomingFeed  *event.Feed
+	incomingChan  chan *types.Attestation
 }
 
 // Config options for the service.
 type Config struct {
-	handler                 *AttestationHandler
-	receiveAttestationBuf   int
-	broadcastAttestationBuf int
+	Handler                 *Handler
+	ReceiveAttestationBuf   int
+	BroadcastAttestationBuf int
 }
 
 // NewAttestationService instantiates a new service instance that will
@@ -37,20 +36,20 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *AttestationService {
 	ctx, cancel := context.WithCancel(ctx)
 	return &AttestationService{
-		ctx:                      ctx,
-		cancel:                   cancel,
-		core:                     cfg.handler,
-		broadcastFeed:            new(event.Feed),
-		broadcastChan:            make(chan *types.Attestation, cfg.broadcastAttestationBuf),
-		receiveFeed:              new(event.Feed),
-		receiveChan:              make(chan *types.Attestation, cfg.receiveAttestationBuf),
-		processedAttestationFeed: new(event.Feed),
+		ctx:           ctx,
+		cancel:        cancel,
+		handler:       cfg.Handler,
+		broadcastFeed: new(event.Feed),
+		broadcastChan: make(chan *types.Attestation, cfg.BroadcastAttestationBuf),
+		incomingFeed:  new(event.Feed),
+		incomingChan:  make(chan *types.Attestation, cfg.ReceiveAttestationBuf),
 	}
 }
 
 // Start an attestation service's main event loop.
 func (a *AttestationService) Start() {
 	log.Info("Starting service")
+	go a.aggregateAttestations()
 }
 
 // Stop the Attestation service's main event loop and associated goroutines.
@@ -61,20 +60,14 @@ func (a *AttestationService) Stop() error {
 }
 
 // IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
-// The chain service will subscribe to this feed in order to relay incoming attestations.
+// The attestation service will subscribe to this feed in order to relay incoming attestations.
 func (a *AttestationService) IncomingAttestationFeed() *event.Feed {
-	return a.IncomingAttestationFeed()
+	return a.incomingFeed
 }
 
-// ProcessedAttestationFeed returns a feed that will be used to stream attestations that have been
-// processed by the beacon node to its rpc clients.
-func (a *AttestationService) ProcessedAttestationFeed() *event.Feed {
-	return a.processedAttestationFeed
-}
-
-// ContainsAttestation checks if an attestation has already been aggregated.
+// ContainsAttestation checks if an attestation has already been received and aggregated.
 func (a *AttestationService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	attestation, err := a.core.getAttestation(h)
+	attestation, err := a.handler.getAttestation(h)
 	if err != nil {
 		return false, fmt.Errorf("could not get attestation from DB: %v", err)
 	}
@@ -87,30 +80,31 @@ func (a *AttestationService) ContainsAttestation(bitfield []byte, h [32]byte) (b
 	return false, nil
 }
 
-func (a *AttestationService) attestationProcessing() {
-	broadcastSub := a.broadcastFeed.Subscribe(a.broadcastChan)
-	receiveSub := a.receiveFeed.Subscribe(a.receiveChan)
+// aggregateAttestations aggregates the newly broadcasted attestation that was
+// received from sync service.
+func (a *AttestationService) aggregateAttestations() {
+	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
+	defer incomingSub.Unsubscribe()
 
-	defer broadcastSub.Unsubscribe()
-	defer receiveSub.Unsubscribe()
 	for {
 		select {
 		case <-a.ctx.Done():
 			log.Debug("Attestation service context closed, exiting goroutine")
 			return
-			// Listen for a newly received incoming attestation from the sync service.
-		case attestation := <-a.receiveChan:
+		// Listen for a newly received incoming attestation from the sync service.
+		case attestation := <-a.incomingChan:
 			h, err := attestation.Hash()
 			if err != nil {
 				log.Debugf("Could not hash incoming attestation: %v", err)
 			}
-			if err := a.core.saveAttestation(attestation); err != nil {
+			// TODO: Look up aggregated attestation in DB, aggregate the new one with them.
+			if err := a.handler.saveAttestation(attestation); err != nil {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
 
-			a.processedAttestationFeed.Send(attestation.Proto)
-			log.Info("Relaying attestation 0x%v to proposers through grpc", h)
+			// TODO: Forward aggregated attestation to proposer.
+			log.Info("Forwarding aggregated attestation 0x%v to proposers through grpc", h)
 		}
 	}
 }

@@ -36,13 +36,13 @@ func (f *faultyDB) NewBatch() ethdb.Batch {
 	return nil
 }
 
-func startInMemoryAttestationDB(t *testing.T) (*AttestationHandler, *database.DB) {
+func startInMemoryAttestationDB(t *testing.T) (*Handler, *database.DB) {
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	handler, err := NewAttestationHandler(db.DB())
+	handler, err := NewHandler(db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}

@@ -19,14 +19,17 @@ var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
 	ContainsBlock(h [32]byte) (bool, error)
-	ContainsAttestation(bitfield []byte, h [32]byte) (bool, error)
 	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
-	IncomingAttestationFeed() *event.Feed
 	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
 	CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
 	BlockSlotNumberByHash(h [32]byte) (uint64, error)
 	CurrentCrystallizedState() *types.CrystallizedState
+}
+
+type attestationService interface {
+	ContainsAttestation(bitfield []byte, h [32]byte) (bool, error)
+	IncomingAttestationFeed() *event.Feed
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -46,6 +49,7 @@ type Service struct {
 	cancel                context.CancelFunc
 	p2p                   shared.P2P
 	chainService          chainService
+	attestationService    attestationService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
 	blockBuf              chan p2p.Message
@@ -59,6 +63,8 @@ type Config struct {
 	BlockBufferSize        int
 	BlockRequestBufferSize int
 	AttestationBufferSize  int
+	ChainService           chainService
+	AttestationService     attestationService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -72,13 +78,14 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs chainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
 		cancel:                cancel,
 		p2p:                   beaconp2p,
-		chainService:          cs,
+		chainService:          cfg.ChainService,
+		attestationService:    cfg.AttestationService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -138,21 +145,7 @@ func (ss *Service) run() {
 		case msg := <-ss.announceBlockHashBuf:
 			ss.receiveBlockHash(msg)
 		case msg := <-ss.attestationBuf:
-			data := msg.Data.(*pb.AggregatedAttestation)
-			// Check if it's a valid attestation and drop it?
-			attestation := types.NewAttestation(data)
-			attestationHash := attestation.Key()
-
-			attestationExists, err := ss.chainService.ContainsAttestation(attestation.AttesterBitfield(), attestationHash)
-			if err != nil {
-				log.Errorf("Can not check for attestation in DB: %v", err)
-				continue
-			}
-			if attestationExists {
-				continue
-			}
-			ss.chainService.IncomingAttestationFeed().Send(attestation)
-
+			ss.receiveAttestation(msg)
 		case msg := <-ss.blockBuf:
 			ss.receiveBlock(msg)
 		case msg := <-ss.blockRequestBySlot:
@@ -238,7 +231,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
-	ss.chainService.IncomingAttestationFeed().Send(attestation)
+	ss.attestationService.IncomingAttestationFeed().Send(attestation)
 	sendAttestationSpan.End()
 }
 
@@ -278,4 +271,32 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
 	ss.p2p.Send(block.Proto(), msg.Peer)
 	sendBlockSpan.End()
+}
+
+// receiveAttestation accepts an broadcasted attestation from the p2p layer,
+// discard the attestation if we have gotten before, send it to attestation
+// service if we have not.
+func (ss *Service) receiveAttestation(msg p2p.Message) {
+	ctx, receiveAttestationSpan := trace.StartSpan(msg.Ctx, "receiveAttestation")
+	defer receiveAttestationSpan.End()
+
+	data := msg.Data.(*pb.AggregatedAttestation)
+	a := types.NewAttestation(data)
+	h := a.Key()
+
+	ctx, containsAttestationSpan := trace.StartSpan(ctx, "containsAttestation")
+	containsAttestationSpan.End()
+	attestationExists, err := ss.attestationService.ContainsAttestation(a.AttesterBitfield(), h)
+	if err != nil {
+		log.Errorf("Can not check for attestation in DB: %v", err)
+		return
+	}
+	if attestationExists {
+		log.Debugf("Received attestation 0x%v already", h)
+		return
+	}
+
+	log.WithField("attestationHash", fmt.Sprintf("0x%x", h)).Debug("Forwarding attestation to subscribed services")
+	// Request the full block data from peer that sent the block hash.
+	ss.attestationService.IncomingAttestationFeed().Send(a)
 }

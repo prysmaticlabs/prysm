@@ -11,33 +11,33 @@ import (
 
 func TestIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx := context.Background()
 	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
 	db, err := database.NewDB(config)
 	if err != nil {
 		t.Fatalf("could not setup beaconDB: %v", err)
 	}
 
-	attestationHandler, err := NewAttestationHandler(db.DB())
+	attestationHandler, err := NewHandler(db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
 	cfg := &Config{
-		receiveAttestationBuf: 0,
-		handler:               attestationHandler,
+		ReceiveAttestationBuf: 0,
+		Handler:               attestationHandler,
 	}
 
-	attestationService := NewAttestationService(ctx, cfg)
+	attestationService := NewAttestationService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	go func() {
-		attestationService.attestationProcessing()
+		attestationService.aggregateAttestations()
 		<-exitRoutine
 	}()
 
-	attestationService.receiveChan <- types.NewAttestation(nil)
+	attestationService.incomingChan <- types.NewAttestation(nil)
 	attestationService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Relaying attestation")
+
+	testutil.AssertLogsContain(t, hook, "Forwarding aggregated attestation")
 }

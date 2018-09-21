@@ -21,35 +21,39 @@ var log = logrus.WithField("prefix", "rpc")
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
-	IncomingAttestationFeed() *event.Feed
 	CurrentCrystallizedState() *types.CrystallizedState
-	ProcessedAttestationFeed() *event.Feed
+}
+
+type attestationService interface {
+	IncomingAttestationFeed() *event.Feed
 }
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	announcer             types.CanonicalEventAnnouncer
-	chainService          chainService
-	port                  string
-	listener              net.Listener
-	withCert              string
-	withKey               string
-	grpcServer            *grpc.Server
-	canonicalBlockChan    chan *types.Block
-	canonicalStateChan    chan *types.CrystallizedState
-	proccessedAttestation chan *pbp2p.AggregatedAttestation
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	announcer           types.CanonicalEventAnnouncer
+	chainService        chainService
+	attestationService  attestationService
+	port                string
+	listener            net.Listener
+	withCert            string
+	withKey             string
+	grpcServer          *grpc.Server
+	canonicalBlockChan  chan *types.Block
+	canonicalStateChan  chan *types.CrystallizedState
+	incomingAttestation chan *pbp2p.AggregatedAttestation
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port            string
-	CertFlag        string
-	KeyFlag         string
-	SubscriptionBuf int
-	Announcer       types.CanonicalEventAnnouncer
-	ChainService    chainService
+	Port               string
+	CertFlag           string
+	KeyFlag            string
+	SubscriptionBuf    int
+	Announcer          types.CanonicalEventAnnouncer
+	ChainService       chainService
+	AttestationService attestationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -57,16 +61,17 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		announcer:             cfg.Announcer,
-		chainService:          cfg.ChainService,
-		port:                  cfg.Port,
-		withCert:              cfg.CertFlag,
-		withKey:               cfg.KeyFlag,
-		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
-		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
+		ctx:                 ctx,
+		cancel:              cancel,
+		announcer:           cfg.Announcer,
+		chainService:        cfg.ChainService,
+		attestationService:  cfg.AttestationService,
+		port:                cfg.Port,
+		withCert:            cfg.CertFlag,
+		withKey:             cfg.KeyFlag,
+		canonicalBlockChan:  make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalStateChan:  make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		incomingAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
 	}
 }
 
@@ -162,7 +167,7 @@ func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.At
 	}
 
 	// Relays the attestation to chain service.
-	s.chainService.IncomingAttestationFeed().Send(attestation)
+	s.attestationService.IncomingAttestationFeed().Send(attestation)
 
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
@@ -260,12 +265,12 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 
 // LatestAttestation streams the latest processed attestations to the rpc clients.
 func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
-	sub := s.chainService.ProcessedAttestationFeed().Subscribe(s.proccessedAttestation)
+	sub := s.attestationService.IncomingAttestationFeed().Subscribe(s.incomingAttestation)
 	defer sub.Unsubscribe()
 
 	for {
 		select {
-		case attestation := <-s.proccessedAttestation:
+		case attestation := <-s.incomingAttestation:
 			log.Info("Sending attestation to RPC clients")
 			if err := stream.Send(attestation); err != nil {
 				return err

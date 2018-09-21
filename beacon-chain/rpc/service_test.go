@@ -25,12 +25,14 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockChainService struct {
+type mockChainService struct{}
+
+type mockAttestationService struct {
 	attestationFeed *event.Feed
 }
 
-func newMockChainService() *mockChainService {
-	return &mockChainService{
+func newMockAttestationService() *mockAttestationService {
+	return &mockAttestationService{
 		attestationFeed: new(event.Feed),
 	}
 }
@@ -39,11 +41,11 @@ func (m *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockChainService) IncomingAttestationFeed() *event.Feed {
+func (m *mockAttestationService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockChainService) ProcessedAttestationFeed() *event.Feed {
+func (m *mockAttestationService) ProcessedAttestationFeed() *event.Feed {
 	return m.attestationFeed
 }
 
@@ -285,8 +287,8 @@ func TestAttestHead(t *testing.T) {
 
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainservice := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, ChainService: chainservice})
+	attestationService := newMockAttestationService()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: attestationService})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -304,8 +306,8 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 
 func TestLatestAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainservice := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, ChainService: chainservice})
+	attestationService := newMockAttestationService()
+	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: attestationService})
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -320,7 +322,7 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.proccessedAttestation <- &pbp2p.AggregatedAttestation{}
+	rpcService.incomingAttestation <- &pbp2p.AggregatedAttestation{}
 
 	mockStream = internal.NewMockBeaconService_LatestAttestationServer(ctrl)
 	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(nil)
@@ -332,7 +334,7 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.proccessedAttestation <- &pbp2p.AggregatedAttestation{}
+	rpcService.incomingAttestation <- &pbp2p.AggregatedAttestation{}
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true

@@ -90,8 +90,8 @@ func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	// set the channel's buffer to 0 to make channel interactions blocking
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, &mockChainService{})
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 
@@ -124,9 +124,8 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
-	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 
@@ -167,9 +166,8 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0}
-	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 
@@ -220,9 +218,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestBlockRequestErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
-	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: &mockChainService{}}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 
@@ -262,10 +259,9 @@ func TestBlockRequestErrors(t *testing.T) {
 
 func TestBlockRequestGetCanonicalError(t *testing.T) {
 	hook := logTest.NewGlobal()
-
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
 	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 
@@ -294,10 +290,9 @@ func TestBlockRequestGetCanonicalError(t *testing.T) {
 
 func TestBlockRequestBySlot(t *testing.T) {
 	hook := logTest.NewGlobal()
-
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0}
 	ms := &mockChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
 
@@ -373,9 +368,10 @@ func (ms *mockEmptyChainService) BlockSlotNumberByHash(h [32]byte) (uint64, erro
 
 func TestStartEmptyState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := DefaultConfig()
 	ms := &mockEmptyChainService{}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{}, ms)
+	cfg := DefaultConfig()
+	cfg.ChainService = ms
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	ss.Start()
 	testutil.AssertLogsContain(t, hook, "Empty chain state, but continue sync")
