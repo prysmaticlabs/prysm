@@ -33,22 +33,17 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	data := &pb.CrystallizedState{
 		Validators:        validators,
 		CurrentDynasty:    1,
-		TotalDeposits:     totalDeposit,
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}
 
-	rewardedValidators, err := CalculateRewards(
+	rewardedValidators := CalculateRewards(
 		5,
 		[]uint32{2, 3, 6, 9},
 		data.Validators,
 		data.CurrentDynasty,
 		participatedDeposit,
 		timeSinceFinality)
-
-	if err != nil {
-		t.Fatalf("could not compute validator rewards and penalties: %v", err)
-	}
 
 	expectedBalance := defaultBalance - defaultBalance/uint64(rewQuotient)
 
@@ -69,17 +64,13 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	validators = NewValidators()
 	timeSinceFinality = 168
 
-	rewardedValidators, err = CalculateRewards(
+	rewardedValidators = CalculateRewards(
 		5,
 		[]uint32{1, 2, 7, 8},
 		validators,
 		data.CurrentDynasty,
 		participatedDeposit,
 		timeSinceFinality)
-
-	if err != nil {
-		t.Fatalf("unable to calculate rewards: %v", err)
-	}
 
 	if rewardedValidators[1].Balance != defaultBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[1].Balance, defaultBalance)

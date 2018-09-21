@@ -81,7 +81,6 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			CurrentDynasty:             1,
-			TotalDeposits:              totalDeposit,
 			DynastySeed:                []byte{},
 			DynastyStart:               0,
 			CrosslinkRecords:           crosslinkRecords,
@@ -139,9 +138,12 @@ func (c *CrystallizedState) CurrentDynasty() uint64 {
 	return c.data.CurrentDynasty
 }
 
-// TotalDeposits returns total balance of deposits.
+// TotalDeposits returns total balance of the deposits of the active validators.
 func (c *CrystallizedState) TotalDeposits() uint64 {
-	return c.data.TotalDeposits
+	dynasty := c.data.CurrentDynasty
+	validators := c.data.Validators
+	totalDeposit := casper.TotalActiveValidatorDeposit(dynasty, validators)
+	return totalDeposit
 }
 
 // DynastyStart returns the last dynasty start number.
@@ -241,7 +243,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
 		var voterIndices []uint32
-		var err error
 
 		slot := lastStateRecalc - params.CycleLength + i
 		blockHash := recentBlockHashes[i]
@@ -251,16 +252,13 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			totalParticipatedDeposits = blockVoteCache[blockHash].VoteTotalDeposit
 
 			// Apply Rewards for each slot.
-			rewardedValidators, err = casper.CalculateRewards(
+			rewardedValidators = casper.CalculateRewards(
 				slot,
 				voterIndices,
 				c.Validators(),
 				c.CurrentDynasty(),
 				totalParticipatedDeposits,
 				timeSinceFinality)
-			if err != nil {
-				log.Errorf("rewards unable to be assigned for slot %d, %v", slot, err)
-			}
 
 		} else {
 			blockVoteBalance = 0
@@ -314,7 +312,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		JustifiedStreak:            justifiedStreak,
 		LastFinalizedSlot:          finalizedSlot,
 		CrosslinkRecords:           newCrossLinkRecords,
-		TotalDeposits:              nextCycleBalance,
 		DynastyStart:               dynastyStart,
 		CurrentDynasty:             currentDynasty,
 	})

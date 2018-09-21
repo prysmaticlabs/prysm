@@ -89,6 +89,12 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
 
+	cState.data.Validators = []*pb.ValidatorRecord{
+		{Balance: 2e18,
+			StartDynasty: 0,
+			EndDynasty:   2},
+	}
+
 	totalDeposits := cState.TotalDeposits()
 	recentBlockHashes := make([][]byte, 3*params.CycleLength)
 	voteCache := make(map[[32]byte]*VoteCache)
@@ -106,12 +112,6 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, voteCache)
 
-	cState.data.Validators = []*pb.ValidatorRecord{
-		{Balance: 2e18,
-			StartDynasty: 0,
-			EndDynasty:   2},
-	}
-
 	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
@@ -128,7 +128,6 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	if cState.LastFinalizedSlot() != 0 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
-	cState.data.TotalDeposits = 0
 
 	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {

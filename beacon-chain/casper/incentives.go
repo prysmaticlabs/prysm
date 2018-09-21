@@ -20,7 +20,7 @@ func CalculateRewards(
 	validators []*pb.ValidatorRecord,
 	dynasty uint64,
 	totalParticipatedDeposit uint64,
-	timeSinceFinality uint64) ([]*pb.ValidatorRecord, error) {
+	timeSinceFinality uint64) []*pb.ValidatorRecord {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 	rewardQuotient := uint64(rewardQuotient(dynasty, validators))
@@ -69,7 +69,7 @@ func CalculateRewards(
 
 	}
 
-	return validators, nil
+	return validators
 }
 
 // rewardQuotient returns the reward quotient for validators which will be used to
