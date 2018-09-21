@@ -19,7 +19,7 @@ import (
 
 var log = logrus.WithField("prefix", "types")
 
-// GenesisTime in the protocol.
+// GenesisTime used by the protocol.
 var GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 var clock utils.Clock = &utils.RealClock{}
 
@@ -146,9 +146,6 @@ func (b *Block) isSlotValid() bool {
 // IsValid is called to decide if an incoming p2p block can be processed. It checks for following conditions:
 // 1.) Ensure local time is large enough to process this block's slot.
 // 2.) Verify that the parent block's proposer's attestation is included.
-// IsValid is called to decide if an incoming p2p block can be processed.
-// It checks the slot against the system clock, and the validity of the included attestations.
-// Existence of the parent block and the PoW chain block is checked outside of this function because they require additional dependencies.
 func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	_, err := b.Hash()
 	if err != nil {
@@ -197,7 +194,6 @@ func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *C
 func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
 	attestation := b.Attestations()[attestationIndex]
-
 	if !isAttestationSlotNumberValid(attestation.Slot, parentSlot) {
 		return false
 	}
@@ -210,7 +206,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	}
 
 	hash := [32]byte{}
-	copy(attestation.JustifiedBlockHash[:], hash[:32])
+	copy(hash[:], attestation.JustifiedBlockHash)
 	blockInChain, err := chain.ContainsBlock(hash)
 	if err != nil {
 		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)

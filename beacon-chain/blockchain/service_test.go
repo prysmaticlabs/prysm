@@ -376,37 +376,37 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to get canonical head: %v", err)
 	}
-
+	beaconChain.saveBlock(genesis)
 	parentHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	if err := chainService.SaveBlock(genesis); err != nil {
-		t.Fatalf("could not save genesis to disk: %v", err)
-	}
+	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
 
-	//secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-	//currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
+	slotsStart := int64(crystallized.LastStateRecalc()) - params.CycleLength
+	slotIndex := (int64(currentSlot) - slotsStart) % params.CycleLength
+	shardID := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].ShardId
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:            1,
+		SlotNumber:            currentSlot,
 		ActiveStateHash:       activeStateHash[:],
 		CrystallizedStateHash: crystallizedStateHash[:],
 		ParentHash:            parentHash[:],
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
+			Slot:             currentSlot,
+			AttesterBitfield: []byte{128, 0},
+			ShardId:          shardID,
 			JustifiedBlockHash: parentHash[:],
-			Slot:               1,
-			AttesterBitfield:   []byte{128, 0},
-			ShardId:            1,
 		}},
 	})
 
-	//blockNoParent := types.NewBlock(&pb.BeaconBlock{
-	//SlotNumber:  currentSlot,
-	//PowChainRef: []byte("a"),
-	//})
+	blockNoParent := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber:  currentSlot,
+		PowChainRef: []byte("a"),
+	})
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -423,7 +423,7 @@ func TestRunningChainService(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 	testutil.WaitForLog(t, hook, "Chain service context closed, exiting goroutine")
-	//testutil.AssertLogsContain(t, hook, "Block points to nil parent")
+	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
 	testutil.AssertLogsContain(t, hook, "Finished processing received block")
 }
 
