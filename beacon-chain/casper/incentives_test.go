@@ -77,6 +77,10 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		participatedDeposit,
 		timeSinceFinality)
 
+	if err != nil {
+		t.Fatalf("unable to calculate rewards: %v", err)
+	}
+
 	if rewardedValidators[1].Balance != defaultBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[1].Balance, defaultBalance)
 	}
