@@ -33,6 +33,7 @@ const shardChainDBName = "shardchaindata"
 // the entire lifecycle of services attached to it participating in
 // Ethereum 2.0.
 type ShardEthereum struct {
+	ctx      *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
@@ -43,6 +44,7 @@ type ShardEthereum struct {
 func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 	registry := shared.NewServiceRegistry()
 	shardEthereum := &ShardEthereum{
+		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
 	}
@@ -102,7 +104,7 @@ func (s *ShardEthereum) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		debug.Exit() // Ensure trace and CPU profile data are flushed.
+		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
 		panic("Panic closing the sharding validator")
 	}()
 

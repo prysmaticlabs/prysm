@@ -82,7 +82,7 @@ VERSION:
 	}
 
 	app.After = func(ctx *cli.Context) error {
-		debug.Exit()
+		debug.Exit(ctx)
 		return nil
 	}
 

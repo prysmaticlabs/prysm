@@ -305,6 +305,22 @@ func TestListenForCrystallizedStates(t *testing.T) {
 	b.listenForCrystallizedStates(mockServiceClient)
 
 	testutil.AssertLogsContain(t, hook, "Validator selected as proposer")
+
+	// Test that the routine exits when context is closed
+	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
+
+	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, nil)
+
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestCrystallizedState(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+	b.cancel()
+
+	b.listenForCrystallizedStates(mockServiceClient)
+	testutil.AssertLogsContain(t, hook, "Context has been canceled so shutting down the loop")
+
 }
 
 func TestListenForProcessedAttestations(t *testing.T) {
@@ -355,4 +371,19 @@ func TestListenForProcessedAttestations(t *testing.T) {
 	b.listenForProcessedAttestations(mockServiceClient)
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
 	testutil.AssertLogsContain(t, hook, "Could not receive latest attestation from stream")
+
+	// Test that the routine exits when context is closed
+	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
+
+	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, nil)
+
+	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil)
+	b.cancel()
+
+	b.listenForProcessedAttestations(mockServiceClient)
+	testutil.AssertLogsContain(t, hook, "Context has been canceled so shutting down the loop")
 }

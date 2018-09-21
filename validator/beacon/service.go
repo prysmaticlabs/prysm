@@ -182,6 +182,11 @@ func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
 		if err == io.EOF {
 			break
 		}
+		// If context is canceled we stop the loop.
+		if s.ctx.Err() != nil {
+			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
+			break
+		}
 		if err != nil {
 			log.Errorf("Could not receive latest crystallized beacon state from stream: %v", err)
 			continue
@@ -245,6 +250,11 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if s.ctx.Err() != nil {
+			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
 			break
 		}
 		if err != nil {
