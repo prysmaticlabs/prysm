@@ -89,10 +89,16 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
 
+	cState.data.Validators = []*pb.ValidatorRecord{
+		{Balance: 2e18,
+			StartDynasty: 0,
+			EndDynasty:   2},
+	}
+
 	totalDeposits := cState.TotalDeposits()
-	recentBlockHashes := make([][]byte, 2*params.CycleLength)
+	recentBlockHashes := make([][]byte, 3*params.CycleLength)
 	voteCache := make(map[[32]byte]*VoteCache)
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 3*params.CycleLength; i++ {
 		blockHash := [32]byte{}
 		counter := []byte(strconv.Itoa(i))
 		copy(blockHash[:], counter)
