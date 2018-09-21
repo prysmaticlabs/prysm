@@ -94,7 +94,7 @@ func (a *Attestation) ShardBlockHash() []byte {
 
 // JustifiedSlotNumber of the attestation should be earlier than the last justified slot in crystallized state.
 func (a *Attestation) JustifiedSlotNumber() uint64 {
-	return a.data.Slot
+	return a.data.JustifiedSlot
 }
 
 // JustifiedBlockHash should be in the chain of the block being processed.

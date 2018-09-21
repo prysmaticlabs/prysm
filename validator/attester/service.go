@@ -116,7 +116,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 					ShardId:          a.shardID,
 					AttesterBitfield: attesterBitfield,
 					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
-					AggregateSig:     []uint64{},         // TODO: Need Signature verification scheme/library
+					AggregateSig:     []uint64{},         // TODO(258): Need Signature verification scheme/library
 				},
 			}
 
