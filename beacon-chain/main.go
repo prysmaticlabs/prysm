@@ -60,8 +60,8 @@ VERSION:
 	app.Action = startNode
 
 	app.Flags = []cli.Flag{
+		utils.DevFlag,
 		utils.SimulatorFlag,
-		utils.ValidatorFlag,
 		utils.VrcContractFlag,
 		utils.PubKeyFlag,
 		utils.Web3ProviderFlag,

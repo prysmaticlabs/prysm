@@ -64,6 +64,7 @@ type Service struct {
 	canonicalBlockChan    chan *types.Block
 	canonicalStateChan    chan *types.CrystallizedState
 	proccessedAttestation chan *pbp2p.AggregatedAttestation
+	devMode               bool
 }
 
 // Config options for the beacon node RPC server.
@@ -75,6 +76,7 @@ type Config struct {
 	CanonicalFetcher canonicalFetcher
 	ChainService     chainService
 	POWChainService  powChainService
+	DevMode          bool
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -93,6 +95,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		proccessedAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
+		devMode:               cfg.DevMode,
 	}
 }
 
@@ -166,8 +169,12 @@ func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.E
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
-	// TODO: handle fields such as attestation bitmask, aggregate sig, and randao reveal.
-	powChainHash := s.powChainService.LatestBlockHash()
+	var powChainHash common.Hash
+	if s.devMode {
+		powChainHash = common.BytesToHash([]byte("stub"))
+	} else {
+		powChainHash = s.powChainService.LatestBlockHash()
+	}
 	data := &pbp2p.BeaconBlock{
 		SlotNumber:  req.GetSlotNumber(),
 		PowChainRef: powChainHash[:],
@@ -213,6 +220,9 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 			if err := stream.Send(state.Proto()); err != nil {
 				return err
 			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
 		case <-s.ctx.Done():
 			log.Debug("RPC context closed, exiting goroutine")
 			return nil
@@ -285,6 +295,9 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 			if err := stream.Send(attestation); err != nil {
 				return err
 			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
 		case <-s.ctx.Done():
 			log.Debug("RPC context closed, exiting goroutine")
 			return nil
