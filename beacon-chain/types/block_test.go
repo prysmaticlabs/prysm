@@ -12,6 +12,12 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
+type mockChainService struct{}
+
+func (f *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return true, nil
+}
+
 func TestGenesisBlock(t *testing.T) {
 	b1, err1 := NewGenesisBlock()
 	b2, err2 := NewGenesisBlock()
@@ -62,6 +68,7 @@ func TestGenesisBlock(t *testing.T) {
 
 func TestBlockValidity(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState()
+
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
@@ -87,11 +94,13 @@ func TestBlockValidity(t *testing.T) {
 	})
 
 	parentSlot := uint64(1)
-	if !b.isAttestationValid(0, aState, cState, parentSlot) {
+	chainService := &mockChainService{}
+
+	if !b.isAttestationValid(0, chainService, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(aState, cState, parentSlot) {
+	if !b.IsValid(chainService, aState, cState, parentSlot) {
 		t.Fatalf("failed block validation")
 	}
 }
