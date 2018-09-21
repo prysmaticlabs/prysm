@@ -364,11 +364,15 @@ func startPProf(address string) {
 
 // Exit stops all running profiles, flushing their output to the
 // respective file.
-func Exit() {
-	if err := Handler.StopCPUProfile(); err != nil {
-		log.Errorf("Failed to stop CPU profiling: %v", err)
+func Exit(ctx *cli.Context) {
+	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
+		if err := Handler.StopGoTrace(); err != nil {
+			log.Errorf("Failed to stop go tracing: %v", err)
+		}
 	}
-	if err := Handler.StopGoTrace(); err != nil {
-		log.Errorf("Failed to stop go tracing: %v", err)
+	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
+		if err := Handler.StopCPUProfile(); err != nil {
+			log.Errorf("Failed to stop CPU profiling: %v", err)
+		}
 	}
 }
