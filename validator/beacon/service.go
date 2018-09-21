@@ -34,6 +34,7 @@ type Service struct {
 	attesterAssignmentFeed   *event.Feed
 	proposerAssignmentFeed   *event.Feed
 	processedAttestationFeed *event.Feed
+	genesisTimestamp         time.Time
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node
@@ -87,6 +88,12 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// CurrentBeaconSlot based on the seconds since genesis.
+func (s *Service) CurrentBeaconSlot() uint64 {
+	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
+	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+}
+
 // fetchGenesisAndCanonicalState fetches both the genesis timestamp as well
 // as the latest canonical crystallized state from a beacon node. This allows
 // the validator to do the following:
@@ -114,10 +121,8 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	if err != nil {
 		log.Fatalf("cannot compute genesis timestamp: %v", err)
 	}
-	secondsSinceGenesis := time.Since(genesisTimestamp).Seconds()
 
-	// Set the current slot.
-	s.currentSlot = uint64(math.Floor(secondsSinceGenesis / 8.0))
+	s.genesisTimestamp = genesisTimestamp
 
 	crystallized := res.GetLatestCrystallizedState()
 	if err := s.processCrystallizedState(crystallized); err != nil {
@@ -135,10 +140,9 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 		case <-s.ctx.Done():
 			return
 		case <-ticker:
-			log.WithField("slotNumber", s.currentSlot).Info("New beacon node slot interval")
-			if s.responsibility == "proposer" && s.assignedSlot == s.currentSlot {
-				s.currentSlot++
-				log.WithField("slotNumber", s.currentSlot).Info("Assigned proposal slot number reached")
+			log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New beacon node slot interval")
+			if s.responsibility == "proposer" && s.assignedSlot == s.CurrentBeaconSlot() {
+				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
 				s.responsibility = ""
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
@@ -147,9 +151,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				}
 				// We forward the latest canonical block to the proposer service via a feed.
 				s.proposerAssignmentFeed.Send(block)
-				continue
-			} else if s.responsibility == "attester" && s.assignedSlot == s.currentSlot {
-				s.currentSlot++
+			} else if s.responsibility == "attester" && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.Info("Assigned attestation slot number reached")
 				s.responsibility = ""
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
@@ -159,9 +161,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				}
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
-				continue
 			}
-			s.currentSlot++
 		}
 	}
 }
@@ -228,7 +228,7 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 	// TODO(#545): Determine this from a gRPC stream from the beacon node
 	// instead.
 	s.responsibility = "proposer"
-	s.assignedSlot = s.currentSlot + 2
+	s.assignedSlot = s.CurrentBeaconSlot() + 2
 	log.WithField("assignedSlot", s.assignedSlot).Info("Validator selected as proposer")
 	return nil
 }

@@ -112,6 +112,16 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
+func TestCurrentBeaconSlot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), &mockLifecycleClient{ctrl})
+	b.genesisTimestamp = time.Now()
+	if b.CurrentBeaconSlot() != 0 {
+		t.Errorf("Expected us to be in the 0th slot, received %v", b.CurrentBeaconSlot())
+	}
+}
+
 func TestWaitForAssignmentProposer(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
@@ -132,8 +142,9 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 	}()
 
 	b.responsibility = "proposer"
-	b.assignedSlot = 40
-	b.currentSlot = 40
+	b.genesisTimestamp = time.Now()
+	b.assignedSlot = 0
+	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
@@ -161,8 +172,9 @@ func TestWaitForAssignmentProposerError(t *testing.T) {
 	}()
 
 	b.responsibility = "proposer"
-	b.assignedSlot = 40
-	b.currentSlot = 40
+	b.genesisTimestamp = time.Now()
+	b.assignedSlot = 0
+	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
@@ -190,8 +202,9 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 	}()
 
 	b.responsibility = "attester"
-	b.assignedSlot = 40
-	b.currentSlot = 40
+	b.genesisTimestamp = time.Now()
+	b.assignedSlot = 0
+	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
@@ -219,8 +232,9 @@ func TestWaitForAssignmentAttesterError(t *testing.T) {
 	}()
 
 	b.responsibility = "attester"
-	b.assignedSlot = 40
-	b.currentSlot = 40
+	b.genesisTimestamp = time.Now()
+	b.assignedSlot = 0
+	b.currentSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
