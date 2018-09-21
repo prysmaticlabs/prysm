@@ -143,9 +143,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 	}
 
 	s := NewGenesisActiveState()
-	for i, d := range interestingData {
-		s.data.RecentBlockHashes[i] = d
-	}
+	copy(s.data.RecentBlockHashes, interestingData)
 	original := make([][]byte, 2*params.CycleLength)
 	copy(original, s.data.RecentBlockHashes)
 
