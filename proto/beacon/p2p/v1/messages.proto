@@ -18,6 +18,31 @@ enum Topic {
   ACTIVE_STATE_RESPONSE = 10;
 }
 
+message Message {
+  map<string, bytes> metadata = 1;
+  oneof payload {
+    BeaconBlockHashAnnounce beaconBlockHashAnnounce = 2;
+    BeaconBlockRequest beaconBlockRequest = 3;
+    BeaconBlockRequestBySlotNumber beaconBlockRequestBySlotNumber = 4;
+    BeaconBlockResponse beaconBlockResponse = 5;
+    BeaconBlock beaconBlock = 6;
+    CrystallizedStateHashAnnounce crystallizedStateHashAnnounce = 7;
+    CrystallizedStateRequest crystallizedStateRequest = 8;
+    CrystallizedStateResponse crystallizedStateResponse = 9;
+    CrystallizedState crystallizedState = 10;
+    ShardAndCommitteeArray shardAndCommitteeArray = 11;
+    ActiveStateHashAnnounce activeStateHashAnnounce = 12;
+    ActiveStateRequest activeStateRequest = 13;
+    ShardAndCommittee shardAndCommittee = 14;
+    ActiveStateResponse activeStateResponse = 15;
+    ActiveState activeState = 16;
+    ValidatorRecord validatorRecord = 17;
+    AggregatedAttestation aggregatedAttestation = 18;
+    CrosslinkRecord crosslinkRecord = 19;
+    AttestationHashes attestationHashes = 20;
+  }
+}
+
 message BeaconBlockHashAnnounce {
   bytes hash = 1;
 }
