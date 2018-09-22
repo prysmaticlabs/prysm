@@ -33,7 +33,7 @@ type Config struct {
 
 // AttestationService instantiates a new service instance that will
 // be registered into a running beacon node.
-func AttestationService(ctx context.Context, cfg *Config) *Service {
+func NewAttestService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,
@@ -95,7 +95,8 @@ func (a *Service) aggregateAttestations() {
 		case attestation := <-a.incomingChan:
 			h, err := attestation.Hash()
 			if err != nil {
-				log.Debugf("Could not hash incoming attestation: %v", err)
+				log.Errorf("Could not hash incoming attestation: %v", err)
+				continue
 			}
 			// TODO: Look up aggregated attestation in DB, aggregate the new one with them.
 			if err := a.handler.saveAttestation(attestation); err != nil {
