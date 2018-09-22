@@ -22,23 +22,28 @@ service ProposerService {
 }
 
 service ValidatorService {
+    // These endpoints can be called on demand in the future
+    // by some web3 API for users to conveniently know their assignment.
     rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
     rpc ValidatorIndex(PublicKey) returns (IndexResponse);
     rpc ValidatorSlot(PublicKey) returns (SlotResponse);
+    // This endpoint is called by all validator clients to watch for assignments
+    // for a subset of public keys in the active validator set.
+    rpc ValidatorAssignment(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
 }
 
 message GenesisTimeAndStateResponse {
-  google.protobuf.Timestamp genesis_timestamp = 1;
-  ethereum.beacon.p2p.v1.CrystallizedState latest_crystallized_state = 2;
+    google.protobuf.Timestamp genesis_timestamp = 1;
+    ethereum.beacon.p2p.v1.CrystallizedState latest_crystallized_state = 2;
 }
 
 message ProposeRequest {
-  bytes parent_hash = 1;
-  uint64 slot_number = 2;
-  bytes randao_reveal = 3;
-  bytes attestation_bitmask = 4;
-  repeated uint32 attestation_aggregate_sig = 5;
-  google.protobuf.Timestamp timestamp = 6;
+    bytes parent_hash = 1;
+    uint64 slot_number = 2;
+    bytes randao_reveal = 3;
+    bytes attestation_bitmask = 4;
+    repeated uint32 attestation_aggregate_sig = 5;
+    google.protobuf.Timestamp timestamp = 6;
 }
 
 message ProposeResponse {
@@ -53,18 +58,42 @@ message AttestResponse {
     bytes attestation_hash = 1;
 }
 
+// Request assignment updates for either all validators or a subset of validators 
+// defined by their public keys.
+message ValidatorAssignmentRequest {
+    bool all_validators = 1;
+    repeated PublicKey public_keys = 2;
+}
+
+message ValidatorAssignmentResponse {
+    repeated Assignment assignments = 1;
+    uint64 slot = 2;
+
+    message Assignment {
+      PublicKey public_key = 1;
+      uint64 shard_id = 2;
+      Role role = 3;
+    }
+
+    enum Role {
+      UNKNOWN = 0;
+      ATTESTER = 1;
+      PROPOSER = 2;
+    }
+}
+
 message PublicKey {
     uint64 public_key = 1;
 }
 
-message ShardIDResponse {
-    uint64 shard_id = 1;
+message SlotResponse {
+    uint64 slot = 1;
 }
 
 message IndexResponse {
     uint32 index = 1;
 }
 
-message SlotResponse {
-    uint64 slot = 1;
+message ShardIDResponse {
+    uint64 shard_id = 1;
 }
