@@ -31,7 +31,7 @@ var (
 	EtherDenomination = 1e18
 	// BaseRewardQuotient is where 1/BaseRewardQuotient is the per-slot interest rate which will,
 	// compound to an annual rate of 3.88% for 10 million eth staked.
-	BaseRewardQuotient = 32768
+	BaseRewardQuotient = uint64(32768)
 	// SqrtDropTime is a constant set to reflect the amount of time it will take for the quadratic leak to
 	// cut nonparticipating validators’ deposits by 39.4%.
 	SqrtDropTime = uint64(1048576)
