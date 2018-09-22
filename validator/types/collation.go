@@ -131,7 +131,6 @@ func (c *Collation) CalculateChunkRoot() {
 func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 	body := make([]byte, 0, len(c.body)*(1+len(salt)))
 
-	// TODO: Use 32 byte chunks instead of a single byte
 	for _, chunk := range c.body {
 		body = append(append(body, salt...), chunk)
 	}

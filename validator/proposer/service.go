@@ -108,14 +108,14 @@ func (p *Proposer) AddPendingAttestation(attestation *pbp2p.AggregatedAttestatio
 // AggregateAllSignatures aggregates all the signatures of the attesters. This is currently a
 // stub for now till BLS/other signature schemes are implemented.
 func (p *Proposer) AggregateAllSignatures(attestations []*pbp2p.AggregatedAttestation) []uint32 {
-	// TODO: Implement Signature Aggregation.
+	// TODO(#258): Implement Signature Aggregation.
 	return []uint32{}
 }
 
 // GenerateBitmask creates the attestation bitmask from all the attester bitfields in the
 // attestation records.
 func (p *Proposer) GenerateBitmask(attestations []*pbp2p.AggregatedAttestation) []byte {
-	// TODO: Implement bitmask where all attesters bitfields are aggregated.
+	// TODO(#258): Implement bitmask where all attesters bitfields are aggregated.
 	return []byte{}
 }
 
@@ -170,10 +170,10 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			agSig := p.AggregateAllSignatures(p.pendingAttestation)
 			bitmask := p.GenerateBitmask(p.pendingAttestation)
 
-			// TODO: Implement real proposals with randao reveals and attestation fields.
+			// TODO(#552): Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
 				ParentHash: latestBlockHash[:],
-				// TODO: Fix to be the actual, timebased slot number instead.
+				// TODO(#511): Fix to be the actual, timebased slot number instead.
 				SlotNumber:              latestBeaconBlock.GetSlotNumber() + 1,
 				RandaoReveal:            []byte{},
 				AttestationBitmask:      bitmask,
