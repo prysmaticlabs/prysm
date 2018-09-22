@@ -104,8 +104,6 @@ func TestLifecycle(t *testing.T) {
 		t.Error("ProcessedAttestationFeed empty")
 	}
 	b.Start()
-	// TODO: find a better way to test this. The problem is that start is non-blocking, and it ends
-	// before the for loops of its inner goroutines begin.
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	b.Stop()
