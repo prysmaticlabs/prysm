@@ -8,13 +8,13 @@ import (
 	"math"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/validator/params"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "beacon")
@@ -141,8 +141,8 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 			return
 		case <-ticker:
 			log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New beacon node slot interval")
-		    fmt.Println(s.responsibility)
-		    fmt.Println(s.assignedSlot)
+			fmt.Println(s.responsibility)
+			fmt.Println(s.assignedSlot)
 			if s.responsibility == "proposer" && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
 				s.responsibility = ""

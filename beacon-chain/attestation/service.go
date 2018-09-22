@@ -98,13 +98,11 @@ func (a *Service) aggregateAttestations() {
 				log.Errorf("Could not hash incoming attestation: %v", err)
 				continue
 			}
-			// TODO: Look up aggregated attestation in DB, aggregate the new one with them.
 			if err := a.handler.saveAttestation(attestation); err != nil {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
 
-			// TODO: Forward aggregated attestation to proposer.
 			log.Info("Forwarding aggregated attestation 0x%v to proposers through grpc", h)
 		}
 	}
