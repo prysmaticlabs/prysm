@@ -3,7 +3,7 @@ package beacon
 import (
 	"bytes"
 	"context"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
+	"fmt"
 	"io"
 	"math"
 	"time"

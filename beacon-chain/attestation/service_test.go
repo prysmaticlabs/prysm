@@ -28,7 +28,7 @@ func TestIncomingAttestations(t *testing.T) {
 		Handler:               attestationHandler,
 	}
 
-	attestationService := NewService(context.Background(), cfg)
+	attestationService := AttestationService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	go func() {

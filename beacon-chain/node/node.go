@@ -191,7 +191,7 @@ func (b *BeaconNode) registerService() error {
 		return fmt.Errorf("could not register attestation service: %v", err)
 	}
 
-	attestationService := attestation.NewService(context.TODO(), &attestation.Config{
+	attestationService := attestation.AttestationService(context.TODO(), &attestation.Config{
 		Handler: handler,
 	})
 

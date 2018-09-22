@@ -31,9 +31,9 @@ type Config struct {
 	BroadcastAttestationBuf int
 }
 
-// NewService instantiates a new service instance that will
+// AttestationService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func AttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,

@@ -235,6 +235,12 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 	}
 }
 
+// ValidatorAssignment streams validator assignments every slot to clients that request
+// to watch a subset of public keys in the CrystallizedState's active validator set.
+func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
+	return nil
+}
+
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
 func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {

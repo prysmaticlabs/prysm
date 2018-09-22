@@ -12,37 +12,6 @@ import (
 
 const bitsInByte = 8
 
-// RotateValidatorSet is called every dynasty transition. The primary functions are:
-// 1.) Go through queued validator indices and induct them to be active by setting start
-// dynasty to current cycle.
-// 2.) Remove bad active validator whose balance is below threshold to the exit set by
-// setting end dynasty to current cycle.
-func RotateValidatorSet(validators []*pb.ValidatorRecord, dynasty uint64) []*pb.ValidatorRecord {
-	upperbound := len(ActiveValidatorIndices(validators, dynasty))/30 + 1
-
-	// Loop through active validator set, remove validator whose balance is below 50%.
-	for _, index := range ActiveValidatorIndices(validators, dynasty) {
-		if validators[index].Balance < params.DefaultBalance/2 {
-			validators[index].EndDynasty = dynasty
-		}
-	}
-	// Get the total number of validator we can induct.
-	inductNum := upperbound
-	if len(QueuedValidatorIndices(validators, dynasty)) < inductNum {
-		inductNum = len(QueuedValidatorIndices(validators, dynasty))
-	}
-
-	// Induct queued validator to active validator set until the switch dynasty is greater than current number.
-	for _, index := range QueuedValidatorIndices(validators, dynasty) {
-		validators[index].StartDynasty = dynasty
-		inductNum--
-		if inductNum == 0 {
-			break
-		}
-	}
-	return validators
-}
-
 // ActiveValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
@@ -82,8 +51,8 @@ func QueuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 // SampleAttestersAndProposers returns lists of random sampled attesters and proposer indices.
 func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRecord, dynasty uint64) ([]uint32, uint32, error) {
 	attesterCount := params.MinCommiteeSize
-	if len(validators) < params.MinCommiteeSize {
-		attesterCount = len(validators)
+	if len(validators) < int(params.MinCommiteeSize) {
+		attesterCount = uint64(len(validators))
 	}
 	indices, err := utils.ShuffleIndices(seed, ActiveValidatorIndices(validators, dynasty))
 	if err != nil {
@@ -222,7 +191,7 @@ func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecor
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
-	depositInEth := totalDeposit / params.EtherDenomination
+	depositInEth := totalDeposit / uint64(params.EtherDenomination)
 
 	return depositInEth
 }

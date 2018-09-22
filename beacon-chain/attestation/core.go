@@ -16,7 +16,7 @@ type Handler struct {
 	db ethdb.Database
 }
 
-// NewHandler initializes an attestation handler.
+// NewHandler initializes an attestation handler for db interaction and more.
 func NewHandler(db ethdb.Database) (*Handler, error) {
 	handler := &Handler{
 		db: db,
@@ -25,6 +25,7 @@ func NewHandler(db ethdb.Database) (*Handler, error) {
 	return handler, nil
 }
 
+// hasAttestation checks an attestation exists in beacon chain db by inputting its hash.
 func (h *Handler) hasAttestation(attestationHash [32]byte) (bool, error) {
 	return h.db.Has(blockchain.AttestationKey(attestationHash))
 }
