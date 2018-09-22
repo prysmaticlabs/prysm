@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestStartStop(t *testing.T) {
@@ -37,7 +37,6 @@ func TestStartStop(t *testing.T) {
 
 	// Test the start function.
 	attestService.Start()
-
 
 	// Test the stop function.
 	if err := attestService.Stop(); err != nil {
@@ -106,8 +105,8 @@ func TestContainsAttestations(t *testing.T) {
 	attestationService := NewAttestService(context.Background(), cfg)
 
 	attestation := types.NewAttestation(&pb.AggregatedAttestation{
-		Slot: 0,
-		ShardId: 0,
+		Slot:             0,
+		ShardId:          0,
 		AttesterBitfield: []byte{7}, // 0000 0111
 	})
 	if err := attestationService.handler.saveAttestation(attestation); err != nil {
