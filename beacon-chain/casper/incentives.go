@@ -28,7 +28,7 @@ func CalculateRewards(
 	depositFactor := (totalParticipatedDeposit - totalDeposit) / totalDeposit
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
-	if timeSinceFinality <= 2*(params.CycleLength) {
+	if timeSinceFinality <= 2*params.CycleLength {
 		for _, validatorIndex := range activeValidators {
 			var voted bool
 

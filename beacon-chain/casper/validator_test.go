@@ -2,68 +2,13 @@ package casper
 
 import (
 	"math"
+	"math/big"
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
-
-func TestRotateValidatorSet(t *testing.T) {
-	validators := []*pb.ValidatorRecord{
-		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty},  // half below default balance, should be moved to exit.
-		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty},  // half below default balance, should be moved to exit.
-		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty},  // stays in active.
-		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty},  // stays in active.
-		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty},  // stays in active.
-		{Balance: 30, StartDynasty: 15, EndDynasty: params.DefaultEndDynasty}, // will trigger for loop in rotate val indices.
-	}
-
-	data := &pb.CrystallizedState{
-		Validators:     validators,
-		CurrentDynasty: 10,
-	}
-
-	// Rotate validator set and increment dynasty count by 1.
-	rotatedValidators := RotateValidatorSet(data.Validators, data.CurrentDynasty)
-	if !reflect.DeepEqual(ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{2, 3, 4, 5}) {
-		t.Errorf("active validator indices should be [2,3,4,5], got: %v", ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty))
-	}
-	if len(QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty))
-	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty))
-	}
-
-	// Another run without queuing validators.
-	validators = []*pb.ValidatorRecord{
-		{Balance: 10, StartDynasty: 0, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
-		{Balance: 15, StartDynasty: 1, EndDynasty: params.DefaultEndDynasty}, // half below default balance, should be moved to exit.
-		{Balance: 20, StartDynasty: 2, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-		{Balance: 25, StartDynasty: 3, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-		{Balance: 30, StartDynasty: 4, EndDynasty: params.DefaultEndDynasty}, // stays in active.
-	}
-
-	data = &pb.CrystallizedState{
-		Validators:     validators,
-		CurrentDynasty: 10,
-	}
-
-	// rotate validator set and increment dynasty count by 1.
-	RotateValidatorSet(data.Validators, data.CurrentDynasty)
-
-	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3, 4}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
-	}
-	if len(QueuedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
-	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
-	}
-}
 
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
@@ -319,8 +264,11 @@ func TestTotalActiveValidatorDeposit(t *testing.T) {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, Balance: 1e18})
 	}
 
+	expectedTotalDeposit := new(big.Int)
+	expectedTotalDeposit.SetString("10000000000000000000", 10)
+
 	totalDeposit := TotalActiveValidatorDeposit(0, validators)
-	if totalDeposit != 10e18 {
+	if expectedTotalDeposit.Cmp(new(big.Int).SetUint64(totalDeposit)) != 0 {
 		t.Fatalf("incorrect total deposit calculated %d", totalDeposit)
 	}
 

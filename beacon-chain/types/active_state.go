@@ -25,7 +25,7 @@ type ActiveState struct {
 func NewGenesisActiveState() *ActiveState {
 	// Bootstrap recent block hashes to all 0s for first 2 cycles.
 	var recentBlockHashes [][]byte
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 2*int(params.CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
 	}
 
@@ -137,7 +137,7 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 	distance := block.SlotNumber() - parentSlot
 	existing := a.data.RecentBlockHashes
 	update := existing[distance:]
-	for len(update) < 2*params.CycleLength {
+	for len(update) < 2*int(params.CycleLength) {
 		update = append(update, hash[:])
 	}
 
