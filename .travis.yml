@@ -13,6 +13,7 @@ matrix:
     - os: linux
       env: 
         - todos
+        - install: true # Skip installing go packages
       script:
           - ./scripts/check-todo.sh
     - os: linux
