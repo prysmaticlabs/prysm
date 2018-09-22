@@ -88,7 +88,7 @@ func Test1000ActiveValidators(t *testing.T) {
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
-	if len(indices) != params.CycleLength {
+	if len(indices) != int(params.CycleLength) {
 		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", params.CycleLength, len(indices))
 	}
 }
@@ -124,13 +124,13 @@ func TestSmallSampleValidators(t *testing.T) {
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
-	if len(indices) != params.CycleLength {
+	if len(indices) != int(params.CycleLength) {
 		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", params.CycleLength, len(indices))
 	}
 }
 
 func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
-	numValidators := params.CycleLength * params.MinCommiteeSize / 4
+	numValidators := int(params.CycleLength * params.MinCommiteeSize / 4)
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {
@@ -143,7 +143,7 @@ func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteeParamsRegularValidatorSet(t *testing.T) {
-	numValidators := params.CycleLength * params.MinCommiteeSize
+	numValidators := int(params.CycleLength * params.MinCommiteeSize)
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {
@@ -156,7 +156,7 @@ func TestGetCommitteeParamsRegularValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
-	numValidators := params.CycleLength * params.MinCommiteeSize * 8
+	numValidators := int(params.CycleLength*params.MinCommiteeSize) * 8
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 5 {
@@ -170,14 +170,14 @@ func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
 
 func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := params.CycleLength * params.MinCommiteeSize
+	numValidators := int(params.CycleLength * params.MinCommiteeSize)
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(shardAndCommitteeArray) != params.CycleLength {
+	if len(shardAndCommitteeArray) != int(params.CycleLength) {
 		t.Fatalf("Expected length %d: got %d", params.CycleLength, len(shardAndCommitteeArray))
 	}
 
@@ -188,7 +188,7 @@ func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 		}
 
 		committeeSize := len(shardAndCommittees[0].Committee)
-		if committeeSize != params.MinCommiteeSize {
+		if committeeSize != int(params.MinCommiteeSize) {
 			t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize, committeeSize)
 		}
 	}
@@ -196,14 +196,14 @@ func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 
 func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := params.CycleLength * params.MinCommiteeSize * 2
+	numValidators := int(params.CycleLength*params.MinCommiteeSize) * 2
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(shardAndCommitteeArray) != params.CycleLength {
+	if len(shardAndCommitteeArray) != int(params.CycleLength) {
 		t.Fatalf("Expected length %d: got %d", params.CycleLength, len(shardAndCommitteeArray))
 	}
 
@@ -218,7 +218,7 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 			shardCommittee := shardAndCommittees[j]
 			t.Logf("shard %d", shardCommittee.ShardId)
 			t.Logf("committee: %v", shardCommittee.Committee)
-			if len(shardCommittee.Committee) != params.MinCommiteeSize {
+			if len(shardCommittee.Committee) != int(params.MinCommiteeSize) {
 				t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize, len(shardCommittee.Committee))
 			}
 		}
@@ -228,14 +228,14 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 
 func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := params.CycleLength * params.MinCommiteeSize / 2
+	numValidators := int(params.CycleLength*params.MinCommiteeSize) / 2
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(shardAndCommitteeArray) != params.CycleLength {
+	if len(shardAndCommitteeArray) != int(params.CycleLength) {
 		t.Fatalf("Expected length %d: got %d", params.CycleLength, len(shardAndCommitteeArray))
 	}
 
@@ -247,7 +247,7 @@ func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 
 		for j := 0; j < len(shardAndCommittees); j++ {
 			shardCommittee := shardAndCommittees[j]
-			if len(shardCommittee.Committee) != params.MinCommiteeSize/2 {
+			if len(shardCommittee.Committee) != int(params.MinCommiteeSize/2) {
 				t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize/2, len(shardCommittee.Committee))
 			}
 		}

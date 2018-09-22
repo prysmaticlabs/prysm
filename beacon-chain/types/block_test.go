@@ -78,7 +78,7 @@ func TestBlockValidity(t *testing.T) {
 	}
 
 	recentBlockHashes := make([][]byte, 2*params.CycleLength)
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 2*int(params.CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 	aState := NewActiveState(&pb.ActiveState{
