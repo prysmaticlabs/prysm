@@ -26,6 +26,32 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type ValidatorAssignmentResponse_Role int32
+
+const (
+	ValidatorAssignmentResponse_UNKNOWN  ValidatorAssignmentResponse_Role = 0
+	ValidatorAssignmentResponse_ATTESTER ValidatorAssignmentResponse_Role = 1
+	ValidatorAssignmentResponse_PROPOSER ValidatorAssignmentResponse_Role = 2
+)
+
+var ValidatorAssignmentResponse_Role_name = map[int32]string{
+	0: "UNKNOWN",
+	1: "ATTESTER",
+	2: "PROPOSER",
+}
+var ValidatorAssignmentResponse_Role_value = map[string]int32{
+	"UNKNOWN":  0,
+	"ATTESTER": 1,
+	"PROPOSER": 2,
+}
+
+func (x ValidatorAssignmentResponse_Role) String() string {
+	return proto.EnumName(ValidatorAssignmentResponse_Role_name, int32(x))
+}
+func (ValidatorAssignmentResponse_Role) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{6, 0}
+}
+
 type GenesisTimeAndStateResponse struct {
 	GenesisTimestamp        *timestamp.Timestamp  `protobuf:"bytes,1,opt,name=genesis_timestamp,json=genesisTimestamp,proto3" json:"genesis_timestamp,omitempty"`
 	LatestCrystallizedState *v1.CrystallizedState `protobuf:"bytes,2,opt,name=latest_crystallized_state,json=latestCrystallizedState,proto3" json:"latest_crystallized_state,omitempty"`
@@ -38,7 +64,7 @@ func (m *GenesisTimeAndStateResponse) Reset()         { *m = GenesisTimeAndState
 func (m *GenesisTimeAndStateResponse) String() string { return proto.CompactTextString(m) }
 func (*GenesisTimeAndStateResponse) ProtoMessage()    {}
 func (*GenesisTimeAndStateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{0}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{0}
 }
 func (m *GenesisTimeAndStateResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GenesisTimeAndStateResponse.Unmarshal(m, b)
@@ -88,7 +114,7 @@ func (m *ProposeRequest) Reset()         { *m = ProposeRequest{} }
 func (m *ProposeRequest) String() string { return proto.CompactTextString(m) }
 func (*ProposeRequest) ProtoMessage()    {}
 func (*ProposeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{1}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{1}
 }
 func (m *ProposeRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProposeRequest.Unmarshal(m, b)
@@ -161,7 +187,7 @@ func (m *ProposeResponse) Reset()         { *m = ProposeResponse{} }
 func (m *ProposeResponse) String() string { return proto.CompactTextString(m) }
 func (*ProposeResponse) ProtoMessage()    {}
 func (*ProposeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{2}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{2}
 }
 func (m *ProposeResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProposeResponse.Unmarshal(m, b)
@@ -199,7 +225,7 @@ func (m *AttestRequest) Reset()         { *m = AttestRequest{} }
 func (m *AttestRequest) String() string { return proto.CompactTextString(m) }
 func (*AttestRequest) ProtoMessage()    {}
 func (*AttestRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{3}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{3}
 }
 func (m *AttestRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AttestRequest.Unmarshal(m, b)
@@ -237,7 +263,7 @@ func (m *AttestResponse) Reset()         { *m = AttestResponse{} }
 func (m *AttestResponse) String() string { return proto.CompactTextString(m) }
 func (*AttestResponse) ProtoMessage()    {}
 func (*AttestResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{4}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{4}
 }
 func (m *AttestResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AttestResponse.Unmarshal(m, b)
@@ -264,6 +290,154 @@ func (m *AttestResponse) GetAttestationHash() []byte {
 	return nil
 }
 
+type ValidatorAssignmentRequest struct {
+	AllValidators        bool         `protobuf:"varint,1,opt,name=all_validators,json=allValidators,proto3" json:"all_validators,omitempty"`
+	PublicKeys           []*PublicKey `protobuf:"bytes,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *ValidatorAssignmentRequest) Reset()         { *m = ValidatorAssignmentRequest{} }
+func (m *ValidatorAssignmentRequest) String() string { return proto.CompactTextString(m) }
+func (*ValidatorAssignmentRequest) ProtoMessage()    {}
+func (*ValidatorAssignmentRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{5}
+}
+func (m *ValidatorAssignmentRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ValidatorAssignmentRequest.Unmarshal(m, b)
+}
+func (m *ValidatorAssignmentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ValidatorAssignmentRequest.Marshal(b, m, deterministic)
+}
+func (dst *ValidatorAssignmentRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorAssignmentRequest.Merge(dst, src)
+}
+func (m *ValidatorAssignmentRequest) XXX_Size() int {
+	return xxx_messageInfo_ValidatorAssignmentRequest.Size(m)
+}
+func (m *ValidatorAssignmentRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorAssignmentRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorAssignmentRequest proto.InternalMessageInfo
+
+func (m *ValidatorAssignmentRequest) GetAllValidators() bool {
+	if m != nil {
+		return m.AllValidators
+	}
+	return false
+}
+
+func (m *ValidatorAssignmentRequest) GetPublicKeys() []*PublicKey {
+	if m != nil {
+		return m.PublicKeys
+	}
+	return nil
+}
+
+type ValidatorAssignmentResponse struct {
+	Assignments          []*ValidatorAssignmentResponse_Assignment `protobuf:"bytes,1,rep,name=assignments,proto3" json:"assignments,omitempty"`
+	Slot                 uint64                                    `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                  `json:"-"`
+	XXX_unrecognized     []byte                                    `json:"-"`
+	XXX_sizecache        int32                                     `json:"-"`
+}
+
+func (m *ValidatorAssignmentResponse) Reset()         { *m = ValidatorAssignmentResponse{} }
+func (m *ValidatorAssignmentResponse) String() string { return proto.CompactTextString(m) }
+func (*ValidatorAssignmentResponse) ProtoMessage()    {}
+func (*ValidatorAssignmentResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{6}
+}
+func (m *ValidatorAssignmentResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ValidatorAssignmentResponse.Unmarshal(m, b)
+}
+func (m *ValidatorAssignmentResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ValidatorAssignmentResponse.Marshal(b, m, deterministic)
+}
+func (dst *ValidatorAssignmentResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorAssignmentResponse.Merge(dst, src)
+}
+func (m *ValidatorAssignmentResponse) XXX_Size() int {
+	return xxx_messageInfo_ValidatorAssignmentResponse.Size(m)
+}
+func (m *ValidatorAssignmentResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorAssignmentResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorAssignmentResponse proto.InternalMessageInfo
+
+func (m *ValidatorAssignmentResponse) GetAssignments() []*ValidatorAssignmentResponse_Assignment {
+	if m != nil {
+		return m.Assignments
+	}
+	return nil
+}
+
+func (m *ValidatorAssignmentResponse) GetSlot() uint64 {
+	if m != nil {
+		return m.Slot
+	}
+	return 0
+}
+
+type ValidatorAssignmentResponse_Assignment struct {
+	PublicKey            *PublicKey                       `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	ShardId              uint64                           `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	Role                 ValidatorAssignmentResponse_Role `protobuf:"varint,3,opt,name=role,proto3,enum=ethereum.beacon.rpc.v1.ValidatorAssignmentResponse_Role" json:"role,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                         `json:"-"`
+	XXX_unrecognized     []byte                           `json:"-"`
+	XXX_sizecache        int32                            `json:"-"`
+}
+
+func (m *ValidatorAssignmentResponse_Assignment) Reset() {
+	*m = ValidatorAssignmentResponse_Assignment{}
+}
+func (m *ValidatorAssignmentResponse_Assignment) String() string { return proto.CompactTextString(m) }
+func (*ValidatorAssignmentResponse_Assignment) ProtoMessage()    {}
+func (*ValidatorAssignmentResponse_Assignment) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{6, 0}
+}
+func (m *ValidatorAssignmentResponse_Assignment) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Unmarshal(m, b)
+}
+func (m *ValidatorAssignmentResponse_Assignment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Marshal(b, m, deterministic)
+}
+func (dst *ValidatorAssignmentResponse_Assignment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Merge(dst, src)
+}
+func (m *ValidatorAssignmentResponse_Assignment) XXX_Size() int {
+	return xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Size(m)
+}
+func (m *ValidatorAssignmentResponse_Assignment) XXX_DiscardUnknown() {
+	xxx_messageInfo_ValidatorAssignmentResponse_Assignment.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ValidatorAssignmentResponse_Assignment proto.InternalMessageInfo
+
+func (m *ValidatorAssignmentResponse_Assignment) GetPublicKey() *PublicKey {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+func (m *ValidatorAssignmentResponse_Assignment) GetShardId() uint64 {
+	if m != nil {
+		return m.ShardId
+	}
+	return 0
+}
+
+func (m *ValidatorAssignmentResponse_Assignment) GetRole() ValidatorAssignmentResponse_Role {
+	if m != nil {
+		return m.Role
+	}
+	return ValidatorAssignmentResponse_UNKNOWN
+}
+
 type PublicKey struct {
 	PublicKey            uint64   `protobuf:"varint,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -275,7 +449,7 @@ func (m *PublicKey) Reset()         { *m = PublicKey{} }
 func (m *PublicKey) String() string { return proto.CompactTextString(m) }
 func (*PublicKey) ProtoMessage()    {}
 func (*PublicKey) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{5}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{7}
 }
 func (m *PublicKey) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PublicKey.Unmarshal(m, b)
@@ -302,82 +476,6 @@ func (m *PublicKey) GetPublicKey() uint64 {
 	return 0
 }
 
-type ShardIDResponse struct {
-	ShardId              uint64   `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ShardIDResponse) Reset()         { *m = ShardIDResponse{} }
-func (m *ShardIDResponse) String() string { return proto.CompactTextString(m) }
-func (*ShardIDResponse) ProtoMessage()    {}
-func (*ShardIDResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{6}
-}
-func (m *ShardIDResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ShardIDResponse.Unmarshal(m, b)
-}
-func (m *ShardIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ShardIDResponse.Marshal(b, m, deterministic)
-}
-func (dst *ShardIDResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ShardIDResponse.Merge(dst, src)
-}
-func (m *ShardIDResponse) XXX_Size() int {
-	return xxx_messageInfo_ShardIDResponse.Size(m)
-}
-func (m *ShardIDResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ShardIDResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ShardIDResponse proto.InternalMessageInfo
-
-func (m *ShardIDResponse) GetShardId() uint64 {
-	if m != nil {
-		return m.ShardId
-	}
-	return 0
-}
-
-type IndexResponse struct {
-	Index                uint32   `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *IndexResponse) Reset()         { *m = IndexResponse{} }
-func (m *IndexResponse) String() string { return proto.CompactTextString(m) }
-func (*IndexResponse) ProtoMessage()    {}
-func (*IndexResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{7}
-}
-func (m *IndexResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_IndexResponse.Unmarshal(m, b)
-}
-func (m *IndexResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_IndexResponse.Marshal(b, m, deterministic)
-}
-func (dst *IndexResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_IndexResponse.Merge(dst, src)
-}
-func (m *IndexResponse) XXX_Size() int {
-	return xxx_messageInfo_IndexResponse.Size(m)
-}
-func (m *IndexResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_IndexResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_IndexResponse proto.InternalMessageInfo
-
-func (m *IndexResponse) GetIndex() uint32 {
-	if m != nil {
-		return m.Index
-	}
-	return 0
-}
-
 type SlotResponse struct {
 	Slot                 uint64   `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -389,7 +487,7 @@ func (m *SlotResponse) Reset()         { *m = SlotResponse{} }
 func (m *SlotResponse) String() string { return proto.CompactTextString(m) }
 func (*SlotResponse) ProtoMessage()    {}
 func (*SlotResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_593701c51c9f5594, []int{8}
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{8}
 }
 func (m *SlotResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SlotResponse.Unmarshal(m, b)
@@ -416,16 +514,96 @@ func (m *SlotResponse) GetSlot() uint64 {
 	return 0
 }
 
+type IndexResponse struct {
+	Index                uint32   `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *IndexResponse) Reset()         { *m = IndexResponse{} }
+func (m *IndexResponse) String() string { return proto.CompactTextString(m) }
+func (*IndexResponse) ProtoMessage()    {}
+func (*IndexResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{9}
+}
+func (m *IndexResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IndexResponse.Unmarshal(m, b)
+}
+func (m *IndexResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IndexResponse.Marshal(b, m, deterministic)
+}
+func (dst *IndexResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IndexResponse.Merge(dst, src)
+}
+func (m *IndexResponse) XXX_Size() int {
+	return xxx_messageInfo_IndexResponse.Size(m)
+}
+func (m *IndexResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_IndexResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IndexResponse proto.InternalMessageInfo
+
+func (m *IndexResponse) GetIndex() uint32 {
+	if m != nil {
+		return m.Index
+	}
+	return 0
+}
+
+type ShardIDResponse struct {
+	ShardId              uint64   `protobuf:"varint,1,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ShardIDResponse) Reset()         { *m = ShardIDResponse{} }
+func (m *ShardIDResponse) String() string { return proto.CompactTextString(m) }
+func (*ShardIDResponse) ProtoMessage()    {}
+func (*ShardIDResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_c6a6f3b554d979ac, []int{10}
+}
+func (m *ShardIDResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ShardIDResponse.Unmarshal(m, b)
+}
+func (m *ShardIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ShardIDResponse.Marshal(b, m, deterministic)
+}
+func (dst *ShardIDResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ShardIDResponse.Merge(dst, src)
+}
+func (m *ShardIDResponse) XXX_Size() int {
+	return xxx_messageInfo_ShardIDResponse.Size(m)
+}
+func (m *ShardIDResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ShardIDResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ShardIDResponse proto.InternalMessageInfo
+
+func (m *ShardIDResponse) GetShardId() uint64 {
+	if m != nil {
+		return m.ShardId
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterType((*GenesisTimeAndStateResponse)(nil), "ethereum.beacon.rpc.v1.GenesisTimeAndStateResponse")
 	proto.RegisterType((*ProposeRequest)(nil), "ethereum.beacon.rpc.v1.ProposeRequest")
 	proto.RegisterType((*ProposeResponse)(nil), "ethereum.beacon.rpc.v1.ProposeResponse")
 	proto.RegisterType((*AttestRequest)(nil), "ethereum.beacon.rpc.v1.AttestRequest")
 	proto.RegisterType((*AttestResponse)(nil), "ethereum.beacon.rpc.v1.AttestResponse")
+	proto.RegisterType((*ValidatorAssignmentRequest)(nil), "ethereum.beacon.rpc.v1.ValidatorAssignmentRequest")
+	proto.RegisterType((*ValidatorAssignmentResponse)(nil), "ethereum.beacon.rpc.v1.ValidatorAssignmentResponse")
+	proto.RegisterType((*ValidatorAssignmentResponse_Assignment)(nil), "ethereum.beacon.rpc.v1.ValidatorAssignmentResponse.Assignment")
 	proto.RegisterType((*PublicKey)(nil), "ethereum.beacon.rpc.v1.PublicKey")
-	proto.RegisterType((*ShardIDResponse)(nil), "ethereum.beacon.rpc.v1.ShardIDResponse")
-	proto.RegisterType((*IndexResponse)(nil), "ethereum.beacon.rpc.v1.IndexResponse")
 	proto.RegisterType((*SlotResponse)(nil), "ethereum.beacon.rpc.v1.SlotResponse")
+	proto.RegisterType((*IndexResponse)(nil), "ethereum.beacon.rpc.v1.IndexResponse")
+	proto.RegisterType((*ShardIDResponse)(nil), "ethereum.beacon.rpc.v1.ShardIDResponse")
+	proto.RegisterEnum("ethereum.beacon.rpc.v1.ValidatorAssignmentResponse_Role", ValidatorAssignmentResponse_Role_name, ValidatorAssignmentResponse_Role_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -786,9 +964,14 @@ var _ProposerService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ValidatorServiceClient interface {
+	// These endpoints can be called on demand in the future
+	// by some web3 API for users to conveniently know their assignment.
 	ValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error)
 	ValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error)
 	ValidatorSlot(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponse, error)
+	// This endpoint is called by all validator clients to watch for assignments
+	// for a subset of public keys in the active validator set.
+	ValidatorAssignment(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (ValidatorService_ValidatorAssignmentClient, error)
 }
 
 type validatorServiceClient struct {
@@ -826,11 +1009,48 @@ func (c *validatorServiceClient) ValidatorSlot(ctx context.Context, in *PublicKe
 	return out, nil
 }
 
+func (c *validatorServiceClient) ValidatorAssignment(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (ValidatorService_ValidatorAssignmentClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ValidatorService_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorAssignment", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &validatorServiceValidatorAssignmentClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ValidatorService_ValidatorAssignmentClient interface {
+	Recv() (*ValidatorAssignmentResponse, error)
+	grpc.ClientStream
+}
+
+type validatorServiceValidatorAssignmentClient struct {
+	grpc.ClientStream
+}
+
+func (x *validatorServiceValidatorAssignmentClient) Recv() (*ValidatorAssignmentResponse, error) {
+	m := new(ValidatorAssignmentResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ValidatorServiceServer is the server API for ValidatorService service.
 type ValidatorServiceServer interface {
+	// These endpoints can be called on demand in the future
+	// by some web3 API for users to conveniently know their assignment.
 	ValidatorShardID(context.Context, *PublicKey) (*ShardIDResponse, error)
 	ValidatorIndex(context.Context, *PublicKey) (*IndexResponse, error)
 	ValidatorSlot(context.Context, *PublicKey) (*SlotResponse, error)
+	// This endpoint is called by all validator clients to watch for assignments
+	// for a subset of public keys in the active validator set.
+	ValidatorAssignment(*ValidatorAssignmentRequest, ValidatorService_ValidatorAssignmentServer) error
 }
 
 func RegisterValidatorServiceServer(s *grpc.Server, srv ValidatorServiceServer) {
@@ -891,6 +1111,27 @@ func _ValidatorService_ValidatorSlot_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ValidatorService_ValidatorAssignment_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ValidatorAssignmentRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ValidatorServiceServer).ValidatorAssignment(m, &validatorServiceValidatorAssignmentServer{stream})
+}
+
+type ValidatorService_ValidatorAssignmentServer interface {
+	Send(*ValidatorAssignmentResponse) error
+	grpc.ServerStream
+}
+
+type validatorServiceValidatorAssignmentServer struct {
+	grpc.ServerStream
+}
+
+func (x *validatorServiceValidatorAssignmentServer) Send(m *ValidatorAssignmentResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.ValidatorService",
 	HandlerType: (*ValidatorServiceServer)(nil),
@@ -908,61 +1149,80 @@ var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _ValidatorService_ValidatorSlot_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ValidatorAssignment",
+			Handler:       _ValidatorService_ValidatorAssignment_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "proto/beacon/rpc/v1/services.proto",
 }
 
 func init() {
-	proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_services_593701c51c9f5594)
+	proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_services_c6a6f3b554d979ac)
 }
 
-var fileDescriptor_services_593701c51c9f5594 = []byte{
-	// 742 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xd1, 0x52, 0xd3, 0x50,
-	0x10, 0x9d, 0x42, 0x41, 0xbb, 0x34, 0x14, 0xa2, 0x03, 0xa5, 0xe8, 0x80, 0x41, 0x14, 0x1c, 0x4d,
-	0xa1, 0xbc, 0x38, 0xfa, 0x54, 0xd0, 0x01, 0x46, 0x46, 0x99, 0x94, 0x71, 0x1c, 0x75, 0x88, 0xb7,
-	0xc9, 0x9a, 0x66, 0x9a, 0xe4, 0xc6, 0xdc, 0xdb, 0x8e, 0xf5, 0x0b, 0xfc, 0x0a, 0x9f, 0xfd, 0x19,
-	0xff, 0xc9, 0xc9, 0xbd, 0x49, 0x9a, 0x02, 0x11, 0x7c, 0xeb, 0x3d, 0xbb, 0x7b, 0xf6, 0x74, 0x77,
-	0x4f, 0x40, 0x0b, 0x23, 0xca, 0x69, 0xb3, 0x8b, 0xc4, 0xa2, 0x41, 0x33, 0x0a, 0xad, 0xe6, 0x70,
-	0xb7, 0xc9, 0x30, 0x1a, 0xba, 0x16, 0x32, 0x5d, 0x04, 0xd5, 0x25, 0xe4, 0x3d, 0x8c, 0x70, 0xe0,
-	0xeb, 0x32, 0x4d, 0x8f, 0x42, 0x4b, 0x1f, 0xee, 0x36, 0x26, 0x6b, 0xc3, 0x56, 0x18, 0xd7, 0xfa,
-	0xc8, 0x18, 0x71, 0xd2, 0xda, 0xc6, 0xaa, 0x43, 0xa9, 0xe3, 0x61, 0x53, 0xbc, 0xba, 0x83, 0xaf,
-	0x4d, 0xf4, 0x43, 0x3e, 0x4a, 0x82, 0x6b, 0x17, 0x83, 0xdc, 0xf5, 0x91, 0x71, 0xe2, 0x87, 0x32,
-	0x41, 0xfb, 0x53, 0x82, 0xd5, 0x43, 0x0c, 0x90, 0xb9, 0xec, 0xcc, 0xf5, 0xb1, 0x1d, 0xd8, 0x1d,
-	0x4e, 0x38, 0x1a, 0xc8, 0x42, 0x1a, 0x30, 0x54, 0x0f, 0x61, 0xd1, 0x91, 0x61, 0x33, 0x2b, 0xad,
-	0x97, 0xd6, 0x4b, 0x5b, 0x73, 0xad, 0x86, 0x2e, 0xc9, 0xf5, 0x94, 0x5c, 0x3f, 0x4b, 0x33, 0x8c,
-	0x05, 0x67, 0xcc, 0x29, 0x10, 0x15, 0x61, 0xc5, 0x23, 0x1c, 0x19, 0x37, 0xad, 0x68, 0xc4, 0x38,
-	0xf1, 0x3c, 0xf7, 0x07, 0xda, 0x26, 0x8b, 0xbb, 0xd5, 0xa7, 0x04, 0xe1, 0xb6, 0x7e, 0x71, 0x0c,
-	0x61, 0x2b, 0xd4, 0x87, 0xbb, 0xfa, 0x41, 0xae, 0x42, 0xca, 0x5b, 0x96, 0x5c, 0x97, 0x02, 0xda,
-	0xaf, 0x29, 0x98, 0x3f, 0x8d, 0x68, 0x48, 0x19, 0x1a, 0xf8, 0x6d, 0x80, 0x8c, 0xab, 0x6b, 0x30,
-	0x17, 0x92, 0x08, 0x03, 0x6e, 0xf6, 0x08, 0xeb, 0x09, 0xf1, 0x55, 0x03, 0x24, 0x74, 0x44, 0x58,
-	0x2f, 0x4e, 0x60, 0x1e, 0xe5, 0x66, 0x30, 0xf0, 0xbb, 0x18, 0x09, 0x31, 0x65, 0x03, 0x62, 0xe8,
-	0xad, 0x40, 0xd4, 0x0d, 0x50, 0x22, 0x12, 0xd8, 0x84, 0x9a, 0x11, 0x0e, 0x91, 0x78, 0xf5, 0x69,
-	0xc1, 0x51, 0x95, 0xa0, 0x21, 0x30, 0xb5, 0x09, 0x77, 0x08, 0x8f, 0x45, 0x11, 0xee, 0xd2, 0xc0,
-	0xec, 0xba, 0xdc, 0x27, 0xac, 0x5f, 0x2f, 0x8b, 0x54, 0x35, 0x17, 0xda, 0x97, 0x11, 0xf5, 0x05,
-	0xac, 0xe4, 0x0b, 0x88, 0xe3, 0x44, 0xe8, 0x10, 0x8e, 0x26, 0x73, 0x9d, 0xfa, 0xcc, 0xfa, 0xf4,
-	0x96, 0x62, 0x2c, 0xe7, 0x12, 0xda, 0x69, 0xbc, 0xe3, 0x3a, 0xea, 0x73, 0xa8, 0x8c, 0xd7, 0x31,
-	0x7b, 0xed, 0x3a, 0xc6, 0xc9, 0xda, 0x0e, 0xd4, 0xb2, 0xf9, 0x24, 0x3b, 0xbe, 0x0f, 0xd0, 0xf5,
-	0xa8, 0xd5, 0xcf, 0xcf, 0xa7, 0x22, 0x90, 0x78, 0x3c, 0xda, 0x17, 0x50, 0xda, 0x42, 0x46, 0x3a,
-	0xd0, 0x77, 0x30, 0x97, 0xd3, 0x95, 0x5c, 0xc3, 0xb3, 0xa2, 0xe5, 0x65, 0xba, 0xed, 0xf6, 0xb8,
-	0xc8, 0xc8, 0x33, 0x68, 0x2f, 0x61, 0x3e, 0xed, 0x90, 0x48, 0xda, 0x86, 0x85, 0xfc, 0x6c, 0x72,
-	0xc2, 0x6a, 0x39, 0x5c, 0xc8, 0x7b, 0x02, 0x95, 0xd3, 0x41, 0xd7, 0x73, 0xad, 0x37, 0x38, 0x8a,
-	0xff, 0x4a, 0x28, 0x1e, 0x66, 0x1f, 0x47, 0xa2, 0xa2, 0x6c, 0x54, 0xc2, 0x34, 0xac, 0x3d, 0x85,
-	0x5a, 0xa7, 0x47, 0x22, 0xfb, 0xf8, 0x55, 0xd6, 0x69, 0x05, 0x6e, 0xb3, 0x18, 0x32, 0x5d, 0x3b,
-	0xc9, 0xbf, 0x25, 0xde, 0xc7, 0xb6, 0xb6, 0x09, 0xca, 0x71, 0x60, 0xe3, 0xf7, 0x2c, 0xf7, 0x2e,
-	0xcc, 0xb8, 0x31, 0x20, 0x12, 0x15, 0x43, 0x3e, 0x34, 0x0d, 0xaa, 0x1d, 0x8f, 0x8e, 0xb5, 0xab,
-	0x50, 0x8e, 0x6f, 0x27, 0x61, 0x13, 0xbf, 0x5b, 0x3f, 0xa7, 0x41, 0xd9, 0x17, 0x63, 0xe9, 0x48,
-	0xe7, 0xab, 0x7d, 0xb8, 0x37, 0xe9, 0xbb, 0x03, 0x12, 0xd0, 0xc0, 0xb5, 0x88, 0x27, 0x0e, 0x59,
-	0x5d, 0xba, 0xb4, 0xce, 0xd7, 0xb1, 0xaf, 0x1b, 0x7b, 0xfa, 0xd5, 0xdf, 0x0a, 0xfd, 0x5f, 0x2e,
-	0x3e, 0x01, 0x25, 0xa3, 0x3f, 0x42, 0x62, 0x17, 0xb2, 0x6f, 0x14, 0x6d, 0x51, 0x8a, 0xdf, 0x8f,
-	0x8f, 0x42, 0x3d, 0x87, 0xe5, 0x93, 0xab, 0xed, 0x57, 0xc8, 0x7b, 0x73, 0x6b, 0xef, 0x94, 0xd4,
-	0xcf, 0xb0, 0x28, 0xf9, 0x73, 0x07, 0x53, 0xc8, 0xfc, 0x7f, 0x77, 0xb7, 0x53, 0x6a, 0x05, 0x50,
-	0x93, 0x00, 0x46, 0xe9, 0x2e, 0x3e, 0x01, 0x48, 0x48, 0xcc, 0x66, 0xb3, 0x68, 0xc2, 0x13, 0x2e,
-	0x68, 0x3c, 0xba, 0x2e, 0x4d, 0xce, 0xbe, 0x15, 0x65, 0x86, 0xcb, 0xfa, 0x99, 0x50, 0x4d, 0x20,
-	0x39, 0xd0, 0x42, 0xaa, 0xc9, 0x2f, 0x59, 0xe3, 0xf1, 0xb5, 0x79, 0x49, 0xcf, 0xdf, 0x53, 0xb0,
-	0xf0, 0x9e, 0x78, 0xae, 0x4d, 0x38, 0xcd, 0xba, 0x9e, 0xe7, 0x31, 0xe9, 0x02, 0xf5, 0x41, 0x21,
-	0x63, 0xea, 0x99, 0xe2, 0xa6, 0x17, 0x9d, 0xf4, 0x11, 0xe6, 0x33, 0x7e, 0xe1, 0x9b, 0x9b, 0xb0,
-	0x17, 0x0e, 0x7b, 0xd2, 0x79, 0x1f, 0x40, 0x19, 0x6b, 0xf7, 0x28, 0xbf, 0x09, 0xf5, 0xc3, 0x42,
-	0xe1, 0x39, 0xb7, 0x76, 0x67, 0xc5, 0x3d, 0xed, 0xfd, 0x0d, 0x00, 0x00, 0xff, 0xff, 0x79, 0xa1,
-	0x46, 0xbd, 0xa7, 0x07, 0x00, 0x00,
+var fileDescriptor_services_c6a6f3b554d979ac = []byte{
+	// 945 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x55, 0xdd, 0x6e, 0x1b, 0x45,
+	0x14, 0x66, 0x6d, 0xb7, 0x4d, 0x8e, 0x7f, 0xe2, 0x4e, 0x51, 0xe3, 0x38, 0xa0, 0x86, 0x2d, 0x81,
+	0x14, 0xc1, 0x3a, 0x71, 0x6e, 0x2a, 0x90, 0x10, 0x4e, 0x89, 0xda, 0xaa, 0x51, 0x12, 0xad, 0xcd,
+	0x8f, 0x00, 0x75, 0x3b, 0xf6, 0x1e, 0xd6, 0xab, 0x8c, 0x77, 0x96, 0x9d, 0xb1, 0x45, 0xb8, 0xe2,
+	0x0e, 0x9e, 0x82, 0x17, 0xe0, 0x01, 0x78, 0x0a, 0x5e, 0x09, 0xa1, 0x9d, 0xd9, 0x3f, 0xa7, 0xd9,
+	0x26, 0xcd, 0xdd, 0xce, 0x99, 0x73, 0xbe, 0xf3, 0xcd, 0x77, 0x66, 0xbe, 0x05, 0x33, 0x8c, 0xb8,
+	0xe4, 0xbd, 0x31, 0xd2, 0x09, 0x0f, 0x7a, 0x51, 0x38, 0xe9, 0x2d, 0xf6, 0x7a, 0x02, 0xa3, 0x85,
+	0x3f, 0x41, 0x61, 0xa9, 0x4d, 0x72, 0x1f, 0xe5, 0x14, 0x23, 0x9c, 0xcf, 0x2c, 0x9d, 0x66, 0x45,
+	0xe1, 0xc4, 0x5a, 0xec, 0x75, 0x97, 0x6b, 0xc3, 0x7e, 0x18, 0xd7, 0xce, 0x50, 0x08, 0xea, 0xa5,
+	0xb5, 0xdd, 0x4d, 0x8f, 0x73, 0x8f, 0x61, 0x4f, 0xad, 0xc6, 0xf3, 0x9f, 0x7b, 0x38, 0x0b, 0xe5,
+	0x79, 0xb2, 0xf9, 0xe0, 0xe2, 0xa6, 0xf4, 0x67, 0x28, 0x24, 0x9d, 0x85, 0x3a, 0xc1, 0xfc, 0xd7,
+	0x80, 0xcd, 0xa7, 0x18, 0xa0, 0xf0, 0xc5, 0xc8, 0x9f, 0xe1, 0x20, 0x70, 0x87, 0x92, 0x4a, 0xb4,
+	0x51, 0x84, 0x3c, 0x10, 0x48, 0x9e, 0xc2, 0x5d, 0x4f, 0x6f, 0x3b, 0x59, 0x69, 0xc7, 0xd8, 0x32,
+	0x76, 0xea, 0xfd, 0xae, 0xa5, 0xc1, 0xad, 0x14, 0xdc, 0x1a, 0xa5, 0x19, 0x76, 0xdb, 0xcb, 0x31,
+	0x55, 0x84, 0x20, 0x6c, 0x30, 0x2a, 0x51, 0x48, 0x67, 0x12, 0x9d, 0x0b, 0x49, 0x19, 0xf3, 0x7f,
+	0x43, 0xd7, 0x11, 0x71, 0xb7, 0x4e, 0x45, 0x01, 0x3e, 0xb2, 0x2e, 0xca, 0x10, 0xf6, 0x43, 0x6b,
+	0xb1, 0x67, 0x3d, 0x29, 0x54, 0x68, 0x7a, 0xeb, 0x1a, 0xeb, 0xb5, 0x0d, 0xf3, 0xaf, 0x0a, 0xb4,
+	0x4e, 0x23, 0x1e, 0x72, 0x81, 0x36, 0xfe, 0x32, 0x47, 0x21, 0xc9, 0x03, 0xa8, 0x87, 0x34, 0xc2,
+	0x40, 0x3a, 0x53, 0x2a, 0xa6, 0x8a, 0x7c, 0xc3, 0x06, 0x1d, 0x7a, 0x46, 0xc5, 0x34, 0x4e, 0x10,
+	0x8c, 0x4b, 0x27, 0x98, 0xcf, 0xc6, 0x18, 0x29, 0x32, 0x35, 0x1b, 0xe2, 0xd0, 0xb1, 0x8a, 0x90,
+	0x87, 0xd0, 0x8c, 0x68, 0xe0, 0x52, 0xee, 0x44, 0xb8, 0x40, 0xca, 0x3a, 0x55, 0x85, 0xd1, 0xd0,
+	0x41, 0x5b, 0xc5, 0x48, 0x0f, 0xee, 0x51, 0x19, 0x93, 0xa2, 0xd2, 0xe7, 0x81, 0x33, 0xf6, 0xe5,
+	0x8c, 0x8a, 0xb3, 0x4e, 0x4d, 0xa5, 0x92, 0xc2, 0xd6, 0x81, 0xde, 0x21, 0x9f, 0xc3, 0x46, 0xb1,
+	0x80, 0x7a, 0x5e, 0x84, 0x1e, 0x95, 0xe8, 0x08, 0xdf, 0xeb, 0xdc, 0xda, 0xaa, 0xee, 0x34, 0xed,
+	0xf5, 0x42, 0xc2, 0x20, 0xdd, 0x1f, 0xfa, 0x1e, 0x79, 0x0c, 0xab, 0xf9, 0x38, 0x6e, 0x5f, 0x39,
+	0x8e, 0x3c, 0xd9, 0xdc, 0x85, 0xb5, 0x4c, 0x9f, 0x64, 0xc6, 0xef, 0x03, 0x8c, 0x19, 0x9f, 0x9c,
+	0x15, 0xf5, 0x59, 0x55, 0x91, 0x58, 0x1e, 0xf3, 0x15, 0x34, 0x07, 0x8a, 0x46, 0x2a, 0xe8, 0x09,
+	0xd4, 0x0b, 0xbc, 0x92, 0xdb, 0xf0, 0x59, 0xd9, 0xf0, 0x32, 0xde, 0xee, 0x20, 0x2f, 0xb2, 0x8b,
+	0x08, 0xe6, 0x17, 0xd0, 0x4a, 0x3b, 0x24, 0x94, 0x1e, 0x41, 0xbb, 0xa8, 0x4d, 0x81, 0xd8, 0x5a,
+	0x21, 0xae, 0xe8, 0xfd, 0x61, 0x40, 0xf7, 0x5b, 0xca, 0x7c, 0x97, 0x4a, 0x1e, 0x0d, 0x84, 0xf0,
+	0xbd, 0x60, 0x86, 0x41, 0x46, 0x76, 0x1b, 0x5a, 0x94, 0x31, 0x67, 0x91, 0x66, 0x08, 0x85, 0xb3,
+	0x62, 0x37, 0x29, 0x63, 0x59, 0x99, 0x20, 0x07, 0x50, 0x0f, 0xe7, 0x63, 0xe6, 0x4f, 0x9c, 0x33,
+	0x3c, 0x17, 0x9d, 0xca, 0x56, 0x75, 0xa7, 0xde, 0xff, 0xc0, 0xba, 0xfc, 0x5d, 0x5a, 0xa7, 0x2a,
+	0xf5, 0x05, 0x9e, 0xdb, 0x10, 0xa6, 0x9f, 0xc2, 0xfc, 0xaf, 0x02, 0x9b, 0x97, 0x32, 0x49, 0x0e,
+	0xf5, 0x0a, 0xea, 0x34, 0x8b, 0xc6, 0x3c, 0xe2, 0x1e, 0x5f, 0x96, 0xf5, 0x78, 0x03, 0x92, 0x55,
+	0x08, 0x15, 0x21, 0x09, 0x81, 0x5a, 0x7c, 0x6d, 0x93, 0x2b, 0xac, 0xbe, 0xbb, 0xff, 0x18, 0x00,
+	0x79, 0x3e, 0xf9, 0x0a, 0x20, 0x3f, 0x68, 0x32, 0xbb, 0x6b, 0x9c, 0x73, 0x35, 0x3b, 0x27, 0xd9,
+	0x80, 0x15, 0x31, 0xa5, 0x91, 0xeb, 0xf8, 0x6e, 0xd2, 0xe8, 0x8e, 0x5a, 0x3f, 0x77, 0xc9, 0x11,
+	0xd4, 0x22, 0xce, 0x50, 0xbd, 0x8f, 0x56, 0xff, 0xf1, 0x4d, 0x8e, 0x66, 0x73, 0x86, 0xb6, 0x42,
+	0x31, 0x7b, 0x50, 0x8b, 0x57, 0xa4, 0x0e, 0x77, 0xbe, 0x39, 0x7e, 0x71, 0x7c, 0xf2, 0xdd, 0x71,
+	0xfb, 0x1d, 0xd2, 0x80, 0x95, 0xc1, 0x68, 0x74, 0x38, 0x1c, 0x1d, 0xda, 0x6d, 0x23, 0x5e, 0x9d,
+	0xda, 0x27, 0xa7, 0x27, 0xc3, 0x43, 0xbb, 0x5d, 0x31, 0x3f, 0x81, 0xd5, 0x8c, 0x71, 0x7c, 0xab,
+	0x2f, 0x1c, 0xb4, 0x56, 0x38, 0x85, 0x69, 0x42, 0x63, 0xc8, 0x78, 0x3e, 0x9c, 0x54, 0x3a, 0x23,
+	0x97, 0xce, 0xdc, 0x86, 0xe6, 0xf3, 0xc0, 0xc5, 0x5f, 0xb3, 0xa4, 0x77, 0xe1, 0x96, 0x1f, 0x07,
+	0x54, 0x56, 0xd3, 0xd6, 0x0b, 0xf3, 0x53, 0x58, 0x1b, 0x2a, 0x01, 0xbe, 0xce, 0x12, 0x8b, 0x1a,
+	0x19, 0x4b, 0x1a, 0xf5, 0xff, 0xac, 0x42, 0xf3, 0x40, 0xc9, 0x31, 0xd4, 0x3f, 0x01, 0x72, 0x06,
+	0xef, 0x2d, 0x5b, 0xf0, 0x13, 0x1a, 0xf0, 0xc0, 0x9f, 0x50, 0xa6, 0x3c, 0x8d, 0xdc, 0x7f, 0xed,
+	0x65, 0x1f, 0xc6, 0x16, 0xdf, 0xdd, 0x2f, 0xd3, 0xf7, 0x4d, 0x86, 0x7e, 0x04, 0xcd, 0x0c, 0xfe,
+	0x19, 0x52, 0xb7, 0x14, 0xfd, 0x61, 0xd9, 0x83, 0xd6, 0xe4, 0x0f, 0x62, 0x7f, 0x20, 0x2f, 0x61,
+	0xfd, 0xe8, 0x72, 0x27, 0x2e, 0xc5, 0xbd, 0xbe, 0xcb, 0xef, 0x1a, 0xe4, 0x27, 0xb8, 0xab, 0xf1,
+	0x0b, 0xde, 0x51, 0x8a, 0xfc, 0x76, 0x16, 0xb4, 0x6b, 0xf4, 0x03, 0x58, 0xd3, 0x01, 0x8c, 0xd2,
+	0x59, 0xfc, 0x08, 0xa0, 0x43, 0x4a, 0x9b, 0xed, 0x32, 0x85, 0x97, 0x0c, 0xb1, 0xfb, 0xd1, 0x55,
+	0x69, 0x5a, 0xfb, 0x7e, 0x94, 0x79, 0x6f, 0xd6, 0xcf, 0x81, 0x46, 0x12, 0xd2, 0x82, 0x96, 0x42,
+	0x2d, 0xff, 0xd4, 0xba, 0x1f, 0x5f, 0x99, 0x97, 0xf4, 0xfc, 0xbb, 0x0a, 0xed, 0xec, 0xbd, 0xa5,
+	0x5d, 0x5f, 0x16, 0x63, 0xfa, 0xea, 0x92, 0xab, 0x4d, 0xa0, 0xbc, 0xe9, 0xc5, 0xeb, 0xff, 0x03,
+	0xb4, 0x32, 0x7c, 0xf5, 0x82, 0xae, 0x83, 0x5e, 0x2a, 0xf6, 0xf2, 0x1b, 0xfc, 0x1e, 0x9a, 0x39,
+	0x77, 0xc6, 0xe5, 0x75, 0xa0, 0x3f, 0x2c, 0x25, 0x5e, 0xb4, 0x80, 0xdf, 0x0d, 0xb8, 0x77, 0x89,
+	0x35, 0x91, 0xfe, 0x5b, 0xf9, 0x98, 0x9e, 0xcf, 0xfe, 0x0d, 0xbc, 0x6f, 0xd7, 0x18, 0xdf, 0x56,
+	0x57, 0x7a, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff, 0xff, 0x5f, 0xb4, 0xa2, 0x3d, 0x35, 0x0a, 0x00,
+	0x00,
 }
