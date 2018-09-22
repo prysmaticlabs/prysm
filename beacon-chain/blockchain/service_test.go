@@ -383,10 +383,10 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
 
-	slotsStart := int64(crystallized.LastStateRecalc()) - params.CycleLength
-	slotIndex := (int64(currentSlot) - slotsStart) % params.CycleLength
+	slotsStart := crystallized.LastStateRecalc() - uint64(params.CycleLength)
+	slotIndex := (currentSlot - slotsStart) % uint64(params.CycleLength)
 	shardID := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].ShardId
 
 	block := types.NewBlock(&pb.BeaconBlock{
@@ -749,7 +749,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	}
 
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / params.SlotDuration))
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash:            block0Hash[:],

@@ -100,7 +100,7 @@ func TestRewardQuotient(t *testing.T) {
 	}
 	rewQuotient := rewardQuotient(0, validators)
 
-	if rewQuotient != params.BaseRewardQuotient {
+	if rewQuotient != uint64(params.BaseRewardQuotient) {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
 	}
 }

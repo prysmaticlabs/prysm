@@ -138,7 +138,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
-	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
+	slotDuration := time.Duration(b.SlotNumber()*uint64(params.SlotDuration)) * time.Second
 	validTimeThreshold := GenesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
@@ -257,10 +257,10 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 		return false
 	}
 
-	if parentSlot >= params.CycleLength-1 && attestationSlot < parentSlot-params.CycleLength+1 {
+	if parentSlot >= uint64(params.CycleLength)-1 && attestationSlot < parentSlot-uint64(params.CycleLength)+1 {
 		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestationSlot,
-			parentSlot-params.CycleLength+1)
+			parentSlot-uint64(params.CycleLength)+1)
 		return false
 	}
 

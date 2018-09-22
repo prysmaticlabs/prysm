@@ -78,7 +78,7 @@ func TestBlockValidity(t *testing.T) {
 	}
 
 	recentBlockHashes := make([][]byte, 2*params.CycleLength)
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 2*int(params.CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 	aState := NewActiveState(&pb.ActiveState{
@@ -114,7 +114,7 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 		t.Errorf("attestation slot number can't be higher than parent block's slot number")
 	}
 
-	if isAttestationSlotNumberValid(1, params.CycleLength+1) {
+	if isAttestationSlotNumberValid(1, uint64(params.CycleLength)+1) {
 		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
 	}
 

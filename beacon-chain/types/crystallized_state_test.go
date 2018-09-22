@@ -58,16 +58,16 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
 
-	if newCState.LastJustifiedSlot() != 0 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 0, newCState.LastFinalizedSlot())
+	if newCState.LastJustifiedSlot() != 63 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 0, newCState.LastJustifiedSlot())
 	}
 
-	if newCState.JustifiedStreak() != 0 {
+	if newCState.JustifiedStreak() != 64 {
 		t.Fatalf("expected justified streak to equal %d: got %d", 0, newCState.JustifiedStreak())
 	}
 
-	if newCState.LastStateRecalc() != params.CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", params.CycleLength, newCState.LastStateRecalc())
+	if newCState.LastStateRecalc() != uint64(params.CycleLength) {
+		t.Fatalf("expected last state recalc to equal %d: got %d", uint64(params.CycleLength), newCState.LastStateRecalc())
 	}
 
 	if newCState.LastFinalizedSlot() != 0 {
@@ -96,9 +96,9 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	}
 
 	totalDeposits := cState.TotalDeposits()
-	recentBlockHashes := make([][]byte, 3*params.CycleLength)
+	recentBlockHashes := make([][]byte, 3*uint64(params.CycleLength))
 	voteCache := make(map[[32]byte]*VoteCache)
-	for i := 0; i < 3*params.CycleLength; i++ {
+	for i := 0; i < 3*int(params.CycleLength); i++ {
 		blockHash := [32]byte{}
 		counter := []byte(strconv.Itoa(i))
 		copy(blockHash[:], counter)
@@ -116,14 +116,14 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
-	if cState.LastStateRecalc() != 2*params.CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 2*params.CycleLength, cState.LastStateRecalc())
+	if cState.LastStateRecalc() != 2*uint64(params.CycleLength) {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 2*uint64(params.CycleLength), cState.LastStateRecalc())
 	}
-	if cState.LastJustifiedSlot() != params.CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", params.CycleLength-1, cState.LastJustifiedSlot())
+	if cState.LastJustifiedSlot() != uint64(params.CycleLength)-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", uint64(params.CycleLength)-1, cState.LastJustifiedSlot())
 	}
-	if cState.JustifiedStreak() != params.CycleLength {
-		t.Fatalf("expected justified streak to equal %d: got %d", params.CycleLength, cState.JustifiedStreak())
+	if cState.JustifiedStreak() != 2*uint64(params.CycleLength) {
+		t.Fatalf("expected justified streak to equal %d: got %d", uint64(params.CycleLength), cState.JustifiedStreak())
 	}
 	if cState.LastFinalizedSlot() != 0 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
@@ -133,17 +133,17 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
-	if cState.LastStateRecalc() != 3*params.CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.CycleLength, cState.LastStateRecalc())
+	if cState.LastStateRecalc() != 3*uint64(params.CycleLength) {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 3*uint64(params.CycleLength), cState.LastStateRecalc())
 	}
-	if cState.LastJustifiedSlot() != 2*params.CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.CycleLength-1, cState.LastJustifiedSlot())
+	if cState.LastJustifiedSlot() != 2*uint64(params.CycleLength)-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 2*uint64(params.CycleLength)-1, cState.LastJustifiedSlot())
 	}
-	if cState.JustifiedStreak() != 2*params.CycleLength {
-		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.CycleLength, cState.JustifiedStreak())
+	if cState.JustifiedStreak() != 3*uint64(params.CycleLength) {
+		t.Fatalf("expected justified streak to equal %d: got %d", 2*uint64(params.CycleLength), cState.JustifiedStreak())
 	}
-	if cState.LastFinalizedSlot() != params.CycleLength-1 {
-		t.Fatalf("expected finalized slot to equal %d: got %d", params.CycleLength-1, cState.LastFinalizedSlot())
+	if cState.LastFinalizedSlot() != uint64(params.CycleLength)-1 {
+		t.Fatalf("expected finalized slot to equal %d: got %d", uint64(params.CycleLength)-1, cState.LastFinalizedSlot())
 	}
 }
 
@@ -160,7 +160,7 @@ func TestProcessCrosslinks(t *testing.T) {
 		{
 			Balance:      10000,
 			StartDynasty: 0,
-			EndDynasty:   params.DefaultEndDynasty,
+			EndDynasty:   uint64(params.DefaultEndDynasty),
 		},
 	}
 
@@ -232,7 +232,7 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.CrosslinkRecords = crosslinkRecords
 
-	if cState.isDynastyTransition(params.MinDynastyLength + 1) {
+	if cState.isDynastyTransition(uint64(params.MinDynastyLength) + 1) {
 		t.Errorf("Is Dynasty transtion should be false, crosslink records dynasty is higher than current slot")
 	}
 
@@ -243,7 +243,7 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.CrosslinkRecords = crosslinkRecords
 
-	if !cState.isDynastyTransition(params.MinDynastyLength + 1) {
+	if !cState.isDynastyTransition(uint64(params.MinDynastyLength) + 1) {
 		t.Errorf("Dynasty transition failed should have been true")
 	}
 }
@@ -257,7 +257,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 	// Negative test case, shuffle validators with more than MaxValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.MaxValidators+1; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: uint64(params.DefaultEndDynasty)})
 	}
 	cState.data.Validators = validators
 	if _, _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {
@@ -273,7 +273,7 @@ func TestNewDynastyRecalculations(t *testing.T) {
 
 	// Create shard committee for every slot.
 	var shardCommitteesForSlot []*pb.ShardAndCommitteeArray
-	for i := 0; i < params.CycleLength; i++ {
+	for i := 0; i < int(params.CycleLength); i++ {
 		// Only 10 shards gets crosslinked by validators this dynasty.
 		var shardCommittees []*pb.ShardAndCommittee
 		for i := 0; i < 10; i++ {

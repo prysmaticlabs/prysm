@@ -27,7 +27,7 @@ func TestGenesisActiveState_HashEquality(t *testing.T) {
 
 func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 	as := NewGenesisActiveState()
-	want, got := len(as.data.RecentBlockHashes), 2*params.CycleLength
+	want, got := len(as.data.RecentBlockHashes), 2*int(params.CycleLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
@@ -102,7 +102,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	})
 
 	recentBlockHashes := [][]byte{}
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 2*int(params.CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{0})
 	}
 
@@ -115,7 +115,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 		t.Fatalf("failed to update recent blockhashes: %v", err)
 	}
 
-	if len(updated) != 2*params.CycleLength {
+	if len(updated) != 2*int(params.CycleLength) {
 		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.CycleLength, len(updated))
 	}
 
@@ -236,7 +236,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 	}
 
 	recentBlockHashes := [][]byte{}
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 2*int(params.CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{0})
 	}
 
@@ -263,7 +263,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
 	}
 
-	if len(aState.RecentBlockHashes()) != 2*params.CycleLength {
+	if len(aState.RecentBlockHashes()) != 2*int(params.CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 }
