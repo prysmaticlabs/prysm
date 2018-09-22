@@ -1,9 +1,10 @@
 package casper
 
 import (
+	"math"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 )
 
@@ -11,22 +12,91 @@ var log = logrus.WithField("prefix", "casper")
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
-func CalculateRewards(attestations []*pb.AggregatedAttestation, validators []*pb.ValidatorRecord, dynasty uint64, totalDeposit uint64) ([]*pb.ValidatorRecord, error) {
+// FFG Rewards scheme rewards validator who have voted on blocks, and penalises those validators
+// who are offline. The penalties are more severe the longer they are offline.
+func CalculateRewards(
+	slot uint64,
+	voterIndices []uint32,
+	validators []*pb.ValidatorRecord,
+	dynasty uint64,
+	totalParticipatedDeposit uint64,
+	timeSinceFinality uint64) []*pb.ValidatorRecord {
+	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
-	attesterDeposits := GetAttestersTotalDeposit(attestations)
+	rewardQuotient := uint64(rewardQuotient(dynasty, validators))
+	penaltyQuotient := uint64(quadraticPenaltyQuotient())
+	depositFactor := (totalParticipatedDeposit - totalDeposit) / totalDeposit
 
-	attesterFactor := attesterDeposits * 3
-	totalFactor := uint64(totalDeposit * 2)
-	if attesterFactor >= totalFactor {
-		log.Debug("Applying rewards and penalties for the validators from last cycle")
-		for i, attesterIndex := range activeValidators {
-			voted := shared.CheckBit(attestations[len(attestations)-1].AttesterBitfield, int(attesterIndex))
-			if voted {
-				validators[i].Balance += params.AttesterReward
-			} else {
-				validators[i].Balance -= params.AttesterReward
+	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
+	if timeSinceFinality <= 2*(params.CycleLength) {
+		for _, validatorIndex := range activeValidators {
+			var voted bool
+
+			for _, voterIndex := range voterIndices {
+				if voterIndex == validatorIndex {
+					voted = true
+					balance := validators[validatorIndex].GetBalance()
+					newbalance := uint64(balance + (balance/rewardQuotient)*depositFactor)
+					validators[validatorIndex].Balance = newbalance
+					break
+				}
+			}
+
+			if !voted {
+				newBalance := validators[validatorIndex].GetBalance()
+				newBalance -= newBalance / rewardQuotient
+				validators[validatorIndex].Balance = newBalance
 			}
 		}
+
+	} else {
+		for _, validatorIndex := range activeValidators {
+			var voted bool
+
+			for _, voterIndex := range voterIndices {
+				if voterIndex == validatorIndex {
+					voted = true
+					break
+				}
+			}
+
+			if !voted {
+				newBalance := validators[validatorIndex].GetBalance()
+				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/penaltyQuotient
+				validators[validatorIndex].Balance = newBalance
+			}
+		}
+
 	}
-	return validators, nil
+
+	return validators
+}
+
+// rewardQuotient returns the reward quotient for validators which will be used to
+// reward validators for voting on blocks, or penalise them for being offline.
+func rewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
+	return params.BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
+}
+
+// SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
+// rate is targeted for a compunded annual rate of 3.88%.
+func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
+	rewardQuotient := float64(rewardQuotient(dynasty, validators))
+	return 1 / rewardQuotient
+}
+
+// quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
+// validators.
+func quadraticPenaltyQuotient() uint64 {
+	dropTimeFactor := float64(params.SqrtDropTime / params.SlotDuration)
+	return uint64(math.Pow(dropTimeFactor, 0.5))
+}
+
+// QuadraticPenalty returns the penalty that will be applied to an offline validator
+// based on the number of slots that they are offline.
+func QuadraticPenalty(numberOfSlots uint64) uint64 {
+	slotFactor := (numberOfSlots * numberOfSlots) / 2
+	penaltyQuotient := quadraticPenaltyQuotient()
+	return slotFactor / uint64(penaltyQuotient)
 }

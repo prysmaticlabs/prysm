@@ -35,8 +35,23 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
 
+	var attesterBitfield []byte
+	for len(attesterBitfield)*8 < params.BootstrappedValidatorsCount {
+		attesterBitfield = append(attesterBitfield, byte(0))
+	}
+
 	aState := NewGenesisActiveState()
-	block := NewBlock(nil)
+	block := NewBlock(&pb.BeaconBlock{
+		ParentHash:            []byte{},
+		SlotNumber:            0,
+		ActiveStateHash:       []byte{},
+		CrystallizedStateHash: []byte{},
+		Attestations: []*pb.AggregatedAttestation{{
+			Slot:             0,
+			AttesterBitfield: attesterBitfield,
+			ShardId:          0,
+		}},
+	})
 
 	newCState, err := cState.NewStateRecalculations(aState, block)
 	if err != nil {
@@ -74,10 +89,16 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
 
+	cState.data.Validators = []*pb.ValidatorRecord{
+		{Balance: 2e18,
+			StartDynasty: 0,
+			EndDynasty:   2},
+	}
+
 	totalDeposits := cState.TotalDeposits()
-	recentBlockHashes := make([][]byte, 2*params.CycleLength)
+	recentBlockHashes := make([][]byte, 3*params.CycleLength)
 	voteCache := make(map[[32]byte]*VoteCache)
-	for i := 0; i < 2*params.CycleLength; i++ {
+	for i := 0; i < 3*params.CycleLength; i++ {
 		blockHash := [32]byte{}
 		counter := []byte(strconv.Itoa(i))
 		copy(blockHash[:], counter)

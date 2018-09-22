@@ -3,6 +3,7 @@ package types
 import (
 	"testing"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
@@ -12,11 +13,20 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
+type mockChainService struct{}
+
+func (f *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
+	return true, nil
+}
+
 func TestGenesisBlock(t *testing.T) {
-	b1, err1 := NewGenesisBlock()
-	b2, err2 := NewGenesisBlock()
-	if err1 != nil || err2 != nil {
-		t.Fatalf("failed to instantiate genesis block: %v %v", err1, err2)
+	b1 := NewGenesisBlock()
+	b2 := NewGenesisBlock()
+
+	// We ensure that initializing a proto timestamp from
+	// genesis time will lead to no error.
+	if _, err := ptypes.TimestampProto(GenesisTime); err != nil {
+		t.Errorf("could not create proto timestamp, expected no error: %v", err)
 	}
 
 	h1, err1 := b1.Hash()
@@ -62,6 +72,7 @@ func TestGenesisBlock(t *testing.T) {
 
 func TestBlockValidity(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState()
+
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
@@ -87,11 +98,13 @@ func TestBlockValidity(t *testing.T) {
 	})
 
 	parentSlot := uint64(1)
-	if !b.isAttestationValid(0, aState, cState, parentSlot) {
+	chainService := &mockChainService{}
+
+	if !b.isAttestationValid(0, chainService, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(aState, cState, parentSlot) {
+	if !b.IsValid(chainService, aState, cState, parentSlot) {
 		t.Fatalf("failed block validation")
 	}
 }
