@@ -385,8 +385,8 @@ func TestRunningChainService(t *testing.T) {
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
 	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
 
-	slotsStart := crystallized.LastStateRecalc() - uint64(params.CycleLength)
-	slotIndex := (currentSlot - slotsStart) % uint64(params.CycleLength)
+	slotsStart := crystallized.LastStateRecalc() - params.CycleLength
+	slotIndex := (currentSlot - slotsStart) % params.CycleLength
 	shardID := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].ShardId
 
 	block := types.NewBlock(&pb.BeaconBlock{

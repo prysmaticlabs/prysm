@@ -227,7 +227,7 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) [][32]byte {
 	var signedParentHashes [][32]byte
 	start := block.SlotNumber() - attestation.Slot
-	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + uint64(params.CycleLength)
+	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
 
 	recentBlockHashes := a.RecentBlockHashes()
 	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)

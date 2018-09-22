@@ -257,10 +257,10 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 		return false
 	}
 
-	if parentSlot >= uint64(params.CycleLength)-1 && attestationSlot < parentSlot-uint64(params.CycleLength)+1 {
+	if parentSlot >= params.CycleLength-1 && attestationSlot < parentSlot-params.CycleLength+1 {
 		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestationSlot,
-			parentSlot-uint64(params.CycleLength)+1)
+			parentSlot-params.CycleLength+1)
 		return false
 	}
 

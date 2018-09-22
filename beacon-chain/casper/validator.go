@@ -63,14 +63,14 @@ func SampleAttestersAndProposers(seed common.Hash, validators []*pb.ValidatorRec
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	if lastStateRecalc < uint64(params.CycleLength) {
+	if lastStateRecalc < params.CycleLength {
 		lastStateRecalc = 0
 	} else {
-		lastStateRecalc = lastStateRecalc - uint64(params.CycleLength)
+		lastStateRecalc = lastStateRecalc - params.CycleLength
 	}
 
 	lowerBound := lastStateRecalc
-	upperBound := lastStateRecalc + uint64(params.CycleLength)*2
+	upperBound := lastStateRecalc + params.CycleLength*2
 	if !(slot >= lowerBound && slot < upperBound) {
 		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
 			slot,
