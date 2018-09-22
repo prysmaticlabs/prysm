@@ -30,7 +30,7 @@ func initialValidators() []*pb.ValidatorRecord {
 	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{
 			StartDynasty:      0,
-			EndDynasty:        uint64(params.DefaultEndDynasty),
+			EndDynasty:        params.DefaultEndDynasty,
 			Balance:           params.DefaultBalance.Uint64(),
 			WithdrawalAddress: []byte{},
 			PublicKey:         0,
@@ -191,7 +191,7 @@ func (c *CrystallizedState) isDynastyTransition(slotNumber uint64) bool {
 	if c.LastFinalizedSlot() <= c.DynastyStart() {
 		return false
 	}
-	if slotNumber-c.DynastyStart() < uint64(params.MinDynastyLength) {
+	if slotNumber-c.DynastyStart() < params.MinDynastyLength {
 		return false
 	}
 
@@ -246,7 +246,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
 
-	if int(lastStateRecalc)-int(params.CycleLength) <= 0 {
+	if lastStateRecalc < params.CycleLength {
 		lastStateRecalcCycleBack = 0
 	} else {
 		lastStateRecalcCycleBack = lastStateRecalc - params.CycleLength

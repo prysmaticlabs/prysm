@@ -130,7 +130,7 @@ func TestSmallSampleValidators(t *testing.T) {
 }
 
 func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
-	numValidators := int(int(params.CycleLength*params.MinCommiteeSize) / 4)
+	numValidators := int(params.CycleLength * params.MinCommiteeSize / 4)
 
 	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {

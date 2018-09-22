@@ -160,7 +160,7 @@ func TestProcessCrosslinks(t *testing.T) {
 		{
 			Balance:      10000,
 			StartDynasty: 0,
-			EndDynasty:   uint64(params.DefaultEndDynasty),
+			EndDynasty:   params.DefaultEndDynasty,
 		},
 	}
 
@@ -232,7 +232,7 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.CrosslinkRecords = crosslinkRecords
 
-	if cState.isDynastyTransition(uint64(params.MinDynastyLength) + 1) {
+	if cState.isDynastyTransition(params.MinDynastyLength + 1) {
 		t.Errorf("Is Dynasty transtion should be false, crosslink records dynasty is higher than current slot")
 	}
 
@@ -243,7 +243,7 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.CrosslinkRecords = crosslinkRecords
 
-	if !cState.isDynastyTransition(uint64(params.MinDynastyLength) + 1) {
+	if !cState.isDynastyTransition(params.MinDynastyLength + 1) {
 		t.Errorf("Dynasty transition failed should have been true")
 	}
 }
@@ -257,7 +257,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 	// Negative test case, shuffle validators with more than MaxValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.MaxValidators+1; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: uint64(params.DefaultEndDynasty)})
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
 	}
 	cState.data.Validators = validators
 	if _, _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {

@@ -138,7 +138,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
-	slotDuration := time.Duration(b.SlotNumber()*uint64(params.SlotDuration)) * time.Second
+	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
 	validTimeThreshold := GenesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }

@@ -15,13 +15,13 @@ var (
 	// MaxValidators in the protocol.
 	MaxValidators = 4194304
 	// SlotDuration in seconds.
-	SlotDuration = 8
+	SlotDuration = uint64(8)
 	// Cofactor is used cutoff algorithm to select slot and shard cutoffs.
 	Cofactor = 19
 	// MinCommiteeSize is the minimal number of validator needs to be in a committee.
 	MinCommiteeSize = uint64(128)
 	// DefaultEndDynasty is the upper bound of dynasty. We use it to track queued and exited validators.
-	DefaultEndDynasty = 999999999999999999
+	DefaultEndDynasty = uint64(999999999999999999)
 	// BootstrappedValidatorsCount is the number of validators we seed the first crystallized
 	// state with. This number has yet to be decided by research and is arbitrary for now.
 	BootstrappedValidatorsCount = 1000
@@ -34,5 +34,5 @@ var (
 	BaseRewardQuotient = 32768
 	// SqrtDropTime is a constant set to reflect the amount of time it will take for the quadratic leak to
 	// cut nonparticipating validators’ deposits by 39.4%.
-	SqrtDropTime = 1048576
+	SqrtDropTime = uint64(1048576)
 )
