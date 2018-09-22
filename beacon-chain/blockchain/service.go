@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -79,7 +78,7 @@ func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
 	log.Infof("Starting service")
-	go c.updateHead(time.NewTicker(time.Second * time.Duration(rand.Int31n(int32(params.SlotDuration)))).C)
+	go c.updateHead(time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C)
 	go c.blockProcessing()
 }
 
