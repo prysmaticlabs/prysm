@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # Continuous integration script to check that TODOs are in the correct format
 OUTPUT="$(grep -PrinH '(?<!context\.)todo(?!\(#{0,1}\d+\))' --include \*.go *)";
