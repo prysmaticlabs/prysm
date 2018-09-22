@@ -58,6 +58,8 @@ message AttestResponse {
     bytes attestation_hash = 1;
 }
 
+// Request assignment updates for either all validators or a subset of validators 
+// defined by their public keys.
 message ValidatorAssignmentRequest {
     bool all_validators = 1;
     repeated PublicKey public_keys = 2;
@@ -66,6 +68,7 @@ message ValidatorAssignmentRequest {
 message ValidatorAssignmentResponse {
     repeated Assignment assignments = 1;
     uint64 slot = 2;
+
     message Assignment {
       PublicKey public_key = 1;
       uint64 shard_id = 2;
