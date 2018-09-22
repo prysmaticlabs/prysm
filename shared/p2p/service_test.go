@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
 	floodsub "github.com/libp2p/go-floodsub"
@@ -17,13 +18,18 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/shared"
+	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+type testService interface {
+	Start()
+	Stop() error
+}
+
 // Ensure that server implements service.
-var _ = shared.Service(&Server{})
+var _ = testService(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -39,13 +45,13 @@ func TestBroadcast(t *testing.T) {
 	msg := &shardpb.CollationBodyRequest{}
 	s.Broadcast(msg)
 
-	// TODO: test that topic was published
+	// TODO(543): test that topic was published
 }
 
 func TestEmitFailsNonProtobuf(t *testing.T) {
 	s, _ := NewServer()
 	hook := logTest.NewGlobal()
-	s.emit(nil /*feed*/, nil /*msg*/, reflect.TypeOf(""))
+	s.emit(Message{}, &event.Feed{}, nil /*msg*/, reflect.TypeOf(""))
 	want := "Received message is not a protobuf message: string"
 	if hook.LastEntry().Message != want {
 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
@@ -61,10 +67,36 @@ func TestEmitFailsUnmarshal(t *testing.T) {
 		},
 	}
 
-	s.emit(nil /*feed*/, msg, reflect.TypeOf(testpb.TestMessage{}))
+	s.emit(Message{}, &event.Feed{}, msg, reflect.TypeOf(testpb.TestMessage{}))
 	want := "Failed to decode data:"
 	if !strings.Contains(hook.LastEntry().Message, want) {
 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+	}
+}
+
+func TestEmit(t *testing.T) {
+	s, _ := NewServer()
+	p := &testpb.TestMessage{Foo: "bar"}
+	d, err := proto.Marshal(p)
+	if err != nil {
+		t.Fatalf("failed to marshal pb: %v", err)
+	}
+	msg := &floodsub.Message{
+		&floodsubPb.Message{
+			Data: d,
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	feed := p2pmock.NewMockFeed(ctrl)
+	var got Message
+	feed.EXPECT().Send(gomock.AssignableToTypeOf(Message{})).Times(1).Do(func(m Message) {
+		got = m
+	})
+	s.emit(Message{}, feed, msg, messageType(&testpb.TestMessage{}))
+	if !proto.Equal(p, got.Data) {
+		t.Error("feed was not called with the correct data")
 	}
 }
 
@@ -82,7 +114,7 @@ func TestSubscribeToTopic(t *testing.T) {
 		ctx:          ctx,
 		gsub:         gsub,
 		host:         h,
-		feeds:        make(map[reflect.Type]*event.Feed),
+		feeds:        make(map[reflect.Type]Feed),
 		mutex:        &sync.Mutex{},
 		topicMapping: make(map[reflect.Type]string),
 	}
@@ -109,7 +141,7 @@ func TestSubscribe(t *testing.T) {
 		ctx:          ctx,
 		gsub:         gsub,
 		host:         h,
-		feeds:        make(map[reflect.Type]*event.Feed),
+		feeds:        make(map[reflect.Type]Feed),
 		mutex:        &sync.Mutex{},
 		topicMapping: make(map[reflect.Type]string),
 	}
@@ -165,6 +197,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 }
 
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
+	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer()
 	if err != nil {
@@ -205,6 +238,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 }
 
 func TestRegisterTopic_WithAdapters(t *testing.T) {
+	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer()
 	if err != nil {
@@ -215,9 +249,9 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 
 	i := 0
 	var testAdapter Adapter = func(next Handler) Handler {
-		return func(ctx context.Context, msg Message) {
+		return func(msg Message) {
 			i++
-			next(ctx, msg)
+			next(msg)
 		}
 	}
 

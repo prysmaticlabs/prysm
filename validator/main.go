@@ -65,6 +65,9 @@ VERSION:
 		types.BeaconRPCProviderFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
+		cmd.EnableTracingFlag,
+		cmd.TracingEndpointFlag,
+		cmd.TraceSampleFractionFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
@@ -79,7 +82,7 @@ VERSION:
 	}
 
 	app.After = func(ctx *cli.Context) error {
-		debug.Exit()
+		debug.Exit(ctx)
 		return nil
 	}
 

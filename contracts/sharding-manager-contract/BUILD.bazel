@@ -27,6 +27,7 @@ go_test(
     srcs = ["sharding_manager_test.go"],
     embed = [":go_default_library"],
     race = "off",
+    tags = ["manual"],
     deps = [
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",

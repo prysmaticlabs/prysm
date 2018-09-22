@@ -30,7 +30,7 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
 	// split the validator indices by slot.
-	validatorsBySlot := utils.SplitIndices(shuffledValidators, params.CycleLength)
+	validatorsBySlot := utils.SplitIndices(shuffledValidators, int(params.CycleLength))
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
@@ -58,14 +58,14 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // If numActiveValidators < CycleLength * MinCommitteeSize, committees span across multiple slots
 // to attest the same shard.
 func getCommitteeParams(numValidators int) (committeesPerSlot, slotsPerCommittee int) {
-	if numValidators >= params.CycleLength*params.MinCommiteeSize {
-		committeesPerSlot := numValidators/(params.CycleLength*params.MinCommiteeSize*2) + 1
+	if numValidators >= int(params.CycleLength*params.MinCommiteeSize) {
+		committeesPerSlot := numValidators/int(params.CycleLength*params.MinCommiteeSize*2) + 1
 		return committeesPerSlot, 1
 	}
 
 	slotsPerCommittee = 1
-	for numValidators*slotsPerCommittee < params.MinCommiteeSize*params.CycleLength &&
-		slotsPerCommittee < params.CycleLength {
+	for numValidators*slotsPerCommittee < int(params.MinCommiteeSize*params.CycleLength) &&
+		slotsPerCommittee < int(params.CycleLength) {
 		slotsPerCommittee *= 2
 	}
 

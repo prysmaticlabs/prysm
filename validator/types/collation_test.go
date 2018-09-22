@@ -31,9 +31,7 @@ func TestCollation_Transactions(t *testing.T) {
 	}
 }
 
-//TODO: Add test for converting *gethTypes.Transaction into raw blobs
-
-//Tests that Transactions can be serialised
+// Tests that Transactions can be serialised
 func TestSerialize_Deserialize(t *testing.T) {
 
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})

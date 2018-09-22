@@ -9,7 +9,7 @@ import (
 )
 
 func TestAttestation(t *testing.T) {
-	data := &pb.AttestationRecord{
+	data := &pb.AggregatedAttestation{
 		Slot:                0,
 		ShardId:             0,
 		JustifiedSlot:       0,
@@ -51,5 +51,8 @@ func TestAttestation(t *testing.T) {
 	}
 	if !bytes.Equal(attestation.ShardBlockHash(), []byte{0}) {
 		t.Errorf("mismatched shard block hash")
+	}
+	if err := attestation.VerifyProposerAttestation([32]byte{}, 0); err != nil {
+		t.Errorf("verify attestation failed: %v", err)
 	}
 }

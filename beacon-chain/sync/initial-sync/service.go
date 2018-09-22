@@ -18,11 +18,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "initialsync")
+var log = logrus.WithField("prefix", "initial-sync")
 
 // Config defines the configurable properties of InitialSync.
 //
@@ -61,7 +62,7 @@ type SyncService interface {
 type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
-	p2p                          types.P2P
+	p2p                          shared.P2P
 	chainService                 ChainService
 	syncService                  SyncService
 	blockBuf                     chan p2p.Message
@@ -75,7 +76,7 @@ type InitialSync struct {
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
-	beaconp2p types.P2P,
+	beaconp2p shared.P2P,
 	chainService ChainService,
 	syncService SyncService,
 ) *InitialSync {
@@ -105,7 +106,7 @@ func (s *InitialSync) Start() {
 	}
 
 	if stored {
-		// TODO: Bail out of the sync service if the chain is only partially synced.
+		// TODO(555): Bail out of the sync service if the chain is only partially synced.
 		log.Info("Chain state detected, exiting initial sync")
 		return
 	}
@@ -147,17 +148,12 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case <-delaychan:
 			if highestObservedSlot == s.currentSlotNumber {
 				log.Info("Exiting initial sync and starting normal sync")
-				// TODO: Resume sync after completion of initial sync.
+				// TODO(#426): Resume sync after completion of initial sync.
 				// See comment in Sync service's Start function for explanation.
 				return
 			}
 		case msg := <-s.blockBuf:
-			data, ok := msg.Data.(*pb.BeaconBlockResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.BeaconBlockResponse)
 
 			if data.Block.GetSlotNumber() > highestObservedSlot {
 				highestObservedSlot = data.Block.GetSlotNumber()
@@ -186,12 +182,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 			s.requestNextBlock()
 		case msg := <-s.crystallizedStateBuf:
-			data, ok := msg.Data.(*pb.CrystallizedStateResponse)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed crystallized state p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.CrystallizedStateResponse)
 
 			if s.initialCrystallizedStateHash == [32]byte{} {
 				continue

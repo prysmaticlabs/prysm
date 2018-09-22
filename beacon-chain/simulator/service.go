@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,11 +24,11 @@ var log = logrus.WithField("prefix", "simulator")
 type Simulator struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	p2p                    types.P2P
+	p2p                    shared.P2P
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
 	beaconDB               ethdb.Database
-	validator              bool
+	devMode                bool
 	delay                  time.Duration
 	slotNum                uint64
 	broadcastedBlocks      map[[32]byte]*types.Block
@@ -39,11 +40,11 @@ type Simulator struct {
 type Config struct {
 	Delay           time.Duration
 	BlockRequestBuf int
-	P2P             types.P2P
-	Validator       bool
+	P2P             shared.P2P
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
 	BeaconDB        ethdb.Database
+	DevMode         bool
 }
 
 // DefaultConfig options for the simulator.
@@ -65,7 +66,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		chainService:           cfg.ChainService,
 		beaconDB:               cfg.BeaconDB,
 		delay:                  cfg.Delay,
-		validator:              cfg.Validator,
+		devMode:                cfg.DevMode,
 		slotNum:                1,
 		broadcastedBlocks:      make(map[[32]byte]*types.Block),
 		broadcastedBlockHashes: [][32]byte{},
@@ -164,10 +165,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
 
 			var powChainRef []byte
-			if sim.validator {
+			if !sim.devMode {
 				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
 			} else {
-				powChainRef = []byte{'N', '/', 'A'}
+				powChainRef = []byte("stub")
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
@@ -197,12 +198,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, h)
 
 		case msg := <-sim.blockRequestChan:
-			data, ok := msg.Data.(*pb.BeaconBlockRequest)
-			// TODO: Handle this at p2p layer.
-			if !ok {
-				log.Error("Received malformed beacon block request p2p message")
-				continue
-			}
+			data := msg.Data.(*pb.BeaconBlockRequest)
 			var h [32]byte
 			copy(h[:], data.Hash[:32])
 
@@ -214,7 +210,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto()}
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: nil}
 			sim.p2p.Send(res, msg.Peer)
 		}
 	}
