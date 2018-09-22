@@ -91,7 +91,7 @@ func (ss *Service) Start() {
 	}
 
 	if !stored {
-		// TODO: Resume sync after completion of initial sync.
+		// TODO(#426): Resume sync after completion of initial sync.
 		// Currently, `Simulator` only supports sync from genesis block, therefore
 		// new nodes with a fresh database must skip InitialSync and immediately run the Sync goroutine.
 		log.Info("Empty chain state, but continue sync")
@@ -226,7 +226,6 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	defer blockRequestSpan.End()
 
 	request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
-	// TODO: Handle this at p2p layer.
 	if !ok {
 		log.Error("Received malformed beacon block request p2p message")
 		return
