@@ -233,7 +233,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			var stateTransitioned bool
 
 			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
-				cState, err = cState.NewStateRecalculations(aState, block)
+				cState, aState, err = cState.NewStateRecalculations(aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
 					continue
@@ -312,7 +312,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			// Process block as a validator if beacon node has registered, else process block as an observer.
+			// Check if we have received the parent block.
 			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Could not check existence of parent: %v", err)

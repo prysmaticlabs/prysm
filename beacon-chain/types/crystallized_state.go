@@ -230,7 +230,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, *ActiveState, error) {
 	var blockVoteBalance uint64
 	var rewardedValidators []*pb.ValidatorRecord
 	var lastStateRecalcCycleBack uint64
@@ -291,7 +291,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	newCrossLinkRecords, err := c.processCrosslinks(aState.PendingAttestations(), lastStateRecalc+params.CycleLength)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Get all active validators and calculate total balance for next cycle.
@@ -308,9 +308,12 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		dynastyStart = lastStateRecalc
 		currentDynasty, ShardAndCommitteesForSlots, err = c.newDynastyRecalculations(block.ParentHash())
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
+
+	// Clean up old attestations.
+	newPendingAttestations := aState.cleanUpAttestations(lastStateRecalc)
 
 	// Construct new crystallized state after cycle and dynasty transition.
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
@@ -326,7 +329,13 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		CurrentDynasty:             currentDynasty,
 	})
 
-	return newCrystallizedState, nil
+	// Construct new active state after clean up pending attestations.
+	newActiveState := NewActiveState(&pb.ActiveState{
+		PendingAttestations: newPendingAttestations,
+		RecentBlockHashes: aState.data.RecentBlockHashes,
+	}, aState.blockVoteCache)
+
+	return newCrystallizedState, newActiveState, nil
 }
 
 // newDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.

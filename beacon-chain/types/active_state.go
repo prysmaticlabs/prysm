@@ -91,16 +91,22 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
 	return a.blockVoteCache
 }
 
-func (a *ActiveState) calculateNewAttestations(add []*pb.AggregatedAttestation, lastStateRecalc uint64) []*pb.AggregatedAttestation {
+// appendNewAttestations appends new attestations from block in to active state.
+// this is called during cycle transition.
+func (a *ActiveState) appendNewAttestations(add []*pb.AggregatedAttestation) []*pb.AggregatedAttestation {
 	existing := a.data.PendingAttestations
-	update := []*pb.AggregatedAttestation{}
+	return append(existing, add...)
+}
+
+// cleanUpAttestations removes attestations older than last state recalc slot.
+func (a *ActiveState) cleanUpAttestations(lastStateRecalc uint64) []*pb.AggregatedAttestation {
+	existing := a.data.PendingAttestations
+	var update []*pb.AggregatedAttestation
 	for i := 0; i < len(existing); i++ {
 		if existing[i].GetSlot() >= lastStateRecalc {
 			update = append(update, existing[i])
 		}
 	}
-	update = append(update, add...)
-
 	return update
 }
 
@@ -112,7 +118,7 @@ func (a *ActiveState) calculateNewAttestations(add []*pb.AggregatedAttestation, 
 //     first by the number of slots that have occurred between the block and
 //     its parent).
 //
-//   2) fill the array with the block hash for all values between the parent
+//   2) fill the array with the parent block hash for all values between the parent
 //     slot and the block slot.
 //
 // Computation of the active state hash depends on this feature that slots with
@@ -129,16 +135,11 @@ func (a *ActiveState) calculateNewAttestations(add []*pb.AggregatedAttestation, 
 //
 // This method does not mutate the active state.
 func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
-	hash, err := block.Hash()
-	if err != nil {
-		return nil, err
-	}
-
 	distance := block.SlotNumber() - parentSlot
 	existing := a.data.RecentBlockHashes
 	update := existing[distance:]
 	for len(update) < 2*int(params.CycleLength) {
-		update = append(update, hash[:])
+		update = append(update, block.data.ParentHash)
 	}
 
 	return update, nil
@@ -203,9 +204,9 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
 	// Derive the new set of pending attestations.
-	newPendingAttestations := a.calculateNewAttestations(block.data.Attestations, cState.LastStateRecalc())
+	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
 
-	// Derive the new value for RecentBlockHashes.
+	// Derive the new set of recent block hashes.
 	newRecentBlockHashes, err := a.calculateNewBlockHashes(block, parentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
