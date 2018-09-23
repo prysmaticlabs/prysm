@@ -238,7 +238,7 @@ func (b *BeaconNode) registerSyncService() error {
 
 	cfg := rbcsync.DefaultConfig()
 	cfg.ChainService = chainService
-	cfg.Service = attestationService
+	cfg.AttestService = attestationService
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg, p2pService)
 	return b.services.RegisterService(syncService)

@@ -82,14 +82,24 @@ func (ms *mockChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*type
 	return types.NewBlock(&pb.BeaconBlock{SlotNumber: slotnumber}), nil
 }
 
-type mockService struct{}
+type faultyMockAttestService struct{}
 
-func (ms *mockService) IncomingAttestationFeed() *event.Feed {
+func (ms *faultyMockAttestService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	return true, nil
+func (ms *faultyMockAttestService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
+	return false, errors.New("Can not check for attestation in DB")
+}
+
+type mockAttestService struct{}
+
+func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockAttestService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
+	return false, nil
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -130,7 +140,7 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, Service: &mockService{}}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, AttestService: &mockAttestService{}}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
@@ -172,7 +182,7 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, Service: &mockService{}}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, AttestService: &mockAttestService{}}
 	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
 
 	exitRoutine := make(chan bool)
@@ -332,6 +342,68 @@ func TestBlockRequestBySlot(t *testing.T) {
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
 	hook.Reset()
+}
+
+func TestFaultyReceiveAttestationService(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ms := &mockChainService{}
+	as := &faultyMockAttestService{}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms, AttestService: as}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.AggregatedAttestation{
+		Slot:             0,
+		AttesterBitfield: []byte{99},
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.attestationBuf <- msg1
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Can not check for attestation in DB")
+}
+
+func TestReceiveAttestation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ms := &mockChainService{}
+	as := &mockAttestService{}
+	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms, AttestService: as}
+	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.AggregatedAttestation{
+		Slot:             0,
+		AttesterBitfield: []byte{99},
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.attestationBuf <- msg1
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
 }
 
 type mockEmptyChainService struct {
