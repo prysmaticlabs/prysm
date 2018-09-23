@@ -1,6 +1,7 @@
 package casper
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -125,11 +126,11 @@ func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastSta
 }
 
 // ValidatorIndex returns the index of the validator given an input public key.
-func ValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
+func ValidatorIndex(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 
 	for _, index := range activeValidators {
-		if validators[index].PublicKey == pubKey {
+		if bytes.Equal(validators[index].PublicKey, pubKey) {
 			return index, nil
 		}
 	}
@@ -138,7 +139,7 @@ func ValidatorIndex(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRec
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
-func ValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+func ValidatorShardID(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
 	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
 		return 0, err
@@ -154,11 +155,11 @@ func ValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorR
 		}
 	}
 
-	return 0, fmt.Errorf("can't find shard ID for validator with public key %d", pubKey)
+	return 0, fmt.Errorf("can't find shard ID for validator with public key %x", pubKey)
 }
 
 // ValidatorSlot returns the slot number of when the validator gets to attest or proposer.
-func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+func ValidatorSlot(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
 	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
 		return 0, err

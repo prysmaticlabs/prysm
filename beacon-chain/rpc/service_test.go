@@ -358,7 +358,7 @@ func TestValidatorSlot(t *testing.T) {
 		ChainService: mockChain,
 	})
 	req := &pb.PublicKey{
-		PublicKey: 0,
+		PublicKey: []byte{},
 	}
 	if _, err := rpcService.ValidatorSlot(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator slot: %v", err)
@@ -372,7 +372,7 @@ func TestValidatorIndex(t *testing.T) {
 		ChainService: mockChain,
 	})
 	req := &pb.PublicKey{
-		PublicKey: 0,
+		PublicKey: []byte{},
 	}
 	if _, err := rpcService.ValidatorIndex(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator index: %v", err)
@@ -386,7 +386,7 @@ func TestValidatorShardID(t *testing.T) {
 		ChainService: mockChain,
 	})
 	req := &pb.PublicKey{
-		PublicKey: 0,
+		PublicKey: []byte{},
 	}
 	if _, err := rpcService.ValidatorShardID(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator shard ID: %v", err)

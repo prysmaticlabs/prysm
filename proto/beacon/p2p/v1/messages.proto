@@ -98,7 +98,7 @@ message ActiveState {
 }
 
 message ValidatorRecord {
-  uint64 public_key = 1;
+  bytes public_key = 1;
   uint64 withdrawal_shard = 2;
   bytes withdrawal_address = 3;
   bytes randao_commitment = 4;
