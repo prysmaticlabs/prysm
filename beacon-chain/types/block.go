@@ -19,8 +19,6 @@ import (
 
 var log = logrus.WithField("prefix", "types")
 
-// GenesisTime used by the protocol.
-var GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 var clock utils.Clock = &utils.RealClock{}
 
 // Block defines a beacon chain core primitive.
@@ -55,7 +53,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 func NewGenesisBlock() *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 	return gb
@@ -139,7 +137,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
-	validTimeThreshold := GenesisTime.Add(slotDuration)
+	validTimeThreshold := params.GenesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 
