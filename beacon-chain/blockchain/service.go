@@ -54,7 +54,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
-		genesisTimestamp:               utils.GenesisTime,
+		genesisTimestamp:               params.GenesisTime,
 		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,

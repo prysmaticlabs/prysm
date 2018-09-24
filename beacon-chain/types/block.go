@@ -53,7 +53,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 func NewGenesisBlock() *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(utils.GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 	return gb
@@ -137,7 +137,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
-	validTimeThreshold := utils.GenesisTime.Add(slotDuration)
+	validTimeThreshold := params.GenesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 

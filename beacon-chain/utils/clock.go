@@ -3,10 +3,9 @@ package utils
 import (
 	"math"
 	"time"
-)
 
-// GenesisTime used by the protocol.
-var GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+)
 
 // Clock represents a time providing interface that can be mocked for testing.
 type Clock interface {
@@ -23,7 +22,7 @@ func (RealClock) Now() time.Time {
 
 // CurrentBeaconSlot based on the seconds since genesis.
 func CurrentBeaconSlot() uint64 {
-	secondsSinceGenesis := time.Since(GenesisTime).Seconds()
+	secondsSinceGenesis := time.Since(params.GenesisTime).Seconds()
 	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }
 
