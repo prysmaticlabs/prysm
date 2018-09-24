@@ -25,3 +25,13 @@ func CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
 	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }
+
+// WaitUntilTimestamp sleeps until a specific time is reached after
+// a certain duratio. For example, if the genesis block
+// was at 12:00:00PM and the current time is 12:00:03PM,
+// we want the next slot to tick at 12:00:08PM so we can use
+// this helper method to achieve that purpose.
+func WaitUntilTimestamp(duration time.Duration) {
+	d := time.Until(time.Now().Add(duration).Truncate(duration))
+	time.Sleep(d)
+}

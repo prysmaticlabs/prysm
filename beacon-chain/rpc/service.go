@@ -56,21 +56,22 @@ type powChainService interface {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	fetcher             canonicalFetcher
-	chainService        chainService
-	powChainService     powChainService
-	attestationService  attestationService
-	port                string
-	listener            net.Listener
-	withCert            string
-	withKey             string
-	grpcServer          *grpc.Server
-	canonicalBlockChan  chan *types.Block
-	canonicalStateChan  chan *types.CrystallizedState
-	incomingAttestation chan *pbp2p.AggregatedAttestation
-	devMode             bool
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	fetcher               canonicalFetcher
+	chainService          chainService
+	powChainService       powChainService
+	attestationService    attestationService
+	port                  string
+	listener              net.Listener
+	withCert              string
+	withKey               string
+	grpcServer            *grpc.Server
+	canonicalBlockChan    chan *types.Block
+	canonicalStateChan    chan *types.CrystallizedState
+	incomingAttestation   chan *pbp2p.AggregatedAttestation
+	devMode               bool
+	slotAlignmentDuration uint64
 }
 
 // Config options for the beacon node RPC server.
@@ -91,19 +92,20 @@ type Config struct {
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		fetcher:             cfg.CanonicalFetcher,
-		chainService:        cfg.ChainService,
-		powChainService:     cfg.POWChainService,
-		attestationService:  cfg.AttestationService,
-		port:                cfg.Port,
-		withCert:            cfg.CertFlag,
-		withKey:             cfg.KeyFlag,
-		canonicalBlockChan:  make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan:  make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
-		incomingAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
-		devMode:             cfg.DevMode,
+		ctx:                   ctx,
+		cancel:                cancel,
+		fetcher:               cfg.CanonicalFetcher,
+		chainService:          cfg.ChainService,
+		powChainService:       cfg.POWChainService,
+		attestationService:    cfg.AttestationService,
+		port:                  cfg.Port,
+		withCert:              cfg.CertFlag,
+		withKey:               cfg.KeyFlag,
+		slotAlignmentDuration: params.SlotDuration,
+		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		incomingAttestation:   make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
+		devMode:               cfg.DevMode,
 	}
 }
 
@@ -241,11 +243,19 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 // ValidatorAssignment streams validator assignments every slot to clients that request
 // to watch a subset of public keys in the CrystallizedState's active validator set.
 func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
-	// genesis was at 12:00:00PM, if current time is 12:00:03PM,
-	// we want the next slot to tick at 12:00:08PM.
-	d := time.Until(time.Now().Add(time.Second * params.SlotDuration).Truncate(time.Second * params.SlotDuration))
-	time.Sleep(d)
+	// If the genesis time was at 12:00:00PM, if current time is 12:00:03PM,
+	// the next slot should tick at 12:00:08PM. We can accomplish this
+	// using utils.WaitUntilTimestamp and passing in the desired
+	// slot duration.
+	//
+	// Instead of utilizing params.SlotDuration, we utilize a property of
+	// RPC service struct so it can be set to 0 as a parameter in tests.
+	// Otherwise, tests would sleep.
+	utils.WaitUntilTimestamp(s.slotAlignmentDuration * time.Second)
 
+	// Right after the timestamps are aligned, we start a new ticker
+	// that fires exactly every params.SlotDuration*time.Second. This ensures
+	// a consistent "heartbeat" to keep track of every beacon slot.
 	tick := time.NewTicker(time.Second * params.SlotDuration).C
 	tickerChan := time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C
 	for {
@@ -254,7 +264,7 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			log.Debug("ValidatorAssignment stream closed, exiting goroutine")
 			return nil
 		case <-tickerChan:
-			log.WithField("slotNumber", utils.CurrentBeaconSlot()).Info("Sending validator assignment to RPC clients")
+			log.WithField("slotNumber", utils.CurrentBeaconSlot()).Debug("Sending validator assignment to RPC clients")
 			// Note this set will not change, so we can just cache the previous one
 			// we computed and stream instead of recomputing each slot.
 			// Note: this does not respect the pub keys in the request.
