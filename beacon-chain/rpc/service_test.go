@@ -355,7 +355,7 @@ func TestLatestAttestation(t *testing.T) {
 	exitRoutine <- true
 }
 
-func TestValidatorSlot(t *testing.T) {
+func TestValidatorSlotAndResponsibility(t *testing.T) {
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
@@ -364,7 +364,7 @@ func TestValidatorSlot(t *testing.T) {
 	req := &pb.PublicKey{
 		PublicKey: 0,
 	}
-	if _, err := rpcService.ValidatorSlot(context.Background(), req); err != nil {
+	if _, err := rpcService.ValidatorSlotAndResponsibility(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator slot: %v", err)
 	}
 }

@@ -142,24 +142,27 @@ func ValidatorShardID(pubKey uint64, dynasty uint64, validators []*pb.ValidatorR
 	return 0, fmt.Errorf("can't find shard ID for validator with public key %d", pubKey)
 }
 
-// ValidatorSlot returns the slot number of when the validator gets to attest or proposer.
-func ValidatorSlot(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+// ValidatorSlotAndResponsibility returns a validator's assingned slot number
+// and whether it should act as an attester or proposer.
+func ValidatorSlotAndResponsibility(pubKey uint64, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, string, error) {
 	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
 	for slot, slotCommittee := range shardCommittees {
-		for _, committee := range slotCommittee.ArrayShardAndCommittee {
-			for _, validator := range committee.Committee {
+		for i, committee := range slotCommittee.ArrayShardAndCommittee {
+			for v, validator := range committee.Committee {
+				if i == 0 && v == slot%len(committee.Committee) && validator == index {
+					return uint64(slot), "proposer", nil
+				}
 				if validator == index {
-					return uint64(slot), nil
+					return uint64(slot), "attester", nil
 				}
 			}
 		}
 	}
-
-	return 0, fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
+	return 0, "", fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
 }
 
 // TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
