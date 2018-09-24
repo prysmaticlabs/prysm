@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"math"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 )
 
 // Clock represents a time providing interface that can be mocked for testing.
@@ -15,4 +18,10 @@ type RealClock struct{}
 // Now represents the standard functionality of time.
 func (RealClock) Now() time.Time {
 	return time.Now()
+}
+
+// CurrentBeaconSlot based on the seconds since genesis.
+func CurrentBeaconSlot() uint64 {
+	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }

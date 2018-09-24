@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -240,6 +241,12 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 // ValidatorAssignment streams validator assignments every slot to clients that request
 // to watch a subset of public keys in the CrystallizedState's active validator set.
 func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
+	// genesis was at 12:00:00PM, if current time is 12:00:03PM,
+	// we want the next slot to tick at 12:00:08PM.
+	d := time.Until(time.Now().Add(time.Second * params.SlotDuration).Truncate(time.Second * params.SlotDuration))
+	time.Sleep(d)
+
+	tick := time.NewTicker(time.Second * params.SlotDuration).C
 	tickerChan := time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C
 	for {
 		select {
@@ -247,7 +254,7 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			log.Debug("ValidatorAssignment stream closed, exiting goroutine")
 			return nil
 		case <-tickerChan:
-			log.Info("Sending validator assignment to RPC clients")
+			log.WithField("slotNumber", utils.CurrentBeaconSlot()).Info("Sending validator assignment to RPC clients")
 			// Note this set will not change, so we can just cache the previous one
 			// we computed and stream instead of recomputing each slot.
 			// Note: this does not respect the pub keys in the request.
@@ -259,7 +266,7 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			})
 			res := &pb.ValidatorAssignmentResponse{
 				Assignments: assignments,
-				Slot:        1,
+				Slot:        utils.CurrentBeaconSlot(),
 			}
 			if err := stream.Send(res); err != nil {
 				return err
