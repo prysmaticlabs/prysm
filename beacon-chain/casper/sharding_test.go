@@ -1,12 +1,10 @@
 package casper
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -47,41 +45,18 @@ func TestMaxValidators(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	if _, _, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1); err == nil {
-		t.Errorf("GetAttestersProposer should have failed")
-	}
-
 	// ValidatorsBySlotShard should fail the same.
 	if _, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0); err == nil {
 		t.Errorf("ValidatorsBySlotShard should have failed")
 	}
 }
 
-func Test1000ActiveValidators(t *testing.T) {
+func TestShuffleActiveValidators(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
-	}
-
-	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
-	if err != nil {
-		t.Errorf("GetAttestersProposer function failed: %v", err)
-	}
-
-	activeValidators := ActiveValidatorIndices(validators, 1)
-
-	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
-	if err != nil {
-		t.Errorf("Shuffle function function failed: %v", err)
-	}
-
-	if !reflect.DeepEqual(proposer, validatorList[len(validatorList)-1]) {
-		t.Errorf("Get proposer failed, expected: %v got: %v", validatorList[len(validatorList)-1], proposer)
-	}
-	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
-		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
 	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
@@ -99,25 +74,6 @@ func TestSmallSampleValidators(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
 		validators = append(validators, validator)
-	}
-
-	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
-	if err != nil {
-		t.Errorf("GetAttestersProposer function failed: %v", err)
-	}
-
-	activeValidators := ActiveValidatorIndices(validators, 1)
-
-	validatorList, err := utils.ShuffleIndices(common.Hash{'A'}, activeValidators)
-	if err != nil {
-		t.Errorf("Shuffle function function failed: %v", err)
-	}
-
-	if !reflect.DeepEqual(proposer, validatorList[len(validatorList)-1]) {
-		t.Errorf("Get proposer failed, expected: %v got: %v", validatorList[len(validatorList)-1], proposer)
-	}
-	if !reflect.DeepEqual(attesters, validatorList[:len(attesters)]) {
-		t.Errorf("Get attesters failed, expected: %v got: %v", validatorList[:len(attesters)], attesters)
 	}
 
 	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
