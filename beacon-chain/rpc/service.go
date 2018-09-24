@@ -235,7 +235,6 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 // ValidatorAssignment streams validator assignments every slot to clients that request
 // to watch a subset of public keys in the CrystallizedState's active validator set.
 func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
-	// TODO: Currently just streams all validator assignments to clients.
 	tickerChan := time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C
 	for {
 		select {
@@ -244,6 +243,9 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			return nil
 		case <-tickerChan:
 			log.Info("Sending validator assignment to RPC clients")
+			// Note this set will not change, so we can just cache the previous one
+			// we computed and stream instead of recomputing each slot.
+			// Note: this does not respect the pub keys in the request.
 			assignments := []*pb.ValidatorAssignmentResponse_Assignment{}
 			assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
 				PublicKey: &pb.PublicKey{PublicKey: 0},
