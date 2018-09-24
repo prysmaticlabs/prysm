@@ -117,7 +117,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to update recent blockhashes: %v", err)
 	}
-	t.Log(updated)
+
 	if len(updated) != 2*int(params.CycleLength) {
 		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.CycleLength, len(updated))
 	}
