@@ -297,7 +297,7 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 				assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
 					PublicKey: val,
 					ShardId:   shardID,
-					Role:      pb.ValidatorAssignmentResponse_ATTESTER,
+					Role:      pb.ValidatorRole_ATTESTER,
 				})
 			}
 
@@ -330,12 +330,12 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 	return &pb.ShardIDResponse{ShardId: shardID}, nil
 }
 
-// ValidatorSlot is called by a validator to get the slot number of when it's supposed
-// to proposer or attest.
-func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponse, error) {
+// ValidatorSlotAndResponsibility fetches a validator's assigned slot number
+// and whether it should act as a proposer/attester.
+func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponsibilityResponse, error) {
 	cState := s.chainService.CurrentCrystallizedState()
 
-	slot, err := casper.ValidatorSlot(
+	slot, responsibility, err := casper.ValidatorSlotAndResponsibility(
 		req.PublicKey,
 		cState.CurrentDynasty(),
 		cState.Validators(),
@@ -345,7 +345,14 @@ func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.Slo
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
 	}
 
-	return &pb.SlotResponse{Slot: slot}, nil
+	var role pb.ValidatorRole
+	if responsibility == "proposer" {
+		role = pb.ValidatorRole_PROPOSER
+	} else if responsibility == "attester" {
+		role = pb.ValidatorRole_ATTESTER
+	}
+
+	return &pb.SlotResponsibilityResponse{Slot: slot, Role: role}, nil
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds
