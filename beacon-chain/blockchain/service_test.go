@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -99,6 +100,8 @@ func TestStartStop(t *testing.T) {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
 
+	chainService.slotAlignmentDuration = 0
+
 	chainService.IncomingBlockFeed()
 	chainService.CanonicalBlockBySlotNumber(0)
 	chainService.CheckForCanonicalBlockBySlot(0)
@@ -118,6 +121,9 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+
+	chainService.slotAlignmentDuration = 0
+
 	chainService.Start()
 
 	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
@@ -222,6 +228,8 @@ func TestFaultyStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+
+	chainService.slotAlignmentDuration = 0
 
 	chainService.Start()
 
@@ -380,7 +388,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+	secondsSinceGenesis := time.Since(utils.GenesisTime).Seconds()
 	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
 
 	slotsStart := crystallized.LastStateRecalc() - params.CycleLength
@@ -705,7 +713,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
+	secondsSinceGenesis := time.Since(utils.GenesisTime).Seconds()
 	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
 
 	block1 := types.NewBlock(&pb.BeaconBlock{

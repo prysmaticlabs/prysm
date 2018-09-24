@@ -251,13 +251,12 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 	// Instead of utilizing params.SlotDuration, we utilize a property of
 	// RPC service struct so this value can be set to 0 seconds
 	// as a parameter in tests. Otherwise, tests would sleep.
-	utils.WaitUntilTimestamp(s.slotAlignmentDuration * time.Second)
+	utils.WaitUntilTimestamp(time.Duration(s.slotAlignmentDuration) * time.Second)
 
 	// Right after the timestamps are aligned, we start a new ticker
 	// that fires exactly every params.SlotDuration*time.Second. This ensures
 	// a consistent "heartbeat" to keep track of every beacon slot.
-	tick := time.NewTicker(time.Second * params.SlotDuration).C
-	tickerChan := time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C
+	tickerChan := time.NewTicker(time.Duration(params.SlotDuration) * time.Second).C
 	for {
 		select {
 		case <-s.ctx.Done():

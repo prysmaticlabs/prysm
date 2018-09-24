@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func TestGenesisBlock(t *testing.T) {
 
 	// We ensure that initializing a proto timestamp from
 	// genesis time will lead to no error.
-	if _, err := ptypes.TimestampProto(GenesisTime); err != nil {
+	if _, err := ptypes.TimestampProto(utils.GenesisTime); err != nil {
 		t.Errorf("could not create proto timestamp, expected no error: %v", err)
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,6 +35,7 @@ type ChainService struct {
 	lock                           sync.Mutex
 	devMode                        bool
 	genesisTimestamp               time.Time
+	slotAlignmentDuration          uint64
 }
 
 // Config options for the service.
@@ -52,7 +54,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
-		genesisTimestamp:               types.GenesisTime,
+		genesisTimestamp:               utils.GenesisTime,
 		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
@@ -63,6 +65,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
 		devMode:                        cfg.DevMode,
+		slotAlignmentDuration:          params.SlotDuration,
 	}, nil
 }
 
@@ -70,7 +73,17 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
-	log.Infof("Starting service")
+	log.Info("Starting service")
+
+	// If the genesis time was at 12:00:00PM and the current time is 12:00:03PM,
+	// the next slot should tick at 12:00:08PM. We can accomplish this
+	// using utils.WaitUntilTimestamp and passing in the desired
+	// slot duration.
+	//
+	// Instead of utilizing params.SlotDuration, we utilize a property of
+	// RPC service struct so this value can be set to 0 seconds
+	// as a parameter in tests. Otherwise, tests would sleep.
+	utils.WaitUntilTimestamp(time.Duration(c.slotAlignmentDuration) * time.Second)
 	go c.updateHead(time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C)
 	go c.blockProcessing()
 }
