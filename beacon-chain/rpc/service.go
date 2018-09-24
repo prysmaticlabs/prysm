@@ -249,8 +249,8 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 	// slot duration.
 	//
 	// Instead of utilizing params.SlotDuration, we utilize a property of
-	// RPC service struct so it can be set to 0 as a parameter in tests.
-	// Otherwise, tests would sleep.
+	// RPC service struct so this value can be set to 0 seconds
+	// as a parameter in tests. Otherwise, tests would sleep.
 	utils.WaitUntilTimestamp(s.slotAlignmentDuration * time.Second)
 
 	// Right after the timestamps are aligned, we start a new ticker
