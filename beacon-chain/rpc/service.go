@@ -265,7 +265,7 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			return nil
 		case <-tickerChan:
 			log.WithField("slotNumber", utils.CurrentBeaconSlot()).Debug("Sending validator assignment to RPC clients")
-			// Note this set will not change, so we can just cache the previous one
+			// NOTE: this set will not change, so we can just cache the previous one
 			// we computed and stream instead of recomputing each slot.
 
 			// We get the current crystallized state.
@@ -275,16 +275,29 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			// up an array of assignments.
 			assignments := []*pb.ValidatorAssignmentResponse_Assignment{}
 			for _, val := range req.GetPublicKeys() {
-				//assignedSlot, err := casper.ValidatorSlot(
-				//val.GetPublicKey(),
-				//cState.CurrentDynasty(),
-				//cState.Validators(),
-				//cState.ShardAndCommitteesForSlots(),
-				//)
-				//if err != nil {
-				//return err
-				//}
 
+				// For the corresponding public key and current crystallized state,
+				// we determine the assigned slot for the validator and whether it
+				// should act as a proposer or attester.
+				assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
+					val.GetPublicKey(),
+					cState.CurrentDynasty(),
+					cState.Validators(),
+					cState.ShardAndCommitteesForSlots(),
+				)
+				if err != nil {
+					return err
+				}
+
+				var role pb.ValidatorRole
+				if responsibility == "proposer" {
+					role = pb.ValidatorRole_PROPOSER
+				} else {
+					role = pb.ValidatorRole_ATTESTER
+				}
+
+				// We determine the assigned shard ID for the validator
+				// based on a public key and current crystallized state.
 				shardID, err := casper.ValidatorShardID(
 					val.GetPublicKey(),
 					cState.CurrentDynasty(),
@@ -294,16 +307,21 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 				if err != nil {
 					return err
 				}
+
 				assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
-					PublicKey: val,
-					ShardId:   shardID,
-					Role:      pb.ValidatorRole_ATTESTER,
+					PublicKey:    val,
+					ShardId:      shardID,
+					Role:         role,
+					AssignedSlot: assignedSlot,
 				})
 			}
 
+			// We create a response consisting of all the assignments for each
+			// corresponding, valid public key in the request. We also include
+			// the beacon node's current beacon slot in the response.
 			res := &pb.ValidatorAssignmentResponse{
-				Assignments: assignments,
-				Slot:        utils.CurrentBeaconSlot(),
+				Assignments:       assignments,
+				CurrentBeaconSlot: utils.CurrentBeaconSlot(),
 			}
 			if err := stream.Send(res); err != nil {
 				return err

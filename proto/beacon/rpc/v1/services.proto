@@ -67,12 +67,13 @@ message ValidatorAssignmentRequest {
 
 message ValidatorAssignmentResponse {
     repeated Assignment assignments = 1;
-    uint64 slot = 2;
+    uint64 current_beacon_slot = 2;
 
     message Assignment {
       PublicKey public_key = 1;
       uint64 shard_id = 2;
       ValidatorRole role = 3;
+      uint64 assigned_slot = 4;
     }
 }
 
