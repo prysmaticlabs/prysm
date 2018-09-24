@@ -12,12 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -66,6 +67,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerBlockchainService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerService(); err != nil {
 		return nil, err
 	}
 
@@ -180,6 +185,19 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
+func (b *BeaconNode) registerService() error {
+	handler, err := attestation.NewHandler(b.db.DB())
+	if err != nil {
+		return fmt.Errorf("could not register attestation service: %v", err)
+	}
+
+	attestationService := attestation.NewAttestService(context.TODO(), &attestation.Config{
+		Handler: handler,
+	})
+
+	return b.services.RegisterService(attestationService)
+}
+
 func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 	if ctx.GlobalBool(utils.DevFlag.Name) {
 		return nil
@@ -213,7 +231,16 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
+	var attestationService *attestation.Service
+	if err := b.services.FetchService(&attestationService); err != nil {
+		return err
+	}
+
+	cfg := rbcsync.DefaultConfig()
+	cfg.ChainService = chainService
+	cfg.AttestService = attestationService
+
+	syncService := rbcsync.NewSyncService(context.Background(), cfg, p2pService)
 	return b.services.RegisterService(syncService)
 }
 
@@ -279,6 +306,11 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
+	var attestationService *attestation.Service
+	if err := b.services.FetchService(&attestationService); err != nil {
+		return err
+	}
+
 	var web3Service *powchain.Web3Service
 	var devMode = ctx.GlobalBool(utils.DevFlag.Name)
 	if !devMode {
@@ -291,14 +323,15 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		SubscriptionBuf:  100,
-		CanonicalFetcher: chainService,
-		ChainService:     chainService,
-		POWChainService:  web3Service,
-		DevMode:          devMode,
+		Port:               port,
+		CertFlag:           cert,
+		KeyFlag:            key,
+		SubscriptionBuf:    100,
+		CanonicalFetcher:   chainService,
+		ChainService:       chainService,
+		AttestationService: attestationService,
+		POWChainService:    web3Service,
+		DevMode:            devMode,
 	})
 
 	return b.services.RegisterService(rpcService)
