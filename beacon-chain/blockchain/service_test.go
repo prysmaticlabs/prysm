@@ -100,8 +100,6 @@ func TestStartStop(t *testing.T) {
 	}
 
 	chainService.IncomingBlockFeed()
-	chainService.IncomingAttestationFeed()
-	chainService.ProcessedAttestationFeed()
 	chainService.CanonicalBlockBySlotNumber(0)
 	chainService.CheckForCanonicalBlockBySlot(0)
 	chainService.CanonicalHead()
@@ -651,47 +649,6 @@ func TestUpdateHead(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not get block")
 	testutil.AssertLogsContain(t, hook, "Failed to get parent of block")
 	testutil.AssertLogsContain(t, hook, "Canonical block determined")
-}
-
-func TestIncomingAttestations(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
-
-	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
-	if err != nil {
-		t.Fatalf("unable to set up web3 service: %v", err)
-	}
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
-
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
-	}
-
-	chainService, _ := NewChainService(ctx, cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		chainService.blockProcessing()
-		<-exitRoutine
-	}()
-
-	chainService.incomingAttestationChan <- types.NewAttestation(nil)
-	chainService.cancel()
-	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Relaying attestation")
 }
 
 func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
