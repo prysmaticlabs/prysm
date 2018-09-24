@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -233,7 +235,30 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 // ValidatorAssignment streams validator assignments every slot to clients that request
 // to watch a subset of public keys in the CrystallizedState's active validator set.
 func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
-	return nil
+	// TODO: Currently just streams all validator assignments to clients.
+	tickerChan := time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C
+	for {
+		select {
+		case <-s.ctx.Done():
+			log.Debug("ValidatorAssignment stream closed, exiting goroutine")
+			return nil
+		case <-tickerChan:
+			log.Info("Sending validator assignment to RPC clients")
+			assignments := []*pb.ValidatorAssignmentResponse_Assignment{}
+			assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
+				PublicKey: &pb.PublicKey{PublicKey: 0},
+				ShardId:   1,
+				Role:      pb.ValidatorAssignmentResponse_ATTESTER,
+			})
+			res := &pb.ValidatorAssignmentResponse{
+				Assignments: assignments,
+				Slot:        1,
+			}
+			if err := stream.Send(res); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
