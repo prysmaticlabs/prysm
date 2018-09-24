@@ -270,14 +270,15 @@ func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.Pu
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
+	}
+
 	var role pb.ValidatorRole
 	if responsibility == "proposer" {
 		role = pb.ValidatorRole_PROPOSER
 	} else if responsibility == "attester" {
 		role = pb.ValidatorRole_ATTESTER
-	}
-	if err != nil {
-		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
 	}
 
 	return &pb.SlotResponsibilityResponse{Slot: slot, Role: role}, nil
