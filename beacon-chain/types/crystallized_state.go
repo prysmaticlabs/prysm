@@ -284,8 +284,8 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			justifiedStreak = 0
 		}
 
-		if slot >= params.CycleLength && justifiedStreak >= params.CycleLength+1 && slot-params.CycleLength > finalizedSlot {
-			finalizedSlot = slot - params.CycleLength
+		if slot > params.CycleLength && justifiedStreak >= params.CycleLength+1 && slot-params.CycleLength-1 > finalizedSlot {
+			finalizedSlot = slot - params.CycleLength - 1
 		}
 	}
 
@@ -294,12 +294,8 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		return nil, nil, err
 	}
 
-	// Get all active validators and calculate total balance for next cycle.
-	var nextCycleBalance uint64
-	nextCycleValidators := casper.ActiveValidatorIndices(c.Validators(), c.CurrentDynasty())
-	for _, index := range nextCycleValidators {
-		nextCycleBalance += c.Validators()[index].Balance
-	}
+	// Clean up old attestations.
+	newPendingAttestations := aState.cleanUpAttestations(lastStateRecalc)
 
 	c.data.LastFinalizedSlot = finalizedSlot
 	// Entering new dynasty transition.
@@ -311,9 +307,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			return nil, nil, err
 		}
 	}
-
-	// Clean up old attestations.
-	newPendingAttestations := aState.cleanUpAttestations(lastStateRecalc)
 
 	// Construct new crystallized state after cycle and dynasty transition.
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
@@ -332,7 +325,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	// Construct new active state after clean up pending attestations.
 	newActiveState := NewActiveState(&pb.ActiveState{
 		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes: aState.data.RecentBlockHashes,
+		RecentBlockHashes:   aState.data.RecentBlockHashes,
 	}, aState.blockVoteCache)
 
 	return newCrystallizedState, newActiveState, nil
