@@ -52,12 +52,12 @@ func canonicalBlockKey(slotnumber uint64) []byte {
 	return append(encodeSlotNumber(slotnumber)[:], canonicalSuffix...)
 }
 
-// attestationKey = attestationPrefix + attestationHash.
-func attestationKey(hash [32]byte) []byte {
+// AttestationKey = attestationPrefix + attestationHash.
+func AttestationKey(hash [32]byte) []byte {
 	return append(hash[:], attestationSuffix...)
 }
 
-// attestationHashListKey = attestationHashesPrefix + blockHash.
-func attestationHashListKey(hash [32]byte) []byte {
+// AttestationHashListKey = attestationHashesPrefix + blockHash.
+func AttestationHashListKey(hash [32]byte) []byte {
 	return append(hash[:], attestationHashesSuffix...)
 }
