@@ -243,19 +243,20 @@ func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconServ
 // ValidatorAssignment streams validator assignments every slot to clients that request
 // to watch a subset of public keys in the CrystallizedState's active validator set.
 func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
-	// If the genesis time was at 12:00:00PM, if current time is 12:00:03PM,
-	// the next slot should tick at 12:00:08PM. We can accomplish this
-	// using utils.WaitUntilTimestamp and passing in the desired
-	// slot duration.
+	// If the genesis time was at 12:00:00PM a if the SlotDuration is set to
+	// 8 seconds. We can accomplish this by using utils.WaitUntilTimestamp
+	// and passing in the desired slot duration as an argument.
 	//
 	// Instead of utilizing params.SlotDuration, we utilize a property of
-	// RPC service struct so this value can be set to 0 seconds
-	// as a parameter in tests. Otherwise, tests would sleep.
+	// RPC service struct called slotAlignmentDuration. This value
+	// can be set to 0 seconds as a parameter in tests.
+	// Otherwise, tests would sleep.
 	utils.WaitUntilTimestamp(time.Duration(s.slotAlignmentDuration) * time.Second)
 
 	// Right after the timestamps are aligned, we start a new ticker
 	// that fires exactly every params.SlotDuration*time.Second. This ensures
 	// a consistent "heartbeat" to keep track of every beacon slot.
+	// NOTE: Change to a parameter as well.
 	tickerChan := time.NewTicker(time.Duration(params.SlotDuration) * time.Second).C
 	for {
 		select {
@@ -266,13 +267,40 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			log.WithField("slotNumber", utils.CurrentBeaconSlot()).Debug("Sending validator assignment to RPC clients")
 			// Note this set will not change, so we can just cache the previous one
 			// we computed and stream instead of recomputing each slot.
-			// Note: this does not respect the pub keys in the request.
+
+			// We get the current crystallized state.
+			cState := s.chainService.CurrentCrystallizedState()
+
+			// Next, for each public key in the request, we build
+			// up an array of assignments.
 			assignments := []*pb.ValidatorAssignmentResponse_Assignment{}
-			assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
-				PublicKey: &pb.PublicKey{PublicKey: 0},
-				ShardId:   1,
-				Role:      pb.ValidatorAssignmentResponse_ATTESTER,
-			})
+			for _, val := range req.GetPublicKeys() {
+				//assignedSlot, err := casper.ValidatorSlot(
+				//val.GetPublicKey(),
+				//cState.CurrentDynasty(),
+				//cState.Validators(),
+				//cState.ShardAndCommitteesForSlots(),
+				//)
+				//if err != nil {
+				//return err
+				//}
+
+				shardID, err := casper.ValidatorShardID(
+					val.GetPublicKey(),
+					cState.CurrentDynasty(),
+					cState.Validators(),
+					cState.ShardAndCommitteesForSlots(),
+				)
+				if err != nil {
+					return err
+				}
+				assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
+					PublicKey: val,
+					ShardId:   shardID,
+					Role:      pb.ValidatorAssignmentResponse_ATTESTER,
+				})
+			}
+
 			res := &pb.ValidatorAssignmentResponse{
 				Assignments: assignments,
 				Slot:        utils.CurrentBeaconSlot(),
@@ -302,7 +330,7 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 	return &pb.ShardIDResponse{ShardId: shardID}, nil
 }
 
-// ValidatorSlot is called by a validator to get the slot number of when it's suppose
+// ValidatorSlot is called by a validator to get the slot number of when it's supposed
 // to proposer or attest.
 func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponse, error) {
 	cState := s.chainService.CurrentCrystallizedState()
@@ -314,7 +342,7 @@ func (s *Service) ValidatorSlot(ctx context.Context, req *pb.PublicKey) (*pb.Slo
 		cState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not get validator slot for attester/propose: %v", err)
+		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
 	}
 
 	return &pb.SlotResponse{Slot: slot}, nil
