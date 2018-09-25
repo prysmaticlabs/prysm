@@ -406,7 +406,7 @@ func TestValidatorShardID(t *testing.T) {
 	}
 }
 
-func TestValidatorAssignment(t *testing.T) {
+func TestStreamValidators(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	mockChain := &mockChainService{}
@@ -417,25 +417,24 @@ func TestValidatorAssignment(t *testing.T) {
 
 	rpcService.slotAlignmentDuration = 0
 
-	timeChan := make(chan time.Time)
-	tick := time.Ticker{C: timeChan}
-
-	newTicker = func(time.Duration) *time.Ticker {
-		return &tick
-	}
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	exitRoutine := make(chan bool)
 
 	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
 	mockStream.EXPECT().Send(&pb.ValidatorAssignmentResponse{}).Return(nil)
 
+	exitRoutine := make(chan bool)
+	timeChan := make(chan time.Time)
+
+	key := &pb.PublicKey{PublicKey: 0}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
 	// Tests a validator assignment stream.
 	go func(tt *testing.T) {
-		if err := rpcService.ValidatorAssignment(&pb.ValidatorAssignmentRequest{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
+		if err := rpcService.streamValidators(req, mockStream, timeChan); err != nil {
+			tt.Errorf("Could not stream validators: %v", err)
 		}
 		<-exitRoutine
 	}(t)
