@@ -30,11 +30,6 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: 1,
 	}
-	// PublicKeysFlag defines the public keys of the validators who will subscribe to beacon node.
-	PublicKeysFlag = cli.IntSliceFlag {
-		Name: "pubkeys",
-		Usage: "Public keys of the validators who want subscribe to the beacon node",
-	}
 	// PasswordFileFlag defines the path to the user's account password file.
 	PasswordFileFlag = cli.StringFlag{
 		Name:  "password",
