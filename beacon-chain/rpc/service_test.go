@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
@@ -303,7 +305,11 @@ func TestAttestHead(t *testing.T) {
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockAttestationService := &mockAttestationService{}
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: mockAttestationService})
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:               "8777",
+		SubscriptionBuf:    0,
+		AttestationService: mockAttestationService,
+	})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -322,7 +328,11 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 func TestLatestAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	attestationService := &mockAttestationService{}
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: attestationService})
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:               "8777",
+		SubscriptionBuf:    0,
+		AttestationService: attestationService,
+	})
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -395,4 +405,64 @@ func TestValidatorShardID(t *testing.T) {
 	if _, err := rpcService.ValidatorShardID(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator shard ID: %v", err)
 	}
+}
+
+func TestValidatorAssignmentRPC(t *testing.T) {
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		ChainService: mockChain,
+	})
+
+	rpcService.slotAlignmentDuration = time.Millisecond
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
+
+	req := &pb.ValidatorAssignmentRequest{}
+
+	err := rpcService.ValidatorAssignment(req, mockStream)
+	if !strings.Contains(err.Error(), "no public keys specified in request") {
+		t.Errorf("Expected error: no public keys specified in request, received %v", err)
+	}
+}
+
+func TestStreamValidators(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		ChainService: mockChain,
+	})
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
+
+	key := &pb.PublicKey{PublicKey: []byte{}}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
+
+	timeChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	// Tests a validator assignment stream.
+	go func(tt *testing.T) {
+		if err := rpcService.streamValidators(req, mockStream, 100, timeChan, doneChan); err != nil {
+			tt.Errorf("Could not stream validators: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+
+	timeChan <- time.Now()
+	doneChan <- struct{}{}
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Sending validator assignment to RPC clients")
 }
