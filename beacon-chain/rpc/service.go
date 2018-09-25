@@ -22,6 +22,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "rpc")
+var newTicker = time.NewTicker
 
 // canonicalFetcher defines a struct with methods that can be
 // called on-demand to fetch the latest canonical head
@@ -251,13 +252,12 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 	// RPC service struct called slotAlignmentDuration. This value
 	// can be set to 0 seconds as a parameter in tests.
 	// Otherwise, tests would sleep.
-	utils.WaitUntilTimestamp(time.Duration(s.slotAlignmentDuration) * time.Second)
+	//utils.WaitUntilTimestamp(time.Duration(s.slotAlignmentDuration) * time.Second)
 
 	// Right after the timestamps are aligned, we start a new ticker
 	// that fires exactly every params.SlotDuration*time.Second. This ensures
 	// a consistent "heartbeat" to keep track of every beacon slot.
-	// NOTE: Change to a parameter as well.
-	tickerChan := time.NewTicker(time.Duration(params.SlotDuration) * time.Second).C
+	tickerChan := newTicker(time.Duration(params.SlotDuration) * time.Second).C
 	for {
 		select {
 		case <-s.ctx.Done():
