@@ -443,7 +443,7 @@ func TestStreamValidators(t *testing.T) {
 	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
 	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 
-	key := &pb.PublicKey{PublicKey: []byte{0}}
+	key := &pb.PublicKey{PublicKey: []byte{}}
 	publicKeys := []*pb.PublicKey{key}
 	req := &pb.ValidatorAssignmentRequest{
 		PublicKeys: publicKeys,

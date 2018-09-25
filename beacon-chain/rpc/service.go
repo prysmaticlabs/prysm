@@ -362,9 +362,8 @@ func (s *Service) streamValidators(
 				return errors.New("no public keys specified in request")
 			}
 
-			log.WithField("slotNumber", utils.CurrentBeaconSlot()).Debug("Sending validator assignment to RPC clients")
+			log.WithField("slotNumber", currentSlot).Debug("Sending validator assignment to RPC clients")
 			// NOTE: this set will not change, so we can just cache the previous one
-			// we computed and stream instead of recomputing each slot.
 
 			// We get the current crystallized state.
 			cState := s.chainService.CurrentCrystallizedState()
