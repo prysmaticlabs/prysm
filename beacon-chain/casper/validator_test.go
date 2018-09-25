@@ -217,7 +217,7 @@ func TestValidatorShardID(t *testing.T) {
 	}
 }
 
-func TestValidatorSlot(t *testing.T) {
+func TestValidatorSlotAndResponsibility(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 61; i++ {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: []byte{}})
@@ -239,12 +239,12 @@ func TestValidatorSlot(t *testing.T) {
 			{ShardId: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
 		}},
 	}
-	if _, err := ValidatorSlot([]byte("100"), 0, validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndResponsibility([]byte("100"), 0, validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, there's no validator with pubkey 100")
 	}
 
 	validators[59].PublicKey = []byte("100")
-	slot, err := ValidatorSlot([]byte("100"), 0, validators, shardCommittees)
+	slot, _, err := ValidatorSlotAndResponsibility([]byte("100"), 0, validators, shardCommittees)
 	if err != nil {
 		t.Fatalf("call ValidatorSlot failed: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestValidatorSlot(t *testing.T) {
 	}
 
 	validators[60].PublicKey = []byte("101")
-	if _, err := ValidatorSlot([]byte("101"), 0, validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndResponsibility([]byte("101"), 0, validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
 	}
 }

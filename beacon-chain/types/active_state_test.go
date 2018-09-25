@@ -59,7 +59,7 @@ func TestUpdateAttestations(t *testing.T) {
 		},
 	}
 
-	updatedAttestations := aState.calculateNewAttestations(newAttestations, 0)
+	updatedAttestations := aState.appendNewAttestations(newAttestations)
 	if len(updatedAttestations) != 2 {
 		t.Fatalf("Updated attestations should be length 2: %d", len(updatedAttestations))
 	}
@@ -90,7 +90,9 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 		},
 	}
 
-	updatedAttestations := aState.calculateNewAttestations(newAttestations, 7)
+	updatedAttestations := aState.appendNewAttestations(newAttestations)
+	aState.data.PendingAttestations = updatedAttestations
+	updatedAttestations = aState.cleanUpAttestations(8)
 	if len(updatedAttestations) != 2 {
 		t.Fatalf("Updated attestations should be length 2: %d", len(updatedAttestations))
 	}
@@ -99,6 +101,7 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 func TestUpdateRecentBlockHashes(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
 		SlotNumber: 10,
+		ParentHash: []byte{'A'},
 	})
 
 	recentBlockHashes := [][]byte{}
@@ -119,17 +122,13 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.CycleLength, len(updated))
 	}
 
-	hash, err := block.Hash()
-	if err != nil {
-		t.Fatalf("failed to hash block: %v", err)
-	}
 	for i := 0; i < len(updated); i++ {
 		if i < len(updated)-10 {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %x got %x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], hash[:]) {
-			t.Fatalf("update failed: expected %x got %x", hash[:], updated[i])
+		} else if !areBytesEqual(updated[i], block.data.ParentHash) {
+			t.Fatalf("update failed: expected %x got %x", block.data.ParentHash[:], updated[i])
 		}
 	}
 }

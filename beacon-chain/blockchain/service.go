@@ -28,9 +28,6 @@ type ChainService struct {
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
-	incomingAttestationFeed        *event.Feed
-	incomingAttestationChan        chan *types.Attestation
-	processedAttestationFeed       *event.Feed
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
@@ -41,13 +38,12 @@ type ChainService struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf         int
-	IncomingBlockBuf       int
-	Chain                  *BeaconChain
-	Web3Service            *powchain.Web3Service
-	BeaconDB               ethdb.Database
-	IncomingAttestationBuf int
-	DevMode                bool
+	BeaconBlockBuf   int
+	IncomingBlockBuf int
+	Chain            *BeaconChain
+	Web3Service      *powchain.Web3Service
+	BeaconDB         ethdb.Database
+	DevMode          bool
 }
 
 // NewChainService instantiates a new service instance that will
@@ -63,9 +59,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:                    cfg.Web3Service,
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
 		incomingBlockFeed:              new(event.Feed),
-		incomingAttestationChan:        make(chan *types.Attestation, cfg.IncomingAttestationBuf),
-		incomingAttestationFeed:        new(event.Feed),
-		processedAttestationFeed:       new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
@@ -86,7 +79,7 @@ func (c *ChainService) Start() {
 func (c *ChainService) Stop() error {
 	defer c.cancel()
 	log.Info("Stopping service")
-	log.Infof("Persisting current active and crystallized states before closing")
+	log.Info("Persisting current active and crystallized states before closing")
 	if err := c.chain.PersistActiveState(); err != nil {
 		return fmt.Errorf("Error persisting active state: %v", err)
 	}
@@ -116,18 +109,6 @@ func (c *ChainService) CanonicalCrystallizedState() *types.CrystallizedState {
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
 	return c.incomingBlockFeed
-}
-
-// IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
-// The chain service will subscribe to this feed in order to relay incoming attestations.
-func (c *ChainService) IncomingAttestationFeed() *event.Feed {
-	return c.incomingAttestationFeed
-}
-
-// ProcessedAttestationFeed returns a feed that will be used to stream attestations that have been
-// processed by the beacon node to its rpc clients.
-func (c *ChainService) ProcessedAttestationFeed() *event.Feed {
-	return c.processedAttestationFeed
 }
 
 // HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
@@ -252,7 +233,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			var stateTransitioned bool
 
 			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
-				cState, err = cState.NewStateRecalculations(aState, block)
+				cState, aState, err = cState.NewStateRecalculations(aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
 					continue
@@ -310,28 +291,13 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 }
 
 func (c *ChainService) blockProcessing() {
-	sub := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
-	subAttestation := c.incomingAttestationFeed.Subscribe(c.incomingAttestationChan)
-	defer subAttestation.Unsubscribe()
-	defer sub.Unsubscribe()
+	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	defer subBlock.Unsubscribe()
 	for {
 		select {
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		// Listen for a newly received incoming attestation from the sync service.
-		case attestation := <-c.incomingAttestationChan:
-			h, err := attestation.Hash()
-			if err != nil {
-				log.Debugf("Could not hash incoming attestation: %v", err)
-			}
-			if err := c.chain.saveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
-				continue
-			}
-
-			c.processedAttestationFeed.Send(attestation.Proto)
-			log.Info("Relaying attestation 0x%v to proposers through grpc", h)
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
@@ -346,7 +312,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			// Process block as a validator if beacon node has registered, else process block as an observer.
+			// Check if we have received the parent block.
 			parentExists, err := c.chain.hasBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Could not check existence of parent: %v", err)
@@ -370,7 +336,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			if err := c.chain.saveBlockAndAttestations(block); err != nil {
+			if err := c.chain.saveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}

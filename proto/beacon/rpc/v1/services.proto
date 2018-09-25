@@ -26,7 +26,7 @@ service ValidatorService {
     // by some web3 API for users to conveniently know their assignment.
     rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
     rpc ValidatorIndex(PublicKey) returns (IndexResponse);
-    rpc ValidatorSlot(PublicKey) returns (SlotResponse);
+    rpc ValidatorSlotAndResponsibility(PublicKey) returns (SlotResponsibilityResponse);
     // This endpoint is called by all validator clients to watch for assignments
     // for a subset of public keys in the active validator set.
     rpc ValidatorAssignment(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
@@ -72,22 +72,23 @@ message ValidatorAssignmentResponse {
     message Assignment {
       PublicKey public_key = 1;
       uint64 shard_id = 2;
-      Role role = 3;
+      ValidatorRole role = 3;
     }
+}
 
-    enum Role {
-      UNKNOWN = 0;
-      ATTESTER = 1;
-      PROPOSER = 2;
-    }
+enum ValidatorRole {
+  UNKNOWN = 0;
+  ATTESTER = 1;
+  PROPOSER = 2;
 }
 
 message PublicKey {
     bytes public_key = 1;
 }
 
-message SlotResponse {
+message SlotResponsibilityResponse {
     uint64 slot = 1;
+    ValidatorRole role = 2;
 }
 
 message IndexResponse {
