@@ -21,8 +21,9 @@ type rpcClientService interface {
 	ValidatorServiceClient() pb.ValidatorServiceClient
 }
 
-type assignmentAnnouncer interface {
+type beaconClientService interface {
 	AttesterAssignmentFeed() *event.Feed
+	PublicKey() []byte
 }
 
 // Attester holds functionality required to run a block attester
@@ -30,18 +31,17 @@ type assignmentAnnouncer interface {
 type Attester struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
-	assigner         assignmentAnnouncer
+	beaconService    beaconClientService
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
 	shardID          uint64
-	pubkey           []byte
 }
 
 // Config options for an attester service.
 type Config struct {
 	AssignmentBuf int
 	ShardID       uint64
-	Assigner      assignmentAnnouncer
+	Assigner      beaconClientService
 	Client        rpcClientService
 	Pubkey        []byte
 }
@@ -52,10 +52,9 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 	return &Attester{
 		ctx:              ctx,
 		cancel:           cancel,
-		assigner:         cfg.Assigner,
+		beaconService:    cfg.Assigner,
 		rpcClientService: cfg.Client,
 		shardID:          cfg.ShardID,
-		pubkey:           cfg.Pubkey,
 		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 	}
 }
@@ -77,7 +76,7 @@ func (a *Attester) Stop() error {
 
 // run the main event loop that listens for an attester assignment.
 func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
-	sub := a.assigner.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
+	sub := a.beaconService.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
 	defer sub.Unsubscribe()
 
 	for {
@@ -96,7 +95,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			latestBlockHash := blake2b.Sum512(data)
 
 			pubKeyReq := &pb.PublicKey{
-				PublicKey: a.pubkey,
+				PublicKey: a.beaconService.PublicKey(),
 			}
 			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {

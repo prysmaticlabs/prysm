@@ -29,12 +29,13 @@ type validatorClientService interface {
 type Service struct {
 	ctx                      context.Context
 	cancel                   context.CancelFunc
-	pubKeys                  []int
+	pubKey                   []byte
 	rpcClient                rpcClientService
 	validatorClient          validatorClientService
 	validatorIndex           int
 	assignedSlot             uint64
-	responsibility           string
+	assignedShardID          uint64
+	responsibility           pb.ValidatorRole
 	attesterAssignmentFeed   *event.Feed
 	proposerAssignmentFeed   *event.Feed
 	processedAttestationFeed *event.Feed
@@ -43,11 +44,11 @@ type Service struct {
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node
 // via gRPC requests.
-func NewBeaconValidator(ctx context.Context, pubKey []int, rpcClient rpcClientService, validatorClient validatorClientService) *Service {
+func NewBeaconValidator(ctx context.Context, pubKey []byte, rpcClient rpcClientService, validatorClient validatorClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                      ctx,
-		pubKeys:                  pubKey,
+		pubKey:                   pubKey,
 		cancel:                   cancel,
 		rpcClient:                rpcClient,
 		validatorClient:          validatorClient,
@@ -75,12 +76,17 @@ func (s *Service) Start() {
 	// currently in a cycle we are supposed to participate in.
 	s.fetchGenesisAndCanonicalState(client)
 
-	// We kick off a routine that listens for streams of validator assignment
-	// coming from the beacon node. This will tell the validator client which slot to
-	// perform which role, proposer or attester.
-	go s.waitForAssignment(client, validator)
+	// We kick off a routine that listens for stream of validator assignment coming from
+	// beacon node. This will update validator client on which slot, shard ID and what
+	// responsbility to perform.
+	go s.listenForAssignmentChange(validator)
 
-	// We then kick off a routine that listens for streams of cycle transitions
+	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
+	// to wait until the validator's assigned slot to perform proposals or attestations.
+	ticker := time.NewTicker(time.Second)
+	go s.waitForAssignment(ticker.C, client)
+
+	// Finally, we then kick off a routine that listens for streams of cycle transitions
 	// coming from the beacon node. This will allow the validator client to recalculate
 	// when it has to perform its responsibilities appropriately using timestamps
 	// and the IndicesForSlots field inside the received crystallized state.
@@ -137,21 +143,14 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	}
 }
 
-// waitForAssignment receives the latest
-func (s *Service) waitForAssignment(client pb.BeaconServiceClient, validator pb.ValidatorServiceClient) {
-
-	var pubKeys []*pb.PublicKey
-	for _, key := range s.pubKeys {
-		pubKeys = append(pubKeys, &pb.PublicKey{PublicKey: uint64(key)})
-	}
-
-	req := &pb.ValidatorAssignmentRequest{PublicKeys: pubKeys}
+func (s *Service) listenForAssignmentChange(validator pb.ValidatorServiceClient) {
+	req := &pb.ValidatorAssignmentRequest{PublicKeys: []*pb.PublicKey{{PublicKey: s.pubKey}}}
 	stream, err := validator.ValidatorAssignment(s.ctx, req)
 	if err != nil {
-		// If this RPC request fails, the entire system should fatal as it is critical for
-		// the validator to begin this way.
-		log.Fatalf("could not fetch validator assigned slot and responsibility from beacon node: %v", err)
+		log.Errorf("could not fetch validator assigned slot and responsibility from beacon node: %v", err)
+		return
 	}
+
 	for {
 		assignment, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
@@ -167,9 +166,26 @@ func (s *Service) waitForAssignment(client pb.BeaconServiceClient, validator pb.
 			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
 			continue
 		}
+		s.responsibility = assignment.Assignments[0].Role
+		s.assignedSlot = assignment.Assignments[0].AssignedSlot
+		s.assignedShardID = assignment.Assignments[0].ShardId
 
-		for _, assignment := range assignment.Assignments {
-			if assignment.GetRole() == pb.ValidatorRole_ATTESTER && assignment.AssignedSlot == s.CurrentBeaconSlot() {
+		log.Infof("Validator with pub key 0x%v re-assigned to shard ID %d for %v duty at slot %d",
+			string(assignment.Assignments[0].PublicKey.PublicKey),
+			s.assignedShardID,
+			s.responsibility,
+			s.assignedSlot)
+	}
+}
+
+func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconServiceClient) {
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+
+		case <-ticker:
+			if s.responsibility == pb.ValidatorRole_ATTESTER && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned attest slot number reached")
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
@@ -178,7 +194,8 @@ func (s *Service) waitForAssignment(client pb.BeaconServiceClient, validator pb.
 				}
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
-			} else if assignment.GetRole() == pb.ValidatorRole_PROPOSER && assignment.AssignedSlot == s.CurrentBeaconSlot() {
+
+			} else if s.responsibility == pb.ValidatorRole_PROPOSER && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
@@ -258,7 +275,7 @@ func (s *Service) processCrystallizedState(crystallizedState *pbp2p.Crystallized
 	// The validator needs to propose the next block.
 	// TODO(#545): Determine this from a gRPC stream from the beacon node
 	// instead.
-	s.responsibility = "proposer"
+	s.responsibility = pb.ValidatorRole_PROPOSER
 	s.assignedSlot = s.CurrentBeaconSlot() + 2
 	log.WithField("assignedSlot", s.assignedSlot).Info("Validator selected as proposer")
 	return nil
@@ -288,6 +305,7 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 			log.Errorf("Could not receive latest attestation from stream: %v", err)
 			continue
 		}
+
 		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
 		s.processedAttestationFeed.Send(attestation)
 	}
@@ -309,6 +327,11 @@ func (s *Service) ProposerAssignmentFeed() *event.Feed {
 // is processed by a beacon node.
 func (s *Service) ProcessedAttestationFeed() *event.Feed {
 	return s.processedAttestationFeed
+}
+
+// PublicKey returns validator's public key.
+func (s *Service) PublicKey() []byte {
+	return s.pubKey
 }
 
 // isZeroAddress compares a withdrawal address to an empty byte array.

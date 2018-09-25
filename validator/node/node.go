@@ -88,15 +88,15 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconService(ctx); err != nil {
+	if err := shardEthereum.registerBeaconService(pubkey); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerAttesterService(pubkey); err != nil {
+	if err := shardEthereum.registerAttesterService(); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerProposerService(pubkey); err != nil {
+	if err := shardEthereum.registerProposerService(); err != nil {
 		return nil, err
 	}
 
@@ -188,19 +188,18 @@ func (s *ShardEthereum) registerTXPool() error {
 
 // registerBeaconService registers a service that fetches streams from a beacon node
 // via RPC.
-func (s *ShardEthereum) registerBeaconService(ctx *cli.Context) error {
-	pubKeys := ctx.GlobalIntSlice(cmd.PublicKeysFlag.Name)
+func (s *ShardEthereum) registerBeaconService(pubKey []byte) error {
 
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
 	}
-	b := beacon.NewBeaconValidator(context.TODO(), pubKeys, rpcService, rpcService)
+	b := beacon.NewBeaconValidator(context.TODO(), pubKey, rpcService, rpcService)
 	return s.services.RegisterService(b)
 }
 
 // registerAttesterService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerAttesterService(pubkey []byte) error {
+func (s *ShardEthereum) registerAttesterService() error {
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
@@ -215,13 +214,12 @@ func (s *ShardEthereum) registerAttesterService(pubkey []byte) error {
 		Assigner:      beaconService,
 		AssignmentBuf: 100,
 		Client:        rpcService,
-		Pubkey:        pubkey,
 	})
 	return s.services.RegisterService(att)
 }
 
 // registerProposerService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerProposerService(pubkey []byte) error {
+func (s *ShardEthereum) registerProposerService() error {
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
@@ -237,7 +235,6 @@ func (s *ShardEthereum) registerProposerService(pubkey []byte) error {
 		AssignmentBuf:         100,
 		AttestationBufferSize: 100,
 		AttesterFeed:          beaconService,
-		Pubkey:                pubkey,
 	})
 	return s.services.RegisterService(prop)
 }
