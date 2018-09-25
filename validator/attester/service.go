@@ -34,6 +34,7 @@ type Attester struct {
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
 	shardID          uint64
+	pubkey           []byte
 }
 
 // Config options for an attester service.
@@ -42,6 +43,7 @@ type Config struct {
 	ShardID       uint64
 	Assigner      assignmentAnnouncer
 	Client        rpcClientService
+	Pubkey        []byte
 }
 
 // NewAttester creates a new attester instance.
@@ -54,6 +56,7 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 		rpcClientService: cfg.Client,
 		shardID:          cfg.ShardID,
 		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
+		pubkey:           cfg.Pubkey,
 	}
 }
 

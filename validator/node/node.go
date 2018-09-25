@@ -69,7 +69,7 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerAttesterService(); err != nil {
+	if err := shardEthereum.registerAttesterService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -175,7 +175,7 @@ func (s *ShardEthereum) registerBeaconService() error {
 }
 
 // registerAttesterService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerAttesterService() error {
+func (s *ShardEthereum) registerAttesterService(ctx *cli.Context) error {
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
@@ -186,10 +186,13 @@ func (s *ShardEthereum) registerAttesterService() error {
 		return err
 	}
 
+	pubkey := ctx.GlobalString(types.PubKeyFlag.Name)
+
 	att := attester.NewAttester(context.TODO(), &attester.Config{
 		Assigner:      beaconService,
 		AssignmentBuf: 100,
 		Client:        rpcService,
+		Pubkey:        []byte(pubkey),
 	})
 	return s.services.RegisterService(att)
 }
