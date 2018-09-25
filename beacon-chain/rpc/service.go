@@ -72,7 +72,7 @@ type Service struct {
 	canonicalStateChan    chan *types.CrystallizedState
 	incomingAttestation   chan *pbp2p.AggregatedAttestation
 	devMode               bool
-	slotAlignmentDuration uint64
+	slotAlignmentDuration time.Duration
 }
 
 // Config options for the beacon node RPC server.
@@ -102,7 +102,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: params.SlotDuration,
+		slotAlignmentDuration: time.Duration(params.SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
@@ -334,21 +334,26 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 	// RPC service struct called slotAlignmentDuration. This value
 	// can be set to 0 seconds as a parameter in tests.
 	// Otherwise, tests would sleep.
-	utils.WaitUntilTimestamp(time.Duration(s.slotAlignmentDuration) * time.Second)
+	utils.WaitUntilTimestamp(s.slotAlignmentDuration)
 
 	// Right after the timestamps are aligned, we start a new ticker
 	// that fires exactly every params.SlotDuration*time.Second. This ensures
 	// a consistent "heartbeat" to keep track of every beacon slot.
-	tickerChan := time.NewTicker(time.Duration(s.slotAlignmentDuration) * time.Second).C
-	return s.streamValidators(req, stream, tickerChan)
+	tickerChan := time.NewTicker(s.slotAlignmentDuration).C
+	return s.streamValidators(req, stream, utils.CurrentBeaconSlot(), tickerChan, s.ctx.Done())
 }
 
 // streamValidators is a wrapper around the internal logic for streaming validator assignments
 // to clients. It is abstracted into this function for easier tests.
-func (s *Service) streamValidators(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer, tickerChan <-chan time.Time) error {
+func (s *Service) streamValidators(
+	req *pb.ValidatorAssignmentRequest,
+	stream pb.ValidatorService_ValidatorAssignmentServer,
+	currentSlot uint64,
+	tickerChan <-chan time.Time,
+	done <-chan struct{}) error {
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-done:
 			log.Debug("ValidatorAssignment stream closed, exiting goroutine")
 			return nil
 		case <-tickerChan:
@@ -409,16 +414,13 @@ func (s *Service) streamValidators(req *pb.ValidatorAssignmentRequest, stream pb
 					AssignedSlot: assignedSlot,
 				})
 			}
-			if 1 == 1 {
-				return fmt.Errorf("Assigned: %v", assignments)
-			}
 
 			// We create a response consisting of all the assignments for each
 			// corresponding, valid public key in the request. We also include
 			// the beacon node's current beacon slot in the response.
 			res := &pb.ValidatorAssignmentResponse{
 				Assignments:       assignments,
-				CurrentBeaconSlot: utils.CurrentBeaconSlot(),
+				CurrentBeaconSlot: currentSlot,
 			}
 			if err := stream.Send(res); err != nil {
 				return err

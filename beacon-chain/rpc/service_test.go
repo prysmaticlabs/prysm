@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -406,6 +407,27 @@ func TestValidatorShardID(t *testing.T) {
 	}
 }
 
+func TestValidatorAssignmentRPC(t *testing.T) {
+	mockChain := &mockChainService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "6372",
+		ChainService: mockChain,
+	})
+
+	rpcService.slotAlignmentDuration = time.Millisecond
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
+
+	req := &pb.ValidatorAssignmentRequest{}
+
+	err := rpcService.ValidatorAssignment(req, mockStream)
+	if !strings.Contains(err.Error(), "no public keys specified in request") {
+		t.Errorf("Expected error: no public keys specified in request, received %v", err)
+	}
+}
+
 func TestStreamValidators(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -415,32 +437,32 @@ func TestStreamValidators(t *testing.T) {
 		ChainService: mockChain,
 	})
 
-	rpcService.slotAlignmentDuration = 0
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
-	mockStream.EXPECT().Send(&pb.ValidatorAssignmentResponse{}).Return(nil)
-
-	exitRoutine := make(chan bool)
-	timeChan := make(chan time.Time)
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 
 	key := &pb.PublicKey{PublicKey: 0}
 	publicKeys := []*pb.PublicKey{key}
 	req := &pb.ValidatorAssignmentRequest{
 		PublicKeys: publicKeys,
 	}
+
+	timeChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
 	// Tests a validator assignment stream.
 	go func(tt *testing.T) {
-		if err := rpcService.streamValidators(req, mockStream, timeChan); err != nil {
+		if err := rpcService.streamValidators(req, mockStream, 100, timeChan, doneChan); err != nil {
 			tt.Errorf("Could not stream validators: %v", err)
 		}
 		<-exitRoutine
 	}(t)
 
 	timeChan <- time.Now()
-	testutil.AssertLogsContain(t, hook, "Sending validator assignment to RPC clients")
-	rpcService.cancel()
+	doneChan <- struct{}{}
 	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Sending validator assignment to RPC clients")
 }
