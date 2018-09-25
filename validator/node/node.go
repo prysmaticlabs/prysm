@@ -65,7 +65,7 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconService(); err != nil {
+	if err := shardEthereum.registerBeaconService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -165,12 +165,14 @@ func (s *ShardEthereum) registerTXPool() error {
 
 // registerBeaconService registers a service that fetches streams from a beacon node
 // via RPC.
-func (s *ShardEthereum) registerBeaconService() error {
+func (s *ShardEthereum) registerBeaconService(ctx *cli.Context) error {
+	pubKeys := ctx.GlobalIntSlice(cmd.PublicKeysFlag.Name)
+
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
 	}
-	b := beacon.NewBeaconValidator(context.TODO(), rpcService)
+	b := beacon.NewBeaconValidator(context.TODO(), pubKeys, rpcService, rpcService)
 	return s.services.RegisterService(b)
 }
 

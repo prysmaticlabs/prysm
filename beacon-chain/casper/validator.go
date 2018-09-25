@@ -95,7 +95,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 }
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
-func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
+func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint32, error) {
 	slotCommittees, err := GetShardAndCommitteesForSlot(
 		shardCommittees,
 		lastStateRecalc,
@@ -105,7 +105,9 @@ func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastSta
 	}
 
 	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].ShardId
-	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	fmt.Println(slotCommittees.ArrayShardAndCommittee[0].Committee)
+	index := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	proposerIndex := slotCommittees.ArrayShardAndCommittee[0].Committee[index]
 	return proposerShardID, proposerIndex, nil
 }
 

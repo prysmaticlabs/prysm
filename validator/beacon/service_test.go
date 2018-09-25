@@ -24,6 +24,15 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
+type mockValidator struct {
+	ctrl *gomock.Controller
+}
+
+func (fc *mockValidator) ValidatorServiceClient() pb.ValidatorServiceClient{
+	mockValidatorClient := internal.NewMockValidatorServiceClient(fc.ctrl)
+	return mockValidatorClient
+}
+
 type mockClient struct {
 	ctrl *gomock.Controller
 }
@@ -92,7 +101,7 @@ func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockLifecycleClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []int{0,1,2}, &mockLifecycleClient{ctrl}, &mockValidator{ctrl})
 	// Testing basic feeds.
 	if b.AttesterAssignmentFeed() == nil {
 		t.Error("AttesterAssignmentFeed empty")
@@ -113,7 +122,7 @@ func TestLifecycle(t *testing.T) {
 func TestCurrentBeaconSlot(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockLifecycleClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []int{0,1,2}, &mockLifecycleClient{ctrl})
 	b.genesisTimestamp = time.Now()
 	if b.CurrentBeaconSlot() != 0 {
 		t.Errorf("Expected us to be in the 0th slot, received %v", b.CurrentBeaconSlot())
@@ -124,7 +133,7 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []int{0,1,2}, &mockClient{ctrl})
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().CanonicalHead(

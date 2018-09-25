@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,11 +21,17 @@ type rpcClientService interface {
 	BeaconServiceClient() pb.BeaconServiceClient
 }
 
+type validatorClientService interface {
+	ValidatorServiceClient() pb.ValidatorServiceClient
+}
+
 // Service that interacts with a beacon node via RPC.
 type Service struct {
 	ctx                      context.Context
 	cancel                   context.CancelFunc
+	pubKeys                  []int
 	rpcClient                rpcClientService
+	validatorClient          validatorClientService
 	validatorIndex           int
 	assignedSlot             uint64
 	responsibility           string
@@ -38,12 +43,14 @@ type Service struct {
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node
 // via gRPC requests.
-func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Service {
+func NewBeaconValidator(ctx context.Context, pubKey []int, rpcClient rpcClientService, validatorClient validatorClientService) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                      ctx,
+		pubKeys:                  pubKey,
 		cancel:                   cancel,
 		rpcClient:                rpcClient,
+		validatorClient:          validatorClient,
 		attesterAssignmentFeed:   new(event.Feed),
 		proposerAssignmentFeed:   new(event.Feed),
 		processedAttestationFeed: new(event.Feed),
@@ -54,6 +61,7 @@ func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Servic
 func (s *Service) Start() {
 	log.Info("Starting service")
 	client := s.rpcClient.BeaconServiceClient()
+	validator := s.validatorClient.ValidatorServiceClient()
 
 	// First thing the validator does is request the genesis block timestamp
 	// and the latest, canonical crystallized state from a beacon node. From here,
@@ -67,10 +75,10 @@ func (s *Service) Start() {
 	// currently in a cycle we are supposed to participate in.
 	s.fetchGenesisAndCanonicalState(client)
 
-	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
-	// to wait until the validator's assigned slot to perform proposals or attestations.
-	slotTicker := time.NewTicker(time.Second * time.Duration(params.DefaultConfig().SlotDuration))
-	go s.waitForAssignment(slotTicker.C, client)
+	// We kick off a routine that listens for streams of validator assignment
+	// coming from the beacon node. This will tell the validator client which slot to
+	// perform which role, proposer or attester.
+	go s.waitForAssignment(client, validator)
 
 	// We then kick off a routine that listens for streams of cycle transitions
 	// coming from the beacon node. This will allow the validator client to recalculate
@@ -129,30 +137,40 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	}
 }
 
-// waitForAssignment kicks off once the validator determines the currentSlot of the
-// beacon node by calculating the difference between the current system time
-// and the genesis timestamp. It runs exactly every SLOT_LENGTH seconds
-// and checks if it is time for the validator to act as a proposer or attester.
-func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconServiceClient) {
+// waitForAssignment receives the latest
+func (s *Service) waitForAssignment(client pb.BeaconServiceClient, validator pb.ValidatorServiceClient) {
+
+	var pubKeys []*pb.PublicKey
+	for _, key := range s.pubKeys {
+		pubKeys = append(pubKeys, &pb.PublicKey{PublicKey: uint64(key)})
+	}
+
+	req := &pb.ValidatorAssignmentRequest{PublicKeys: pubKeys}
+	stream, err := validator.ValidatorAssignment(s.ctx, req)
+	if err != nil {
+		// If this RPC request fails, the entire system should fatal as it is critical for
+		// the validator to begin this way.
+		log.Fatalf("could not fetch validator assigned slot and responsibility from beacon node: %v", err)
+	}
 	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case <-ticker:
-			log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New beacon node slot interval")
-			if s.responsibility == "proposer" && s.assignedSlot == s.CurrentBeaconSlot() {
-				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
-				s.responsibility = ""
-				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
-				if err != nil {
-					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					continue
-				}
-				// We forward the latest canonical block to the proposer service via a feed.
-				s.proposerAssignmentFeed.Send(block)
-			} else if s.responsibility == "attester" && s.assignedSlot == s.CurrentBeaconSlot() {
-				log.Info("Assigned attestation slot number reached")
-				s.responsibility = ""
+		assignment, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if s.ctx.Err() != nil {
+			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
+			break
+		}
+		if err != nil {
+			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
+			continue
+		}
+
+		for _, assignment := range assignment.Assignments {
+			if assignment.GetRole() == pb.ValidatorRole_ATTESTER && assignment.AssignedSlot == s.CurrentBeaconSlot() {
+				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned attest slot number reached")
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
@@ -160,6 +178,15 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				}
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
+			} else if assignment.GetRole() == pb.ValidatorRole_PROPOSER && assignment.AssignedSlot == s.CurrentBeaconSlot() {
+				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
+				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
+				if err != nil {
+					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
+					continue
+				}
+				// We forward the latest canonical block to the proposer service a feed.
+				s.proposerAssignmentFeed.Send(block)
 			}
 		}
 	}
