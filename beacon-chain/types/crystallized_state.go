@@ -33,7 +33,7 @@ func initialValidators() []*pb.ValidatorRecord {
 			EndDynasty:        params.DefaultEndDynasty,
 			Balance:           params.DefaultBalance.Uint64(),
 			WithdrawalAddress: []byte{},
-			PublicKey:         0,
+			PublicKey:         []byte{},
 		}
 		validators = append(validators, validator)
 	}

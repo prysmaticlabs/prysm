@@ -93,7 +93,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			latestBlockHash := blake2b.Sum512(data)
 
 			pubKeyReq := &pb.PublicKey{
-				PublicKey: 0,
+				PublicKey: []byte{},
 			}
 			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {
