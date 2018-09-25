@@ -30,6 +30,7 @@ func TestGenesisBlock(t *testing.T) {
 	// genesis time will lead to no error.
 	if _, err := ptypes.TimestampProto(GenesisTime); err != nil {
 		t.Errorf("could not create proto timestamp, expected no error: %v", err)
+	}
 
 	h1, err1 := b1.Hash()
 	h2, err2 := b2.Hash()

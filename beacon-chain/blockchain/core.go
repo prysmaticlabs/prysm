@@ -55,9 +55,6 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 	if !hasGenesis {
 		log.Info("No genesis block found on disk, initializing genesis block")
-<<<<<<< 5bc324d2f110e60421fdc66399cc154509b9823e
-		genesisBlock := types.NewGenesisBlock()
-=======
 		activeStateHash, err := active.Hash()
 		if err != nil {
 			return nil, err
@@ -66,11 +63,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 		if err != nil {
 			return nil, err
 		}
-		genesisBlock, err := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
-		if err != nil {
-			return nil, err
-		}
->>>>>>> Initialize ActiveStateHash and CrystallizedStateHash for genesis beacon block
+		genesisBlock := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
 		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
 		if err != nil {
 			return nil, err
@@ -119,18 +112,20 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		}
 		return types.NewBlock(block), nil
 	}
-<<<<<<< 5bc324d2f110e60421fdc66399cc154509b9823e
-	return types.NewGenesisBlock(), nil
-=======
 	active := types.NewGenesisActiveState()
 	activeStateHash, err := active.Hash()
+	if err != nil {
+		return nil, err
+	}
 	crystallized, err := types.NewGenesisCrystallizedState()
 	if err != nil {
 		return nil, err
 	}
 	crystallizedStateHash, err := crystallized.Hash()
-	return types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
->>>>>>> Initialize ActiveStateHash and CrystallizedStateHash for genesis beacon block
+	if err != nil {
+		return nil, err
+	}
+	return types.NewGenesisBlock(activeStateHash, crystallizedStateHash), nil
 }
 
 // CanonicalHead fetches the latest head stored in persistent storage.
