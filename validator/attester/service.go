@@ -55,8 +55,8 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 		assigner:         cfg.Assigner,
 		rpcClientService: cfg.Client,
 		shardID:          cfg.ShardID,
-		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 		pubkey:           cfg.Pubkey,
+		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 	}
 }
 
@@ -96,7 +96,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			latestBlockHash := blake2b.Sum512(data)
 
 			pubKeyReq := &pb.PublicKey{
-				PublicKey: []byte{},
+				PublicKey: a.pubkey,
 			}
 			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {

@@ -43,6 +43,7 @@ type Proposer struct {
 	attestationChan    chan *pbp2p.AggregatedAttestation
 	pendingAttestation []*pbp2p.AggregatedAttestation
 	lock               sync.Mutex
+	pubkey             []byte
 }
 
 // Config options for proposer service.
@@ -52,6 +53,7 @@ type Config struct {
 	Assigner              assignmentAnnouncer
 	AttesterFeed          rpcAttestationService
 	Client                rpcClientService
+	Pubkey                []byte
 }
 
 // NewProposer creates a new attester instance.
@@ -63,6 +65,7 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 		assigner:           cfg.Assigner,
 		rpcClientService:   cfg.Client,
 		attestationService: cfg.AttesterFeed,
+		pubkey:             cfg.Pubkey,
 		assignmentChan:     make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 		attestationChan:    make(chan *pbp2p.AggregatedAttestation, cfg.AttestationBufferSize),
 		pendingAttestation: make([]*pbp2p.AggregatedAttestation, 0),

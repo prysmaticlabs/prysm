@@ -4,6 +4,7 @@ package node
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"os"
 	"os/signal"
@@ -40,6 +41,14 @@ type ShardEthereum struct {
 	db       *database.DB
 }
 
+// GeneratePubKey generates a random public key for the validator, if they have not provided one.
+func GeneratePubKey() ([]byte, error) {
+	pubkey := make([]byte, 48)
+	_, err := rand.Read(pubkey)
+
+	return pubkey, err
+}
+
 // NewShardInstance creates a new, Ethereum 2.0 sharding validator.
 func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 	registry := shared.NewServiceRegistry()
@@ -47,6 +56,20 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+	var pubkey []byte
+
+	inputkey := ctx.GlobalString(types.PubKeyFlag.Name)
+	if inputkey == "" {
+		var err error
+		pubkey, err = GeneratePubKey()
+		if err != nil {
+			return nil, err
+		}
+		log.Warnf("Public Key not detected, generating a new one: %v", pubkey)
+
+	} else {
+		pubkey = []byte(inputkey)
 	}
 
 	if err := shardEthereum.startDB(ctx); err != nil {
@@ -69,11 +92,11 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerAttesterService(ctx); err != nil {
+	if err := shardEthereum.registerAttesterService(pubkey); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerProposerService(); err != nil {
+	if err := shardEthereum.registerProposerService(pubkey); err != nil {
 		return nil, err
 	}
 
@@ -175,7 +198,7 @@ func (s *ShardEthereum) registerBeaconService() error {
 }
 
 // registerAttesterService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerAttesterService(ctx *cli.Context) error {
+func (s *ShardEthereum) registerAttesterService(pubkey []byte) error {
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
@@ -186,19 +209,17 @@ func (s *ShardEthereum) registerAttesterService(ctx *cli.Context) error {
 		return err
 	}
 
-	pubkey := ctx.GlobalString(types.PubKeyFlag.Name)
-
 	att := attester.NewAttester(context.TODO(), &attester.Config{
 		Assigner:      beaconService,
 		AssignmentBuf: 100,
 		Client:        rpcService,
-		Pubkey:        []byte(pubkey),
+		Pubkey:        pubkey,
 	})
 	return s.services.RegisterService(att)
 }
 
 // registerProposerService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerProposerService() error {
+func (s *ShardEthereum) registerProposerService(pubkey []byte) error {
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
@@ -214,6 +235,7 @@ func (s *ShardEthereum) registerProposerService() error {
 		AssignmentBuf:         100,
 		AttestationBufferSize: 100,
 		AttesterFeed:          beaconService,
+		Pubkey:                pubkey,
 	})
 	return s.services.RegisterService(prop)
 }
