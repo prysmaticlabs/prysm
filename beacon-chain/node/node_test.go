@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli"
 )
@@ -18,6 +18,7 @@ func TestNodeObserver_Builds(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	defer os.RemoveAll(tmp)
 	set.String("datadir", tmp, "node data directory")
 	set.Bool("simulator", true, "want to be a simulator?")
 
@@ -28,7 +29,6 @@ func TestNodeObserver_Builds(t *testing.T) {
 		t.Fatalf("Failed to create BeaconNode: %v", err)
 	}
 
-	os.RemoveAll(tmp)
 }
 
 // Test that the beacon chain validator node build fails without PoW service.
@@ -66,6 +66,7 @@ func TestNodeStart(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	defer os.RemoveAll(tmp)
 	set.String("datadir", tmp, "node data directory")
 	set.Bool("simulator", true, "want to be a simulator?")
 
@@ -77,7 +78,6 @@ func TestNodeStart(t *testing.T) {
 	}
 
 	go node.Start()
-	os.RemoveAll(tmp)
 }
 
 // Test that beacon chain node can close.
@@ -87,6 +87,7 @@ func TestNodeClose(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	defer os.RemoveAll(tmp)
 	set.String("datadir", tmp, "node data directory")
 
 	context := cli.NewContext(app, set, nil)
@@ -98,7 +99,5 @@ func TestNodeClose(t *testing.T) {
 
 	node.Close()
 
-	testutil.AssertLogsContain(t, hook, "Stopping beacon node")
-
-	os.RemoveAll(tmp)
+	testutils.AssertLogsContain(t, hook, "Stopping beacon node")
 }

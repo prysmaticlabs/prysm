@@ -5,14 +5,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/boltdb/bolt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
@@ -21,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -39,7 +41,7 @@ type BeaconNode struct {
 	services *shared.ServiceRegistry
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
-	db       *database.DB
+	db       *db.DB
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -132,14 +134,18 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
-	path := ctx.GlobalString(cmd.DataDirFlag.Name)
-	config := &database.DBConfig{DataDir: path, Name: beaconChainDBName, InMemory: false}
-	db, err := database.NewDB(config)
+	datadir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	if err := os.MkdirAll(datadir, 0700); err != nil {
+		return err
+	}
+	datafile := path.Join(datadir, "bolt.db")
+
+	bolt, err := bolt.Open(datafile, 0600, nil)
 	if err != nil {
 		return err
 	}
 
-	b.db = db
+	b.db = db.NewDB(bolt)
 	return nil
 }
 
@@ -160,13 +166,13 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		}
 	}
 
-	beaconChain, err := blockchain.NewBeaconChain(b.db.DB())
+	beaconChain, err := blockchain.NewBeaconChain(b.db)
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
 
 	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
-		BeaconDB:         b.db.DB(),
+		BeaconDB:         b.db,
 		Web3Service:      web3Service,
 		Chain:            beaconChain,
 		BeaconBlockBuf:   10,
@@ -211,7 +217,7 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService)
+	syncService := rbcsync.NewSyncService(context.Background(), rbcsync.DefaultConfig(), p2pService, chainService, b.db)
 	return b.services.RegisterService(syncService)
 }
 
@@ -231,7 +237,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	initialSyncService := initialsync.NewInitialSyncService(context.Background(), initialsync.DefaultConfig(), p2pService, chainService, syncService)
+	initialSyncService := initialsync.NewInitialSyncService(context.Background(), initialsync.DefaultConfig(), b.db, p2pService, syncService)
 	return b.services.RegisterService(initialSyncService)
 }
 
@@ -261,7 +267,7 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	cfg := &simulator.Config{
 		Delay:           defaultConf.Delay,
 		BlockRequestBuf: defaultConf.BlockRequestBuf,
-		BeaconDB:        b.db.DB(),
+		BeaconDB:        b.db,
 		P2P:             p2pService,
 		Web3Service:     web3Service,
 		ChainService:    chainService,

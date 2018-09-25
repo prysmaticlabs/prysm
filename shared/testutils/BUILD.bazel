@@ -6,7 +6,7 @@ go_library(
         "checkbit.go",
         "log.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
+    importpath = "github.com/prysmaticlabs/prysm/shared/testutils",
     visibility = ["//visibility:public"],
     deps = ["@com_github_sirupsen_logrus//hooks/test:go_default_library"],
 )

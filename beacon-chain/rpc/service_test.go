@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutils"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -87,11 +87,11 @@ func TestLifecycle(t *testing.T) {
 
 	rpcService.Start()
 
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutils.AssertLogsContain(t, hook, "Starting service")
+	testutils.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	testutils.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestBadEndpoint(t *testing.T) {
@@ -101,11 +101,11 @@ func TestBadEndpoint(t *testing.T) {
 
 	rpcService.Start()
 
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
+	testutils.AssertLogsContain(t, hook, "Starting service")
+	testutils.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	testutils.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestInsecureEndpoint(t *testing.T) {
@@ -115,12 +115,12 @@ func TestInsecureEndpoint(t *testing.T) {
 
 	rpcService.Start()
 
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
-	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
+	testutils.AssertLogsContain(t, hook, "Starting service")
+	testutils.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
+	testutils.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	testutils.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestFetchShuffledValidatorIndices(t *testing.T) {
@@ -169,7 +169,7 @@ func TestLatestBeaconBlockContextClosed(t *testing.T) {
 	}(t)
 	rpcService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
+	testutils.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
 
 func TestLatestBeaconBlock(t *testing.T) {
@@ -203,7 +203,7 @@ func TestLatestBeaconBlock(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	rpcService.canonicalBlockChan <- types.NewBlock(&pbp2p.BeaconBlock{})
-	testutil.AssertLogsContain(t, hook, "Sending latest canonical block to RPC clients")
+	testutils.AssertLogsContain(t, hook, "Sending latest canonical block to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
 }
@@ -224,7 +224,7 @@ func TestLatestCrystallizedStateContextClosed(t *testing.T) {
 	}(t)
 	rpcService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
+	testutils.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
 
 func TestLatestCrystallizedState(t *testing.T) {
@@ -258,7 +258,7 @@ func TestLatestCrystallizedState(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
-	testutil.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
+	testutils.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
 }
@@ -299,7 +299,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	}(t)
 	rpcService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
+	testutils.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
 
 func TestLatestAttestation(t *testing.T) {
@@ -333,7 +333,7 @@ func TestLatestAttestation(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	rpcService.proccessedAttestation <- &pbp2p.AggregatedAttestation{}
-	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
+	testutils.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
 }

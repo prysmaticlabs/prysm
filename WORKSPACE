@@ -571,6 +571,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_boltdb_bolt",
+    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    importpath = "github.com/boltdb/bolt",
+)
+
+go_repository(
     name = "com_github_steakknife_hamming",
     commit = "c99c65617cd3d686aea8365fe563d6542f01d940",
     importpath = "github.com/steakknife/hamming",

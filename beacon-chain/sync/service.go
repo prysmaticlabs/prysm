@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -17,14 +16,18 @@ import (
 var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
-	ContainsBlock(h [32]byte) (bool, error)
-	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
 	IncomingAttestationFeed() *event.Feed
-	CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error)
-	GetCanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error)
-	GetBlockSlotNumber(h [32]byte) (uint64, error)
-	CurrentCrystallizedState() *types.CrystallizedState
+}
+
+// DB is the interface for the DB service.
+type beaconDB interface {
+	GetBlock([32]byte) (*types.Block, error)
+	GetBlockBySlot(uint64) (*types.Block, error)
+	GetCrystallizedState() (*types.CrystallizedState, error)
+	HasInitialState() bool
+	HasBlock([32]byte) bool
+	HasBlockForSlot(uint64) bool
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -42,7 +45,8 @@ type chainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	p2p                   shared.P2P
+	p2p                   types.P2P
+	db                    beaconDB
 	chainService          chainService
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
@@ -67,12 +71,13 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs chainService) *Service {
+func NewSyncService(ctx context.Context, cfg Config, beaconp2p types.P2P, cs chainService, db beaconDB) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
 		cancel:                cancel,
 		p2p:                   beaconp2p,
+		db:                    db,
 		chainService:          cs,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
@@ -83,11 +88,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P, cs ch
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
-	stored, err := ss.chainService.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-		return
-	}
+	stored := ss.db.HasInitialState()
 
 	if !stored {
 		// TODO: Resume sync after completion of initial sync.
@@ -112,17 +113,13 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 	return ss.blockAnnouncementFeed
 }
 
-// ReceiveBlockHash accepts a block hash.
+// receiveBlockHash accepts a block hash.
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
-func (ss *Service) ReceiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
+func (ss *Service) receiveBlockHash(data *pb.BeaconBlockHashAnnounce, peer p2p.Peer) error {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
-	blockExists, err := ss.chainService.ContainsBlock(h)
-	if err != nil {
-		return err
-	}
-	if blockExists {
+	if ss.db.HasBlock(h) {
 		return nil
 	}
 	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
@@ -148,7 +145,7 @@ func (ss *Service) run() {
 			return
 		case msg := <-ss.announceBlockHashBuf:
 			data := msg.Data.(*pb.BeaconBlockHashAnnounce)
-			if err := ss.ReceiveBlockHash(data, msg.Peer); err != nil {
+			if err := ss.receiveBlockHash(data, msg.Peer); err != nil {
 				log.Errorf("Received block hash failed: %v", err)
 			}
 		case msg := <-ss.blockBuf:
@@ -158,24 +155,27 @@ func (ss *Service) run() {
 			if err != nil {
 				log.Errorf("Could not hash received block: %v", err)
 			}
-
-			blockExists, err := ss.chainService.ContainsBlock(blockHash)
-			if err != nil {
-				log.Errorf("Can not check for block in DB: %v", err)
-				continue
-			}
-			if blockExists {
+			if ss.db.HasBlock(blockHash) {
 				continue
 			}
 
 			// Verify attestation coming from proposer then forward block to the subscribers.
 			attestation := types.NewAttestation(response.Attestation)
-			cState := ss.chainService.CurrentCrystallizedState()
-			parentSlot, err := ss.chainService.GetBlockSlotNumber(block.ParentHash())
+			cState, err := ss.db.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Failed to get crystallized state: %v", err)
+			}
+
+			parentBlock, err := ss.db.GetBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Failed to get parent slot: %v", err)
 				continue
 			}
+			if parentBlock == nil {
+				continue
+			}
+			parentSlot := parentBlock.SlotNumber()
+
 			proposerShardID, _, err := casper.GetProposerIndexAndShard(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
 			if err != nil {
 				log.Errorf("Failed to get proposer shard ID: %v", err)
@@ -198,18 +198,12 @@ func (ss *Service) run() {
 				continue
 			}
 
-			blockExists, err := ss.chainService.CheckForCanonicalBlockBySlot(request.GetSlotNumber())
-			if err != nil {
-				log.Errorf("Error checking db for block %v", err)
-				continue
-			}
-			if !blockExists {
-				continue
-			}
-
-			block, err := ss.chainService.GetCanonicalBlockBySlotNumber(request.GetSlotNumber())
+			block, err := ss.db.GetBlockBySlot(request.GetSlotNumber())
 			if err != nil {
 				log.Errorf("Error retrieving block from db %v", err)
+				continue
+			}
+			if block != nil {
 				continue
 			}
 

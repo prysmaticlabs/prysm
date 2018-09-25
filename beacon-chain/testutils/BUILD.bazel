@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["setup.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/testutils",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/db:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
+    ],
+)
