@@ -411,7 +411,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
 				voteBalance += validators[attesterIndex].Balance
 			}
-			// add to total balance of the commitee.
+			// add to total balance of the committee.
 			totalBalance += validators[attesterIndex].Balance
 		}
 

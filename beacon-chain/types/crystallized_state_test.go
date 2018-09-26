@@ -182,9 +182,9 @@ func TestProcessCrosslinks(t *testing.T) {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
 
-	commitee := []uint32{0, 4, 6}
+	committee := []uint32{0, 4, 6}
 
-	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = commitee
+	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
 
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		CrosslinkRecords:           clRecords,
@@ -207,7 +207,7 @@ func TestProcessCrosslinks(t *testing.T) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
 
-	for _, index := range commitee {
+	for _, index := range committee {
 		if cState.Validators()[index].Balance == 1e18 {
 			t.Errorf("validator with index %d did not have balance changed.", index)
 		}
