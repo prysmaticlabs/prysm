@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -240,29 +239,6 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 	}
 }
 
-// LatestCrystallizedState streams the latest beacon crystallized state.
-func (s *Service) LatestCrystallizedState(req *empty.Empty, stream pb.BeaconService_LatestCrystallizedStateServer) error {
-	// Right now, this streams every newly created crystallized state but should only
-	// stream canonical states.
-	sub := s.fetcher.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
-	defer sub.Unsubscribe()
-	for {
-		select {
-		case state := <-s.canonicalStateChan:
-			log.Info("Sending crystallized state to RPC clients")
-			if err := stream.Send(state.Proto()); err != nil {
-				return err
-			}
-		case <-sub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
-			return nil
-		case <-s.ctx.Done():
-			log.Debug("RPC context closed, exiting goroutine")
-			return nil
-		}
-	}
-}
-
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
 func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
@@ -323,50 +299,21 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	return &pb.IndexResponse{Index: index}, nil
 }
 
-// ValidatorAssignment streams validator assignments every slot to clients that request
-// to watch a subset of public keys in the CrystallizedState's active validator set.
+// ValidatorAssignment streams validator assignments every cycle transition
+// to clients that request to watch a subset of public keys in the
+// CrystallizedState's active validator set.
 func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
-	// If the genesis time was at 12:00:00PM a if the SlotDuration is set to
-	// 8 seconds. We can accomplish this by using utils.WaitUntilTimestamp
-	// and passing in the desired slot duration as an argument.
-	//
-	// Instead of utilizing params.SlotDuration, we utilize a property of
-	// RPC service struct called slotAlignmentDuration. This value
-	// can be set to 0 seconds as a parameter in tests.
-	// Otherwise, tests would sleep.
-	utils.WaitUntilTimestamp(s.slotAlignmentDuration)
-
-	// Right after the timestamps are aligned, we start a new ticker
-	// that fires exactly every params.SlotDuration*time.Second. This ensures
-	// a consistent "heartbeat" to keep track of every beacon slot.
-	tickerChan := time.NewTicker(s.slotAlignmentDuration).C
-	return s.streamValidators(req, stream, utils.CurrentBeaconSlot(), tickerChan, s.ctx.Done())
-}
-
-// streamValidators is a wrapper around the internal logic for streaming validator assignments
-// to clients. It is abstracted into this function for easier tests.
-func (s *Service) streamValidators(
-	req *pb.ValidatorAssignmentRequest,
-	stream pb.ValidatorService_ValidatorAssignmentServer,
-	currentSlot uint64,
-	tickerChan <-chan time.Time,
-	done <-chan struct{}) error {
+	sub := s.fetcher.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-done:
-			log.Debug("ValidatorAssignment stream closed, exiting goroutine")
-			return nil
-		case <-tickerChan:
+		case cState := <-s.canonicalStateChan:
 
 			if len(req.GetPublicKeys()) == 0 {
 				return errors.New("no public keys specified in request")
 			}
 
-			log.WithField("slotNumber", currentSlot).Debug("Sending validator assignment to RPC clients")
-			// NOTE: this set will not change, so we can just cache the previous one
-
-			// We get the current crystallized state.
-			cState := s.chainService.CurrentCrystallizedState()
+			log.Info("Sending new cycle assignments to validator clients")
 
 			// Next, for each public key in the request, we build
 			// up an array of assignments.
@@ -424,6 +371,12 @@ func (s *Service) streamValidators(
 			if err := stream.Send(res); err != nil {
 				return err
 			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
+		case <-s.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
+			return nil
 		}
 	}
 }
