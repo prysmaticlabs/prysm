@@ -2,31 +2,32 @@ language: go
 go_import_path: github.com/prysmaticlabs/prysm
 sudo: false
 matrix:
-  include:
+    include:
     - os: linux
       go: 1.10.x
       env:
-        - lint
+      - lint
       script:
-        - 
+      -
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
-      env: 
-        - todos
+      env:
+      - todos
       install: true # Skip installing go packages
       script:
-          - ./scripts/check-todo.sh
+      - ./scripts/check-todo.sh
     - os: linux
       env:
-        - coverage
+      - coverage
       script:
-        - ./scripts/coverage.sh
-        - bash <(curl -s https://codecov.io/bash)
+      - ./scripts/coverage.sh
+      - bash <(curl -s https://codecov.io/bash)
     - os: linux
       env: V=0.17.1
       before_install:
-        # Install Bazel
-         - |
+      # Install Bazel
+      - |
+          echo "\ngo_register_toolchains(go_version = \"host\")"  >> WORKSPACE
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
           else
@@ -38,43 +39,44 @@ matrix:
           chmod +x install.sh
           ./install.sh --user
           rm -f install.sh
-        # Decrypt service account (only works on prysmaticlabs branches)
-        # TODO(#282): enable remote caching / execution
-        #- if [[ $encrypted_64ca747eb448_iv ]]; then
-        #    openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-        #    -in service-account.json.enc -out /tmp/service-account.json -d;
-        #    REMOTE_FLAGS=--config=remote;
-        #  fi
-      
+      # Decrypt service account (only works on prysmaticlabs branches)
+      # TODO(#282): enable remote caching / execution
+      - if [[ $encrypted_64ca747eb448_iv ]]; then
+          openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+          -in service-account.json.enc -out /tmp/service-account.json -d;
+          REMOTE_FLAGS=--config=remote;
+        fi
+
       install: true # Skip install go packages.
-          
+
       script:
-        # Ensure everything builds.
-        - |
+      # Ensure everything builds.
+      - |
           bazel \
             --bazelrc=.travis-bazelrc \
             build \
             //...
-        # Run all tests.
-        - |
+      # Run all tests.
+      - |
           bazel \
             --bazelrc=.travis-bazelrc \
             test \
             //... $REMOTE_FLAGS
-        
-        # Check that BUILD files are formatted correctly.
-        - ./scripts/check_gazelle.sh
 
-        # Check that target visibility is correct.
-        - ./scripts/check_visibility.sh
+      # Check that BUILD files are formatted correctly.
+      - ./scripts/check_gazelle.sh
 
-        # Shutdown must be last.
-        - bazel shutdown
+      # Check that target visibility is correct.
+      - ./scripts/check_visibility.sh
+
+      # Shutdown must be last.
+      - bazel shutdown
     - os: osx
       env: V=0.17.1
       before_install:
-        # Install Bazel
-         - |
+      # Install Bazel
+      - |
+          echo "\ngo_register_toolchains(go_version = \"host\")"  >> WORKSPACE
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
           else
@@ -86,53 +88,53 @@ matrix:
           chmod +x install.sh
           ./install.sh --user
           rm -f install.sh
-        # Decrypt service account (only works on prysmaticlabs branches)
-        # TODO(#282): enable remote caching / execution
-        #- if [[ $encrypted_64ca747eb448_iv ]]; then
-        #    openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-        #    -in service-account.json.enc -out /tmp/service-account.json -d;
-        #    REMOTE_FLAGS=--config=remote;
-        #  fi
+      # Decrypt service account (only works on prysmaticlabs branches)
+      # TODO(#282): enable remote caching / execution
+      - if [[ $encrypted_64ca747eb448_iv ]]; then
+          openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+          -in service-account.json.enc -out /tmp/service-account.json -d;
+          REMOTE_FLAGS=--config=remote;
+        fi
 
       install: true # Skip install go packages.
 
       script:
-        # Ensure everything builds.
-        - |
+      # Ensure everything builds.
+      - |
           bazel \
             --bazelrc=.travis-bazelrc \
             build \
             //...
-        # Run all tests.
-        - |
+      # Run all tests.
+      - |
           bazel \
             --bazelrc=.travis-bazelrc \
             test \
             //... $REMOTE_FLAGS
 
-        # Shutdown must be last.
-        - bazel shutdown
+      # Shutdown must be last.
+      - bazel shutdown
     - language: node_js
       os: linux
       env:
-        - solidity
+      - solidity
       node_js:
-        - "lts/*"
+      - "lts/*"
       before_install:
-        - npm install -g solium
+      - npm install -g solium
       install: true # Skip npm install.
       script:
-        # Check solidity linter.
-        - solium -d contracts/
+      # Check solidity linter.
+      - solium -d contracts/
 
       notifications:
-        email: false
+          email: false
 
       after_success:
-        - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
-        - chmod +x send.sh
-        - ./send.sh success $WEBHOOK_URL
+      - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
+      - chmod +x send.sh
+      - ./send.sh success $WEBHOOK_URL
       after_failure:
-        - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
-        - chmod +x send.sh
-        - ./send.sh failure $WEBHOOK_URL
+      - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
+      - chmod +x send.sh
+      - ./send.sh failure $WEBHOOK_URL
