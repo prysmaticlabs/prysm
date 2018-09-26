@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes"
@@ -20,8 +21,10 @@ func (f *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
 }
 
 func TestGenesisBlock(t *testing.T) {
-	b1 := NewGenesisBlock()
-	b2 := NewGenesisBlock()
+	aStateHash := [32]byte{0}
+	cStateHash := [32]byte{1}
+	b1 := NewGenesisBlock(aStateHash, cStateHash)
+	b2 := NewGenesisBlock(aStateHash, cStateHash)
 
 	// We ensure that initializing a proto timestamp from
 	// genesis time will lead to no error.
@@ -51,12 +54,12 @@ func TestGenesisBlock(t *testing.T) {
 		t.Fatalf("genesis block missing PowChainRef field")
 	}
 
-	if b1.data.ActiveStateHash == nil {
-		t.Fatalf("genesis block missing ActiveStateHash field")
+	if !bytes.Equal(b1.data.ActiveStateHash, aStateHash[:]) {
+		t.Fatalf("genesis block ActiveStateHash isn't initialized correctly")
 	}
 
-	if b1.data.CrystallizedStateHash == nil {
-		t.Fatalf("genesis block missing CrystallizedStateHash field")
+	if !bytes.Equal(b1.data.CrystallizedStateHash, cStateHash[:]) {
+		t.Fatalf("genesis block CrystallizedStateHash isn't initialized correctly")
 	}
 
 	b3 := NewBlock(nil)
