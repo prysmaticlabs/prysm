@@ -146,6 +146,9 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	} else {
 		log.Infof("Assigned as ATTESTER to slot %v, shardID: %v", s.assignedSlot, s.shardID)
 	}
+	if s.CurrentBeaconSlot() > s.assignedSlot {
+		log.Info("You joined a bit too late -the current slot is greater than assigned slot in the cycle, wait until next cycle to be re-assigned")
+	}
 }
 
 // waitForAssignment kicks off once the validator determines the currentSlot of the
