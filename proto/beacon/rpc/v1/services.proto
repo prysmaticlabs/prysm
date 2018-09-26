@@ -13,6 +13,10 @@ service BeaconService {
     // LatestAttestation streams the latest aggregated attestation to connected
     // validator clients.
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.AggregatedAttestation);
+    // CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
+    // to a beacon node in order to determine the current validator assignments
+    // and genesis timestamp of the protocol.
+    rpc CurrentAssignmentsAndGenesisTime(google.protobuf.Empty) returns (CurrentAssignmentsResponse);
 }
 
 service AttesterService {
@@ -32,10 +36,6 @@ service ValidatorService {
     // ValidatorAssignment streams validator assignments to clients
     // for a subset of public keys in the active validator set.
     rpc ValidatorAssignment(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
-    // CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
-    // to a beacon node in order to determine the current validator assignments
-    // and genesis timestamp of the protocol.
-    rpc CurrentAssignmentsAndGenesisTime(google.protobuf.Empty) returns (CurrentAssignmentsResponse);
 }
 
 message ProposeRequest {

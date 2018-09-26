@@ -50,6 +50,19 @@ func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalHead), arg0, arg1)
 }
 
+// CurrentAssignmentsAndGenesisTime mocks base method
+func (m *MockBeaconServiceServer) CurrentAssignmentsAndGenesisTime(arg0 context.Context, arg1 *empty.Empty) (*v10.CurrentAssignmentsResponse, error) {
+	ret := m.ctrl.Call(m, "CurrentAssignmentsAndGenesisTime", arg0, arg1)
+	ret0, _ := ret[0].(*v10.CurrentAssignmentsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CurrentAssignmentsAndGenesisTime indicates an expected call of CurrentAssignmentsAndGenesisTime
+func (mr *MockBeaconServiceServerMockRecorder) CurrentAssignmentsAndGenesisTime(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentAssignmentsAndGenesisTime", reflect.TypeOf((*MockBeaconServiceServer)(nil).CurrentAssignmentsAndGenesisTime), arg0, arg1)
+}
+
 // LatestAttestation mocks base method
 func (m *MockBeaconServiceServer) LatestAttestation(arg0 *empty.Empty, arg1 v10.BeaconService_LatestAttestationServer) error {
 	ret := m.ctrl.Call(m, "LatestAttestation", arg0, arg1)

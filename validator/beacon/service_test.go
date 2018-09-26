@@ -49,10 +49,10 @@ type mockLifecycleClient struct {
 func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
 
-	mockServiceClient.EXPECT().GenesisTimeAndCanonicalState(
+	mockServiceClient.EXPECT().CurrentAssignmentsAndGenesisTime(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.GenesisTimeAndStateResponse{
+	).Return(&pb.CurrentAssignmentsResponse{
 		GenesisTimestamp: ptypes.TimestampNow(),
 	}, nil)
 

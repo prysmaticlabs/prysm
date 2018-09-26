@@ -134,7 +134,9 @@ func (s *Service) Start() {
 	}
 
 	pb.RegisterBeaconServiceServer(s.grpcServer, s)
+	pb.RegisterValidatorServiceServer(s.grpcServer, s)
 	pb.RegisterProposerServiceServer(s.grpcServer, s)
+	pb.RegisterAttesterServiceServer(s.grpcServer, s)
 	go func() {
 		err = s.grpcServer.Serve(lis)
 		if err != nil {
