@@ -23,7 +23,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	validators := NewValidators()
 	defaultBalance := uint64(1e18)
 
-	rewQuotient := rewardQuotient(1, validators)
+	rewQuotient := RewardQuotient(1, validators)
 	participatedDeposit := 4 * defaultBalance
 	totalDeposit := 10 * defaultBalance
 	depositFactor := (2*participatedDeposit - totalDeposit) / totalDeposit
@@ -62,7 +62,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 
 	validators = NewValidators()
-	timeSinceFinality = 168
+	timeSinceFinality = 200
 
 	rewardedValidators = CalculateRewards(
 		5,
@@ -98,7 +98,7 @@ func TestRewardQuotient(t *testing.T) {
 			StartDynasty: 0,
 			EndDynasty:   2},
 	}
-	rewQuotient := rewardQuotient(0, validators)
+	rewQuotient := RewardQuotient(0, validators)
 
 	if rewQuotient != params.BaseRewardQuotient {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
@@ -123,7 +123,7 @@ func TestSlotMaxInterestRate(t *testing.T) {
 func TestQuadraticPenaltyQuotient(t *testing.T) {
 	penaltyQuotient := quadraticPenaltyQuotient()
 
-	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 17), 0.5)) {
+	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 17), 2)) {
 		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
 }

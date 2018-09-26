@@ -186,7 +186,7 @@ func TestProcessCrosslinks(t *testing.T) {
 		CurrentDynasty:             5,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50, 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
