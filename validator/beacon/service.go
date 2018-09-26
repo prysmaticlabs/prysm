@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"io"
 	"math"
 	"time"
@@ -80,7 +81,7 @@ func (s *Service) Start() {
 
 	// Then, we kick off a routine that uses the begins a ticker set in fetchGenesisAndCanonicalState
 	// to wait until the validator's assigned slot to perform proposals or attestations.
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Second * time.Duration(params.DefaultConfig().SlotDuration))
 	go s.waitForAssignment(ticker.C, client)
 
 	// Finally, we kick off a routine to pass processed attestations from beacon node to attester.
@@ -148,7 +149,7 @@ func (s *Service) listenForAssignmentChange(validator pb.ValidatorServiceClient)
 		s.assignedSlot = assignment.Assignments[0].AssignedSlot
 		s.assignedShardID = assignment.Assignments[0].ShardId
 
-		log.Infof("Validator with pub key 0x%v re-assigned to shard ID %d for %v duty at slot %d",
+		log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
 			string(assignment.Assignments[0].PublicKey.PublicKey),
 			s.assignedShardID,
 			s.responsibility,
