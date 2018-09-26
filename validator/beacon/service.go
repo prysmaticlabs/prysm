@@ -135,10 +135,9 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 		// TODO(#566): Determine assignment based on public key flag.
 		pubKeyProto := assignment.GetPublicKey()
 		if isZeroAddress(pubKeyProto.GetPublicKey()) {
-			s.assignedSlot = assignment.GetAssignedSlot()
+			s.assignedSlot = s.CurrentCycleStartSlot() + assignment.GetAssignedSlot()
 			s.shardID = assignment.GetShardId()
 			s.role = assignment.GetRole()
-			log.Info("MATCHEEEEESSSSSS")
 			break
 		}
 	}
@@ -221,7 +220,7 @@ func (s *Service) listenForCycleTransitions(client pb.BeaconServiceClient) {
 			// TODO(#566): Determine assignment based on public key flag.
 			pubKeyProto := assignment.GetPublicKey()
 			if isZeroAddress(pubKeyProto.GetPublicKey()) {
-				s.assignedSlot = assignment.GetAssignedSlot()
+				s.assignedSlot = s.CurrentCycleStartSlot() + assignment.GetAssignedSlot()
 				s.shardID = assignment.GetShardId()
 				s.role = assignment.GetRole()
 				break
@@ -285,7 +284,14 @@ func (s *Service) ProcessedAttestationFeed() *event.Feed {
 // CurrentBeaconSlot based on the genesis timestamp of the protocol.
 func (s *Service) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+	return uint64(math.Floor(secondsSinceGenesis / params.DefaultConfig().SlotDuration))
+}
+
+// CurrentCycleStartSlot returns the slot at which the current cycle started.
+func (s *Service) CurrentCycleStartSlot() uint64 {
+	currentSlot := s.CurrentBeaconSlot()
+	cycleNum := math.Floor(float64(currentSlot) / float64(params.DefaultConfig().CycleLength))
+	return uint64(cycleNum) * params.DefaultConfig().CycleLength
 }
 
 // isZeroAddress compares a withdrawal address to an empty byte array.
