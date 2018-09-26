@@ -41,7 +41,7 @@ matrix:
           rm -f install.sh
         # Decrypt service account (only works on prysmaticlabs branches)
         # TODO(#282): enable remote caching / execution
-        - if [[ $encrypted_64ca747eb448_iv ]]; then
+         - if [[ $encrypted_64ca747eb448_iv ]]; then
             openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
             -in service-account.json.enc -out /tmp/service-account.json -d;
             REMOTE_FLAGS=--config=remote;
@@ -90,11 +90,11 @@ matrix:
           rm -f install.sh
         # Decrypt service account (only works on prysmaticlabs branches)
         # TODO(#282): enable remote caching / execution
-        - if [[ $encrypted_64ca747eb448_iv ]]; then
-            openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-            -in service-account.json.enc -out /tmp/service-account.json -d;
-            REMOTE_FLAGS=--config=remote;
-          fi
+         - if [[ $encrypted_64ca747eb448_iv ]]; then
+             openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+             -in service-account.json.enc -out /tmp/service-account.json -d;
+             REMOTE_FLAGS=--config=remote;
+             fi
 
       install: true # Skip install go packages.
 
