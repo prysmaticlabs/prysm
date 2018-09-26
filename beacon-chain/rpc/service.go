@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -356,8 +355,7 @@ func (s *Service) ValidatorAssignments(
 			// corresponding, valid public key in the request. We also include
 			// the beacon node's current beacon slot in the response.
 			res := &pb.ValidatorAssignmentResponse{
-				Assignments:       assignments,
-				CurrentBeaconSlot: utils.CurrentBeaconSlot(),
+				Assignments: assignments,
 			}
 			if err := stream.Send(res); err != nil {
 				return err
