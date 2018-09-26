@@ -68,21 +68,20 @@ message ValidatorAssignmentRequest {
 
 message ValidatorAssignmentResponse {
     repeated Assignment assignments = 1;
-    uint64 current_beacon_slot = 2;
 }
 
 enum ValidatorRole {
-  UNKNOWN = 0;
-  ATTESTER = 1;
-  PROPOSER = 2;
+    UNKNOWN = 0;
+    ATTESTER = 1;
+    PROPOSER = 2;
 }
 
 // Assignment defines a validator's assignment responsibilities.
 message Assignment {
-  PublicKey public_key = 1;
-  uint64 shard_id = 2;
-  ValidatorRole role = 3;
-  uint64 assigned_slot = 4;
+    PublicKey public_key = 1;
+    uint64 shard_id = 2;
+    ValidatorRole role = 3;
+    uint64 assigned_slot = 4;
 }
 
 message PublicKey {
