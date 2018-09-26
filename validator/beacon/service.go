@@ -109,7 +109,7 @@ func (s *Service) CurrentBeaconSlot() uint64 {
 // From this, the validator client can deduce what slot interval the beacon
 // node is in and determine when exactly it is time to propose or attest.
 func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceClient) {
-	res, err := client.CurrentAssignmentsAndGenesisTime(s.ctx, &empty.Empty{})
+	res, err := client.CurrentAssignmentsAndGenesisTime(s.ctx, &pb.ValidatorAssignmentRequest{})
 	if err != nil {
 		// If this RPC request fails, the entire system should fatal as it is critical for
 		// the validator to begin this way.

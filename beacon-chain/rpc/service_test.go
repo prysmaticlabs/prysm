@@ -189,7 +189,14 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 		ChainService:     mockChain,
 		POWChainService:  &mockPOWChainService{},
 	})
-	res, err := rpcService.CurrentAssignmentsAndGenesisTime(context.Background(), &empty.Empty{})
+
+	key := &pb.PublicKey{PublicKey: []byte{}}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
+
+	res, err := rpcService.CurrentAssignmentsAndGenesisTime(context.Background(), req)
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}

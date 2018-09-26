@@ -16,7 +16,7 @@ service BeaconService {
     // CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
     // to a beacon node in order to determine the current validator assignments
     // and genesis timestamp of the protocol.
-    rpc CurrentAssignmentsAndGenesisTime(google.protobuf.Empty) returns (CurrentAssignmentsResponse);
+    rpc CurrentAssignmentsAndGenesisTime(ValidatorAssignmentRequest) returns (CurrentAssignmentsResponse);
 }
 
 service AttesterService {

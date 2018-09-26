@@ -57,7 +57,7 @@ func (mr *MockBeaconServiceClientMockRecorder) CanonicalHead(arg0, arg1 interfac
 }
 
 // CurrentAssignmentsAndGenesisTime mocks base method
-func (m *MockBeaconServiceClient) CurrentAssignmentsAndGenesisTime(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.CurrentAssignmentsResponse, error) {
+func (m *MockBeaconServiceClient) CurrentAssignmentsAndGenesisTime(arg0 context.Context, arg1 *v10.ValidatorAssignmentRequest, arg2 ...grpc.CallOption) (*v10.CurrentAssignmentsResponse, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)

@@ -51,7 +51,7 @@ func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interfac
 }
 
 // CurrentAssignmentsAndGenesisTime mocks base method
-func (m *MockBeaconServiceServer) CurrentAssignmentsAndGenesisTime(arg0 context.Context, arg1 *empty.Empty) (*v10.CurrentAssignmentsResponse, error) {
+func (m *MockBeaconServiceServer) CurrentAssignmentsAndGenesisTime(arg0 context.Context, arg1 *v10.ValidatorAssignmentRequest) (*v10.CurrentAssignmentsResponse, error) {
 	ret := m.ctrl.Call(m, "CurrentAssignmentsAndGenesisTime", arg0, arg1)
 	ret0, _ := ret[0].(*v10.CurrentAssignmentsResponse)
 	ret1, _ := ret[1].(error)

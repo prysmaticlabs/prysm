@@ -173,11 +173,18 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // initially. This method also returns the genesis timestamp
 // of the beacon node which will allow a validator client to setup a
 // a ticker to keep track of the current beacon slot.
-func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *empty.Empty) (*pb.CurrentAssignmentsResponse, error) {
+func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
 	genesis := types.NewGenesisBlock()
-	// TODO: Add assignments.
+	cState := s.chainService.CurrentCrystallizedState()
+
+	assignments, err := assignmentsForPublicKeys(req.GetPublicKeys(), cState)
+	if err != nil {
+		return nil, fmt.Errorf("could not get current assignments for public keys: %v", err)
+	}
+
 	return &pb.CurrentAssignmentsResponse{
 		GenesisTimestamp: genesis.Proto().GetTimestamp(),
+		Assignments:      assignments,
 	}, nil
 }
 
@@ -322,50 +329,9 @@ func (s *Service) ValidatorAssignment(
 
 			log.Info("Sending new cycle assignments to validator clients")
 
-			// Next, for each public key in the request, we build
-			// up an array of assignments.
-			assignments := []*pb.Assignment{}
-
-			for _, val := range req.GetPublicKeys() {
-
-				// For the corresponding public key and current crystallized state,
-				// we determine the assigned slot for the validator and whether it
-				// should act as a proposer or attester.
-				assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
-					val.GetPublicKey(),
-					cState.CurrentDynasty(),
-					cState.Validators(),
-					cState.ShardAndCommitteesForSlots(),
-				)
-				if err != nil {
-					return err
-				}
-
-				var role pb.ValidatorRole
-				if responsibility == "proposer" {
-					role = pb.ValidatorRole_PROPOSER
-				} else {
-					role = pb.ValidatorRole_ATTESTER
-				}
-
-				// We determine the assigned shard ID for the validator
-				// based on a public key and current crystallized state.
-				shardID, err := casper.ValidatorShardID(
-					val.GetPublicKey(),
-					cState.CurrentDynasty(),
-					cState.Validators(),
-					cState.ShardAndCommitteesForSlots(),
-				)
-				if err != nil {
-					return err
-				}
-
-				assignments = append(assignments, &pb.Assignment{
-					PublicKey:    val,
-					ShardId:      shardID,
-					Role:         role,
-					AssignedSlot: assignedSlot,
-				})
+			assignments, err := assignmentsForPublicKeys(req.GetPublicKeys(), cState)
+			if err != nil {
+				return fmt.Errorf("could not get assignments for public keys: %v", err)
 			}
 
 			// We create a response consisting of all the assignments for each
@@ -386,4 +352,53 @@ func (s *Service) ValidatorAssignment(
 			return nil
 		}
 	}
+}
+
+// assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
+// given a crystallized state.
+func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedState) ([]*pb.Assignment, error) {
+	// Next, for each public key in the request, we build
+	// up an array of assignments.
+	assignments := []*pb.Assignment{}
+	for _, val := range keys {
+		// For the corresponding public key and current crystallized state,
+		// we determine the assigned slot for the validator and whether it
+		// should act as a proposer or attester.
+		assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
+			val.GetPublicKey(),
+			cState.CurrentDynasty(),
+			cState.Validators(),
+			cState.ShardAndCommitteesForSlots(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		var role pb.ValidatorRole
+		if responsibility == "proposer" {
+			role = pb.ValidatorRole_PROPOSER
+		} else {
+			role = pb.ValidatorRole_ATTESTER
+		}
+
+		// We determine the assigned shard ID for the validator
+		// based on a public key and current crystallized state.
+		shardID, err := casper.ValidatorShardID(
+			val.GetPublicKey(),
+			cState.CurrentDynasty(),
+			cState.Validators(),
+			cState.ShardAndCommitteesForSlots(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		assignments = append(assignments, &pb.Assignment{
+			PublicKey:    val,
+			ShardId:      shardID,
+			Role:         role,
+			AssignedSlot: assignedSlot,
+		})
+	}
+	return assignments, nil
 }
