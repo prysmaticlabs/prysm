@@ -27,9 +27,9 @@ type Service struct {
 	ctx                      context.Context
 	cancel                   context.CancelFunc
 	rpcClient                rpcClientService
-	validatorIndex           int
 	assignedSlot             uint64
-	responsibility           string
+	shardID                  uint64
+	role                     pb.ValidatorRole
 	attesterAssignmentFeed   *event.Feed
 	proposerAssignmentFeed   *event.Feed
 	processedAttestationFeed *event.Feed
@@ -108,7 +108,12 @@ func (s *Service) Stop() error {
 // From this, the validator client can deduce what slot interval the beacon
 // node is in and determine when exactly it is time to propose or attest.
 func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceClient) {
-	res, err := client.CurrentAssignmentsAndGenesisTime(s.ctx, &pb.ValidatorAssignmentRequest{})
+
+	// Currently fetches assignments for all validators.
+	req := &pb.ValidatorAssignmentRequest{
+		AllValidators: true,
+	}
+	res, err := client.CurrentAssignmentsAndGenesisTime(s.ctx, req)
 	if err != nil {
 		// If this RPC request fails, the entire system should fatal as it is critical for
 		// the validator to begin this way.
@@ -123,8 +128,19 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	}
 
 	s.genesisTimestamp = genesisTimestamp
-	// TODO: Parse through the assignments and set the assigned slot, shardID,
-	// and responsibility.
+
+	// Loops through the received assignments to determine which one
+	// corresponds to this validator client based on a matching public key.
+	for _, assignment := range res.GetAssignments() {
+		// TODO(#566): Determine assignment based on public key flag.
+		pubKeyProto := assignment.GetPublicKey()
+		if isZeroAddress(pubKeyProto.GetPublicKey()) {
+			s.assignedSlot = assignment.GetAssignedSlot()
+			s.shardID = assignment.GetShardId()
+			s.role = assignment.GetRole()
+			break
+		}
+	}
 }
 
 // waitForAssignment kicks off once the validator determines the currentSlot of the
@@ -137,10 +153,9 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 		case <-s.ctx.Done():
 			return
 		case <-ticker:
-			log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New beacon node slot interval")
-			if s.responsibility == "proposer" && s.assignedSlot == s.CurrentBeaconSlot() {
+			log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New beacon node slot")
+			if s.role == pb.ValidatorRole_PROPOSER && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
-				s.responsibility = ""
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
@@ -148,9 +163,8 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				}
 				// We forward the latest canonical block to the proposer service via a feed.
 				s.proposerAssignmentFeed.Send(block)
-			} else if s.responsibility == "attester" && s.assignedSlot == s.CurrentBeaconSlot() {
+			} else if s.role == pb.ValidatorRole_ATTESTER && s.assignedSlot == s.CurrentBeaconSlot() {
 				log.Info("Assigned attestation slot number reached")
-				s.responsibility = ""
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
@@ -166,6 +180,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 // listenForCycleTransitions receives validator assignments from the
 // the beacon node's RPC server when a new cycle transition occurs.
 func (s *Service) listenForCycleTransitions(client pb.BeaconServiceClient) {
+	// Currently fetches assignments for all validators.
 	req := &pb.ValidatorAssignmentRequest{
 		AllValidators: true,
 	}
@@ -193,7 +208,18 @@ func (s *Service) listenForCycleTransitions(client pb.BeaconServiceClient) {
 		}
 
 		log.Print(res)
-		// TODO: Loop through and get assigned slot, shardID, and role.
+		// Loops through the received assignments to determine which one
+		// corresponds to this validator client based on a matching public key.
+		for _, assignment := range res.GetAssignments() {
+			// TODO(#566): Determine assignment based on public key flag.
+			pubKeyProto := assignment.GetPublicKey()
+			if isZeroAddress(pubKeyProto.GetPublicKey()) {
+				s.assignedSlot = assignment.GetAssignedSlot()
+				s.shardID = assignment.GetShardId()
+				s.role = assignment.GetRole()
+				break
+			}
+		}
 	}
 }
 

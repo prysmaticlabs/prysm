@@ -125,14 +125,14 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "proposer"
+	b.role = pb.ValidatorRole_PROPOSER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "New beacon node slot interval")
+	testutil.AssertLogsContain(t, hook, "New beacon node slot")
 }
 
 func TestWaitForAssignmentProposerError(t *testing.T) {
@@ -154,7 +154,7 @@ func TestWaitForAssignmentProposerError(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "proposer"
+	b.role = pb.ValidatorRole_PROPOSER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
@@ -183,14 +183,14 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "attester"
+	b.role = pb.ValidatorRole_ATTESTER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "New beacon node slot interval")
+	testutil.AssertLogsContain(t, hook, "New beacon node slot")
 }
 
 func TestWaitForAssignmentAttesterError(t *testing.T) {
@@ -212,7 +212,7 @@ func TestWaitForAssignmentAttesterError(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "attester"
+	b.role = pb.ValidatorRole_ATTESTER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
