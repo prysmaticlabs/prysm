@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
@@ -34,6 +35,24 @@ func NewMockValidatorServiceClient(ctrl *gomock.Controller) *MockValidatorServic
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRecorder {
 	return m.recorder
+}
+
+// CurrentAssignmentsAndGenesisTime mocks base method
+func (m *MockValidatorServiceClient) CurrentAssignmentsAndGenesisTime(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v1.CurrentAssignmentsResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CurrentAssignmentsAndGenesisTime", varargs...)
+	ret0, _ := ret[0].(*v1.CurrentAssignmentsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CurrentAssignmentsAndGenesisTime indicates an expected call of CurrentAssignmentsAndGenesisTime
+func (mr *MockValidatorServiceClientMockRecorder) CurrentAssignmentsAndGenesisTime(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentAssignmentsAndGenesisTime", reflect.TypeOf((*MockValidatorServiceClient)(nil).CurrentAssignmentsAndGenesisTime), varargs...)
 }
 
 // ValidatorAssignment mocks base method

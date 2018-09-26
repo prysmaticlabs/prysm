@@ -181,7 +181,7 @@ func TestCanonicalHead(t *testing.T) {
 	}
 }
 
-func TestGenesisTimeAndCanonicalState(t *testing.T) {
+func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:             "6372",
@@ -189,9 +189,9 @@ func TestGenesisTimeAndCanonicalState(t *testing.T) {
 		ChainService:     mockChain,
 		POWChainService:  &mockPOWChainService{},
 	})
-	res, err := rpcService.GenesisTimeAndCanonicalState(context.Background(), &empty.Empty{})
+	res, err := rpcService.CurrentAssignmentsAndGenesisTime(context.Background(), &empty.Empty{})
 	if err != nil {
-		t.Errorf("Could not call GenesisTimeAndCanonicalState correctly: %v", err)
+		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
 	genesis := types.NewGenesisBlock()
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
@@ -345,10 +345,11 @@ func TestValidatorShardID(t *testing.T) {
 func TestValidatorAssignment(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	mockChain := &mockChainService{}
+	mockChain := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "6372",
-		ChainService: mockChain,
+		Port:             "6372",
+		ChainService:     mockChain,
+		CanonicalFetcher: mockChain,
 	})
 
 	ctrl := gomock.NewController(t)
@@ -363,7 +364,6 @@ func TestValidatorAssignment(t *testing.T) {
 		PublicKeys: publicKeys,
 	}
 
-	cStateChan := make(chan *types.CrystallizedState)
 	exitRoutine := make(chan bool)
 
 	// Tests a validator assignment stream.
@@ -379,7 +379,7 @@ func TestValidatorAssignment(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cStateChan <- genesisState
+	rpcService.canonicalStateChan <- genesisState
 	rpcService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")

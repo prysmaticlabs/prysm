@@ -164,14 +164,14 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 	return block.Proto(), nil
 }
 
-// CurrentAssignments returns the current validator assignments
+// CurrentAssignmentsAndGenesisTime returns the current validator assignments
 // based on the beacon node's current, canonical crystallized state.
 // Validator clients send this request once upon establishing a connection
 // to the beacon node in order to determine their role and assigned slot
 // initially. This method also returns the genesis timestamp
 // of the beacon node which will allow a validator client to setup a
 // a ticker to keep track of the current beacon slot.
-func (s *Service) CurrentAssignments(ctx context.Context, req *empty.Empty) (*pb.CurrentAssignmentsResponse, error) {
+func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *empty.Empty) (*pb.CurrentAssignmentsResponse, error) {
 	genesis := types.NewGenesisBlock()
 	// TODO: Add assignments.
 	return &pb.CurrentAssignmentsResponse{
@@ -322,7 +322,7 @@ func (s *Service) ValidatorAssignment(
 
 			// Next, for each public key in the request, we build
 			// up an array of assignments.
-			assignments := []*pb.ValidatorAssignmentResponse_Assignment{}
+			assignments := []*pb.Assignment{}
 
 			for _, val := range req.GetPublicKeys() {
 
@@ -358,7 +358,7 @@ func (s *Service) ValidatorAssignment(
 					return err
 				}
 
-				assignments = append(assignments, &pb.ValidatorAssignmentResponse_Assignment{
+				assignments = append(assignments, &pb.Assignment{
 					PublicKey:    val,
 					ShardId:      shardID,
 					Role:         role,

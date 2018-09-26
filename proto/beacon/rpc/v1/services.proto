@@ -32,10 +32,10 @@ service ValidatorService {
     // ValidatorAssignment streams validator assignments to clients
     // for a subset of public keys in the active validator set.
     rpc ValidatorAssignment(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
-    // CurrentAssignments is called by a validator client upon first connecting
+    // CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
     // to a beacon node in order to determine the current validator assignments
     // and genesis timestamp of the protocol.
-    rpc CurrentAssignments(google.protobuf.Empty) returns (CurrentAssignmentsResponse);
+    rpc CurrentAssignmentsAndGenesisTime(google.protobuf.Empty) returns (CurrentAssignmentsResponse);
 }
 
 message ProposeRequest {

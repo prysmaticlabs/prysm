@@ -56,24 +56,6 @@ func (mr *MockBeaconServiceClientMockRecorder) CanonicalHead(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceClient)(nil).CanonicalHead), varargs...)
 }
 
-// GenesisTimeAndCanonicalState mocks base method
-func (m *MockBeaconServiceClient) GenesisTimeAndCanonicalState(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v10.GenesisTimeAndStateResponse, error) {
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GenesisTimeAndCanonicalState", varargs...)
-	ret0, _ := ret[0].(*v10.GenesisTimeAndStateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GenesisTimeAndCanonicalState indicates an expected call of GenesisTimeAndCanonicalState
-func (mr *MockBeaconServiceClientMockRecorder) GenesisTimeAndCanonicalState(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenesisTimeAndCanonicalState", reflect.TypeOf((*MockBeaconServiceClient)(nil).GenesisTimeAndCanonicalState), varargs...)
-}
-
 // LatestAttestation mocks base method
 func (m *MockBeaconServiceClient) LatestAttestation(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (v10.BeaconService_LatestAttestationClient, error) {
 	varargs := []interface{}{arg0, arg1}
