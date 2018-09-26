@@ -163,7 +163,7 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // once upon establishing a connection to the beacon node in order to determine
 // their role and assigned slot initially and setup an internal ticker.
 func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndStateResponse, error) {
-	genesis := types.NewGenesisBlock()
+	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
 	crystallized := s.fetcher.CanonicalCrystallizedState()
 	return &pb.GenesisTimeAndStateResponse{
 		GenesisTimestamp:        genesis.Proto().GetTimestamp(),
