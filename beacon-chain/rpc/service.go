@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_golang_protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -70,7 +71,7 @@ type Service struct {
 	grpcServer            *grpc.Server
 	canonicalBlockChan    chan *types.Block
 	canonicalStateChan    chan *types.CrystallizedState
-	incomingAttestation   chan *pbp2p.AggregatedAttestation
+	incomingAttestation   chan *types.Attestation
 	devMode               bool
 	slotAlignmentDuration time.Duration
 }
@@ -105,7 +106,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		slotAlignmentDuration: time.Duration(params.SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
-		incomingAttestation:   make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
+		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
 		devMode:               cfg.DevMode,
 	}
 }
@@ -174,7 +175,8 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // of the beacon node which will allow a validator client to setup a
 // a ticker to keep track of the current beacon slot.
 func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
-	genesis := types.NewGenesisBlock()
+	// #nosec G104
+	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	cState := s.chainService.CurrentCrystallizedState()
 
 	assignments, err := assignmentsForPublicKeys(req.GetPublicKeys(), cState)
@@ -183,7 +185,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	}
 
 	return &pb.CurrentAssignmentsResponse{
-		GenesisTimestamp: genesis.Proto().GetTimestamp(),
+		GenesisTimestamp: protoGenesis,
 		Assignments:      assignments,
 	}, nil
 }
@@ -238,7 +240,7 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 		select {
 		case attestation := <-s.incomingAttestation:
 			log.Info("Sending attestation to RPC clients")
-			if err := stream.Send(attestation); err != nil {
+			if err := stream.Send(attestation.Proto()); err != nil {
 				return err
 			}
 		case <-sub.Err():

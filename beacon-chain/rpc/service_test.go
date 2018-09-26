@@ -200,7 +200,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis := types.NewGenesisBlock()
+	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
 		t.Errorf("Received different genesis timestamp, wanted: %v, received: %v", genesis.Proto().GetTimestamp(), res.GenesisTimestamp)
 	}
@@ -279,9 +279,10 @@ func TestLatestAttestation(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
+	attestation := &types.Attestation{}
 
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(errors.New("something wrong"))
+	mockStream.EXPECT().Send(attestation.Proto()).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
@@ -289,10 +290,11 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.incomingAttestation <- &pbp2p.AggregatedAttestation{}
+
+	rpcService.incomingAttestation <- attestation
 
 	mockStream = internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(nil)
+	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
 
 	// Tests a good stream.
 	go func(tt *testing.T) {
@@ -301,7 +303,7 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.incomingAttestation <- &pbp2p.AggregatedAttestation{}
+	rpcService.incomingAttestation <- attestation
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
