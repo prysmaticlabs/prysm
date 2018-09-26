@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
@@ -219,69 +217,6 @@ func TestProposeBlock(t *testing.T) {
 	}
 }
 
-func TestLatestCrystallizedStateContextClosed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "8777",
-		SubscriptionBuf:  0,
-		CanonicalFetcher: cs,
-	})
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	go func(tt *testing.T) {
-		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.cancel()
-	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
-}
-
-func TestLatestCrystallizedState(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "8773",
-		SubscriptionBuf:  0,
-		CanonicalFetcher: cs,
-	})
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	exitRoutine := make(chan bool)
-
-	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(errors.New("something wrong"))
-	// Tests a faulty stream.
-	go func(tt *testing.T) {
-		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
-			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
-
-	mockStream = internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(nil)
-
-	// Tests a good stream.
-	go func(tt *testing.T) {
-		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
-	testutil.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
-	rpcService.cancel()
-	exitRoutine <- true
-}
-
 func TestAttestHead(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockAttestationService := &mockAttestationService{}
@@ -407,28 +342,7 @@ func TestValidatorShardID(t *testing.T) {
 	}
 }
 
-func TestValidatorAssignmentRPC(t *testing.T) {
-	mockChain := &mockChainService{}
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "6372",
-		ChainService: mockChain,
-	})
-
-	rpcService.slotAlignmentDuration = time.Millisecond
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
-
-	req := &pb.ValidatorAssignmentRequest{}
-
-	err := rpcService.ValidatorAssignment(req, mockStream)
-	if !strings.Contains(err.Error(), "no public keys specified in request") {
-		t.Errorf("Expected error: no public keys specified in request, received %v", err)
-	}
-}
-
-func TestStreamValidators(t *testing.T) {
+func TestValidatorAssignment(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	mockChain := &mockChainService{}
@@ -449,20 +363,24 @@ func TestStreamValidators(t *testing.T) {
 		PublicKeys: publicKeys,
 	}
 
-	timeChan := make(chan time.Time)
-	doneChan := make(chan struct{})
+	cStateChan := make(chan *types.CrystallizedState)
 	exitRoutine := make(chan bool)
 
 	// Tests a validator assignment stream.
 	go func(tt *testing.T) {
-		if err := rpcService.streamValidators(req, mockStream, 100, timeChan, doneChan); err != nil {
+		if err := rpcService.ValidatorAssignment(req, mockStream); err != nil {
 			tt.Errorf("Could not stream validators: %v", err)
 		}
 		<-exitRoutine
 	}(t)
 
-	timeChan <- time.Now()
-	doneChan <- struct{}{}
+	genesisState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cStateChan <- genesisState
+	rpcService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending validator assignment to RPC clients")
+	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")
 }

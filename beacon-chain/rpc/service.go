@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -302,7 +303,9 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 // ValidatorAssignment streams validator assignments every cycle transition
 // to clients that request to watch a subset of public keys in the
 // CrystallizedState's active validator set.
-func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream pb.ValidatorService_ValidatorAssignmentServer) error {
+func (s *Service) ValidatorAssignment(
+	req *pb.ValidatorAssignmentRequest,
+	stream pb.ValidatorService_ValidatorAssignmentServer) error {
 	sub := s.fetcher.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
@@ -366,7 +369,7 @@ func (s *Service) ValidatorAssignment(req *pb.ValidatorAssignmentRequest, stream
 			// the beacon node's current beacon slot in the response.
 			res := &pb.ValidatorAssignmentResponse{
 				Assignments:       assignments,
-				CurrentBeaconSlot: currentSlot,
+				CurrentBeaconSlot: utils.CurrentBeaconSlot(),
 			}
 			if err := stream.Send(res); err != nil {
 				return err

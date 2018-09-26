@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
@@ -76,7 +75,6 @@ func (s *Service) Start() {
 	// coming from the beacon node. This will allow the validator client to recalculate
 	// when it has to perform its responsibilities appropriately using timestamps
 	// and the IndicesForSlots field inside the received crystallized state.
-	go s.listenForCrystallizedStates(client)
 	go s.listenForProcessedAttestations(client)
 }
 
@@ -122,11 +120,6 @@ func (s *Service) fetchGenesisAndCanonicalState(client pb.BeaconServiceClient) {
 	}
 
 	s.genesisTimestamp = genesisTimestamp
-
-	crystallized := res.GetLatestCrystallizedState()
-	if err := s.processCrystallizedState(crystallized); err != nil {
-		log.Fatalf("unable to process received crystallized state: %v", err)
-	}
 }
 
 // waitForAssignment kicks off once the validator determines the currentSlot of the
@@ -163,78 +156,6 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 			}
 		}
 	}
-}
-
-// listenForCrystallizedStates receives the latest canonical crystallized state
-// from the beacon node's RPC server via gRPC streams.
-// TODO(#545): Rename to listen for assignment instead, which is streamed from a beacon node
-// upon every new cycle transition and will include the validator's index in the
-// assignment bitfield as well as the assigned shard ID.
-func (s *Service) listenForCrystallizedStates(client pb.BeaconServiceClient) {
-	stream, err := client.LatestCrystallizedState(s.ctx, &empty.Empty{})
-	if err != nil {
-		log.Errorf("Could not setup crystallized beacon state streaming client: %v", err)
-		return
-	}
-	for {
-		crystallizedState, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
-		if s.ctx.Err() != nil {
-			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
-			break
-		}
-		if err != nil {
-			log.Errorf("Could not receive latest crystallized beacon state from stream: %v", err)
-			continue
-		}
-		if err := s.processCrystallizedState(crystallizedState); err != nil {
-			log.Error(err)
-		}
-	}
-}
-
-// processCrystallizedState uses a received crystallized state to determine
-// whether a validator is a proposer/attester and the validator's assigned slot.
-func (s *Service) processCrystallizedState(crystallizedState *pbp2p.CrystallizedState) error {
-	var activeValidatorIndices []int
-	dynasty := crystallizedState.GetCurrentDynasty()
-
-	for i, validator := range crystallizedState.GetValidators() {
-		if validator.StartDynasty <= dynasty && dynasty < validator.EndDynasty {
-			activeValidatorIndices = append(activeValidatorIndices, i)
-		}
-	}
-	isValidatorIndexSet := false
-
-	// We then iteratate over the activeValidatorIndices to determine what index
-	// this running validator client corresponds to.
-	for _, val := range activeValidatorIndices {
-		// TODO(#258): Check the public key instead of withdrawal address. This will use BLS.
-		if isZeroAddress(crystallizedState.Validators[val].WithdrawalAddress) {
-			s.validatorIndex = val
-			isValidatorIndexSet = true
-			break
-		}
-	}
-
-	// If validator was not found in the validator set was not set, keep listening for
-	// crystallized states.
-	if !isValidatorIndexSet {
-		log.Debug("Validator index not found in latest crystallized state's active validator list")
-		return nil
-	}
-
-	// The validator needs to propose the next block.
-	// TODO(#545): Determine this from a gRPC stream from the beacon node
-	// instead.
-	s.responsibility = "proposer"
-	s.assignedSlot = s.CurrentBeaconSlot() + 2
-	log.WithField("assignedSlot", s.assignedSlot).Info("Validator selected as proposer")
-	return nil
 }
 
 // listenForProcessedAttestations receives processed attestations from the

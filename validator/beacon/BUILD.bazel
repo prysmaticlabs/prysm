@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/beacon",
     visibility = ["//validator:__subpackages__"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//validator/params:go_default_library",
         "@com_github_ethereum_go_ethereum//event:go_default_library",
