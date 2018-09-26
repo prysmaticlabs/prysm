@@ -30,7 +30,6 @@ type Service struct {
 	pubKey                   []byte
 	rpcClient                rpcClientService
 	validatorClient          validatorClientService
-	validatorIndex           int
 	assignedSlot             uint64
 	assignedShardID          uint64
 	responsibility           pb.ValidatorRole

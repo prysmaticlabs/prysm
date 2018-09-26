@@ -43,7 +43,6 @@ type Config struct {
 	ShardID       uint64
 	Assigner      beaconClientService
 	Client        rpcClientService
-	Pubkey        []byte
 }
 
 // NewAttester creates a new attester instance.

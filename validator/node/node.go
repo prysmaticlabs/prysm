@@ -57,19 +57,20 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		services: registry,
 		stop:     make(chan struct{}),
 	}
-	var pubkey []byte
 
-	inputkey := ctx.GlobalString(types.PubKeyFlag.Name)
-	if inputkey == "" {
+	var pubKey []byte
+
+	inputKey := ctx.GlobalString(types.PubKeyFlag.Name)
+	if inputKey == "" {
 		var err error
-		pubkey, err = GeneratePubKey()
+		pubKey, err = GeneratePubKey()
 		if err != nil {
 			return nil, err
 		}
-		log.Warnf("Public Key not detected, generating a new one: %v", pubkey)
+		log.Warnf("Public Key not detected, generating a new one: %v", pubKey)
 
 	} else {
-		pubkey = []byte(inputkey)
+		pubKey = []byte(inputKey)
 	}
 
 	if err := shardEthereum.startDB(ctx); err != nil {
@@ -88,7 +89,7 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconService(pubkey); err != nil {
+	if err := shardEthereum.registerBeaconService(pubKey); err != nil {
 		return nil, err
 	}
 
