@@ -164,16 +164,18 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 	return block.Proto(), nil
 }
 
-// GenesisTimeAndCanonicalState returns the genesis timestamp and crystallized state
-// determined as canonical. Validator clients send this request
-// once upon establishing a connection to the beacon node in order to determine
-// their role and assigned slot initially and setup an internal ticker.
-func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndStateResponse, error) {
+// CurrentAssignments returns the current validator assignments
+// based on the beacon node's current, canonical crystallized state.
+// Validator clients send this request once upon establishing a connection
+// to the beacon node in order to determine their role and assigned slot
+// initially. This method also returns the genesis timestamp
+// of the beacon node which will allow a validator client to setup a
+// a ticker to keep track of the current beacon slot.
+func (s *Service) CurrentAssignments(ctx context.Context, req *empty.Empty) (*pb.CurrentAssignmentsResponse, error) {
 	genesis := types.NewGenesisBlock()
-	crystallized := s.fetcher.CanonicalCrystallizedState()
-	return &pb.GenesisTimeAndStateResponse{
-		GenesisTimestamp:        genesis.Proto().GetTimestamp(),
-		LatestCrystallizedState: crystallized.Proto(),
+	// TODO: Add assignments.
+	return &pb.CurrentAssignmentsResponse{
+		GenesisTimestamp: genesis.Proto().GetTimestamp(),
 	}, nil
 }
 
