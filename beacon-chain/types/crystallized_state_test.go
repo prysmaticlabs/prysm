@@ -156,12 +156,14 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Set up validators.
-	validators := []*pb.ValidatorRecord{
-		{
-			Balance:      10000,
+	var validators []*pb.ValidatorRecord
+
+	for i := 0; i < 20; i++ {
+		validators = append(validators, &pb.ValidatorRecord{
+			Balance:      1e18,
 			StartDynasty: 0,
 			EndDynasty:   params.DefaultEndDynasty,
-		},
+		})
 	}
 
 	// Set up pending attestations.
@@ -170,7 +172,7 @@ func TestProcessCrosslinks(t *testing.T) {
 			Slot:             0,
 			ShardId:          0,
 			ShardBlockHash:   []byte{'a'},
-			AttesterBitfield: []byte{'z', 'z'},
+			AttesterBitfield: []byte{10},
 		},
 	}
 
@@ -179,6 +181,10 @@ func TestProcessCrosslinks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
+
+	commitee := []uint32{0, 4, 6}
+
+	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = commitee
 
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		CrosslinkRecords:           clRecords,
@@ -199,6 +205,12 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
+	}
+
+	for _, index := range commitee {
+		if cState.Validators()[index].Balance == 1e18 {
+			t.Errorf("validator with index %d did not have balance changed.", index)
+		}
 	}
 }
 

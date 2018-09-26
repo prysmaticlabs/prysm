@@ -101,6 +101,7 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 	return slotFactor / uint64(penaltyQuotient)
 }
 
+// RewardValidatorCrosslink applies rewards to validators part of a shard commitee for voting on a shard.
 func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
 	currentBalance := validator.Balance
 	multipicFactor := float64(2*participatedDeposits)/float64(totalDeposit) - 1
@@ -108,6 +109,7 @@ func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, 
 	validator.Balance = uint64(newBalance)
 }
 
+// PenaliseValidatorCrosslink applies penalties to validators part of a shard commitee for not voting on a shard.
 func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
 	currentBalance := validator.Balance
 	quadraticQuotient := quadraticPenaltyQuotient()
