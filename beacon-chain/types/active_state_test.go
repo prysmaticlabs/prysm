@@ -267,3 +267,39 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 }
+
+
+func TestGetSignedParentHashes(t *testing.T) {
+	block := NewBlock(&pb.BeaconBlock{
+		SlotNumber: 129,
+	})
+
+	recentBlockHashes := [][]byte{}
+	for i := 0; i < 2*params.CycleLength; i++ {
+		recentBlockHashes = append(recentBlockHashes, []byte{0})
+	}
+
+	aState := NewActiveState(&pb.ActiveState{
+		PendingAttestations: []*pb.AggregatedAttestation{
+			{
+				Slot:    0,
+				ShardId: 0,
+			},
+			{
+				Slot:    0,
+				ShardId: 1,
+			},
+		},
+		RecentBlockHashes: recentBlockHashes,
+	}, nil)
+
+	hashes, err := aState.getSignedParentHashes(block, aState.data.PendingAttestations[0])
+	if err != nil {
+		t.Fatalf("failed to get back expected parent hashes")
+	}
+
+	if !reflect.DeepEqual(hashes, recentBlockHashes) {
+		t.Fatalf("returned parent hashes from getSignedParentHashes are not what we expected")
+	}
+
+}
