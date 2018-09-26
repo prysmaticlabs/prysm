@@ -27,8 +27,7 @@ matrix:
       before_install:
         # Install Bazel
          - |
-          echo "
-          go_register_toolchains(go_version = \"host\")"  >> WORKSPACE
+          echo "\\ngo_register_toolchains(go_version = \"host\")"  >> WORKSPACE
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
           else
@@ -78,8 +77,7 @@ matrix:
       before_install:
         # Install Bazel
          - |
-          echo "
-          go_register_toolchains(go_version = \"host\")"  >> WORKSPACE
+          echo "\\ngo_register_toolchains(go_version = \"host\")"  >> WORKSPACE
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
           else
