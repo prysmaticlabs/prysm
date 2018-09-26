@@ -103,9 +103,9 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 
 func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
 	currentBalance := validator.Balance
-	multipicFactor := 2*participatedDeposits/totalDeposit - 1
-	newBalance := currentBalance + currentBalance/rewardQuotient*multipicFactor
-	validator.Balance = newBalance
+	multipicFactor := float64(2*participatedDeposits)/float64(totalDeposit) - 1
+	newBalance := float64(currentBalance) + float64(currentBalance)/float64(rewardQuotient)*multipicFactor
+	validator.Balance = uint64(newBalance)
 }
 
 func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {

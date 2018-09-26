@@ -139,3 +139,43 @@ func TestQuadraticPenalty(t *testing.T) {
 		t.Errorf("quadric penalty is not the expected amount for %d slots %d", numOfSlots, penalty)
 	}
 }
+
+func TestRewardCrosslink(t *testing.T) {
+	totalDeposit := uint64(6e18)
+	participatedDeposit := uint64(3e18)
+	rewardQuotient := params.BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	validator := &pb.ValidatorRecord{
+		Balance: 1e18,
+	}
+
+	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
+
+	if validator.Balance != 1e18 {
+		t.Errorf("validator balances have changed when they were not supposed to %d", validator.Balance)
+	}
+	participatedDeposit = uint64(4e18)
+	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
+
+	if validator.Balance == 1e18 {
+		t.Errorf("validator balances have not been updated %d ", validator.Balance)
+	}
+
+}
+
+func TestPenaltyCrosslink(t *testing.T) {
+	totalDeposit := uint64(6e18)
+	rewardQuotient := params.BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	validator := &pb.ValidatorRecord{
+		Balance: 1e18,
+	}
+	timeSinceConfirmation := uint64(100)
+	quadraticQuotient := quadraticPenaltyQuotient()
+
+	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
+	expectedBalance := 1e18 - 1e18/rewardQuotient + 100/quadraticQuotient
+
+	if validator.Balance != expectedBalance {
+		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)
+	}
+
+}
