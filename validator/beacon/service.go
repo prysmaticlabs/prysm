@@ -138,8 +138,14 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 			s.assignedSlot = assignment.GetAssignedSlot()
 			s.shardID = assignment.GetShardId()
 			s.role = assignment.GetRole()
+			log.Info("MATCHEEEEESSSSSS")
 			break
 		}
+	}
+	if s.role == pb.ValidatorRole_PROPOSER {
+		log.Infof("Assigned as PROPOSER to slot %v, shardID: %v", s.assignedSlot, s.shardID)
+	} else {
+		log.Infof("Assigned as ATTESTER to slot %v, shardID: %v", s.assignedSlot, s.shardID)
 	}
 }
 
@@ -207,7 +213,8 @@ func (s *Service) listenForCycleTransitions(client pb.BeaconServiceClient) {
 			continue
 		}
 
-		log.Print(res)
+		log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("New cycle transition")
+
 		// Loops through the received assignments to determine which one
 		// corresponds to this validator client based on a matching public key.
 		for _, assignment := range res.GetAssignments() {
@@ -219,6 +226,11 @@ func (s *Service) listenForCycleTransitions(client pb.BeaconServiceClient) {
 				s.role = assignment.GetRole()
 				break
 			}
+		}
+		if s.role == pb.ValidatorRole_PROPOSER {
+			log.Infof("Assigned as PROPOSER to slot %v, shardID: %v", s.assignedSlot, s.shardID)
+		} else {
+			log.Infof("Assigned as ATTESTER to slot %v, shardID: %v", s.assignedSlot, s.shardID)
 		}
 	}
 }
