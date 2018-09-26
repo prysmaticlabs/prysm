@@ -26,7 +26,7 @@ matrix:
       env: V=0.17.1
       before_install:
         # Install Bazel
-         - echo "go_register_toolchains(go_version = "host")"  >> WORKSPACE
+         - echo "go_register_toolchains(go_version = \"host\")"  >> WORKSPACE
          - |
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
@@ -75,7 +75,7 @@ matrix:
       env: V=0.17.1
       before_install:
         # Install Bazel
-         - echo "go_register_toolchains(go_version = "host")"  >> WORKSPACE
+         - echo "go_register_toolchains(go_version = \"host\")"  >> WORKSPACE
          - |
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
