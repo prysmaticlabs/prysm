@@ -114,7 +114,7 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	// Active state hash is predefined so error can be safely ignored
 	// #nosec G104
 	activeStateHash, _ := active.Hash()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		return nil, err
 	}
