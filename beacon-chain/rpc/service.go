@@ -66,7 +66,7 @@ type Service struct {
 	grpcServer          *grpc.Server
 	canonicalBlockChan  chan *types.Block
 	canonicalStateChan  chan *types.CrystallizedState
-	incomingAttestation chan *pbp2p.AggregatedAttestation
+	incomingAttestation chan *types.Attestation
 	devMode             bool
 }
 
@@ -99,7 +99,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withKey:             cfg.KeyFlag,
 		canonicalBlockChan:  make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:  make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
-		incomingAttestation: make(chan *pbp2p.AggregatedAttestation, cfg.SubscriptionBuf),
+		incomingAttestation: make(chan *types.Attestation, cfg.SubscriptionBuf),
 		devMode:             cfg.DevMode,
 	}
 }
@@ -163,7 +163,7 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // once upon establishing a connection to the beacon node in order to determine
 // their role and assigned slot initially and setup an internal ticker.
 func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndStateResponse, error) {
-	genesis := types.NewGenesisBlock()
+	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
 	crystallized := s.fetcher.CanonicalCrystallizedState()
 	return &pb.GenesisTimeAndStateResponse{
 		GenesisTimestamp:        genesis.Proto().GetTimestamp(),
@@ -310,7 +310,7 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 		select {
 		case attestation := <-s.incomingAttestation:
 			log.Info("Sending attestation to RPC clients")
-			if err := stream.Send(attestation); err != nil {
+			if err := stream.Send(attestation.Proto()); err != nil {
 				return err
 			}
 		case <-sub.Err():
