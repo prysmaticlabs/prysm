@@ -27,6 +27,7 @@ matrix:
       before_install:
         # Install Bazel
          - |
+          echo "\\ngo_register_toolchains(go_version = \"host\")"  >> WORKSPACE
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
           else
@@ -39,12 +40,13 @@ matrix:
           ./install.sh --user
           rm -f install.sh
         # Decrypt service account (only works on prysmaticlabs branches)
-        # TODO(#282): enable remote caching / execution
-        #- if [[ $encrypted_64ca747eb448_iv ]]; then
-        #    openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-        #    -in service-account.json.enc -out /tmp/service-account.json -d;
-        #    REMOTE_FLAGS=--config=remote;
-        #  fi
+         - if [[ $encrypted_64ca747eb448_iv ]]; then
+            openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+            -in service-account.json.enc -out /tmp/service-account.json -d;
+             REMOTE_FLAGS=--config=remote-rw;
+             else
+             REMOTE_FLAGS=--config=remote;
+          fi
       
       install: true # Skip install go packages.
           
@@ -54,7 +56,7 @@ matrix:
           bazel \
             --bazelrc=.travis-bazelrc \
             build \
-            //...
+            //... $REMOTE_FLAGS
         # Run all tests.
         - |
           bazel \
@@ -75,6 +77,7 @@ matrix:
       before_install:
         # Install Bazel
          - |
+          echo "\\ngo_register_toolchains(go_version = \"host\")"  >> WORKSPACE
           if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
             OS=darwin
           else
@@ -87,12 +90,13 @@ matrix:
           ./install.sh --user
           rm -f install.sh
         # Decrypt service account (only works on prysmaticlabs branches)
-        # TODO(#282): enable remote caching / execution
-        #- if [[ $encrypted_64ca747eb448_iv ]]; then
-        #    openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
-        #    -in service-account.json.enc -out /tmp/service-account.json -d;
-        #    REMOTE_FLAGS=--config=remote;
-        #  fi
+         - if [[ $encrypted_64ca747eb448_iv ]]; then
+             openssl aes-256-cbc -K $encrypted_64ca747eb448_key -iv $encrypted_64ca747eb448_iv
+             -in service-account.json.enc -out /tmp/service-account.json -d;
+             REMOTE_FLAGS=--config=remote-rw;
+             else
+             REMOTE_FLAGS=--config=remote;
+             fi
 
       install: true # Skip install go packages.
 
@@ -102,7 +106,7 @@ matrix:
           bazel \
             --bazelrc=.travis-bazelrc \
             build \
-            //...
+            //... $REMOTE_FLAGS
         # Run all tests.
         - |
           bazel \
