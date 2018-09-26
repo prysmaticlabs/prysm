@@ -70,13 +70,14 @@ func TestNewBeaconChain(t *testing.T) {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
 
-	if !reflect.DeepEqual(beaconChain.ActiveState(), aState) {
+	if !proto.Equal(beaconChain.ActiveState().Proto(), aState.Proto()) {
 		t.Errorf("active states not equal. received: %v, wanted: %v", beaconChain.ActiveState(), aState)
 	}
 
-	if !reflect.DeepEqual(beaconChain.CrystallizedState(), cState) {
+	if !proto.Equal(beaconChain.CrystallizedState().Proto(), cState.Proto()) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), cState)
 	}
+
 	if _, err := beaconChain.GenesisBlock(); err != nil {
 		t.Errorf("Getting new beaconchain genesis failed: %v", err)
 	}
@@ -111,6 +112,29 @@ func TestGetGenesisBlock(t *testing.T) {
 		t.Errorf("Timestamp could not be retrieved: %v", err)
 	}
 	if time.Second() != 40 {
+		t.Errorf("Timestamp was not saved properly: %v", time.Second())
+	}
+}
+
+func TestGetGenesisBlock_GenesisNotExist(t *testing.T) {
+	beaconChain, db := startInMemoryBeaconChain(t)
+	defer db.Close()
+
+	if err := db.DB().Delete([]byte("genesis")); err != nil {
+		t.Errorf("unable to delete key value of genesis: %v", err)
+	}
+
+	genesisBlock, err := beaconChain.GenesisBlock()
+	if err != nil {
+		t.Errorf("unable to get key value of genesis: %v", err)
+	}
+
+	time, err := genesisBlock.Timestamp()
+	if err != nil {
+		t.Errorf("Timestamp could not be retrieved: %v", err)
+	}
+
+	if time.Unix() != 1535673600 {
 		t.Errorf("Timestamp was not saved properly: %v", time.Second())
 	}
 }
