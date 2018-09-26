@@ -164,16 +164,12 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 	return block.Proto(), nil
 }
 
-// GenesisTimeAndCanonicalState returns the genesis timestamp and crystallized state
-// determined as canonical. Validator clients send this request
-// once upon establishing a connection to the beacon node in order to determine
-// their role and assigned slot initially and setup an internal ticker.
-func (s *Service) GenesisTimeAndCanonicalState(ctx context.Context, req *empty.Empty) (*pb.GenesisTimeAndStateResponse, error) {
+// GenesisStartTime returns the genesis timestamp. Validator clients send this request
+// once upon establishing a connection to the beacon node in order to setup an internal ticker.
+func (s *Service) GenesisStartTime(ctx context.Context, req *empty.Empty) (*pb.GenesisTime, error) {
 	genesis := types.NewGenesisBlock()
-	crystallized := s.fetcher.CanonicalCrystallizedState()
-	return &pb.GenesisTimeAndStateResponse{
-		GenesisTimestamp:        genesis.Proto().GetTimestamp(),
-		LatestCrystallizedState: crystallized.Proto(),
+	return &pb.GenesisTime{
+		GenesisTimestamp: genesis.Proto().GetTimestamp(),
 	}, nil
 }
 

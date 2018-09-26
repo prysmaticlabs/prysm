@@ -7,7 +7,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service BeaconService {
-    rpc GenesisTimeAndCanonicalState(google.protobuf.Empty) returns (GenesisTimeAndStateResponse);
+    rpc GenesisStartTime(google.protobuf.Empty) returns (GenesisTime);
     rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
     rpc LatestCrystallizedState(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.CrystallizedState);
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.AggregatedAttestation);
@@ -32,9 +32,8 @@ service ValidatorService {
     rpc ValidatorAssignment(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
 }
 
-message GenesisTimeAndStateResponse {
+message GenesisTime {
     google.protobuf.Timestamp genesis_timestamp = 1;
-    ethereum.beacon.p2p.v1.CrystallizedState latest_crystallized_state = 2;
 }
 
 message ProposeRequest {
