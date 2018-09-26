@@ -67,7 +67,7 @@ func (m *mockAttestationService) ContainsAttestation(bitfield []byte, h [32]byte
 }
 
 func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	cState, err := types.NewGenesisCrystallizedState()
+	cState, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		return nil
 	}

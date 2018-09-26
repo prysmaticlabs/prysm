@@ -10,8 +10,8 @@ import (
 )
 
 func TestGenesisCrystallizedState(t *testing.T) {
-	cState1, err1 := NewGenesisCrystallizedState()
-	cState2, err2 := NewGenesisCrystallizedState()
+	cState1, err1 := NewGenesisCrystallizedState("")
+	cState2, err2 := NewGenesisCrystallizedState("")
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v %v", err1, err2)
@@ -30,7 +30,7 @@ func TestGenesisCrystallizedState(t *testing.T) {
 }
 
 func TestInitialDeriveCrystallizedState(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 }
 
 func TestNextDeriveCrystallizedSlot(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialized crystallized state: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestProcessCrosslinks(t *testing.T) {
 }
 
 func TestIsDynastyTransition(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -249,7 +249,7 @@ func TestIsDynastyTransition(t *testing.T) {
 }
 
 func TestNewDynastyRecalculationsInvalid(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -266,7 +266,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 }
 
 func TestNewDynastyRecalculations(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}

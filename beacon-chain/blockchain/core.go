@@ -31,7 +31,7 @@ type beaconState struct {
 
 // NewBeaconChain initializes a beacon chain using genesis state parameters if
 // none provided.
-func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
+func NewBeaconChain(genesisJSON string, db ethdb.Database) (*BeaconChain, error) {
 	beaconChain := &BeaconChain{
 		db:    db,
 		state: &beaconState{},
@@ -46,7 +46,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	}
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState(genesisJSON)
 	if err != nil {
 		return nil, err
 	}

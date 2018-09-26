@@ -44,7 +44,7 @@ func startInMemoryBeaconChain(t *testing.T) (*BeaconChain, *database.DB) {
 	if err != nil {
 		t.Fatalf("unable to setup db: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup beacon chain: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestNewBeaconChain(t *testing.T) {
 
 	hook.Reset()
 	aState := types.NewGenesisActiveState()
-	cState, err := types.NewGenesisCrystallizedState()
+	cState, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}
@@ -116,7 +116,7 @@ func TestGetGenesisBlock(t *testing.T) {
 }
 
 func TestCanonicalHead(t *testing.T) {
-	chain, err := NewBeaconChain(&faultyDB{})
+	chain, err := NewBeaconChain("", &faultyDB{})
 	if err != nil {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestCanonicalHead(t *testing.T) {
 
 func TestSaveCanonicalBlock(t *testing.T) {
 	block := types.NewBlock(&pb.BeaconBlock{})
-	chain, err := NewBeaconChain(&faultyDB{})
+	chain, err := NewBeaconChain("", &faultyDB{})
 	if err != nil {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestSetCrystallizedState(t *testing.T) {
 	}
 
 	// Initializing a new beacon chain should deserialize persisted state from disk.
-	newBeaconChain, err := NewBeaconChain(db.DB())
+	newBeaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("unable to setup second beacon chain: %v", err)
 	}

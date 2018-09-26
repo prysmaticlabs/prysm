@@ -158,6 +158,11 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
+	var genesisJSON string
+	if ctx.GlobalIsSet(utils.GenesisJSON.Name) {
+		genesisJSON = ctx.GlobalString(utils.GenesisJSON.Name)
+	}
+
 	var web3Service *powchain.Web3Service
 	devMode := ctx.GlobalBool(utils.DevFlag.Name)
 	if !devMode {
@@ -166,7 +171,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		}
 	}
 
-	beaconChain, err := blockchain.NewBeaconChain(b.db.DB())
+	beaconChain, err := blockchain.NewBeaconChain(genesisJSON, b.db.DB())
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
