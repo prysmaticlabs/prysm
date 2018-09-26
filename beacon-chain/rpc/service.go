@@ -179,9 +179,19 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	cState := s.chainService.CurrentCrystallizedState()
 
-	assignments, err := assignmentsForPublicKeys(req.GetPublicKeys(), cState)
-	if err != nil {
-		return nil, fmt.Errorf("could not get current assignments for public keys: %v", err)
+	var assignments []*pb.Assignment
+	var err error
+
+	if req.AllValidators {
+		assignments, err = allAssignmentsForCycle(cState)
+		if err != nil {
+			return nil, fmt.Errorf("could not get assignments for all validators %v", err)
+		}
+	} else {
+		assignments, err = assignmentsForPublicKeys(req.GetPublicKeys(), cState)
+		if err != nil {
+			return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
+		}
 	}
 
 	return &pb.CurrentAssignmentsResponse{
@@ -325,15 +335,21 @@ func (s *Service) ValidatorAssignments(
 		select {
 		case cState := <-s.canonicalStateChan:
 
-			if len(req.GetPublicKeys()) == 0 {
-				return errors.New("no public keys specified in request")
-			}
-
 			log.Info("Sending new cycle assignments to validator clients")
 
-			assignments, err := assignmentsForPublicKeys(req.GetPublicKeys(), cState)
-			if err != nil {
-				return fmt.Errorf("could not get assignments for public keys: %v", err)
+			var assignments []*pb.Assignment
+			var err error
+
+			if req.AllValidators {
+				assignments, err = allAssignmentsForCycle(cState)
+				if err != nil {
+					return fmt.Errorf("could not get assignments for all validators: %v", err)
+				}
+			} else {
+				assignments, err = assignmentsForPublicKeys(req.GetPublicKeys(), cState)
+				if err != nil {
+					return fmt.Errorf("could not get assignments for public keys: %v", err)
+				}
 			}
 
 			// We create a response consisting of all the assignments for each
@@ -359,6 +375,9 @@ func (s *Service) ValidatorAssignments(
 // assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
 // given a crystallized state.
 func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedState) ([]*pb.Assignment, error) {
+	if len(keys) == 0 {
+		return nil, errors.New("no public keys specified in request")
+	}
 	// Next, for each public key in the request, we build
 	// up an array of assignments.
 	assignments := []*pb.Assignment{}
@@ -397,6 +416,55 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 
 		assignments = append(assignments, &pb.Assignment{
 			PublicKey:    val,
+			ShardId:      shardID,
+			Role:         role,
+			AssignedSlot: assignedSlot,
+		})
+	}
+	return assignments, nil
+}
+
+// allAssignmentsForCycle fetches the validator assignments for all active validators in
+// a given crystallized state's cycle.
+func allAssignmentsForCycle(cState *types.CrystallizedState) ([]*pb.Assignment, error) {
+	// Next, for each public key in the request, we build
+	// up an array of assignments.
+	assignments := []*pb.Assignment{}
+	for _, validator := range cState.Validators() {
+		// For the corresponding public key and current crystallized state,
+		// we determine the assigned slot for the validator and whether it
+		// should act as a proposer or attester.
+		assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
+			validator.GetPublicKey(),
+			cState.CurrentDynasty(),
+			cState.Validators(),
+			cState.ShardAndCommitteesForSlots(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		var role pb.ValidatorRole
+		if responsibility == "proposer" {
+			role = pb.ValidatorRole_PROPOSER
+		} else {
+			role = pb.ValidatorRole_ATTESTER
+		}
+
+		// We determine the assigned shard ID for the validator
+		// based on a public key and current crystallized state.
+		shardID, err := casper.ValidatorShardID(
+			validator.GetPublicKey(),
+			cState.CurrentDynasty(),
+			cState.Validators(),
+			cState.ShardAndCommitteesForSlots(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		assignments = append(assignments, &pb.Assignment{
+			PublicKey:    &pb.PublicKey{PublicKey: validator.GetPublicKey()},
 			ShardId:      shardID,
 			Role:         role,
 			AssignedSlot: assignedSlot,
