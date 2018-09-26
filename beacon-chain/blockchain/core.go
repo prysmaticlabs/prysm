@@ -55,7 +55,11 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 
 	if !hasGenesis {
 		log.Info("No genesis block found on disk, initializing genesis block")
+		// Active state hash is predefined so error can be safely ignored
+		// #nosec G104
 		activeStateHash, _ := active.Hash()
+		// Crystallized state hash is predefined so error can be safely ignored
+		// #nosec G104
 		crystallizedStateHash, _ := crystallized.Hash()
 		genesisBlock := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
 		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
@@ -107,11 +111,15 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 		return types.NewBlock(block), nil
 	}
 	active := types.NewGenesisActiveState()
+	// Active state hash is predefined so error can be safely ignored
+	// #nosec G104
 	activeStateHash, _ := active.Hash()
 	crystallized, err := types.NewGenesisCrystallizedState()
 	if err != nil {
 		return nil, err
 	}
+	// Crystallized state hash is predefined so error can be safely ignored
+	// #nosec G104
 	crystallizedStateHash, _ := crystallized.Hash()
 	return types.NewGenesisBlock(activeStateHash, crystallizedStateHash), nil
 }
