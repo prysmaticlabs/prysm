@@ -62,6 +62,14 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 		&empty.Empty{},
 	).Return(attesterStream, nil)
 	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+
+	cycleStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
+	mockServiceClient.EXPECT().ValidatorAssignments(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(cycleStream, nil)
+	cycleStream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
+
 	return mockServiceClient
 }
 
@@ -80,6 +88,7 @@ func TestLifecycle(t *testing.T) {
 	if b.ProcessedAttestationFeed() == nil {
 		t.Error("ProcessedAttestationFeed empty")
 	}
+	b.slotAlignmentDuration = time.Millisecond * 10
 	b.Start()
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")

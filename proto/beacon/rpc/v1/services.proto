@@ -17,6 +17,9 @@ service BeaconService {
     // to a beacon node in order to determine the current validator assignments
     // and genesis timestamp of the protocol.
     rpc CurrentAssignmentsAndGenesisTime(ValidatorAssignmentRequest) returns (CurrentAssignmentsResponse);
+    // ValidatorAssignments streams validator assignments to clients
+    // for a subset of public keys in the active validator set.
+    rpc ValidatorAssignments(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
 }
 
 service AttesterService {
@@ -33,9 +36,6 @@ service ValidatorService {
     rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
     rpc ValidatorIndex(PublicKey) returns (IndexResponse);
     rpc ValidatorSlotAndResponsibility(PublicKey) returns (SlotResponsibilityResponse);
-    // ValidatorAssignment streams validator assignments to clients
-    // for a subset of public keys in the active validator set.
-    rpc ValidatorAssignment(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
 }
 
 message ProposeRequest {

@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/validator/params"
+	"github.com/prysmaticlabs/prysm/validator/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,6 +34,7 @@ type Service struct {
 	proposerAssignmentFeed   *event.Feed
 	processedAttestationFeed *event.Feed
 	genesisTimestamp         time.Time
+	slotAlignmentDuration    time.Duration
 }
 
 // NewBeaconValidator instantiates a service that interacts with a beacon node
@@ -46,13 +48,14 @@ func NewBeaconValidator(ctx context.Context, rpcClient rpcClientService) *Servic
 		attesterAssignmentFeed:   new(event.Feed),
 		proposerAssignmentFeed:   new(event.Feed),
 		processedAttestationFeed: new(event.Feed),
+		slotAlignmentDuration:    time.Duration(params.DefaultConfig().SlotDuration) * time.Second,
 	}
 }
 
 // Start the main routine for a beacon client service.
 func (s *Service) Start() {
 	log.Info("Starting service")
-	client := s.rpcClient.BeaconServiceClient()
+	beaconServiceClient := s.rpcClient.BeaconServiceClient()
 
 	// First thing the validator does is request the current validator assignments
 	// for the current beacon node cycle as well as the genesis timestamp
@@ -64,22 +67,24 @@ func (s *Service) Start() {
 	// Note: this does not validate the current system time against a global
 	// NTP server, which will be important to do in production.
 	// currently in a cycle we are supposed to participate in.
-	s.fetchCurrentAssignmentsAndGenesisTime(client)
+	s.fetchCurrentAssignmentsAndGenesisTime(beaconServiceClient)
 
 	// Then, we kick off a routine that uses the begins a ticker based on the beacon node's
 	// genesis timestamp and the validator will use this slot ticker to
 	// determine when it is assigned to perform proposals or attestations.
-	// TODO: Wait Until Aligned.
-	slotTicker := time.NewTicker(time.Second * time.Duration(params.DefaultConfig().SlotDuration))
-	go s.waitForAssignment(slotTicker.C, client)
+	//
+	// We block until the current time is a multiple of params.SlotDuration
+	// so the validator and beacon node's internal tickers are aligned.
+	utils.BlockingWait(s.slotAlignmentDuration)
+
+	slotTicker := time.NewTicker(s.slotAlignmentDuration)
+	go s.waitForAssignment(slotTicker.C, beaconServiceClient)
 
 	// We then kick off a routine that listens for streams of cycle transitions
 	// coming from the beacon node. This will allow the validator client to recalculate
-	// when it has to perform its responsibilities appropriately using timestamps
-	// and the IndicesForSlots field inside the received crystallized state.
-	go s.listenForProcessedAttestations(client)
-
-	// TODO: Listen for cycle transitions.
+	// when it has to perform its responsibilities.
+	go s.listenForCycleTransitions(beaconServiceClient)
+	go s.listenForProcessedAttestations(beaconServiceClient)
 }
 
 // Stop the main loop..
@@ -87,12 +92,6 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 	log.Info("Stopping service")
 	return nil
-}
-
-// CurrentBeaconSlot based on the seconds since genesis.
-func (s *Service) CurrentBeaconSlot() uint64 {
-	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }
 
 // fetchCurrentAssignmentsAndGenesisTime fetches both the genesis timestamp as well
@@ -164,6 +163,40 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 	}
 }
 
+// listenForCycleTransitions receives validator assignments from the
+// the beacon node's RPC server when a new cycle transition occurs.
+func (s *Service) listenForCycleTransitions(client pb.BeaconServiceClient) {
+	req := &pb.ValidatorAssignmentRequest{
+		AllValidators: true,
+	}
+	stream, err := client.ValidatorAssignments(s.ctx, req)
+	if err != nil {
+		log.Errorf("Could not setup validator assignments streaming client: %v", err)
+		return
+	}
+	for {
+		res, err := stream.Recv()
+
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if s.ctx.Err() != nil {
+			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
+			break
+		}
+
+		if err != nil {
+			log.Errorf("Could not receive validator assignments from stream: %v", err)
+			continue
+		}
+
+		log.Print(res)
+		// TODO: Loop through and get assigned slot, shardID, and role.
+	}
+}
+
 // listenForProcessedAttestations receives processed attestations from the
 // the beacon node's RPC server via gRPC streams.
 func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) {
@@ -209,6 +242,12 @@ func (s *Service) ProposerAssignmentFeed() *event.Feed {
 // is processed by a beacon node.
 func (s *Service) ProcessedAttestationFeed() *event.Feed {
 	return s.processedAttestationFeed
+}
+
+// CurrentBeaconSlot based on the genesis timestamp of the protocol.
+func (s *Service) CurrentBeaconSlot() uint64 {
+	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
+	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }
 
 // isZeroAddress compares a withdrawal address to an empty byte array.

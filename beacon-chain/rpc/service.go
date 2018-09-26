@@ -311,12 +311,12 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	return &pb.IndexResponse{Index: index}, nil
 }
 
-// ValidatorAssignment streams validator assignments every cycle transition
+// ValidatorAssignments streams validator assignments every cycle transition
 // to clients that request to watch a subset of public keys in the
 // CrystallizedState's active validator set.
-func (s *Service) ValidatorAssignment(
+func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
-	stream pb.ValidatorService_ValidatorAssignmentServer) error {
+	stream pb.BeaconService_ValidatorAssignmentsServer) error {
 	sub := s.fetcher.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {

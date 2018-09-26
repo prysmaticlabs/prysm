@@ -349,7 +349,7 @@ func TestValidatorShardID(t *testing.T) {
 	}
 }
 
-func TestValidatorAssignment(t *testing.T) {
+func TestValidatorAssignments(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	mockChain := newMockChainService()
@@ -362,7 +362,7 @@ func TestValidatorAssignment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
+	mockStream := internal.NewMockBeaconService_ValidatorAssignmentsServer(ctrl)
 	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 
 	key := &pb.PublicKey{PublicKey: []byte{}}
@@ -375,7 +375,7 @@ func TestValidatorAssignment(t *testing.T) {
 
 	// Tests a validator assignment stream.
 	go func(tt *testing.T) {
-		if err := rpcService.ValidatorAssignment(req, mockStream); err != nil {
+		if err := rpcService.ValidatorAssignments(req, mockStream); err != nil {
 			tt.Errorf("Could not stream validators: %v", err)
 		}
 		<-exitRoutine

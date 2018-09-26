@@ -77,13 +77,14 @@ func (c *ChainService) Start() {
 
 	// If the genesis time was at 12:00:00PM and the current time is 12:00:03PM,
 	// the next slot should tick at 12:00:08PM. We can accomplish this
-	// using utils.WaitUntilTimestamp and passing in the desired
+	// using utils.BlockingWait and passing in the desired
 	// slot duration.
 	//
 	// Instead of utilizing params.SlotDuration, we utilize a property of
 	// RPC service struct so this value can be set to 0 seconds
 	// as a parameter in tests. Otherwise, tests would sleep.
-	utils.WaitUntilTimestamp(time.Duration(c.slotAlignmentDuration) * time.Second)
+	utils.BlockingWait(time.Duration(c.slotAlignmentDuration) * time.Second)
+
 	go c.updateHead(time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C)
 	go c.blockProcessing()
 }
