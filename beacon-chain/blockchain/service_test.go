@@ -558,7 +558,7 @@ func TestUpdateHead(t *testing.T) {
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	genesis := types.NewGenesisBlock()
+	genesis := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
 	genesisHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)

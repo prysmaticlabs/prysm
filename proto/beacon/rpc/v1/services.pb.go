@@ -49,45 +49,7 @@ func (x ValidatorRole) String() string {
 	return proto.EnumName(ValidatorRole_name, int32(x))
 }
 func (ValidatorRole) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{0}
-}
-
-type GenesisTime struct {
-	GenesisTimestamp     *timestamp.Timestamp `protobuf:"bytes,1,opt,name=genesis_timestamp,json=genesisTimestamp,proto3" json:"genesis_timestamp,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
-}
-
-func (m *GenesisTime) Reset()         { *m = GenesisTime{} }
-func (m *GenesisTime) String() string { return proto.CompactTextString(m) }
-func (*GenesisTime) ProtoMessage()    {}
-func (*GenesisTime) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{0}
-}
-func (m *GenesisTime) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_GenesisTime.Unmarshal(m, b)
-}
-func (m *GenesisTime) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_GenesisTime.Marshal(b, m, deterministic)
-}
-func (dst *GenesisTime) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisTime.Merge(dst, src)
-}
-func (m *GenesisTime) XXX_Size() int {
-	return xxx_messageInfo_GenesisTime.Size(m)
-}
-func (m *GenesisTime) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisTime.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GenesisTime proto.InternalMessageInfo
-
-func (m *GenesisTime) GetGenesisTimestamp() *timestamp.Timestamp {
-	if m != nil {
-		return m.GenesisTimestamp
-	}
-	return nil
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{0}
 }
 
 type ProposeRequest struct {
@@ -106,7 +68,7 @@ func (m *ProposeRequest) Reset()         { *m = ProposeRequest{} }
 func (m *ProposeRequest) String() string { return proto.CompactTextString(m) }
 func (*ProposeRequest) ProtoMessage()    {}
 func (*ProposeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{1}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{0}
 }
 func (m *ProposeRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProposeRequest.Unmarshal(m, b)
@@ -179,7 +141,7 @@ func (m *ProposeResponse) Reset()         { *m = ProposeResponse{} }
 func (m *ProposeResponse) String() string { return proto.CompactTextString(m) }
 func (*ProposeResponse) ProtoMessage()    {}
 func (*ProposeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{2}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{1}
 }
 func (m *ProposeResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProposeResponse.Unmarshal(m, b)
@@ -217,7 +179,7 @@ func (m *AttestRequest) Reset()         { *m = AttestRequest{} }
 func (m *AttestRequest) String() string { return proto.CompactTextString(m) }
 func (*AttestRequest) ProtoMessage()    {}
 func (*AttestRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{3}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{2}
 }
 func (m *AttestRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AttestRequest.Unmarshal(m, b)
@@ -255,7 +217,7 @@ func (m *AttestResponse) Reset()         { *m = AttestResponse{} }
 func (m *AttestResponse) String() string { return proto.CompactTextString(m) }
 func (*AttestResponse) ProtoMessage()    {}
 func (*AttestResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{4}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{3}
 }
 func (m *AttestResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AttestResponse.Unmarshal(m, b)
@@ -296,7 +258,7 @@ func (m *ValidatorAssignmentRequest) Reset()         { *m = ValidatorAssignmentR
 func (m *ValidatorAssignmentRequest) String() string { return proto.CompactTextString(m) }
 func (*ValidatorAssignmentRequest) ProtoMessage()    {}
 func (*ValidatorAssignmentRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{5}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{4}
 }
 func (m *ValidatorAssignmentRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ValidatorAssignmentRequest.Unmarshal(m, b)
@@ -331,18 +293,17 @@ func (m *ValidatorAssignmentRequest) GetPublicKeys() []*PublicKey {
 }
 
 type ValidatorAssignmentResponse struct {
-	Assignments          []*ValidatorAssignmentResponse_Assignment `protobuf:"bytes,1,rep,name=assignments,proto3" json:"assignments,omitempty"`
-	CurrentBeaconSlot    uint64                                    `protobuf:"varint,2,opt,name=current_beacon_slot,json=currentBeaconSlot,proto3" json:"current_beacon_slot,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                                  `json:"-"`
-	XXX_unrecognized     []byte                                    `json:"-"`
-	XXX_sizecache        int32                                     `json:"-"`
+	Assignments          []*Assignment `protobuf:"bytes,1,rep,name=assignments,proto3" json:"assignments,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *ValidatorAssignmentResponse) Reset()         { *m = ValidatorAssignmentResponse{} }
 func (m *ValidatorAssignmentResponse) String() string { return proto.CompactTextString(m) }
 func (*ValidatorAssignmentResponse) ProtoMessage()    {}
 func (*ValidatorAssignmentResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{6}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{5}
 }
 func (m *ValidatorAssignmentResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ValidatorAssignmentResponse.Unmarshal(m, b)
@@ -362,21 +323,15 @@ func (m *ValidatorAssignmentResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ValidatorAssignmentResponse proto.InternalMessageInfo
 
-func (m *ValidatorAssignmentResponse) GetAssignments() []*ValidatorAssignmentResponse_Assignment {
+func (m *ValidatorAssignmentResponse) GetAssignments() []*Assignment {
 	if m != nil {
 		return m.Assignments
 	}
 	return nil
 }
 
-func (m *ValidatorAssignmentResponse) GetCurrentBeaconSlot() uint64 {
-	if m != nil {
-		return m.CurrentBeaconSlot
-	}
-	return 0
-}
-
-type ValidatorAssignmentResponse_Assignment struct {
+// Assignment defines a validator's assignment responsibilities.
+type Assignment struct {
 	PublicKey            *PublicKey    `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	ShardId              uint64        `protobuf:"varint,2,opt,name=shard_id,json=shardId,proto3" json:"shard_id,omitempty"`
 	Role                 ValidatorRole `protobuf:"varint,3,opt,name=role,proto3,enum=ethereum.beacon.rpc.v1.ValidatorRole" json:"role,omitempty"`
@@ -386,54 +341,52 @@ type ValidatorAssignmentResponse_Assignment struct {
 	XXX_sizecache        int32         `json:"-"`
 }
 
-func (m *ValidatorAssignmentResponse_Assignment) Reset() {
-	*m = ValidatorAssignmentResponse_Assignment{}
+func (m *Assignment) Reset()         { *m = Assignment{} }
+func (m *Assignment) String() string { return proto.CompactTextString(m) }
+func (*Assignment) ProtoMessage()    {}
+func (*Assignment) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{6}
 }
-func (m *ValidatorAssignmentResponse_Assignment) String() string { return proto.CompactTextString(m) }
-func (*ValidatorAssignmentResponse_Assignment) ProtoMessage()    {}
-func (*ValidatorAssignmentResponse_Assignment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{6, 0}
+func (m *Assignment) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Assignment.Unmarshal(m, b)
 }
-func (m *ValidatorAssignmentResponse_Assignment) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Unmarshal(m, b)
+func (m *Assignment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Assignment.Marshal(b, m, deterministic)
 }
-func (m *ValidatorAssignmentResponse_Assignment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Marshal(b, m, deterministic)
+func (dst *Assignment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Assignment.Merge(dst, src)
 }
-func (dst *ValidatorAssignmentResponse_Assignment) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Merge(dst, src)
+func (m *Assignment) XXX_Size() int {
+	return xxx_messageInfo_Assignment.Size(m)
 }
-func (m *ValidatorAssignmentResponse_Assignment) XXX_Size() int {
-	return xxx_messageInfo_ValidatorAssignmentResponse_Assignment.Size(m)
-}
-func (m *ValidatorAssignmentResponse_Assignment) XXX_DiscardUnknown() {
-	xxx_messageInfo_ValidatorAssignmentResponse_Assignment.DiscardUnknown(m)
+func (m *Assignment) XXX_DiscardUnknown() {
+	xxx_messageInfo_Assignment.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ValidatorAssignmentResponse_Assignment proto.InternalMessageInfo
+var xxx_messageInfo_Assignment proto.InternalMessageInfo
 
-func (m *ValidatorAssignmentResponse_Assignment) GetPublicKey() *PublicKey {
+func (m *Assignment) GetPublicKey() *PublicKey {
 	if m != nil {
 		return m.PublicKey
 	}
 	return nil
 }
 
-func (m *ValidatorAssignmentResponse_Assignment) GetShardId() uint64 {
+func (m *Assignment) GetShardId() uint64 {
 	if m != nil {
 		return m.ShardId
 	}
 	return 0
 }
 
-func (m *ValidatorAssignmentResponse_Assignment) GetRole() ValidatorRole {
+func (m *Assignment) GetRole() ValidatorRole {
 	if m != nil {
 		return m.Role
 	}
 	return ValidatorRole_UNKNOWN
 }
 
-func (m *ValidatorAssignmentResponse_Assignment) GetAssignedSlot() uint64 {
+func (m *Assignment) GetAssignedSlot() uint64 {
 	if m != nil {
 		return m.AssignedSlot
 	}
@@ -451,7 +404,7 @@ func (m *PublicKey) Reset()         { *m = PublicKey{} }
 func (m *PublicKey) String() string { return proto.CompactTextString(m) }
 func (*PublicKey) ProtoMessage()    {}
 func (*PublicKey) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{7}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{7}
 }
 func (m *PublicKey) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PublicKey.Unmarshal(m, b)
@@ -490,7 +443,7 @@ func (m *SlotResponsibilityResponse) Reset()         { *m = SlotResponsibilityRe
 func (m *SlotResponsibilityResponse) String() string { return proto.CompactTextString(m) }
 func (*SlotResponsibilityResponse) ProtoMessage()    {}
 func (*SlotResponsibilityResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{8}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{8}
 }
 func (m *SlotResponsibilityResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SlotResponsibilityResponse.Unmarshal(m, b)
@@ -535,7 +488,7 @@ func (m *IndexResponse) Reset()         { *m = IndexResponse{} }
 func (m *IndexResponse) String() string { return proto.CompactTextString(m) }
 func (*IndexResponse) ProtoMessage()    {}
 func (*IndexResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{9}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{9}
 }
 func (m *IndexResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IndexResponse.Unmarshal(m, b)
@@ -573,7 +526,7 @@ func (m *ShardIDResponse) Reset()         { *m = ShardIDResponse{} }
 func (m *ShardIDResponse) String() string { return proto.CompactTextString(m) }
 func (*ShardIDResponse) ProtoMessage()    {}
 func (*ShardIDResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_services_37e53a594698a536, []int{10}
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{10}
 }
 func (m *ShardIDResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ShardIDResponse.Unmarshal(m, b)
@@ -600,19 +553,65 @@ func (m *ShardIDResponse) GetShardId() uint64 {
 	return 0
 }
 
+type CurrentAssignmentsResponse struct {
+	Assignments          []*Assignment        `protobuf:"bytes,1,rep,name=assignments,proto3" json:"assignments,omitempty"`
+	GenesisTimestamp     *timestamp.Timestamp `protobuf:"bytes,2,opt,name=genesis_timestamp,json=genesisTimestamp,proto3" json:"genesis_timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *CurrentAssignmentsResponse) Reset()         { *m = CurrentAssignmentsResponse{} }
+func (m *CurrentAssignmentsResponse) String() string { return proto.CompactTextString(m) }
+func (*CurrentAssignmentsResponse) ProtoMessage()    {}
+func (*CurrentAssignmentsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_services_54e1be11fa7a94d4, []int{11}
+}
+func (m *CurrentAssignmentsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CurrentAssignmentsResponse.Unmarshal(m, b)
+}
+func (m *CurrentAssignmentsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CurrentAssignmentsResponse.Marshal(b, m, deterministic)
+}
+func (dst *CurrentAssignmentsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CurrentAssignmentsResponse.Merge(dst, src)
+}
+func (m *CurrentAssignmentsResponse) XXX_Size() int {
+	return xxx_messageInfo_CurrentAssignmentsResponse.Size(m)
+}
+func (m *CurrentAssignmentsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_CurrentAssignmentsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CurrentAssignmentsResponse proto.InternalMessageInfo
+
+func (m *CurrentAssignmentsResponse) GetAssignments() []*Assignment {
+	if m != nil {
+		return m.Assignments
+	}
+	return nil
+}
+
+func (m *CurrentAssignmentsResponse) GetGenesisTimestamp() *timestamp.Timestamp {
+	if m != nil {
+		return m.GenesisTimestamp
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterType((*GenesisTime)(nil), "ethereum.beacon.rpc.v1.GenesisTime")
 	proto.RegisterType((*ProposeRequest)(nil), "ethereum.beacon.rpc.v1.ProposeRequest")
 	proto.RegisterType((*ProposeResponse)(nil), "ethereum.beacon.rpc.v1.ProposeResponse")
 	proto.RegisterType((*AttestRequest)(nil), "ethereum.beacon.rpc.v1.AttestRequest")
 	proto.RegisterType((*AttestResponse)(nil), "ethereum.beacon.rpc.v1.AttestResponse")
 	proto.RegisterType((*ValidatorAssignmentRequest)(nil), "ethereum.beacon.rpc.v1.ValidatorAssignmentRequest")
 	proto.RegisterType((*ValidatorAssignmentResponse)(nil), "ethereum.beacon.rpc.v1.ValidatorAssignmentResponse")
-	proto.RegisterType((*ValidatorAssignmentResponse_Assignment)(nil), "ethereum.beacon.rpc.v1.ValidatorAssignmentResponse.Assignment")
+	proto.RegisterType((*Assignment)(nil), "ethereum.beacon.rpc.v1.Assignment")
 	proto.RegisterType((*PublicKey)(nil), "ethereum.beacon.rpc.v1.PublicKey")
 	proto.RegisterType((*SlotResponsibilityResponse)(nil), "ethereum.beacon.rpc.v1.SlotResponsibilityResponse")
 	proto.RegisterType((*IndexResponse)(nil), "ethereum.beacon.rpc.v1.IndexResponse")
 	proto.RegisterType((*ShardIDResponse)(nil), "ethereum.beacon.rpc.v1.ShardIDResponse")
+	proto.RegisterType((*CurrentAssignmentsResponse)(nil), "ethereum.beacon.rpc.v1.CurrentAssignmentsResponse")
 	proto.RegisterEnum("ethereum.beacon.rpc.v1.ValidatorRole", ValidatorRole_name, ValidatorRole_value)
 }
 
@@ -628,10 +627,19 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BeaconServiceClient interface {
-	GenesisStartTime(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenesisTime, error)
+	// CanonicalHead can be called on demand to fetch the current, head block of a
+	// beacon node.
 	CanonicalHead(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.BeaconBlock, error)
-	LatestCrystallizedState(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestCrystallizedStateClient, error)
+	// LatestAttestation streams the latest aggregated attestation to connected
+	// validator clients.
 	LatestAttestation(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestAttestationClient, error)
+	// CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
+	// to a beacon node in order to determine the current validator assignments
+	// and genesis timestamp of the protocol.
+	CurrentAssignmentsAndGenesisTime(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (*CurrentAssignmentsResponse, error)
+	// ValidatorAssignments streams validator assignments to clients
+	// for a subset of public keys in the active validator set.
+	ValidatorAssignments(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (BeaconService_ValidatorAssignmentsClient, error)
 }
 
 type beaconServiceClient struct {
@@ -640,15 +648,6 @@ type beaconServiceClient struct {
 
 func NewBeaconServiceClient(cc *grpc.ClientConn) BeaconServiceClient {
 	return &beaconServiceClient{cc}
-}
-
-func (c *beaconServiceClient) GenesisStartTime(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenesisTime, error) {
-	out := new(GenesisTime)
-	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.BeaconService/GenesisStartTime", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *beaconServiceClient) CanonicalHead(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.BeaconBlock, error) {
@@ -660,40 +659,8 @@ func (c *beaconServiceClient) CanonicalHead(ctx context.Context, in *empty.Empty
 	return out, nil
 }
 
-func (c *beaconServiceClient) LatestCrystallizedState(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestCrystallizedStateClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.BeaconService/LatestCrystallizedState", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &beaconServiceLatestCrystallizedStateClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type BeaconService_LatestCrystallizedStateClient interface {
-	Recv() (*v1.CrystallizedState, error)
-	grpc.ClientStream
-}
-
-type beaconServiceLatestCrystallizedStateClient struct {
-	grpc.ClientStream
-}
-
-func (x *beaconServiceLatestCrystallizedStateClient) Recv() (*v1.CrystallizedState, error) {
-	m := new(v1.CrystallizedState)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func (c *beaconServiceClient) LatestAttestation(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestAttestationClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[1], "/ethereum.beacon.rpc.v1.BeaconService/LatestAttestation", opts...)
+	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.BeaconService/LatestAttestation", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -724,34 +691,66 @@ func (x *beaconServiceLatestAttestationClient) Recv() (*v1.AggregatedAttestation
 	return m, nil
 }
 
+func (c *beaconServiceClient) CurrentAssignmentsAndGenesisTime(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (*CurrentAssignmentsResponse, error) {
+	out := new(CurrentAssignmentsResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.BeaconService/CurrentAssignmentsAndGenesisTime", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *beaconServiceClient) ValidatorAssignments(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (BeaconService_ValidatorAssignmentsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[1], "/ethereum.beacon.rpc.v1.BeaconService/ValidatorAssignments", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &beaconServiceValidatorAssignmentsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type BeaconService_ValidatorAssignmentsClient interface {
+	Recv() (*ValidatorAssignmentResponse, error)
+	grpc.ClientStream
+}
+
+type beaconServiceValidatorAssignmentsClient struct {
+	grpc.ClientStream
+}
+
+func (x *beaconServiceValidatorAssignmentsClient) Recv() (*ValidatorAssignmentResponse, error) {
+	m := new(ValidatorAssignmentResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // BeaconServiceServer is the server API for BeaconService service.
 type BeaconServiceServer interface {
-	GenesisStartTime(context.Context, *empty.Empty) (*GenesisTime, error)
+	// CanonicalHead can be called on demand to fetch the current, head block of a
+	// beacon node.
 	CanonicalHead(context.Context, *empty.Empty) (*v1.BeaconBlock, error)
-	LatestCrystallizedState(*empty.Empty, BeaconService_LatestCrystallizedStateServer) error
+	// LatestAttestation streams the latest aggregated attestation to connected
+	// validator clients.
 	LatestAttestation(*empty.Empty, BeaconService_LatestAttestationServer) error
+	// CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
+	// to a beacon node in order to determine the current validator assignments
+	// and genesis timestamp of the protocol.
+	CurrentAssignmentsAndGenesisTime(context.Context, *ValidatorAssignmentRequest) (*CurrentAssignmentsResponse, error)
+	// ValidatorAssignments streams validator assignments to clients
+	// for a subset of public keys in the active validator set.
+	ValidatorAssignments(*ValidatorAssignmentRequest, BeaconService_ValidatorAssignmentsServer) error
 }
 
 func RegisterBeaconServiceServer(s *grpc.Server, srv BeaconServiceServer) {
 	s.RegisterService(&_BeaconService_serviceDesc, srv)
-}
-
-func _BeaconService_GenesisStartTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconServiceServer).GenesisStartTime(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.beacon.rpc.v1.BeaconService/GenesisStartTime",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServiceServer).GenesisStartTime(ctx, req.(*empty.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _BeaconService_CanonicalHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -770,27 +769,6 @@ func _BeaconService_CanonicalHead_Handler(srv interface{}, ctx context.Context, 
 		return srv.(BeaconServiceServer).CanonicalHead(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconService_LatestCrystallizedState_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(empty.Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(BeaconServiceServer).LatestCrystallizedState(m, &beaconServiceLatestCrystallizedStateServer{stream})
-}
-
-type BeaconService_LatestCrystallizedStateServer interface {
-	Send(*v1.CrystallizedState) error
-	grpc.ServerStream
-}
-
-type beaconServiceLatestCrystallizedStateServer struct {
-	grpc.ServerStream
-}
-
-func (x *beaconServiceLatestCrystallizedStateServer) Send(m *v1.CrystallizedState) error {
-	return x.ServerStream.SendMsg(m)
 }
 
 func _BeaconService_LatestAttestation_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -814,28 +792,67 @@ func (x *beaconServiceLatestAttestationServer) Send(m *v1.AggregatedAttestation)
 	return x.ServerStream.SendMsg(m)
 }
 
+func _BeaconService_CurrentAssignmentsAndGenesisTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatorAssignmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeaconServiceServer).CurrentAssignmentsAndGenesisTime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.BeaconService/CurrentAssignmentsAndGenesisTime",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconServiceServer).CurrentAssignmentsAndGenesisTime(ctx, req.(*ValidatorAssignmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BeaconService_ValidatorAssignments_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ValidatorAssignmentRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BeaconServiceServer).ValidatorAssignments(m, &beaconServiceValidatorAssignmentsServer{stream})
+}
+
+type BeaconService_ValidatorAssignmentsServer interface {
+	Send(*ValidatorAssignmentResponse) error
+	grpc.ServerStream
+}
+
+type beaconServiceValidatorAssignmentsServer struct {
+	grpc.ServerStream
+}
+
+func (x *beaconServiceValidatorAssignmentsServer) Send(m *ValidatorAssignmentResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 var _BeaconService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.BeaconService",
 	HandlerType: (*BeaconServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GenesisStartTime",
-			Handler:    _BeaconService_GenesisStartTime_Handler,
-		},
-		{
 			MethodName: "CanonicalHead",
 			Handler:    _BeaconService_CanonicalHead_Handler,
+		},
+		{
+			MethodName: "CurrentAssignmentsAndGenesisTime",
+			Handler:    _BeaconService_CurrentAssignmentsAndGenesisTime_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "LatestCrystallizedState",
-			Handler:       _BeaconService_LatestCrystallizedState_Handler,
+			StreamName:    "LatestAttestation",
+			Handler:       _BeaconService_LatestAttestation_Handler,
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "LatestAttestation",
-			Handler:       _BeaconService_LatestAttestation_Handler,
+			StreamName:    "ValidatorAssignments",
+			Handler:       _BeaconService_ValidatorAssignments_Handler,
 			ServerStreams: true,
 		},
 	},
@@ -979,9 +996,6 @@ type ValidatorServiceClient interface {
 	ValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error)
 	ValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error)
 	ValidatorSlotAndResponsibility(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponsibilityResponse, error)
-	// This endpoint is called by all validator clients to watch for assignments
-	// for a subset of public keys in the active validator set.
-	ValidatorAssignment(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (ValidatorService_ValidatorAssignmentClient, error)
 }
 
 type validatorServiceClient struct {
@@ -1019,38 +1033,6 @@ func (c *validatorServiceClient) ValidatorSlotAndResponsibility(ctx context.Cont
 	return out, nil
 }
 
-func (c *validatorServiceClient) ValidatorAssignment(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (ValidatorService_ValidatorAssignmentClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ValidatorService_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorAssignment", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &validatorServiceValidatorAssignmentClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type ValidatorService_ValidatorAssignmentClient interface {
-	Recv() (*ValidatorAssignmentResponse, error)
-	grpc.ClientStream
-}
-
-type validatorServiceValidatorAssignmentClient struct {
-	grpc.ClientStream
-}
-
-func (x *validatorServiceValidatorAssignmentClient) Recv() (*ValidatorAssignmentResponse, error) {
-	m := new(ValidatorAssignmentResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // ValidatorServiceServer is the server API for ValidatorService service.
 type ValidatorServiceServer interface {
 	// These endpoints can be called on demand in the future
@@ -1058,9 +1040,6 @@ type ValidatorServiceServer interface {
 	ValidatorShardID(context.Context, *PublicKey) (*ShardIDResponse, error)
 	ValidatorIndex(context.Context, *PublicKey) (*IndexResponse, error)
 	ValidatorSlotAndResponsibility(context.Context, *PublicKey) (*SlotResponsibilityResponse, error)
-	// This endpoint is called by all validator clients to watch for assignments
-	// for a subset of public keys in the active validator set.
-	ValidatorAssignment(*ValidatorAssignmentRequest, ValidatorService_ValidatorAssignmentServer) error
 }
 
 func RegisterValidatorServiceServer(s *grpc.Server, srv ValidatorServiceServer) {
@@ -1121,27 +1100,6 @@ func _ValidatorService_ValidatorSlotAndResponsibility_Handler(srv interface{}, c
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ValidatorService_ValidatorAssignment_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ValidatorAssignmentRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ValidatorServiceServer).ValidatorAssignment(m, &validatorServiceValidatorAssignmentServer{stream})
-}
-
-type ValidatorService_ValidatorAssignmentServer interface {
-	Send(*ValidatorAssignmentResponse) error
-	grpc.ServerStream
-}
-
-type validatorServiceValidatorAssignmentServer struct {
-	grpc.ServerStream
-}
-
-func (x *validatorServiceValidatorAssignmentServer) Send(m *ValidatorAssignmentResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
 var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.ValidatorService",
 	HandlerType: (*ValidatorServiceServer)(nil),
@@ -1159,81 +1117,73 @@ var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _ValidatorService_ValidatorSlotAndResponsibility_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "ValidatorAssignment",
-			Handler:       _ValidatorService_ValidatorAssignment_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/beacon/rpc/v1/services.proto",
 }
 
 func init() {
-	proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_services_37e53a594698a536)
+	proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_services_54e1be11fa7a94d4)
 }
 
-var fileDescriptor_services_37e53a594698a536 = []byte{
-	// 963 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x55, 0xdf, 0x72, 0xdb, 0xc4,
-	0x17, 0xfe, 0xc9, 0x71, 0xdb, 0xe4, 0xf8, 0x4f, 0x9c, 0xcd, 0x6f, 0x5a, 0xd7, 0x1d, 0x68, 0x50,
-	0x27, 0x90, 0x76, 0x40, 0x4e, 0xd4, 0x9b, 0x02, 0x33, 0x0c, 0x4e, 0xc9, 0xb4, 0x9d, 0x76, 0xe2,
-	0x8c, 0x6c, 0xca, 0x0c, 0x30, 0x55, 0xd7, 0xd6, 0x22, 0xef, 0x64, 0xad, 0x15, 0xbb, 0x6b, 0x83,
-	0xb9, 0xe2, 0x8e, 0xb7, 0xe0, 0x7d, 0xe0, 0x59, 0x78, 0x03, 0x6e, 0x18, 0xed, 0x4a, 0xb2, 0x9c,
-	0x46, 0x38, 0xe1, 0x4e, 0xfb, 0xed, 0xd9, 0xef, 0x7c, 0xe7, 0xd3, 0xd9, 0xb3, 0x60, 0xc7, 0x82,
-	0x2b, 0xde, 0x1d, 0x11, 0x3c, 0xe6, 0x51, 0x57, 0xc4, 0xe3, 0xee, 0xfc, 0xa8, 0x2b, 0x89, 0x98,
-	0xd3, 0x31, 0x91, 0x8e, 0xde, 0x44, 0xb7, 0x89, 0x9a, 0x10, 0x41, 0x66, 0x53, 0xc7, 0x84, 0x39,
-	0x22, 0x1e, 0x3b, 0xf3, 0xa3, 0xce, 0xea, 0xd9, 0xd8, 0x8d, 0x93, 0xb3, 0x53, 0x22, 0x25, 0x0e,
-	0xb3, 0xb3, 0x9d, 0x7b, 0x21, 0xe7, 0x21, 0x23, 0x5d, 0xbd, 0x1a, 0xcd, 0x7e, 0xe8, 0x92, 0x69,
-	0xac, 0x16, 0xe9, 0xe6, 0xfd, 0x8b, 0x9b, 0x8a, 0x4e, 0x89, 0x54, 0x78, 0x1a, 0x9b, 0x00, 0xfb,
-	0x35, 0xd4, 0x9e, 0x91, 0x88, 0x48, 0x2a, 0x87, 0x74, 0x4a, 0xd0, 0x33, 0xd8, 0x09, 0xcd, 0xd2,
-	0xcf, 0x23, 0xdb, 0xd6, 0x9e, 0x75, 0x50, 0x73, 0x3b, 0x8e, 0xe1, 0x72, 0x32, 0x2e, 0x67, 0x98,
-	0x45, 0x78, 0xad, 0x70, 0xc9, 0xa1, 0x11, 0xfb, 0xf7, 0x0a, 0x34, 0xcf, 0x04, 0x8f, 0xb9, 0x24,
-	0x1e, 0xf9, 0x71, 0x46, 0xa4, 0x42, 0xf7, 0xa1, 0x16, 0x63, 0x41, 0x22, 0xe5, 0x4f, 0xb0, 0x9c,
-	0x68, 0xd6, 0xba, 0x07, 0x06, 0x7a, 0x8e, 0xe5, 0x24, 0x09, 0x90, 0x8c, 0x2b, 0x3f, 0x9a, 0x4d,
-	0x47, 0x44, 0xb4, 0x2b, 0x7b, 0xd6, 0x41, 0xd5, 0x83, 0x04, 0x3a, 0xd5, 0x08, 0x7a, 0x00, 0x0d,
-	0x81, 0xa3, 0x00, 0x73, 0x5f, 0x90, 0x39, 0xc1, 0xac, 0xbd, 0xa1, 0x39, 0xea, 0x06, 0xf4, 0x34,
-	0x86, 0xba, 0xb0, 0x8b, 0x95, 0x4a, 0x64, 0x28, 0xca, 0x23, 0x7f, 0x44, 0xd5, 0x14, 0xcb, 0xf3,
-	0x76, 0x55, 0x87, 0xa2, 0xc2, 0xd6, 0xb1, 0xd9, 0x41, 0x9f, 0xc1, 0xdd, 0xe2, 0x01, 0x1c, 0x86,
-	0x82, 0x84, 0x58, 0x11, 0x5f, 0xd2, 0xb0, 0x7d, 0x63, 0x6f, 0xe3, 0xa0, 0xe1, 0xdd, 0x29, 0x04,
-	0xf4, 0xb2, 0xfd, 0x01, 0x0d, 0xd1, 0x13, 0xd8, 0x5a, 0xfa, 0x74, 0x73, 0xad, 0x4f, 0xcb, 0x60,
-	0xfb, 0x10, 0xb6, 0x73, 0x7f, 0x64, 0xcc, 0x23, 0x49, 0xd0, 0x7b, 0x00, 0x23, 0xc6, 0xc7, 0xe7,
-	0x45, 0x7f, 0xb6, 0x34, 0x92, 0xd8, 0x63, 0xbf, 0x85, 0x46, 0x4f, 0xcb, 0xc8, 0x0c, 0xed, 0x43,
-	0xad, 0xa0, 0x2b, 0xfd, 0x4d, 0x9f, 0x38, 0x17, 0x7b, 0x29, 0x76, 0x63, 0x67, 0x7e, 0xe4, 0xe4,
-	0xba, 0x83, 0xde, 0xf2, 0x90, 0x57, 0x64, 0xb0, 0x3f, 0x87, 0x66, 0x96, 0x21, 0x95, 0xf4, 0x10,
-	0x5a, 0x45, 0x6f, 0x0a, 0xc2, 0xb6, 0x0b, 0xb8, 0x96, 0xf7, 0x9b, 0x05, 0x9d, 0xd7, 0x98, 0xd1,
-	0x00, 0x2b, 0x2e, 0x7a, 0x52, 0xd2, 0x30, 0x9a, 0x92, 0x28, 0x17, 0xbb, 0x0f, 0x4d, 0xcc, 0x98,
-	0x3f, 0xcf, 0x22, 0xa4, 0xe6, 0xd9, 0xf4, 0x1a, 0x98, 0xb1, 0xfc, 0x98, 0x44, 0xc7, 0x50, 0x8b,
-	0x67, 0x23, 0x46, 0xc7, 0xfe, 0x39, 0x59, 0xc8, 0x76, 0x65, 0x6f, 0xe3, 0xa0, 0xe6, 0x7e, 0xe0,
-	0x5c, 0x7e, 0x3f, 0x9c, 0x33, 0x1d, 0xfa, 0x92, 0x2c, 0x3c, 0x88, 0xb3, 0x4f, 0x69, 0xff, 0x5d,
-	0x81, 0x7b, 0x97, 0x2a, 0x49, 0x8b, 0x7a, 0x0b, 0x35, 0x9c, 0xa3, 0x89, 0x8e, 0x24, 0xc7, 0x17,
-	0x65, 0x39, 0xfe, 0x85, 0xc9, 0x29, 0x40, 0x45, 0x4a, 0xe4, 0xc0, 0xee, 0x78, 0x26, 0x74, 0xaf,
-	0x1b, 0x32, 0x3f, 0xe9, 0xe2, 0xb4, 0xa3, 0x77, 0xd2, 0xad, 0x63, 0xbd, 0x33, 0x60, 0x5c, 0x75,
-	0xfe, 0xb0, 0x00, 0x96, 0x5c, 0xe8, 0x4b, 0x80, 0xa5, 0x09, 0xe9, 0x7f, 0xbd, 0x82, 0x07, 0x5b,
-	0xb9, 0x07, 0xe8, 0x2e, 0x6c, 0xca, 0x09, 0x16, 0x81, 0x4f, 0x83, 0x34, 0xeb, 0x2d, 0xbd, 0x7e,
-	0x11, 0xa0, 0x4f, 0xa1, 0x2a, 0x38, 0x23, 0xfa, 0xee, 0x34, 0xdd, 0xfd, 0xb5, 0x65, 0x7b, 0x9c,
-	0x11, 0x4f, 0x1f, 0x49, 0xee, 0x9f, 0xa9, 0x92, 0x04, 0xa6, 0xa0, 0xaa, 0xa6, 0xae, 0x67, 0x60,
-	0x52, 0x8b, 0xfd, 0x08, 0xb6, 0x72, 0x49, 0x49, 0x4b, 0x5f, 0xa8, 0xa4, 0x5e, 0x90, 0x69, 0x9f,
-	0x43, 0x27, 0x39, 0x93, 0xfa, 0x49, 0x47, 0x94, 0x51, 0xb5, 0xc8, 0xff, 0x13, 0x82, 0xaa, 0xce,
-	0x62, 0xe9, 0x2c, 0xfa, 0x3b, 0x57, 0x5f, 0xb9, 0xb6, 0x7a, 0x7b, 0x1f, 0x1a, 0x2f, 0xa2, 0x80,
-	0xfc, 0x9c, 0xf3, 0xff, 0x1f, 0x6e, 0xd0, 0x04, 0xd0, 0x09, 0x1a, 0x9e, 0x59, 0xd8, 0x1f, 0xc3,
-	0xf6, 0x40, 0x5b, 0xf5, 0x55, 0x1e, 0x58, 0x74, 0xd3, 0x5a, 0x71, 0xf3, 0xd1, 0x13, 0x68, 0xac,
-	0xe4, 0x42, 0x35, 0xb8, 0xf5, 0xf5, 0xe9, 0xcb, 0xd3, 0xfe, 0x37, 0xa7, 0xad, 0xff, 0xa1, 0x3a,
-	0x6c, 0xf6, 0x86, 0xc3, 0x93, 0xc1, 0xf0, 0xc4, 0x6b, 0x59, 0xc9, 0xea, 0xcc, 0xeb, 0x9f, 0xf5,
-	0x07, 0x27, 0x5e, 0xab, 0xe2, 0xfe, 0x55, 0x81, 0x46, 0xda, 0x02, 0xe6, 0x31, 0x40, 0x7d, 0x68,
-	0xa5, 0xb3, 0x78, 0xa0, 0xb0, 0x50, 0x7a, 0x20, 0xdf, 0x7e, 0x67, 0x9a, 0x9c, 0x24, 0xe3, 0xbd,
-	0xf3, 0xa0, 0xac, 0xf2, 0xe2, 0x34, 0x7f, 0x05, 0x8d, 0xa7, 0x38, 0xe2, 0x11, 0x1d, 0x63, 0xf6,
-	0x9c, 0xe0, 0xe0, 0x1a, 0x6c, 0xe9, 0xd0, 0x30, 0x02, 0x8f, 0x93, 0x19, 0x84, 0xde, 0xc0, 0x9d,
-	0x57, 0x38, 0xb9, 0xf3, 0x4f, 0xc5, 0x42, 0x2a, 0xcc, 0x18, 0xfd, 0x85, 0x04, 0x03, 0x85, 0x55,
-	0xb9, 0xca, 0x87, 0x65, 0xbc, 0xef, 0x50, 0x1c, 0x5a, 0xe8, 0x7b, 0xd8, 0x31, 0xfc, 0x85, 0xf9,
-	0x54, 0xca, 0x7c, 0xbd, 0x31, 0x77, 0x68, 0xb9, 0x11, 0x6c, 0x1b, 0x80, 0x88, 0xcc, 0xef, 0xef,
-	0x00, 0x0c, 0xa4, 0xbd, 0x29, 0xed, 0xa5, 0x95, 0xa1, 0xdb, 0xf9, 0x70, 0x5d, 0x98, 0xe9, 0x19,
-	0x57, 0xe4, 0xf3, 0x3d, 0xcf, 0xe7, 0x43, 0x3d, 0x85, 0x8c, 0xa1, 0xa5, 0x54, 0xab, 0x0f, 0x67,
-	0xe7, 0xa3, 0xb5, 0x71, 0x69, 0xce, 0x3f, 0x37, 0xa0, 0x95, 0x77, 0x63, 0x96, 0xf5, 0x4d, 0x11,
-	0x33, 0x8d, 0x8d, 0xd6, 0x0f, 0x93, 0xf2, 0xa4, 0x17, 0x2f, 0xc7, 0xb7, 0xd0, 0xcc, 0xf9, 0xf5,
-	0xfd, 0xba, 0x0a, 0x7b, 0xa9, 0xd9, 0xab, 0x37, 0xf4, 0x27, 0x78, 0x7f, 0xa9, 0x9d, 0x71, 0xd5,
-	0x8b, 0x82, 0xd5, 0x59, 0x71, 0x95, 0x5c, 0x6e, 0x69, 0x25, 0xe5, 0xa3, 0xe7, 0x57, 0x0b, 0x76,
-	0x2f, 0x19, 0xfc, 0xc8, 0xbd, 0xd6, 0x2b, 0x61, 0x7e, 0xdf, 0xe3, 0xff, 0xf0, 0xb2, 0x1c, 0x5a,
-	0xa3, 0x9b, 0xba, 0xe3, 0x1f, 0xff, 0x13, 0x00, 0x00, 0xff, 0xff, 0x65, 0x87, 0x1a, 0x96, 0x40,
-	0x0a, 0x00, 0x00,
+var fileDescriptor_services_54e1be11fa7a94d4 = []byte{
+	// 929 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0x6f, 0x6f, 0xdb, 0x44,
+	0x1c, 0xc6, 0x69, 0xb6, 0xb5, 0xbf, 0xc4, 0x69, 0x76, 0x4c, 0x23, 0xf3, 0x04, 0x0b, 0x9e, 0x0a,
+	0x61, 0x02, 0xa7, 0xf5, 0xde, 0x0c, 0x78, 0x43, 0xba, 0x55, 0xdb, 0xb4, 0xa9, 0xad, 0x9c, 0x02,
+	0x12, 0x20, 0xcc, 0x25, 0x3e, 0x1c, 0xab, 0x8e, 0xcf, 0xdc, 0x5d, 0x02, 0x7d, 0xc9, 0x2b, 0x24,
+	0x3e, 0x04, 0x5f, 0x80, 0x0f, 0x82, 0x90, 0xf8, 0x50, 0xe8, 0xce, 0xf6, 0xd9, 0x69, 0x6b, 0xd2,
+	0xa2, 0xbd, 0xb3, 0x9f, 0xfb, 0xfd, 0x79, 0xee, 0xb9, 0xdf, 0x3d, 0x07, 0x76, 0xca, 0xa8, 0xa0,
+	0xc3, 0x09, 0xc1, 0x53, 0x9a, 0x0c, 0x59, 0x3a, 0x1d, 0x2e, 0xf7, 0x86, 0x9c, 0xb0, 0x65, 0x34,
+	0x25, 0xdc, 0x51, 0x8b, 0xe8, 0x2e, 0x11, 0x33, 0xc2, 0xc8, 0x62, 0xee, 0x64, 0x61, 0x0e, 0x4b,
+	0xa7, 0xce, 0x72, 0xcf, 0x5a, 0xcd, 0x4d, 0xdd, 0x54, 0xe6, 0xce, 0x09, 0xe7, 0x38, 0x2c, 0x72,
+	0xad, 0xfb, 0x21, 0xa5, 0x61, 0x4c, 0x86, 0xea, 0x6f, 0xb2, 0xf8, 0x71, 0x48, 0xe6, 0xa9, 0x38,
+	0xcb, 0x17, 0x1f, 0x9c, 0x5f, 0x14, 0xd1, 0x9c, 0x70, 0x81, 0xe7, 0x69, 0x16, 0x60, 0xff, 0xd1,
+	0x80, 0xce, 0x31, 0xa3, 0x29, 0xe5, 0xc4, 0x23, 0x3f, 0x2d, 0x08, 0x17, 0xe8, 0x01, 0xb4, 0x52,
+	0xcc, 0x48, 0x22, 0xfc, 0x19, 0xe6, 0xb3, 0x9e, 0xd1, 0x37, 0x06, 0x6d, 0x0f, 0x32, 0xe8, 0x05,
+	0xe6, 0x33, 0x19, 0xc0, 0x63, 0x2a, 0xfc, 0x64, 0x31, 0x9f, 0x10, 0xd6, 0x6b, 0xf4, 0x8d, 0x41,
+	0xd3, 0x03, 0x09, 0x1d, 0x2a, 0x04, 0x3d, 0x04, 0x93, 0xe1, 0x24, 0xc0, 0xd4, 0x67, 0x64, 0x49,
+	0x70, 0xdc, 0xdb, 0x50, 0x35, 0xda, 0x19, 0xe8, 0x29, 0x0c, 0x0d, 0xe1, 0x6d, 0x2c, 0x84, 0x24,
+	0x23, 0x22, 0x9a, 0xf8, 0x93, 0x48, 0xcc, 0x31, 0x3f, 0xed, 0x35, 0x55, 0x28, 0xaa, 0x2c, 0xed,
+	0x67, 0x2b, 0xe8, 0x33, 0xb8, 0x57, 0x4d, 0xc0, 0x61, 0xc8, 0x48, 0x88, 0x05, 0xf1, 0x79, 0x14,
+	0xf6, 0x6e, 0xf4, 0x37, 0x06, 0xa6, 0xf7, 0x4e, 0x25, 0x60, 0x54, 0xac, 0x8f, 0xa3, 0x10, 0x3d,
+	0x81, 0x2d, 0xbd, 0xf3, 0xde, 0xcd, 0xbe, 0x31, 0x68, 0xb9, 0x96, 0x93, 0x69, 0xe3, 0x14, 0xda,
+	0x38, 0x27, 0x45, 0x84, 0x57, 0x06, 0xdb, 0xbb, 0xb0, 0xad, 0xf5, 0xe1, 0x29, 0x4d, 0x38, 0x41,
+	0xef, 0x02, 0x4c, 0x62, 0x3a, 0x3d, 0xad, 0xea, 0xb3, 0xa5, 0x10, 0x29, 0x8f, 0xfd, 0x03, 0x98,
+	0x23, 0x45, 0xa3, 0x10, 0xf4, 0x08, 0x5a, 0x15, 0x5e, 0x2a, 0xa1, 0xe5, 0x7e, 0xe2, 0x9c, 0x3f,
+	0xf3, 0xd4, 0x4d, 0x9d, 0xe5, 0x9e, 0xa3, 0x79, 0x07, 0xa3, 0x32, 0xc9, 0xab, 0x56, 0xb0, 0x3f,
+	0x87, 0x4e, 0xd1, 0x21, 0xa7, 0xf4, 0x11, 0x74, 0xab, 0xda, 0x54, 0x88, 0x6d, 0x57, 0x70, 0x45,
+	0xef, 0x37, 0x03, 0xac, 0xaf, 0x70, 0x1c, 0x05, 0x58, 0x50, 0x36, 0xe2, 0x3c, 0x0a, 0x93, 0x39,
+	0x49, 0x34, 0xd9, 0x1d, 0xe8, 0xe0, 0x38, 0xf6, 0x97, 0x45, 0x04, 0x57, 0x75, 0x36, 0x3d, 0x13,
+	0xc7, 0xb1, 0x4e, 0xe3, 0x68, 0x1f, 0x5a, 0xe9, 0x62, 0x12, 0x47, 0x53, 0xff, 0x94, 0x9c, 0xf1,
+	0x5e, 0xa3, 0xbf, 0x31, 0x68, 0xb9, 0xef, 0x3b, 0x97, 0xcf, 0xb1, 0x73, 0xac, 0x42, 0x5f, 0x91,
+	0x33, 0x0f, 0xd2, 0xe2, 0x93, 0xdb, 0x53, 0xb8, 0x7f, 0x29, 0x91, 0x7c, 0x4f, 0xcf, 0xa0, 0x85,
+	0x35, 0x2a, 0x69, 0xc8, 0x16, 0x76, 0x5d, 0x8b, 0x4a, 0x81, 0x6a, 0x9a, 0xfd, 0xb7, 0x01, 0x50,
+	0xae, 0xa1, 0x2f, 0x00, 0x4a, 0xde, 0xf9, 0x51, 0x5c, 0x81, 0xf6, 0x96, 0xa6, 0x8d, 0xee, 0xc1,
+	0x26, 0x9f, 0x61, 0x16, 0xf8, 0x51, 0x90, 0x8f, 0xfe, 0x2d, 0xf5, 0xff, 0x32, 0x40, 0x9f, 0x42,
+	0x93, 0xd1, 0x98, 0xa8, 0x71, 0xef, 0xb8, 0x3b, 0x75, 0x65, 0xf5, 0xa6, 0x3d, 0x1a, 0x13, 0x4f,
+	0xa5, 0xc8, 0x2b, 0x93, 0xb1, 0x26, 0x81, 0x2f, 0x6f, 0x92, 0xba, 0x07, 0x4d, 0xaf, 0x5d, 0x80,
+	0xe3, 0x98, 0x0a, 0xfb, 0x11, 0x6c, 0x69, 0x4a, 0x72, 0x0a, 0xcf, 0xed, 0xa4, 0x5d, 0xa1, 0x69,
+	0x9f, 0x82, 0x25, 0x73, 0x72, 0x35, 0xa3, 0x49, 0x14, 0x47, 0xe2, 0x4c, 0x6b, 0x8b, 0xa0, 0xa9,
+	0xba, 0x18, 0xaa, 0x8b, 0xfa, 0xd6, 0xec, 0x1b, 0xd7, 0x66, 0x6f, 0xef, 0x80, 0xf9, 0x32, 0x09,
+	0xc8, 0x2f, 0xba, 0xfe, 0x1d, 0xb8, 0x11, 0x49, 0x40, 0x35, 0x30, 0xbd, 0xec, 0xc7, 0xfe, 0x18,
+	0xb6, 0xc7, 0x4a, 0xaa, 0x67, 0x3a, 0xb0, 0xaa, 0xa6, 0xb1, 0xa2, 0xa6, 0xfd, 0xa7, 0x01, 0xd6,
+	0xd3, 0x05, 0x93, 0xb6, 0x53, 0x1e, 0x20, 0x7f, 0xb3, 0xe3, 0x81, 0x9e, 0xc3, 0xed, 0x90, 0x24,
+	0x84, 0x47, 0xdc, 0x2f, 0x0d, 0xa2, 0xb1, 0xd6, 0x20, 0xba, 0x79, 0x92, 0x46, 0x1e, 0x3d, 0x01,
+	0x73, 0x45, 0x19, 0xd4, 0x82, 0x5b, 0x5f, 0x1e, 0xbe, 0x3a, 0x3c, 0xfa, 0xfa, 0xb0, 0xfb, 0x16,
+	0x6a, 0xc3, 0xe6, 0xe8, 0xe4, 0xe4, 0x60, 0x7c, 0x72, 0xe0, 0x75, 0x0d, 0xf9, 0x77, 0xec, 0x1d,
+	0x1d, 0x1f, 0x8d, 0x0f, 0xbc, 0x6e, 0xc3, 0xfd, 0x67, 0x03, 0xcc, 0x7d, 0x45, 0x76, 0x9c, 0xbd,
+	0x0a, 0xe8, 0x35, 0x98, 0x4f, 0x71, 0x42, 0x93, 0x68, 0x8a, 0xe3, 0x17, 0x04, 0x07, 0xe8, 0xee,
+	0x05, 0x2a, 0x07, 0xd2, 0xe4, 0xad, 0x87, 0x75, 0x26, 0x92, 0xd5, 0xdb, 0x97, 0x9e, 0x84, 0xbe,
+	0x83, 0xdb, 0xaf, 0xb1, 0xf4, 0x80, 0x8a, 0x9f, 0xd4, 0x56, 0xbc, 0x9e, 0x2d, 0xed, 0x1a, 0xe8,
+	0x77, 0x03, 0xfa, 0x17, 0x4f, 0x69, 0x94, 0x04, 0xcf, 0x4b, 0x85, 0x90, 0xbb, 0x76, 0x98, 0x2e,
+	0x18, 0x91, 0x55, 0x9b, 0xf3, 0x1f, 0x33, 0xf1, 0xab, 0x01, 0x77, 0x2e, 0x29, 0xc9, 0xff, 0x17,
+	0x81, 0xc7, 0xd7, 0xca, 0xc9, 0x18, 0xec, 0x1a, 0x6e, 0x02, 0xdb, 0x99, 0x42, 0x84, 0x15, 0xe7,
+	0xf9, 0x2d, 0x40, 0x06, 0xa9, 0xc3, 0xac, 0xbd, 0x59, 0x2b, 0xaf, 0x86, 0xf5, 0xc1, 0xba, 0xb0,
+	0xac, 0xa3, 0xcb, 0xf4, 0x03, 0xa5, 0xfb, 0xf9, 0xd0, 0xce, 0xa1, 0x6c, 0x02, 0x6a, 0x4b, 0xad,
+	0xbe, 0xfc, 0xd6, 0x87, 0x6b, 0xe3, 0xf2, 0x9e, 0x7f, 0x35, 0xa0, 0xab, 0x55, 0x28, 0xba, 0x7e,
+	0x5f, 0xc5, 0xb2, 0x6b, 0x8e, 0xd6, 0x5b, 0x6b, 0x7d, 0xd3, 0xf3, 0x56, 0xf1, 0x0d, 0x74, 0x74,
+	0x7d, 0xe5, 0x36, 0x57, 0xa9, 0x5e, 0x2b, 0xf6, 0xaa, 0x5f, 0xfd, 0x0c, 0xef, 0x95, 0xdc, 0x63,
+	0x2a, 0x46, 0x49, 0xb0, 0xea, 0x9c, 0x57, 0xe9, 0x55, 0x3b, 0x64, 0xf5, 0x46, 0x3c, 0xb9, 0xa9,
+	0xee, 0xdf, 0xe3, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0xd7, 0xae, 0x60, 0x87, 0x26, 0x0a, 0x00,
+	0x00,
 }

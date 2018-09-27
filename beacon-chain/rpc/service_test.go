@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
@@ -183,7 +181,7 @@ func TestCanonicalHead(t *testing.T) {
 	}
 }
 
-func TestGenesisTime(t *testing.T) {
+func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:             "6372",
@@ -191,11 +189,18 @@ func TestGenesisTime(t *testing.T) {
 		ChainService:     mockChain,
 		POWChainService:  &mockPOWChainService{},
 	})
-	res, err := rpcService.GenesisStartTime(context.Background(), &empty.Empty{})
-	if err != nil {
-		t.Errorf("Could not call GenesisTimeAndCanonicalState correctly: %v", err)
+
+	key := &pb.PublicKey{PublicKey: []byte{}}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
 	}
-	genesis := types.NewGenesisBlock()
+
+	res, err := rpcService.CurrentAssignmentsAndGenesisTime(context.Background(), req)
+	if err != nil {
+		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
+	}
+	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
 		t.Errorf("Received different genesis timestamp, wanted: %v, received: %v", genesis.Proto().GetTimestamp(), res.GenesisTimestamp)
 	}
@@ -274,9 +279,10 @@ func TestLatestAttestation(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
+	attestation := &types.Attestation{}
 
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(errors.New("something wrong"))
+	mockStream.EXPECT().Send(attestation.Proto()).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
@@ -284,10 +290,11 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.incomingAttestation <- &pbp2p.AggregatedAttestation{}
+
+	rpcService.incomingAttestation <- attestation
 
 	mockStream = internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.AggregatedAttestation{}).Return(nil)
+	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
 
 	// Tests a good stream.
 	go func(tt *testing.T) {
@@ -296,7 +303,7 @@ func TestLatestAttestation(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	rpcService.incomingAttestation <- &pbp2p.AggregatedAttestation{}
+	rpcService.incomingAttestation <- attestation
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
@@ -344,40 +351,20 @@ func TestValidatorShardID(t *testing.T) {
 	}
 }
 
-func TestValidatorAssignmentRPC(t *testing.T) {
-	mockChain := &mockChainService{}
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "6372",
-		ChainService: mockChain,
-	})
-
-	rpcService.slotAlignmentDuration = time.Millisecond
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
-
-	req := &pb.ValidatorAssignmentRequest{}
-
-	err := rpcService.ValidatorAssignment(req, mockStream)
-	if !strings.Contains(err.Error(), "no public keys specified in request") {
-		t.Errorf("Expected error: no public keys specified in request, received %v", err)
-	}
-}
-
-func TestStreamValidators(t *testing.T) {
+func TestValidatorAssignments(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	mockChain := &mockChainService{}
+	mockChain := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:         "6372",
-		ChainService: mockChain,
+		Port:             "6372",
+		ChainService:     mockChain,
+		CanonicalFetcher: mockChain,
 	})
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockStream := internal.NewMockValidatorService_ValidatorAssignmentServer(ctrl)
+	mockStream := internal.NewMockBeaconService_ValidatorAssignmentsServer(ctrl)
 	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 
 	key := &pb.PublicKey{PublicKey: []byte{}}
@@ -386,20 +373,23 @@ func TestStreamValidators(t *testing.T) {
 		PublicKeys: publicKeys,
 	}
 
-	timeChan := make(chan time.Time)
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	// Tests a validator assignment stream.
 	go func(tt *testing.T) {
-		if err := rpcService.streamValidators(req, mockStream, 100, timeChan, doneChan); err != nil {
+		if err := rpcService.ValidatorAssignments(req, mockStream); err != nil {
 			tt.Errorf("Could not stream validators: %v", err)
 		}
 		<-exitRoutine
 	}(t)
 
-	timeChan <- time.Now()
-	doneChan <- struct{}{}
+	genesisState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rpcService.canonicalStateChan <- genesisState
+	rpcService.cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Sending validator assignment to RPC clients")
+	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")
 }

@@ -67,10 +67,17 @@ type mockLifecycleClient struct {
 func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
 
+<<<<<<< HEAD
 	mockServiceClient.EXPECT().GenesisStartTime(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&pb.GenesisTime{
+=======
+	mockServiceClient.EXPECT().CurrentAssignmentsAndGenesisTime(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.CurrentAssignmentsResponse{
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 		GenesisTimestamp: ptypes.TimestampNow(),
 	}, nil)
 
@@ -80,6 +87,14 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 		&empty.Empty{},
 	).Return(attesterStream, nil)
 	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+
+	cycleStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
+	mockServiceClient.EXPECT().ValidatorAssignments(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(cycleStream, nil)
+	cycleStream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
+
 	return mockServiceClient
 }
 
@@ -98,9 +113,13 @@ func TestLifecycle(t *testing.T) {
 	if b.ProcessedAttestationFeed() == nil {
 		t.Error("ProcessedAttestationFeed empty")
 	}
+<<<<<<< HEAD
 	if !bytes.Equal(b.PublicKey(), []byte{}) {
 		t.Error("Incorrect public key")
 	}
+=======
+	b.slotAlignmentDuration = time.Millisecond * 10
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 	b.Start()
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -206,14 +225,22 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 		<-exitRoutine
 	}()
 
+<<<<<<< HEAD
 	b.responsibility = pb.ValidatorRole_PROPOSER
+=======
+	b.role = pb.ValidatorRole_PROPOSER
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
 
+<<<<<<< HEAD
 	testutil.AssertLogsContain(t, hook, "Assigned proposal slot number reached")
+=======
+	testutil.AssertLogsContain(t, hook, "New beacon node slot")
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 }
 
 func TestWaitForAssignmentProposerError(t *testing.T) {
@@ -235,7 +262,11 @@ func TestWaitForAssignmentProposerError(t *testing.T) {
 		<-exitRoutine
 	}()
 
+<<<<<<< HEAD
 	b.responsibility = pb.ValidatorRole_PROPOSER
+=======
+	b.role = pb.ValidatorRole_PROPOSER
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
@@ -264,14 +295,22 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 		<-exitRoutine
 	}()
 
+<<<<<<< HEAD
 	b.responsibility = pb.ValidatorRole_ATTESTER
+=======
+	b.role = pb.ValidatorRole_ATTESTER
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
 
+<<<<<<< HEAD
 	testutil.AssertLogsContain(t, hook, "Assigned attest slot number reached")
+=======
+	testutil.AssertLogsContain(t, hook, "New beacon node slot")
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 }
 
 func TestWaitForAssignmentAttesterError(t *testing.T) {
@@ -293,7 +332,11 @@ func TestWaitForAssignmentAttesterError(t *testing.T) {
 		<-exitRoutine
 	}()
 
+<<<<<<< HEAD
 	b.responsibility = pb.ValidatorRole_ATTESTER
+=======
+	b.role = pb.ValidatorRole_ATTESTER
+>>>>>>> 48c07bfeb9a2c86181cc4dab8404039031207b9a
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
