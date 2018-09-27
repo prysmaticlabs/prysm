@@ -368,6 +368,12 @@ func (s *Service) ValidatorAssignments(
 			if err := stream.Send(res); err != nil {
 				return err
 			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
+		case <-s.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
+			return nil
 		}
 	}
 }

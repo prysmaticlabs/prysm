@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"math"
@@ -20,10 +19,6 @@ var log = logrus.WithField("prefix", "beacon")
 
 type rpcClientService interface {
 	BeaconServiceClient() pb.BeaconServiceClient
-}
-
-type validatorClientService interface {
-	ValidatorServiceClient() pb.ValidatorServiceClient
 }
 
 // Service that interacts with a beacon node via RPC.
@@ -139,9 +134,9 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 
 // listenForAssignmentChange listens for validator assignment changes via a RPC stream.
 // when there's an assignment change, beacon service will update its shard ID, slot number and role.
-func (s *Service) listenForAssignmentChange(validator pb.BeaconServiceClient) {
+func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 	req := &pb.ValidatorAssignmentRequest{PublicKeys: []*pb.PublicKey{{PublicKey: s.pubKey}}}
-	stream, err := validator.ValidatorAssignments(s.ctx, req)
+	stream, err := client.ValidatorAssignments(s.ctx, req)
 	if err != nil {
 		log.Errorf("could not fetch validator assigned slot and responsibility from beacon node: %v", err)
 		return
@@ -273,9 +268,4 @@ func (s *Service) CurrentCycleStartSlot() uint64 {
 	currentSlot := s.CurrentBeaconSlot()
 	cycleNum := math.Floor(float64(currentSlot) / float64(params.DefaultConfig().CycleLength))
 	return uint64(cycleNum) * params.DefaultConfig().CycleLength
-}
-
-// isZeroAddress compares a withdrawal address to an empty byte array.
-func isZeroAddress(withdrawalAddress []byte) bool {
-	return bytes.Equal(withdrawalAddress, []byte{})
 }

@@ -25,23 +25,6 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockValidator struct {
-	ctrl *gomock.Controller
-}
-
-func (fc *mockValidator) ValidatorServiceClient() pb.BeaconServiceClient {
-	mockValidatorClient := internal.NewMockBeaconServiceClient(fc.ctrl)
-
-	assignmentStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
-	assignmentStream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
-	mockValidatorClient.EXPECT().ValidatorAssignments(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(assignmentStream, nil)
-
-	return mockValidatorClient
-}
-
 type mockClient struct {
 	ctrl *gomock.Controller
 }
