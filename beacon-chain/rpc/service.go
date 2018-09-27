@@ -24,27 +24,20 @@ import (
 
 var log = logrus.WithField("prefix", "rpc")
 
-// canonicalFetcher defines a struct with methods that can be
-// called on-demand to fetch the latest canonical head
-// and crystallized state as well as methods that stream
-// latest canonical head events to clients
-// These functions are called by a validator client upon
-// establishing an initial connection to a beacon node via gRPC.
-type canonicalFetcher interface {
+type beaconDB interface {
 	// These methods can be called on-demand by a validator
 	// to fetch canonical head and state.
-	CanonicalHead() (*types.Block, error)
-	CanonicalCrystallizedState() *types.CrystallizedState
+	GetCanonicalBlock() (*types.Block, error)
+	GetCrystallizedState() *types.CrystallizedState
+}
+
+type chainService interface {
+	IncomingBlockFeed() *event.Feed
 	// These methods are not called on-demand by a validator
 	// but instead streamed to connected validators every
 	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
 	CanonicalCrystallizedStateFeed() *event.Feed
-}
-
-type chainService interface {
-	IncomingBlockFeed() *event.Feed
-	CurrentCrystallizedState() *types.CrystallizedState
 }
 
 type attestationService interface {
@@ -59,7 +52,7 @@ type powChainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	fetcher               canonicalFetcher
+	beaconDB              beaconDB
 	chainService          chainService
 	powChainService       powChainService
 	attestationService    attestationService
@@ -81,7 +74,7 @@ type Config struct {
 	CertFlag           string
 	KeyFlag            string
 	SubscriptionBuf    int
-	CanonicalFetcher   canonicalFetcher
+	BeaconDB           beaconDB
 	ChainService       chainService
 	POWChainService    powChainService
 	AttestationService attestationService
@@ -95,7 +88,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	return &Service{
 		ctx:                   ctx,
 		cancel:                cancel,
-		fetcher:               cfg.CanonicalFetcher,
+		beaconDB:              cfg.BeaconDB,
 		chainService:          cfg.ChainService,
 		powChainService:       cfg.POWChainService,
 		attestationService:    cfg.AttestationService,
@@ -159,7 +152,7 @@ func (s *Service) Stop() error {
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.BeaconBlock, error) {
-	block, err := s.fetcher.CanonicalHead()
+	block, err := s.beaconDB.GetCanonicalBlock()
 	if err != nil {
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
@@ -179,7 +172,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	// and defined in the params package).
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
-	cState := s.chainService.CurrentCrystallizedState()
+	cState := s.beaconDB.GetCrystallizedState()
 
 	var keys []*pb.PublicKey
 	if req.AllValidators {
@@ -270,7 +263,7 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
 func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
-	cState := s.chainService.CurrentCrystallizedState()
+	cState := s.beaconDB.GetCrystallizedState()
 
 	shardID, err := casper.ValidatorShardID(
 		req.PublicKey,
@@ -288,7 +281,7 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 // ValidatorSlotAndResponsibility fetches a validator's assigned slot number
 // and whether it should act as a proposer/attester.
 func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponsibilityResponse, error) {
-	cState := s.chainService.CurrentCrystallizedState()
+	cState := s.beaconDB.GetCrystallizedState()
 
 	slot, responsibility, err := casper.ValidatorSlotAndResponsibility(
 		req.PublicKey,
@@ -313,7 +306,7 @@ func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.Pu
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
-	cState := s.chainService.CurrentCrystallizedState()
+	cState := s.beaconDB.GetCrystallizedState()
 
 	index, err := casper.ValidatorIndex(
 		req.PublicKey,
@@ -333,7 +326,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
 	stream pb.BeaconService_ValidatorAssignmentsServer) error {
-	sub := s.fetcher.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
+	sub := s.chainService.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {

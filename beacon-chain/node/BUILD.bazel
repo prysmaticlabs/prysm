@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//beacon-chain/attestation:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/rpc:go_default_library",
         "//beacon-chain/simulator:go_default_library",
@@ -20,7 +21,6 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/database:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/p2p/adapter/tracer:go_default_library",

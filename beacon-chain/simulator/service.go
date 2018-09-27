@@ -6,15 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,7 +24,7 @@ type Simulator struct {
 	p2p                    shared.P2P
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
-	beaconDB               ethdb.Database
+	beaconDB               beaconDB
 	devMode                bool
 	delay                  time.Duration
 	slotNum                uint64
@@ -43,8 +40,14 @@ type Config struct {
 	P2P             shared.P2P
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
-	BeaconDB        ethdb.Database
+	BeaconDB        beaconDB
 	DevMode         bool
+}
+
+type beaconDB interface {
+	HasSimulatedBlock() (bool, error)
+	GetSimulatedBlock() (*types.Block, error)
+	SaveSimulatedBlock(*types.Block) error
 }
 
 // DefaultConfig options for the simulator.
@@ -77,7 +80,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	go sim.run(time.NewTicker(sim.delay).C, sim.ctx.Done())
+	go sim.run(time.NewTicker(sim.delay).C)
 }
 
 // Stop the sim.
@@ -89,26 +92,27 @@ func (sim *Simulator) Stop() error {
 	if len(sim.broadcastedBlockHashes) > 0 {
 		lastBlockHash := sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1]
 		lastBlock := sim.broadcastedBlocks[lastBlockHash]
-		encoded, err := lastBlock.Marshal()
-		if err != nil {
-			return err
-		}
-		return sim.beaconDB.Put([]byte("last-simulated-block"), encoded)
+		return sim.beaconDB.SaveSimulatedBlock(lastBlock)
 	}
 	return nil
 }
 
 func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
-	hasSimulated, err := sim.beaconDB.Has([]byte("last-simulated-block"))
+	hasBlock, err := sim.beaconDB.HasSimulatedBlock()
 	if err != nil {
 		return nil, fmt.Errorf("Could not determine if a previous simulation occurred: %v", err)
 	}
-	if !hasSimulated {
+	if !hasBlock {
 		return nil, nil
 	}
-	enc, err := sim.beaconDB.Get([]byte("last-simulated-block"))
+
+	simulatedBlock, err := sim.beaconDB.GetSimulatedBlock()
 	if err != nil {
 		return nil, fmt.Errorf("Could not fetch simulated block from db: %v", err)
+	}
+	enc, err := simulatedBlock.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("Could not encode simulated block: %v", err)
 	}
 	lastSimulatedBlockProto := &pb.BeaconBlock{}
 	if err = proto.Unmarshal(enc, lastSimulatedBlockProto); err != nil {
@@ -117,7 +121,7 @@ func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
 	return types.NewBlock(lastSimulatedBlockProto), nil
 }
 
-func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
+func (sim *Simulator) run(delayChan <-chan time.Time) {
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 
@@ -139,7 +143,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 	for {
 		select {
-		case <-done:
+		case <-sim.ctx.Done():
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-delayChan:

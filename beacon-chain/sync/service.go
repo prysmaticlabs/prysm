@@ -18,18 +18,22 @@ import (
 var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
-	ContainsBlock(h [32]byte) (bool, error)
-	HasStoredState() (bool, error)
 	IncomingBlockFeed() *event.Feed
-	CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, error)
-	CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error)
-	BlockSlotNumberByHash(h [32]byte) (uint64, error)
-	CurrentCrystallizedState() *types.CrystallizedState
 }
 
 type attestationService interface {
-	ContainsAttestation(bitfield []byte, h [32]byte) (bool, error)
 	IncomingAttestationFeed() *event.Feed
+}
+
+type beaconDB interface {
+	GetCrystallizedState() *types.CrystallizedState
+	GetBlock([32]byte) (*types.Block, error)
+	GetAttestation([32]byte) (*types.Attestation, error)
+	HasAttestation([32]byte) (bool, error)
+	HasStoredState() (bool, error)
+	HasBlock([32]byte) (bool, error)
+	HasCanonicalBlockForSlot(uint64) (bool, error)
+	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -50,6 +54,7 @@ type Service struct {
 	p2p                   shared.P2P
 	chainService          chainService
 	attestationService    attestationService
+	db                    beaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
 	blockBuf              chan p2p.Message
@@ -65,6 +70,8 @@ type Config struct {
 	AttestationBufferSize  int
 	ChainService           chainService
 	AttestService          attestationService
+	BeaconDB               beaconDB
+	P2P                    shared.P2P
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -78,14 +85,15 @@ func DefaultConfig() Config {
 }
 
 // NewSyncService accepts a context and returns a new Service.
-func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P) *Service {
+func NewSyncService(ctx context.Context, cfg Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
 		cancel:                cancel,
-		p2p:                   beaconp2p,
+		p2p:                   cfg.P2P,
 		chainService:          cfg.ChainService,
 		attestationService:    cfg.AttestService,
+		db:                    cfg.BeaconDB,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -96,7 +104,7 @@ func NewSyncService(ctx context.Context, cfg Config, beaconp2p shared.P2P) *Serv
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
-	stored, err := ss.chainService.HasStoredState()
+	stored, err := ss.db.HasStoredState()
 	if err != nil {
 		log.Errorf("error retrieving stored state: %v", err)
 		return
@@ -166,7 +174,7 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	copy(h[:], data.Hash[:32])
 
 	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.chainService.ContainsBlock(h)
+	blockExists, err := ss.db.HasBlock(h)
 	containsBlockSpan.End()
 	if err != nil {
 		log.Errorf("Received block hash failed: %v", err)
@@ -195,7 +203,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	}
 
 	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.chainService.ContainsBlock(blockHash)
+	blockExists, err := ss.db.HasBlock(blockHash)
 	containsBlockSpan.End()
 	if err != nil {
 		log.Errorf("Can not check for block in DB: %v", err)
@@ -207,12 +215,13 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	attestation := types.NewAttestation(response.Attestation)
-	cState := ss.chainService.CurrentCrystallizedState()
-	parentSlot, err := ss.chainService.BlockSlotNumberByHash(block.ParentHash())
+	cState := ss.db.GetCrystallizedState()
+	parentBlock, err := ss.db.GetBlock(block.ParentHash())
 	if err != nil {
 		log.Errorf("Failed to get parent slot: %v", err)
 		return
 	}
+	parentSlot := parentBlock.SlotNumber()
 	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
@@ -248,7 +257,7 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	}
 
 	ctx, checkForBlockSpan := trace.StartSpan(ctx, "checkForBlockBySlot")
-	blockExists, err := ss.chainService.CheckForCanonicalBlockBySlot(request.GetSlotNumber())
+	blockExists, err := ss.db.HasCanonicalBlockForSlot(request.GetSlotNumber())
 	checkForBlockSpan.End()
 	if err != nil {
 		log.Errorf("Error checking db for block %v", err)
@@ -259,10 +268,10 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	}
 
 	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := ss.chainService.CanonicalBlockBySlotNumber(request.GetSlotNumber())
+	block, err := ss.db.GetCanonicalBlockForSlot(request.GetSlotNumber())
 	getBlockSpan.End()
 	if err != nil {
-		log.Errorf("Error retrieving block from db %v", err)
+		log.Errorf("Error retrieving block from db: %v", err)
 		return
 	}
 
@@ -285,14 +294,21 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 
 	_, containsAttestationSpan := trace.StartSpan(ctx, "containsAttestation")
 	containsAttestationSpan.End()
-	attestationExists, err := ss.attestationService.ContainsAttestation(a.AttesterBitfield(), h)
+	hasAttestation, err := ss.db.HasAttestation(h)
 	if err != nil {
-		log.Errorf("Can not check for attestation in DB: %v", err)
-		return
+		log.Errorf("Failed check for existence of attestation: %v", err)
 	}
-	if attestationExists {
-		log.Debugf("Received attestation 0x%v already", h)
-		return
+	if hasAttestation {
+		attestation, err := ss.db.GetAttestation(h)
+		if err != nil {
+			log.Errorf("Can not check for attestation in DB: %v", err)
+			return
+		}
+		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
+		if validatorExists {
+			log.Debugf("Received attestation 0x%v already", h)
+			return
+		}
 	}
 
 	log.WithField("attestationHash", fmt.Sprintf("0x%x", h)).Debug("Forwarding attestation to subscribed services")

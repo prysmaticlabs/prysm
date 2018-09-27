@@ -14,9 +14,9 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-type mockChainService struct{}
+type mockDB struct{}
 
-func (f *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
+func (f *mockDB) HasBlock(h [32]byte) (bool, error) {
 	return true, nil
 }
 
@@ -101,13 +101,13 @@ func TestBlockValidity(t *testing.T) {
 	})
 
 	parentSlot := uint64(1)
-	chainService := &mockChainService{}
+	db := &mockDB{}
 
-	if !b.isAttestationValid(0, chainService, aState, cState, parentSlot) {
+	if !b.isAttestationValid(0, db, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(chainService, aState, cState, parentSlot) {
+	if !b.IsValid(db, aState, cState, parentSlot) {
 		t.Fatalf("failed block validation")
 	}
 }

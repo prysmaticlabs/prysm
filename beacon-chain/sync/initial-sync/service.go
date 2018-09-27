@@ -31,6 +31,9 @@ type Config struct {
 	SyncPollingInterval         time.Duration
 	BlockBufferSize             int
 	CrystallizedStateBufferSize int
+	BeaconDB                    beaconDB
+	P2P                         shared.P2P
+	SyncService                 syncService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -45,15 +48,14 @@ func DefaultConfig() Config {
 	}
 }
 
-// ChainService is the interface for the blockchain package's ChainService struct.
-type ChainService interface {
+type beaconDB interface {
 	HasStoredState() (bool, error)
 	SaveBlock(*types.Block) error
 }
 
 // SyncService is the interface for the Sync service.
 // InitialSync calls `Start` when initial sync completes.
-type SyncService interface {
+type syncService interface {
 	Start()
 }
 
@@ -63,8 +65,8 @@ type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
 	p2p                          shared.P2P
-	chainService                 ChainService
-	syncService                  SyncService
+	syncService                  syncService
+	db                           beaconDB
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
 	currentSlotNumber            uint64
@@ -76,9 +78,6 @@ type InitialSync struct {
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
-	beaconp2p shared.P2P,
-	chainService ChainService,
-	syncService SyncService,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -88,9 +87,9 @@ func NewInitialSyncService(ctx context.Context,
 	return &InitialSync{
 		ctx:                  ctx,
 		cancel:               cancel,
-		p2p:                  beaconp2p,
-		chainService:         chainService,
-		syncService:          syncService,
+		p2p:                  cfg.P2P,
+		syncService:          cfg.SyncService,
+		db:                   cfg.BeaconDB,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
@@ -99,7 +98,7 @@ func NewInitialSyncService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
-	stored, err := s.chainService.HasStoredState()
+	stored, err := s.db.HasStoredState()
 	if err != nil {
 		log.Errorf("error retrieving stored state: %v", err)
 		return
@@ -262,5 +261,5 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 
 // writeBlockToDB saves the corresponding block to the local DB.
 func (s *InitialSync) writeBlockToDB(block *types.Block) error {
-	return s.chainService.SaveBlock(block)
+	return s.db.SaveBlock(block)
 }

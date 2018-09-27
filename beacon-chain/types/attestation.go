@@ -163,3 +163,15 @@ func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shar
 	copy(hashMsg[:], h[:32])
 	return hashMsg
 }
+
+// ContainsValidator checks if the validator is included in the attestation.
+// TODO(#569): Modify method to accept a single index rather than a bitfield.
+func (a *Attestation) ContainsValidator(bitfield []byte) bool {
+	savedAttestationBitfield := a.AttesterBitfield()
+	for i := 0; i < len(bitfield); i++ {
+		if bitfield[i]&savedAttestationBitfield[i] != 0 {
+			return true
+		}
+	}
+	return false
+}
