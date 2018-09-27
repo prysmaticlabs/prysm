@@ -180,7 +180,6 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	cState := s.chainService.CurrentCrystallizedState()
-
 	var keys []*pb.PublicKey
 	if req.AllValidators {
 		for _, val := range cState.Validators() {
@@ -248,6 +247,7 @@ func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.At
 // LatestAttestation streams the latest processed attestations to the rpc clients.
 func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
 	sub := s.attestationService.IncomingAttestationFeed().Subscribe(s.incomingAttestation)
+
 	defer sub.Unsubscribe()
 
 	for {
@@ -415,7 +415,6 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		if err != nil {
 			return nil, err
 		}
-
 		assignments = append(assignments, &pb.Assignment{
 			PublicKey:    val,
 			ShardId:      shardID,

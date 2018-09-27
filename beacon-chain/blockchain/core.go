@@ -73,12 +73,12 @@ func NewBeaconChain(genesisJSON string, db ethdb.Database) (*BeaconChain, error)
 			return nil, err
 		}
 	}
+
 	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
-
 	enc, err := db.Get(crystallizedStateLookupKey)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -8,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -77,7 +78,7 @@ func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockLifecycleClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockLifecycleClient{ctrl})
 	// Testing basic feeds.
 	if b.AttesterAssignmentFeed() == nil {
 		t.Error("AttesterAssignmentFeed empty")
@@ -87,6 +88,9 @@ func TestLifecycle(t *testing.T) {
 	}
 	if b.ProcessedAttestationFeed() == nil {
 		t.Error("ProcessedAttestationFeed empty")
+	}
+	if !bytes.Equal(b.PublicKey(), []byte{}) {
+		t.Error("Incorrect public key")
 	}
 	b.slotAlignmentDuration = time.Millisecond * 10
 	b.Start()
@@ -99,7 +103,7 @@ func TestLifecycle(t *testing.T) {
 func TestCurrentBeaconSlot(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockLifecycleClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockLifecycleClient{ctrl})
 	b.genesisTimestamp = time.Now()
 	if b.CurrentBeaconSlot() != 0 {
 		t.Errorf("Expected us to be in the 0th slot, received %v", b.CurrentBeaconSlot())
@@ -110,7 +114,7 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockClient{ctrl})
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().CanonicalHead(
@@ -132,14 +136,14 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "New beacon node slot")
+	testutil.AssertLogsContain(t, hook, "Assigned proposal slot number reached")
 }
 
 func TestWaitForAssignmentProposerError(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockClient{ctrl})
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().CanonicalHead(
@@ -168,7 +172,7 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockClient{ctrl})
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().CanonicalHead(
@@ -190,14 +194,14 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "New beacon node slot")
+	testutil.AssertLogsContain(t, hook, "Assigned attest slot number reached")
 }
 
 func TestWaitForAssignmentAttesterError(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockClient{ctrl})
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().CanonicalHead(
@@ -226,7 +230,7 @@ func TestListenForProcessedAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockClient{ctrl})
 
 	// Create mock for the stream returned by LatestAttestation.
 	stream := internal.NewMockBeaconService_LatestAttestationClient(ctrl)
