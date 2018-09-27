@@ -198,7 +198,9 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 			return
 
 		case <-ticker:
-			if s.role == pb.ValidatorRole_ATTESTER && s.assignedSlot == s.CurrentBeaconSlot() {
+			currentSlot := s.CurrentBeaconSlot()
+			log.Infof("role: %v, assigned slot: %d, current slot: %d", s.role, s.assignedSlot, currentSlot)
+			if s.role == pb.ValidatorRole_ATTESTER && s.assignedSlot == currentSlot {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned attest slot number reached")
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
@@ -208,7 +210,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
 
-			} else if s.role == pb.ValidatorRole_PROPOSER && s.assignedSlot == s.CurrentBeaconSlot() {
+			} else if s.role == pb.ValidatorRole_PROPOSER && s.assignedSlot == currentSlot {
 				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {

@@ -77,6 +77,7 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 	var genesisValidators []*pb.ValidatorRecord
 	var err error
 	if genesisJSONPath != "" {
+		log.Infof("Initializing crystallized state from %s", genesisJSONPath)
 		genesisValidators, err = initialValidatorsFromJSON(genesisJSONPath)
 		if err != nil {
 			return nil, err
