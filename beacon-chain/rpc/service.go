@@ -3,6 +3,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -186,8 +187,10 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPublicKey()})
 		}
 	} else {
-		// TODO: Error if len 0.
 		keys = req.GetPublicKeys()
+		if len(keys) == 0 {
+			return nil, errors.New("no public keys specified in request")
+		}
 	}
 
 	assignments, err := assignmentsForPublicKeys(keys, cState)
@@ -344,8 +347,10 @@ func (s *Service) ValidatorAssignments(
 					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPublicKey()})
 				}
 			} else {
-				// TODO: Error if len 0.
 				keys = req.GetPublicKeys()
+				if len(keys) == 0 {
+					return errors.New("no public keys specified in request")
+				}
 			}
 
 			assignments, err := assignmentsForPublicKeys(keys, cState)
