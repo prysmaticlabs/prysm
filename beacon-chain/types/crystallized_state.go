@@ -2,9 +2,11 @@ package types
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -40,6 +42,23 @@ func initialValidators() []*pb.ValidatorRecord {
 	return validators
 }
 
+func initialValidatorsFromJSON(genesisJSONPath string) ([]*pb.ValidatorRecord, error) {
+	// #nosec G304
+	// genesisJSONPath is a user input for the path of genesis.json.
+	// Ex: /path/to/my/genesis.json.
+	f, err := os.Open(genesisJSONPath)
+	if err != nil {
+		return nil, err
+	}
+
+	cState := &pb.CrystallizedState{}
+	if err := jsonpb.Unmarshal(f, cState); err != nil {
+		return nil, fmt.Errorf("error converting JSON to proto: %v", err)
+	}
+
+	return cState.Validators, nil
+}
+
 func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
 	seed := make([]byte, 0, 32)
 	committees, err := casper.ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1, 0)
@@ -52,14 +71,22 @@ func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 }
 
 // NewGenesisCrystallizedState initializes the crystallized state for slot 0.
-func NewGenesisCrystallizedState() (*CrystallizedState, error) {
+func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, error) {
 	// We seed the genesis crystallized state with a bunch of validators to
 	// bootstrap the system.
-	// TODO(#493): Perform this task from some sort of genesis state json config instead.
-	validators := initialValidators()
+	var genesisValidators []*pb.ValidatorRecord
+	var err error
+	if genesisJSONPath != "" {
+		genesisValidators, err = initialValidatorsFromJSON(genesisJSONPath)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		genesisValidators = initialValidators()
+	}
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(validators)
+	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +103,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 
 	// Calculate total deposit from boot strapped validators.
 	var totalDeposit uint64
-	for _, v := range validators {
+	for _, v := range genesisValidators {
 		totalDeposit += v.Balance
 	}
 
@@ -90,7 +117,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 			DynastySeed:                []byte{},
 			DynastyStart:               0,
 			CrosslinkRecords:           crosslinkRecords,
-			Validators:                 validators,
+			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
 	}, nil

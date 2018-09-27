@@ -85,7 +85,7 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	cfg := &Config{
 		BeaconBlockBuf: 0,
 		BeaconDB:       db.DB(),
@@ -212,7 +212,7 @@ func TestFaultyStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -272,7 +272,7 @@ func TestCurrentBeaconSlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -355,13 +355,13 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -446,7 +446,7 @@ func TestBlockSlotNumberByHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -498,7 +498,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -537,7 +537,7 @@ func TestUpdateHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -551,7 +551,7 @@ func TestUpdateHead(t *testing.T) {
 	chainService, _ := NewChainService(ctx, cfg)
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -672,7 +672,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -687,7 +687,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	chainService, _ := NewChainService(ctx, cfg)
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

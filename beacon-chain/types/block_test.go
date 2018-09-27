@@ -74,7 +74,7 @@ func TestGenesisBlock(t *testing.T) {
 }
 
 func TestBlockValidity(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
