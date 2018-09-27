@@ -3,9 +3,12 @@ package params
 
 import (
 	"math/big"
+	"time"
 )
 
 var (
+	// GenesisTime used by the protocol.
+	GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 	// CycleLength is the beacon chain cycle length in slots.
 	CycleLength = uint64(64)
 	// ShardCount is a fixed number.
