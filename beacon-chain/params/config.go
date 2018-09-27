@@ -10,9 +10,9 @@ var (
 	// GenesisTime used by the protocol.
 	GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 	// CycleLength is the beacon chain cycle length in slots.
-	CycleLength = uint64(64)
+	CycleLength = uint64(5)
 	// ShardCount is a fixed number.
-	ShardCount = 1024
+	ShardCount = 3
 	// DefaultBalance of a validator in wei.
 	DefaultBalance = new(big.Int).Div(big.NewInt(32), big.NewInt(int64(EtherDenomination)))
 	// MaxValidators in the protocol.
@@ -22,7 +22,7 @@ var (
 	// Cofactor is used cutoff algorithm to select slot and shard cutoffs.
 	Cofactor = 19
 	// MinCommiteeSize is the minimal number of validator needs to be in a committee.
-	MinCommiteeSize = uint64(128)
+	MinCommiteeSize = uint64(3)
 	// DefaultEndDynasty is the upper bound of dynasty. We use it to track queued and exited validators.
 	DefaultEndDynasty = uint64(999999999999999999)
 	// BootstrappedValidatorsCount is the number of validators we seed the first crystallized

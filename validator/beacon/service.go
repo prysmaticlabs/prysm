@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"math"
@@ -141,10 +142,8 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		log.Errorf("could not fetch validator assigned slot and responsibility from beacon node: %v", err)
 		return
 	}
-
 	for {
 		assignment, err := stream.Recv()
-
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
 			break
@@ -159,16 +158,21 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
 			continue
 		}
-		s.role = assignment.Assignments[0].Role
-		s.assignedSlot = assignment.Assignments[0].AssignedSlot
-		s.shardID = assignment.Assignments[0].ShardId
 
-		log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
-			string(assignment.Assignments[0].PublicKey.PublicKey),
-			s.assignedSlot,
-			s.role,
-			s.assignedSlot)
-	}
+		for index, assign := range assignment.Assignments {
+			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
+				s.role = assignment.Assignments[index].Role
+				s.assignedSlot = assignment.Assignments[index].AssignedSlot
+				s.shardID = assignment.Assignments[index].ShardId
+
+				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
+					string(s.pubKey),
+					s.assignedSlot,
+					s.role,
+					s.assignedSlot)
+			}
+			}
+		}
 }
 
 // waitForAssignment waits till it's validator's role to attest or propose. Then it forwards

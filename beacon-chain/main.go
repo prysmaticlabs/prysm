@@ -68,6 +68,7 @@ VERSION:
 		utils.RPCPort,
 		utils.CertFlag,
 		utils.KeyFlag,
+		utils.GenesisJSON,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,
