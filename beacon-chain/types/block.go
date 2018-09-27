@@ -221,7 +221,12 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	}
 
 	// Get all the block hashes up to cycle length.
-	parentHashes := aState.getSignedParentHashes(b, attestation)
+	parentHashes, err := aState.getSignedParentHashes(b, attestation)
+	if err != nil {
+		log.Errorf(err.Error())
+		return false
+	}
+
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
 		log.Debugf("Unable to get validator committee: %v", attesterIndices)
@@ -236,7 +241,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 	// TODO(#258): Generate validators aggregated pub key.
 
 	attestationMsg := AttestationMsg(
-		parentHashes,
+		parentHashes[:],
 		attestation.ShardBlockHash,
 		attestation.Slot,
 		attestation.ShardId,

@@ -152,7 +152,11 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	for i := 0; i < len(block.Attestations()); i++ {
 		attestation := block.Attestations()[i]
 
-		parentHashes := a.getSignedParentHashes(block, attestation)
+		parentHashes, err := a.getSignedParentHashes(block, attestation)
+		if err != nil {
+			return nil, err
+		}
+
 		attesterIndices, err := cState.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
@@ -224,18 +228,39 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 	}, newBlockVoteCache), nil
 }
 
-// getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) [][32]byte {
-	var signedParentHashes [][32]byte
-	start := block.SlotNumber() - attestation.Slot
-	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
+// getBlockHash by looking at the current block and returning the block hash at the given slot number. If the slot number is not within the cycleLength*2 range, then this method returns an error.
+func (a *ActiveState) getBlockHash(currentBlock *Block, slot uint64) ([32]byte, error) {
+	//hashes are filled from the end of the array backwards towards the beginning
+	relativeSlotPosition := slot - (currentBlock.SlotNumber() - (params.CycleLength * 2))
 
-	recentBlockHashes := a.RecentBlockHashes()
-	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)
+	if relativeSlotPosition < 0 || relativeSlotPosition > params.CycleLength*2 {
+		return [32]byte{}, fmt.Errorf("requested slot hash is out of recent hashes bounds in ActiveState: Requested: %d Currnt Slot Number: %d",
+			slot,
+			currentBlock.SlotNumber())
+	}
+
+	return a.RecentBlockHashes()[relativeSlotPosition], nil
+}
+
+// getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
+func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) (signedParentHashes [params.CycleLength][32]byte, err error) {
+	loc := 0
+
+	for i := 1; i <= (params.CycleLength - len(attestation.ObliqueParentHashes)); i++ {
+		hash, err := a.getBlockHash(block, block.SlotNumber()-uint64(params.CycleLength+i))
+		if err != nil {
+			return signedParentHashes, err
+		}
+
+		signedParentHashes[loc] = hash
+		loc++
+	}
 
 	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
 		hashes := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, hashes)
+		signedParentHashes[loc] = hashes
+		loc++
 	}
-	return signedParentHashes
+
+	return signedParentHashes, nil
 }
