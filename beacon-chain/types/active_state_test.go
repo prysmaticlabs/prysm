@@ -32,10 +32,9 @@ func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	// TODO(#583): Updated for demo config.
-	got = cap(as.data.RecentBlockHashes)
-	if got != 16 {
-		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: 16")
+	want = cap(as.data.RecentBlockHashes)
+	if want != got {
+		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
 	zero := make([]byte, 0, 32)

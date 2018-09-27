@@ -95,8 +95,7 @@ func TestBlockValidity(t *testing.T) {
 				Slot:             0,
 				ShardId:          0,
 				JustifiedSlot:    0,
-				// TODO(#583): Updated for demo config.
-				AttesterBitfield: []byte{64},
+				AttesterBitfield: []byte{64, 0},
 			},
 		},
 	})
@@ -126,8 +125,7 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
 	}
 
-	// TODO(#583): Updated for demo config.
-	if !isAttestationSlotNumberValid(2, 3) {
+	if !isAttestationSlotNumberValid(2, 10) {
 		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
 	}
 }

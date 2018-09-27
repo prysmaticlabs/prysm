@@ -60,14 +60,12 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
 
-	// TODO(#583): Updated for demo config.
-	if newCState.LastJustifiedSlot() != 4 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 4, newCState.LastJustifiedSlot())
+	if newCState.LastJustifiedSlot() != 63 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 0, newCState.LastJustifiedSlot())
 	}
 
-	// TODO(#583): Updated for demo config.
-	if newCState.JustifiedStreak() != 5 {
-		t.Fatalf("expected justified streak to equal %d: got %d", 5, newCState.JustifiedStreak())
+	if newCState.JustifiedStreak() != 64 {
+		t.Fatalf("expected justified streak to equal %d: got %d", 0, newCState.JustifiedStreak())
 	}
 
 	if newCState.LastStateRecalc() != params.CycleLength {
