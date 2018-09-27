@@ -20,7 +20,7 @@ func TestCheckBit(t *testing.T) {
 	for _, tt := range tests {
 		set := CheckBit(tt.a, tt.b)
 		if set != tt.c {
-			t.Errorf("Test check bit set failed with %v and location %v", tt.a, tt.b)
+			t.Errorf("Test check bit set failed with %08b and location %v", tt.a, tt.b)
 		}
 	}
 }
