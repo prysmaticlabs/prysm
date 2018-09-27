@@ -181,7 +181,7 @@ func TestCanonicalHead(t *testing.T) {
 	}
 }
 
-func TestGenesisTimeAndCanonicalState(t *testing.T) {
+func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockChain := &mockChainService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:             "6372",
@@ -189,9 +189,16 @@ func TestGenesisTimeAndCanonicalState(t *testing.T) {
 		ChainService:     mockChain,
 		POWChainService:  &mockPOWChainService{},
 	})
-	res, err := rpcService.GenesisTimeAndCanonicalState(context.Background(), &empty.Empty{})
+
+	key := &pb.PublicKey{PublicKey: []byte{}}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
+
+	res, err := rpcService.CurrentAssignmentsAndGenesisTime(context.Background(), req)
 	if err != nil {
-		t.Errorf("Could not call GenesisTimeAndCanonicalState correctly: %v", err)
+		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
@@ -217,69 +224,6 @@ func TestProposeBlock(t *testing.T) {
 	}
 }
 
-func TestLatestCrystallizedStateContextClosed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "8777",
-		SubscriptionBuf:  0,
-		CanonicalFetcher: cs,
-	})
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	go func(tt *testing.T) {
-		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.cancel()
-	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
-}
-
-func TestLatestCrystallizedState(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cs := newMockChainService()
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "8773",
-		SubscriptionBuf:  0,
-		CanonicalFetcher: cs,
-	})
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	exitRoutine := make(chan bool)
-
-	mockStream := internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(errors.New("something wrong"))
-	// Tests a faulty stream.
-	go func(tt *testing.T) {
-		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
-			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
-
-	mockStream = internal.NewMockBeaconService_LatestCrystallizedStateServer(ctrl)
-	mockStream.EXPECT().Send(&pbp2p.CrystallizedState{}).Return(nil)
-
-	// Tests a good stream.
-	go func(tt *testing.T) {
-		if err := rpcService.LatestCrystallizedState(&empty.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	rpcService.canonicalStateChan <- types.NewCrystallizedState(&pbp2p.CrystallizedState{})
-	testutil.AssertLogsContain(t, hook, "Sending crystallized state to RPC clients")
-	rpcService.cancel()
-	exitRoutine <- true
-}
-
 func TestAttestHead(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockAttestationService := &mockAttestationService{}
@@ -303,7 +247,11 @@ func TestAttestHead(t *testing.T) {
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockAttestationService := &mockAttestationService{}
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: mockAttestationService})
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:               "8777",
+		SubscriptionBuf:    0,
+		AttestationService: mockAttestationService,
+	})
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -322,7 +270,11 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 func TestLatestAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	attestationService := &mockAttestationService{}
-	rpcService := NewRPCService(context.Background(), &Config{Port: "8777", SubscriptionBuf: 0, AttestationService: attestationService})
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:               "8777",
+		SubscriptionBuf:    0,
+		AttestationService: attestationService,
+	})
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -397,4 +349,47 @@ func TestValidatorShardID(t *testing.T) {
 	if _, err := rpcService.ValidatorShardID(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator shard ID: %v", err)
 	}
+}
+
+func TestValidatorAssignments(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	mockChain := newMockChainService()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:             "6372",
+		ChainService:     mockChain,
+		CanonicalFetcher: mockChain,
+	})
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStream := internal.NewMockBeaconService_ValidatorAssignmentsServer(ctrl)
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
+
+	key := &pb.PublicKey{PublicKey: []byte{}}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
+
+	exitRoutine := make(chan bool)
+
+	// Tests a validator assignment stream.
+	go func(tt *testing.T) {
+		if err := rpcService.ValidatorAssignments(req, mockStream); err != nil {
+			tt.Errorf("Could not stream validators: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+
+	genesisState, err := types.NewGenesisCrystallizedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rpcService.canonicalStateChan <- genesisState
+	rpcService.cancel()
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")
 }

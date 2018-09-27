@@ -31,8 +31,6 @@ type mockClient struct {
 func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
 
-	stateStream := internal.NewMockBeaconService_LatestCrystallizedStateClient(fc.ctrl)
-	stateStream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
 	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
 	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
 
@@ -41,10 +39,6 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 		&empty.Empty{},
 	).Return(attesterStream, nil)
 
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		&empty.Empty{},
-	).Return(stateStream, nil)
 	return mockServiceClient
 }
 
@@ -55,28 +49,11 @@ type mockLifecycleClient struct {
 func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
 
-	stateStream := internal.NewMockBeaconService_LatestCrystallizedStateClient(fc.ctrl)
-	stateStream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
-
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		&empty.Empty{},
-	).Return(stateStream, nil)
-
-	validator1 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
-	validator2 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x1"), StartDynasty: 1, EndDynasty: 10}
-	validator3 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
-	crystallized := &pbp2p.CrystallizedState{
-		Validators:     []*pbp2p.ValidatorRecord{validator1, validator2, validator3},
-		CurrentDynasty: 5,
-	}
-
-	mockServiceClient.EXPECT().GenesisTimeAndCanonicalState(
+	mockServiceClient.EXPECT().CurrentAssignmentsAndGenesisTime(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.GenesisTimeAndStateResponse{
-		LatestCrystallizedState: crystallized,
-		GenesisTimestamp:        ptypes.TimestampNow(),
+	).Return(&pb.CurrentAssignmentsResponse{
+		GenesisTimestamp: ptypes.TimestampNow(),
 	}, nil)
 
 	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
@@ -85,6 +62,14 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 		&empty.Empty{},
 	).Return(attesterStream, nil)
 	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+
+	cycleStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
+	mockServiceClient.EXPECT().ValidatorAssignments(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(cycleStream, nil)
+	cycleStream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
+
 	return mockServiceClient
 }
 
@@ -103,6 +88,7 @@ func TestLifecycle(t *testing.T) {
 	if b.ProcessedAttestationFeed() == nil {
 		t.Error("ProcessedAttestationFeed empty")
 	}
+	b.slotAlignmentDuration = time.Millisecond * 10
 	b.Start()
 	time.Sleep(time.Millisecond * 10)
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -139,14 +125,14 @@ func TestWaitForAssignmentProposer(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "proposer"
+	b.role = pb.ValidatorRole_PROPOSER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "New beacon node slot interval")
+	testutil.AssertLogsContain(t, hook, "New beacon node slot")
 }
 
 func TestWaitForAssignmentProposerError(t *testing.T) {
@@ -168,7 +154,7 @@ func TestWaitForAssignmentProposerError(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "proposer"
+	b.role = pb.ValidatorRole_PROPOSER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
@@ -197,14 +183,14 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "attester"
+	b.role = pb.ValidatorRole_ATTESTER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "New beacon node slot interval")
+	testutil.AssertLogsContain(t, hook, "New beacon node slot")
 }
 
 func TestWaitForAssignmentAttesterError(t *testing.T) {
@@ -226,7 +212,7 @@ func TestWaitForAssignmentAttesterError(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	b.responsibility = "attester"
+	b.role = pb.ValidatorRole_ATTESTER
 	b.genesisTimestamp = time.Now()
 	b.assignedSlot = 0
 	timeChan <- time.Now()
@@ -234,91 +220,6 @@ func TestWaitForAssignmentAttesterError(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "failed")
-}
-
-func TestListenForCrystallizedStates(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	b := NewBeaconValidator(context.Background(), &mockClient{ctrl})
-
-	// Creating a faulty stream will trigger error.
-	stream := internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, errors.New("stream creation failed"))
-
-	b.listenForCrystallizedStates(mockServiceClient)
-
-	testutil.AssertLogsContain(t, hook, "stream creation failed")
-
-	// Stream recv error should trigger error log.
-	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-	stream.EXPECT().Recv().Return(nil, errors.New("recv error"))
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
-
-	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, nil)
-
-	b.listenForCrystallizedStates(mockServiceClient)
-
-	testutil.AssertLogsContain(t, hook, "recv error")
-
-	// If the current validator is not found within the active validators list, log a debug message.
-	validator := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x01"), StartDynasty: 1, EndDynasty: 10}
-	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{Validators: []*pbp2p.ValidatorRecord{validator}, CurrentDynasty: 5}, nil)
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
-
-	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, nil)
-
-	b.listenForCrystallizedStates(mockServiceClient)
-
-	testutil.AssertLogsContain(t, hook, "Validator index not found in latest crystallized state's active validator list")
-
-	// If the validator is the last index in the shuffled validator indices, it should be assigned
-	// to be a proposer.
-	validator1 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
-	validator2 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x1"), StartDynasty: 1, EndDynasty: 10}
-	validator3 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
-	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{Validators: []*pbp2p.ValidatorRecord{validator1, validator2, validator3}, CurrentDynasty: 5}, nil)
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
-
-	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, nil)
-
-	b.listenForCrystallizedStates(mockServiceClient)
-
-	testutil.AssertLogsContain(t, hook, "Validator selected as proposer")
-
-	// Test that the routine exits when context is closed
-	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, nil)
-
-	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestCrystallizedState(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, nil)
-	b.cancel()
-
-	b.listenForCrystallizedStates(mockServiceClient)
-	testutil.AssertLogsContain(t, hook, "Context has been canceled so shutting down the loop")
-
 }
 
 func TestListenForProcessedAttestations(t *testing.T) {
