@@ -43,6 +43,9 @@ func initialValidators() []*pb.ValidatorRecord {
 }
 
 func initialValidatorsFromJSON(genesisJSONPath string) ([]*pb.ValidatorRecord, error) {
+	// #nosec G304
+	// genesisJSONPath is a user input for the path of genesis.json.
+	// Ex: /path/to/my/genesis.json.
 	f, err := os.Open(genesisJSONPath)
 	if err != nil {
 		return nil, err
