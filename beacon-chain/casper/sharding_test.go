@@ -24,14 +24,17 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 1000); err == nil {
 		t.Error("getShardAndCommitteesForSlot should have failed with invalid slot")
 	}
-	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 1)
+	// TODO(#583): Updated for demo config.
+	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 61)
 	if err != nil {
 		t.Errorf("getShardAndCommitteesForSlot failed: %v", err)
 	}
-	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
+	// TODO(#583): Updated for demo config.
+	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
 		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 2)
+	// TODO(#583): Updated for demo config.
+	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 61)
 	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
 		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
@@ -93,8 +96,9 @@ func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
 
-	if slotsPerCommittee != 4 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 4, slotsPerCommittee)
+	// TODO(#583): Updated for demo config.
+	if slotsPerCommittee != 8 {
+		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 8, slotsPerCommittee)
 	}
 }
 
@@ -169,7 +173,6 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 			t.Fatalf("Expected %d committee per slot: got %d", params.MinCommiteeSize, 2)
 		}
 
-		t.Logf("slot %d", i)
 		for j := 0; j < len(shardAndCommittees); j++ {
 			shardCommittee := shardAndCommittees[j]
 			t.Logf("shard %d", shardCommittee.ShardId)
@@ -203,8 +206,9 @@ func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 
 		for j := 0; j < len(shardAndCommittees); j++ {
 			shardCommittee := shardAndCommittees[j]
-			if len(shardCommittee.Committee) != int(params.MinCommiteeSize/2) {
-				t.Fatalf("Expected committee size %d: got %d", params.MinCommiteeSize/2, len(shardCommittee.Committee))
+			// TODO(#583): Updated for demo config.
+			if len(shardCommittee.Committee) != 2 {
+				t.Fatalf("Expected committee size. wanted %d: got %d", 2, len(shardCommittee.Committee))
 			}
 		}
 	}

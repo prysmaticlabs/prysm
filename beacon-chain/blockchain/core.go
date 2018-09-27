@@ -73,23 +73,23 @@ func NewBeaconChain(genesisJSON string, db ethdb.Database) (*BeaconChain, error)
 			return nil, err
 		}
 	}
+
 	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
+	} else {
+		enc, err := db.Get(crystallizedStateLookupKey)
+		if err != nil {
+			return nil, err
+		}
+		crystallizedData := &pb.CrystallizedState{}
+		err = proto.Unmarshal(enc, crystallizedData)
+		if err != nil {
+			return nil, err
+		}
+		beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
 	}
-
-	enc, err := db.Get(crystallizedStateLookupKey)
-	if err != nil {
-		return nil, err
-	}
-	crystallizedData := &pb.CrystallizedState{}
-	err = proto.Unmarshal(enc, crystallizedData)
-	if err != nil {
-		return nil, err
-	}
-	beaconChain.state.CrystallizedState = types.NewCrystallizedState(crystallizedData)
-
 	return beaconChain, nil
 }
 

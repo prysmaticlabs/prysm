@@ -180,7 +180,6 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	cState := s.chainService.CurrentCrystallizedState()
-
 	var keys []*pb.PublicKey
 	if req.AllValidators {
 		for _, val := range cState.Validators() {
@@ -416,7 +415,6 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		if err != nil {
 			return nil, err
 		}
-
 		assignments = append(assignments, &pb.Assignment{
 			PublicKey:    val,
 			ShardId:      shardID,
