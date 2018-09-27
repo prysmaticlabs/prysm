@@ -173,6 +173,9 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // of the beacon node which will allow a validator client to setup a
 // a ticker to keep track of the current beacon slot.
 func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
+	// This error is safe to ignore as we are initializing a proto timestamp
+	// from a constant value (genesis time is constant in the protocol
+	// and defined in the params package).
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
 	cState := s.chainService.CurrentCrystallizedState()
