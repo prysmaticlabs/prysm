@@ -383,7 +383,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	genesisState, err := types.NewGenesisCrystallizedState()
+	genesisState, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatal(err)
 	}
