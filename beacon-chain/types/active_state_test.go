@@ -169,7 +169,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 func TestBlockVoteCacheNoAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("failed to initialize crystallized state: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestBlockVoteCacheNoAttestations(t *testing.T) {
 
 func TestBlockVoteCache(t *testing.T) {
 	aState := NewGenesisActiveState()
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("failed to initialize crystallized state: %v", err)
 	}
@@ -229,7 +229,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		SlotNumber: 10,
 	})
 
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("failed to initialize genesis crystallized state: %v", err)
 	}

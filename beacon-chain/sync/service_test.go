@@ -54,7 +54,7 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 }
 
 func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	cState, err := types.NewGenesisCrystallizedState()
+	cState, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		fmt.Println(err)
 	}

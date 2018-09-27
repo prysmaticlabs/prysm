@@ -49,4 +49,10 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
+	// GenesisJSON defines a flag for bootstrapping validators from genesis JSON.
+	// If this flag is not specified, beacon node will bootstrap validators from code from crystallized_state.go.
+	GenesisJSON = cli.StringFlag{
+		Name:  "genesis-json",
+		Usage: "Beacon node will bootstrap genesis state defined in genesis.json",
+	}
 )
