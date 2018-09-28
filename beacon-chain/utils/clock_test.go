@@ -13,4 +13,7 @@ func TestRealClockIsAccurate(t *testing.T) {
 	if clockTime != actualTime {
 		t.Errorf("The time from the Clock interface should equal the actual time. Got: %v, Expected: %v", clockTime, actualTime)
 	}
+
+	BlockingWait(0)
+	CurrentBeaconSlot()
 }

@@ -2,16 +2,18 @@ package types
 
 import (
 	"bytes"
+	"os"
 	"strconv"
 	"testing"
 
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestGenesisCrystallizedState(t *testing.T) {
-	cState1, err1 := NewGenesisCrystallizedState()
-	cState2, err2 := NewGenesisCrystallizedState()
+	cState1, err1 := NewGenesisCrystallizedState("")
+	cState2, err2 := NewGenesisCrystallizedState("")
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v %v", err1, err2)
@@ -30,7 +32,7 @@ func TestGenesisCrystallizedState(t *testing.T) {
 }
 
 func TestInitialDeriveCrystallizedState(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -76,7 +78,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 }
 
 func TestNextDeriveCrystallizedSlot(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialized crystallized state: %v", err)
 	}
@@ -156,12 +158,14 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Set up validators.
-	validators := []*pb.ValidatorRecord{
-		{
-			Balance:      10000,
+	var validators []*pb.ValidatorRecord
+
+	for i := 0; i < 20; i++ {
+		validators = append(validators, &pb.ValidatorRecord{
+			Balance:      1e18,
 			StartDynasty: 0,
 			EndDynasty:   params.DefaultEndDynasty,
-		},
+		})
 	}
 
 	// Set up pending attestations.
@@ -170,7 +174,7 @@ func TestProcessCrosslinks(t *testing.T) {
 			Slot:             0,
 			ShardId:          0,
 			ShardBlockHash:   []byte{'a'},
-			AttesterBitfield: []byte{'z', 'z'},
+			AttesterBitfield: []byte{10},
 		},
 	}
 
@@ -180,13 +184,17 @@ func TestProcessCrosslinks(t *testing.T) {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
 
+	committee := []uint32{0, 4, 6}
+
+	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
+
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		CrosslinkRecords:           clRecords,
 		Validators:                 validators,
 		CurrentDynasty:             5,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50, 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
@@ -200,10 +208,16 @@ func TestProcessCrosslinks(t *testing.T) {
 	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
+
+	for _, index := range committee {
+		if cState.Validators()[index].Balance == 1e18 {
+			t.Errorf("validator with index %d did not have balance changed.", index)
+		}
+	}
 }
 
 func TestIsDynastyTransition(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -249,7 +263,7 @@ func TestIsDynastyTransition(t *testing.T) {
 }
 
 func TestNewDynastyRecalculationsInvalid(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -266,7 +280,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 }
 
 func TestNewDynastyRecalculations(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -295,4 +309,46 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	if currentDynasty != 2 {
 		t.Errorf("Incorrect dynasty number, wanted 2, got: %d", currentDynasty)
 	}
+}
+
+func TestInitGenesisJson(t *testing.T) {
+	fname := "/genesis.json"
+	pwd, _ := os.Getwd()
+	fnamePath := pwd + fname
+	os.Remove(fnamePath)
+
+	_, err := NewGenesisCrystallizedState(fnamePath)
+	if err == nil {
+		t.Fatalf("genesis.json should have failed %v", err)
+	}
+
+	cStateJSON := &pb.CrystallizedState{
+		LastStateRecalc:   0,
+		JustifiedStreak:   1,
+		LastFinalizedSlot: 99,
+		Validators: []*pb.ValidatorRecord{
+			{PublicKey: []byte{}, Balance: 32, EndDynasty: 99},
+		},
+	}
+	os.Create(fnamePath)
+	f, err := os.OpenFile(fnamePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		t.Fatalf("can't open file %v", err)
+	}
+
+	ma := jsonpb.Marshaler{}
+	err = ma.Marshal(f, cStateJSON)
+	if err != nil {
+		t.Fatalf("can't marshal file %v", err)
+	}
+
+	cState, err := NewGenesisCrystallizedState(fnamePath)
+	if err != nil {
+		t.Fatalf("genesis.json failed %v", err)
+	}
+
+	if cState.Validators()[0].EndDynasty != 99 {
+		t.Errorf("Failed to load of genesis json")
+	}
+	os.Remove(fnamePath)
 }

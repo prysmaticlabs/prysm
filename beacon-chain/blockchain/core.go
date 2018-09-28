@@ -31,7 +31,7 @@ type beaconState struct {
 
 // NewBeaconChain initializes a beacon chain using genesis state parameters if
 // none provided.
-func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
+func NewBeaconChain(genesisJSON string, db ethdb.Database) (*BeaconChain, error) {
 	beaconChain := &BeaconChain{
 		db:    db,
 		state: &beaconState{},
@@ -46,7 +46,7 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 	}
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState(genesisJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -73,12 +73,12 @@ func NewBeaconChain(db ethdb.Database) (*BeaconChain, error) {
 			return nil, err
 		}
 	}
+
 	if !hasCrystallized {
 		log.Info("No chainstate found on disk, initializing beacon from genesis")
 		beaconChain.state.CrystallizedState = crystallized
 		return beaconChain, nil
 	}
-
 	enc, err := db.Get(crystallizedStateLookupKey)
 	if err != nil {
 		return nil, err
@@ -114,13 +114,10 @@ func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
 	// Active state hash is predefined so error can be safely ignored
 	// #nosec G104
 	activeStateHash, _ := active.Hash()
-	crystallized, err := types.NewGenesisCrystallizedState()
-	if err != nil {
-		return nil, err
-	}
+
 	// Crystallized state hash is predefined so error can be safely ignored
 	// #nosec G104
-	crystallizedStateHash, _ := crystallized.Hash()
+	crystallizedStateHash, _ := b.CrystallizedState().Hash()
 	return types.NewGenesisBlock(activeStateHash, crystallizedStateHash), nil
 }
 

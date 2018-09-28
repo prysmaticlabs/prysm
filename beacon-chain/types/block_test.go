@@ -28,7 +28,7 @@ func TestGenesisBlock(t *testing.T) {
 
 	// We ensure that initializing a proto timestamp from
 	// genesis time will lead to no error.
-	if _, err := ptypes.TimestampProto(GenesisTime); err != nil {
+	if _, err := ptypes.TimestampProto(params.GenesisTime); err != nil {
 		t.Errorf("could not create proto timestamp, expected no error: %v", err)
 	}
 
@@ -74,7 +74,7 @@ func TestGenesisBlock(t *testing.T) {
 }
 
 func TestBlockValidity(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)

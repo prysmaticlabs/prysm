@@ -2,9 +2,11 @@ package types
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -40,6 +42,23 @@ func initialValidators() []*pb.ValidatorRecord {
 	return validators
 }
 
+func initialValidatorsFromJSON(genesisJSONPath string) ([]*pb.ValidatorRecord, error) {
+	// #nosec G304
+	// genesisJSONPath is a user input for the path of genesis.json.
+	// Ex: /path/to/my/genesis.json.
+	f, err := os.Open(genesisJSONPath)
+	if err != nil {
+		return nil, err
+	}
+
+	cState := &pb.CrystallizedState{}
+	if err := jsonpb.Unmarshal(f, cState); err != nil {
+		return nil, fmt.Errorf("error converting JSON to proto: %v", err)
+	}
+
+	return cState.Validators, nil
+}
+
 func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
 	seed := make([]byte, 0, 32)
 	committees, err := casper.ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1, 0)
@@ -52,14 +71,23 @@ func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 }
 
 // NewGenesisCrystallizedState initializes the crystallized state for slot 0.
-func NewGenesisCrystallizedState() (*CrystallizedState, error) {
+func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, error) {
 	// We seed the genesis crystallized state with a bunch of validators to
 	// bootstrap the system.
-	// TODO(#493): Perform this task from some sort of genesis state json config instead.
-	validators := initialValidators()
+	var genesisValidators []*pb.ValidatorRecord
+	var err error
+	if genesisJSONPath != "" {
+		log.Infof("Initializing crystallized state from %s", genesisJSONPath)
+		genesisValidators, err = initialValidatorsFromJSON(genesisJSONPath)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		genesisValidators = initialValidators()
+	}
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(validators)
+	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +104,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 
 	// Calculate total deposit from boot strapped validators.
 	var totalDeposit uint64
-	for _, v := range validators {
+	for _, v := range genesisValidators {
 		totalDeposit += v.Balance
 	}
 
@@ -90,7 +118,7 @@ func NewGenesisCrystallizedState() (*CrystallizedState, error) {
 			DynastySeed:                []byte{},
 			DynastyStart:               0,
 			CrosslinkRecords:           crosslinkRecords,
-			Validators:                 validators,
+			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
 	}, nil
@@ -232,8 +260,10 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, *ActiveState, error) {
 	var blockVoteBalance uint64
-	var rewardedValidators []*pb.ValidatorRecord
 	var lastStateRecalcCycleBack uint64
+	var rewardedValidators []*pb.ValidatorRecord
+	var newCrossLinkRecords []*pb.CrosslinkRecord
+	var err error
 
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
@@ -255,6 +285,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.CycleLength; i++ {
 		var voterIndices []uint32
+
 		slot := lastStateRecalcCycleBack + i
 		blockHash := recentBlockHashes[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
@@ -287,11 +318,11 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		if slot > params.CycleLength && justifiedStreak >= params.CycleLength+1 && slot-params.CycleLength-1 > finalizedSlot {
 			finalizedSlot = slot - params.CycleLength - 1
 		}
-	}
 
-	newCrossLinkRecords, err := c.processCrosslinks(aState.PendingAttestations(), lastStateRecalc+params.CycleLength)
-	if err != nil {
-		return nil, nil, err
+		newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Clean up old attestations.
@@ -377,10 +408,11 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 // processCrosslinks checks if the proposed shard block has recevied
 // 2/3 of the votes. If yes, we update crosslink record to point to
 // the proposed shard block with latest dynasty and slot numbers.
-func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64) ([]*pb.CrosslinkRecord, error) {
+func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
 	validators := c.data.Validators
 	dynasty := c.data.CurrentDynasty
 	crosslinkRecords := copyCrosslinks(c.data.CrosslinkRecords)
+	rewardQuotient := casper.RewardQuotient(dynasty, validators)
 
 	shardAttestationBalance := map[shardAttestation]uint64{}
 	for _, attestation := range pendingAttestations {
@@ -391,28 +423,39 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 
 		shardBlockHash := [32]byte{}
 		copy(shardBlockHash[:], attestation.ShardBlockHash)
-		sa := shardAttestation{
+		shardAtt := shardAttestation{
 			shardID:        attestation.ShardId,
 			shardBlockHash: shardBlockHash,
 		}
-		if _, ok := shardAttestationBalance[sa]; !ok {
-			shardAttestationBalance[sa] = 0
+		if _, ok := shardAttestationBalance[shardAtt]; !ok {
+			shardAttestationBalance[shardAtt] = 0
 		}
 
-		// find the total balance of the shard committee.
+		// find the total and vote balance of the shard committee.
 		var totalBalance uint64
+		var voteBalance uint64
 		for _, attesterIndex := range indices {
+			// find balance of validators who voted.
+			if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+				voteBalance += validators[attesterIndex].Balance
+			}
+			// add to total balance of the committee.
 			totalBalance += validators[attesterIndex].Balance
 		}
 
-		// find the balance of votes cast in shard attestation.
-		var voteBalance uint64
-		for i, attesterIndex := range indices {
-			if shared.CheckBit(attestation.AttesterBitfield, i) {
-				voteBalance += validators[attesterIndex].Balance
+		for _, attesterIndex := range indices {
+			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.ShardId].GetSlot()
+
+			if crosslinkRecords[attestation.ShardId].GetDynasty() != dynasty {
+				if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+				} else {
+					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+				}
 			}
 		}
-		shardAttestationBalance[sa] += voteBalance
+
+		shardAttestationBalance[shardAtt] += voteBalance
 
 		// if 2/3 of committee voted on this crosslink, update the crosslink
 		// with latest dynasty number, shard block hash, and slot number.
