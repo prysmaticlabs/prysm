@@ -85,7 +85,7 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	cfg := &Config{
 		BeaconBlockBuf: 0,
 		BeaconDB:       db.DB(),
@@ -98,6 +98,8 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+
+	chainService.slotAlignmentDuration = 0
 
 	chainService.IncomingBlockFeed()
 	chainService.CanonicalBlockBySlotNumber(0)
@@ -118,13 +120,16 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+
+	chainService.slotAlignmentDuration = 0
+
 	chainService.Start()
 
 	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 128 {
 		t.Errorf("incorrect recent block hashes")
 	}
 
-	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
+	if len(chainService.CurrentCrystallizedState().Validators()) != params.GetConfig().BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
 	}
 	blockExists, err := chainService.ContainsBlock([32]byte{})
@@ -207,7 +212,7 @@ func TestFaultyStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -222,6 +227,8 @@ func TestFaultyStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+
+	chainService.slotAlignmentDuration = 0
 
 	chainService.Start()
 
@@ -265,7 +272,7 @@ func TestCurrentBeaconSlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -298,7 +305,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -348,13 +355,13 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -380,11 +387,11 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
+	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
 
-	slotsStart := crystallized.LastStateRecalc() - params.CycleLength
-	slotIndex := (currentSlot - slotsStart) % params.CycleLength
+	slotsStart := crystallized.LastStateRecalc() - params.GetConfig().CycleLength
+	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	shardID := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].ShardId
 
 	block := types.NewBlock(&pb.BeaconBlock{
@@ -439,7 +446,7 @@ func TestBlockSlotNumberByHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -491,7 +498,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -530,7 +537,7 @@ func TestUpdateHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -544,14 +551,14 @@ func TestUpdateHead(t *testing.T) {
 	chainService, _ := NewChainService(ctx, cfg)
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 	activeStateHash, _ := active.Hash()
 	crystallizedStateHash, _ := crystallized.Hash()
 
-	genesis := types.NewGenesisBlock()
+	genesis := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
 	genesisHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)
@@ -665,7 +672,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	beaconChain, err := NewBeaconChain("", db.DB())
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
@@ -680,7 +687,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	chainService, _ := NewChainService(ctx, cfg)
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState()
+	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -705,8 +712,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(types.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
+	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash:            block0Hash[:],

@@ -22,7 +22,7 @@ type rpcClientService interface {
 	ProposerServiceClient() pb.ProposerServiceClient
 }
 
-type assignmentAnnouncer interface {
+type beaconClientService interface {
 	ProposerAssignmentFeed() *event.Feed
 }
 
@@ -36,7 +36,7 @@ type rpcAttestationService interface {
 type Proposer struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
-	assigner           assignmentAnnouncer
+	beaconService      beaconClientService
 	rpcClientService   rpcClientService
 	assignmentChan     chan *pbp2p.BeaconBlock
 	attestationService rpcAttestationService
@@ -49,7 +49,7 @@ type Proposer struct {
 type Config struct {
 	AssignmentBuf         int
 	AttestationBufferSize int
-	Assigner              assignmentAnnouncer
+	Assigner              beaconClientService
 	AttesterFeed          rpcAttestationService
 	Client                rpcClientService
 }
@@ -60,7 +60,7 @@ func NewProposer(ctx context.Context, cfg *Config) *Proposer {
 	return &Proposer{
 		ctx:                ctx,
 		cancel:             cancel,
-		assigner:           cfg.Assigner,
+		beaconService:      cfg.Assigner,
 		rpcClientService:   cfg.Client,
 		attestationService: cfg.AttesterFeed,
 		assignmentChan:     make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
@@ -142,7 +142,7 @@ func (p *Proposer) processAttestation(done <-chan struct{}) {
 
 // run the main event loop that listens for a proposer assignment.
 func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
-	sub := p.assigner.ProposerAssignmentFeed().Subscribe(p.assignmentChan)
+	sub := p.beaconService.ProposerAssignmentFeed().Subscribe(p.assignmentChan)
 	defer sub.Unsubscribe()
 
 	for {
@@ -167,18 +167,16 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			// To prevent any unaccounted attestations from being added.
 			p.lock.Lock()
 
-			agSig := p.AggregateAllSignatures(p.pendingAttestation)
 			bitmask := p.GenerateBitmask(p.pendingAttestation)
 
 			// TODO(#552): Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
 				ParentHash: latestBlockHash[:],
 				// TODO(#511): Fix to be the actual, timebased slot number instead.
-				SlotNumber:              latestBeaconBlock.GetSlotNumber() + 1,
-				RandaoReveal:            []byte{},
-				AttestationBitmask:      bitmask,
-				AttestationAggregateSig: agSig,
-				Timestamp:               ptypes.TimestampNow(),
+				SlotNumber:         latestBeaconBlock.GetSlotNumber() + 1,
+				RandaoReveal:       []byte{},
+				AttestationBitmask: bitmask,
+				Timestamp:          ptypes.TimestampNow(),
 			}
 			res, err := client.ProposeBlock(p.ctx, req)
 			if err != nil {

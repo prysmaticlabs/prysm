@@ -42,12 +42,12 @@ func TestHasVoted(t *testing.T) {
 func TestValidatorIndices(t *testing.T) {
 	data := &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 2},                   // active.
-			{PublicKey: 0, StartDynasty: 0, EndDynasty: 3},                   // active.
-			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // queued.
+			{PublicKey: []byte{}, StartDynasty: 0, EndDynasty: 2},                   // active.
+			{PublicKey: []byte{}, StartDynasty: 0, EndDynasty: 2},                   // active.
+			{PublicKey: []byte{}, StartDynasty: 1, EndDynasty: 2},                   // active.
+			{PublicKey: []byte{}, StartDynasty: 0, EndDynasty: 2},                   // active.
+			{PublicKey: []byte{}, StartDynasty: 0, EndDynasty: 3},                   // active.
+			{PublicKey: []byte{}, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // queued.
 		},
 		CurrentDynasty: 1,
 	}
@@ -64,12 +64,12 @@ func TestValidatorIndices(t *testing.T) {
 
 	data = &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // active.
-			{PublicKey: 0, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // active.
-			{PublicKey: 0, StartDynasty: 6, EndDynasty: uint64(math.Inf(0))}, // queued.
-			{PublicKey: 0, StartDynasty: 7, EndDynasty: uint64(math.Inf(0))}, // queued.
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 2},                   // exited.
-			{PublicKey: 0, StartDynasty: 1, EndDynasty: 3},                   // exited.
+			{PublicKey: []byte{}, StartDynasty: 1, EndDynasty: uint64(math.Inf(0))}, // active.
+			{PublicKey: []byte{}, StartDynasty: 2, EndDynasty: uint64(math.Inf(0))}, // active.
+			{PublicKey: []byte{}, StartDynasty: 6, EndDynasty: uint64(math.Inf(0))}, // queued.
+			{PublicKey: []byte{}, StartDynasty: 7, EndDynasty: uint64(math.Inf(0))}, // queued.
+			{PublicKey: []byte{}, StartDynasty: 1, EndDynasty: 2},                   // exited.
+			{PublicKey: []byte{}, StartDynasty: 1, EndDynasty: 3},                   // exited.
 		},
 		CurrentDynasty: 5,
 	}
@@ -170,13 +170,13 @@ func TestProposerShardAndIndex(t *testing.T) {
 func TestValidatorIndex(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: 0})
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: []byte{}})
 	}
-	if _, err := ValidatorIndex(100, 0, validators); err == nil {
+	if _, err := ValidatorIndex([]byte("100"), 0, validators); err == nil {
 		t.Fatalf("ValidatorIndex should have failed,  there's no validator with pubkey 100")
 	}
-	validators[5].PublicKey = 100
-	index, err := ValidatorIndex(100, 0, validators)
+	validators[5].PublicKey = []byte("100")
+	index, err := ValidatorIndex([]byte("100"), 0, validators)
 	if err != nil {
 		t.Fatalf("call ValidatorIndex failed: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestValidatorIndex(t *testing.T) {
 func TestValidatorShardID(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 21; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: 0})
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: []byte{}})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -197,8 +197,8 @@ func TestValidatorShardID(t *testing.T) {
 			{ShardId: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
 		}},
 	}
-	validators[19].PublicKey = 100
-	shardID, err := ValidatorShardID(100, 0, validators, shardCommittees)
+	validators[19].PublicKey = []byte("100")
+	shardID, err := ValidatorShardID([]byte("100"), 0, validators, shardCommittees)
 	if err != nil {
 		t.Fatalf("call ValidatorShardID failed: %v", err)
 	}
@@ -206,21 +206,21 @@ func TestValidatorShardID(t *testing.T) {
 		t.Errorf("Incorrect validator shard ID. Wanted 2, Got %v", shardID)
 	}
 
-	validators[19].PublicKey = 0
-	if _, err := ValidatorShardID(100, 0, validators, shardCommittees); err == nil {
+	validators[19].PublicKey = []byte{}
+	if _, err := ValidatorShardID([]byte("100"), 0, validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorShardID should have failed, there's no validator with pubkey 100")
 	}
 
-	validators[20].PublicKey = 100
-	if _, err := ValidatorShardID(100, 0, validators, shardCommittees); err == nil {
+	validators[20].PublicKey = []byte("100")
+	if _, err := ValidatorShardID([]byte("100"), 0, validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorShardID should have failed, validator indexed at 20 is not in the committee")
 	}
 }
 
-func TestValidatorSlot(t *testing.T) {
+func TestValidatorSlotAndResponsibility(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 61; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: 0})
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: 10, PublicKey: []byte{}})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -239,12 +239,12 @@ func TestValidatorSlot(t *testing.T) {
 			{ShardId: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
 		}},
 	}
-	if _, err := ValidatorSlot(100, 0, validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndResponsibility([]byte("100"), 0, validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, there's no validator with pubkey 100")
 	}
 
-	validators[59].PublicKey = 100
-	slot, err := ValidatorSlot(100, 0, validators, shardCommittees)
+	validators[59].PublicKey = []byte("100")
+	slot, _, err := ValidatorSlotAndResponsibility([]byte("100"), 0, validators, shardCommittees)
 	if err != nil {
 		t.Fatalf("call ValidatorSlot failed: %v", err)
 	}
@@ -252,8 +252,8 @@ func TestValidatorSlot(t *testing.T) {
 		t.Errorf("Incorrect validator slot ID. Wanted 1, Got %v", slot)
 	}
 
-	validators[60].PublicKey = 101
-	if _, err := ValidatorSlot(101, 0, validators, shardCommittees); err == nil {
+	validators[60].PublicKey = []byte("101")
+	if _, _, err := ValidatorSlotAndResponsibility([]byte("101"), 0, validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
 	}
 }

@@ -2,16 +2,18 @@ package types
 
 import (
 	"bytes"
+	"os"
 	"strconv"
 	"testing"
 
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestGenesisCrystallizedState(t *testing.T) {
-	cState1, err1 := NewGenesisCrystallizedState()
-	cState2, err2 := NewGenesisCrystallizedState()
+	cState1, err1 := NewGenesisCrystallizedState("")
+	cState2, err2 := NewGenesisCrystallizedState("")
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v %v", err1, err2)
@@ -30,13 +32,13 @@ func TestGenesisCrystallizedState(t *testing.T) {
 }
 
 func TestInitialDeriveCrystallizedState(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
 
 	var attesterBitfield []byte
-	for len(attesterBitfield)*8 < params.BootstrappedValidatorsCount {
+	for len(attesterBitfield)*8 < params.GetConfig().BootstrappedValidatorsCount {
 		attesterBitfield = append(attesterBitfield, byte(0))
 	}
 
@@ -66,8 +68,8 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		t.Fatalf("expected justified streak to equal %d: got %d", 0, newCState.JustifiedStreak())
 	}
 
-	if newCState.LastStateRecalc() != params.CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", params.CycleLength, newCState.LastStateRecalc())
+	if newCState.LastStateRecalc() != params.GetConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", params.GetConfig().CycleLength, newCState.LastStateRecalc())
 	}
 
 	if newCState.LastFinalizedSlot() != 0 {
@@ -76,7 +78,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 }
 
 func TestNextDeriveCrystallizedSlot(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialized crystallized state: %v", err)
 	}
@@ -96,9 +98,9 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	}
 
 	totalDeposits := cState.TotalDeposits()
-	recentBlockHashes := make([][]byte, 3*params.CycleLength)
+	recentBlockHashes := make([][]byte, 3*params.GetConfig().CycleLength)
 	voteCache := make(map[[32]byte]*VoteCache)
-	for i := 0; i < 3*int(params.CycleLength); i++ {
+	for i := 0; i < 3*int(params.GetConfig().CycleLength); i++ {
 		blockHash := [32]byte{}
 		counter := []byte(strconv.Itoa(i))
 		copy(blockHash[:], counter)
@@ -116,14 +118,14 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
-	if cState.LastStateRecalc() != 2*params.CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 2*params.CycleLength, cState.LastStateRecalc())
+	if cState.LastStateRecalc() != 2*params.GetConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 2*params.GetConfig().CycleLength, cState.LastStateRecalc())
 	}
-	if cState.LastJustifiedSlot() != params.CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", params.CycleLength-1, cState.LastJustifiedSlot())
+	if cState.LastJustifiedSlot() != params.GetConfig().CycleLength-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
 	}
-	if cState.JustifiedStreak() != 2*params.CycleLength {
-		t.Fatalf("expected justified streak to equal %d: got %d", params.CycleLength, cState.JustifiedStreak())
+	if cState.JustifiedStreak() != 2*params.GetConfig().CycleLength {
+		t.Fatalf("expected justified streak to equal %d: got %d", params.GetConfig().CycleLength, cState.JustifiedStreak())
 	}
 	if cState.LastFinalizedSlot() != 0 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
@@ -133,35 +135,37 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
-	if cState.LastStateRecalc() != 3*params.CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.CycleLength, cState.LastStateRecalc())
+	if cState.LastStateRecalc() != 3*params.GetConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.GetConfig().CycleLength, cState.LastStateRecalc())
 	}
-	if cState.LastJustifiedSlot() != 2*params.CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.CycleLength-1, cState.LastJustifiedSlot())
+	if cState.LastJustifiedSlot() != 2*params.GetConfig().CycleLength-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
 	}
-	if cState.JustifiedStreak() != 3*params.CycleLength {
-		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.CycleLength, cState.JustifiedStreak())
+	if cState.JustifiedStreak() != 3*params.GetConfig().CycleLength {
+		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.GetConfig().CycleLength, cState.JustifiedStreak())
 	}
-	if cState.LastFinalizedSlot() != params.CycleLength-2 {
-		t.Fatalf("expected finalized slot to equal %d: got %d", params.CycleLength-2, cState.LastFinalizedSlot())
+	if cState.LastFinalizedSlot() != params.GetConfig().CycleLength-2 {
+		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 }
 
 func TestProcessCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
-	for i := 0; i < params.ShardCount; i++ {
+	for i := 0; i < params.GetConfig().ShardCount; i++ {
 		clRecord := &pb.CrosslinkRecord{Dynasty: 1, Blockhash: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
 
 	// Set up validators.
-	validators := []*pb.ValidatorRecord{
-		{
-			Balance:      10000,
+	var validators []*pb.ValidatorRecord
+
+	for i := 0; i < 20; i++ {
+		validators = append(validators, &pb.ValidatorRecord{
+			Balance:      1e18,
 			StartDynasty: 0,
-			EndDynasty:   params.DefaultEndDynasty,
-		},
+			EndDynasty:   params.GetConfig().DefaultEndDynasty,
+		})
 	}
 
 	// Set up pending attestations.
@@ -170,7 +174,7 @@ func TestProcessCrosslinks(t *testing.T) {
 			Slot:             0,
 			ShardId:          0,
 			ShardBlockHash:   []byte{'a'},
-			AttesterBitfield: []byte{'z', 'z'},
+			AttesterBitfield: []byte{10},
 		},
 	}
 
@@ -180,13 +184,17 @@ func TestProcessCrosslinks(t *testing.T) {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
 
+	committee := []uint32{0, 4, 6}
+
+	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
+
 	cState := NewCrystallizedState(&pb.CrystallizedState{
 		CrosslinkRecords:           clRecords,
 		Validators:                 validators,
 		CurrentDynasty:             5,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50, 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
@@ -200,10 +208,16 @@ func TestProcessCrosslinks(t *testing.T) {
 	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
+
+	for _, index := range committee {
+		if cState.Validators()[index].Balance == 1e18 {
+			t.Errorf("validator with index %d did not have balance changed.", index)
+		}
+	}
 }
 
 func TestIsDynastyTransition(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -232,7 +246,7 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.CrosslinkRecords = crosslinkRecords
 
-	if cState.isDynastyTransition(params.MinDynastyLength + 1) {
+	if cState.isDynastyTransition(params.GetConfig().MinDynastyLength + 1) {
 		t.Errorf("Is Dynasty transtion should be false, crosslink records dynasty is higher than current slot")
 	}
 
@@ -243,21 +257,21 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.CrosslinkRecords = crosslinkRecords
 
-	if !cState.isDynastyTransition(params.MinDynastyLength + 1) {
+	if !cState.isDynastyTransition(params.GetConfig().MinDynastyLength + 1) {
 		t.Errorf("Dynasty transition failed should have been true")
 	}
 }
 
 func TestNewDynastyRecalculationsInvalid(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
 
 	// Negative test case, shuffle validators with more than MaxValidators.
 	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.MaxValidators+1; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty})
+	for i := 0; i < params.GetConfig().MaxValidators+1; i++ {
+		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.GetConfig().DefaultEndDynasty})
 	}
 	cState.data.Validators = validators
 	if _, _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {
@@ -266,14 +280,14 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 }
 
 func TestNewDynastyRecalculations(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
 
 	// Create shard committee for every slot.
 	var shardCommitteesForSlot []*pb.ShardAndCommitteeArray
-	for i := 0; i < int(params.CycleLength); i++ {
+	for i := 0; i < int(params.GetConfig().CycleLength); i++ {
 		// Only 10 shards gets crosslinked by validators this dynasty.
 		var shardCommittees []*pb.ShardAndCommittee
 		for i := 0; i < 10; i++ {
@@ -295,4 +309,46 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	if currentDynasty != 2 {
 		t.Errorf("Incorrect dynasty number, wanted 2, got: %d", currentDynasty)
 	}
+}
+
+func TestInitGenesisJson(t *testing.T) {
+	fname := "/genesis.json"
+	pwd, _ := os.Getwd()
+	fnamePath := pwd + fname
+	os.Remove(fnamePath)
+
+	_, err := NewGenesisCrystallizedState(fnamePath)
+	if err == nil {
+		t.Fatalf("genesis.json should have failed %v", err)
+	}
+
+	cStateJSON := &pb.CrystallizedState{
+		LastStateRecalc:   0,
+		JustifiedStreak:   1,
+		LastFinalizedSlot: 99,
+		Validators: []*pb.ValidatorRecord{
+			{PublicKey: []byte{}, Balance: 32, EndDynasty: 99},
+		},
+	}
+	os.Create(fnamePath)
+	f, err := os.OpenFile(fnamePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		t.Fatalf("can't open file %v", err)
+	}
+
+	ma := jsonpb.Marshaler{}
+	err = ma.Marshal(f, cStateJSON)
+	if err != nil {
+		t.Fatalf("can't marshal file %v", err)
+	}
+
+	cState, err := NewGenesisCrystallizedState(fnamePath)
+	if err != nil {
+		t.Fatalf("genesis.json failed %v", err)
+	}
+
+	if cState.Validators()[0].EndDynasty != 99 {
+		t.Errorf("Failed to load of genesis json")
+	}
+	os.Remove(fnamePath)
 }

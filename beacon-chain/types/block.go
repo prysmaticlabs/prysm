@@ -19,8 +19,6 @@ import (
 
 var log = logrus.WithField("prefix", "types")
 
-// GenesisTime used by the protocol.
-var GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 var clock utils.Clock = &utils.RealClock{}
 
 // Block defines a beacon chain core primitive.
@@ -52,12 +50,15 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock() *Block {
+func NewGenesisBlock(activeStateHash [32]byte, crystallizedStateHash [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
+
+	gb.data.ActiveStateHash = activeStateHash[:]
+	gb.data.CrystallizedStateHash = crystallizedStateHash[:]
 	return gb
 }
 
@@ -138,8 +139,8 @@ func (b *Block) Timestamp() (time.Time, error) {
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
-	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
-	validTimeThreshold := GenesisTime.Add(slotDuration)
+	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
+	validTimeThreshold := params.GetConfig().GenesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 
@@ -257,10 +258,10 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 		return false
 	}
 
-	if parentSlot >= params.CycleLength-1 && attestationSlot < parentSlot-params.CycleLength+1 {
+	if parentSlot >= params.GetConfig().CycleLength-1 && attestationSlot < parentSlot-params.GetConfig().CycleLength+1 {
 		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestationSlot,
-			parentSlot-params.CycleLength+1)
+			parentSlot-params.GetConfig().CycleLength+1)
 		return false
 	}
 

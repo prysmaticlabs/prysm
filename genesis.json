@@ -1,0 +1,54 @@
+{
+  "validators": [
+    {
+      "publicKey": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJC",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0ND",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "RUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVF",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZG",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "R0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dH",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "SEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "SUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJ",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    },
+    {
+      "publicKey": "SkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpK",
+      "balance": "32",
+      "endDynasty": "999999999999999999"
+    }
+  ]
+}

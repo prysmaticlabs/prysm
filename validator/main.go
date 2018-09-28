@@ -63,6 +63,7 @@ VERSION:
 	app.Action = startNode
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
+		types.PubKeyFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,

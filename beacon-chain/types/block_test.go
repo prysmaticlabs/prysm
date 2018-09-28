@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes"
@@ -20,12 +21,14 @@ func (f *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
 }
 
 func TestGenesisBlock(t *testing.T) {
-	b1 := NewGenesisBlock()
-	b2 := NewGenesisBlock()
+	aStateHash := [32]byte{0}
+	cStateHash := [32]byte{1}
+	b1 := NewGenesisBlock(aStateHash, cStateHash)
+	b2 := NewGenesisBlock(aStateHash, cStateHash)
 
 	// We ensure that initializing a proto timestamp from
 	// genesis time will lead to no error.
-	if _, err := ptypes.TimestampProto(GenesisTime); err != nil {
+	if _, err := ptypes.TimestampProto(params.GetConfig().GenesisTime); err != nil {
 		t.Errorf("could not create proto timestamp, expected no error: %v", err)
 	}
 
@@ -51,12 +54,12 @@ func TestGenesisBlock(t *testing.T) {
 		t.Fatalf("genesis block missing PowChainRef field")
 	}
 
-	if b1.data.ActiveStateHash == nil {
-		t.Fatalf("genesis block missing ActiveStateHash field")
+	if !bytes.Equal(b1.data.ActiveStateHash, aStateHash[:]) {
+		t.Fatalf("genesis block ActiveStateHash isn't initialized correctly")
 	}
 
-	if b1.data.CrystallizedStateHash == nil {
-		t.Fatalf("genesis block missing CrystallizedStateHash field")
+	if !bytes.Equal(b1.data.CrystallizedStateHash, cStateHash[:]) {
+		t.Fatalf("genesis block CrystallizedStateHash isn't initialized correctly")
 	}
 
 	b3 := NewBlock(nil)
@@ -71,14 +74,14 @@ func TestGenesisBlock(t *testing.T) {
 }
 
 func TestBlockValidity(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState()
+	cState, err := NewGenesisCrystallizedState("")
 
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
 
-	recentBlockHashes := make([][]byte, 2*params.CycleLength)
-	for i := 0; i < 2*int(params.CycleLength); i++ {
+	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 	aState := NewActiveState(&pb.ActiveState{
@@ -114,7 +117,7 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 		t.Errorf("attestation slot number can't be higher than parent block's slot number")
 	}
 
-	if isAttestationSlotNumberValid(1, params.CycleLength+1) {
+	if isAttestationSlotNumberValid(1, params.GetConfig().CycleLength+1) {
 		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
 	}
 

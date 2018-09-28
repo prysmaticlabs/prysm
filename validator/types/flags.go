@@ -11,6 +11,11 @@ var (
 		Usage: "Beacon node RPC provider endpoint",
 		Value: "http://localhost:4000/",
 	}
+	// PubKeyFlag defines a flag for validator's public key on the mainchain
+	PubKeyFlag = cli.StringFlag{
+		Name:  "pubkey",
+		Usage: "Validator's public key. The public key will be used to identify the validator to the beacon-node",
+	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{
 		Name:  "tls-cert",
