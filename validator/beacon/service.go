@@ -130,7 +130,7 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 		log.Fatalf("cannot compute genesis timestamp: %v", err)
 	}
 
-	log.Infof("Setting validator genesis time to %s", genesisTimestamp)
+	log.Infof("Setting validator genesis time to %s", genesisTimestamp.Format(time.UnixDate))
 	s.genesisTimestamp = genesisTimestamp
 	for _, assign := range res.Assignments {
 		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
