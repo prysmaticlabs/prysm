@@ -140,7 +140,7 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 
 			log.Infof("Validator shuffled. Pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
 				string(s.pubKey),
-				s.assignedSlot,
+				s.shardID,
 				s.role,
 				s.assignedSlot)
 		}
@@ -181,7 +181,7 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 
 				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
 					string(s.pubKey),
-					s.assignedSlot,
+					s.shardID,
 					s.role,
 					s.assignedSlot)
 			}
