@@ -130,17 +130,17 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 		log.Fatalf("cannot compute genesis timestamp: %v", err)
 	}
 
-	log.Infof("Setting validator genesis time to %d", genesisTimestamp.Unix())
+	log.Infof("Setting validator genesis time to %s", genesisTimestamp.Format(time.UnixDate))
 	s.genesisTimestamp = genesisTimestamp
 	for _, assign := range res.Assignments {
 		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 			s.role = assign.Role
-			s.assignedSlot = assign.AssignedSlot
+			s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
 			s.shardID = assign.ShardId
 
 			log.Infof("Validator shuffled. Pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
 				string(s.pubKey),
-				s.assignedSlot,
+				s.shardID,
 				s.role,
 				s.assignedSlot)
 		}
@@ -176,12 +176,12 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		for _, assign := range assignment.Assignments {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
-				s.assignedSlot = assign.AssignedSlot
+				s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
 				s.shardID = assign.ShardId
 
 				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
 					string(s.pubKey),
-					s.assignedSlot,
+					s.shardID,
 					s.role,
 					s.assignedSlot)
 			}

@@ -49,14 +49,14 @@ func QueuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	if lastStateRecalc < params.CycleLength {
+	if lastStateRecalc < params.GetConfig().CycleLength {
 		lastStateRecalc = 0
 	} else {
-		lastStateRecalc = lastStateRecalc - params.CycleLength
+		lastStateRecalc = lastStateRecalc - params.GetConfig().CycleLength
 	}
 
 	lowerBound := lastStateRecalc
-	upperBound := lastStateRecalc + params.CycleLength*2
+	upperBound := lastStateRecalc + params.GetConfig().CycleLength*2
 	if !(slot >= lowerBound && slot < upperBound) {
 		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
 			slot,
@@ -180,7 +180,7 @@ func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecor
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
-	depositInEth := totalDeposit / uint64(params.EtherDenomination)
+	depositInEth := totalDeposit / uint64(params.GetConfig().EtherDenomination)
 
 	return depositInEth
 }
