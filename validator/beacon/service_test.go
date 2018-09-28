@@ -301,10 +301,11 @@ func TestListenForAssignmentProposer(t *testing.T) {
 	stream := internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
 
 	// Testing proposer assignment.
+	assignedSlot := b.CurrentCycleStartSlot() + 2
 	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{Assignments: []*pb.Assignment{{
 		PublicKey:    &pb.PublicKey{PublicKey: []byte{'A'}},
 		ShardId:      2,
-		AssignedSlot: 2,
+		AssignedSlot: assignedSlot,
 		Role:         pb.ValidatorRole_PROPOSER}}}, nil)
 	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
 
@@ -316,7 +317,7 @@ func TestListenForAssignmentProposer(t *testing.T) {
 
 	b.listenForAssignmentChange(mockServiceValidator)
 
-	testutil.AssertLogsContain(t, hook, "Validator with pub key 0xA re-assigned to shard ID 2 for PROPOSER duty at slot 2")
+	testutil.AssertLogsContain(t, hook, "Validator with pub key 0xA re-assigned to shard ID 2 for PROPOSER duty")
 
 	// Testing an error coming from the stream.
 	stream = internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
