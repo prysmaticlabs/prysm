@@ -6,7 +6,15 @@ import (
 	"time"
 )
 
-var (
+var env = "default"
+
+
+func GetConfig() Config {
+	switch env:
+	...
+}
+
+type Config struct {
 	// GenesisTime used by the protocol.
 	GenesisTime = time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC) // September 2018
 	// CycleLength is the beacon chain cycle length in slots.
@@ -38,4 +46,9 @@ var (
 	// SqrtDropTime is a constant set to reflect the amount of time it will take for the quadratic leak to
 	// cut nonparticipating validators’ deposits by 39.4%.
 	SqrtDropTime = uint64(1048576)
+}
 )
+
+func SetEnv(e string) {
+	env = e
+}
