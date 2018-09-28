@@ -56,3 +56,19 @@ func TestAttestation(t *testing.T) {
 		t.Errorf("verify attestation failed: %v", err)
 	}
 }
+
+func TestContainsValidator(t *testing.T) {
+	attestation := NewAttestation(&pb.AggregatedAttestation{
+		Slot:             0,
+		ShardId:          0,
+		AttesterBitfield: []byte{7}, // 0000 0111
+	})
+
+	if !attestation.ContainsValidator([]byte{4}) {
+		t.Error("Attestation should contain validator")
+	}
+
+	if attestation.ContainsValidator([]byte{8}) {
+		t.Error("Attestation should not contain validator")
+	}
+}
