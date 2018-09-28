@@ -24,8 +24,10 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_test.go",
+        "block_test.go",
         "db_test.go",
         "schema_test.go",
+        "state_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

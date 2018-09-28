@@ -107,6 +107,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool) *ChainService {
 
 func TestStartStop(t *testing.T) {
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
 
 	chainService.IncomingBlockFeed()
 
@@ -125,6 +126,7 @@ func TestStartStop(t *testing.T) {
 
 func TestCurrentBeaconSlot(t *testing.T) {
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
 	chainService.genesisTimestamp = time.Now()
 	if chainService.CurrentBeaconSlot() != 0 {
 		t.Errorf("Expected us to be in the 0th slot, received %v", chainService.CurrentBeaconSlot())
@@ -134,6 +136,7 @@ func TestCurrentBeaconSlot(t *testing.T) {
 func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := setupBeaconChain(t, true)
+	defer chainService.beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber:  1,
@@ -161,6 +164,7 @@ func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState("")
@@ -226,6 +230,7 @@ func TestRunningChainService(t *testing.T) {
 func TestDoesPOWBlockExist(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := setupBeaconChain(t, true)
+	defer chainService.beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber: 10,
@@ -241,6 +246,8 @@ func TestDoesPOWBlockExist(t *testing.T) {
 
 func TestUpdateHead(t *testing.T) {
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
+
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState("")
 	if err != nil {
@@ -283,6 +290,7 @@ func TestUpdateHead(t *testing.T) {
 
 func TestUpdateHead2(t *testing.T) {
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
 
 	exitRoutine := make(chan bool)
 	timeChan := make(chan time.Time)
@@ -318,6 +326,8 @@ func TestUpdateHead3(t *testing.T) {
 	}
 
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
+
 	exitRoutine := make(chan bool)
 	timeChan := make(chan time.Time)
 	go func() {
@@ -339,6 +349,7 @@ func TestUpdateHead3(t *testing.T) {
 
 func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	chainService := setupBeaconChain(t, false)
+	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState("")

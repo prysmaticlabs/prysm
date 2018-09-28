@@ -41,6 +41,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 
 func TestSaveAndRemoveAttestationHashList(t *testing.T) {
 	db := startInMemoryBeaconDB(t)
+	defer db.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		SlotNumber: 0,
