@@ -39,6 +39,10 @@ func (m *mockAssigner) AttesterAssignmentFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockAssigner) PublicKey() []byte {
+	return []byte{}
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
