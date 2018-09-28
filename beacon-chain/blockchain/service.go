@@ -80,7 +80,7 @@ func (c *ChainService) Start() {
 	// using utils.BlockingWait and passing in the desired
 	// slot duration.
 	//
-	// Instead of utilizing params.GetConfig().SlotDuration, we utilize a property of
+	// Instead of utilizing SlotDuration from config, we utilize a property of
 	// RPC service struct so this value can be set to 0 seconds
 	// as a parameter in tests. Otherwise, tests would sleep.
 	utils.BlockingWait(time.Duration(c.slotAlignmentDuration) * time.Second)
