@@ -319,10 +319,11 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			finalizedSlot = slot - params.GetConfig().CycleLength - 1
 		}
 
-		newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
-		if err != nil {
-			return nil, nil, err
-		}
+		// TODO: Skip for demo.
+		//newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
+		//if err != nil {
+		//	return nil, nil, err
+		//}
 	}
 
 	// Clean up old attestations.

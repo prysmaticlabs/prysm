@@ -4,6 +4,7 @@ package simulator
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -50,7 +51,7 @@ type Config struct {
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		Delay:           time.Second * 5,
+		Delay:           time.Second * time.Duration(params.DefaultConfig().SlotDuration),
 		BlockRequestBuf: 100,
 	}
 }
@@ -156,8 +157,19 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			// If we have not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
+			var hash [32]byte
 			if sim.slotNum == 1 {
-				parentHash = []byte("genesis")
+				genesisBlock, err := sim.chainService.GenesisBlock()
+				if err != nil {
+					log.Errorf("Failed to retrieve genesis block: %v", err)
+					continue
+				}
+				hash, err = genesisBlock.Hash()
+				if err != nil {
+					log.Errorf("Failed to hash genesis block: %v", err)
+					continue
+				}
+				parentHash = hash[:]
 			} else {
 				parentHash = sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1][:]
 			}
@@ -178,6 +190,9 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            parentHash,
+				Attestations: []*pb.AggregatedAttestation{
+					{Slot: sim.slotNum -1, AttesterBitfield: []byte{byte(255)}},
+				},
 			})
 
 			sim.slotNum++
@@ -210,7 +225,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: nil}
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
+				Slot: sim.slotNum - 1,
+				AttesterBitfield: []byte{byte(255)},
+			}}
 			sim.p2p.Send(res, msg.Peer)
 		}
 	}

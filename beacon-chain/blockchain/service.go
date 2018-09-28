@@ -190,6 +190,11 @@ func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Blo
 	return c.chain.canonicalBlockForSlot(slotNumber)
 }
 
+// Genesisblock returns the contents of the genesis block.
+func (c *ChainService) GenesisBlock() (*types.Block, error) {
+	return c.chain.genesisBlock()
+}
+
 // doesPoWBlockExist checks if the referenced PoW block exists.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.PowChainRef())
@@ -315,6 +320,7 @@ func (c *ChainService) blockProcessing() {
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
+			log.Infof("Incoming block slot number: %d", block.SlotNumber())
 			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Failed to get hash of block: %v", err)

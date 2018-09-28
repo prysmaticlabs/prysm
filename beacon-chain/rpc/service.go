@@ -338,7 +338,6 @@ func (s *Service) ValidatorAssignments(
 	for {
 		select {
 		case cState := <-s.canonicalStateChan:
-
 			log.Info("Sending new cycle assignments to validator clients")
 
 			var keys []*pb.PublicKey

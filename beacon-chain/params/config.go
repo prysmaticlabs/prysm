@@ -44,7 +44,7 @@ var defaultConfig = &Config{
 }
 
 var demoConfig = &Config{
-	GenesisTime:        time.Now(),
+	GenesisTime:        time.Now().Add(-8*time.Second),
 	CycleLength:        uint64(5),
 	ShardCount:         3,
 	DefaultBalance:     new(big.Int).Div(big.NewInt(32), big.NewInt(int64(1e18))),

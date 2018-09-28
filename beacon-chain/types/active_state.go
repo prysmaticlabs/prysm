@@ -212,16 +212,17 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
+	// TODO: Skip for demo.
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-	newBlockVoteCache, err := a.calculateNewVoteCache(block, cState)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update vote cache: %v", err)
-	}
+	//newBlockVoteCache, err := a.calculateNewVoteCache(block, cState)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to update vote cache: %v", err)
+	//}
 
 	return NewActiveState(&pb.ActiveState{
 		PendingAttestations: newPendingAttestations,
 		RecentBlockHashes:   newRecentBlockHashes,
-	}, newBlockVoteCache), nil
+	}, a.blockVoteCache), nil
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
