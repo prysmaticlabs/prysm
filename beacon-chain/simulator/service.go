@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -110,15 +109,7 @@ func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Could not fetch simulated block from db: %v", err)
 	}
-	enc, err := simulatedBlock.Marshal()
-	if err != nil {
-		return nil, fmt.Errorf("Could not encode simulated block: %v", err)
-	}
-	lastSimulatedBlockProto := &pb.BeaconBlock{}
-	if err = proto.Unmarshal(enc, lastSimulatedBlockProto); err != nil {
-		return nil, fmt.Errorf("Could not unmarshal simulated block from db: %v", err)
-	}
-	return types.NewBlock(lastSimulatedBlockProto), nil
+	return simulatedBlock, nil
 }
 
 func (sim *Simulator) run(delayChan <-chan time.Time) {

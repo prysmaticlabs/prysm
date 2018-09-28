@@ -164,7 +164,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			parentBlock, err := c.beaconDB.GetBlock(block.ParentHash())
 			if err != nil {
-				log.Errorf("Failed to get parent of block 0x%x", h)
+				log.Errorf("Failed to get parent of block %x", h)
 				continue
 			}
 
