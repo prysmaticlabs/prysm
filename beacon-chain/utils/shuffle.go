@@ -12,7 +12,7 @@ import (
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
 func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) {
-	if len(validatorList) > params.MaxValidators {
+	if len(validatorList) > params.GetConfig().MaxValidators {
 		return nil, errors.New("Validator count has exceeded MaxValidator Count")
 	}
 

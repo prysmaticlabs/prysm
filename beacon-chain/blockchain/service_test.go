@@ -129,7 +129,7 @@ func TestStartStop(t *testing.T) {
 		t.Errorf("incorrect recent block hashes")
 	}
 
-	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
+	if len(chainService.CurrentCrystallizedState().Validators()) != params.GetConfig().BootstrappedValidatorsCount {
 		t.Errorf("incorrect default validator size")
 	}
 	blockExists, err := chainService.ContainsBlock([32]byte{})
@@ -387,11 +387,11 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(params.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
+	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
 
-	slotsStart := crystallized.LastStateRecalc() - params.CycleLength
-	slotIndex := (currentSlot - slotsStart) % params.CycleLength
+	slotsStart := crystallized.LastStateRecalc() - params.GetConfig().CycleLength
+	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	shardID := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].ShardId
 
 	block := types.NewBlock(&pb.BeaconBlock{
@@ -712,8 +712,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(params.GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.SlotDuration)))
+	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
+	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		ParentHash:            block0Hash[:],

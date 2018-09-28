@@ -11,7 +11,7 @@ import (
 func TestFaultyShuffleIndices(t *testing.T) {
 	var list []uint32
 
-	for i := 0; i < params.MaxValidators+1; i++ {
+	for i := 0; i < params.GetConfig().MaxValidators+1; i++ {
 		list = append(list, uint32(i))
 	}
 
@@ -53,14 +53,14 @@ func TestSplitIndices(t *testing.T) {
 	for i := 0; i < validators; i++ {
 		l = append(l, uint32(i))
 	}
-	split := SplitIndices(l, int(params.CycleLength))
-	if len(split) != int(params.CycleLength) {
-		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.CycleLength, len(split))
+	split := SplitIndices(l, int(params.GetConfig().CycleLength))
+	if len(split) != int(params.GetConfig().CycleLength) {
+		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.GetConfig().CycleLength, len(split))
 	}
 
 	for _, s := range split {
-		if len(s) != validators/int(params.CycleLength) {
-			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.CycleLength), len(s))
+		if len(s) != validators/int(params.GetConfig().CycleLength) {
+			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.GetConfig().CycleLength), len(s))
 		}
 	}
 }
