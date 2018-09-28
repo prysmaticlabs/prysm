@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -100,7 +99,7 @@ func TestRewardQuotient(t *testing.T) {
 	}
 	rewQuotient := RewardQuotient(0, validators)
 
-	if rewQuotient != params.BaseRewardQuotient {
+	if rewQuotient != params.GetConfig().BaseRewardQuotient {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
 	}
 }
@@ -114,7 +113,7 @@ func TestSlotMaxInterestRate(t *testing.T) {
 
 	interestRate := SlotMaxInterestRate(0, validators)
 
-	if interestRate != 1/float64(params.BaseRewardQuotient) {
+	if interestRate != 1/float64(params.GetConfig().BaseRewardQuotient) {
 		t.Errorf("incorrect interest rate generated %f", interestRate)
 	}
 
@@ -143,7 +142,7 @@ func TestQuadraticPenalty(t *testing.T) {
 func TestRewardCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
 	participatedDeposit := uint64(3e18)
-	rewardQuotient := params.BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
@@ -164,7 +163,7 @@ func TestRewardCrosslink(t *testing.T) {
 
 func TestPenaltyCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
-	rewardQuotient := params.BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}

@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var shardCount = params.ShardCount
+var shardCount = params.GetConfig().ShardCount
 
 // CrystallizedState contains fields of every Slot state,
 // it changes every Slot.
@@ -29,11 +29,11 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 
 func initialValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
+	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{
 			StartDynasty:      0,
-			EndDynasty:        params.DefaultEndDynasty,
-			Balance:           params.DefaultBalance.Uint64(),
+			EndDynasty:        params.GetConfig().DefaultEndDynasty,
+			Balance:           params.GetConfig().DefaultBalance.Uint64(),
 			WithdrawalAddress: []byte{},
 			PublicKey:         []byte{},
 		}
@@ -210,7 +210,7 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
-	return slotNumber >= c.LastStateRecalc()+params.CycleLength
+	return slotNumber >= c.LastStateRecalc()+params.GetConfig().CycleLength
 }
 
 // isDynastyTransition checks if a dynasty transition can be processed. At that point,
@@ -219,7 +219,7 @@ func (c *CrystallizedState) isDynastyTransition(slotNumber uint64) bool {
 	if c.LastFinalizedSlot() <= c.DynastyStart() {
 		return false
 	}
-	if slotNumber-c.DynastyStart() < params.MinDynastyLength {
+	if slotNumber-c.DynastyStart() < params.GetConfig().MinDynastyLength {
 		return false
 	}
 
@@ -242,8 +242,8 @@ func (c *CrystallizedState) isDynastyTransition(slotNumber uint64) bool {
 
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
-	slotsStart := c.LastStateRecalc() - params.CycleLength
-	slotIndex := (attestation.Slot - slotsStart) % params.CycleLength
+	slotsStart := c.LastStateRecalc() - params.GetConfig().CycleLength
+	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
 	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
@@ -276,14 +276,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
 
-	if lastStateRecalc < params.CycleLength {
+	if lastStateRecalc < params.GetConfig().CycleLength {
 		lastStateRecalcCycleBack = 0
 	} else {
-		lastStateRecalcCycleBack = lastStateRecalc - params.CycleLength
+		lastStateRecalcCycleBack = lastStateRecalc - params.GetConfig().CycleLength
 	}
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
-	for i := uint64(0); i < params.CycleLength; i++ {
+	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
 		var voterIndices []uint32
 
 		slot := lastStateRecalcCycleBack + i
@@ -315,8 +315,8 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			justifiedStreak = 0
 		}
 
-		if slot > params.CycleLength && justifiedStreak >= params.CycleLength+1 && slot-params.CycleLength-1 > finalizedSlot {
-			finalizedSlot = slot - params.CycleLength - 1
+		if slot > params.GetConfig().CycleLength && justifiedStreak >= params.GetConfig().CycleLength+1 && slot-params.GetConfig().CycleLength-1 > finalizedSlot {
+			finalizedSlot = slot - params.GetConfig().CycleLength - 1
 		}
 
 		newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
@@ -344,7 +344,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		DynastySeed:                c.data.DynastySeed,
 		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
 		Validators:                 rewardedValidators,
-		LastStateRecalc:            lastStateRecalc + params.CycleLength,
+		LastStateRecalc:            lastStateRecalc + params.GetConfig().CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
 		JustifiedStreak:            justifiedStreak,
 		LastFinalizedSlot:          finalizedSlot,
@@ -380,7 +380,7 @@ func (c *CrystallizedState) newDynastyRecalculations(seed [32]byte) (uint64, []*
 		return 0, nil, err
 	}
 
-	return nextDynasty, append(c.data.ShardAndCommitteesForSlots[:params.CycleLength], newShardCommitteeArray...), nil
+	return nextDynasty, append(c.data.ShardAndCommitteesForSlots[:params.GetConfig().CycleLength], newShardCommitteeArray...), nil
 }
 
 type shardAttestation struct {

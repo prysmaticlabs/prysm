@@ -28,7 +28,7 @@ func CalculateRewards(
 	depositFactor := (totalParticipatedDeposit - totalDeposit) / totalDeposit
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
-	if timeSinceFinality <= 3*params.CycleLength {
+	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
 		for _, validatorIndex := range activeValidators {
 			var voted bool
 
@@ -76,7 +76,7 @@ func CalculateRewards(
 // reward validators for voting on blocks, or penalise them for being offline.
 func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
-	return params.BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
+	return params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
 }
 
 // SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
@@ -89,7 +89,7 @@ func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := float64(params.SqrtDropTime / params.SlotDuration)
+	dropTimeFactor := float64(params.GetConfig().SqrtDropTime / params.GetConfig().SlotDuration)
 	return uint64(math.Pow(dropTimeFactor, 2))
 }
 

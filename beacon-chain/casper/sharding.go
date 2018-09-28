@@ -30,14 +30,14 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
 	// split the validator indices by slot.
-	validatorsBySlot := utils.SplitIndices(shuffledValidators, int(params.CycleLength))
+	validatorsBySlot := utils.SplitIndices(shuffledValidators, int(params.GetConfig().CycleLength))
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
 		shardStart := int(crosslinkStartShard) + i*committeesPerSlot/slotsPerCommittee
 
 		for j, validatorsForShard := range validatorsByShard {
-			shardID := (shardStart + j) % params.ShardCount
+			shardID := (shardStart + j) % params.GetConfig().ShardCount
 			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
 				ShardId:   uint64(shardID),
 				Committee: validatorsForShard,
@@ -58,14 +58,14 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // If numActiveValidators < CycleLength * MinCommitteeSize, committees span across multiple slots
 // to attest the same shard.
 func getCommitteeParams(numValidators int) (committeesPerSlot, slotsPerCommittee int) {
-	if numValidators >= int(params.CycleLength*params.MinCommiteeSize) {
-		committeesPerSlot := numValidators/int(params.CycleLength*params.MinCommiteeSize*2) + 1
+	if numValidators >= int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize) {
+		committeesPerSlot := numValidators/int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize*2) + 1
 		return committeesPerSlot, 1
 	}
 
 	slotsPerCommittee = 1
-	for numValidators*slotsPerCommittee < int(params.MinCommiteeSize*params.CycleLength) &&
-		slotsPerCommittee < int(params.CycleLength) {
+	for numValidators*slotsPerCommittee < int(params.GetConfig().MinCommiteeSize*params.GetConfig().CycleLength) &&
+		slotsPerCommittee < int(params.GetConfig().CycleLength) {
 		slotsPerCommittee *= 2
 	}
 
