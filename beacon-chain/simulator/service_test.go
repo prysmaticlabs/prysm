@@ -185,7 +185,7 @@ func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
 	}
-	if DefaultConfig().Delay != time.Second*5 {
+	if DefaultConfig().Delay != time.Second*8 {
 		t.Errorf("incorrect default config for delay")
 	}
 }

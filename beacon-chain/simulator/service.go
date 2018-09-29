@@ -4,18 +4,16 @@ package simulator
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/validator/params"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 )
 

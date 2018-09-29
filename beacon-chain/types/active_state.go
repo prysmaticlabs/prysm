@@ -212,7 +212,8 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
-	// TODO: Skip for demo.
+	// TODO(485): Skip for demo.
+	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalc())
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
 	//newBlockVoteCache, err := a.calculateNewVoteCache(block, cState)
 	//if err != nil {

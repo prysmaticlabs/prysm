@@ -148,7 +148,7 @@ func (b *Block) isSlotValid() bool {
 // 1.) Ensure local time is large enough to process this block's slot.
 // 2.) Verify that the parent block's proposer's attestation is included.
 func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
-	_, err := b.Hash()
+	h, err := b.Hash()
 	if err != nil {
 		log.Errorf("Could not hash incoming block: %v", err)
 		return false
@@ -178,7 +178,12 @@ func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *C
 		return false
 	}
 
-	// TODO: Skip for demo.
+	// TODO(485): Skip for demo.
+	hasBlock, err := chain.ContainsBlock(h)
+	if err != nil {
+		log.Errorf("Checking contains block failed %v", err)
+	}
+	log.Debugf("Checking block validity. Contains block is %v, Recent block hash is %d", hasBlock, aState.data.RecentBlockHashes[0])
 	//for index, attestation := range b.Attestations() {
 	//	if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
 	//		log.Debugf("attestation invalid: %v", attestation)

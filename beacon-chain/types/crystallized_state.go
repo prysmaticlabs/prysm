@@ -305,7 +305,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			blockVoteBalance = 0
 		}
 
-		// TODO(#542): This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
 				justifiedSlot = slot
@@ -319,7 +318,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			finalizedSlot = slot - params.GetConfig().CycleLength - 1
 		}
 
-		// TODO: Skip for demo.
+		// TODO(485): Skip for demo.
 		//newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
 		//if err != nil {
 		//	return nil, nil, err
