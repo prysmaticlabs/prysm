@@ -369,7 +369,6 @@ func (c *ChainService) blockProcessing() {
 			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
-			log.Info("Finished processing received block")
 		}
 	}
 }
