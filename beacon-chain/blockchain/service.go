@@ -321,7 +321,7 @@ func (c *ChainService) blockProcessing() {
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
-			log.Infof("Incoming block slot number: %d", block.SlotNumber())
+			log.WithField("slotNumber", block.SlotNumber()).Info("Received an incoming block for processing")
 			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Failed to get hash of block: %v", err)
