@@ -276,6 +276,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 					log.Errorf("Write crystallized state to disk failed: %v", err)
 					continue
 				}
+				log.WithField("slotNumber", block.SlotNumber()).Info("Cycle transition occurred, crystallized state updated")
 			}
 
 			// Save canonical block hash with slot number to DB.

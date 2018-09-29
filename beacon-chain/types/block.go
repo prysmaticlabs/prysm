@@ -173,7 +173,6 @@ func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *C
 		log.Errorf("Can not get proposer index %v", err)
 		return false
 	}
-	log.Infof("Proposer index: %v", proposerIndex)
 	if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
 		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false

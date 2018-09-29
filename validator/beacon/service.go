@@ -120,14 +120,14 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	if err != nil {
 		// If this RPC request fails, the entire system should fatal as it is critical for
 		// the validator to begin this way.
-		log.Fatalf("could not fetch genesis time and latest canonical state from beacon node: %v", err)
+		log.Fatalf("Could not fetch genesis time and latest canonical state from beacon node: %v", err)
 	}
 
 	// Determine what slot the beacon node is in by checking the number of seconds
 	// since the genesis block.
 	genesisTimestamp, err := ptypes.Timestamp(res.GetGenesisTimestamp())
 	if err != nil {
-		log.Fatalf("cannot compute genesis timestamp: %v", err)
+		log.Fatalf("Cannot compute genesis timestamp: %v", err)
 	}
 
 	log.Infof("Setting validator genesis time to %s", genesisTimestamp.Format(time.UnixDate))
@@ -170,7 +170,7 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 
 		if err != nil {
 			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
-			continue
+			break
 		}
 
 		for _, assign := range assignment.Assignments {
@@ -205,7 +205,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					continue
+					break
 				}
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
@@ -215,7 +215,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					continue
+					break
 				}
 				// We forward the latest canonical block to the proposer service a feed.
 				s.proposerAssignmentFeed.Send(block)
@@ -246,7 +246,7 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 		}
 		if err != nil {
 			log.Errorf("Could not receive latest attestation from stream: %v", err)
-			continue
+			break
 		}
 
 		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
