@@ -12,7 +12,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		CollationSizeLimit: DefaultCollationSizeLimit(),
 		SlotDuration:       8.0,
-		CycleLength:        64,
+		CycleLength:        5,
 	}
 }
 
