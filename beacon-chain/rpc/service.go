@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -211,12 +212,34 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	} else {
 		powChainHash = s.powChainService.LatestBlockHash()
 	}
-	data := &pbp2p.BeaconBlock{
-		SlotNumber:  req.GetSlotNumber(),
-		PowChainRef: powChainHash[:],
-		ParentHash:  req.GetParentHash(),
-		Timestamp:   req.GetTimestamp(),
+
+	//TODO(#589) The attestation should be aggregated in the validator client side not in the beacon node.
+	parentSlot := req.GetSlotNumber() - 1
+	cState := s.chainService.CurrentCrystallizedState()
+
+	_, prevProposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalc(),
+		parentSlot,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
 	}
+
+	proposerBitfield := uint64(math.Pow(2, (7 - float64(prevProposerIndex))))
+	attestation := &pbp2p.AggregatedAttestation{
+		AttesterBitfield: []byte{byte(proposerBitfield)},
+	}
+
+	data := &pbp2p.BeaconBlock{
+		SlotNumber:   req.GetSlotNumber(),
+		PowChainRef:  powChainHash[:],
+		ParentHash:   req.GetParentHash(),
+		Timestamp:    req.GetTimestamp(),
+		Attestations: []*pbp2p.AggregatedAttestation{attestation},
+	}
+
 	block := types.NewBlock(data)
 	h, err := block.Hash()
 	if err != nil {
