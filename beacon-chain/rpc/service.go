@@ -252,7 +252,7 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 	for {
 		select {
 		case attestation := <-s.incomingAttestation:
-			log.Info("Sending attestation to RPC clients")
+			log.Debugf("Sending attestation to RPC clients")
 			if err := stream.Send(attestation.Proto()); err != nil {
 				return err
 			}

@@ -205,7 +205,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					break
+					continue
 				}
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
@@ -215,7 +215,7 @@ func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconSer
 				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 				if err != nil {
 					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					break
+					continue
 				}
 				// We forward the latest canonical block to the proposer service a feed.
 				s.proposerAssignmentFeed.Send(block)
