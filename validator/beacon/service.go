@@ -176,7 +176,13 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		for _, assign := range assignment.Assignments {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
-				s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
+				// If the current cycle is genesis, we set the assigned slot to be
+				// params.CycleLength + assign.AssignedSlot
+				if s.CurrentCycleStartSlot() == 0 {
+					s.assignedSlot = params.DefaultConfig().CycleLength + assign.AssignedSlot
+				} else {
+					s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
+				}
 				s.shardID = assign.ShardId
 
 				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
