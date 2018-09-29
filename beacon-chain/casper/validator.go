@@ -163,7 +163,7 @@ func ValidatorSlotAndResponsibility(pubKey []byte, dynasty uint64, validators []
 			}
 		}
 	}
-	return 0, "", fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
+	return 0, "", fmt.Errorf("can't find slot number for validator with public key %x", pubKey)
 }
 
 // TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
