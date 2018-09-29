@@ -50,6 +50,9 @@ func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState 
 	return types.NewCrystallizedState(&pb.CrystallizedState{})
 }
 
+func (mc *mockChainService) GenesisBlock() (*types.Block, error) {
+	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
+}
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := database.NewKVStore()
