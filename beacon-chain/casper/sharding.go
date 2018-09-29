@@ -59,8 +59,14 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // to attest the same shard.
 func getCommitteeParams(numValidators int) (committeesPerSlot, slotsPerCommittee int) {
 	if numValidators >= int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize) {
-		committeesPerSlot := numValidators/int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize*2) + 1
-		return committeesPerSlot, 1
+		cycleLength := int(params.GetConfig().CycleLength)
+		boundOnAVS := numValidators / cycleLength / (int(params.GetConfig().MinCommiteeSize*2) + 1)
+		boundOnShardCount := params.GetConfig().ShardCount / cycleLength
+		if boundOnAVS > boundOnShardCount {
+			return boundOnShardCount, 1
+		} else {
+			return boundOnAVS, 1
+		}
 	}
 
 	slotsPerCommittee = 1
