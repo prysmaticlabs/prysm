@@ -191,7 +191,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            parentHash,
 				Attestations: []*pb.AggregatedAttestation{
-					{Slot: sim.slotNum -1, AttesterBitfield: []byte{byte(255)}},
+					{Slot: sim.slotNum - 1, AttesterBitfield: []byte{byte(255)}},
 				},
 			})
 
@@ -226,7 +226,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-				Slot: sim.slotNum - 1,
+				Slot:             sim.slotNum - 1,
 				AttesterBitfield: []byte{byte(255)},
 			}}
 			sim.p2p.Send(res, msg.Peer)
