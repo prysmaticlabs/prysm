@@ -261,7 +261,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, *ActiveState, error) {
 	var blockVoteBalance uint64
 	var lastStateRecalcCycleBack uint64
-	//var rewardedValidators []*pb.ValidatorRecord
+	var rewardedValidators []*pb.ValidatorRecord
 	var newCrossLinkRecords []*pb.CrosslinkRecord
 	var err error
 
@@ -273,7 +273,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	dynastyStart := c.DynastyStart()
 	blockVoteCache := aState.GetBlockVoteCache()
 	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
-	//timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
+	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
 
 	if lastStateRecalc < params.GetConfig().CycleLength {
@@ -284,22 +284,22 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
-		//var voterIndices []uint32
+		var voterIndices []uint32
 
 		slot := lastStateRecalcCycleBack + i
 		blockHash := recentBlockHashes[i]
 		if _, ok := blockVoteCache[blockHash]; ok {
 			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
-			//voterIndices = blockVoteCache[blockHash].VoterIndices
+			voterIndices = blockVoteCache[blockHash].VoterIndices
 
 			// Apply Rewards for each slot.
-			//rewardedValidators = casper.CalculateRewards(
-			//	slot,
-			//	voterIndices,
-			//	c.Validators(),
-			//	c.CurrentDynasty(),
-			//	blockVoteBalance,
-			//	timeSinceFinality)
+			rewardedValidators = casper.CalculateRewards(
+				slot,
+				voterIndices,
+				c.Validators(),
+				c.CurrentDynasty(),
+				blockVoteBalance,
+				timeSinceFinality)
 
 		} else {
 			blockVoteBalance = 0
@@ -325,6 +325,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		//}
 	}
 
+	fmt.Println(len(rewardedValidators))
 	// Clean up old attestations.
 	newPendingAttestations := aState.cleanUpAttestations(lastStateRecalc)
 
