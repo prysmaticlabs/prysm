@@ -54,7 +54,7 @@ var (
 		Name:  "genesis-json",
 		Usage: "Beacon node will bootstrap genesis state defined in genesis.json",
 	}
-	// EnablePOWChain tells the beacon node to use a real web3 endpoint.
+	// EnablePOWChain tells the beacon node to use a real web3 endpoint. Disabled by default.
 	EnablePOWChain = cli.BoolFlag{
 		Name:  "enable-powchain",
 		Usage: "Enable a real, web3 proof-of-work chain endpoint in the beacon node",
@@ -63,20 +63,20 @@ var (
 	// during block processing. Disabled by default.
 	EnableCrossLinks = cli.BoolFlag{
 		Name:  "enable-cross-links",
-		Usage: "enable cross-link verification in the beacon chain",
+		Usage: "Enable cross-link verification in the beacon chain",
 	}
 	// EnableRewardChecking tells the beacon node to apply Casper FFG rewards/penalties to validators
 	// at each cycle transition. This can mutate the validator set as bad validators can get kicked off.
 	// Disabled by default.
 	EnableRewardChecking = cli.BoolFlag{
 		Name:  "enable-reward-checking",
-		Usage: "enable Casper FFG reward/penalty applications at each cycle transition",
+		Usage: "Enable Casper FFG reward/penalty applications at each cycle transition",
 	}
 	// EnableAttestationValidity in the beacon node. This enables a few more verification
 	// conditions during block processing and the creation of a block vote cache
 	// for attestations. Disabled by default.
 	EnableAttestationValidity = cli.BoolFlag{
 		Name:  "enable-attestations-validity",
-		Usage: "enable the verification of attestation validity in a beacon node",
+		Usage: "Enable the verification of attestation validity in a beacon node",
 	}
 )
