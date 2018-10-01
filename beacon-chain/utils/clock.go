@@ -22,7 +22,7 @@ func (RealClock) Now() time.Time {
 
 // CurrentBeaconSlot based on the seconds since genesis.
 func CurrentBeaconSlot() uint64 {
-	secondsSinceGenesis := time.Since(params.GenesisTime).Seconds()
+	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
 	return uint64(math.Floor(secondsSinceGenesis / 8.0))
 }
 

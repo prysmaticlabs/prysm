@@ -28,7 +28,7 @@ func TestGenesisBlock(t *testing.T) {
 
 	// We ensure that initializing a proto timestamp from
 	// genesis time will lead to no error.
-	if _, err := ptypes.TimestampProto(params.GenesisTime); err != nil {
+	if _, err := ptypes.TimestampProto(params.GetConfig().GenesisTime); err != nil {
 		t.Errorf("could not create proto timestamp, expected no error: %v", err)
 	}
 
@@ -80,8 +80,8 @@ func TestBlockValidity(t *testing.T) {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
 
-	recentBlockHashes := make([][]byte, 2*params.CycleLength)
-	for i := 0; i < 2*int(params.CycleLength); i++ {
+	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 	aState := NewActiveState(&pb.ActiveState{
@@ -117,7 +117,7 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 		t.Errorf("attestation slot number can't be higher than parent block's slot number")
 	}
 
-	if isAttestationSlotNumberValid(1, params.CycleLength+1) {
+	if isAttestationSlotNumberValid(1, params.GetConfig().CycleLength+1) {
 		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
 	}
 

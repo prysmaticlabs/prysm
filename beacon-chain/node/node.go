@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
@@ -52,6 +53,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+
+	// Use demo config values if dev flag is set.
+	if ctx.GlobalBool(utils.DevFlag.Name) {
+		params.SetEnv("demo")
 	}
 
 	if err := beacon.startDB(ctx); err != nil {

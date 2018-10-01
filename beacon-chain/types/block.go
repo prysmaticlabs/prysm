@@ -53,7 +53,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 func NewGenesisBlock(activeStateHash [32]byte, crystallizedStateHash [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 
@@ -139,8 +139,8 @@ func (b *Block) Timestamp() (time.Time, error) {
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid() bool {
-	slotDuration := time.Duration(b.SlotNumber()*params.SlotDuration) * time.Second
-	validTimeThreshold := params.GenesisTime.Add(slotDuration)
+	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
+	validTimeThreshold := params.GetConfig().GenesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 
@@ -258,10 +258,10 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 		return false
 	}
 
-	if parentSlot >= params.CycleLength-1 && attestationSlot < parentSlot-params.CycleLength+1 {
+	if parentSlot >= params.GetConfig().CycleLength-1 && attestationSlot < parentSlot-params.GetConfig().CycleLength+1 {
 		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestationSlot,
-			parentSlot-params.CycleLength+1)
+			parentSlot-params.GetConfig().CycleLength+1)
 		return false
 	}
 

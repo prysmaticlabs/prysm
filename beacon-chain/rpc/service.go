@@ -95,7 +95,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.SlotDuration) * time.Second,
+		slotAlignmentDuration: time.Duration(params.GetConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
@@ -169,11 +169,10 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
 	// This error is safe to ignore as we are initializing a proto timestamp
 	// from a constant value (genesis time is constant in the protocol
-	// and defined in the params package).
+	// and defined in the params.GetConfig().package).
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(params.GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
 	cState := s.beaconDB.GetCrystallizedState()
-
 	var keys []*pb.PublicKey
 	if req.AllValidators {
 		for _, val := range cState.Validators() {
@@ -185,7 +184,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 			return nil, errors.New("no public keys specified in request")
 		}
 	}
-
+	log.Info(len(cState.Validators()))
 	assignments, err := assignmentsForPublicKeys(keys, cState)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)

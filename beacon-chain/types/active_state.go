@@ -25,7 +25,7 @@ type ActiveState struct {
 func NewGenesisActiveState() *ActiveState {
 	// Bootstrap recent block hashes to all 0s for first 2 cycles.
 	var recentBlockHashes [][]byte
-	for i := 0; i < 2*int(params.CycleLength); i++ {
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
 	}
 
@@ -138,7 +138,7 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 	distance := block.SlotNumber() - parentSlot
 	existing := a.data.RecentBlockHashes
 	update := existing[distance:]
-	for len(update) < 2*int(params.CycleLength) {
+	for len(update) < 2*int(params.GetConfig().CycleLength) {
 		update = append(update, block.data.ParentHash)
 	}
 
@@ -228,7 +228,7 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) [][32]byte {
 	var signedParentHashes [][32]byte
 	start := block.SlotNumber() - attestation.Slot
-	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.CycleLength
+	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.GetConfig().CycleLength
 
 	recentBlockHashes := a.RecentBlockHashes()
 	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)

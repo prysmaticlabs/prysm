@@ -51,7 +51,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
-		genesisTimestamp:               params.GenesisTime,
+		genesisTimestamp:               params.GetConfig().GenesisTime,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
 		web3Service:                    cfg.Web3Service,
@@ -61,7 +61,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
 		devMode:                        cfg.DevMode,
-		slotAlignmentDuration:          params.SlotDuration,
+		slotAlignmentDuration:          params.GetConfig().SlotDuration,
 	}, nil
 }
 
@@ -76,12 +76,12 @@ func (c *ChainService) Start() {
 	// using utils.BlockingWait and passing in the desired
 	// slot duration.
 	//
-	// Instead of utilizing params.SlotDuration, we utilize a property of
+	// Instead of utilizing SlotDuration from config, we utilize a property of
 	// RPC service struct so this value can be set to 0 seconds
 	// as a parameter in tests. Otherwise, tests would sleep.
 	utils.BlockingWait(time.Duration(c.slotAlignmentDuration) * time.Second)
 
-	go c.updateHead(time.NewTicker(time.Second * time.Duration(params.SlotDuration)).C)
+	go c.updateHead(time.NewTicker(time.Second * time.Duration(params.GetConfig().SlotDuration)).C)
 	go c.blockProcessing()
 }
 
@@ -95,7 +95,7 @@ func (c *ChainService) Stop() error {
 // CurrentBeaconSlot based on the seconds since genesis.
 func (c *ChainService) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := uint64(time.Since(c.genesisTimestamp).Seconds())
-	return secondsSinceGenesis / params.SlotDuration
+	return secondsSinceGenesis / params.GetConfig().SlotDuration
 }
 
 // IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
