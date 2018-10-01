@@ -110,6 +110,9 @@ func TestBlockValidity(t *testing.T) {
 	if !b.IsValid(chainService, aState, cState, parentSlot, false) {
 		t.Fatalf("failed block validation")
 	}
+	if !b.IsValid(chainService, aState, cState, parentSlot, true) {
+		t.Fatalf("failed block validation")
+	}
 }
 
 func TestIsAttestationSlotNumberValid(t *testing.T) {

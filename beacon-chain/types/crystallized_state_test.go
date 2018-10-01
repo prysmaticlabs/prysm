@@ -147,6 +147,23 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	if cState.LastFinalizedSlot() != params.GetConfig().CycleLength-2 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
+
+	cState, _, err = cState.NewStateRecalculations(aState, block, true, true)
+	if err != nil {
+		t.Fatalf("failed to derive crystallized state: %v", err)
+	}
+	if cState.LastStateRecalc() != 4*params.GetConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.GetConfig().CycleLength, cState.LastStateRecalc())
+	}
+	if cState.LastJustifiedSlot() != 3*params.GetConfig().CycleLength-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
+	}
+	if cState.JustifiedStreak() != 4*params.GetConfig().CycleLength {
+		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.GetConfig().CycleLength, cState.JustifiedStreak())
+	}
+	if cState.LastFinalizedSlot() != 2*params.GetConfig().CycleLength-2 {
+		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
+	}
 }
 
 func TestProcessCrosslinks(t *testing.T) {
