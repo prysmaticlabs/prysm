@@ -265,4 +265,17 @@ func TestCalculateNewActiveState(t *testing.T) {
 	if len(aState.RecentBlockHashes()) != 2*int(params.GetConfig().CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
+
+	aState, err = aState.CalculateNewActiveState(block, cState, 0, true)
+	if err != nil {
+		t.Fatalf("failed to calculate new active state: %v", err)
+	}
+
+	if len(aState.PendingAttestations()) != 2 {
+		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
+	}
+
+	if len(aState.RecentBlockHashes()) != 2*int(params.GetConfig().CycleLength) {
+		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
+	}
 }
