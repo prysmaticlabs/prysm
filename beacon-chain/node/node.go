@@ -177,18 +177,25 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		}
 	}
 
+	enableCrossLinks := ctx.GlobalBool(utils.EnableCrossLinks.Name)
+	enableRewardChecking := ctx.GlobalBool(utils.EnableRewardChecking.Name)
+	enableAttestationValidity := ctx.GlobalBool(utils.EnableAttestationValidity.Name)
+
 	beaconChain, err := blockchain.NewBeaconChain(genesisJSON, b.db.DB())
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
 	}
 
 	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
-		BeaconDB:         b.db.DB(),
-		Web3Service:      web3Service,
-		Chain:            beaconChain,
-		BeaconBlockBuf:   10,
-		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
-		DevMode:          devMode,
+		BeaconDB:                  b.db.DB(),
+		Web3Service:               web3Service,
+		Chain:                     beaconChain,
+		BeaconBlockBuf:            10,
+		IncomingBlockBuf:          100, // Big buffer to accommodate other feed subscribers.
+		DevMode:                   devMode,
+		EnableCrossLinks:          enableCrossLinks,
+		EnableRewardChecking:      enableRewardChecking,
+		EnableAttestationValidity: enableAttestationValidity,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)

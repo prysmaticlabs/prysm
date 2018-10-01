@@ -36,16 +36,22 @@ type ChainService struct {
 	devMode                        bool
 	genesisTimestamp               time.Time
 	slotAlignmentDuration          uint64
+	enableCrossLinks               bool
+	enableRewardChecking           bool
+	enableAttestationValidity      bool
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf   int
-	IncomingBlockBuf int
-	Chain            *BeaconChain
-	Web3Service      *powchain.Web3Service
-	BeaconDB         ethdb.Database
-	DevMode          bool
+	BeaconBlockBuf            int
+	IncomingBlockBuf          int
+	Chain                     *BeaconChain
+	Web3Service               *powchain.Web3Service
+	BeaconDB                  ethdb.Database
+	DevMode                   bool
+	EnableCrossLinks          bool
+	EnableRewardChecking      bool
+	EnableAttestationValidity bool
 }
 
 // NewChainService instantiates a new service instance that will
@@ -65,6 +71,9 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
 		devMode:                        cfg.DevMode,
+		enableCrossLinks:               cfg.EnableCrossLinks,
+		enableRewardChecking:           cfg.EnableRewardChecking,
+		enableAttestationValidity:      cfg.EnableAttestationValidity,
 		slotAlignmentDuration:          params.GetConfig().SlotDuration,
 	}, nil
 }
@@ -247,7 +256,12 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			var stateTransitioned bool
 
 			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
-				cState, aState, err = cState.NewStateRecalculations(aState, block)
+				cState, aState, err = cState.NewStateRecalculations(
+					aState,
+					block,
+					c.enableCrossLinks,
+					c.enableRewardChecking,
+				)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
 					continue
@@ -255,7 +269,12 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 				stateTransitioned = true
 			}
 
-			aState, err = aState.CalculateNewActiveState(block, cState, parentBlock.SlotNumber())
+			aState, err = aState.CalculateNewActiveState(
+				block,
+				cState,
+				parentBlock.SlotNumber(),
+				c.enableAttestationValidity,
+			)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
 				continue
@@ -345,7 +364,7 @@ func (c *ChainService) blockProcessing() {
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
 
-			if valid := block.IsValid(c, aState, cState, parent.SlotNumber()); !valid {
+			if valid := block.IsValid(c, aState, cState, parent.SlotNumber(), c.enableAttestationValidity); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
 				continue
 			}
