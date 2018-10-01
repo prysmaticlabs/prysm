@@ -33,12 +33,12 @@ type ChainService struct {
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
-	devMode                        bool
 	genesisTimestamp               time.Time
 	slotAlignmentDuration          uint64
 	enableCrossLinks               bool
 	enableRewardChecking           bool
 	enableAttestationValidity      bool
+	enablePOWChain                 bool
 }
 
 // Config options for the service.
@@ -52,6 +52,7 @@ type Config struct {
 	EnableCrossLinks          bool
 	EnableRewardChecking      bool
 	EnableAttestationValidity bool
+	EnablePOWChain            bool
 }
 
 // NewChainService instantiates a new service instance that will
@@ -70,7 +71,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		blocksPendingProcessing:        [][32]byte{},
-		devMode:                        cfg.DevMode,
+		enablePOWChain:                 cfg.EnablePOWChain,
 		enableCrossLinks:               cfg.EnableCrossLinks,
 		enableRewardChecking:           cfg.EnableRewardChecking,
 		enableAttestationValidity:      cfg.EnableAttestationValidity,
@@ -350,7 +351,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			if !c.devMode && !c.doesPoWBlockExist(block) {
+			if c.enablePOWChain && !c.doesPoWBlockExist(block) {
 				log.Debugf("Proof-of-Work chain reference in block does not exist")
 				continue
 			}

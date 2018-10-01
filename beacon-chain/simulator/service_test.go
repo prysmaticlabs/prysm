@@ -63,7 +63,7 @@ func TestLifecycle(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         false,
+		EnablePOWChain:  true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -88,7 +88,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         false,
+		EnablePOWChain:  false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -124,7 +124,7 @@ func TestBlockRequest(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         true,
+		EnablePOWChain:  false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -170,7 +170,7 @@ func TestLastSimulatedSession(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         true,
+		EnablePOWChain:  false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {
