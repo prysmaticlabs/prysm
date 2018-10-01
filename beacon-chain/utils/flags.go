@@ -5,12 +5,11 @@ import (
 )
 
 var (
-	// DevFlag enables a local-development version of the beacon chain that stubs out
-	// a web3 PoW chain and other items related to signature verification. This allows
-	// a user to advance a beacon chain locally.
-	DevFlag = cli.BoolFlag{
-		Name:  "dev",
-		Usage: "Run the beacon chain in local development mode",
+	// DemoConfigFlag determines whether to launch a beacon chain using demo parameters
+	// such as shorter cycle length, fewer shards, and more.
+	DemoConfigFlag = cli.BoolFlag{
+		Name:  "demo-config",
+		Usage: " Run the beacon node using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
 	}
 	// SimulatorFlag determines if a node will run only as a simulator service.
 	SimulatorFlag = cli.BoolFlag{
@@ -54,6 +53,11 @@ var (
 	GenesisJSON = cli.StringFlag{
 		Name:  "genesis-json",
 		Usage: "Beacon node will bootstrap genesis state defined in genesis.json",
+	}
+	// EnablePOWChain tells the beacon node to use a real web3 endpoint.
+	EnablePOWChain = cli.BoolFlag{
+		Name:  "enable-powchain",
+		Usage: "Enable a real, web3 proof-of-work chain endpoint in the beacon node",
 	}
 	// EnableCrossLinks tells the beacon node to enable the verification of shard cross-links
 	// during block processing. Disabled by default.
