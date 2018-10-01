@@ -79,11 +79,4 @@ var (
 		Name:  "enable-attestations-validity",
 		Usage: "Enable the verification of attestation validity in a beacon node",
 	}
-	// EnableAttestationValidity in the beacon node. This enables a few more verification
-	// conditions during block processing and the creation of a block vote cache
-	// for attestations. Disabled by default.
-	EnableAttestationValidity = cli.BoolFlag{
-		Name:  "enable-attestations-validity",
-		Usage: "enable the verification of attestation validity in a beacon node",
-	}
 )
