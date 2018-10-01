@@ -249,21 +249,6 @@ func TestListenForProcessedAttestations(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Latest attestation slot number")
 
-	// Testing an error coming from the stream.
-	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, errors.New("stream error"))
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
-
-	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestAttestation(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, nil)
-
-	b.listenForProcessedAttestations(mockServiceClient)
-
-	testutil.AssertLogsContain(t, hook, "stream error")
-
 	// Creating a faulty stream will trigger error.
 	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(
@@ -273,7 +258,6 @@ func TestListenForProcessedAttestations(t *testing.T) {
 
 	b.listenForProcessedAttestations(mockServiceClient)
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
-	testutil.AssertLogsContain(t, hook, "Could not receive latest attestation from stream")
 
 	// Test that the routine exits when context is closed
 	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
@@ -319,21 +303,6 @@ func TestListenForAssignmentProposer(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Validator with pub key 0xA re-assigned to shard ID 2 for PROPOSER duty")
 
-	// Testing an error coming from the stream.
-	stream = internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
-	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, errors.New("stream error"))
-	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
-
-	mockServiceValidator = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorAssignments(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(stream, nil)
-
-	b.listenForAssignmentChange(mockServiceValidator)
-
-	testutil.AssertLogsContain(t, hook, "stream error")
-
 	// Creating a faulty stream will trigger error.
 	mockServiceValidator = internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceValidator.EXPECT().ValidatorAssignments(
@@ -356,7 +325,7 @@ func TestListenForAssignmentProposer(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 	b.cancel()
-	//
+
 	b.listenForAssignmentChange(mockServiceValidator)
 	testutil.AssertLogsContain(t, hook, "Context has been canceled so shutting down the loop")
 }

@@ -106,7 +106,10 @@ func (c *ChainService) Stop() error {
 // CurrentBeaconSlot based on the seconds since genesis.
 func (c *ChainService) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+	if math.Floor(secondsSinceGenesis/8.0)-1 < 0 {
+		return 0
+	}
+	return uint64(math.Floor(secondsSinceGenesis/8.0)) - 1
 }
 
 // CanonicalHead of the current beacon chain.
@@ -190,6 +193,11 @@ func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Blo
 	return c.chain.canonicalBlockForSlot(slotNumber)
 }
 
+// GenesisBlock returns the contents of the genesis block.
+func (c *ChainService) GenesisBlock() (*types.Block, error) {
+	return c.chain.genesisBlock()
+}
+
 // doesPoWBlockExist checks if the referenced PoW block exists.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.PowChainRef())
@@ -271,6 +279,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 					log.Errorf("Write crystallized state to disk failed: %v", err)
 					continue
 				}
+				log.WithField("slotNumber", block.SlotNumber()).Info("Cycle transition occurred, crystallized state updated")
 			}
 
 			// Save canonical block hash with slot number to DB.
@@ -315,6 +324,7 @@ func (c *ChainService) blockProcessing() {
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
+			log.WithField("slotNumber", block.SlotNumber()).Info("Received an incoming block for processing")
 			blockHash, err := block.Hash()
 			if err != nil {
 				log.Errorf("Failed to get hash of block: %v", err)
@@ -362,7 +372,6 @@ func (c *ChainService) blockProcessing() {
 			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
-			log.Info("Finished processing received block")
 		}
 	}
 }

@@ -126,7 +126,7 @@ func (s *Service) Start() {
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
-			log.Errorf("could not load TLS keys: %s", err)
+			log.Errorf("Could not load TLS keys: %s", err)
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
@@ -192,7 +192,6 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 			return nil, errors.New("no public keys specified in request")
 		}
 	}
-	log.Info(len(cState.Validators()))
 	assignments, err := assignmentsForPublicKeys(keys, cState)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
@@ -276,7 +275,7 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 	for {
 		select {
 		case attestation := <-s.incomingAttestation:
-			log.Info("Sending attestation to RPC clients")
+			log.Debugf("Sending attestation to RPC clients")
 			if err := stream.Send(attestation.Proto()); err != nil {
 				return err
 			}
@@ -361,7 +360,6 @@ func (s *Service) ValidatorAssignments(
 	for {
 		select {
 		case cState := <-s.canonicalStateChan:
-
 			log.Info("Sending new cycle assignments to validator clients")
 
 			var keys []*pb.PublicKey
