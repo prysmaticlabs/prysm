@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "bit.go",
         "marshal.go",
+        "math_helper.go",
         "service_registry.go",
         "types.go",
     ],
@@ -25,6 +26,7 @@ go_test(
     srcs = [
         "bit_test.go",
         "marshal_test.go",
+        "math_helper_test.go",
         "service_registry_test.go",
     ],
     embed = [":go_default_library"],

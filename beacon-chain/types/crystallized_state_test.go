@@ -184,7 +184,7 @@ func TestProcessCrosslinks(t *testing.T) {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
 
-	committee := []uint32{0, 4, 6}
+	committee := []uint32{4, 6}
 
 	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
 
