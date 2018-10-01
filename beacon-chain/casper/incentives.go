@@ -110,6 +110,6 @@ func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, 
 func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
 	newBalance := validator.Balance
 	quadraticQuotient := quadraticPenaltyQuotient()
-	newBalance -= newBalance / rewardQuotient * timeSinceLastConfirmation / quadraticQuotient
+	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
 	validator.Balance = newBalance
 }
