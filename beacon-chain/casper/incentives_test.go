@@ -142,7 +142,7 @@ func TestQuadraticPenalty(t *testing.T) {
 func TestRewardCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
 	participatedDeposit := uint64(3e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
@@ -154,10 +154,6 @@ func TestRewardCrosslink(t *testing.T) {
 	}
 	participatedDeposit = uint64(4e18)
 	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
-
-	if validator.Balance == 1e18 {
-		t.Errorf("validator balances have not been updated %d ", validator.Balance)
-	}
 
 }
 
