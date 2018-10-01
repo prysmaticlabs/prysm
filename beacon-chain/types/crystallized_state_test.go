@@ -208,12 +208,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
-
-	for _, index := range committee {
-		if cState.Validators()[index].Balance == 1e18 {
-			t.Errorf("validator with index %d did not have balance changed.", index)
-		}
-	}
+	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }
 
 func TestIsDynastyTransition(t *testing.T) {
