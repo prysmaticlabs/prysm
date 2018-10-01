@@ -1,6 +1,7 @@
 package casper
 
 import (
+	"github.com/prysmaticlabs/prysm/shared"
 	"math"
 	"testing"
 
@@ -25,7 +26,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	rewQuotient := RewardQuotient(1, validators)
 	participatedDeposit := 4 * defaultBalance
 	totalDeposit := 10 * defaultBalance
-	depositFactor := (2*participatedDeposit - totalDeposit) / totalDeposit
 	penaltyQuotient := quadraticPenaltyQuotient()
 	timeSinceFinality := uint64(5)
 
@@ -50,7 +50,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
 	}
 
-	expectedBalance = uint64(defaultBalance + (defaultBalance/rewQuotient)*depositFactor)
+	expectedBalance = uint64(defaultBalance + (defaultBalance/rewQuotient)*uint64(2*int64(participatedDeposit)-int64(totalDeposit))/uint64(totalDeposit))
 
 	if rewardedValidators[6].Balance != expectedBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
@@ -163,7 +163,7 @@ func TestRewardCrosslink(t *testing.T) {
 
 func TestPenaltyCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
@@ -171,7 +171,7 @@ func TestPenaltyCrosslink(t *testing.T) {
 	quadraticQuotient := quadraticPenaltyQuotient()
 
 	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
-	expectedBalance := 1e18 - 1e18/rewardQuotient + 100/quadraticQuotient
+	expectedBalance := 1e18 - 1e18/rewardQuotient*100/quadraticQuotient
 
 	if validator.Balance != expectedBalance {
 		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)
