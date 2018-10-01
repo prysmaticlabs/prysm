@@ -55,4 +55,17 @@ var (
 		Name:  "genesis-json",
 		Usage: "Beacon node will bootstrap genesis state defined in genesis.json",
 	}
+	// EnableCrossLinks tells the beacon node to enable the verification of shard cross-links
+	// during block processing. Disabled by default.
+	EnableCrossLinks = cli.BoolFlag{
+		Name:  "enable-cross-links",
+		Usage: "enable cross-link verification in the beacon chain",
+	}
+	// EnableRewardChecking tells the beacon node to apply Casper FFG rewards/penalties to validators
+	// at each cycle transition. This can mutate the validator set as bad validators can get kicked off.
+	// This is disabled by default.
+	EnableRewardChecking = cli.BoolFlag{
+		Name:  "enable-reward-checking",
+		Usage: "enable Casper FFG reward/penalty applications at each cycle transition",
+	}
 )
