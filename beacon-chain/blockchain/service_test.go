@@ -283,9 +283,10 @@ func TestCurrentBeaconSlot(t *testing.T) {
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
 	}
+
 	chainService, _ := NewChainService(ctx, cfg)
 	chainService.genesisTimestamp = time.Now()
-	if chainService.CurrentBeaconSlot() != 0 {
+	if uint(chainService.CurrentBeaconSlot()) != 0 {
 		t.Errorf("Expected us to be in the 0th slot, received %v", chainService.CurrentBeaconSlot())
 	}
 }
