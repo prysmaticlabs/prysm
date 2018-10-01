@@ -1,5 +1,7 @@
 package shared
 
+// IntegerSquareRoot defines a function that returns the
+// largest possible integer root of a number.
 func IntegerSquareRoot(n uint64) uint64 {
 	x := n
 	y := (x + 1) / 2
