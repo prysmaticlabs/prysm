@@ -31,11 +31,6 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
 		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
 	}
-	//TODO(#485): Skip for demo.
-	//committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 2)
-	//if committee.ArrayShardAndCommittee[0].ShardId != 3 {
-	//	t.Errorf("getShardAndCommitteesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
-	//}
 }
 
 func TestMaxValidators(t *testing.T) {

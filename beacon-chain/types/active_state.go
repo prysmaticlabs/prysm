@@ -202,7 +202,11 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
-func (a *ActiveState) CalculateNewActiveState(block *Block, cState *CrystallizedState, parentSlot uint64) (*ActiveState, error) {
+func (a *ActiveState) CalculateNewActiveState(
+	block *Block,
+	cState *CrystallizedState,
+	parentSlot uint64,
+	enableAttestationValidity bool) (*ActiveState, error) {
 	// Derive the new set of pending attestations.
 	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
 
@@ -212,18 +216,22 @@ func (a *ActiveState) CalculateNewActiveState(block *Block, cState *Crystallized
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
-	// TODO(485): Skip for demo.
 	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalc())
+
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-	//newBlockVoteCache, err := a.calculateNewVoteCache(block, cState)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to update vote cache: %v", err)
-	//}
+	blockVoteCache := a.blockVoteCache
+
+	if enableAttestationValidity {
+		blockVoteCache, err = a.calculateNewVoteCache(block, cState)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update vote cache: %v", err)
+		}
+	}
 
 	return NewActiveState(&pb.ActiveState{
 		PendingAttestations: newPendingAttestations,
 		RecentBlockHashes:   newRecentBlockHashes,
-	}, a.blockVoteCache), nil
+	}, blockVoteCache), nil
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.

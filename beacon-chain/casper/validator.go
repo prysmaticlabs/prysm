@@ -49,12 +49,6 @@ func QueuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	// TODO(#485): Skip for demo. Need to figure out why we want to subtract cycle length.
-	//if lastStateRecalc < params.GetConfig().CycleLength {
-	//	lastStateRecalc = 0
-	//} else {
-	//	lastStateRecalc = lastStateRecalc - params.GetConfig().CycleLength
-	//}
 	lowerBound := lastStateRecalc
 	upperBound := lastStateRecalc + params.GetConfig().CycleLength*2
 	if !(slot >= lowerBound && slot < upperBound) {
