@@ -253,7 +253,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, nil)
 
-	aState, err = aState.CalculateNewActiveState(block, cState, 0)
+	aState, err = aState.CalculateNewActiveState(block, cState, 0, false)
 	if err != nil {
 		t.Fatalf("failed to calculate new active state: %v", err)
 	}
