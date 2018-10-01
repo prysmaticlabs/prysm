@@ -55,7 +55,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		}},
 	})
 
-	newCState, _, err := cState.NewStateRecalculations(aState, block)
+	newCState, _, err := cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	aState := NewGenesisActiveState()
 	block := NewBlock(nil)
 
-	cState, _, err = cState.NewStateRecalculations(aState, block)
+	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, voteCache)
 
-	cState, _, err = cState.NewStateRecalculations(aState, block)
+	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
 
-	cState, _, err = cState.NewStateRecalculations(aState, block)
+	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}

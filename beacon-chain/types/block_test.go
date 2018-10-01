@@ -107,7 +107,7 @@ func TestBlockValidity(t *testing.T) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(chainService, aState, cState, parentSlot) {
+	if !b.IsValid(chainService, aState, cState, parentSlot, false) {
 		t.Fatalf("failed block validation")
 	}
 }
