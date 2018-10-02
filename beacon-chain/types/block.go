@@ -169,33 +169,21 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-	_, proposerIndex, err := casper.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalc(),
-		parentSlot)
-	if err != nil {
-		log.Errorf("Can not get proposer index %v", err)
-		return false
-	}
-	if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
-		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
-		return false
-	}
-
 	if enableAttestationValidity {
-		log.Debugf("Checking block validity. Recent block hash is %d",
-			aState.data.RecentBlockHashes[0],
-		)
-		for index, attestation := range b.Attestations() {
-			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
-				return false
-			}
+		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
+		_, proposerIndex, err := casper.ProposerShardAndIndex(
+			cState.ShardAndCommitteesForSlots(),
+			cState.LastStateRecalc(),
+			parentSlot)
+		if err != nil {
+			log.Errorf("Can not get proposer index %v", err)
+			return false
 		}
-	}
+		if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
+			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+			return false
+		}
 
-	if enableAttestationValidity {
 		log.Debugf("Checking block validity. Recent block hash is %d",
 			aState.data.RecentBlockHashes[0],
 		)
