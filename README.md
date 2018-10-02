@@ -46,20 +46,40 @@ Bazel manages all of the dependencies for you (including go and necessary compil
 
 # Instructions
 
-## Running Ethereum 2.0
+## Running Ethereum 2.0, v0.0.0 Release
 
-Build our system first
+To run our current release, v0.0.0, as a local demo, first build both parts of our system: a beacon chain node implementation, and a validator client.
 
 ```
 bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
 
-As part of our current release v0.0.0, we:
+As part of our current release v0.0.0, we allow users to start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INSTRUCTIONS.md).
 
-## Running an ETH2.0 Validator Client
+## Running the Beacon Node
 
-Once your beacon node is up, you'll need to attach a validator as a separate process. This validator is in charge of running attester/proposer responsibilities and processing shard cross links (shards to be designed in phase 2). This validator will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
+To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can you for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
+
+```
+bazel run //beacon-chain --\
+  --datadir /path/to/beacondatadir/
+  --rpc-port 4000
+  --genesis-json /path/to/genesis.json
+  --simulator
+  --demo-config
+
+```
+
+We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version, this gives us a good idea of what the system will need to handle in the wild.
+
+We also have a `--demo-config` flag that configures some internal parameters for you to run a local demo version of the system.
+
+If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time.
+
+## Running a Single, ETH2.0 Validator Client
+
+Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities(shards to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
 
 Run as follows:
 
@@ -71,9 +91,11 @@ bazel run //validator --\
 
 Then, the beacon node will update this validator with new blocks + crystallized states in order for the validator to act as an attester or proposer.
 
-### Running via Docker
+### Running Via Docker
 
-To run the validator within a docker container, use the `//validator:image` target.
+To run the beacon node or validator client  within a docker container, use the `//beacon-chain:image` and  `//validator:image` targets, respectively.
+
+Example:
 
 ```text
 bazel run //validator:image --\
