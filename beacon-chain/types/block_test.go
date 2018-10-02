@@ -107,10 +107,11 @@ func TestBlockValidity(t *testing.T) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	if !b.IsValid(chainService, aState, cState, parentSlot, false) {
+	genesisTime := params.GetConfig().GenesisTime
+	if !b.IsValid(chainService, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
-	if !b.IsValid(chainService, aState, cState, parentSlot, true) {
+	if !b.IsValid(chainService, aState, cState, parentSlot, true, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
 }
