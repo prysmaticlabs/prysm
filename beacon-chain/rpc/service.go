@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -46,6 +45,7 @@ type canonicalFetcher interface {
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	CurrentCrystallizedState() *types.CrystallizedState
+	GenesisBlock() (*types.Block, error)
 }
 
 type attestationService interface {
@@ -178,8 +178,12 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	// This error is safe to ignore as we are initializing a proto timestamp
 	// from a constant value (genesis time is constant in the protocol
 	// and defined in the params.GetConfig().package).
-	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
+	// Get the genesis timestamp from persistent storage.
+	genesis, err := s.chainService.GenesisBlock()
+	if err != nil {
+		return nil, fmt.Errorf("could not get genesis block: %v", err)
+	}
+
 	cState := s.chainService.CurrentCrystallizedState()
 	var keys []*pb.PublicKey
 	if req.AllValidators {
@@ -198,7 +202,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	}
 
 	return &pb.CurrentAssignmentsResponse{
-		GenesisTimestamp: protoGenesis,
+		GenesisTimestamp: genesis.Proto().GetTimestamp(),
 		Assignments:      assignments,
 	}, nil
 }
