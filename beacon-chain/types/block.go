@@ -147,7 +147,12 @@ func (b *Block) isSlotValid() bool {
 // IsValid is called to decide if an incoming p2p block can be processed. It checks for following conditions:
 // 1.) Ensure local time is large enough to process this block's slot.
 // 2.) Verify that the parent block's proposer's attestation is included.
-func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
+func (b *Block) IsValid(
+	chain chainSearchService,
+	aState *ActiveState,
+	cState *CrystallizedState,
+	parentSlot uint64,
+	enableAttestationValidity bool) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Errorf("Could not hash incoming block: %v", err)
@@ -183,6 +188,19 @@ func (b *Block) IsValid(chain chainSearchService, aState *ActiveState, cState *C
 		if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
 			log.Debugf("attestation invalid: %v", attestation)
 			return false
+		}
+	}
+
+	if enableAttestationValidity {
+		log.Debugf("Checking block validity. Contains block is %v, Recent block hash is %d",
+			hasBlock,
+			aState.data.RecentBlockHashes[0],
+		)
+		for index, attestation := range b.Attestations() {
+			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
+				log.Debugf("attestation invalid: %v", attestation)
+				return false
+			}
 		}
 	}
 
