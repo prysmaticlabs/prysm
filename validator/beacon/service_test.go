@@ -16,6 +16,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -301,7 +302,7 @@ func TestListenForAssignmentProposer(t *testing.T) {
 	stream := internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
 
 	// Testing proposer assignment.
-	assignedSlot := b.CurrentCycleStartSlot() + 2
+	assignedSlot := b.CurrentCycleStartSlot(params.DefaultConfig().CycleLength) + 2
 	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{Assignments: []*pb.Assignment{{
 		PublicKey:    &pb.PublicKey{PublicKey: []byte{'A'}},
 		ShardId:      2,
