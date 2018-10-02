@@ -103,7 +103,7 @@ func (a *Service) aggregateAttestations() {
 				continue
 			}
 
-			log.Debugf("Forwarding aggregated attestation 0x%x to proposers through grpc", h)
+			log.Infof("Forwarding aggregated attestation 0x%x to proposers through grpc", h)
 		}
 	}
 }

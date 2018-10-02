@@ -210,7 +210,7 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
-	return slotNumber >= c.LastStateRecalc()+params.GetConfig().CycleLength-1
+	return slotNumber >= c.LastStateRecalc()+params.GetConfig().CycleLength
 }
 
 // isDynastyTransition checks if a dynasty transition can be processed. At that point,
@@ -305,6 +305,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			blockVoteBalance = 0
 		}
 
+		// TODO(#542): This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
 				justifiedSlot = slot
@@ -318,14 +319,12 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			finalizedSlot = slot - params.GetConfig().CycleLength - 1
 		}
 
-		// TODO(485): Skip for demo.
-		//newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
-		//if err != nil {
-		//	return nil, nil, err
-		//}
+		newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
-	fmt.Println(len(rewardedValidators))
 	// Clean up old attestations.
 	newPendingAttestations := aState.cleanUpAttestations(lastStateRecalc)
 
@@ -344,7 +343,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
 		DynastySeed:                c.data.DynastySeed,
 		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
-		Validators:                 c.data.Validators,
+		Validators:                 rewardedValidators,
 		LastStateRecalc:            lastStateRecalc + params.GetConfig().CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
 		JustifiedStreak:            justifiedStreak,

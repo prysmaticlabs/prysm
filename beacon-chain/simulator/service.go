@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,7 +50,7 @@ type Config struct {
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		Delay:           time.Second * time.Duration(params.GetConfig().SlotDuration),
+		Delay:           time.Second * 5,
 		BlockRequestBuf: 100,
 	}
 }
@@ -155,19 +156,8 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			// If we have not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
-			var hash [32]byte
 			if sim.slotNum == 1 {
-				genesisBlock, err := sim.chainService.GenesisBlock()
-				if err != nil {
-					log.Errorf("Failed to retrieve genesis block: %v", err)
-					continue
-				}
-				hash, err = genesisBlock.Hash()
-				if err != nil {
-					log.Errorf("Failed to hash genesis block: %v", err)
-					continue
-				}
-				parentHash = hash[:]
+				parentHash = []byte("genesis")
 			} else {
 				parentHash = sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1][:]
 			}
@@ -188,9 +178,6 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            parentHash,
-				Attestations: []*pb.AggregatedAttestation{
-					{Slot: sim.slotNum - 1, AttesterBitfield: []byte{byte(255)}},
-				},
 			})
 
 			sim.slotNum++
@@ -223,10 +210,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-				Slot:             sim.slotNum - 1,
-				AttesterBitfield: []byte{byte(255)},
-			}}
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: nil}
 			sim.p2p.Send(res, msg.Peer)
 		}
 	}
