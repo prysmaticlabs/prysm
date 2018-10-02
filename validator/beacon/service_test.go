@@ -104,7 +104,7 @@ func TestCurrentBeaconSlot(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	b := NewBeaconValidator(context.Background(), []byte{}, &mockLifecycleClient{ctrl})
-	b.genesisTimestamp = time.Now().Add(time.Second * 8)
+	b.genesisTimestamp = time.Now()
 	if b.CurrentBeaconSlot() != 0 {
 		t.Errorf("Expected us to be in the 0th slot, received %v", b.CurrentBeaconSlot())
 	}
