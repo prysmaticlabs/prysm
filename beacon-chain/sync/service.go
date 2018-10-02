@@ -207,7 +207,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	if blockExists {
 		return
 	}
-	fmt.Println(ss.enableAttestationValidity)
+	
 	if ss.enableAttestationValidity {
 		// Verify attestation coming from proposer then forward block to the subscribers.
 		attestation := types.NewAttestation(response.Attestation)
