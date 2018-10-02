@@ -195,6 +195,7 @@ func (b *Block) IsValid(
 			}
 		}
 	}
+
 	return true
 }
 
