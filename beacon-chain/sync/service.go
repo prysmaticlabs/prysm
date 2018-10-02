@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

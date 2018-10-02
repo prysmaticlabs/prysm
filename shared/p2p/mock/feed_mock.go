@@ -7,7 +7,7 @@ package mock_p2p
 import (
 	reflect "reflect"
 
-	event "github.com/ethereum/go-ethereum/event"
+	event "github.com/prysmaticlabs/prysm/shared/event"
 	gomock "github.com/golang/mock/gomock"
 )
 

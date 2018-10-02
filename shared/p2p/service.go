@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 

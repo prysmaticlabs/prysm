@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
