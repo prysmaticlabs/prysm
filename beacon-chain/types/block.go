@@ -192,8 +192,7 @@ func (b *Block) IsValid(
 	}
 
 	if enableAttestationValidity {
-		log.Debugf("Checking block validity. Contains block is %v, Recent block hash is %d",
-			hasBlock,
+		log.Debugf("Checking block validity. Recent block hash is %d",
 			aState.data.RecentBlockHashes[0],
 		)
 		for index, attestation := range b.Attestations() {
@@ -205,8 +204,7 @@ func (b *Block) IsValid(
 	}
 
 	if enableAttestationValidity {
-		log.Debugf("Checking block validity. Contains block is %v, Recent block hash is %d",
-			hasBlock,
+		log.Debugf("Checking block validity. Recent block hash is %d",
 			aState.data.RecentBlockHashes[0],
 		)
 		for index, attestation := range b.Attestations() {
