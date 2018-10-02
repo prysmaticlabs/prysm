@@ -261,7 +261,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 			aState := c.chain.ActiveState()
 			var stateTransitioned bool
 
-			for cState.IsCycleTransition(block.SlotNumber()) {
+			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
 				cState, aState, err = cState.NewStateRecalculations(
 					aState,
 					block,
