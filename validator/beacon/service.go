@@ -136,7 +136,7 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 			s.role = assign.Role
 			// + 1 to account for the genesis block being slot 0.
-			s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot + 1
+			s.assignedSlot = s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) + assign.AssignedSlot + 1
 			s.shardID = assign.ShardId
 
 			log.Infof("Validator shuffled. Pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
@@ -177,11 +177,11 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		for _, assign := range assignment.Assignments {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
-				if s.CurrentCycleStartSlot() == 0 {
+				if s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) == 0 {
 					// +1 to account for genesis block being slot 0.
 					s.assignedSlot = params.DemoConfig().CycleLength + assign.AssignedSlot + 1
 				} else {
-					s.assignedSlot = s.CurrentDemoCycleStartSlot() + assign.AssignedSlot + 1
+					s.assignedSlot = s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) + assign.AssignedSlot + 1
 				}
 				s.shardID = assign.ShardId
 
@@ -293,15 +293,8 @@ func (s *Service) CurrentBeaconSlot() uint64 {
 }
 
 // CurrentCycleStartSlot returns the slot at which the current cycle started.
-func (s *Service) CurrentCycleStartSlot() uint64 {
+func (s *Service) CurrentCycleStartSlot(cycleLength uint64) uint64 {
 	currentSlot := s.CurrentBeaconSlot()
-	cycleNum := math.Floor(float64(currentSlot) / float64(params.DefaultConfig().CycleLength))
-	return uint64(cycleNum) * params.DefaultConfig().CycleLength
-}
-
-// CurrentDemoCycleStartSlot returns the slot at which the current cycle started for demo config.
-func (s *Service) CurrentDemoCycleStartSlot() uint64 {
-	currentSlot := s.CurrentBeaconSlot()
-	cycleNum := math.Floor(float64(currentSlot) / float64(params.DemoConfig().CycleLength))
-	return uint64(cycleNum) * params.DemoConfig().CycleLength
+	cycleNum := math.Floor(float64(currentSlot / cycleLength))
+	return uint64(cycleNum) * cycleLength
 }
