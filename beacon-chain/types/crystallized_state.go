@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"gx/ipfs/QmTWEDbLX2d4NiMgPks6J2crRz47BamBtP16WiFuTL6Ydm/common/log"
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
