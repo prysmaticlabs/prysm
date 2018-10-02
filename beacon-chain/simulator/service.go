@@ -9,11 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,7 +49,7 @@ type Config struct {
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		Delay:           time.Second * time.Duration(params.DefaultConfig().SlotDuration),
+		Delay:           time.Second * time.Duration(params.GetConfig().SlotDuration),
 		BlockRequestBuf: 100,
 	}
 }
