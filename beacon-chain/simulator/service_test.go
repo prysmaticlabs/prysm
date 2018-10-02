@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
@@ -50,6 +51,10 @@ func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState 
 	return types.NewCrystallizedState(&pb.CrystallizedState{})
 }
 
+func (mc *mockChainService) GenesisBlock() (*types.Block, error) {
+	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := database.NewKVStore()
@@ -60,7 +65,7 @@ func TestLifecycle(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         false,
+		EnablePOWChain:  true,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -85,7 +90,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         false,
+		EnablePOWChain:  false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -121,7 +126,7 @@ func TestBlockRequest(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         true,
+		EnablePOWChain:  false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 
@@ -167,7 +172,7 @@ func TestLastSimulatedSession(t *testing.T) {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         true,
+		EnablePOWChain:  false,
 	}
 	sim := NewSimulator(context.Background(), cfg)
 	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {
@@ -182,7 +187,7 @@ func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
 	}
-	if DefaultConfig().Delay != time.Second*5 {
+	if DefaultConfig().Delay != time.Second*time.Duration(params.GetConfig().SlotDuration) {
 		t.Errorf("incorrect default config for delay")
 	}
 }

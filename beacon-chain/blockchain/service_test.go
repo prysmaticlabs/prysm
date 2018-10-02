@@ -315,6 +315,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		BeaconDB:       db.DB(),
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
+		EnablePOWChain: true,
 	}
 	chainService, _ := NewChainService(ctx, cfg)
 
@@ -377,7 +378,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 	chainService, _ := NewChainService(ctx, cfg)
 
-	genesis, err := beaconChain.GenesisBlock()
+	genesis, err := beaconChain.genesisBlock()
 	if err != nil {
 		t.Fatalf("unable to get canonical head: %v", err)
 	}
