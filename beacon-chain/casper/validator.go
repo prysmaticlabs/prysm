@@ -13,7 +13,7 @@ const bitsInByte = 8
 
 // ActiveValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
-func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
+func ActiveValidatorIndices(validators []*ValidatorRecord, dynasty uint64) []uint32 {
 	var indices []uint32
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
@@ -25,7 +25,7 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 
 // ExitedValidatorIndices filters out exited validators based on start and end dynasty
 // and returns their indices in a list.
-func ExitedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
+func ExitedValidatorIndices(validators []*ValidatorRecord, dynasty uint64) []uint32 {
 	var indices []uint32
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty < dynasty && validators[i].EndDynasty <= dynasty {
@@ -37,7 +37,7 @@ func ExitedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []
 
 // QueuedValidatorIndices filters out queued validators based on start and end dynasty
 // and returns their indices in a list.
-func QueuedValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
+func QueuedValidatorIndices(validators []*ValidatorRecord, dynasty uint64) []uint32 {
 	var indices []uint32
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty > dynasty {
@@ -111,7 +111,7 @@ func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastSta
 }
 
 // ValidatorIndex returns the index of the validator given an input public key.
-func ValidatorIndex(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRecord) (uint32, error) {
+func ValidatorIndex(pubKey []byte, dynasty uint64, validators []*ValidatorRecord) (uint32, error) {
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 
 	for _, index := range activeValidators {
@@ -124,7 +124,7 @@ func ValidatorIndex(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRec
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
-func ValidatorShardID(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+func ValidatorShardID(pubKey []byte, dynasty uint64, validators []*ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
 	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
 		return 0, err
@@ -145,7 +145,7 @@ func ValidatorShardID(pubKey []byte, dynasty uint64, validators []*pb.ValidatorR
 
 // ValidatorSlotAndResponsibility returns a validator's assingned slot number
 // and whether it should act as an attester or proposer.
-func ValidatorSlotAndResponsibility(pubKey []byte, dynasty uint64, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, string, error) {
+func ValidatorSlotAndResponsibility(pubKey []byte, dynasty uint64, validators []*ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, string, error) {
 	index, err := ValidatorIndex(pubKey, dynasty, validators)
 	if err != nil {
 		return 0, "", err
@@ -167,7 +167,7 @@ func ValidatorSlotAndResponsibility(pubKey []byte, dynasty uint64, validators []
 }
 
 // TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
-func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+func TotalActiveValidatorDeposit(dynasty uint64, validators []*ValidatorRecord) uint64 {
 	var totalDeposit uint64
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 
@@ -178,7 +178,7 @@ func TotalActiveValidatorDeposit(dynasty uint64, validators []*pb.ValidatorRecor
 }
 
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
-func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+func TotalActiveValidatorDepositInEth(dynasty uint64, validators []*ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	depositInEth := totalDeposit / uint64(params.GetConfig().EtherDenomination)
 
