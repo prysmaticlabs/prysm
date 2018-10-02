@@ -380,7 +380,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			log.Infof("Finished processing received block: 0%x", blockHash)
+			log.Infof("Finished processing received block: 0x%x", blockHash)
 
 			// We push the hash of the block we just stored to a pending processing
 			// slice the fork choice rule will utilize.
