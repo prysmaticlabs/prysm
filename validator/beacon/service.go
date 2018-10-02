@@ -176,7 +176,11 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		for _, assign := range assignment.Assignments {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
-				s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
+				if s.CurrentCycleStartSlot() == 0 {
+					s.assignedSlot = params.DemoConfig().CycleLength + assign.AssignedSlot
+				} else {
+					s.assignedSlot = s.CurrentDemoCycleStartSlot() + assign.AssignedSlot
+				}
 				s.shardID = assign.ShardId
 
 				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
@@ -280,7 +284,7 @@ func (s *Service) PublicKey() []byte {
 // CurrentBeaconSlot based on the genesis timestamp of the protocol.
 func (s *Service) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / params.DefaultConfig().SlotDuration))
+	return uint64(math.Floor(secondsSinceGenesis/params.DefaultConfig().SlotDuration)) - 1
 }
 
 // CurrentCycleStartSlot returns the slot at which the current cycle started.
@@ -288,4 +292,11 @@ func (s *Service) CurrentCycleStartSlot() uint64 {
 	currentSlot := s.CurrentBeaconSlot()
 	cycleNum := math.Floor(float64(currentSlot) / float64(params.DefaultConfig().CycleLength))
 	return uint64(cycleNum) * params.DefaultConfig().CycleLength
+}
+
+// CurrentDemoCycleStartSlot returns the slot at which the current cycle started for demo config.
+func (s *Service) CurrentDemoCycleStartSlot() uint64 {
+	currentSlot := s.CurrentBeaconSlot()
+	cycleNum := math.Floor(float64(currentSlot) / float64(params.DemoConfig().CycleLength))
+	return uint64(cycleNum) * params.DemoConfig().CycleLength
 }
