@@ -2,9 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "mclock.go",
-    ],
+    srcs = ["mclock.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/mclock",
     visibility = ["//visibility:public"],
     deps = ["@com_github_aristanetworks_goarista//monotime:go_default_library"],
