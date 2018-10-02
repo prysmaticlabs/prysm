@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
@@ -18,6 +17,7 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"

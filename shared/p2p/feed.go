@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 // Feed is a one to many subscription feed of the argument type.

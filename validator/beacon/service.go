@@ -7,10 +7,10 @@ import (
 	"math"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/prysmaticlabs/prysm/validator/utils"
 	"github.com/sirupsen/logrus"

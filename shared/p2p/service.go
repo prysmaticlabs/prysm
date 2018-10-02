@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 
 	floodsub "github.com/libp2p/go-floodsub"
