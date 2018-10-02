@@ -120,14 +120,14 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	if err != nil {
 		// If this RPC request fails, the entire system should fatal as it is critical for
 		// the validator to begin this way.
-		log.Fatalf("Could not fetch genesis time and latest canonical state from beacon node: %v", err)
+		log.Fatalf("could not fetch genesis time and latest canonical state from beacon node: %v", err)
 	}
 
 	// Determine what slot the beacon node is in by checking the number of seconds
 	// since the genesis block.
 	genesisTimestamp, err := ptypes.Timestamp(res.GetGenesisTimestamp())
 	if err != nil {
-		log.Fatalf("Cannot compute genesis timestamp: %v", err)
+		log.Fatalf("cannot compute genesis timestamp: %v", err)
 	}
 
 	log.Infof("Setting validator genesis time to %s", genesisTimestamp.Format(time.UnixDate))
@@ -170,19 +170,13 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 
 		if err != nil {
 			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
-			break
+			continue
 		}
 
 		for _, assign := range assignment.Assignments {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
-				// If the current cycle is genesis, we set the assigned slot to be
-				// params.CycleLength + assign.AssignedSlot
-				if s.CurrentCycleStartSlot() == 0 {
-					s.assignedSlot = params.DefaultConfig().CycleLength + assign.AssignedSlot
-				} else {
-					s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
-				}
+				s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
 				s.shardID = assign.ShardId
 
 				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
@@ -252,7 +246,7 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 		}
 		if err != nil {
 			log.Errorf("Could not receive latest attestation from stream: %v", err)
-			break
+			continue
 		}
 
 		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
@@ -286,10 +280,7 @@ func (s *Service) PublicKey() []byte {
 // CurrentBeaconSlot based on the genesis timestamp of the protocol.
 func (s *Service) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	if math.Floor(secondsSinceGenesis/8.0)-1 < 0 {
-		return 0
-	}
-	return uint64(math.Floor(secondsSinceGenesis/params.DefaultConfig().SlotDuration)) - 1
+	return uint64(math.Floor(secondsSinceGenesis / params.DefaultConfig().SlotDuration))
 }
 
 // CurrentCycleStartSlot returns the slot at which the current cycle started.
