@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "mclock.go",
-        "simclock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/mclock",
     visibility = ["//visibility:public"],
