@@ -55,18 +55,7 @@ bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
 
-## Running via Docker
-
-To run the beacon node within a docker container, use the `//beacon-chain:image` target.
-
-```text
-bazel run //beacon-chain:image --\
-  --web3provider  ws://127.0.0.1:8546 \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --simulator \
-  --verbosity debug
-```
+As part of our current release v0.0.0, we:
 
 ## Running an ETH2.0 Validator Client
 
