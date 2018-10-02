@@ -79,7 +79,7 @@ If you want to see what's happening in the system underneath the hood, add a `--
 
 ## Running a Single, ETH2.0 Validator Client
 
-Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities (shards to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
+Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities (shard state execution to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
 
 To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
 
