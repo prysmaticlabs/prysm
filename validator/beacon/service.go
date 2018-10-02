@@ -295,6 +295,6 @@ func (s *Service) CurrentBeaconSlot() uint64 {
 // CurrentCycleStartSlot returns the slot at which the current cycle started.
 func (s *Service) CurrentCycleStartSlot(cycleLength uint64) uint64 {
 	currentSlot := s.CurrentBeaconSlot()
-	cycleNum := math.Floor(float64(currentSlot / cycleLength))
+	cycleNum := currentSlot / cycleLength
 	return uint64(cycleNum) * cycleLength
 }
