@@ -46,51 +46,7 @@ Bazel manages all of the dependencies for you (including go and necessary compil
 
 # Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin running our system
-
-## Running a Local Geth Node
-
-To start a local Geth node, you can create your own `genesis.json` file similar to:
-
-```json
-{
-    "config": {
-        "chainId": 12345,
-        "homesteadBlock": 0,
-        "eip155Block": 0,
-        "eip158Block": 0
-    },
-    "difficulty": "200",
-    "gasLimit": "210000000000",
-    "alloc": {
-        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" }
-    }
-}
-```
-
-The `alloc` portion specifies account addresses with prefunded ETH when the Ethereum blockchain is created. You can modify this section of the genesis to include your own test address and prefund it with 100ETH.
-
-Then, you can build and init a new instance of a local, Ethereum blockchain as follows:
-
-```
-geth init /path/to/genesis.json --datadir /path/to/your/datadir
-geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*" --rpc
-````
-
-It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
-
-Then, the geth console can start up and you can start a miner as follows:
-
-    > personal.newAccount()
-    > miner.setEtherbase(eth.accounts[0])
-    > miner.start(1)
-
-Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
-
-
-# Running Ethereum 2.0
-
-**NOTE**: This section is in flux, much of this will likely change as the beacon chain spec evolves.
+## Running Ethereum 2.0
 
 Build our system first
 
@@ -99,48 +55,7 @@ bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
 
-## Step 1: Deploy a Validator Registation Contract
-
-Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/deployVRC/README.md).
-
-## Step 2a: Running a Beacon Node as a Validator or Observer
-
-Make sure a geth node is running as a separate process according to the instructions from the previous section. Then, you can run a full beacon node as follows:
-
-```
-bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --validator
-```
-
-This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding validators to connect to it, and begins listening for p2p events.
-
-To try out the beacon node in development by simulating incoming blocks, run the same command above but enable the `--simulator` and a debug level, log verbosity with `--verbosity debug` to see everything happening underneath the hood.
-
-```
-bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --validator \
-  --simulator \
-  --verbosity debug
-```
-
-Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/VALIDATOR_REGISTRATION.md)
-
-If you don't want to deposit ETH and become a validator, one option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
-in validator duties such as proposing or attesting blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.
-
-```
-bazel run //beacon-chain --\
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-```
-
-### Running via Docker
+## Running via Docker
 
 To run the beacon node within a docker container, use the `//beacon-chain:image` target.
 
@@ -153,7 +68,7 @@ bazel run //beacon-chain:image --\
   --verbosity debug
 ```
 
-## Step 3: Running a Beacon/Sharding validator
+## Running an ETH2.0 Validator Client
 
 Once your beacon node is up, you'll need to attach a validator as a separate process. This validator is in charge of running attester/proposer responsibilities and processing shard cross links (shards to be designed in phase 2). This validator will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
 
