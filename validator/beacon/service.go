@@ -135,7 +135,8 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	for _, assign := range res.Assignments {
 		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 			s.role = assign.Role
-			s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
+			// + 1 to account for the genesis block being slot 0.
+			s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot + 1
 			s.shardID = assign.ShardId
 
 			log.Infof("Validator shuffled. Pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
@@ -177,9 +178,10 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
 				if s.CurrentCycleStartSlot() == 0 {
-					s.assignedSlot = params.DemoConfig().CycleLength + assign.AssignedSlot
+					// +1 to account for genesis block being slot 0.
+					s.assignedSlot = params.DemoConfig().CycleLength + assign.AssignedSlot + 1
 				} else {
-					s.assignedSlot = s.CurrentDemoCycleStartSlot() + assign.AssignedSlot
+					s.assignedSlot = s.CurrentDemoCycleStartSlot() + assign.AssignedSlot + 1
 				}
 				s.shardID = assign.ShardId
 
