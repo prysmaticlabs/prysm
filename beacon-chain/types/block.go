@@ -185,37 +185,6 @@ func (b *Block) IsValid(
 	}
 
 	if enableAttestationValidity {
-		for index, attestation := range b.Attestations() {
-			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
-				return false
-			}
-		}
-
-		log.Debugf("Checking block validity. Recent block hash is %d",
-			aState.data.RecentBlockHashes[0],
-		)
-		for index, attestation := range b.Attestations() {
-			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
-				return false
-			}
-		}
-	}
-
-	if enableAttestationValidity {
-		log.Debugf("Checking block validity. Recent block hash is %d",
-			aState.data.RecentBlockHashes[0],
-		)
-		for index, attestation := range b.Attestations() {
-			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
-				return false
-			}
-		}
-	}
-
-	if enableAttestationValidity {
 		log.Debugf("Checking block validity. Recent block hash is %d",
 			aState.data.RecentBlockHashes[0],
 		)
