@@ -182,7 +182,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
-				SlotNumber:            sim.slotNum,
+				SlotNumber:            sim.chainService.CurrentBeaconSlot(),
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],
