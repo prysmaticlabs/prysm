@@ -200,7 +200,7 @@ func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Blo
 	return c.chain.canonicalBlockForSlot(slotNumber)
 }
 
-// Genesisblock returns the contents of the genesis block.
+// GenesisBlock returns the contents of the genesis block.
 func (c *ChainService) GenesisBlock() (*types.Block, error) {
 	return c.chain.genesisBlock()
 }
