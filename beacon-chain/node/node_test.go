@@ -20,6 +20,7 @@ func TestNodeValidator_Builds(t *testing.T) {
 		set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 		tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 		set.String("datadir", tmp, "node data directory")
+		set.Bool("enable-powchain", true, "enable powchain")
 
 		context := cli.NewContext(app, set, nil)
 
@@ -47,7 +48,8 @@ func TestNodeStart(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
-	set.Bool("dev", true, "dev mode")
+	set.Bool("enable-powchain", false, "no powchain service")
+	set.Bool("demo-config", true, "demo configuration")
 
 	context := cli.NewContext(app, set, nil)
 
@@ -68,7 +70,8 @@ func TestNodeClose(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
-	set.Bool("dev", true, "dev mode")
+	set.Bool("enable-powchain", false, "no powchain service")
+	set.Bool("demo-config", true, "demo configuration")
 
 	context := cli.NewContext(app, set, nil)
 
