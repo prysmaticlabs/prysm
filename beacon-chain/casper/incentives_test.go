@@ -1,9 +1,10 @@
 package casper
 
 import (
-	"github.com/prysmaticlabs/prysm/shared"
 	"math"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
