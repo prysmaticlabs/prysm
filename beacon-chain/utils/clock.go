@@ -23,7 +23,7 @@ func (RealClock) Now() time.Time {
 // CurrentBeaconSlot based on the seconds since genesis.
 func CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+	return uint64(math.Floor(secondsSinceGenesis/float64(params.GetConfig().SlotDuration))) - 1
 }
 
 // BlockingWait sleeps until a specific time is reached after

@@ -93,8 +93,8 @@ func NewBeaconChain(genesisJSON string, db ethdb.Database) (*BeaconChain, error)
 	return beaconChain, nil
 }
 
-// GenesisBlock returns the canonical, genesis block.
-func (b *BeaconChain) GenesisBlock() (*types.Block, error) {
+// genesisBlock returns the canonical, genesis block.
+func (b *BeaconChain) genesisBlock() (*types.Block, error) {
 	genesisExists, err := b.db.Has(genesisLookupKey)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (b *BeaconChain) CanonicalHead() (*types.Block, error) {
 	// If there has not been a canonical head stored yet, we
 	// return the genesis block of the chain.
 	if !has {
-		return b.GenesisBlock()
+		return b.genesisBlock()
 	}
 	bytes, err := b.db.Get(canonicalHeadLookupKey)
 	if err != nil {

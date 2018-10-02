@@ -16,6 +16,14 @@ func DefaultConfig() *Config {
 	}
 }
 
+// DemoConfig for running the system under shorter defaults.
+func DemoConfig() *Config {
+	return &Config{
+		SlotDuration: 8.0,
+		CycleLength:  5,
+	}
+}
+
 // DefaultCollationSizeLimit is the integer value representing the maximum
 // number of bytes allowed in a given collation.
 func DefaultCollationSizeLimit() int64 {

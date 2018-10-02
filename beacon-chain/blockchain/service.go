@@ -116,7 +116,10 @@ func (c *ChainService) Stop() error {
 // CurrentBeaconSlot based on the seconds since genesis.
 func (c *ChainService) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+	if secondsSinceGenesis-float64(params.GetConfig().SlotDuration) < 0 {
+		return 0
+	}
+	return uint64(math.Floor(secondsSinceGenesis/float64(params.GetConfig().SlotDuration))) - 1
 }
 
 // CanonicalHead of the current beacon chain.
@@ -198,6 +201,11 @@ func (c *ChainService) CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, er
 // has been saved in the db.
 func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
 	return c.chain.canonicalBlockForSlot(slotNumber)
+}
+
+// GenesisBlock returns the contents of the genesis block.
+func (c *ChainService) GenesisBlock() (*types.Block, error) {
+	return c.chain.genesisBlock()
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
@@ -375,14 +383,13 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			log.Infof("Finished processing received block: %x", blockHash)
+			log.Infof("Finished processing received block: 0x%x", blockHash)
 
 			// We push the hash of the block we just stored to a pending processing
 			// slice the fork choice rule will utilize.
 			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
-			log.Info("Finished processing received block")
 		}
 	}
 }
