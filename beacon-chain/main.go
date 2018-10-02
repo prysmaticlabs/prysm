@@ -60,7 +60,7 @@ VERSION:
 	app.Action = startNode
 
 	app.Flags = []cli.Flag{
-		utils.DevFlag,
+		utils.DemoConfigFlag,
 		utils.SimulatorFlag,
 		utils.VrcContractFlag,
 		utils.PubKeyFlag,
@@ -69,6 +69,10 @@ VERSION:
 		utils.CertFlag,
 		utils.KeyFlag,
 		utils.GenesisJSON,
+		utils.EnableCrossLinks,
+		utils.EnableRewardChecking,
+		utils.EnableAttestationValidity,
+		utils.EnablePOWChain,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,

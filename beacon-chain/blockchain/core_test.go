@@ -78,12 +78,12 @@ func TestNewBeaconChain(t *testing.T) {
 		t.Errorf("crystallized states not equal. received: %v, wanted: %v", beaconChain.CrystallizedState(), cState)
 	}
 
-	if _, err := beaconChain.GenesisBlock(); err != nil {
+	if _, err := beaconChain.genesisBlock(); err != nil {
 		t.Errorf("Getting new beaconchain genesis failed: %v", err)
 	}
 }
 
-func TestGetGenesisBlock(t *testing.T) {
+func TestGetgenesisBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -102,7 +102,7 @@ func TestGetGenesisBlock(t *testing.T) {
 		t.Errorf("unable to save key value of genesis: %v", err)
 	}
 
-	genesisBlock, err := beaconChain.GenesisBlock()
+	genesisBlock, err := beaconChain.genesisBlock()
 	if err != nil {
 		t.Errorf("unable to get key value of genesis: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestGetGenesisBlock(t *testing.T) {
 	}
 }
 
-func TestGetGenesisBlock_GenesisNotExist(t *testing.T) {
+func TestGetgenesisBlock_GenesisNotExist(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -124,7 +124,7 @@ func TestGetGenesisBlock_GenesisNotExist(t *testing.T) {
 		t.Errorf("unable to delete key value of genesis: %v", err)
 	}
 
-	genesisBlock, err := beaconChain.GenesisBlock()
+	genesisBlock, err := beaconChain.genesisBlock()
 	if err != nil {
 		t.Errorf("unable to get key value of genesis: %v", err)
 	}

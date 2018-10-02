@@ -61,15 +61,15 @@ func NewBeaconChain(genesisJSON string, db ethdb.Database) (*BeaconChain, error)
 		// Crystallized state hash is predefined so error can be safely ignored
 		// #nosec G104
 		crystallizedStateHash, _ := crystallized.Hash()
-		genesisBlock := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
-		genesisMarshall, err := proto.Marshal(genesisBlock.Proto())
+		GenesisBlock := types.NewGenesisBlock(activeStateHash, crystallizedStateHash)
+		genesisMarshall, err := proto.Marshal(GenesisBlock.Proto())
 		if err != nil {
 			return nil, err
 		}
 		if err := beaconChain.db.Put(genesisLookupKey, genesisMarshall); err != nil {
 			return nil, err
 		}
-		if err := beaconChain.saveBlock(genesisBlock); err != nil {
+		if err := beaconChain.saveBlock(GenesisBlock); err != nil {
 			return nil, err
 		}
 	}

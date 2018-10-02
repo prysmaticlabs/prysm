@@ -4,17 +4,15 @@ package simulator
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/validator/params"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -29,7 +27,7 @@ type Simulator struct {
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
 	beaconDB               ethdb.Database
-	devMode                bool
+	enablePOWChain         bool
 	delay                  time.Duration
 	slotNum                uint64
 	broadcastedBlocks      map[[32]byte]*types.Block
@@ -45,7 +43,7 @@ type Config struct {
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
 	BeaconDB        ethdb.Database
-	DevMode         bool
+	EnablePOWChain  bool
 }
 
 // DefaultConfig options for the simulator.
@@ -67,7 +65,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		chainService:           cfg.ChainService,
 		beaconDB:               cfg.BeaconDB,
 		delay:                  cfg.Delay,
-		devMode:                cfg.DevMode,
+		enablePOWChain:         cfg.EnablePOWChain,
 		slotNum:                1,
 		broadcastedBlocks:      make(map[[32]byte]*types.Block),
 		broadcastedBlockHashes: [][32]byte{},
@@ -177,10 +175,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
 
 			var powChainRef []byte
-			if !sim.devMode {
+			if sim.enablePOWChain {
 				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
 			} else {
-				powChainRef = []byte("stub")
+				powChainRef = []byte{byte(sim.slotNum)}
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
