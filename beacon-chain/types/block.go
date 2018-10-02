@@ -164,9 +164,9 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	for !b.isSlotValid() {
-		time.Sleep(time.Second)
-		log.Debugf("Waiting. Slot of block is too high: %d", b.SlotNumber())
+	if !b.isSlotValid() {
+		log.Errorf("Slot of block is too high: %d", b.SlotNumber())
+		return false
 	}
 
 	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
@@ -184,15 +184,14 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	// TODO: Skip for demo.
-	//for index, attestation := range b.Attestations() {
-	//	if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
-	//		log.Debugf("attestation invalid: %v", attestation)
-	//		return false
-	//	}
-	//}
-
 	if enableAttestationValidity {
+		for index, attestation := range b.Attestations() {
+			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
+				log.Debugf("attestation invalid: %v", attestation)
+				return false
+			}
+		}
+
 		log.Debugf("Checking block validity. Recent block hash is %d",
 			aState.data.RecentBlockHashes[0],
 		)

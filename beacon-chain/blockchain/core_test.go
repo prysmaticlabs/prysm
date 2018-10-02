@@ -83,7 +83,7 @@ func TestNewBeaconChain(t *testing.T) {
 	}
 }
 
-func TestGetgenesisBlock(t *testing.T) {
+func TestGetGenesisBlock(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
@@ -116,7 +116,7 @@ func TestGetgenesisBlock(t *testing.T) {
 	}
 }
 
-func TestGetgenesisBlock_GenesisNotExist(t *testing.T) {
+func TestGetGenesisBlock_GenesisNotExist(t *testing.T) {
 	beaconChain, db := startInMemoryBeaconChain(t)
 	defer db.Close()
 
