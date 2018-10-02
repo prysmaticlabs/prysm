@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -189,7 +189,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            parentHash,
 				Attestations: []*pb.AggregatedAttestation{
-					{Slot: sim.slotNum -1, AttesterBitfield: []byte{byte(255)}},
+					{Slot: sim.slotNum - 1, AttesterBitfield: []byte{byte(255)}},
 				},
 			})
 
@@ -224,7 +224,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-				Slot: sim.slotNum - 1,
+				Slot:             sim.slotNum - 1,
 				AttesterBitfield: []byte{byte(255)},
 			}}
 			sim.p2p.Send(res, msg.Peer)

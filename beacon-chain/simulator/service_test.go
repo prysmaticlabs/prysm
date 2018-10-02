@@ -10,12 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -187,7 +187,7 @@ func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
 	}
-	if DefaultConfig().Delay != time.Second * time.Duration(params.GetConfig().SlotDuration) {
+	if DefaultConfig().Delay != time.Second*time.Duration(params.GetConfig().SlotDuration) {
 		t.Errorf("incorrect default config for delay")
 	}
 }
