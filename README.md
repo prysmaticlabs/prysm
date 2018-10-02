@@ -59,7 +59,7 @@ As part of our current release v0.0.0, we allow users to start a beacon chain fr
 
 ## Running the Beacon Node
 
-To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can you for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
+To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
 
 ```
 bazel run //beacon-chain --\
@@ -71,7 +71,7 @@ bazel run //beacon-chain --\
 
 ```
 
-We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version, this gives us a good idea of what the system will need to handle in the wild.
+We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version and you'll only be running 1 validator client, this gives us a good idea of what the system will need to handle in the wild and will help advance the chain.
 
 We also have a `--demo-config` flag that configures some internal parameters for you to run a local demo version of the system.
 
@@ -79,7 +79,7 @@ If you want to see what's happening in the system underneath the hood, add a `--
 
 ## Running a Single, ETH2.0 Validator Client
 
-Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities(shards to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
+Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities (shards to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
 
 To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
 
@@ -98,6 +98,10 @@ bazel run //validator --\
 ```
 
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
+
+### Running While Connected to a Mainchain Ethereum 1.0 Node
+
+If you want to run the system with a real Web3 endpoint to listen for incoming Ethereum 1.0 block hashes, follow the instructions on setting up a geth node [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/MAINCHAIN.md)
 
 ### Running Via Docker
 

@@ -64,18 +64,10 @@ bazel run //beacon-chain --\
   --enable-powchain \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
+  --verbosty debug
 ```
 
 This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding validators to connect to it, and begins listening for p2p events. Run the system at debug level log verbosity with `--verbosity debug` to see everything happening underneath the hood.
-
-```
-bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
-  --enable-powchain \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --verbosity debug
-```
 
 Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/VALIDATOR_REGISTRATION.md).
 
