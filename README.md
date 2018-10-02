@@ -55,7 +55,7 @@ bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
 
-As part of our current release v0.0.0, we allow users to start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INSTRUCTIONS.md).
+As part of our current release v0.0.0, we allow users to start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INFORMATION.md).
 
 ## Running the Beacon Node
 
@@ -63,10 +63,10 @@ To start the system, we need to seed the beacon chain state with an initial vali
 
 ```
 bazel run //beacon-chain --\
-  --datadir /path/to/beacondatadir/
-  --rpc-port 4000
-  --genesis-json /path/to/genesis.json
-  --simulator
+  --datadir /path/to/beacondatadir \
+  --rpc-port 4000 \
+  --genesis-json /path/to/genesis.json \
+  --simulator \
   --demo-config
 
 ```
@@ -81,19 +81,27 @@ If you want to see what's happening in the system underneath the hood, add a `--
 
 Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities(shards to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
 
+To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
+
+```
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+```
+
 Run as follows:
 
 ```
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
-  --verbosity debug
+  --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ```
 
-Then, the beacon node will update this validator with new blocks + crystallized states in order for the validator to act as an attester or proposer.
+This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
 
 ### Running Via Docker
 
-To run the beacon node or validator client  within a docker container, use the `//beacon-chain:image` and  `//validator:image` targets, respectively.
+To run the beacon node or validator client within a docker container, use the `//beacon-chain:image` and  `//validator:image` targets, respectively.
 
 Example:
 
