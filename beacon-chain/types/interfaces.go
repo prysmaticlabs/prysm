@@ -52,6 +52,7 @@ type StateFetcher interface {
 	CurrentActiveState() *ActiveState
 	CurrentCrystallizedState() *CrystallizedState
 	GenesisBlock() (*Block, error)
+	CanonicalHead() (*Block, error)
 }
 
 // POWChainService is an interface for a proof-of-work chain web3 service.

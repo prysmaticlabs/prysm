@@ -286,7 +286,7 @@ func (s *Service) PublicKey() []byte {
 // CurrentBeaconSlot based on the genesis timestamp of the protocol.
 func (s *Service) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	if math.Floor(secondsSinceGenesis/float64(params.DefaultConfig().SlotDuration))-1 < 0 {
+	if secondsSinceGenesis - params.DefaultConfig().SlotDuration < 0 {
 		return 0
 	}
 	return uint64(math.Floor(secondsSinceGenesis/params.DefaultConfig().SlotDuration)) - 1

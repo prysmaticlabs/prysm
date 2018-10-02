@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -83,58 +82,12 @@ func (sim *Simulator) Start() {
 func (sim *Simulator) Stop() error {
 	defer sim.cancel()
 	log.Info("Stopping service")
-	// Persist the last simulated block in the DB for future sessions
-	// to continue from the last simulated slot number.
-	if len(sim.broadcastedBlockHashes) > 0 {
-		lastBlockHash := sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1]
-		lastBlock := sim.broadcastedBlocks[lastBlockHash]
-		encoded, err := lastBlock.Marshal()
-		if err != nil {
-			return err
-		}
-		return sim.beaconDB.Put([]byte("last-simulated-block"), encoded)
-	}
 	return nil
-}
-
-func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
-	hasSimulated, err := sim.beaconDB.Has([]byte("last-simulated-block"))
-	if err != nil {
-		return nil, fmt.Errorf("Could not determine if a previous simulation occurred: %v", err)
-	}
-	if !hasSimulated {
-		return nil, nil
-	}
-	enc, err := sim.beaconDB.Get([]byte("last-simulated-block"))
-	if err != nil {
-		return nil, fmt.Errorf("Could not fetch simulated block from db: %v", err)
-	}
-	lastSimulatedBlockProto := &pb.BeaconBlock{}
-	if err = proto.Unmarshal(enc, lastSimulatedBlockProto); err != nil {
-		return nil, fmt.Errorf("Could not unmarshal simulated block from db: %v", err)
-	}
-	return types.NewBlock(lastSimulatedBlockProto), nil
 }
 
 func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
-
-	// Check if we saved a simulated block in the DB from a previous session.
-	// If that is the case, simulator will start from there.
-	var parentHash []byte
-	lastSimulatedBlock, err := sim.lastSimulatedSessionBlock()
-	if err != nil {
-		log.Errorf("Could not fetch last simulated session's block: %v", err)
-	}
-	if lastSimulatedBlock != nil {
-		h, err := lastSimulatedBlock.Hash()
-		if err != nil {
-			log.Errorf("Could not hash last simulated session's block: %v", err)
-		}
-		sim.slotNum = lastSimulatedBlock.SlotNumber()
-		sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, h)
-	}
 
 	for {
 		select {
@@ -153,9 +106,22 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				continue
 			}
 
-			// If we have not broadcast a simulated block yet, we set parent hash
-			// to the genesis block.
+			// Retrieve canonical head.
+			lastSimulatedBlock, err := sim.chainService.CanonicalHead()
+			if err != nil {
+				log.Errorf("Could not fetch last simulated session's block: %v", err)
+			}
+			if lastSimulatedBlock != nil {
+				h, err := lastSimulatedBlock.Hash()
+				if err != nil {
+					log.Errorf("Could not hash last simulated session's block: %v", err)
+				}
+				sim.slotNum = lastSimulatedBlock.SlotNumber()
+				sim.broadcastedBlockHashes = append(sim.broadcastedBlockHashes, h)
+			}
+
 			var hash [32]byte
+			var parentHash [32]byte
 			if sim.slotNum == 1 {
 				genesisBlock, err := sim.chainService.GenesisBlock()
 				if err != nil {
@@ -167,9 +133,9 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 					log.Errorf("Failed to hash genesis block: %v", err)
 					continue
 				}
-				parentHash = hash[:]
+				parentHash = hash
 			} else {
-				parentHash = sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1][:]
+				parentHash = lastSimulatedBlock.ParentHash()
 			}
 
 			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
@@ -187,7 +153,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
-				ParentHash:            parentHash,
+				ParentHash:            parentHash[:],
 				Attestations: []*pb.AggregatedAttestation{
 					{Slot: sim.slotNum - 1, AttesterBitfield: []byte{byte(255)}},
 				},

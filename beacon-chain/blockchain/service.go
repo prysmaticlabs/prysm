@@ -116,7 +116,7 @@ func (c *ChainService) Stop() error {
 // CurrentBeaconSlot based on the seconds since genesis.
 func (c *ChainService) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
-	if math.Floor(secondsSinceGenesis/float64(params.GetConfig().SlotDuration))-1 < 0 {
+	if secondsSinceGenesis - float64(params.GetConfig().SlotDuration) < 0 {
 		return 0
 	}
 	return uint64(math.Floor(secondsSinceGenesis/float64(params.GetConfig().SlotDuration))) - 1
