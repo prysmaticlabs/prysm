@@ -50,9 +50,6 @@ func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState 
 	return types.NewCrystallizedState(&pb.CrystallizedState{})
 }
 
-func (mc *mockChainService) GenesisBlock() (*types.Block, error) {
-	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
-}
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := database.NewKVStore()
@@ -185,7 +182,7 @@ func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
 	}
-	if DefaultConfig().Delay != time.Second*8 {
+	if DefaultConfig().Delay != time.Second*5 {
 		t.Errorf("incorrect default config for delay")
 	}
 }
