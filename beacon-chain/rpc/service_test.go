@@ -50,6 +50,10 @@ func (f *faultyChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return nil
 }
 
+func (f *faultyChainService) GenesisBlock() (*types.Block, error) {
+	return nil, errors.New("failed")
+}
+
 type mockChainService struct {
 	blockFeed       *event.Feed
 	stateFeed       *event.Feed
@@ -94,6 +98,10 @@ func (m *mockChainService) CanonicalHead() (*types.Block, error) {
 func (m *mockChainService) CanonicalCrystallizedState() *types.CrystallizedState {
 	data := &pbp2p.CrystallizedState{}
 	return types.NewCrystallizedState(data)
+}
+
+func (m *mockChainService) GenesisBlock() (*types.Block, error) {
+	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
 }
 
 func newMockChainService() *mockChainService {
