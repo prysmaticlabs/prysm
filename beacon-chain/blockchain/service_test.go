@@ -315,6 +315,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		BeaconDB:       db.DB(),
 		Chain:          beaconChain,
 		Web3Service:    web3Service,
+		EnablePOWChain: true,
 	}
 	chainService, _ := NewChainService(ctx, cfg)
 
