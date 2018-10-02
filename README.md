@@ -94,6 +94,7 @@ Run as follows:
 ```
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
+  --datadir /path/to/validatordatadir \
   --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ```
 
@@ -112,6 +113,7 @@ Example:
 ```text
 bazel run //validator:image --\
   --beacon-rpc-provider http://localhost:4000 \
+  --datadir /path/to/validatordatadir \
   --verbosity debug
 
 INFO: Build options have changed, discarding analysis cache.
