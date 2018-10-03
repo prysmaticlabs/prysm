@@ -76,7 +76,9 @@ bazel build //validator:validator
 
 ## Running The Beacon Chain
 
-To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
+To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/releases/download/0.0.0/genesis.json) in our latest release you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. 
+
+Then, you can run the node as follows:
 
 With the binary executable:
 
@@ -105,7 +107,7 @@ We added a `--simulator` flag that simulates other nodes connected to you sendin
 
 We also have a `--demo-config` flag that configures some internal parameters for you to run a local demo version of the system.
 
-If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time.
+If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time. If you want to rerun the beacon chain, delete and create a new data directory for the system to start from scratch.
 
 ![beaconsystem](https://i.imgur.com/vsUfLFu.png)
 
@@ -141,6 +143,8 @@ bazel run //validator --\
 
 
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
+
+if you want to run multiple validator clients, each one needs to have its own data directory where it will persist information, so create a new one each time and pass it into the validator command with the flag `--datadir /path/to/datadir`.
 
 ## Running Via Docker
 
