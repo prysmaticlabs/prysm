@@ -33,7 +33,11 @@ In this local demo, you can start a beacon chain from genesis, connect as a vali
 
 ## Installation
 
-You can either choose to run our system via downloading our precompiled binaries, use docker, or use our build tool, Bazel **(Recommended)**.
+You can either choose to run our system via:
+
+- Downloading our Precompiled Binaries from our latest [release](https://github.com/prysmaticlabs/prysm/releases)
+- Use Docker
+- Use Our Build Tool, Bazel **(Recommended)**
 
 ## Run Our Pre-Compiled Binaries
 
@@ -160,7 +164,7 @@ docker run gcr.io/prysmaticlabs/prysm/validator:latest validator \
 
 ## Running While Connected to a Mainchain Ethereum 1.0 Node
 
-If you want to run the system with a real Web3 endpoint to listen for incoming Ethereum 1.0 block hashes, follow the instructions on setting up a geth node [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/MAINCHAIN.md)
+If you want to run the system with a real Web3 endpoint to listen for incoming Ethereum 1.0 block hashes, follow the instructions on setting up a geth node [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/MAINCHAIN.md).
 
 
 # Testing
@@ -171,7 +175,7 @@ To run the unit tests of our system do:
 bazel test //...
 ```
 
-To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run
+To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run:
 
 ```
 gometalinter ./...
