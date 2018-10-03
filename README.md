@@ -15,7 +15,12 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 # Table of Contents
 
 -   [Running Our Demo Release](#running-our-demo-release)
--   [Development Instructions](#development-instructions)
+  - [Installation](#installation)
+  - [Run Our Pre-Compiled Binaries](#run-our-precompiled-binaries)
+  - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
+  - [Running The Beacon Chain](#running-the-beacon-chain)
+  - [Running an ETH2.0 Validator Client](#running-an-eth2.0-validator-client)
+  - [Running Via Docker](#running-via-docker)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -35,8 +40,8 @@ You can either choose to run our system via downloading our precompiled binaries
 First, download our latest [release](https://github.com/prysmaticlabs/prysm/releases) for your operating system. Then:
 
 ```
-chmod a+x ./beacon-chain
-chmod a+x ./validator
+chmod +x ./beacon-chain
+chmod +x ./validator
 ```
 
 ## Run Via Bazel (Recommended)
@@ -73,7 +78,7 @@ With the binaries:
 
 ```
 ./beacon-chain \
-  --web3provider  ws://127.0.0.1:8546 \
+  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
@@ -84,7 +89,7 @@ With bazel:
 
 ```
 bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
+  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
@@ -130,6 +135,8 @@ bazel run //validator --\
 
 
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
+
+![beaconsystem](https://imgur.com/a/pEzI4Je)
 
 ## Running Via Docker
 
