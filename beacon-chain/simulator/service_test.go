@@ -55,6 +55,10 @@ func (mc *mockChainService) GenesisBlock() (*types.Block, error) {
 	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
 }
 
+func (mc *mockChainService) CurrentBeaconSlot() uint64 {
+	return 0
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := database.NewKVStore()
