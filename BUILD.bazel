@@ -1,6 +1,7 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 load("@com_github_atlassian_bazel_tools//gometalinter:def.bzl", "gometalinter")
 load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
+load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
@@ -24,4 +25,9 @@ goimports(
     display_diffs = True,
     write = False,
     prefix = prefix,
+)
+
+workspace_binary(
+    name = "golint",
+    cmd = "@com_github_golang_lint//golint",
 )

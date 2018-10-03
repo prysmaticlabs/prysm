@@ -79,6 +79,12 @@ load(
 _go_image_repos()
 
 git_repository(
+    name = "io_kubernetes_build",
+    commit = "4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
+    remote = "https://github.com/kubernetes/repo-infra.git",
+)
+
+git_repository(
     name = "com_github_jmhodges_bazel_gomock",
     commit = "5b73edb74e569ff404b3beffc809d6d9f205e0e4",
     remote = "https://github.com/jmhodges/bazel_gomock.git",
@@ -602,4 +608,16 @@ go_repository(
     name = "org_golang_x_sync",
     commit = "1d60e4601c6fd243af51cc01ddf169918a5407ca",
     importpath = "golang.org/x/sync",
+)
+
+go_repository(
+    name = "com_github_golang_lint",
+    commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
+    importpath = "github.com/golang/lint",
+)
+
+go_repository(
+    name = "org_golang_x_lint",
+    commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
+    importpath = "golang.org/x/lint",
 )
