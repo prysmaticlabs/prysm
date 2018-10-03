@@ -33,12 +33,12 @@ You can either run via Docker (Make sure you have docker installed on your machi
 To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
 
 ````
-docker run gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
+docker run -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
-  --verbosity debug
+  --demo-config
 ```
 
 We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version and you'll only be running 1 validator client, this gives us a good idea of what the system will need to handle in the wild and will help advance the chain.
