@@ -12,6 +12,12 @@ http_archive(
     sha256 = "c0a5739d12c6d05b6c1ad56f2200cb0b57c5a70e03ebd2f7b87ce88cabf09c7b",
 )
 
+http_archive(
+    name = "com_github_atlassian_bazel_tools",
+    strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.zip"],
+)
+
 git_repository(
     name = "io_bazel_rules_docker",
     commit = "7401cb256222615c497c0dee5a4de5724a4f4cc7",  # 2018-06-22
@@ -60,6 +66,10 @@ go_register_toolchains()
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 gazelle_dependencies()
+
+load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
+
+gometalinter_dependencies()
 
 load(
     "@io_bazel_rules_docker//go:image.bzl",

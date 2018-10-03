@@ -1,7 +1,27 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@com_github_atlassian_bazel_tools//gometalinter:def.bzl", "gometalinter")
+load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
+
+prefix = "github.com/prysmaticlabs/prysm"
 
 # gazelle:prefix github.com/prysmaticlabs/prysm
 gazelle(
     name = "gazelle",
-    prefix = "github.com/prysmaticlabs/prysm",
+    prefix = prefix,
+)
+
+gometalinter(
+    name = "gometalinter",
+    config = "//:.gometalinter.json",
+    paths = [
+        "./...",
+    ],
+    prefix = prefix,
+)
+
+goimports(
+    name = "goimports",
+    display_diffs = True,
+    write = False,
+    prefix = prefix,
 )
