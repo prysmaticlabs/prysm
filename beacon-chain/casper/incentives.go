@@ -17,10 +17,10 @@ var log = logrus.WithField("prefix", "casper")
 func CalculateRewards(
 	slot uint64,
 	voterIndices []uint32,
-	validators []*pb.ValidatorRecord,
+	validators []*ValidatorRecord,
 	dynasty uint64,
 	totalParticipatedDeposit uint64,
-	timeSinceFinality uint64) []*pb.ValidatorRecord {
+	timeSinceFinality uint64) []*ValidatorRecord {
 	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
 	activeValidators := ActiveValidatorIndices(validators, dynasty)
 	rewardQuotient := uint64(RewardQuotient(dynasty, validators))
@@ -35,7 +35,11 @@ func CalculateRewards(
 			for _, voterIndex := range voterIndices {
 				if voterIndex == validatorIndex {
 					voted = true
-					balance := validators[validatorIndex].GetBalance()
+					balance, err := validators[validatorIndex].GetBalance()
+					if err != nil {
+						log.Errorf("Could not retrieve validator balance %v", err)
+						break
+					}
 					newbalance := uint64(balance + (balance/rewardQuotient)*depositFactor)
 					validators[validatorIndex].Balance = newbalance
 					break
@@ -74,7 +78,7 @@ func CalculateRewards(
 
 // RewardQuotient returns the reward quotient for validators which will be used to
 // reward validators for voting on blocks, or penalise them for being offline.
-func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
+func RewardQuotient(dynasty uint64, validators []*ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
 	return params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
 }

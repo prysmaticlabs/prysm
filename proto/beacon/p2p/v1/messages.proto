@@ -102,7 +102,7 @@ message ValidatorRecord {
   uint64 withdrawal_shard = 2;
   bytes withdrawal_address = 3;
   bytes randao_commitment = 4;
-  uint64 balance = 5;
+  bytes balance = 5;
   uint64 start_dynasty = 6;
   uint64 end_dynasty = 7;
 }
