@@ -621,3 +621,9 @@ go_repository(
     commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
     importpath = "golang.org/x/lint",
 )
+
+go_repository(
+    name = "com_github_aristanetworks_goarista",
+    commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
+    importpath = "github.com/aristanetworks/goarista",
+)

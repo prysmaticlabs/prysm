@@ -7,11 +7,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 	blake2b "golang.org/x/crypto/blake2b"
 )
