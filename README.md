@@ -74,7 +74,7 @@ bazel build //validator:validator
 
 To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
 
-With the binaries:
+With the binary executable:
 
 ```
 ./beacon-chain \
@@ -119,7 +119,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 Run as follows:
 
-With the binaries:
+With the binary executable:
 
 ```
 ./validator \
