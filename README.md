@@ -56,7 +56,7 @@ First, clone our repository:
 git clone https://github.com/prysmaticlabs/prysm
 ```
 
-Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
+Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing:
 
 ```
 bazel version
@@ -67,7 +67,7 @@ Bazel manages all of the dependencies for you (including go and necessary compil
 
 ### Building
 
-Then, build both parts of our system: a beacon chain node implementation, and a validator client.
+Then, build both parts of our system: a beacon chain node implementation, and a validator client:
 
 ```
 bazel build //beacon-chain:beacon-chain
