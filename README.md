@@ -15,12 +15,12 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 # Table of Contents
 
 -   [Running Our Demo Release](#running-our-demo-release)
-  - [Installation](#installation)
-  - [Run Our Pre-Compiled Binaries](#run-our-precompiled-binaries)
-  - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
-  - [Running The Beacon Chain](#running-the-beacon-chain)
-  - [Running an ETH2.0 Validator Client](#running-an-eth2.0-validator-client)
-  - [Running Via Docker](#running-via-docker)
+    - [Installation](#installation)
+    - [Run Our Pre-Compiled Binaries](#run-our-pre-compiled-binaries)
+    - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
+    - [Running The Beacon Chain](#running-the-beacon-chain)
+    - [Running an ETH2.0 Validator Client](#running-an-eth2.0-validator-client)
+    - [Running Via Docker](#running-via-docker)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -136,7 +136,7 @@ bazel run //validator --\
 
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
 
-![beaconsystem](https://imgur.com/a/pEzI4Je)
+![beaconsystem](https://i.imgur.com/vsUfLFu.png)
 
 ## Running Via Docker
 
