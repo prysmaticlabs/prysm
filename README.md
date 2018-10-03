@@ -145,8 +145,8 @@ This will connect you to your running beacon node and listen for shard/slot assi
 ## Running Via Docker
 
 ```
-docker run -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
-  --genesis-json /path/to/genesis.json \
+docker run -p 4000:4000 -v /path/to/genesis.json:/genesis.json gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
+  --genesis-json /genesis.json \
   --rpc-port 4000 \
   --simulator \
   --demo-config
