@@ -181,8 +181,16 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 				powChainRef = []byte{byte(sim.slotNum)}
 			}
 
+			var blockSlot uint64
+			if sim.chainService.CurrentBeaconSlot() == 0 {
+				// cannot process a genesis block, so we start from 1
+				blockSlot = 1
+			} else {
+				blockSlot = sim.chainService.CurrentBeaconSlot()
+			}
+
 			block := types.NewBlock(&pb.BeaconBlock{
-				SlotNumber:            sim.chainService.CurrentBeaconSlot(),
+				SlotNumber:            blockSlot,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],
