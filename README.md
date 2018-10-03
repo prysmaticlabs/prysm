@@ -32,6 +32,8 @@ You can either choose to run our system via downloading our precompiled binaries
 
 ## Run Our Pre-Compiled Binaries
 
+First, download our latest [release](https://github.com/prysmaticlabs/prysm/releases) for your operating system. Then:
+
 ```
 chmod a+x ./beacon-chain
 chmod a+x ./validator
