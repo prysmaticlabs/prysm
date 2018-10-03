@@ -26,20 +26,69 @@ To run our current release, v0.0.0, as a local demo, you'll need to run a beacon
 
 In this local demo, you can start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INFORMATION.md).
 
-You can either run via Docker (Make sure you have docker installed on your machine), or run our compiled binaries.
+## Installation
+
+You can either choose to run our system via downloading our precompiled binaries, use docker, or use our build tool, Bazel **(Recommended)**.
+
+## Run Our Pre-Compiled Binaries
+
+```
+chmod a+x ./beacon-chain
+chmod a+x ./validator
+```
+
+## Run Via Bazel (Recommended)
+
+First, clone our repository:
+
+```
+git clone https://github.com/prysmaticlabs/prysm
+```
+
+Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
+
+```
+bazel version
+```
+
+Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm.
+
+
+### Building
+
+Then, build both parts of our system: a beacon chain node implementation, and a validator client.
+
+```
+bazel build //beacon-chain:beacon-chain
+bazel build //validator:validator
+```
 
 ## Running The Beacon Chain
 
 To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
 
+With the binaries:
+
 ````
-docker run -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
+./beacon-chain \
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
   --demo-config
 ```
+
+With bazel:
+
+````
+bazel run //beacon-chain --\
+  --web3provider  ws://127.0.0.1:8546 \
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+  --simulator \
+  --demo-config
+```
+
 
 We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version and you'll only be running 1 validator client, this gives us a good idea of what the system will need to handle in the wild and will help advance the chain.
 
@@ -61,89 +110,44 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 Run as follows:
 
+With the binaries:
+
 ```
-docker run gcr.io/prysmaticlabs/prysm/validator:latest validator --\
+./validator \
   --beacon-rpc-provider http://localhost:4000 \
   --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ```
 
-This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
-
-## Running Via Binaries
-
-TODO:
-
-# Development Instructions
-
-## Installation
-
-Make sure you have the latest, stable version of [Golang](https://golang.org/dl/) installed.
-
-Create a folder in your `$GOPATH` and navigate to it
-
-```
-mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
-```
-
-Note: it is not necessary to clone to the gopath if you're only building with Bazel.
-
-Clone our repository:
-
-```
-git clone https://github.com/prysmaticlabs/prysm
-```
-
-Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
-
-```
-bazel version
-```
-
-Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm.
-
-
-## Building
-
-To run our latest code, first build both parts of our system: a beacon chain node implementation, and a validator client.
-
-```
-bazel build //beacon-chain:beacon-chain
-bazel build //validator:validator
-```
-
-## Running the Beacon Node
-
-```
-bazel run //beacon-chain --\
-  --datadir /path/to/beacondatadir \
-  --rpc-port 4000 \
-  --genesis-json /path/to/genesis.json \
-  --simulator \
-  --demo-config
-
-```
-
-## Running a Single, ETH2.0 Validator Client
-
-
-To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
-
-```
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-```
-
-Run as follows:
+With Bazel:
 
 ```
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
-  --datadir /path/to/validatordatadir \
   --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ```
 
+
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
+
+## Running Via Docker
+
+```
+docker run -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
+  --web3provider  ws://127.0.0.1:8546 \
+  --rpc-port 4000 \
+  --simulator \
+  --demo-config
+```
+
+Then, to run a validator client, use:
+
+```
+docker run gcr.io/prysmaticlabs/prysm/validator:latest validator \
+  --web3provider  ws://{YOUR_LOCAL_IP}:8546 \
+  --rpc-port 4000 \
+  --simulator \
+  --demo-config
+```
 
 ## Running While Connected to a Mainchain Ethereum 1.0 Node
 
