@@ -23,8 +23,8 @@ bazel run //beacon-chain --\
   --pubkey aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c \
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
+  --genesis-json /path/to/your/genesis.json \
   --rpc-port 4000 \
-  --validator
 ```
 
 ### Step 3: Deposit 32 ETH
