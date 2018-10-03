@@ -7,8 +7,8 @@ package mock_p2p
 import (
 	reflect "reflect"
 
-	event "github.com/ethereum/go-ethereum/event"
 	gomock "github.com/golang/mock/gomock"
+	event "github.com/prysmaticlabs/prysm/shared/event"
 )
 
 // MockFeed is a mock of Feed interface
