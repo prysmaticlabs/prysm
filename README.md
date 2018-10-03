@@ -128,7 +128,7 @@ With the binary executable:
 ```
 ./validator \
   --beacon-rpc-provider http://localhost:4000 \
-  --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
 With Bazel:
@@ -136,7 +136,7 @@ With Bazel:
 ```
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
-  --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
 
@@ -157,7 +157,7 @@ Then, to run a validator client, use:
 ```
 docker run gcr.io/prysmaticlabs/prysm/validator:latest \
   --beacon-rpc-provider http://{YOUR_LOCAL_IP}:4000 \
-  --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
 
