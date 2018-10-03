@@ -146,7 +146,6 @@ This will connect you to your running beacon node and listen for shard/slot assi
 
 ```
 docker run -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
-  --web3provider  ws://127.0.0.1:8546 \
   --genesis-json /path/to/genesis.json \
   --rpc-port 4000 \
   --simulator \
@@ -157,11 +156,17 @@ Then, to run a validator client, use:
 
 ```
 docker run gcr.io/prysmaticlabs/prysm/validator:latest validator \
-  --web3provider  ws://{YOUR_LOCAL_IP}:8546 \
-  --genesis-json /path/to/genesis.json \
-  --rpc-port 4000 \
-  --simulator \
-  --demo-config
+  --beacon-rpc-provider http://{YOUR_LOCAL_IP}:4000 \
+  --pubkey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+```
+
+
+This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
+
+## Running Via Docker
+
+```
+docker run -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest beacon-chain \
 ```
 
 ## Running While Connected to a Mainchain Ethereum 1.0 Node
