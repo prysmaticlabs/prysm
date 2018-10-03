@@ -60,9 +60,9 @@ Make sure a geth node is running as a separate process according to the instruct
 
 ```
 bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
   --enable-powchain \
   --datadir /path/to/your/datadir \
+  --genesis-json /path/to/your/genesis.json \
   --rpc-port 4000 \
   --verbosty debug
 ```
