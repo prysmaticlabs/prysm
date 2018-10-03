@@ -378,7 +378,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 	chainService, _ := NewChainService(ctx, cfg)
 
-	genesis, err := beaconChain.GenesisBlock()
+	genesis, err := beaconChain.genesisBlock()
 	if err != nil {
 		t.Fatalf("unable to get canonical head: %v", err)
 	}
