@@ -103,6 +103,8 @@ We also have a `--demo-config` flag that configures some internal parameters for
 
 If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time.
 
+![beaconsystem](https://i.imgur.com/vsUfLFu.png)
+
 ## Running an ETH2.0 Validator Client
 
 Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities (shard state execution to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
@@ -135,8 +137,6 @@ bazel run //validator --\
 
 
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
-
-![beaconsystem](https://i.imgur.com/vsUfLFu.png)
 
 ## Running Via Docker
 
