@@ -26,6 +26,8 @@ To run our current release, v0.0.0, as a local demo, you'll need to run a beacon
 
 In this local demo, you can start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INFORMATION.md).
 
+You can either run via Docker (Make sure you have docker installed on your machine), or run our compiled binaries.
+
 ## Running The Beacon Chain
 
 To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. Then, you can run the node as follows:
