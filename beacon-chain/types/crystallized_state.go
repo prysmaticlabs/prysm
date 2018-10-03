@@ -210,6 +210,9 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
+	if c.LastStateRecalc() == 0 && slotNumber == params.GetConfig().CycleLength {
+		return true
+	}
 	return slotNumber >= c.LastStateRecalc()+params.GetConfig().CycleLength
 }
 
