@@ -71,7 +71,7 @@ To start the system, we need to seed the beacon chain state with an initial vali
 
 With the binaries:
 
-````
+```
 ./beacon-chain \
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
@@ -82,7 +82,7 @@ With the binaries:
 
 With bazel:
 
-````
+```
 bazel run //beacon-chain --\
   --web3provider  ws://127.0.0.1:8546 \
   --datadir /path/to/your/datadir \
