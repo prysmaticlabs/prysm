@@ -8,7 +8,7 @@
 exec 5>&1
 
 # Run gazelle while piping a copy of the output to stdout via 5.
-changes=$(bazel run //:gazelle -- fix --mode=diff | tee >(cat - >&5))
+changes=$(bazel --bazelrc=./buildkite.bazelrc run //:gazelle -- fix --mode=diff | tee >(cat - >&5))
 
 # If the captured stdout is not empty then Gazelle has diffs.
 if [ -z "$changes" ]
