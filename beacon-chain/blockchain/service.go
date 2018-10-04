@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,7 +61,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
-		genesisTimestamp:               params.GetConfig().GenesisTime,
 		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
@@ -84,6 +83,15 @@ func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
 	log.Info("Starting service")
+
+	genesis, err := c.GenesisBlock()
+	if err != nil {
+		log.Fatalf("Could not get genesis block: %v", err)
+	}
+	c.genesisTimestamp, err = genesis.Timestamp()
+	if err != nil {
+		log.Fatalf("Could not get genesis timestamp: %v", err)
+	}
 
 	// If the genesis time was at 12:00:00PM and the current time is 12:00:03PM,
 	// the next slot should tick at 12:00:08PM. We can accomplish this
@@ -116,7 +124,10 @@ func (c *ChainService) Stop() error {
 // CurrentBeaconSlot based on the seconds since genesis.
 func (c *ChainService) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / 8.0))
+	if secondsSinceGenesis-float64(params.GetConfig().SlotDuration) < 0 {
+		return 0
+	}
+	return uint64(math.Floor(secondsSinceGenesis/float64(params.GetConfig().SlotDuration))) - 1
 }
 
 // CanonicalHead of the current beacon chain.
@@ -198,6 +209,11 @@ func (c *ChainService) CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, er
 // has been saved in the db.
 func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
 	return c.chain.canonicalBlockForSlot(slotNumber)
+}
+
+// GenesisBlock returns the contents of the genesis block.
+func (c *ChainService) GenesisBlock() (*types.Block, error) {
+	return c.chain.genesisBlock()
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
@@ -365,7 +381,14 @@ func (c *ChainService) blockProcessing() {
 			aState := c.chain.ActiveState()
 			cState := c.chain.CrystallizedState()
 
-			if valid := block.IsValid(c, aState, cState, parent.SlotNumber(), c.enableAttestationValidity); !valid {
+			if valid := block.IsValid(
+				c,
+				aState,
+				cState,
+				parent.SlotNumber(),
+				c.enableAttestationValidity,
+				c.genesisTimestamp,
+			); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
 				continue
 			}
@@ -375,14 +398,13 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			log.Infof("Finished processing received block: %x", blockHash)
+			log.Infof("Finished processing received block: 0x%x", blockHash)
 
 			// We push the hash of the block we just stored to a pending processing
 			// slice the fork choice rule will utilize.
 			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
-			log.Info("Finished processing received block")
 		}
 	}
 }

@@ -12,6 +12,12 @@ http_archive(
     sha256 = "c0a5739d12c6d05b6c1ad56f2200cb0b57c5a70e03ebd2f7b87ce88cabf09c7b",
 )
 
+http_archive(
+    name = "com_github_atlassian_bazel_tools",
+    strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.zip"],
+)
+
 git_repository(
     name = "io_bazel_rules_docker",
     commit = "7401cb256222615c497c0dee5a4de5724a4f4cc7",  # 2018-06-22
@@ -61,12 +67,22 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 gazelle_dependencies()
 
+load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
+
+gometalinter_dependencies()
+
 load(
     "@io_bazel_rules_docker//go:image.bzl",
     _go_image_repos = "repositories",
 )
 
 _go_image_repos()
+
+git_repository(
+    name = "io_kubernetes_build",
+    commit = "4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
+    remote = "https://github.com/kubernetes/repo-infra.git",
+)
 
 git_repository(
     name = "com_github_jmhodges_bazel_gomock",
@@ -592,4 +608,22 @@ go_repository(
     name = "org_golang_x_sync",
     commit = "1d60e4601c6fd243af51cc01ddf169918a5407ca",
     importpath = "golang.org/x/sync",
+)
+
+go_repository(
+    name = "com_github_golang_lint",
+    commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
+    importpath = "github.com/golang/lint",
+)
+
+go_repository(
+    name = "org_golang_x_lint",
+    commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
+    importpath = "golang.org/x/lint",
+)
+
+go_repository(
+    name = "com_github_aristanetworks_goarista",
+    commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
+    importpath = "github.com/aristanetworks/goarista",
 )

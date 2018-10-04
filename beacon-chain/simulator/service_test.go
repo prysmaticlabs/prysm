@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -48,6 +49,14 @@ func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
 
 func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
 	return types.NewCrystallizedState(&pb.CrystallizedState{})
+}
+
+func (mc *mockChainService) GenesisBlock() (*types.Block, error) {
+	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
+}
+
+func (mc *mockChainService) CurrentBeaconSlot() uint64 {
+	return 0
 }
 
 func TestLifecycle(t *testing.T) {
@@ -182,7 +191,7 @@ func TestDefaultConfig(t *testing.T) {
 	if DefaultConfig().BlockRequestBuf != 100 {
 		t.Errorf("incorrect default config for block request buffer")
 	}
-	if DefaultConfig().Delay != time.Second*5 {
+	if DefaultConfig().Delay != time.Second*time.Duration(params.GetConfig().SlotDuration) {
 		t.Errorf("incorrect default config for delay")
 	}
 }
