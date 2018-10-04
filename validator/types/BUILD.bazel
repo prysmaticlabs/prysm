@@ -9,7 +9,7 @@ go_library(
         "shard.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/types",
-    visibility = ["//validator:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//shared:go_default_library",
         "//validator/params:go_default_library",
