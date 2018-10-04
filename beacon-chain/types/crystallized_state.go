@@ -33,7 +33,7 @@ func initialValidators() []*pb.ValidatorRecord {
 		validator := &pb.ValidatorRecord{
 			StartDynasty:      0,
 			EndDynasty:        params.GetConfig().DefaultEndDynasty,
-			Balance:           params.GetConfig().DefaultBalance.Uint64(),
+			Balance:           params.GetConfig().DepositSize.Uint64(),
 			WithdrawalAddress: []byte{},
 			PublicKey:         []byte{},
 		}
