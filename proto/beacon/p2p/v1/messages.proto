@@ -131,6 +131,6 @@ message AttestationHashes {
 }
 
 message SpecialRecord {
-    uint32 opcode = 1;
+    uint32 kind = 1;
     repeated bytes data = 2;
 }
