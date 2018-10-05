@@ -8,6 +8,8 @@ import (
 
 var env = "default"
 
+type ValidatorStatusCode int
+
 // Config contains configs for node to participate in beacon chain.
 type Config struct {
 	ShardCount                  int       // ShardCount is the fixed number of shards in Ethereum 2.0.
@@ -21,7 +23,7 @@ type Config struct {
 	DefaultEndDynasty           uint64    // DefaultEndDynasty is the upper bound of dynasty. We use it to track queued and exited validators.
 	MinDynastyLength            uint64    // MinCommiteeSize is the minimal number of validator needs to be in a committee.
 	BaseRewardQuotient          uint64    // BaseRewardQuotient is used to calculate validator per-slot interest rate.
-	SqrtEDropTime               uint64    // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
+	SqrtExpDropTime             uint64    // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
 	GenesisTime                 time.Time // GenesisTime used by the protocol.
 	LogOutMessage               string    // This is the message a validator will send in order to log out.
 	WithdrawalPeriod            uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
@@ -41,10 +43,9 @@ var defaultConfig = &Config{
 	BootstrappedValidatorsCount: 1000,
 	MinDynastyLength:            uint64(256),
 	BaseRewardQuotient:          uint64(32768),
-	SqrtEDropTime:               uint64(65536),
+	SqrtExpDropTime:             uint64(65536),
 	WithdrawalPeriod:            uint64(524288),
 	MaxValidatorChurnQuotient:   uint64(32),
-	LogOutMessage:               "LOGOUT",
 }
 
 var demoConfig = &Config{
@@ -59,11 +60,19 @@ var demoConfig = &Config{
 	DefaultEndDynasty:         uint64(999999999999999999),
 	MinDynastyLength:          uint64(256),
 	BaseRewardQuotient:        uint64(32768),
-	SqrtEDropTime:             uint64(65536),
+	SqrtExpDropTime:           uint64(65536),
 	WithdrawalPeriod:          uint64(128),
 	MaxValidatorChurnQuotient: uint64(32),
-	LogOutMessage:             "LOGOUT",
 }
+
+const (
+	PENDING_ACTIVATION ValidatorStatusCode = iota
+	ACTIVE
+	PENDING_EXIT
+	PENDING_WITHDRAW
+	WITHDRAWN
+	PENALIZED = 128
+)
 
 // GetConfig retrieves beacon node config.
 func GetConfig() *Config {

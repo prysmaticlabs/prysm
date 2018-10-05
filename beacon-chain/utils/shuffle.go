@@ -12,9 +12,9 @@ import (
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to use to select attesters and proposers.
 func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) {
-	// since we are consuming 3 bytes of entropy at a time in the loop,
+	// Since we are consuming 3 bytes of entropy at a time in the loop,
 	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
-	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator
+	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
 	if len(validatorList) > params.GetConfig().ModuloBias {
 		return nil, errors.New("exceeded upper bound for validator shuffle")
 	}
@@ -22,9 +22,9 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 	hashSeed := blake2b.Sum512(seed[:])
 	validatorCount := len(validatorList)
 
-	// shuffle stops at the second to last index.
+	// Shuffle stops at the second to last index.
 	for i := 0; i < validatorCount-1; i++ {
-		// convert every 3 bytes to random number, replace validator index with that number.
+		// Convert every 3 bytes to random number, replace validator index with that number.
 		for j := 0; j+3 < len(hashSeed); j += 3 {
 			swapNum := int(hashSeed[j] + hashSeed[j+1] + hashSeed[j+2])
 			remaining := validatorCount - i
