@@ -87,7 +87,7 @@ func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := params.GetConfig().SqrtEDropTime / params.GetConfig().SlotDuration
+	dropTimeFactor := params.GetConfig().SqrtExpDropTime / params.GetConfig().SlotDuration
 	return dropTimeFactor * dropTimeFactor
 }
 
