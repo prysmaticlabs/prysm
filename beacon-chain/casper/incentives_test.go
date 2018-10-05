@@ -167,7 +167,7 @@ func TestPenaltyCrosslink(t *testing.T) {
 	quadraticQuotient := quadraticPenaltyQuotient()
 
 	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
-	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*10/quadraticQuotient)
+	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*timeSinceConfirmation/quadraticQuotient)
 
 	if validator.Balance != expectedBalance {
 		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)
