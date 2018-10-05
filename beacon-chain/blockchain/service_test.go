@@ -265,9 +265,9 @@ func TestUpdateHeadEmpty(t *testing.T) {
 	})
 
 	exitRoutine := make(chan bool)
-	timeChan := make(chan time.Time)
+	slotChan := make(chan uint64)
 	go func() {
-		chainService.updateHead(timeChan)
+		chainService.updateHead(slotChan)
 		<-exitRoutine
 	}()
 
@@ -277,7 +277,7 @@ func TestUpdateHeadEmpty(t *testing.T) {
 
 	// If blocks pending processing is empty, the updateHead routine does nothing.
 	chainService.blocksPendingProcessing = [][32]byte{}
-	timeChan <- time.Now()
+	slotChan <- 0
 	chainService.cancel()
 	exitRoutine <- true
 
@@ -290,9 +290,9 @@ func TestUpdateHeadNoBlock(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	exitRoutine := make(chan bool)
-	timeChan := make(chan time.Time)
+	slotChan := make(chan uint64)
 	go func() {
-		chainService.updateHead(timeChan)
+		chainService.updateHead(slotChan)
 		<-exitRoutine
 	}()
 
@@ -307,7 +307,7 @@ func TestUpdateHeadNoBlock(t *testing.T) {
 	}
 	chainService.blocksPendingProcessing = [][32]byte{}
 	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, fakeBlockHash)
-	timeChan <- time.Now()
+	slotChan <- 0
 	chainService.cancel()
 	exitRoutine <- true
 
@@ -320,9 +320,9 @@ func TestUpdateHeadNoParent(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	exitRoutine := make(chan bool)
-	timeChan := make(chan time.Time)
+	slotChan := make(chan uint64)
 	go func() {
-		chainService.updateHead(timeChan)
+		chainService.updateHead(slotChan)
 		<-exitRoutine
 	}()
 
@@ -342,7 +342,7 @@ func TestUpdateHeadNoParent(t *testing.T) {
 	chainService.blocksPendingProcessing = [][32]byte{}
 	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, noParentBlockHash)
 
-	timeChan <- time.Now()
+	slotChan <- 0
 	chainService.cancel()
 	exitRoutine <- true
 
@@ -381,9 +381,9 @@ func TestUpdateHead(t *testing.T) {
 	}
 
 	exitRoutine := make(chan bool)
-	timeChan := make(chan time.Time)
+	slotChan := make(chan uint64)
 	go func() {
-		chainService.updateHead(timeChan)
+		chainService.updateHead(slotChan)
 		<-exitRoutine
 	}()
 
@@ -394,7 +394,7 @@ func TestUpdateHead(t *testing.T) {
 	// If blocks pending processing is empty, the updateHead routine does nothing.
 	chainService.blocksPendingProcessing = [][32]byte{}
 	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, hash)
-	timeChan <- time.Now()
+	slotChan <- 0
 	chainService.cancel()
 	exitRoutine <- true
 

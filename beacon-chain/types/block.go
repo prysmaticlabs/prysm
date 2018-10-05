@@ -138,9 +138,9 @@ func (b *Block) Timestamp() (time.Time, error) {
 }
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
-func (b *Block) isSlotValid(genesisTimestamp time.Time) bool {
+func (b *Block) isSlotValid(genesisTime time.Time) bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTimestamp.Add(slotDuration)
+	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 
@@ -153,7 +153,7 @@ func (b *Block) IsValid(
 	cState *CrystallizedState,
 	parentSlot uint64,
 	enableAttestationValidity bool,
-	genesisTimestamp time.Time) bool {
+	genesisTime time.Time) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Errorf("Could not hash incoming block: %v", err)
@@ -165,7 +165,7 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	if !b.isSlotValid(genesisTimestamp) {
+	if !b.isSlotValid(genesisTime) {
 		log.Errorf("Slot of block is too high: %d", b.SlotNumber())
 		return false
 	}
