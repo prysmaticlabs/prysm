@@ -1,4 +1,4 @@
-package blockchain
+package db
 
 import (
 	"bytes"
