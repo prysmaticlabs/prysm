@@ -1,12 +1,10 @@
-startup --host_jvm_args=-Xmx500m --host_jvm_args=-Xms500m
-
-build --local_resources=3072,1,1
-build --spawn_strategy=standalone --genrule_strategy=standalone
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds
 build --noshow_progress
 build --verbose_failures
+build --announce_rc
+build --show_progress_rate_limit=5
+build --curses=yes --color=yes
 build --test_output=errors
 build --flaky_test_attempts=5
 build --features=race
-test --test_strategy=standalone
