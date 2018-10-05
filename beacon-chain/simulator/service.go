@@ -51,6 +51,7 @@ type beaconDB interface {
 	GetActiveState() *types.ActiveState
 	GetCrystallizedState() *types.CrystallizedState
 	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
+	GetCanonicalBlock() (*types.Block, error)
 }
 
 // DefaultConfig options for the simulator.
@@ -189,8 +190,14 @@ func (sim *Simulator) run(delayChan <-chan time.Time) {
 				powChainRef = []byte{byte(sim.slotNum)}
 			}
 
+			blockSlot := utils.CurrentSlot(sim.genesisTimestamp)
+			if blockSlot == 0 {
+				// cannot process a genesis block, so we start from 1
+				blockSlot = 1
+			}
+
 			block := types.NewBlock(&pb.BeaconBlock{
-				SlotNumber:            utils.CurrentSlot(sim.genesisTimestamp),
+				SlotNumber:            blockSlot,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],
