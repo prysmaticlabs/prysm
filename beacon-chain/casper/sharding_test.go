@@ -40,7 +40,7 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 func TestMaxValidators(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
 	var validators []*pb.ValidatorRecord
-	validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+	validator := &pb.ValidatorRecord{}
 	for i := 0; i < params.GetConfig().ModuloBias+1; i++ {
 		validators = append(validators, validator)
 	}
