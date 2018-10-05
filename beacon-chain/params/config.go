@@ -8,6 +8,7 @@ import (
 
 var env = "default"
 
+// ValidatorStatusCode defines which stage a validator is in.
 type ValidatorStatusCode int
 
 // Config contains configs for node to participate in beacon chain.
@@ -66,12 +67,18 @@ var demoConfig = &Config{
 }
 
 const (
-	PENDING_ACTIVATION ValidatorStatusCode = iota
-	ACTIVE
-	PENDING_EXIT
-	PENDING_WITHDRAW
-	WITHDRAWN
-	PENALIZED = 128
+	// PendingActivation means a validator is queued and waiting to be active.
+	PendingActivation ValidatorStatusCode = iota
+	// Active means a validator is participating validator duties.
+	Active
+	// PendingExit means a validator is waiting to exit.
+	PendingExit
+	// PendingWithdraw means a validator is waiting to get balance back.
+	PendingWithdraw
+	// Withdrawn means a validator has successfully withdrawn balance.
+	Withdrawn
+	// Penalized means a validator did something bad and got slashed.
+	Penalized = 128
 )
 
 // GetConfig retrieves beacon node config.
