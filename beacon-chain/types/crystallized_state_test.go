@@ -282,7 +282,7 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 
 	// Negative test case, shuffle validators with more than MaxValidators.
 	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.GetConfig().MaxValidators+1; i++ {
+	for i := 0; i < params.GetConfig().ModuloBias+1; i++ {
 		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.GetConfig().DefaultEndDynasty})
 	}
 	cState.data.Validators = validators

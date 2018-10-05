@@ -13,7 +13,7 @@ type Config struct {
 	ShardCount                  int       // ShardCount is the fixed number of shards in Ethereum 2.0.
 	DepositSize                 *big.Int  // DepositSize is how much a validator has deposited in wei.
 	BootstrappedValidatorsCount int       // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
-	MaxValidators               int       // MaxValidators is the max number of validators allowed in Ethereum 2.0.
+	ModuloBias                  int       // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
 	EtherDenomination           int       // EtherDenomination is the denomination of ether in wei.
 	CycleLength                 uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                uint64    // SlotDuration is how many seconds are in a single slot.
@@ -30,7 +30,7 @@ type Config struct {
 
 var defaultConfig = &Config{
 	GenesisTime:                 time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
-	MaxValidators:               16777216,
+	ModuloBias:                  16777216,
 	CycleLength:                 uint64(64),
 	ShardCount:                  1024,
 	EtherDenomination:           1e18,
@@ -49,7 +49,7 @@ var defaultConfig = &Config{
 
 var demoConfig = &Config{
 	GenesisTime:               time.Now(),
-	MaxValidators:             16777216,
+	ModuloBias:                16777216,
 	CycleLength:               uint64(5),
 	ShardCount:                3,
 	EtherDenomination:         1e18,
