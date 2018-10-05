@@ -26,22 +26,6 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
-type mockChainService struct {
-	hasStoredState bool
-}
-
-func (mcs *mockChainService) HasStoredState() (bool, error) {
-	return mcs.hasStoredState, nil
-}
-
-func (mcs *mockChainService) setState(flag bool) {
-	mcs.hasStoredState = flag
-}
-
-func (mcs *mockChainService) SaveBlock(*types.Block) error {
-	return nil
-}
-
 type mockSyncService struct {
 	hasStarted bool
 }
@@ -50,10 +34,26 @@ func (ms *mockSyncService) Start() {
 	ms.hasStarted = true
 }
 
+type mockDB struct{}
+
+func (m *mockDB) HasStoredState() (bool, error) {
+	return true, nil
+}
+
+func (m *mockDB) SaveBlock(*types.Block) error {
+	return nil
+}
+
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	ss := NewInitialSyncService(context.Background(), Config{}, &mockP2P{}, &mockChainService{}, &mockSyncService{})
+	cfg := Config{
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    &mockDB{},
+	}
+
+	ss := NewInitialSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -102,7 +102,12 @@ func TestSetBlockForInitialSync(t *testing.T) {
 func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	ss := NewInitialSyncService(context.Background(), Config{}, &mockP2P{}, &mockChainService{}, &mockSyncService{})
+	cfg := Config{
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    &mockDB{},
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -206,7 +211,12 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 func TestDelayChan(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ss := NewInitialSyncService(context.Background(), Config{}, &mockP2P{}, &mockChainService{}, &mockSyncService{})
+	cfg := Config{
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    &mockDB{},
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -275,24 +285,4 @@ func TestDelayChan(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
 
 	hook.Reset()
-}
-
-func TestStartEmptyState(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	cfg := DefaultConfig()
-	mcs := &mockChainService{}
-	ss := NewInitialSyncService(context.Background(), cfg, &mockP2P{}, mcs, &mockSyncService{})
-
-	mcs.setState(true)
-	ss.Start()
-	testutil.AssertLogsContain(t, hook, "Chain state detected, exiting initial sync")
-
-	hook.Reset()
-
-	mcs.setState(false)
-	ss.Start()
-	testutil.AssertLogsDoNotContain(t, hook, "Chain state detected, exiting initial sync")
-
-	ss.cancel()
 }

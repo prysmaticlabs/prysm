@@ -2,12 +2,11 @@ package sync
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -35,61 +34,10 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
-type mockChainService struct {
-	slotExists bool
-	checkError bool
-	getError   bool
-}
-
-func (ms *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
-	return false, nil
-}
-
-func (ms *mockChainService) HasStoredState() (bool, error) {
-	return false, nil
-}
+type mockChainService struct{}
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
-}
-
-func (ms *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	cState, err := types.NewGenesisCrystallizedState("")
-	if err != nil {
-		fmt.Println(err)
-	}
-	return cState
-}
-
-func (ms *mockChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
-	return 0, nil
-}
-
-func (ms *mockChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
-	if ms.checkError {
-		return ms.slotExists, errors.New("mock check canonical block error")
-	}
-	return ms.slotExists, nil
-}
-
-func (ms *mockChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
-	if ms.getError {
-		return nil, errors.New("mock get canonical block error")
-	}
-	if !ms.slotExists {
-		return nil, errors.New("invalid key")
-	}
-	return types.NewBlock(&pb.BeaconBlock{SlotNumber: slotnumber}), nil
-}
-
-type faultyMockAttestService struct{}
-
-func (ms *faultyMockAttestService) IncomingAttestationFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *faultyMockAttestService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	return false, errors.New("Can not check for attestation in DB")
 }
 
 type mockAttestService struct{}
@@ -98,16 +46,40 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockAttestService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	return false, nil
+func setupDB(t *testing.T) *db.BeaconDB {
+	dbConfig := db.Config{Path: "", Name: "", InMemory: true}
+	db, err := db.NewDB(dbConfig)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+	}
+	return db
+}
+
+func setupService(t *testing.T) *Service {
+	db := setupDB(t)
+
+	cfg := Config{
+		BlockHashBufferSize: 0,
+		BlockBufferSize:     0,
+		ChainService:        &mockChainService{},
+		P2P:                 &mockP2P{},
+		BeaconDB:            db,
+	}
+	return NewSyncService(context.Background(), cfg)
 }
 
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	// set the channel's buffer to 0 to make channel interactions blocking
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+	cfg := Config{
+		BlockHashBufferSize: 0,
+		BlockBufferSize:     0,
+		ChainService:        &mockChainService{},
+		P2P:                 &mockP2P{},
+		BeaconDB:            setupDB(t),
+	}
+	ss := NewSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 
@@ -140,19 +112,37 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, AttestService: &mockAttestService{}}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+	db := setupDB(t)
+	cfg := Config{
+		BlockHashBufferSize: 0,
+		BlockBufferSize:     0,
+		ChainService:        &mockChainService{},
+		P2P:                 &mockP2P{},
+		BeaconDB:            db,
+		AttestService:       &mockAttestService{},
+	}
+	ss := NewSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
-
 	go func() {
 		ss.run()
 		exitRoutine <- true
 	}()
 
+	parentBlock := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 0,
+	})
+	if err := db.SaveBlock(parentBlock); err != nil {
+		t.Fatalf("failed to save block: %v", err)
+	}
+	parentHash, err := parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("failed to get parent hash: %v", err)
+	}
+
 	data := &pb.BeaconBlock{
 		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  make([]byte, 32),
+		ParentHash:  parentHash[:],
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
@@ -182,8 +172,16 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, ChainService: &mockChainService{}, AttestService: &mockAttestService{}}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+	db := setupDB(t)
+	cfg := Config{
+		BlockHashBufferSize: 0,
+		BlockBufferSize:     0,
+		ChainService:        &mockChainService{},
+		P2P:                 &mockP2P{},
+		BeaconDB:            db,
+		AttestService:       &mockAttestService{},
+	}
+	ss := NewSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 
@@ -192,9 +190,20 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		exitRoutine <- true
 	}()
 
+	parentBlock := types.NewBlock(&pb.BeaconBlock{
+		SlotNumber: 0,
+	})
+	if err := db.SaveBlock(parentBlock); err != nil {
+		t.Fatalf("failed to save block: %v", err)
+	}
+	parentHash, err := parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("failed to get parent hash: %v", err)
+	}
+
 	data1 := &pb.BeaconBlock{
 		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  make([]byte, 32),
+		ParentHash:  parentHash[:],
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -236,8 +245,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestBlockRequestErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: &mockChainService{}}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+	ss := setupService(t)
 
 	exitRoutine := make(chan bool)
 
@@ -275,112 +283,20 @@ func TestBlockRequestErrors(t *testing.T) {
 
 }
 
-func TestBlockRequestGetCanonicalError(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ms := &mockChainService{}
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	request1 := &pb.BeaconBlockRequestBySlotNumber{
-		SlotNumber: 20,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: p2p.Peer{},
-	}
-	ms.slotExists = true
-	ms.getError = true
-
-	ss.blockRequestBySlot <- msg1
-	testutil.AssertLogsContain(t, hook, "Error retrieving block from db mock get canonical block error")
-	hook.Reset()
-
-}
-
-func TestBlockRequestBySlot(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ms := &mockChainService{}
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	request1 := &pb.BeaconBlockRequestBySlotNumber{
-		SlotNumber: 20,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: p2p.Peer{},
-	}
-
-	ms.checkError = true
-	ms.slotExists = true
-
-	ss.blockRequestBySlot <- msg1
-	testutil.AssertLogsContain(t, hook, "Error checking db for block mock check canonical block error")
-
-	ms.checkError = false
-
-	ss.blockRequestBySlot <- msg1
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
-	hook.Reset()
-}
-
-func TestFaultyReceiveAttestationService(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ms := &mockChainService{}
-	as := &faultyMockAttestService{}
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms, AttestService: as}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	request1 := &pb.AggregatedAttestation{
-		Slot:             0,
-		AttesterBitfield: []byte{99},
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: p2p.Peer{},
-	}
-
-	ss.attestationBuf <- msg1
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Can not check for attestation in DB")
-}
-
 func TestReceiveAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	as := &mockAttestService{}
-	cfg := Config{BlockHashBufferSize: 0, BlockBufferSize: 0, BlockRequestBufferSize: 0, ChainService: ms, AttestService: as}
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+	cfg := Config{
+		BlockHashBufferSize:    0,
+		BlockBufferSize:        0,
+		BlockRequestBufferSize: 0,
+		ChainService:           ms,
+		AttestService:          as,
+		P2P:                    &mockP2P{},
+		BeaconDB:               setupDB(t),
+	}
+	ss := NewSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 
@@ -406,58 +322,21 @@ func TestReceiveAttestation(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
 }
 
-type mockEmptyChainService struct {
-	hasStoredState bool
-}
-
-func (ms *mockEmptyChainService) ContainsBlock(h [32]byte) (bool, error) {
-	return false, nil
-}
-
-func (ms *mockEmptyChainService) HasStoredState() (bool, error) {
-	return ms.hasStoredState, nil
-}
-
-func (ms *mockEmptyChainService) IncomingBlockFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockEmptyChainService) IncomingAttestationFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockEmptyChainService) setState(flag bool) {
-	ms.hasStoredState = flag
-}
-
-func (ms *mockEmptyChainService) CheckForCanonicalBlockBySlot(slotnumber uint64) (bool, error) {
-	return false, nil
-}
-
-func (ms *mockEmptyChainService) CanonicalBlockBySlotNumber(slotnumber uint64) (*types.Block, error) {
-	return nil, nil
-}
-
-func (ms *mockEmptyChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return types.NewCrystallizedState(nil)
-}
-
-func (ms *mockEmptyChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
-	return 0, nil
-}
-
 func TestStartEmptyState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ms := &mockEmptyChainService{}
+	db := setupDB(t)
 	cfg := DefaultConfig()
-	cfg.ChainService = ms
-	ss := NewSyncService(context.Background(), cfg, &mockP2P{})
+	cfg.ChainService = &mockChainService{}
+	cfg.P2P = &mockP2P{}
+	cfg.BeaconDB = db
+	ss := NewSyncService(context.Background(), cfg)
 
 	ss.Start()
 	testutil.AssertLogsContain(t, hook, "Empty chain state, but continue sync")
 
 	hook.Reset()
-	ms.setState(true)
+
+	db.SaveCrystallizedState(db.GetCrystallizedState())
 
 	ss.Start()
 	testutil.AssertLogsDoNotContain(t, hook, "Empty chain state, but continue sync")

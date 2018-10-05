@@ -26,8 +26,8 @@ type Block struct {
 	data *pb.BeaconBlock
 }
 
-type chainSearchService interface {
-	ContainsBlock(h [32]byte) (bool, error)
+type beaconDB interface {
+	HasBlock(h [32]byte) (bool, error)
 }
 
 // NewBlock explicitly sets the data field of a block.
@@ -148,7 +148,7 @@ func (b *Block) isSlotValid(genesisTimestamp time.Time) bool {
 // 1.) Ensure local time is large enough to process this block's slot.
 // 2.) Verify that the parent block's proposer's attestation is included.
 func (b *Block) IsValid(
-	chain chainSearchService,
+	db beaconDB,
 	aState *ActiveState,
 	cState *CrystallizedState,
 	parentSlot uint64,
@@ -180,16 +180,14 @@ func (b *Block) IsValid(
 			log.Errorf("Can not get proposer index %v", err)
 			return false
 		}
+		log.Infof("Proposer index: %v", proposerIndex)
 		if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
 		}
 
-		log.Debugf("Checking block validity. Recent block hash is %d",
-			aState.data.RecentBlockHashes[0],
-		)
 		for index, attestation := range b.Attestations() {
-			if !b.isAttestationValid(index, chain, aState, cState, parentSlot) {
+			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
 				log.Debugf("attestation invalid: %v", attestation)
 				return false
 			}
@@ -202,7 +200,7 @@ func (b *Block) IsValid(
 // isAttestationValid validates an attestation in a block.
 // Attestations are cross-checked against validators in CrystallizedState.ShardAndCommitteesForSlots.
 // In addition, the signature is verified by constructing the list of parent hashes using ActiveState.RecentBlockHashes.
-func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchService, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
+func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	// Validate attestation's slot number has is within range of incoming block number.
 	attestation := b.Attestations()[attestationIndex]
 	if !isAttestationSlotNumberValid(attestation.Slot, parentSlot) {
@@ -218,7 +216,7 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 
 	hash := [32]byte{}
 	copy(hash[:], attestation.JustifiedBlockHash)
-	blockInChain, err := chain.ContainsBlock(hash)
+	blockInChain, err := db.HasBlock(hash)
 	if err != nil {
 		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
 		return false
@@ -256,7 +254,6 @@ func (b *Block) isAttestationValid(attestationIndex int, chain chainSearchServic
 		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
-
 	return true
 }
 
