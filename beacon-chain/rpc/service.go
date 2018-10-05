@@ -209,7 +209,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 
 	//TODO(#589) The attestation should be aggregated in the validator client side not in the beacon node.
 	parentSlot := req.GetSlotNumber() - 1
-	cState := s.chainService.CurrentCrystallizedState()
+	cState := s.beaconDB.GetCrystallizedState()
 
 	_, prevProposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),

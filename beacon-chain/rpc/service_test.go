@@ -158,9 +158,12 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 
 func TestProposeBlock(t *testing.T) {
 	mockChain := &mockChainService{}
+	db := &mockDB{}
+	db.cState, _ = types.NewGenesisCrystallizedState("")
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:            "6372",
 		ChainService:    mockChain,
+		BeaconDB:        db,
 		POWChainService: &mockPOWChainService{},
 	})
 	req := &pb.ProposeRequest{
