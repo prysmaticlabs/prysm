@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
 

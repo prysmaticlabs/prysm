@@ -593,3 +593,9 @@ go_repository(
     commit = "1d60e4601c6fd243af51cc01ddf169918a5407ca",
     importpath = "golang.org/x/sync",
 )
+
+go_repository(
+    name = "com_github_aristanetworks_goarista",
+    commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
+    importpath = "github.com/aristanetworks/goarista",
+)
