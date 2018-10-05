@@ -55,8 +55,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	// Use demo config values if dev flag is set.
-	if ctx.GlobalBool(utils.DevFlag.Name) {
+	// Use demo config values if demo config flag is set.
+	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
 		params.SetEnv("demo")
 	}
 
@@ -170,19 +170,26 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-	devMode := ctx.GlobalBool(utils.DevFlag.Name)
-	if !devMode {
+	enablePOWChain := ctx.GlobalBool(utils.EnablePOWChain.Name)
+	if enablePOWChain {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
 	}
 
+	enableCrossLinks := ctx.GlobalBool(utils.EnableCrossLinks.Name)
+	enableRewardChecking := ctx.GlobalBool(utils.EnableRewardChecking.Name)
+	enableAttestationValidity := ctx.GlobalBool(utils.EnableAttestationValidity.Name)
+
 	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
-		BeaconDB:         b.db,
-		Web3Service:      web3Service,
-		BeaconBlockBuf:   10,
-		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
-		DevMode:          devMode,
+		BeaconDB:                  b.db,
+		Web3Service:               web3Service,
+		BeaconBlockBuf:            10,
+		IncomingBlockBuf:          100, // Big buffer to accommodate other feed subscribers.
+		EnablePOWChain:            enablePOWChain,
+		EnableCrossLinks:          enableCrossLinks,
+		EnableRewardChecking:      enableRewardChecking,
+		EnableAttestationValidity: enableAttestationValidity,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
@@ -199,7 +206,7 @@ func (b *BeaconNode) registerService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
-	if ctx.GlobalBool(utils.DevFlag.Name) {
+	if !ctx.GlobalBool(utils.EnablePOWChain.Name) {
 		return nil
 	}
 
@@ -280,8 +287,8 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	var devMode = ctx.GlobalBool(utils.DevFlag.Name)
-	if !devMode {
+	var enablePOWChain = ctx.GlobalBool(utils.EnablePOWChain.Name)
+	if enablePOWChain {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
@@ -299,7 +306,7 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 		BeaconDB:        b.db,
 		P2P:             p2pService,
 		Web3Service:     web3Service,
-		DevMode:         devMode,
+		EnablePOWChain:  enablePOWChain,
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
@@ -317,8 +324,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	var devMode = ctx.GlobalBool(utils.DevFlag.Name)
-	if !devMode {
+	var enablePOWChain = ctx.GlobalBool(utils.EnablePOWChain.Name)
+	if enablePOWChain {
 		if err := b.services.FetchService(&web3Service); err != nil {
 			return err
 		}
@@ -336,7 +343,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:       chainService,
 		AttestationService: attestationService,
 		POWChainService:    web3Service,
-		DevMode:            devMode,
+		EnablePOWChain:     enablePOWChain,
 	})
 
 	return b.services.RegisterService(rpcService)

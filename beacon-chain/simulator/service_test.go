@@ -66,7 +66,7 @@ func setupSimulator(t *testing.T) *Simulator {
 		Web3Service:     &mockPOWChainService{},
 		ChainService:    &mockChainService{},
 		BeaconDB:        db,
-		DevMode:         false,
+		EnablePOWChain:  true,
 	}
 
 	return NewSimulator(ctx, cfg)

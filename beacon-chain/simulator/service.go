@@ -24,7 +24,7 @@ type Simulator struct {
 	web3Service            types.POWChainService
 	chainService           types.StateFetcher
 	beaconDB               beaconDB
-	devMode                bool
+	enablePOWChain         bool
 	delay                  time.Duration
 	slotNum                uint64
 	broadcastedBlocks      map[[32]byte]*types.Block
@@ -40,7 +40,7 @@ type Config struct {
 	Web3Service     types.POWChainService
 	ChainService    types.StateFetcher
 	BeaconDB        beaconDB
-	DevMode         bool
+	EnablePOWChain  bool
 }
 
 type beaconDB interface {
@@ -68,7 +68,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		chainService:           cfg.ChainService,
 		beaconDB:               cfg.BeaconDB,
 		delay:                  cfg.Delay,
-		devMode:                cfg.DevMode,
+		enablePOWChain:         cfg.EnablePOWChain,
 		slotNum:                1,
 		broadcastedBlocks:      make(map[[32]byte]*types.Block),
 		broadcastedBlockHashes: [][32]byte{},
@@ -160,10 +160,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time) {
 			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
 
 			var powChainRef []byte
-			if !sim.devMode {
+			if sim.enablePOWChain {
 				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
 			} else {
-				powChainRef = []byte("stub")
+				powChainRef = []byte{byte(sim.slotNum)}
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{

@@ -94,6 +94,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool) *ChainService {
 		BeaconBlockBuf: 0,
 		BeaconDB:       db,
 		Web3Service:    web3Service,
+		EnablePOWChain: true,
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)

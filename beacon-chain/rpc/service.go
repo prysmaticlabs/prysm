@@ -65,7 +65,7 @@ type Service struct {
 	canonicalBlockChan    chan *types.Block
 	canonicalStateChan    chan *types.CrystallizedState
 	incomingAttestation   chan *types.Attestation
-	devMode               bool
+	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
 }
 
@@ -79,7 +79,7 @@ type Config struct {
 	ChainService       chainService
 	POWChainService    powChainService
 	AttestationService attestationService
-	DevMode            bool
+	EnablePOWChain     bool
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -100,7 +100,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
-		devMode:               cfg.DevMode,
+		enablePOWChain:        cfg.EnablePOWChain,
 	}
 }
 
@@ -201,8 +201,8 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
 	var powChainHash common.Hash
-	if s.devMode {
-		powChainHash = common.BytesToHash([]byte("stub"))
+	if !s.enablePOWChain {
+		powChainHash = common.BytesToHash([]byte{byte(req.GetSlotNumber())})
 	} else {
 		powChainHash = s.powChainService.LatestBlockHash()
 	}
