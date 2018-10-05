@@ -9,10 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -41,37 +40,30 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{})
 }
 
-type mockChainService struct{}
+func setupSimulator(t *testing.T) *Simulator {
+	ctx := context.Background()
 
-func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
-	return types.NewActiveState(&pb.ActiveState{}, make(map[[32]byte]*types.VoteCache))
-}
+	config := db.Config{Path: "", Name: "", InMemory: true}
+	db, err := db.NewDB(config)
+	if err != nil {
+		t.Fatalf("could not setup beaconDB: %v", err)
+	}
 
-func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return types.NewCrystallizedState(&pb.CrystallizedState{})
-}
-
-func (mc *mockChainService) GenesisBlock() (*types.Block, error) {
-	return types.NewGenesisBlock([32]byte{}, [32]byte{}), nil
-}
-
-func (mc *mockChainService) CurrentBeaconSlot() uint64 {
-	return 0
-}
-
-func TestLifecycle(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := database.NewKVStore()
 	cfg := &Config{
 		Delay:           time.Second,
 		BlockRequestBuf: 0,
 		P2P:             &mockP2P{},
 		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
 		BeaconDB:        db,
 		EnablePOWChain:  true,
 	}
-	sim := NewSimulator(context.Background(), cfg)
+
+	return NewSimulator(ctx, cfg)
+}
+
+func TestLifecycle(t *testing.T) {
+	hook := logTest.NewGlobal()
+	sim := setupSimulator(t)
 
 	sim.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -86,33 +78,21 @@ func TestLifecycle(t *testing.T) {
 
 func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := database.NewKVStore()
-	cfg := &Config{
-		Delay:           time.Second,
-		BlockRequestBuf: 0,
-		P2P:             &mockP2P{},
-		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
-		BeaconDB:        db,
-		EnablePOWChain:  false,
-	}
-	sim := NewSimulator(context.Background(), cfg)
+	sim := setupSimulator(t)
 
 	delayChan := make(chan time.Time)
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.run(delayChan, doneChan)
+		sim.run(delayChan)
 		<-exitRoutine
 	}()
 
 	delayChan <- time.Time{}
-	doneChan <- struct{}{}
+	sim.cancel()
+	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Announcing block hash")
-
-	exitRoutine <- true
 
 	if len(sim.broadcastedBlockHashes) != 1 {
 		t.Error("Did not store the broadcasted block hash")
@@ -122,24 +102,13 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := database.NewKVStore()
-	cfg := &Config{
-		Delay:           time.Second,
-		BlockRequestBuf: 0,
-		P2P:             &mockP2P{},
-		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
-		BeaconDB:        db,
-		EnablePOWChain:  false,
-	}
-	sim := NewSimulator(context.Background(), cfg)
+	sim := setupSimulator(t)
 
 	delayChan := make(chan time.Time)
-	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.run(delayChan, doneChan)
+		sim.run(delayChan)
 		<-exitRoutine
 	}()
 
@@ -161,37 +130,8 @@ func TestBlockRequest(t *testing.T) {
 	sim.broadcastedBlocks[h] = block
 
 	sim.blockRequestChan <- msg
-	doneChan <- struct{}{}
+	sim.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Responding to full block request for hash: 0x%x", h))
-}
-
-func TestLastSimulatedSession(t *testing.T) {
-	db := database.NewKVStore()
-	cfg := &Config{
-		Delay:           time.Second,
-		BlockRequestBuf: 0,
-		P2P:             &mockP2P{},
-		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
-		BeaconDB:        db,
-		EnablePOWChain:  false,
-	}
-	sim := NewSimulator(context.Background(), cfg)
-	if err := db.Put([]byte("last-simulated-block"), []byte{}); err != nil {
-		t.Fatalf("Could not store last simulated block: %v", err)
-	}
-	if _, err := sim.lastSimulatedSessionBlock(); err != nil {
-		t.Errorf("could not fetch last simulated session block: %v", err)
-	}
-}
-
-func TestDefaultConfig(t *testing.T) {
-	if DefaultConfig().BlockRequestBuf != 100 {
-		t.Errorf("incorrect default config for block request buffer")
-	}
-	if DefaultConfig().Delay != time.Second*time.Duration(params.GetConfig().SlotDuration) {
-		t.Errorf("incorrect default config for delay")
-	}
 }

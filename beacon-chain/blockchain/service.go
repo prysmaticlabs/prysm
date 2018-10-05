@@ -4,11 +4,10 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -24,8 +23,7 @@ var log = logrus.WithField("prefix", "blockchain")
 type ChainService struct {
 	ctx                            context.Context
 	cancel                         context.CancelFunc
-	beaconDB                       ethdb.Database
-	chain                          *BeaconChain
+	beaconDB                       *db.BeaconDB
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
@@ -45,9 +43,8 @@ type ChainService struct {
 type Config struct {
 	BeaconBlockBuf            int
 	IncomingBlockBuf          int
-	Chain                     *BeaconChain
 	Web3Service               *powchain.Web3Service
-	BeaconDB                  ethdb.Database
+	BeaconDB                  *db.BeaconDB
 	DevMode                   bool
 	EnableCrossLinks          bool
 	EnableRewardChecking      bool
@@ -61,7 +58,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
-		chain:                          cfg.Chain,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
 		web3Service:                    cfg.Web3Service,
@@ -84,7 +80,7 @@ func (c *ChainService) Start() {
 	// to truly continue across sessions.
 	log.Info("Starting service")
 
-	genesis, err := c.GenesisBlock()
+	genesis, err := c.beaconDB.GetCanonicalBlockForSlot(0)
 	if err != nil {
 		log.Fatalf("Could not get genesis block: %v", err)
 	}
@@ -111,80 +107,13 @@ func (c *ChainService) Start() {
 func (c *ChainService) Stop() error {
 	defer c.cancel()
 	log.Info("Stopping service")
-	log.Info("Persisting current active and crystallized states before closing")
-	if err := c.chain.PersistActiveState(); err != nil {
-		return fmt.Errorf("Error persisting active state: %v", err)
-	}
-	if err := c.chain.PersistCrystallizedState(); err != nil {
-		return fmt.Errorf("Error persisting crystallized state: %v", err)
-	}
 	return nil
-}
-
-// CurrentBeaconSlot based on the seconds since genesis.
-func (c *ChainService) CurrentBeaconSlot() uint64 {
-	secondsSinceGenesis := time.Since(c.genesisTimestamp).Seconds()
-	if secondsSinceGenesis-float64(params.GetConfig().SlotDuration) < 0 {
-		return 0
-	}
-	return uint64(math.Floor(secondsSinceGenesis/float64(params.GetConfig().SlotDuration))) - 1
-}
-
-// CanonicalHead of the current beacon chain.
-func (c *ChainService) CanonicalHead() (*types.Block, error) {
-	return c.chain.CanonicalHead()
-}
-
-// CanonicalCrystallizedState of the current beacon chain's head.
-func (c *ChainService) CanonicalCrystallizedState() *types.CrystallizedState {
-	return c.chain.CrystallizedState()
 }
 
 // IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
 	return c.incomingBlockFeed
-}
-
-// HasStoredState checks if there is any Crystallized/Active State or blocks(not implemented) are
-// persisted to the db.
-func (c *ChainService) HasStoredState() (bool, error) {
-	hasCrystallized, err := c.beaconDB.Has(crystallizedStateLookupKey)
-	if err != nil {
-		return false, err
-	}
-	return hasCrystallized, nil
-}
-
-// SaveBlock is a mock which saves a block to the local db using the
-// blockhash as the key.
-func (c *ChainService) SaveBlock(block *types.Block) error {
-	return c.chain.saveBlock(block)
-}
-
-// ContainsBlock checks if a block for the hash exists in the chain.
-// This method must be safe to call from a goroutine.
-func (c *ChainService) ContainsBlock(h [32]byte) (bool, error) {
-	return c.chain.hasBlock(h)
-}
-
-// BlockSlotNumberByHash returns the slot number of a block.
-func (c *ChainService) BlockSlotNumberByHash(h [32]byte) (uint64, error) {
-	block, err := c.chain.getBlock(h)
-	if err != nil {
-		return 0, fmt.Errorf("could not get block from DB: %v", err)
-	}
-	return block.SlotNumber(), nil
-}
-
-// CurrentCrystallizedState of the canonical chain.
-func (c *ChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return c.chain.CrystallizedState()
-}
-
-// CurrentActiveState of the canonical chain.
-func (c *ChainService) CurrentActiveState() *types.ActiveState {
-	return c.chain.ActiveState()
 }
 
 // CanonicalBlockFeed returns a channel that is written to
@@ -197,23 +126,6 @@ func (c *ChainService) CanonicalBlockFeed() *event.Feed {
 // whenever a new crystallized state is determined to be canonical in the chain.
 func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return c.canonicalCrystallizedStateFeed
-}
-
-// CheckForCanonicalBlockBySlot checks if the canonical block for that slot exists
-// in the db.
-func (c *ChainService) CheckForCanonicalBlockBySlot(slotNumber uint64) (bool, error) {
-	return c.chain.hasCanonicalBlockForSlot(slotNumber)
-}
-
-// CanonicalBlockBySlotNumber retrieves the canonical block for that slot which
-// has been saved in the db.
-func (c *ChainService) CanonicalBlockBySlotNumber(slotNumber uint64) (*types.Block, error) {
-	return c.chain.canonicalBlockForSlot(slotNumber)
-}
-
-// GenesisBlock returns the contents of the genesis block.
-func (c *ChainService) GenesisBlock() (*types.Block, error) {
-	return c.chain.genesisBlock()
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
@@ -238,7 +150,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 		case <-c.ctx.Done():
 			return
 		case <-slotInterval:
-			log.WithField("slotNumber", c.CurrentBeaconSlot()).Info("New beacon slot")
+			log.WithField("slotNumber", utils.CurrentSlot(c.genesisTimestamp)).Info("New beacon slot")
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
@@ -248,7 +160,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			// Naive fork choice rule: we pick the first block we processed for the previous slot
 			// as canonical.
-			block, err := c.chain.getBlock(c.blocksPendingProcessing[0])
+			block, err := c.beaconDB.GetBlock(c.blocksPendingProcessing[0])
 			if err != nil {
 				log.Errorf("Could not get block: %v", err)
 				continue
@@ -262,14 +174,14 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 
 			log.Info("Applying fork choice rule")
 
-			parentBlock, err := c.chain.getBlock(block.ParentHash())
+			parentBlock, err := c.beaconDB.GetBlock(block.ParentHash())
 			if err != nil {
-				log.Errorf("Failed to get parent of block 0x%x", h)
+				log.Errorf("Failed to get parent of block %x", h)
 				continue
 			}
 
-			cState := c.chain.CrystallizedState()
-			aState := c.chain.ActiveState()
+			cState := c.beaconDB.GetCrystallizedState()
+			aState := c.beaconDB.GetActiveState()
 			var stateTransitioned bool
 
 			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
@@ -297,26 +209,26 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 				continue
 			}
 
-			if err := c.chain.SetActiveState(aState); err != nil {
+			if err := c.beaconDB.SaveActiveState(aState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 				continue
 			}
 
 			if stateTransitioned {
-				if err := c.chain.SetCrystallizedState(cState); err != nil {
+				if err := c.beaconDB.SaveCrystallizedState(cState); err != nil {
 					log.Errorf("Write crystallized state to disk failed: %v", err)
 					continue
 				}
 			}
 
 			// Save canonical block hash with slot number to DB.
-			if err := c.chain.saveCanonicalSlotNumber(block.SlotNumber(), h); err != nil {
+			if err := c.beaconDB.SaveCanonicalSlotNumber(block.SlotNumber(), h); err != nil {
 				log.Errorf("Unable to save slot number to db: %v", err)
 				continue
 			}
 
 			// Save canonical block to DB.
-			if err := c.chain.saveCanonicalBlock(block); err != nil {
+			if err := c.beaconDB.SaveCanonicalBlock(block); err != nil {
 				log.Errorf("Unable to save block to db: %v", err)
 				continue
 			}
@@ -363,7 +275,7 @@ func (c *ChainService) blockProcessing() {
 			}
 
 			// Check if we have received the parent block.
-			parentExists, err := c.chain.hasBlock(block.ParentHash())
+			parentExists, err := c.beaconDB.HasBlock(block.ParentHash())
 			if err != nil {
 				log.Errorf("Could not check existence of parent: %v", err)
 				continue
@@ -372,17 +284,17 @@ func (c *ChainService) blockProcessing() {
 				log.Debugf("Block points to nil parent: %v", err)
 				continue
 			}
-			parent, err := c.chain.getBlock(block.ParentHash())
+			parent, err := c.beaconDB.GetBlock(block.ParentHash())
 			if err != nil {
 				log.Debugf("Could not get parent block: %v", err)
 				continue
 			}
 
-			aState := c.chain.ActiveState()
-			cState := c.chain.CrystallizedState()
+			aState := c.beaconDB.GetActiveState()
+			cState := c.beaconDB.GetCrystallizedState()
 
 			if valid := block.IsValid(
-				c,
+				c.beaconDB,
 				aState,
 				cState,
 				parent.SlotNumber(),
@@ -393,7 +305,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			if err := c.chain.saveBlock(block); err != nil {
+			if err := c.beaconDB.SaveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}

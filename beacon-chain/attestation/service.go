@@ -3,8 +3,8 @@ package attestation
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
@@ -17,7 +17,7 @@ var log = logrus.WithField("prefix", "attestation")
 type Service struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
-	handler       *Handler
+	beaconDB      *db.BeaconDB
 	broadcastFeed *event.Feed
 	broadcastChan chan *types.Attestation
 	incomingFeed  *event.Feed
@@ -26,19 +26,19 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	Handler                 *Handler
+	BeaconDB                *db.BeaconDB
 	ReceiveAttestationBuf   int
 	BroadcastAttestationBuf int
 }
 
-// NewAttestService instantiates a new service instance that will
+// NewAttestationService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewAttestService(ctx context.Context, cfg *Config) *Service {
+func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,
 		cancel:        cancel,
-		handler:       cfg.Handler,
+		beaconDB:      cfg.BeaconDB,
 		broadcastFeed: new(event.Feed),
 		broadcastChan: make(chan *types.Attestation, cfg.BroadcastAttestationBuf),
 		incomingFeed:  new(event.Feed),
@@ -65,21 +65,6 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
-// ContainsAttestation checks if an attestation has already been received and aggregated.
-func (a *Service) ContainsAttestation(bitfield []byte, hash [32]byte) (bool, error) {
-	attestation, err := a.handler.getAttestation(hash)
-	if err != nil {
-		return false, fmt.Errorf("could not get attestation from DB: %v", err)
-	}
-	savedAttestationBitfield := attestation.AttesterBitfield()
-	for i := 0; i < len(bitfield); i++ {
-		if bitfield[i]&savedAttestationBitfield[i] != 0 {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // aggregateAttestations aggregates the newly broadcasted attestation that was
 // received from sync service.
 func (a *Service) aggregateAttestations() {
@@ -98,12 +83,12 @@ func (a *Service) aggregateAttestations() {
 				log.Errorf("Could not hash incoming attestation: %v", err)
 				continue
 			}
-			if err := a.handler.saveAttestation(attestation); err != nil {
+			if err := a.beaconDB.SaveAttestation(attestation); err != nil {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
 
-			log.Infof("Forwarding aggregated attestation 0x%x to proposers through grpc", h)
+			log.Infof("Forwarding aggregated attestation %x to proposers through grpc", h)
 		}
 	}
 }
