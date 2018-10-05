@@ -130,6 +130,7 @@ With the binary executable:
 ```
 ./validator \
   --beacon-rpc-provider http://localhost:4000 \
+  --datadir /path/to/uniquevalidatordatadir \
   --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
@@ -138,13 +139,14 @@ With Bazel:
 ```
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
+  --datadir /path/to/uniquevalidatordatadir \
   --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
 
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
 
-if you want to run multiple validator clients, each one needs to have its own data directory where it will persist information, so create a new one each time and pass it into the validator command with the flag `--datadir /path/to/datadir`.
+if you want to run multiple validator clients, **each one needs to have its own data directory where it will persist information, so create a new one each time** and pass it into the validator command with the flag `--datadir /path/to/validatordatadir`.
 
 ## Running Via Docker
 
