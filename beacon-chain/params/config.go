@@ -33,7 +33,7 @@ type Config struct {
 
 var defaultConfig = &Config{
 	GenesisTime:                 time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
-	ModuloBias:                  16777216,
+	ModuloBias:                  4194304,
 	CycleLength:                 uint64(64),
 	ShardCount:                  1024,
 	EtherDenomination:           1e18,
@@ -51,7 +51,7 @@ var defaultConfig = &Config{
 
 var demoConfig = &Config{
 	GenesisTime:               time.Now(),
-	ModuloBias:                16777216,
+	ModuloBias:                4194304,
 	CycleLength:               uint64(5),
 	ShardCount:                3,
 	EtherDenomination:         1e18,
