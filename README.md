@@ -1,6 +1,6 @@
 # Prysmatic Labs Ethereum 2.0 Implementation
 
-![Travis Build](https://travis-ci.org/prysmaticlabs/prysm.svg?branch=master)
+[![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg)](https://buildkite.com/prysmatic-labs/prysm)
 
 This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
 
