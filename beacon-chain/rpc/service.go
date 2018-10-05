@@ -185,7 +185,6 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 			return nil, errors.New("no public keys specified in request")
 		}
 	}
-	log.Info(len(cState.Validators()))
 	assignments, err := assignmentsForPublicKeys(keys, cState)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
@@ -354,7 +353,6 @@ func (s *Service) ValidatorAssignments(
 	for {
 		select {
 		case cState := <-s.canonicalStateChan:
-
 			log.Info("Sending new cycle assignments to validator clients")
 
 			var keys []*pb.PublicKey

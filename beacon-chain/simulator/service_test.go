@@ -64,7 +64,6 @@ func setupSimulator(t *testing.T) *Simulator {
 		BlockRequestBuf: 0,
 		P2P:             &mockP2P{},
 		Web3Service:     &mockPOWChainService{},
-		ChainService:    &mockChainService{},
 		BeaconDB:        db,
 		EnablePOWChain:  true,
 	}

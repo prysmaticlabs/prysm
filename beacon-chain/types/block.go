@@ -169,32 +169,22 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-	_, proposerIndex, err := casper.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalc(),
-		parentSlot)
-	if err != nil {
-		log.Errorf("Can not get proposer index %v", err)
-		return false
-	}
-	log.Infof("Proposer index: %v", proposerIndex)
-	if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
-		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
-		return false
-	}
-
-	for index, attestation := range b.Attestations() {
-		if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-			log.Debugf("attestation invalid: %v", attestation)
+	if enableAttestationValidity {
+		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
+		_, proposerIndex, err := casper.ProposerShardAndIndex(
+			cState.ShardAndCommitteesForSlots(),
+			cState.LastStateRecalc(),
+			parentSlot)
+		if err != nil {
+			log.Errorf("Can not get proposer index %v", err)
 			return false
 		}
-	}
+		log.Infof("Proposer index: %v", proposerIndex)
+		if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
+			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+			return false
+		}
 
-	if enableAttestationValidity {
-		log.Debugf("Checking block validity. Recent block hash is %d",
-			aState.data.RecentBlockHashes[0],
-		)
 		for index, attestation := range b.Attestations() {
 			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
 				log.Debugf("attestation invalid: %v", attestation)
@@ -263,7 +253,6 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
-
 	return true
 }
 

@@ -105,7 +105,11 @@ func (c *ChainService) Stop() error {
 // CurrentBeaconSlot based on the seconds since genesis.
 func (c *ChainService) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := uint64(time.Since(c.genesisTimestamp).Seconds())
-	return secondsSinceGenesis / params.GetConfig().SlotDuration
+	currentSlot := secondsSinceGenesis / params.GetConfig().SlotDuration
+	if currentSlot < 1 {
+		return 0
+	}
+	return currentSlot - 1
 }
 
 // IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
@@ -301,14 +305,13 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			log.Infof("Finished processing received block: %x", blockHash)
+			log.Infof("Finished processing received block: 0x%x", blockHash)
 
 			// We push the hash of the block we just stored to a pending processing
 			// slice the fork choice rule will utilize.
 			c.lock.Lock()
 			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
 			c.lock.Unlock()
-			log.Info("Finished processing received block")
 		}
 	}
 }

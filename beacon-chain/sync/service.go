@@ -49,29 +49,31 @@ type beaconDB interface {
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	p2p                   shared.P2P
-	chainService          chainService
-	attestationService    attestationService
-	db                    beaconDB
-	blockAnnouncementFeed *event.Feed
-	announceBlockHashBuf  chan p2p.Message
-	blockBuf              chan p2p.Message
-	blockRequestBySlot    chan p2p.Message
-	attestationBuf        chan p2p.Message
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	p2p                       shared.P2P
+	chainService              chainService
+	attestationService        attestationService
+	db                        beaconDB
+	blockAnnouncementFeed     *event.Feed
+	announceBlockHashBuf      chan p2p.Message
+	blockBuf                  chan p2p.Message
+	blockRequestBySlot        chan p2p.Message
+	attestationBuf            chan p2p.Message
+	enableAttestationValidity bool
 }
 
 // Config allows the channel's buffer sizes to be changed.
 type Config struct {
-	BlockHashBufferSize    int
-	BlockBufferSize        int
-	BlockRequestBufferSize int
-	AttestationBufferSize  int
-	ChainService           chainService
-	AttestService          attestationService
-	BeaconDB               beaconDB
-	P2P                    shared.P2P
+	BlockHashBufferSize       int
+	BlockBufferSize           int
+	BlockRequestBufferSize    int
+	AttestationBufferSize     int
+	ChainService              chainService
+	AttestService             attestationService
+	BeaconDB                  beaconDB
+	P2P                       shared.P2P
+	EnableAttestationValidity bool
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -88,17 +90,18 @@ func DefaultConfig() Config {
 func NewSyncService(ctx context.Context, cfg Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		p2p:                   cfg.P2P,
-		chainService:          cfg.ChainService,
-		attestationService:    cfg.AttestService,
-		db:                    cfg.BeaconDB,
-		blockAnnouncementFeed: new(event.Feed),
-		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
-		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
-		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
+		ctx:                       ctx,
+		cancel:                    cancel,
+		p2p:                       cfg.P2P,
+		chainService:              cfg.ChainService,
+		db:                        cfg.BeaconDB,
+		attestationService:        cfg.AttestService,
+		blockAnnouncementFeed:     new(event.Feed),
+		announceBlockHashBuf:      make(chan p2p.Message, cfg.BlockHashBufferSize),
+		blockBuf:                  make(chan p2p.Message, cfg.BlockBufferSize),
+		blockRequestBySlot:        make(chan p2p.Message, cfg.BlockRequestBufferSize),
+		attestationBuf:            make(chan p2p.Message, cfg.AttestationBufferSize),
+		enableAttestationValidity: cfg.EnableAttestationValidity,
 	}
 }
 
@@ -213,35 +216,36 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	// Verify attestation coming from proposer then forward block to the subscribers.
-	attestation := types.NewAttestation(response.Attestation)
-	cState := ss.db.GetCrystallizedState()
-	parentBlock, err := ss.db.GetBlock(block.ParentHash())
-	if err != nil {
-		log.Errorf("Failed to get parent slot: %v", err)
-		return
-	}
-	parentSlot := parentBlock.SlotNumber()
-	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
-	if err != nil {
-		log.Errorf("Failed to get proposer shard ID: %v", err)
-		return
-	}
-	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
-		log.Errorf("Failed to verify proposer attestation: %v", err)
-		return
+	if ss.enableAttestationValidity {
+		// Verify attestation coming from proposer then forward block to the subscribers.
+		attestation := types.NewAttestation(response.Attestation)
+		cState := ss.db.GetCrystallizedState()
+		parentBlock, err := ss.db.GetBlock(block.ParentHash())
+		if err != nil {
+			log.Errorf("Failed to get parent slot: %v", err)
+			return
+		}
+		parentSlot := parentBlock.SlotNumber()
+		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+		if err != nil {
+			log.Errorf("Failed to get proposer shard ID: %v", err)
+			return
+		}
+		// TODO(#258): stubbing public key with empty 32 bytes.
+		if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
+			log.Errorf("Failed to verify proposer attestation: %v", err)
+			return
+		}
+		_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+		log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+		ss.attestationService.IncomingAttestationFeed().Send(attestation)
+		sendAttestationSpan.End()
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
 	ss.chainService.IncomingBlockFeed().Send(block)
 	sendBlockSpan.End()
-
-	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
-	ss.attestationService.IncomingAttestationFeed().Send(attestation)
-	sendAttestationSpan.End()
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.
