@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -27,6 +28,7 @@ type Simulator struct {
 	enablePOWChain         bool
 	delay                  time.Duration
 	slotNum                uint64
+	genesisTimestamp       time.Time
 	broadcastedBlocks      map[[32]byte]*types.Block
 	broadcastedBlockHashes [][32]byte
 	blockRequestChan       chan p2p.Message
@@ -80,6 +82,15 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
+	genesis, err := sim.beaconDB.GetCanonicalBlockForSlot(0)
+	if err != nil {
+		log.Fatalf("Could not get genesis block: %v", err)
+	}
+	sim.genesisTimestamp, err = genesis.Timestamp()
+	if err != nil {
+		log.Fatalf("Could not get genesis timestamp: %v", err)
+	}
+
 	go sim.run(time.NewTicker(sim.delay).C)
 }
 
@@ -179,7 +190,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time) {
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
-				SlotNumber:            sim.slotNum,
+				SlotNumber:            utils.CurrentSlot(sim.genesisTimestamp),
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],

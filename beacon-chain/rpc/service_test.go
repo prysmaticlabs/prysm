@@ -65,9 +65,9 @@ func newMockChainService() *mockChainService {
 }
 
 type mockDB struct {
-	block  *types.Block
+	block   *types.Block
 	genesis *types.Block
-	cState *types.CrystallizedState
+	cState  *types.CrystallizedState
 }
 
 func (m *mockDB) GetCanonicalBlock() (*types.Block, error) {

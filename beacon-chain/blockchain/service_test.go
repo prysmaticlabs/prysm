@@ -126,15 +126,6 @@ func TestStartStop(t *testing.T) {
 	}
 }
 
-func TestCurrentBeaconSlot(t *testing.T) {
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
-	chainService.genesisTimestamp = time.Now()
-	if chainService.CurrentBeaconSlot() != 0 {
-		t.Errorf("Expected us to be in the 0th slot, received %v", chainService.CurrentBeaconSlot())
-	}
-}
-
 func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := setupBeaconChain(t, true)

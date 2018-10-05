@@ -110,16 +110,6 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
-// CurrentBeaconSlot based on the seconds since genesis.
-func (c *ChainService) CurrentBeaconSlot() uint64 {
-	secondsSinceGenesis := uint64(time.Since(c.genesisTimestamp).Seconds())
-	currentSlot := secondsSinceGenesis / params.GetConfig().SlotDuration
-	if currentSlot < 1 {
-		return 0
-	}
-	return currentSlot - 1
-}
-
 // IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {
@@ -160,7 +150,7 @@ func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
 		case <-c.ctx.Done():
 			return
 		case <-slotInterval:
-			log.WithField("slotNumber", c.CurrentBeaconSlot()).Info("New beacon slot")
+			log.WithField("slotNumber", utils.CurrentSlot(c.genesisTimestamp)).Info("New beacon slot")
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.

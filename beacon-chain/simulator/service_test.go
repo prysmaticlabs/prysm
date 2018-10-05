@@ -40,16 +40,6 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{})
 }
 
-type mockChainService struct{}
-
-func (mc *mockChainService) CurrentActiveState() *types.ActiveState {
-	return types.NewActiveState(&pb.ActiveState{}, make(map[[32]byte]*types.VoteCache))
-}
-
-func (mc *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	return types.NewCrystallizedState(&pb.CrystallizedState{})
-}
-
 func setupSimulator(t *testing.T) *Simulator {
 	ctx := context.Background()
 
