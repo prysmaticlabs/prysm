@@ -52,6 +52,15 @@ This document serves as an outline of the required readings to catch up with and
 -   [Ethereum Protocol Subtleties](https://github.com/ethereum/wiki/wiki/Subtleties)
 -   [Awesome Ethereum Virtual Machine](https://github.com/ethereum/wiki/wiki/Ethereum-Virtual-Machine-(EVM)-Awesome-List)
 
+**Ethereum-flavored WebAssembly**
+
+-   [Ewasm background, motivation, goals, and design](https://github.com/ewasm/design)
+-   [The current Ewasm spec](https://github.com/ewasm/design/blob/master/eth_interface.md)
+-   [Latest Ewasm community call including live demo of the testnet](https://www.youtube.com/watch?v=apIHpBSdBio)
+-   [Why eWASM? by Alex Beregszaszi](https://www.youtube.com/watch?v=VF7f_s2P3U0)
+-   [Panel: entire eWASM team discussion and Q&A](https://youtu.be/ThvForkdPyc?t=119)
+-   [Ewasm community meetup at ETHBuenosAires](https://www.youtube.com/watch?v=qDzrbj7dtyU)
+
 **Smart Contracts, dApps, and Cryptoeconomics**
 
 -   [What are dApps? The New Decentralized Future](https://blockgeeks.com/guides/dapps/)
