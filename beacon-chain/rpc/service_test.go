@@ -66,6 +66,7 @@ func newMockChainService() *mockChainService {
 
 type mockDB struct {
 	block  *types.Block
+	genesis *types.Block
 	cState *types.CrystallizedState
 }
 
@@ -75,6 +76,10 @@ func (m *mockDB) GetCanonicalBlock() (*types.Block, error) {
 
 func (m *mockDB) GetCrystallizedState() *types.CrystallizedState {
 	return m.cState
+}
+
+func (m *mockDB) GetCanonicalBlockForSlot(uint64) (*types.Block, error) {
+	return m.genesis, nil
 }
 
 func TestLifecycle(t *testing.T) {
@@ -128,6 +133,7 @@ func TestInsecureEndpoint(t *testing.T) {
 func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
+	mockDB.genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
 	var err error
 	mockDB.cState, err = types.NewGenesisCrystallizedState("")
 	if err != nil {

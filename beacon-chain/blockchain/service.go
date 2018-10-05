@@ -58,7 +58,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
 		ctx:                            ctx,
-		genesisTimestamp:               params.GetConfig().GenesisTime,
 		cancel:                         cancel,
 		beaconDB:                       cfg.BeaconDB,
 		web3Service:                    cfg.Web3Service,
@@ -80,6 +79,15 @@ func (c *ChainService) Start() {
 	// TODO(#474): Fetch the slot: (block, state) DAGs from persistent storage
 	// to truly continue across sessions.
 	log.Info("Starting service")
+
+	genesis, err := c.beaconDB.GetCanonicalBlockForSlot(0)
+	if err != nil {
+		log.Fatalf("Could not get genesis block: %v", err)
+	}
+	c.genesisTimestamp, err = genesis.Timestamp()
+	if err != nil {
+		log.Fatalf("Could not get genesis timestamp: %v", err)
+	}
 
 	// If the genesis time was at 12:00:00PM and the current time is 12:00:03PM,
 	// the next slot should tick at 12:00:08PM. We can accomplish this
@@ -295,7 +303,14 @@ func (c *ChainService) blockProcessing() {
 			aState := c.beaconDB.GetActiveState()
 			cState := c.beaconDB.GetCrystallizedState()
 
-			if valid := block.IsValid(c.beaconDB, aState, cState, parent.SlotNumber(), c.enableAttestationValidity); !valid {
+			if valid := block.IsValid(
+				c.beaconDB,
+				aState,
+				cState,
+				parent.SlotNumber(),
+				c.enableAttestationValidity,
+				c.genesisTimestamp,
+			); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
 				continue
 			}
