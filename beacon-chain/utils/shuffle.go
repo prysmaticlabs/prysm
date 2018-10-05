@@ -28,6 +28,7 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 			swapPos := swapNum%remaining + i
 			validatorList[i], validatorList[swapPos] = validatorList[swapPos], validatorList[i]
 		}
+		hashSeed = blake2b.Sum512(seed[:])
 	}
 	return validatorList, nil
 }
