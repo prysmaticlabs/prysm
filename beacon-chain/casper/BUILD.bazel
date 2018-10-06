@@ -21,6 +21,8 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "large",
+    timeout = "short",
     srcs = [
         "incentives_test.go",
         "sharding_test.go",
@@ -34,6 +36,4 @@ go_test(
         "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],
-    size = "large",
-    timeout = "short",
 )
