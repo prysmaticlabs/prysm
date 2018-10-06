@@ -14,7 +14,7 @@ const bitsInByte = 8
 // ActiveValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord, dynasty uint64) []uint32 {
-	var indices []uint32
+	var indices = make([]uint32, 0, len(validators))
 	for i := 0; i < len(validators); i++ {
 		if validators[i].StartDynasty <= dynasty && dynasty < validators[i].EndDynasty {
 			indices = append(indices, uint32(i))
