@@ -11,6 +11,12 @@ var env = "default"
 // ValidatorStatusCode defines which stage a validator is in.
 type ValidatorStatusCode int
 
+// SpecialRecordType defines type of special record this message represents.
+type SpecialRecordType int
+
+// ValidatorSetDeltaFlags is used for light client to track validator entries.
+type ValidatorSetDeltaFlags int
+
 // Config contains configs for node to participate in beacon chain.
 type Config struct {
 	ShardCount                  int       // ShardCount is the fixed number of shards in Ethereum 2.0.
@@ -79,6 +85,21 @@ const (
 	Withdrawn
 	// Penalized means a validator did something bad and got slashed.
 	Penalized = 128
+)
+
+const (
+	// Logout means a validator is requesting to exit the validator pool.
+	Logout SpecialRecordType = iota
+	// CasperSlashing means a validator has committed slashing penalty, you want to submit a msg
+	// to report and earn rewards.
+	CasperSlashing
+)
+
+const (
+	// Entry means this is an entry message for light client to track overall validator status.
+	Entry ValidatorSetDeltaFlags = iota
+	// Exit means this is an exit message for light client to track overall validator status.
+	Exit
 )
 
 // GetConfig retrieves beacon node config.
