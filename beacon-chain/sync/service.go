@@ -226,7 +226,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 			return
 		}
 		parentSlot := parentBlock.SlotNumber()
-		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), parentSlot)
 		if err != nil {
 			log.Errorf("Failed to get proposer shard ID: %v", err)
 			return

@@ -130,7 +130,7 @@ func TestProcessBlock(t *testing.T) {
 	}()
 
 	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -142,11 +142,11 @@ func TestProcessBlock(t *testing.T) {
 
 	data := &pb.BeaconBlock{
 		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  parentHash[:],
+		AncestorHashes:  parentHash[:],
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
-		ShardId:        0,
+		Shard:        0,
 		ShardBlockHash: []byte{'A'},
 	}
 
@@ -191,7 +191,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}()
 
 	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -203,7 +203,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	data1 := &pb.BeaconBlock{
 		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  parentHash[:],
+		AncestorHashes:  parentHash[:],
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -219,7 +219,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	data2 := &pb.BeaconBlock{
 		PowChainRef: []byte{6, 7, 8, 9, 10},
-		ParentHash:  make([]byte, 32),
+		AncestorHashes:  make([]byte, 32),
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -267,8 +267,8 @@ func TestBlockRequestErrors(t *testing.T) {
 	ss.blockRequestBySlot <- invalidmsg
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
 
-	request1 := &pb.BeaconBlockRequestBySlotNumber{
-		SlotNumber: 20,
+	request1 := &pb.BeaconBlockRequestBySlot{
+		Slot: 20,
 	}
 
 	msg1 := p2p.Message{

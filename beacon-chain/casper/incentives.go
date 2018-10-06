@@ -20,9 +20,9 @@ func CalculateRewards(
 	dynasty uint64,
 	totalParticipatedDeposit uint64,
 	timeSinceFinality uint64) []*pb.ValidatorRecord {
-	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
-	activeValidators := ActiveValidatorIndices(validators, dynasty)
-	rewardQuotient := uint64(RewardQuotient(dynasty, validators))
+	totalDeposit := TotalActiveValidatorDeposit(validators)
+	activeValidators := ActiveValidatorIndices(validators)
+	rewardQuotient := uint64(RewardQuotient(validators))
 	penaltyQuotient := uint64(quadraticPenaltyQuotient())
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
@@ -72,15 +72,15 @@ func CalculateRewards(
 
 // RewardQuotient returns the reward quotient for validators which will be used to
 // reward validators for voting on blocks, or penalise them for being offline.
-func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
-	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
+func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
+	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
 	return params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDepositETH)
 }
 
 // SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
 // rate is targeted for a compunded annual rate of 3.88%.
-func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
-	rewardQuotient := float64(RewardQuotient(dynasty, validators))
+func SlotMaxInterestRate(validators []*pb.ValidatorRecord) float64 {
+	rewardQuotient := float64(RewardQuotient(validators))
 	return 1 / rewardQuotient
 }
 

@@ -180,7 +180,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	var keys []*pb.PublicKey
 	if req.AllValidators {
 		for _, val := range cState.Validators() {
-			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPublicKey()})
+			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 		}
 	} else {
 		keys = req.GetPublicKeys()

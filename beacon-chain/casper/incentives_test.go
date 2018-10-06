@@ -14,7 +14,7 @@ func NewValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 
 	for i := 0; i < 10; i++ {
-		validator := &pb.ValidatorRecord{Balance: 1e18, StartDynasty: 1, EndDynasty: 10}
+		validator := &pb.ValidatorRecord{Balance: 1e18}
 		validators = append(validators, validator)
 	}
 	return validators
@@ -24,7 +24,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	validators := NewValidators()
 	defaultBalance := uint64(1e18)
 
-	rewQuotient := RewardQuotient(1, validators)
+	rewQuotient := RewardQuotient(validators)
 	participatedDeposit := 4 * defaultBalance
 	totalDeposit := 10 * defaultBalance
 	penaltyQuotient := quadraticPenaltyQuotient()
@@ -32,7 +32,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	data := &pb.CrystallizedState{
 		Validators:        validators,
-		CurrentDynasty:    1,
+		Dynasty:    1,
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}
@@ -41,7 +41,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		5,
 		[]uint32{2, 3, 6, 9},
 		data.Validators,
-		data.CurrentDynasty,
+		data.Dynasty,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -68,7 +68,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		5,
 		[]uint32{1, 2, 7, 8},
 		validators,
-		data.CurrentDynasty,
+		data.Dynasty,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -94,11 +94,9 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 func TestRewardQuotient(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e18,
-			StartDynasty: 0,
-			EndDynasty:   2},
+		{Balance: 1e18},
 	}
-	rewQuotient := RewardQuotient(0, validators)
+	rewQuotient := RewardQuotient(validators)
 
 	if rewQuotient != params.GetConfig().BaseRewardQuotient {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
@@ -107,12 +105,11 @@ func TestRewardQuotient(t *testing.T) {
 
 func TestSlotMaxInterestRate(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e18,
-			StartDynasty: 0,
-			EndDynasty:   2},
+		{Balance: 1e18},
+
 	}
 
-	interestRate := SlotMaxInterestRate(0, validators)
+	interestRate := SlotMaxInterestRate(validators)
 
 	if interestRate != 1/float64(params.GetConfig().BaseRewardQuotient) {
 		t.Errorf("incorrect interest rate generated %f", interestRate)
