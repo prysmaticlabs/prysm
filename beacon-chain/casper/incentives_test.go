@@ -122,8 +122,7 @@ func TestSlotMaxInterestRate(t *testing.T) {
 
 func TestQuadraticPenaltyQuotient(t *testing.T) {
 	penaltyQuotient := quadraticPenaltyQuotient()
-
-	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 17), 2)) {
+	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 13), 2)) {
 		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
 }
@@ -168,7 +167,7 @@ func TestPenaltyCrosslink(t *testing.T) {
 	quadraticQuotient := quadraticPenaltyQuotient()
 
 	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
-	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*10/quadraticQuotient)
+	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*timeSinceConfirmation/quadraticQuotient)
 
 	if validator.Balance != expectedBalance {
 		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)

@@ -44,6 +44,7 @@ message BeaconBlock {
   bytes crystallized_state_hash = 6;
   google.protobuf.Timestamp timestamp = 7;
   repeated AggregatedAttestation attestations = 8;
+  repeated SpecialRecord specials = 9;
 }
 
 message CrystallizedStateHashAnnounce {
@@ -95,6 +96,7 @@ message ActiveStateResponse {
 message ActiveState {
   repeated AggregatedAttestation pending_attestations = 1;
   repeated bytes recent_block_hashes = 2;
+  repeated SpecialRecord pending_specials = 3;
 }
 
 message ValidatorRecord {
@@ -126,4 +128,9 @@ message CrosslinkRecord {
 
 message AttestationHashes {
   repeated bytes attestation_hash = 1;
+}
+
+message SpecialRecord {
+    uint32 kind = 1;
+    repeated bytes data = 2;
 }
