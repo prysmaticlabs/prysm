@@ -33,7 +33,7 @@ func initialValidators() []*pb.ValidatorRecord {
 		validator := &pb.ValidatorRecord{
 			StartDynasty:      0,
 			EndDynasty:        params.GetConfig().DefaultEndDynasty,
-			Balance:           params.GetConfig().DefaultBalance.Uint64(),
+			Balance:           params.GetConfig().DepositSize.Uint64(),
 			WithdrawalAddress: []byte{},
 			PublicKey:         []byte{},
 		}
@@ -210,7 +210,10 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
-	return slotNumber >= c.LastStateRecalc()+params.GetConfig().CycleLength
+	if c.LastStateRecalc() == 0 && slotNumber == params.GetConfig().CycleLength-1 {
+		return true
+	}
+	return slotNumber >= c.LastStateRecalc()+params.GetConfig().CycleLength-1
 }
 
 // isDynastyTransition checks if a dynasty transition can be processed. At that point,
@@ -258,10 +261,10 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, *ActiveState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, *ActiveState, error) {
 	var blockVoteBalance uint64
 	var lastStateRecalcCycleBack uint64
-	var rewardedValidators []*pb.ValidatorRecord
+	var newValidators []*pb.ValidatorRecord
 	var newCrossLinkRecords []*pb.CrosslinkRecord
 	var err error
 
@@ -282,6 +285,12 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		lastStateRecalcCycleBack = lastStateRecalc - params.GetConfig().CycleLength
 	}
 
+	// If reward checking is disabled, the new set of validators for the cycle
+	// will remain the same.
+	if !enableRewardChecking {
+		newValidators = c.data.Validators
+	}
+
 	// walk through all the slots from LastStateRecalc - cycleLength to LastStateRecalc - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
 		var voterIndices []uint32
@@ -293,14 +302,15 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			voterIndices = blockVoteCache[blockHash].VoterIndices
 
 			// Apply Rewards for each slot.
-			rewardedValidators = casper.CalculateRewards(
-				slot,
-				voterIndices,
-				c.Validators(),
-				c.CurrentDynasty(),
-				blockVoteBalance,
-				timeSinceFinality)
-
+			if enableRewardChecking {
+				newValidators = casper.CalculateRewards(
+					slot,
+					voterIndices,
+					c.Validators(),
+					c.CurrentDynasty(),
+					blockVoteBalance,
+					timeSinceFinality)
+			}
 		} else {
 			blockVoteBalance = 0
 		}
@@ -319,9 +329,11 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			finalizedSlot = slot - params.GetConfig().CycleLength - 1
 		}
 
-		newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
-		if err != nil {
-			return nil, nil, err
+		if enableCrossLinks {
+			newCrossLinkRecords, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -343,7 +355,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
 		DynastySeed:                c.data.DynastySeed,
 		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
-		Validators:                 rewardedValidators,
+		Validators:                 newValidators,
 		LastStateRecalc:            lastStateRecalc + params.GetConfig().CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
 		JustifiedStreak:            justifiedStreak,

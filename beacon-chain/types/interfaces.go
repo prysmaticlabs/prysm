@@ -6,8 +6,8 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
@@ -47,10 +47,12 @@ type ActiveStateChainService interface {
 	ContainsActiveState(h [32]byte) bool
 }
 
-// StateFetcher defines a struct that can fetch the latest canonical beacon state of a node.
+// StateFetcher defines a struct that can fetch the latest canonical beacon state and genesis block of a node.
 type StateFetcher interface {
 	CurrentActiveState() *ActiveState
 	CurrentCrystallizedState() *CrystallizedState
+	GenesisBlock() (*Block, error)
+	CurrentBeaconSlot() uint64
 }
 
 // POWChainService is an interface for a proof-of-work chain web3 service.

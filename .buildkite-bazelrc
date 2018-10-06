@@ -1,0 +1,19 @@
+build:remote --remote_max_connections=200
+build:remote --disk_cache=
+build:remote --remote_http_cache=https://storage.googleapis.com/prysmatic-bazel-cache
+build:remote --google_default_credentials
+build:remote --remote_timeout=10
+build:remote --experimental_guard_against_concurrent_changes
+
+build --experimental_strict_action_env
+build --disk_cache=/tmp/bazelbuilds
+build --experimental_multi_threaded_digest
+build --sandbox_tmpfs_path=/tmp
+build --verbose_failures
+build --announce_rc
+build --show_progress_rate_limit=5
+build --curses=yes --color=yes
+build --keep_going
+build --test_output=errors
+build --flaky_test_attempts=5
+build --features=race

@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,11 +24,11 @@ type Simulator struct {
 	cancel                 context.CancelFunc
 	p2p                    shared.P2P
 	web3Service            types.POWChainService
-	chainService           types.StateFetcher
-	beaconDB               ethdb.Database
-	devMode                bool
+	beaconDB               beaconDB
+	enablePOWChain         bool
 	delay                  time.Duration
 	slotNum                uint64
+	genesisTimestamp       time.Time
 	broadcastedBlocks      map[[32]byte]*types.Block
 	broadcastedBlockHashes [][32]byte
 	blockRequestChan       chan p2p.Message
@@ -42,15 +40,24 @@ type Config struct {
 	BlockRequestBuf int
 	P2P             shared.P2P
 	Web3Service     types.POWChainService
-	ChainService    types.StateFetcher
-	BeaconDB        ethdb.Database
-	DevMode         bool
+	BeaconDB        beaconDB
+	EnablePOWChain  bool
+}
+
+type beaconDB interface {
+	HasSimulatedBlock() (bool, error)
+	GetSimulatedBlock() (*types.Block, error)
+	SaveSimulatedBlock(*types.Block) error
+	GetActiveState() *types.ActiveState
+	GetCrystallizedState() *types.CrystallizedState
+	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
+	GetCanonicalBlock() (*types.Block, error)
 }
 
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		Delay:           time.Second * 5,
+		Delay:           time.Second * time.Duration(params.GetConfig().SlotDuration),
 		BlockRequestBuf: 100,
 	}
 }
@@ -63,10 +70,9 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		cancel:                 cancel,
 		p2p:                    cfg.P2P,
 		web3Service:            cfg.Web3Service,
-		chainService:           cfg.ChainService,
 		beaconDB:               cfg.BeaconDB,
 		delay:                  cfg.Delay,
-		devMode:                cfg.DevMode,
+		enablePOWChain:         cfg.EnablePOWChain,
 		slotNum:                1,
 		broadcastedBlocks:      make(map[[32]byte]*types.Block),
 		broadcastedBlockHashes: [][32]byte{},
@@ -77,7 +83,16 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	go sim.run(time.NewTicker(sim.delay).C, sim.ctx.Done())
+	genesis, err := sim.beaconDB.GetCanonicalBlockForSlot(0)
+	if err != nil {
+		log.Fatalf("Could not get genesis block: %v", err)
+	}
+	sim.genesisTimestamp, err = genesis.Timestamp()
+	if err != nil {
+		log.Fatalf("Could not get genesis timestamp: %v", err)
+	}
+
+	go sim.run(time.NewTicker(sim.delay).C)
 }
 
 // Stop the sim.
@@ -89,35 +104,28 @@ func (sim *Simulator) Stop() error {
 	if len(sim.broadcastedBlockHashes) > 0 {
 		lastBlockHash := sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1]
 		lastBlock := sim.broadcastedBlocks[lastBlockHash]
-		encoded, err := lastBlock.Marshal()
-		if err != nil {
-			return err
-		}
-		return sim.beaconDB.Put([]byte("last-simulated-block"), encoded)
+		return sim.beaconDB.SaveSimulatedBlock(lastBlock)
 	}
 	return nil
 }
 
 func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
-	hasSimulated, err := sim.beaconDB.Has([]byte("last-simulated-block"))
+	hasBlock, err := sim.beaconDB.HasSimulatedBlock()
 	if err != nil {
 		return nil, fmt.Errorf("Could not determine if a previous simulation occurred: %v", err)
 	}
-	if !hasSimulated {
+	if !hasBlock {
 		return nil, nil
 	}
-	enc, err := sim.beaconDB.Get([]byte("last-simulated-block"))
+
+	simulatedBlock, err := sim.beaconDB.GetSimulatedBlock()
 	if err != nil {
 		return nil, fmt.Errorf("Could not fetch simulated block from db: %v", err)
 	}
-	lastSimulatedBlockProto := &pb.BeaconBlock{}
-	if err = proto.Unmarshal(enc, lastSimulatedBlockProto); err != nil {
-		return nil, fmt.Errorf("Could not unmarshal simulated block from db: %v", err)
-	}
-	return types.NewBlock(lastSimulatedBlockProto), nil
+	return simulatedBlock, nil
 }
 
-func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
+func (sim *Simulator) run(delayChan <-chan time.Time) {
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 
@@ -139,16 +147,16 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 	for {
 		select {
-		case <-done:
+		case <-sim.ctx.Done():
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case <-delayChan:
-			activeStateHash, err := sim.chainService.CurrentActiveState().Hash()
+			activeStateHash, err := sim.beaconDB.GetActiveState().Hash()
 			if err != nil {
 				log.Errorf("Could not fetch active state hash: %v", err)
 				continue
 			}
-			crystallizedStateHash, err := sim.chainService.CurrentCrystallizedState().Hash()
+			crystallizedStateHash, err := sim.beaconDB.GetCrystallizedState().Hash()
 			if err != nil {
 				log.Errorf("Could not fetch crystallized state hash: %v", err)
 				continue
@@ -156,8 +164,19 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 
 			// If we have not broadcast a simulated block yet, we set parent hash
 			// to the genesis block.
+			var hash [32]byte
 			if sim.slotNum == 1 {
-				parentHash = []byte("genesis")
+				genesisBlock, err := sim.beaconDB.GetCanonicalBlockForSlot(0)
+				if err != nil {
+					log.Errorf("Failed to retrieve genesis block: %v", err)
+					continue
+				}
+				hash, err = genesisBlock.Hash()
+				if err != nil {
+					log.Errorf("Failed to hash genesis block: %v", err)
+					continue
+				}
+				parentHash = hash[:]
 			} else {
 				parentHash = sim.broadcastedBlockHashes[len(sim.broadcastedBlockHashes)-1][:]
 			}
@@ -165,19 +184,28 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			log.WithField("currentSlot", sim.slotNum).Debug("Current slot")
 
 			var powChainRef []byte
-			if !sim.devMode {
+			if sim.enablePOWChain {
 				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
 			} else {
-				powChainRef = []byte("stub")
+				powChainRef = []byte{byte(sim.slotNum)}
+			}
+
+			blockSlot := utils.CurrentSlot(sim.genesisTimestamp)
+			if blockSlot == 0 {
+				// cannot process a genesis block, so we start from 1
+				blockSlot = 1
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
-				SlotNumber:            sim.slotNum,
+				SlotNumber:            blockSlot,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateHash:       activeStateHash[:],
 				CrystallizedStateHash: crystallizedStateHash[:],
 				ParentHash:            parentHash,
+				Attestations: []*pb.AggregatedAttestation{
+					{Slot: sim.slotNum - 1, AttesterBitfield: []byte{byte(255)}},
+				},
 			})
 
 			sim.slotNum++
@@ -210,7 +238,10 @@ func (sim *Simulator) run(delayChan <-chan time.Time, done <-chan struct{}) {
 			}
 			log.Debugf("Responding to full block request for hash: 0x%x", h)
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: nil}
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
+				Slot:             sim.slotNum - 1,
+				AttesterBitfield: []byte{byte(255)},
+			}}
 			sim.p2p.Send(res, msg.Peer)
 		}
 	}

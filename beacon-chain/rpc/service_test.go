@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -32,46 +32,16 @@ func (m *mockPOWChainService) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{})
 }
 
-type faultyChainService struct{}
-
-func (f *faultyChainService) CanonicalHead() (*types.Block, error) {
-	return nil, errors.New("failed")
-}
-
-func (f *faultyChainService) CanonicalCrystallizedState() *types.CrystallizedState {
-	return nil
-}
-
-func (f *faultyChainService) CanonicalBlockFeed() *event.Feed {
-	return nil
-}
-
-func (f *faultyChainService) CanonicalCrystallizedStateFeed() *event.Feed {
-	return nil
-}
-
-type mockChainService struct {
-	blockFeed       *event.Feed
-	stateFeed       *event.Feed
-	attestationFeed *event.Feed
-}
-
 type mockAttestationService struct{}
 
 func (m *mockAttestationService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (m *mockAttestationService) ContainsAttestation(bitfield []byte, h [32]byte) (bool, error) {
-	return true, nil
-}
-
-func (m *mockChainService) CurrentCrystallizedState() *types.CrystallizedState {
-	cState, err := types.NewGenesisCrystallizedState("")
-	if err != nil {
-		return nil
-	}
-	return cState
+type mockChainService struct {
+	blockFeed       *event.Feed
+	stateFeed       *event.Feed
+	attestationFeed *event.Feed
 }
 
 func (m *mockChainService) IncomingBlockFeed() *event.Feed {
@@ -86,16 +56,6 @@ func (m *mockChainService) CanonicalCrystallizedStateFeed() *event.Feed {
 	return m.stateFeed
 }
 
-func (m *mockChainService) CanonicalHead() (*types.Block, error) {
-	data := &pbp2p.BeaconBlock{SlotNumber: 5}
-	return types.NewBlock(data), nil
-}
-
-func (m *mockChainService) CanonicalCrystallizedState() *types.CrystallizedState {
-	data := &pbp2p.CrystallizedState{}
-	return types.NewCrystallizedState(data)
-}
-
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:       new(event.Feed),
@@ -104,14 +64,30 @@ func newMockChainService() *mockChainService {
 	}
 }
 
+type mockDB struct {
+	block   *types.Block
+	genesis *types.Block
+	cState  *types.CrystallizedState
+}
+
+func (m *mockDB) GetCanonicalBlock() (*types.Block, error) {
+	return m.block, nil
+}
+
+func (m *mockDB) GetCrystallizedState() *types.CrystallizedState {
+	return m.cState
+}
+
+func (m *mockDB) GetCanonicalBlockForSlot(uint64) (*types.Block, error) {
+	return m.genesis, nil
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cs := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "7348",
-		CertFlag:         "alice.crt",
-		KeyFlag:          "alice.key",
-		CanonicalFetcher: cs,
+		Port:     "7348",
+		CertFlag: "alice.crt",
+		KeyFlag:  "alice.key",
 	})
 
 	rpcService.Start()
@@ -125,10 +101,8 @@ func TestLifecycle(t *testing.T) {
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cs := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "ralph merkle!!!",
-		CanonicalFetcher: cs,
+		Port: "ralph merkle!!!",
 	})
 
 	rpcService.Start()
@@ -142,10 +116,8 @@ func TestBadEndpoint(t *testing.T) {
 
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cs := newMockChainService()
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "7777",
-		CanonicalFetcher: cs,
+		Port: "7777",
 	})
 
 	rpcService.Start()
@@ -158,36 +130,20 @@ func TestInsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestCanonicalHead(t *testing.T) {
-	mockChain := &mockChainService{}
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "6372",
-		CanonicalFetcher: mockChain,
-		ChainService:     mockChain,
-		POWChainService:  &mockPOWChainService{},
-	})
-	if _, err := rpcService.CanonicalHead(context.Background(), &empty.Empty{}); err != nil {
-		t.Errorf("Could not call CanonicalHead correctly: %v", err)
-	}
-
-	rpcService = NewRPCService(context.Background(), &Config{
-		Port:             "6372",
-		CanonicalFetcher: &faultyChainService{},
-		ChainService:     &mockChainService{},
-		POWChainService:  &mockPOWChainService{},
-	})
-	if _, err := rpcService.CanonicalHead(context.Background(), &empty.Empty{}); err == nil {
-		t.Error("Expected error from faulty chain service, received nil")
-	}
-}
-
 func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockChain := &mockChainService{}
+	mockDB := &mockDB{}
+	mockDB.genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
+	var err error
+	mockDB.cState, err = types.NewGenesisCrystallizedState("")
+	if err != nil {
+		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
+	}
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "6372",
-		CanonicalFetcher: mockChain,
-		ChainService:     mockChain,
-		POWChainService:  &mockPOWChainService{},
+		Port:            "6372",
+		BeaconDB:        mockDB,
+		ChainService:    mockChain,
+		POWChainService: &mockPOWChainService{},
 	})
 
 	key := &pb.PublicKey{PublicKey: []byte{}}
@@ -208,11 +164,13 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 
 func TestProposeBlock(t *testing.T) {
 	mockChain := &mockChainService{}
+	db := &mockDB{}
+	db.cState, _ = types.NewGenesisCrystallizedState("")
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "6372",
-		CanonicalFetcher: mockChain,
-		ChainService:     mockChain,
-		POWChainService:  &mockPOWChainService{},
+		Port:            "6372",
+		ChainService:    mockChain,
+		BeaconDB:        db,
+		POWChainService: &mockPOWChainService{},
 	})
 	req := &pb.ProposeRequest{
 		SlotNumber: 5,
@@ -311,9 +269,17 @@ func TestLatestAttestation(t *testing.T) {
 
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	mockChain := &mockChainService{}
+	mockDB := &mockDB{}
+	cState, err := types.NewGenesisCrystallizedState("")
+	if err != nil {
+		t.Fatalf("Failed to instantiate genesis state: %v", err)
+	}
+	mockDB.cState = cState
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
+		BeaconDB:     mockDB,
 	})
 	req := &pb.PublicKey{
 		PublicKey: []byte{},
@@ -325,9 +291,17 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 
 func TestValidatorIndex(t *testing.T) {
 	mockChain := &mockChainService{}
+	mockDB := &mockDB{}
+	cState, err := types.NewGenesisCrystallizedState("")
+	if err != nil {
+		t.Fatalf("Failed to instantiate genesis state: %v", err)
+	}
+	mockDB.cState = cState
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
+		BeaconDB:     mockDB,
 	})
 	req := &pb.PublicKey{
 		PublicKey: []byte{},
@@ -339,9 +313,17 @@ func TestValidatorIndex(t *testing.T) {
 
 func TestValidatorShardID(t *testing.T) {
 	mockChain := &mockChainService{}
+	mockDB := &mockDB{}
+	cState, err := types.NewGenesisCrystallizedState("")
+	if err != nil {
+		t.Fatalf("Failed to instantiate genesis state: %v", err)
+	}
+	mockDB.cState = cState
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
+		BeaconDB:     mockDB,
 	})
 	req := &pb.PublicKey{
 		PublicKey: []byte{},
@@ -355,10 +337,11 @@ func TestValidatorAssignments(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	mockChain := newMockChainService()
+	mockDB := &mockDB{}
 	rpcService := NewRPCService(context.Background(), &Config{
-		Port:             "6372",
-		ChainService:     mockChain,
-		CanonicalFetcher: mockChain,
+		Port:         "6372",
+		ChainService: mockChain,
+		BeaconDB:     mockDB,
 	})
 
 	ctrl := gomock.NewController(t)

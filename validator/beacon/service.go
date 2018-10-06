@@ -7,10 +7,10 @@ import (
 	"math"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/validator/params"
 	"github.com/prysmaticlabs/prysm/validator/utils"
 	"github.com/sirupsen/logrus"
@@ -135,7 +135,8 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	for _, assign := range res.Assignments {
 		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 			s.role = assign.Role
-			s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
+			// + 1 to account for the genesis block being slot 0.
+			s.assignedSlot = s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) + assign.AssignedSlot + 1
 			s.shardID = assign.ShardId
 
 			log.Infof("Validator shuffled. Pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
@@ -176,7 +177,12 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		for _, assign := range assignment.Assignments {
 			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
 				s.role = assign.Role
-				s.assignedSlot = s.CurrentCycleStartSlot() + assign.AssignedSlot
+				if s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) == 0 {
+					// +1 to account for genesis block being slot 0.
+					s.assignedSlot = params.DemoConfig().CycleLength + assign.AssignedSlot + 1
+				} else {
+					s.assignedSlot = s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) + assign.AssignedSlot + 1
+				}
 				s.shardID = assign.ShardId
 
 				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
@@ -280,12 +286,15 @@ func (s *Service) PublicKey() []byte {
 // CurrentBeaconSlot based on the genesis timestamp of the protocol.
 func (s *Service) CurrentBeaconSlot() uint64 {
 	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	return uint64(math.Floor(secondsSinceGenesis / params.DefaultConfig().SlotDuration))
+	if secondsSinceGenesis-params.DefaultConfig().SlotDuration < 0 {
+		return 0
+	}
+	return uint64(math.Floor(secondsSinceGenesis/params.DefaultConfig().SlotDuration)) - 1
 }
 
 // CurrentCycleStartSlot returns the slot at which the current cycle started.
-func (s *Service) CurrentCycleStartSlot() uint64 {
+func (s *Service) CurrentCycleStartSlot(cycleLength uint64) uint64 {
 	currentSlot := s.CurrentBeaconSlot()
-	cycleNum := math.Floor(float64(currentSlot) / float64(params.DefaultConfig().CycleLength))
-	return uint64(cycleNum) * params.DefaultConfig().CycleLength
+	cycleNum := currentSlot / cycleLength
+	return uint64(cycleNum) * cycleLength
 }

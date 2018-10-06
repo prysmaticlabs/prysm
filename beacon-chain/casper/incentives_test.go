@@ -4,6 +4,8 @@ import (
 	"math"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -25,7 +27,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	rewQuotient := RewardQuotient(1, validators)
 	participatedDeposit := 4 * defaultBalance
 	totalDeposit := 10 * defaultBalance
-	depositFactor := (2*participatedDeposit - totalDeposit) / totalDeposit
 	penaltyQuotient := quadraticPenaltyQuotient()
 	timeSinceFinality := uint64(5)
 
@@ -50,7 +51,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
 	}
 
-	expectedBalance = uint64(defaultBalance + (defaultBalance/rewQuotient)*depositFactor)
+	expectedBalance = uint64(defaultBalance + (defaultBalance/rewQuotient)*uint64(2*int64(participatedDeposit)-int64(totalDeposit))/uint64(totalDeposit))
 
 	if rewardedValidators[6].Balance != expectedBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
@@ -121,8 +122,7 @@ func TestSlotMaxInterestRate(t *testing.T) {
 
 func TestQuadraticPenaltyQuotient(t *testing.T) {
 	penaltyQuotient := quadraticPenaltyQuotient()
-
-	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 17), 2)) {
+	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 13), 2)) {
 		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
 }
@@ -142,7 +142,7 @@ func TestQuadraticPenalty(t *testing.T) {
 func TestRewardCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
 	participatedDeposit := uint64(3e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
@@ -155,23 +155,19 @@ func TestRewardCrosslink(t *testing.T) {
 	participatedDeposit = uint64(4e18)
 	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
 
-	if validator.Balance == 1e18 {
-		t.Errorf("validator balances have not been updated %d ", validator.Balance)
-	}
-
 }
 
 func TestPenaltyCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDeposit), 0.5))
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
-	timeSinceConfirmation := uint64(100)
+	timeSinceConfirmation := uint64(10)
 	quadraticQuotient := quadraticPenaltyQuotient()
 
 	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
-	expectedBalance := 1e18 - 1e18/rewardQuotient + 100/quadraticQuotient
+	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*timeSinceConfirmation/quadraticQuotient)
 
 	if validator.Balance != expectedBalance {
 		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)

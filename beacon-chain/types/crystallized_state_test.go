@@ -55,7 +55,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		}},
 	})
 
-	newCState, _, err := cState.NewStateRecalculations(aState, block)
+	newCState, _, err := cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	aState := NewGenesisActiveState()
 	block := NewBlock(nil)
 
-	cState, _, err = cState.NewStateRecalculations(aState, block)
+	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, voteCache)
 
-	cState, _, err = cState.NewStateRecalculations(aState, block)
+	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
 
-	cState, _, err = cState.NewStateRecalculations(aState, block)
+	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -145,6 +145,23 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.GetConfig().CycleLength, cState.JustifiedStreak())
 	}
 	if cState.LastFinalizedSlot() != params.GetConfig().CycleLength-2 {
+		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
+	}
+
+	cState, _, err = cState.NewStateRecalculations(aState, block, true, true)
+	if err != nil {
+		t.Fatalf("failed to derive crystallized state: %v", err)
+	}
+	if cState.LastStateRecalc() != 4*params.GetConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.GetConfig().CycleLength, cState.LastStateRecalc())
+	}
+	if cState.LastJustifiedSlot() != 3*params.GetConfig().CycleLength-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
+	}
+	if cState.JustifiedStreak() != 4*params.GetConfig().CycleLength {
+		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.GetConfig().CycleLength, cState.JustifiedStreak())
+	}
+	if cState.LastFinalizedSlot() != 2*params.GetConfig().CycleLength-2 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 }
@@ -208,12 +225,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	if !bytes.Equal(newCrosslinks[0].Blockhash, []byte{'a'}) {
 		t.Errorf("Blockhash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].Blockhash)
 	}
-
-	for _, index := range committee {
-		if cState.Validators()[index].Balance == 1e18 {
-			t.Errorf("validator with index %d did not have balance changed.", index)
-		}
-	}
+	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }
 
 func TestIsDynastyTransition(t *testing.T) {
@@ -269,9 +281,11 @@ func TestNewDynastyRecalculationsInvalid(t *testing.T) {
 	}
 
 	// Negative test case, shuffle validators with more than MaxValidators.
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.GetConfig().MaxValidators+1; i++ {
-		validators = append(validators, &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.GetConfig().DefaultEndDynasty})
+	size := params.GetConfig().ModuloBias + 1
+	validators := make([]*pb.ValidatorRecord, size)
+	validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.GetConfig().DefaultEndDynasty}
+	for i := 0; i < size; i++ {
+		validators[i] = validator
 	}
 	cState.data.Validators = validators
 	if _, _, err := cState.newDynastyRecalculations([32]byte{'A'}); err == nil {

@@ -1,6 +1,6 @@
 # Prysmatic Labs Ethereum 2.0 Implementation
 
-![Travis Build](https://travis-ci.org/prysmaticlabs/prysm.svg?branch=master)
+[![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg)](https://buildkite.com/prysmatic-labs/prysm)
 
 This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
 
@@ -14,29 +14,49 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 
 # Table of Contents
 
--   [Installation](#installation)
--   [Instructions](#instructions)
+-   [Running Our Demo Release](#running-our-demo-release)
+    - [Installation](#installation)
+    - [Run Our Pre-Compiled Binaries](#run-our-pre-compiled-binaries)
+    - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
+    - [Running The Beacon Chain](#running-the-beacon-chain)
+    - [Running an ETH2.0 Validator Client](#running-an-eth2.0-validator-client)
+    - [Running Via Docker](#running-via-docker)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
 
-# Installation
+# Running Our Demo Release
 
-Create a folder in your `$GOPATH` and navigate to it
+To run our current release, v0.0.0, as a local demo, you'll need to run a beacon chain node and a validator client.
+
+In this local demo, you can start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INFORMATION.md).
+
+## Installation
+
+You can either choose to run our system via:
+
+- Downloading our Precompiled Binaries from our latest [release](https://github.com/prysmaticlabs/prysm/releases)
+- Use Docker
+- Use Our Build Tool, Bazel **(Recommended)**
+
+## Run Our Pre-Compiled Binaries
+
+First, download our latest [release](https://github.com/prysmaticlabs/prysm/releases) for your operating system. Then:
 
 ```
-mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs
+chmod +x ./beacon-chain
+chmod +x ./validator
 ```
 
-Note: it is not necessary to clone to the gopath if you're only building with Bazel.
+## Run Via Bazel (Recommended)
 
-Clone our repository:
+First, clone our repository:
 
 ```
 git clone https://github.com/prysmaticlabs/prysm
 ```
 
-Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing
+Download the Bazel build tool by Google [here](https://docs.bazel.build/versions/master/install.html) and ensure it works by typing:
 
 ```
 bazel version
@@ -44,156 +64,114 @@ bazel version
 
 Bazel manages all of the dependencies for you (including go and necessary compilers) so you are all set to build prysm.
 
-# Instructions
 
-To get started with running the project, follow the instructions to initialize your own private Ethereum blockchain and geth node, as they will be required to run before you can begin running our system
+### Building
 
-## Running a Local Geth Node
-
-To start a local Geth node, you can create your own `genesis.json` file similar to:
-
-```json
-{
-    "config": {
-        "chainId": 12345,
-        "homesteadBlock": 0,
-        "eip155Block": 0,
-        "eip158Block": 0
-    },
-    "difficulty": "200",
-    "gasLimit": "210000000000",
-    "alloc": {
-        "826f3F66dB0416ea82033aE917A611bfBF4D98b6": { "balance": "300000" }
-    }
-}
-```
-
-The `alloc` portion specifies account addresses with prefunded ETH when the Ethereum blockchain is created. You can modify this section of the genesis to include your own test address and prefund it with 100ETH.
-
-Then, you can build and init a new instance of a local, Ethereum blockchain as follows:
-
-```
-geth init /path/to/genesis.json --datadir /path/to/your/datadir
-geth --nodiscover console --datadir /path/to/your/datadir --networkid 12345 --ws --wsaddr=127.0.0.1 --wsport 8546 --wsorigins "*" --rpc
-````
-
-It is **important** to note that the `--networkid` flag must match the `chainId` property in the genesis file.
-
-Then, the geth console can start up and you can start a miner as follows:
-
-    > personal.newAccount()
-    > miner.setEtherbase(eth.accounts[0])
-    > miner.start(1)
-
-Now, save the passphrase you used in the geth node into a text file called password.txt. Then, once you have this private geth node running on your local network, we will need to generate test, pending transactions that can then be processed into collations by proposers. For this, we have created an in-house transaction generator CLI tool.
-
-
-# Running Ethereum 2.0
-
-**NOTE**: This section is in flux, much of this will likely change as the beacon chain spec evolves.
-
-Build our system first
+Then, build both parts of our system: a beacon chain node implementation, and a validator client:
 
 ```
 bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
 
-## Step 1: Deploy a Validator Registation Contract
+## Running The Beacon Chain
 
-Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/deployVRC/README.md).
+To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/releases/download/0.0.0/genesis.json) in our latest release you can use for this! You'll also need a special data directory where all the beacon chain data will be persisted to. 
 
-## Step 2a: Running a Beacon Node as a Validator or Observer
+Then, you can run the node as follows:
 
-Make sure a geth node is running as a separate process according to the instructions from the previous section. Then, you can run a full beacon node as follows:
-
-```
-bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --validator
-```
-
-This will spin up a full beacon node that connects to your running geth node, opens up an RPC connection for sharding validators to connect to it, and begins listening for p2p events.
-
-To try out the beacon node in development by simulating incoming blocks, run the same command above but enable the `--simulator` and a debug level, log verbosity with `--verbosity debug` to see everything happening underneath the hood.
+With the binary executable:
 
 ```
-bazel run //beacon-chain --\
-  --web3provider  ws://127.0.0.1:8546 \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --validator \
-  --simulator \
-  --verbosity debug
-```
-
-Now, deposit ETH to become a validator in the contract using instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/VALIDATOR_REGISTRATION.md)
-
-If you don't want to deposit ETH and become a validator, one option is to run a beacon node as an Observer. A beacon observer node has full privilege to listen in beacon chain and shard chains activities, but it will not participate
-in validator duties such as proposing or attesting blocks. In addition, an observer node doesn't need to deposit 32ETH. To run an observer node, you discard the `--validator` flag.
-
-```
-bazel run //beacon-chain --\
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-```
-
-### Running via Docker
-
-To run the beacon node within a docker container, use the `//beacon-chain:image` target.
-
-```text
-bazel run //beacon-chain:image --\
-  --web3provider  ws://127.0.0.1:8546 \
+./beacon-chain \
+  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
-  --verbosity debug
+  --demo-config
 ```
 
-## Step 3: Running a Beacon/Sharding validator
+With bazel:
 
-Once your beacon node is up, you'll need to attach a validator as a separate process. This validator is in charge of running attester/proposer responsibilities and processing shard cross links (shards to be designed in phase 2). This validator will listen for incoming beacon blocks and crystallized states and determine when its time to perform attester/proposer responsibilities accordingly.
+```
+bazel run //beacon-chain --\
+  --genesis-json /path/to/genesis.json \
+  --datadir /path/to/your/datadir \
+  --rpc-port 4000 \
+  --simulator \
+  --demo-config
+```
+
+
+We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version and you'll only be running 1 validator client, this gives us a good idea of what the system will need to handle in the wild and will help advance the chain.
+
+We also have a `--demo-config` flag that configures some internal parameters for you to run a local demo version of the system.
+
+If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time. If you want to rerun the beacon chain, delete and create a new data directory for the system to start from scratch.
+
+![beaconsystem](https://i.imgur.com/vsUfLFu.png)
+
+## Running an ETH2.0 Validator Client
+
+Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities (shard state execution to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
+
+To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
+
+```
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+```
 
 Run as follows:
+
+With the binary executable:
+
+```
+./validator \
+  --beacon-rpc-provider http://localhost:4000 \
+  --datadir /path/to/uniquevalidatordatadir \
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+```
+
+With Bazel:
 
 ```
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
-  --verbosity debug
+  --datadir /path/to/uniquevalidatordatadir \
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
-Then, the beacon node will update this validator with new blocks + crystallized states in order for the validator to act as an attester or proposer.
 
-### Running via Docker
+This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
 
-To run the validator within a docker container, use the `//validator:image` target.
+if you want to run multiple validator clients, **each one needs to have its own data directory where it will persist information, so create a new one each time** and pass it into the validator command with the flag `--datadir /path/to/validatordatadir`.
 
-```text
-bazel run //validator:image --\
-  --beacon-rpc-provider http://localhost:4000 \
-  --verbosity debug
+## Running Via Docker
 
-INFO: Build options have changed, discarding analysis cache.
-INFO: Analysed target //validator:image (306 packages loaded).
-INFO: Found 1 target...
-Target //validator:image up-to-date:
-  bazel-bin/validator/image-layer.tar
-INFO: Elapsed time: 8.568s, Critical Path: 0.22s
-INFO: 0 processes.
-INFO: Build completed successfully, 1 total action
-INFO: Build completed successfully, 1 total action
-37fd88e7190b: Loading layer  22.42MB/22.42MB
-Loaded image ID: sha256:89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1
-Tagging 89b233de1a026eddeeff010fa1ef596ce791cb3f26488150aac72a91b80734c1 as bazel/validator:image
-...
+```
+docker run -p 4000:4000 -v /path/to/genesis.json:/genesis.json gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
+  --genesis-json /genesis.json \
+  --rpc-port 4000 \
+  --simulator \
+  --demo-config
 ```
 
-TODO: Add [container_push](https://github.com/bazelbuild/rules_docker/#container_push-1) 
-targets for the container images such that they can be pulled from GCR or 
-dockerhub. 
+Then, to run a validator client, use:
+
+```
+docker run gcr.io/prysmaticlabs/prysm/validator:latest \
+  --beacon-rpc-provider http://{YOUR_LOCAL_IP}:4000 \
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+```
+
+
+This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
+
+## Running While Connected to a Mainchain Ethereum 1.0 Node
+
+If you want to run the system with a real Web3 endpoint to listen for incoming Ethereum 1.0 block hashes, follow the instructions on setting up a geth node [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/MAINCHAIN.md).
 
 
 # Testing
@@ -204,7 +182,7 @@ To run the unit tests of our system do:
 bazel test //...
 ```
 
-To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run
+To run our linter, make sure you have [gometalinter](https://github.com/alecthomas/gometalinter) installed and then run:
 
 ```
 gometalinter ./...
