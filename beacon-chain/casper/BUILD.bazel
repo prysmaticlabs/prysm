@@ -34,4 +34,6 @@ go_test(
         "//shared:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],
+    size = "large",
+    timeout = "short",
 )
