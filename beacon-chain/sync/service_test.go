@@ -141,12 +141,12 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3, 4, 5},
-		AncestorHashes:  parentHash[:],
+		PowChainRef:    []byte{1, 2, 3, 4, 5},
+		AncestorHashes: [][]byte{parentHash[:]},
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
-		Shard:        0,
+		Shard:          0,
 		ShardBlockHash: []byte{'A'},
 	}
 
@@ -202,8 +202,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3, 4, 5},
-		AncestorHashes:  parentHash[:],
+		PowChainRef:    []byte{1, 2, 3, 4, 5},
+		AncestorHashes: [][]byte{parentHash[:]},
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -218,8 +218,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		PowChainRef: []byte{6, 7, 8, 9, 10},
-		AncestorHashes:  make([]byte, 32),
+		PowChainRef:    []byte{6, 7, 8, 9, 10},
+		AncestorHashes: [][]byte{make([]byte, 32)},
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -267,8 +267,8 @@ func TestBlockRequestErrors(t *testing.T) {
 	ss.blockRequestBySlot <- invalidmsg
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
 
-	request1 := &pb.BeaconBlockRequestBySlot{
-		Slot: 20,
+	request1 := &pb.BeaconBlockRequestBySlotNumber{
+		SlotNumber: 20,
 	}
 
 	msg1 := p2p.Message{

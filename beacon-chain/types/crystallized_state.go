@@ -31,10 +31,10 @@ func initialValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{
-			Status: uint64(params.Active),
+			Status:            uint64(params.Active),
 			Balance:           params.GetConfig().DepositSize.Uint64(),
 			WithdrawalAddress: []byte{},
-			Pubkey:         []byte{},
+			Pubkey:            []byte{},
 		}
 		validators = append(validators, validator)
 	}
@@ -95,9 +95,9 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 	var Crosslinks []*pb.CrosslinkRecord
 	for i := 0; i < shardCount; i++ {
 		Crosslinks = append(Crosslinks, &pb.CrosslinkRecord{
-			Dynasty:   0,
+			Dynasty:        0,
 			ShardBlockHash: make([]byte, 0, 32),
-			Slot:      0,
+			Slot:           0,
 		})
 	}
 
@@ -109,14 +109,14 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 
 	return &CrystallizedState{
 		data: &pb.CrystallizedState{
-			LastStateRecalculationSlot:            0,
+			LastStateRecalculationSlot: 0,
 			JustifiedStreak:            0,
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
-			Dynasty:             1,
+			Dynasty:                    1,
 			DynastySeed:                []byte{},
-			DynastyStartSlot:               0,
-			Crosslinks:           Crosslinks,
+			DynastyStartSlot:           0,
+			Crosslinks:                 Crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
@@ -305,7 +305,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 					slot,
 					voterIndices,
 					c.Validators(),
-					c.Dynasty(),
 					blockVoteBalance,
 					timeSinceFinality)
 			}
@@ -354,13 +353,13 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		DynastySeed:                c.data.DynastySeed,
 		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
 		Validators:                 newValidators,
-		LastStateRecalculationSlot:            LastStateRecalculationSlot + params.GetConfig().CycleLength,
+		LastStateRecalculationSlot: LastStateRecalculationSlot + params.GetConfig().CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
 		JustifiedStreak:            justifiedStreak,
 		LastFinalizedSlot:          finalizedSlot,
-		Crosslinks:           newCrosslinks,
-		DynastyStartSlot:               DynastyStartSlot,
-		Dynasty:             Dynasty,
+		Crosslinks:                 newCrosslinks,
+		DynastyStartSlot:           DynastyStartSlot,
+		Dynasty:                    Dynasty,
 	})
 
 	// Construct new active state after clean up pending attestations.
@@ -393,7 +392,7 @@ func (c *CrystallizedState) newDynastyRecalculations(seed [32]byte) (uint64, []*
 }
 
 type shardAttestation struct {
-	Shard        uint64
+	Shard          uint64
 	shardBlockHash [32]byte
 }
 
@@ -404,9 +403,9 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 		newBlockhash := make([]byte, len(oldCL.ShardBlockHash))
 		copy(newBlockhash, oldCL.ShardBlockHash)
 		newCL := &pb.CrosslinkRecord{
-			Dynasty:   oldCL.Dynasty,
+			Dynasty:        oldCL.Dynasty,
 			ShardBlockHash: newBlockhash,
-			Slot:      oldCL.Slot,
+			Slot:           oldCL.Slot,
 		}
 		new[i] = newCL
 	}
@@ -433,7 +432,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		shardBlockHash := [32]byte{}
 		copy(shardBlockHash[:], attestation.ShardBlockHash)
 		shardAtt := shardAttestation{
-			Shard:        attestation.Shard,
+			Shard:          attestation.Shard,
 			shardBlockHash: shardBlockHash,
 		}
 		if _, ok := shardAttestationBalance[shardAtt]; !ok {
@@ -470,9 +469,9 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		// with latest dynasty number, shard block hash, and slot number.
 		if 3*voteBalance >= 2*totalBalance && dynasty > Crosslinks[attestation.Shard].Dynasty {
 			Crosslinks[attestation.Shard] = &pb.CrosslinkRecord{
-				Dynasty:   dynasty,
+				Dynasty:        dynasty,
 				ShardBlockHash: attestation.ShardBlockHash,
-				Slot:      slot,
+				Slot:           slot,
 			}
 		}
 	}

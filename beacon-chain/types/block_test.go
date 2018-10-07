@@ -93,7 +93,7 @@ func TestBlockValidity(t *testing.T) {
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
-				Shard:          0,
+				Shard:            1,
 				JustifiedSlot:    0,
 				AttesterBitfield: []byte{64, 0},
 			},

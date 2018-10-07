@@ -69,9 +69,9 @@ type InitialSync struct {
 	db                           beaconDB
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
-	currentSlotNumber            uint64
+	currentSlot                  uint64
 	syncPollingInterval          time.Duration
-	initialCrystallizedStateHash [32]byte
+	initialCrystallizedStateRoot [32]byte
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -145,7 +145,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delaychan:
-			if highestObservedSlot == s.currentSlotNumber {
+			if highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				// TODO(#426): Resume sync after completion of initial sync.
 				// See comment in Sync service's Start function for explanation.
@@ -154,12 +154,12 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
 
-			if data.Block.GetSlotNumber() > highestObservedSlot {
-				highestObservedSlot = data.Block.GetSlotNumber()
+			if data.Block.GetSlot() > highestObservedSlot {
+				highestObservedSlot = data.Block.GetSlot()
 			}
 
-			if s.currentSlotNumber == 0 {
-				if s.initialCrystallizedStateHash != [32]byte{} {
+			if s.currentSlot == 0 {
+				if s.initialCrystallizedStateRoot != [32]byte{} {
 					continue
 				}
 				if err := s.setBlockForInitialSync(data); err != nil {
@@ -172,7 +172,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
-			if data.Block.GetSlotNumber() != (s.currentSlotNumber + 1) {
+			if data.Block.GetSlot() != (s.currentSlot + 1) {
 				continue
 			}
 
@@ -183,7 +183,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case msg := <-s.crystallizedStateBuf:
 			data := msg.Data.(*pb.CrystallizedStateResponse)
 
-			if s.initialCrystallizedStateHash == [32]byte{} {
+			if s.initialCrystallizedStateRoot == [32]byte{} {
 				continue
 			}
 
@@ -193,11 +193,11 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				log.Errorf("Unable to hash crytsallized state: %v", err)
 			}
 
-			if hash != s.initialCrystallizedStateHash {
+			if hash != s.initialCrystallizedStateRoot {
 				continue
 			}
 
-			s.currentSlotNumber = crystallizedState.LastFinalizedSlot()
+			s.currentSlot = crystallizedState.LastFinalizedSlot()
 			s.requestNextBlock()
 			crystallizedStateSub.Unsubscribe()
 		}
@@ -208,7 +208,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 // for a beacon block.
 func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block := types.NewBlock(data.Block)
-	h := block.CrystallizedStateHash()
+	h := block.CrystallizedStateRoot()
 	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
 	s.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
 	return nil
@@ -229,7 +229,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 		return err
 	}
 
-	s.initialCrystallizedStateHash = block.CrystallizedStateHash()
+	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
 
 	log.Infof("Saved block with hash %x for initial sync", h)
 	return nil
@@ -237,7 +237,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 
 // requestNextBlock broadcasts a request for a block with the next slotnumber.
 func (s *InitialSync) requestNextBlock() {
-	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlotNumber + 1)})
+	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlot + 1)})
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
@@ -245,16 +245,16 @@ func (s *InitialSync) requestNextBlock() {
 func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 	block := types.NewBlock(data.Block)
 
-	if s.currentSlotNumber == uint64(0) {
+	if s.currentSlot == uint64(0) {
 		return errors.New("invalid slot number for syncing")
 	}
 
-	if (s.currentSlotNumber + 1) == block.SlotNumber() {
+	if (s.currentSlot + 1) == block.SlotNumber() {
 
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
 		}
-		s.currentSlotNumber = block.SlotNumber()
+		s.currentSlot = block.SlotNumber()
 	}
 	return nil
 }

@@ -17,7 +17,6 @@ func CalculateRewards(
 	slot uint64,
 	voterIndices []uint32,
 	validators []*pb.ValidatorRecord,
-	dynasty uint64,
 	totalParticipatedDeposit uint64,
 	timeSinceFinality uint64) []*pb.ValidatorRecord {
 	totalDeposit := TotalActiveValidatorDeposit(validators)

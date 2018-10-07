@@ -41,7 +41,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
 	size := params.GetConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+	validator := &pb.ValidatorRecord{WithdrawalShard: 0, Status: uint64(params.Active)}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}

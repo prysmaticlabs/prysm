@@ -141,8 +141,8 @@ message CrosslinkRecord {
   uint64 slot = 3;
 }
 
-message AncestorHashes {
-  repeated bytes ancestor_hash = 1;
+message AttestationHashes {
+  repeated bytes attestation_hash = 1;
 }
 
 message SpecialRecord {

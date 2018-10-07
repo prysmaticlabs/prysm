@@ -14,7 +14,7 @@ func TestSaveAndRemoveBlocks(t *testing.T) {
 	defer beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("a"),
 	})
 
@@ -29,7 +29,7 @@ func TestSaveAndRemoveBlocks(t *testing.T) {
 
 	// Adding a different block with the same key
 	newblock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  4,
+		Slot:        4,
 		PowChainRef: []byte("b"),
 	})
 
@@ -74,7 +74,7 @@ func TestCheckBlockBySlotNumber(t *testing.T) {
 	defer beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("a"),
 	})
 
@@ -101,7 +101,7 @@ func TestCheckBlockBySlotNumber(t *testing.T) {
 	}
 
 	alternateblock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("d"),
 	})
 
@@ -129,7 +129,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 	defer beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("a"),
 	})
 
@@ -156,7 +156,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 	}
 
 	alternateblock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("d"),
 	})
 

@@ -39,7 +39,7 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 		for j, validatorsForShard := range validatorsByShard {
 			shardID := (shardStart + j) % params.GetConfig().ShardCount
 			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
-				Shard:   uint64(shardID),
+				Shard:     uint64(shardID),
 				Committee: validatorsForShard,
 			})
 		}

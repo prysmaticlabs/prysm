@@ -1,11 +1,11 @@
 package casper
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"math/big"
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -42,11 +42,11 @@ func TestHasVoted(t *testing.T) {
 func TestValidatorIndices(t *testing.T) {
 	data := &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
-			{Pubkey: []byte{}, Status: uint64(params.Active)},                   // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},                   // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},                   // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},                   // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},                   // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
 			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
 		},
 		Dynasty: 1,
@@ -64,12 +64,12 @@ func TestValidatorIndices(t *testing.T) {
 
 	data = &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
-			{Pubkey: []byte{}, Status: uint64(params.Active)}, // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)}, // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
+			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
 			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
 			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
-			{Pubkey: []byte{}, Status: uint64(params.PendingExit)},                   // exited.
-			{Pubkey: []byte{}, Status: uint64(params.PendingExit)},                   // exited.
+			{Pubkey: []byte{}, Status: uint64(params.PendingExit)},       // exited.
+			{Pubkey: []byte{}, Status: uint64(params.PendingExit)},       // exited.
 		},
 	}
 
@@ -169,7 +169,7 @@ func TestProposerShardAndIndex(t *testing.T) {
 func TestValidatorIndex(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: uint64(params.Active)})
 	}
 	if _, err := ValidatorIndex([]byte("100"), validators); err == nil {
 		t.Fatalf("ValidatorIndex should have failed,  there's no validator with pubkey 100")
@@ -187,7 +187,7 @@ func TestValidatorIndex(t *testing.T) {
 func TestValidatorShard(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 21; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: uint64(params.Active)})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -219,7 +219,7 @@ func TestValidatorShard(t *testing.T) {
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 61; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: uint64(params.Active)})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -260,7 +260,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 func TestTotalActiveValidatorDeposit(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Balance: 1e18})
+		validators = append(validators, &pb.ValidatorRecord{Balance: 1e18, Status: uint64(params.Active)})
 	}
 
 	expectedTotalDeposit := new(big.Int)

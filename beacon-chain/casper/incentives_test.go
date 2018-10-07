@@ -14,7 +14,7 @@ func NewValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 
 	for i := 0; i < 10; i++ {
-		validator := &pb.ValidatorRecord{Balance: 1e18}
+		validator := &pb.ValidatorRecord{Balance: 1e18, Status: uint64(params.Active)}
 		validators = append(validators, validator)
 	}
 	return validators
@@ -32,7 +32,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	data := &pb.CrystallizedState{
 		Validators:        validators,
-		Dynasty:    1,
+		Dynasty:           1,
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}
@@ -41,7 +41,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		5,
 		[]uint32{2, 3, 6, 9},
 		data.Validators,
-		data.Dynasty,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -68,7 +67,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		5,
 		[]uint32{1, 2, 7, 8},
 		validators,
-		data.Dynasty,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -94,7 +92,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 func TestRewardQuotient(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e18},
+		{Balance: 1e18, Status: uint64(params.Active)},
 	}
 	rewQuotient := RewardQuotient(validators)
 
@@ -105,8 +103,7 @@ func TestRewardQuotient(t *testing.T) {
 
 func TestSlotMaxInterestRate(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e18},
-
+		{Balance: 1e18, Status: uint64(params.Active)},
 	}
 
 	interestRate := SlotMaxInterestRate(validators)

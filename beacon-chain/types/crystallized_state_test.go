@@ -187,7 +187,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	pAttestations := []*pb.AggregatedAttestation{
 		{
 			Slot:             0,
-			Shard:            0,
+			Shard:            1,
 			ShardBlockHash:   []byte{'a'},
 			AttesterBitfield: []byte{10},
 		},
@@ -214,13 +214,13 @@ func TestProcessCrosslinks(t *testing.T) {
 		t.Fatalf("process crosslink failed %v", err)
 	}
 
-	if newCrosslinks[0].Dynasty != 5 {
+	if newCrosslinks[1].Dynasty != 5 {
 		t.Errorf("Dynasty did not change for new cross link. Wanted: 5. Got: %d", newCrosslinks[0].Dynasty)
 	}
-	if newCrosslinks[0].Slot != 50 {
+	if newCrosslinks[1].Slot != 50 {
 		t.Errorf("Slot did not change for new cross link. Wanted: 50. Got: %d", newCrosslinks[0].Slot)
 	}
-	if !bytes.Equal(newCrosslinks[0].ShardBlockHash, []byte{'a'}) {
+	if !bytes.Equal(newCrosslinks[1].ShardBlockHash, []byte{'a'}) {
 		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].ShardBlockHash)
 	}
 	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.

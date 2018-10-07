@@ -24,7 +24,7 @@ func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 		return &Attestation{
 			data: &pb.AggregatedAttestation{
 				Slot:                0,
-				Shard:             0,
+				Shard:               0,
 				JustifiedSlot:       0,
 				JustifiedBlockHash:  []byte{},
 				ShardBlockHash:      []byte{},

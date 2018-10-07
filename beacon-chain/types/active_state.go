@@ -139,7 +139,7 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 	existing := a.data.RecentBlockHashes
 	update := existing[distance:]
 	for len(update) < 2*int(params.GetConfig().CycleLength) {
-		update = append(update, block.data.ParentHash)
+		update = append(update, block.data.AncestorHashes[0])
 	}
 
 	return update, nil
