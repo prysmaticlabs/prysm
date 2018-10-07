@@ -16,19 +16,6 @@ matrix:
       script:
         - ./scripts/coverage.sh
         - bash <(curl -s https://codecov.io/bash)
-    - language: node_js
-      os: linux
-      env:
-        - solidity
-      node_js:
-        - "lts/*"
-      before_install:
-        - npm install -g solium
-      install: true # Skip npm install.
-      script:
-        # Check solidity linter.
-        - solium -d contracts/
-
       notifications:
         email: false
 
