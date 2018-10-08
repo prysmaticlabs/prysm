@@ -14,7 +14,7 @@ func NewValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 
 	for i := 0; i < 10; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32 * 1e6, Status: uint64(params.Active)}
+		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)}
 		validators = append(validators, validator)
 	}
 	return validators
@@ -22,7 +22,7 @@ func NewValidators() []*pb.ValidatorRecord {
 
 func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	validators := NewValidators()
-	defaultBalance := uint64(32 * 1e6)
+	defaultBalance := uint64(32 * 1e9)
 
 	rewQuotient := RewardQuotient(validators)
 	participatedDeposit := 4 * defaultBalance
@@ -92,7 +92,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 func TestRewardQuotient(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e6, Status: uint64(params.Active)},
+		{Balance: 1e9, Status: uint64(params.Active)},
 	}
 	rewQuotient := RewardQuotient(validators)
 
@@ -103,7 +103,7 @@ func TestRewardQuotient(t *testing.T) {
 
 func TestSlotMaxInterestRate(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e6, Status: uint64(params.Active)},
+		{Balance: 1e9, Status: uint64(params.Active)},
 	}
 
 	interestRate := SlotMaxInterestRate(validators)
