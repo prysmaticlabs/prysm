@@ -32,7 +32,7 @@ func initialValidators() []*pb.ValidatorRecord {
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           params.GetConfig().DepositSize.Uint64(),
+			Balance:           uint64(params.GetConfig().DepositSize),
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 		}

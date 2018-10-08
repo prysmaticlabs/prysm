@@ -260,11 +260,11 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 func TestTotalActiveValidatorDeposit(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Balance: 1e18, Status: uint64(params.Active)})
+		validators = append(validators, &pb.ValidatorRecord{Balance: 1e6, Status: uint64(params.Active)})
 	}
 
 	expectedTotalDeposit := new(big.Int)
-	expectedTotalDeposit.SetString("10000000000000000000", 10)
+	expectedTotalDeposit.SetString("10000000", 10)
 
 	totalDeposit := TotalActiveValidatorDeposit(validators)
 	if expectedTotalDeposit.Cmp(new(big.Int).SetUint64(totalDeposit)) != 0 {
