@@ -231,21 +231,21 @@ func (_ValidatorRegistration *ValidatorRegistrationCallerSession) UsedPubkey(arg
 // Deposit is a paid mutator transaction binding the contract method 0x881d2135.
 //
 // Solidity: function deposit(_pubkey bytes32, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationTransactor) Deposit(opts *bind.TransactOpts, _pubkey [32]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
+func (_ValidatorRegistration *ValidatorRegistrationTransactor) Deposit(opts *bind.TransactOpts, _pubkey [48]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
 	return _ValidatorRegistration.contract.Transact(opts, "deposit", _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x881d2135.
 //
 // Solidity: function deposit(_pubkey bytes32, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationSession) Deposit(_pubkey [32]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
+func (_ValidatorRegistration *ValidatorRegistrationSession) Deposit(_pubkey [48]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
 	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x881d2135.
 //
 // Solidity: function deposit(_pubkey bytes32, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationTransactorSession) Deposit(_pubkey [32]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
+func (_ValidatorRegistration *ValidatorRegistrationTransactorSession) Deposit(_pubkey [48]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
 	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
 }
 
@@ -318,7 +318,7 @@ func (it *ValidatorRegistrationValidatorRegisteredIterator) Close() error {
 
 // ValidatorRegistrationValidatorRegistered represents a ValidatorRegistered event raised by the ValidatorRegistration contract.
 type ValidatorRegistrationValidatorRegistered struct {
-	PubKey                   [32]byte
+	PubKey                   [48]byte
 	WithdrawalShardID        *big.Int
 	WithdrawalAddressbytes32 common.Address
 	RandaoCommitment         [32]byte

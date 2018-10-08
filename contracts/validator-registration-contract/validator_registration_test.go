@@ -24,7 +24,7 @@ type testAccount struct {
 	addr              common.Address
 	withdrawalAddress common.Address
 	randaoCommitment  [32]byte
-	pubKey            [32]byte
+	pubKey            [48]byte
 	contract          *ValidatorRegistration
 	backend           *backends.SimulatedBackend
 	txOpts            *bind.TransactOpts
@@ -40,14 +40,14 @@ func setup() (*testAccount, error) {
 
 	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
 	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
-	var pubKey [32]byte
+	var pubKey [48]byte
 	copy(pubKey[:], []byte(publicKeyBytes))
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	txOpts := bind.NewKeyedTransactor(privKey)
 	startingBalance, _ := new(big.Int).SetString("100000000000000000000", 10)
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis, 2100000)
+	backend := backends.NewSimulatedBackend(genesis)
 
 	_, _, contract, err := DeployValidatorRegistration(txOpts, backend)
 	if err != nil {
@@ -61,6 +61,23 @@ func TestSetupAndContractRegistration(t *testing.T) {
 	_, err := setup()
 	if err != nil {
 		log.Fatalf("Can not deploy validator registration contract: %v", err)
+	}
+}
+
+// negative test case, public key that is not 48 bytes.
+func TestRegisterWithLessThan48BytesPubkey(t *testing.T) {
+	testAccount, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pubKey [48]byte
+	copy(pubKey[:], testAccount.pubKey[:])
+	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
+	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
+	if err == nil {
+		t.Error("Validator registration should have failed with a 32 bytes pubkey")
 	}
 }
 
