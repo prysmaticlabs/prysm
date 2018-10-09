@@ -225,8 +225,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
 
-func TestLatestAttestation(t *testing.T) {
-	hook := logTest.NewGlobal()
+func TestLatestAttestationFaulty(t *testing.T) {
 	attestationService := &mockAttestationService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:               "8777",
@@ -250,10 +249,25 @@ func TestLatestAttestation(t *testing.T) {
 	}(t)
 
 	rpcService.incomingAttestation <- attestation
+	rpcService.cancel()
+	exitRoutine <- true
+}
 
-	mockStream = internal.NewMockBeaconService_LatestAttestationServer(ctrl)
+func TestLatestAttestation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	attestationService := &mockAttestationService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:               "8777",
+		SubscriptionBuf:    0,
+		AttestationService: attestationService,
+	})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exitRoutine := make(chan bool)
+	attestation := &types.Attestation{}
+	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
 	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
-
 	// Tests a good stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
@@ -262,9 +276,10 @@ func TestLatestAttestation(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	rpcService.incomingAttestation <- attestation
-	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 }
 
 func TestValidatorSlotAndResponsibility(t *testing.T) {

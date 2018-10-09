@@ -251,7 +251,7 @@ func TestBlockRequestErrors(t *testing.T) {
 
 	go func() {
 		ss.run()
-		exitRoutine <- true
+		<-exitRoutine
 	}()
 
 	malformedRequest := &pb.BeaconBlockHashAnnounce{
@@ -278,9 +278,10 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- msg1
-	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
-	hook.Reset()
+	ss.cancel()
+	exitRoutine <- true
 
+	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 }
 
 func TestReceiveAttestation(t *testing.T) {
