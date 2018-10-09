@@ -251,7 +251,7 @@ func TestBlockRequestErrors(t *testing.T) {
 
 	go func() {
 		ss.run()
-		exitRoutine <- true
+		<-exitRoutine
 	}()
 
 	malformedRequest := &pb.BeaconBlockHashAnnounce{
@@ -265,7 +265,22 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- invalidmsg
+	ss.cancel()
+	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
+}
+
+func TestBlockRequest(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	ss := setupService(t)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
 
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
@@ -278,9 +293,10 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- msg1
-	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
-	hook.Reset()
+	ss.cancel()
+	exitRoutine <- true
 
+	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 }
 
 func TestReceiveAttestation(t *testing.T) {
