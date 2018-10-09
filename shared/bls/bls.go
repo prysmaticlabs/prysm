@@ -69,7 +69,7 @@ type PublicKey struct {
 	gx     Element
 }
 
-// Private key of an actor.
+// PrivateKey of an actor.
 type PrivateKey struct {
 	system System
 	x      Element
@@ -78,7 +78,7 @@ type PrivateKey struct {
 // Signature is the primitive BLS will work with.
 type Signature = Element
 
-// GenparamsTypeA pairing parameters. This function allocates C structures on
+// GenParamsTypeA pairing parameters. This function allocates C structures on
 // the C heap using malloc. It is the responsibility of the caller to prevent
 // memory leaks by arranging for the C structures to be freed. More information
 // about type A pairing parameters can be found in the PBC library manual:
@@ -97,7 +97,7 @@ func GenParamsTypeA(rbits int, qbits int) Params {
 func GenParamsTypeD(d uint, bitlimit uint) (Params, error) {
 	params := (*C.struct_pbc_param_s)(C.malloc(sizeOfParams))
 	if C.search(params, C.uint(d), C.uint(bitlimit)) == 0 {
-		return Params{}, errors.New("bls.GenParamsTypeD: No suitable curves for this discriminant.")
+		return Params{}, errors.New("bls.GenParamsTypeD: no suitable curves for this discriminant")
 	}
 	return Params{params}, nil
 }
@@ -166,7 +166,7 @@ func GenSystem(pairing Pairing) (System, error) {
 func SystemFromBytes(pairing Pairing, bytes []byte) (System, error) {
 	n := int(C.pairing_length_in_bytes_compressed_G2(pairing.get))
 	if n != len(bytes) {
-		return System{}, errors.New("bls.FromBytes: System length mismatch.")
+		return System{}, errors.New("bls.FromBytes: system length mismatch")
 	}
 	g := (*C.struct_element_s)(C.malloc(sizeOfElement))
 	C.element_init_G2(g, pairing.get)
@@ -206,7 +206,7 @@ func GenKeys(system System) (PublicKey, PrivateKey, error) {
 func GenKeyShares(t int, n int, system System) (PublicKey, []PublicKey, PrivateKey, []PrivateKey, error) {
 	// Check the threshold parameters.
 	if t < 1 || n < t {
-		return PublicKey{}, nil, PrivateKey{}, nil, errors.New("bls.GenKeyShares: Bad threshold parameters.")
+		return PublicKey{}, nil, PrivateKey{}, nil, errors.New("bls.GenKeyShares: bad threshold parameters")
 	}
 
 	// Generate a polynomial.
@@ -331,7 +331,7 @@ func Verify(signature Signature, hash [sha256.Size]byte, key PublicKey) bool {
 func Aggregate(signatures []Signature, system System) (Signature, error) {
 	// Check the list length.
 	if len(signatures) == 0 {
-		return Element{}, errors.New("bls.Aggregate: Empty list.")
+		return Element{}, errors.New("bls.Aggregate: empty list")
 	}
 
 	// Calculate sigma.
@@ -356,15 +356,15 @@ func Aggregate(signatures []Signature, system System) (Signature, error) {
 func AggregateVerify(signature Signature, hashes [][sha256.Size]byte, keys []PublicKey) (bool, error) {
 	// Check the list length.
 	if len(hashes) == 0 {
-		return false, errors.New("bls.AggregateVerify: Empty list.")
+		return false, errors.New("bls.AggregateVerify: empty list")
 	}
 	if len(hashes) != len(keys) {
-		return false, errors.New("bls.AggregateVerify: List length mismatch.")
+		return false, errors.New("bls.AggregateVerify: list length mismatch")
 	}
 
 	// Check the uniqueness constraint.
 	if !uniqueHashes(hashes) {
-		return false, errors.New("bls.AggregateVerify: Message digests must be distinct.")
+		return false, errors.New("bls.AggregateVerify: message digests must be distinct")
 	}
 
 	// Calculate the left-hand side.
@@ -410,10 +410,10 @@ func Threshold(shares []Signature, memberIds []int, system System) (Signature, e
 
 	// Check the list length.
 	if len(shares) == 0 {
-		return Element{}, errors.New("bls.Recover: Empty list.")
+		return Element{}, errors.New("bls.Recover: empty list")
 	}
 	if len(shares) != len(memberIds) {
-		return Element{}, errors.New("bls.Recover: List length mismatch.")
+		return Element{}, errors.New("bls.Recover: list length mismatch")
 	}
 
 	// Determine the group order.
@@ -482,7 +482,7 @@ func (system System) SigToBytes(signature Signature) []byte {
 func (system System) SigFromBytes(bytes []byte) (Signature, error) {
 	n := int(C.pairing_length_in_bytes_compressed_G1(system.pairing.get))
 	if n != len(bytes) {
-		return Element{}, errors.New("bls.FromBytes: Signature length mismatch.")
+		return Element{}, errors.New("bls.FromBytes: signature length mismatch")
 	}
 	sigma := (*C.struct_element_s)(C.malloc(sizeOfElement))
 	C.element_init_G1(sigma, system.pairing.get)
