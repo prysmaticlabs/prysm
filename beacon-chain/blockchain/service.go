@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -33,7 +32,6 @@ type ChainService struct {
 	lock                           sync.Mutex
 	genesisTime                    time.Time
 	slotTicker                     utils.SlotTicker
-	slotAlignmentDuration          uint64
 	enableCrossLinks               bool
 	enableRewardChecking           bool
 	enableAttestationValidity      bool
@@ -71,7 +69,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		enableCrossLinks:               cfg.EnableCrossLinks,
 		enableRewardChecking:           cfg.EnableRewardChecking,
 		enableAttestationValidity:      cfg.EnableAttestationValidity,
-		slotAlignmentDuration:          params.GetConfig().SlotDuration,
 	}, nil
 }
 
