@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 )
 
 func TestHasVoted(t *testing.T) {
@@ -17,7 +17,7 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted := shared.CheckBit(pendingAttestation.AttesterBitfield, i)
+		voted := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
 		if !voted {
 			t.Error("validator voted but received didn't vote")
 		}
@@ -29,7 +29,7 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted := shared.CheckBit(pendingAttestation.AttesterBitfield, i)
+		voted := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
