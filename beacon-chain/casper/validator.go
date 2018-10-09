@@ -14,37 +14,37 @@ const bitsInByte = 8
 // ActiveValidatorIndices filters out active validators based on start and end dynasty
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, 0, len(validators))
+	var indices = make([]uint32, len(validators))
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.Active) {
 			indices = append(indices, uint32(i))
 		}
 	}
-	return indices
+	return indices[len(validators):]
 }
 
 // ExitedValidatorIndices filters out exited validators based on start and end dynasty
 // and returns their indices in a list.
 func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, 0, len(validators))
+	var indices = make([]uint32, len(validators))
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.PendingExit) {
 			indices = append(indices, uint32(i))
 		}
 	}
-	return indices
+	return indices[len(validators):]
 }
 
 // QueuedValidatorIndices filters out queued validators based on start and end dynasty
 // and returns their indices in a list.
 func QueuedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, 0, len(validators))
+	var indices = make([]uint32, len(validators))
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.PendingActivation) {
 			indices = append(indices, uint32(i))
 		}
 	}
-	return indices
+	return indices[len(validators):]
 }
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.

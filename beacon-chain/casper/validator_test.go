@@ -74,13 +74,13 @@ func TestValidatorIndices(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators), []uint32{0, 1}) {
-		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", ActiveValidatorIndices(data.Validators))
+		t.Errorf("active validator indices should be [0, 1], got: %v", ActiveValidatorIndices(data.Validators))
 	}
 	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators), []uint32{2, 3}) {
-		t.Errorf("queued validator indices should be [3], got: %v", QueuedValidatorIndices(data.Validators))
+		t.Errorf("queued validator indices should be [2, 3], got: %v", QueuedValidatorIndices(data.Validators))
 	}
 	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators), []uint32{4, 5}) {
-		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(data.Validators))
+		t.Errorf("exited validator indices should be [4, 5], got: %v", ExitedValidatorIndices(data.Validators))
 	}
 }
 

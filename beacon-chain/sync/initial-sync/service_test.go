@@ -142,7 +142,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		CrystallizedState: incorrectState,
 	}
 
-	CrystallizedStateRoot, err := types.NewCrystallizedState(crystallizedState).Hash()
+	crystallizedStateRoot, err := types.NewCrystallizedState(crystallizedState).Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of crystallized state: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 			PowChainRef:    []byte{1, 2, 3},
 			AncestorHashes: [][]byte{genericHash},
 			Slot:           Slot,
-			CrystallizedStateRoot: CrystallizedStateRoot[:],
+			CrystallizedStateRoot: crystallizedStateRoot[:],
 		}
 
 		blockResponse := &pb.BeaconBlockResponse{
@@ -183,7 +183,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.crystallizedStateBuf <- msg2
 
-	if CrystallizedStateRoot != ss.initialCrystallizedStateRoot {
+	if crystallizedStateRoot != ss.initialCrystallizedStateRoot {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
 		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateRoot)
 	}
@@ -242,7 +242,7 @@ func TestDelayChan(t *testing.T) {
 		CrystallizedState: crystallizedstate,
 	}
 
-	CrystallizedStateRoot, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
+	crystallizedStateRoot, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of crystallized state: %v", err)
 	}
@@ -251,7 +251,7 @@ func TestDelayChan(t *testing.T) {
 		PowChainRef:    []byte{1, 2, 3},
 		AncestorHashes: [][]byte{genericHash},
 		Slot:           uint64(20),
-		CrystallizedStateRoot: CrystallizedStateRoot[:],
+		CrystallizedStateRoot: crystallizedStateRoot[:],
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{

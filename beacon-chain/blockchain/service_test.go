@@ -165,12 +165,12 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 
-	ActiveStateRoot, _ := active.Hash()
-	CrystallizedStateRoot, _ := crystallized.Hash()
+	activeStateRoot, _ := active.Hash()
+	crystallizedStateRoot, _ := crystallized.Hash()
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
 	chainService.beaconDB.SaveBlock(genesis)
-	AncestorHash, err := genesis.Hash()
+	parentHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
@@ -184,15 +184,15 @@ func TestRunningChainService(t *testing.T) {
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:                  currentSlot,
-		ActiveStateRoot:       ActiveStateRoot[:],
-		CrystallizedStateRoot: CrystallizedStateRoot[:],
-		AncestorHashes:        [][]byte{AncestorHash[:]},
+		ActiveStateRoot:       activeStateRoot[:],
+		CrystallizedStateRoot: crystallizedStateRoot[:],
+		AncestorHashes:        [][]byte{parentHash[:]},
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:               currentSlot,
 			AttesterBitfield:   []byte{128, 0},
 			Shard:              Shard,
-			JustifiedBlockHash: AncestorHash[:],
+			JustifiedBlockHash: parentHash[:],
 		}},
 	})
 
@@ -203,7 +203,7 @@ func TestRunningChainService(t *testing.T) {
 	})
 
 	exitRoutine := make(chan bool)
-	t.Log([][]byte{AncestorHash[:]})
+	t.Log([][]byte{parentHash[:]})
 	go func() {
 		chainService.blockProcessing()
 		<-exitRoutine
