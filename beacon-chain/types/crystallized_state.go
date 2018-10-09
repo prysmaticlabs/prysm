@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -419,7 +419,7 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
 	validators := c.data.Validators
 	dynasty := c.data.Dynasty
-	Crosslinks := copyCrosslinks(c.data.Crosslinks)
+	crosslinkRecords := copyCrosslinks(c.data.Crosslinks)
 	rewardQuotient := casper.RewardQuotient(validators)
 
 	shardAttestationBalance := map[shardAttestation]uint64{}
@@ -444,7 +444,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		var voteBalance uint64
 		for _, attesterIndex := range indices {
 			// find balance of validators who voted.
-			if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
 				voteBalance += validators[attesterIndex].Balance
 			}
 			// add to total balance of the committee.
@@ -452,10 +452,10 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		}
 
 		for _, attesterIndex := range indices {
-			timeSinceLastConfirmation := currentSlot - Crosslinks[attestation.Shard].GetSlot()
+			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
 
-			if Crosslinks[attestation.Shard].GetDynasty() != dynasty {
-				if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			if crosslinkRecords[attestation.Slot].GetDynasty() != dynasty {
+				if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
 					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 				} else {
 					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
@@ -467,13 +467,13 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 
 		// if 2/3 of committee voted on this crosslink, update the crosslink
 		// with latest dynasty number, shard block hash, and slot number.
-		if 3*voteBalance >= 2*totalBalance && dynasty > Crosslinks[attestation.Shard].Dynasty {
-			Crosslinks[attestation.Shard] = &pb.CrosslinkRecord{
+		if 3*voteBalance >= 2*totalBalance && dynasty > crosslinkRecords[attestation.Shard].Dynasty {
+			crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
 				Dynasty:        dynasty,
 				ShardBlockHash: attestation.ShardBlockHash,
 				Slot:           slot,
 			}
 		}
 	}
-	return Crosslinks, nil
+	return crosslinkRecords, nil
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
@@ -109,7 +109,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				log.Errorf("could not get attester index: %v", err)
 				continue
 			}
-			attesterBitfield := shared.SetBitfield(int(attesterIndex.Index))
+			attesterBitfield := bitutil.SetBitfield(int(attesterIndex.Index))
 
 			attestReq := &pb.AttestRequest{
 				Attestation: &pbp2p.AggregatedAttestation{
