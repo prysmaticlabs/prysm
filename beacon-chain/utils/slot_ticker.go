@@ -70,7 +70,7 @@ func (s *SlotTicker) start(
 			case <-after(waitTime):
 				s.c <- slot
 				slot++
-				nextTickTime.Add(d)
+				nextTickTime = nextTickTime.Add(d)
 			case <-s.done:
 				return
 			}
