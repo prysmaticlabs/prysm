@@ -15,6 +15,6 @@ build --show_progress_rate_limit=5
 build --curses=yes --color=yes
 build --keep_going
 build --test_output=errors
-build --flaky_test_attempts=5
+build --flaky_test_attempts=10
 build --features=race
 build --cahe_test_results=no
