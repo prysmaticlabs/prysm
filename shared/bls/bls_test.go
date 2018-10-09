@@ -14,7 +14,6 @@ type data struct {
 }
 
 func TestSingleVerification(t *testing.T) {
-
 	// Setting up new pairing
 	params := pbc.GenerateA(160, 512)
 	pairing := params.NewPairing()
@@ -38,8 +37,7 @@ func TestSingleVerification(t *testing.T) {
 	}
 }
 
-func TestAggregatedVerification(t *testing.T) {
-
+func TestAggregateVerification(t *testing.T) {
 	// Setting up new pairing
 	params := pbc.GenerateA(160, 512)
 	pairing := params.NewPairing()

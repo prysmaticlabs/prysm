@@ -647,3 +647,9 @@ go_repository(
     commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
     importpath = "github.com/aristanetworks/goarista",
 )
+
+go_repository(
+    name = "com_github_Nik-U_pbc",
+    commit = "12f3f0abc76db4319de8036959dc3a6d060838fe",
+    importpath = "github.com/Nik-U/pbc",
+)
