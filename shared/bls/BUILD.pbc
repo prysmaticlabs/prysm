@@ -1,0 +1,5 @@
+cc_library(
+    name = "pbc-lib",
+    srcs = ["pbc/pbc.c"],
+    hdrs = ["include/pbc.h"],
+)

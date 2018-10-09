@@ -21,7 +21,7 @@ import (
 
 /*
 #cgo LDFLAGS: -lgmp -lpbc
-#include <pbc/pbc.h>
+#include <pbc.h>
 #include <stdio.h>
 #include <stdlib.h>
 int callback(pbc_cm_t cm, void *data) {

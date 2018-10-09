@@ -117,6 +117,11 @@ go_repository(
 )
 
 # External dependencies
+new_http_archive(
+    name = "pbc",
+    url = "https://crypto.stanford.edu/pbc/files/pbc-0.5.14.tar.gz",
+    build_file = "shared/bls/BUILD.pbc",
+)
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
