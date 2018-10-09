@@ -113,6 +113,7 @@ func (db *BeaconDB) GetCanonicalBlockForSlot(slotNumber uint64) (*types.Block, e
 	return block, err
 }
 
+// GetGenesisTime returns the timestamp for the genesis block
 func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
 	genesis, err := db.GetCanonicalBlockForSlot(0)
 	if err != nil {
