@@ -249,23 +249,23 @@ func TestIsDynastyTransition(t *testing.T) {
 	}
 	cState.data.ShardAndCommitteesForSlots = shardCommitteeForSlots
 
-	Crosslinks := []*pb.CrosslinkRecord{
+	crosslinks := []*pb.CrosslinkRecord{
 		{Slot: 1},
 		{Slot: 1},
 		{Slot: 1},
 	}
-	cState.data.Crosslinks = Crosslinks
+	cState.data.Crosslinks = crosslinks
 
 	if cState.isDynastyTransition(params.GetConfig().MinDynastyLength + 1) {
 		t.Errorf("Is Dynasty transtion should be false, crosslink records dynasty is higher than current slot")
 	}
 
-	Crosslinks = []*pb.CrosslinkRecord{
+	crosslinks = []*pb.CrosslinkRecord{
 		{Slot: 2},
 		{Slot: 2},
 		{Slot: 2},
 	}
-	cState.data.Crosslinks = Crosslinks
+	cState.data.Crosslinks = crosslinks
 
 	if !cState.isDynastyTransition(params.GetConfig().MinDynastyLength + 1) {
 		t.Errorf("Dynasty transition failed should have been true")

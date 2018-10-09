@@ -92,9 +92,9 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 	}
 
 	// Bootstrap cross link records.
-	var Crosslinks []*pb.CrosslinkRecord
+	var crosslinks []*pb.CrosslinkRecord
 	for i := 0; i < shardCount; i++ {
-		Crosslinks = append(Crosslinks, &pb.CrosslinkRecord{
+		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
 			Dynasty:        0,
 			ShardBlockHash: make([]byte, 0, 32),
 			Slot:           0,
@@ -116,7 +116,7 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 			Dynasty:                    1,
 			DynastySeed:                []byte{},
 			DynastyStartSlot:           0,
-			Crosslinks:                 Crosslinks,
+			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
