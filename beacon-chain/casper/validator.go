@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 )
 
 const bitsInByte = 8
@@ -72,9 +72,9 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 // defined in the Crystallized State.
 func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
-	if shared.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
 		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
-			len(attestation.AttesterBitfield), shared.BitLength(len(attesterIndices)))
+			len(attestation.AttesterBitfield), bitutil.BitLength(len(attesterIndices)))
 		return false
 	}
 
@@ -86,7 +86,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		if shared.CheckBit(attestation.AttesterBitfield, lastBit+i) {
+		if bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i) {
 			log.Debugf("attestation has non-zero trailing bits")
 			return false
 		}

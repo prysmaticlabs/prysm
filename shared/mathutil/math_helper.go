@@ -1,4 +1,4 @@
-package shared
+package mathutil
 
 // IntegerSquareRoot defines a function that returns the
 // largest possible integer root of a number.

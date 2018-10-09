@@ -1,4 +1,4 @@
-package shared
+package shardutil
 
 import (
 	"math/rand"

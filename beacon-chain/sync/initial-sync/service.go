@@ -16,9 +16,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -32,7 +33,7 @@ type Config struct {
 	BlockBufferSize             int
 	CrystallizedStateBufferSize int
 	BeaconDB                    beaconDB
-	P2P                         shared.P2P
+	P2P                         p2pAPI
 	SyncService                 syncService
 }
 
@@ -46,6 +47,12 @@ func DefaultConfig() Config {
 		BlockBufferSize:             100,
 		CrystallizedStateBufferSize: 100,
 	}
+}
+
+type p2pAPI interface {
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
 }
 
 type beaconDB interface {
@@ -64,7 +71,7 @@ type syncService interface {
 type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
-	p2p                          shared.P2P
+	p2p                          p2pAPI
 	syncService                  syncService
 	db                           beaconDB
 	blockBuf                     chan p2p.Message
