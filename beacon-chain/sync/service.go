@@ -36,6 +36,12 @@ type beaconDB interface {
 	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
 }
 
+type p2pAPI interface {
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
+}
+
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
 // In broad terms, a new block is synced in 4 steps:
 //     1. Receive a block hash from a peer
@@ -72,7 +78,7 @@ type Config struct {
 	ChainService              chainService
 	AttestService             attestationService
 	BeaconDB                  beaconDB
-	P2P                       shared.P2P
+	P2P                       p2pAPI
 	EnableAttestationValidity bool
 }
 

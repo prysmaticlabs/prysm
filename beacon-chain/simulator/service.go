@@ -18,11 +18,17 @@ import (
 
 var log = logrus.WithField("prefix", "simulator")
 
+type p2pAPI interface {
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
+}
+
 // Simulator struct.
 type Simulator struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	p2p                    shared.P2P
+	p2p                    p2pAPI
 	web3Service            types.POWChainService
 	beaconDB               beaconDB
 	enablePOWChain         bool
@@ -38,7 +44,7 @@ type Simulator struct {
 type Config struct {
 	Delay           time.Duration
 	BlockRequestBuf int
-	P2P             shared.P2P
+	P2P             p2pAPI
 	Web3Service     types.POWChainService
 	BeaconDB        beaconDB
 	EnablePOWChain  bool

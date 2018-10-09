@@ -9,6 +9,16 @@ import (
 
 var log = logrus.WithField("prefix", "registry")
 
+// Service is a struct that can be registered into a ServiceRegistry for
+// easy dependency management.
+type Service interface {
+	// Start spawns any goroutines required by the service.
+	Start()
+	// Stop terminates all goroutines belonging to the service,
+	// blocking until they are all terminated.
+	Stop() error
+}
+
 // ServiceRegistry provides a useful pattern for managing services.
 // It allows for ease of dependency management and ensures services
 // dependent on others use the same references in memory.

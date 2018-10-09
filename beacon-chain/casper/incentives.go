@@ -3,7 +3,7 @@ package casper
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -74,7 +74,7 @@ func CalculateRewards(
 // reward validators for voting on blocks, or penalise them for being offline.
 func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
-	return params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDepositETH)
+	return params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
 }
 
 // SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
