@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -448,7 +448,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		var voteBalance uint64
 		for _, attesterIndex := range indices {
 			// find balance of validators who voted.
-			if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
 				voteBalance += validators[attesterIndex].Balance
 			}
 			// add to total balance of the committee.
@@ -459,7 +459,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.ShardId].GetSlot()
 
 			if crosslinkRecords[attestation.ShardId].GetDynasty() != dynasty {
-				if shared.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+				if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
 					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 				} else {
 					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])

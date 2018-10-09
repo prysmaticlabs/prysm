@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -57,7 +57,7 @@ type p2pAPI interface {
 type Service struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	p2p                       shared.P2P
+	p2p                       p2pAPI
 	chainService              chainService
 	attestationService        attestationService
 	db                        beaconDB
