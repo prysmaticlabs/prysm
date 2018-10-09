@@ -11,13 +11,12 @@
 
 package bls
 
-import (
-	"crypto/sha256"
-	"errors"
-	"math/big"
-	"unsafe"
-	"C"
-)
+import "crypto/sha256"
+import "errors"
+import "math/big"
+import "unsafe"
+import "C"
+
 
 /*
 #cgo LDFLAGS: -lgmp -lpbc
@@ -25,16 +24,16 @@ import (
 #include <stdio.h>
 #include <stdlib.h>
 int callback(pbc_cm_t cm, void *data) {
-pbc_param_init_d_gen(data, cm);
-return 1;
+	pbc_param_init_d_gen(data, cm);
+	return 1;
 }
 
 int search(pbc_param_ptr params, unsigned int d, unsigned int bitlimit) {
-int m = d % 4;
-if (d == 0 || m == 1 || m == 2) {
-	pbc_die("Discriminant must be 0 or 3 mod 4 and positive.");
-}
-return pbc_cm_search_d(callback, params, d, bitlimit);
+	int m = d % 4;
+	if (d == 0 || m == 1 || m == 2) {
+		pbc_die("Discriminant must be 0 or 3 mod 4 and positive.");
+	}
+	return pbc_cm_search_d(callback, params, d, bitlimit);
 }
 */
 

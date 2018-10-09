@@ -1,3 +1,4 @@
+# gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
@@ -7,6 +8,7 @@ go_library(
         "helper.go",
     ],
     cgo = True,
+    cdeps = ["@pbc//:pbc-lib"],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls",
     visibility = ["//visibility:public"],
 )
