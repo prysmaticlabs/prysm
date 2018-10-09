@@ -41,7 +41,6 @@ go_test(
         "crystallized_state_test.go",
     ],
     embed = [":go_default_library"],
-    race = "off",  # TODO(#604): fix issues with tests failing with race on.
     deps = [
         "//beacon-chain/params:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
