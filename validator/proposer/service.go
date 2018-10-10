@@ -169,7 +169,6 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 			bitmask := p.GenerateBitmask(p.pendingAttestation)
 
-			// TODO(#552): Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
 				ParentHash: latestBlockHash[:],
 				// TODO(#511): Fix to be the actual, timebased slot number instead.

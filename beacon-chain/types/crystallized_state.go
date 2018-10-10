@@ -247,7 +247,6 @@ func (c *CrystallizedState) isDynastyTransition(slotNumber uint64) bool {
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
 	slotsStart := c.LastStateRecalc() - params.GetConfig().CycleLength
 	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
-	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
 	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
 	for i := 0; i < len(shardCommittee); i++ {
@@ -315,7 +314,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			blockVoteBalance = 0
 		}
 
-		// TODO(#542): This should have been total balance of the validators in the slot committee.
 		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
 			if slot > justifiedSlot {
 				justifiedSlot = slot
