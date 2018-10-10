@@ -71,9 +71,9 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: genericHash,
 	}
 
@@ -149,9 +149,9 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
+			PowChainRef:           []byte{1, 2, 3},
+			AncestorHashes:        [][]byte{genericHash},
+			Slot:                  Slot,
 			CrystallizedStateRoot: crystallizedStateRoot[:],
 		}
 
@@ -248,9 +248,9 @@ func TestDelayChan(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 	}
 
