@@ -2,11 +2,8 @@ package types
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -27,48 +24,6 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 	return &CrystallizedState{data: data}
 }
 
-func initialValidators() []*pb.ValidatorRecord {
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
-		validator := &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           uint64(params.GetConfig().DepositSize),
-			WithdrawalAddress: []byte{},
-			Pubkey:            []byte{},
-		}
-		validators = append(validators, validator)
-	}
-	return validators
-}
-
-func initialValidatorsFromJSON(genesisJSONPath string) ([]*pb.ValidatorRecord, error) {
-	// #nosec G304
-	// genesisJSONPath is a user input for the path of genesis.json.
-	// Ex: /path/to/my/genesis.json.
-	f, err := os.Open(genesisJSONPath)
-	if err != nil {
-		return nil, err
-	}
-
-	cState := &pb.CrystallizedState{}
-	if err := jsonpb.Unmarshal(f, cState); err != nil {
-		return nil, fmt.Errorf("error converting JSON to proto: %v", err)
-	}
-
-	return cState.Validators, nil
-}
-
-func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
-	seed := make([]byte, 0, 32)
-	committees, err := casper.ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	// Starting with 2 cycles (128 slots) with the same committees.
-	return append(committees, committees...), nil
-}
-
 // NewGenesisCrystallizedState initializes the crystallized state for slot 0.
 func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, error) {
 	// We seed the genesis crystallized state with a bunch of validators to
@@ -77,16 +32,16 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 	var err error
 	if genesisJSONPath != "" {
 		log.Infof("Initializing crystallized state from %s", genesisJSONPath)
-		genesisValidators, err = initialValidatorsFromJSON(genesisJSONPath)
+		genesisValidators, err = casper.InitialValidatorsFromJSON(genesisJSONPath)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		genesisValidators = initialValidators()
+		genesisValidators = casper.InitialValidators()
 	}
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(genesisValidators)
+	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {
 		return nil, err
 	}

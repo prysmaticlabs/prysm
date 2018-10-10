@@ -20,6 +20,19 @@ func ShuffleValidatorsToCommittees(seed common.Hash, activeValidators []*pb.Vali
 	return splitBySlotShard(shuffledValidators, crosslinkStartShard), nil
 }
 
+// InitialShardAndCommitteesForSlots initialises the committees for shards by shuffling the validators
+// and assigning them to specific shards.
+func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
+	seed := make([]byte, 0, 32)
+	committees, err := ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Starting with 2 cycles (128 slots) with the same committees.
+	return append(committees, committees...), nil
+}
+
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. If the validator set is small, a single committee is assigned to a shard
