@@ -166,7 +166,7 @@ func ValidatorSlotAndResponsibility(pubKey []byte, validators []*pb.ValidatorRec
 	return 0, "", fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
 }
 
-// TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
+// TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
 func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
 	activeValidators := ActiveValidatorIndices(validators)
@@ -183,4 +183,97 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	depositInEth := totalDeposit / uint64(params.GetConfig().Gwei)
 
 	return depositInEth
+}
+
+// AddValidator gets be ran for every validator that is inducted as part of a log created on the PoW chain.
+func AddValidator(
+	validators []*pb.ValidatorRecord,
+	pubKey []byte,
+	withdrawalShard uint64,
+	withdrawalAddr []byte,
+	randaoCommitment []byte) []*pb.ValidatorRecord {
+
+	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
+
+	newValidatorRecord := &pb.ValidatorRecord{
+		Pubkey:            pubKey,
+		WithdrawalShard:   withdrawalShard,
+		WithdrawalAddress: withdrawalAddr,
+		RandaoCommitment:  randaoCommitment,
+		Balance:           uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
+		Status:            uint64(params.PendingActivation),
+		ExitSlot:          0,
+	}
+
+	index := minEmptyValidator(validators)
+	if index > 0 {
+		validators[index] = newValidatorRecord
+		return validators
+	}
+
+	validators = append(validators, newValidatorRecord)
+	return validators
+}
+
+// ChangeValidators updates the validator set during state transition.
+func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+	maxAllowableChange := uint64(2 * params.GetConfig().DepositSize * params.GetConfig().Gwei)
+
+	totalBalance := TotalActiveValidatorDeposit(validators)
+
+	// Determine the max total wei that can deposit and withdraw.
+	if totalBalance > maxAllowableChange {
+		maxAllowableChange = totalBalance
+	}
+
+	var totalChanged uint64
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.PendingActivation) {
+			validators[i].Status = uint64(params.Active)
+			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
+			// TODO: Add validator set change
+		}
+		if validators[i].Status == uint64(params.PendingExit) {
+			validators[i].Status = uint64(params.PendingWithdraw)
+			validators[i].ExitSlot = currentSlot
+			totalChanged += validators[i].Balance
+			// TODO: Add validator set change
+		}
+		if totalChanged > maxAllowableChange {
+			break
+		}
+	}
+
+	// Calculate withdraw validators that have been logged out long enough,
+	// apply their penalties if they were slashed.
+
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.PendingWithdraw) ||
+			validators[i].Status == uint64(params.Penalized) &&
+				currentSlot >= validators[i].ExitSlot+params.GetConfig().WithdrawalPeriod {
+
+			penaltyFactor := totalPenalties * 3
+			if penaltyFactor > totalBalance {
+				penaltyFactor = totalBalance
+			}
+
+			if validators[i].Status == uint64(params.Penalized) {
+				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
+			}
+
+			validators[i].Status = uint64(params.Withdrawn)
+		}
+	}
+
+	return validators
+}
+
+// minEmptyValidator returns the lowest validator index which the status is withdrawn.
+func minEmptyValidator(validators []*pb.ValidatorRecord) int {
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.Withdrawn) {
+			return i
+		}
+	}
+	return -1
 }

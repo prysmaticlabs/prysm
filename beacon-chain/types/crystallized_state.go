@@ -205,6 +205,11 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 	return c.data.Validators
 }
 
+// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period
+func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
+	return c.data.DepositsPenalizedInPeriod
+}
+
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
@@ -346,6 +351,10 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		if err != nil {
 			return nil, nil, err
 		}
+
+		period := block.SlotNumber() / params.GetConfig().WithdrawalPeriod
+		totalPenalties := c.penalizedETH(period)
+		casper.ChangeValidators(block.SlotNumber(), totalPenalties, newValidators)
 	}
 
 	// Construct new crystallized state after cycle and dynasty transition.
@@ -476,4 +485,22 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		}
 	}
 	return crosslinkRecords, nil
+}
+
+// penalizedETH calculates penalized total ETH during the last 3 withdrawal periods.
+func (c *CrystallizedState) penalizedETH(periodIndex uint64) uint64 {
+	var penalties uint64
+
+	depositsPenalizedInPeriod := c.DepositsPenalizedInPeriod()
+	penalties += uint64(depositsPenalizedInPeriod[periodIndex])
+
+	if periodIndex >= 1 {
+		penalties += uint64(depositsPenalizedInPeriod[periodIndex-1])
+	}
+
+	if periodIndex >= 2 {
+		penalties += uint64(depositsPenalizedInPeriod[periodIndex-2])
+	}
+
+	return penalties
 }
