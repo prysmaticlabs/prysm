@@ -22,7 +22,7 @@ type Config struct {
 	DepositSize                 int       // DepositSize is how much a validator has deposited in Gwei.
 	BootstrappedValidatorsCount int       // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
 	ModuloBias                  int       // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
-	GWEIPerETH                  int       // GWEIPerETH is the denomination of GWEI in Ether.
+	Gwei                        int       // Gwei is the denomination of Gwei in Ether.
 	CycleLength                 uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                uint64    // SlotDuration is how many seconds are in a single slot.
 	MinCommiteeSize             uint64    // MinDynastyLength is the slots needed before dynasty transition happens.
@@ -41,7 +41,7 @@ var defaultConfig = &Config{
 	ModuloBias:                  16777216,
 	CycleLength:                 uint64(64),
 	ShardCount:                  1024,
-	GWEIPerETH:                  1e9,
+	Gwei:                        1e9,
 	DepositSize:                 32 * 1e9,
 	SlotDuration:                uint64(8),
 	MinCommiteeSize:             uint64(128),
@@ -59,7 +59,7 @@ var demoConfig = &Config{
 	ModuloBias:                16777216,
 	CycleLength:               uint64(5),
 	ShardCount:                3,
-	GWEIPerETH:                1e9,
+	Gwei:                      1e9,
 	DepositSize:               32 * 1e9,
 	SlotDuration:              uint64(8),
 	MinCommiteeSize:           uint64(3),

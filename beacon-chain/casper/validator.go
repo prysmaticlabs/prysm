@@ -180,7 +180,7 @@ func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(validators)
-	depositInEth := totalDeposit / uint64(params.GetConfig().GWEIPerETH)
+	depositInEth := totalDeposit / uint64(params.GetConfig().Gwei)
 
 	return depositInEth
 }
