@@ -199,7 +199,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
-				Slot:                  blockSlot,
+				Slot:                  slot,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateRoot:       activeStateHash[:],
