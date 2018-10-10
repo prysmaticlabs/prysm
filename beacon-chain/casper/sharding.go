@@ -53,10 +53,11 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 
 // getCommitteeParams calculates the parameters for ShuffleValidatorsToCommittees.
 // If numActiveValidators > CycleLength * MinCommitteeSize, committees are based off a max amount
-// of len(avs) // CYCLE_LENGTH // (MIN_COMMITTEE_SIZE * 2) + 1 or SHARD_COUNT // CYCLE_LENGTH
-func getCommitteeParams(numValidators int) (committeesPerSlot int) {
+// from either numActiveValidators / CycleLength /  MinCommitteeSize or
+// it is decided from the ShardCount / CycleLength.
+func getCommitteeParams(numActiveValidators int) (committeesPerSlot int) {
 	cycleLength := int(params.GetConfig().CycleLength)
-	boundOnAVS := numValidators/cycleLength/int(params.GetConfig().MinCommiteeSize*2) + 1
+	boundOnAVS := numActiveValidators/cycleLength/int(params.GetConfig().MinCommiteeSize*2) + 1
 	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
 	if boundOnAVS > boundOnShardCount {
 		return boundOnShardCount
