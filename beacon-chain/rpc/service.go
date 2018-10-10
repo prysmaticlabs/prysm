@@ -180,7 +180,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 	var keys []*pb.PublicKey
 	if req.AllValidators {
 		for _, val := range cState.Validators() {
-			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPublicKey()})
+			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 		}
 	} else {
 		keys = req.GetPublicKeys()
@@ -215,7 +215,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 
 	_, prevProposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalc(),
+		cState.LastStateRecalculationSlot(),
 		parentSlot,
 	)
 
@@ -229,11 +229,11 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	data := &pbp2p.BeaconBlock{
-		SlotNumber:   req.GetSlotNumber(),
-		PowChainRef:  powChainHash[:],
-		ParentHash:   req.GetParentHash(),
-		Timestamp:    req.GetTimestamp(),
-		Attestations: []*pbp2p.AggregatedAttestation{attestation},
+		Slot:           req.GetSlotNumber(),
+		PowChainRef:    powChainHash[:],
+		AncestorHashes: [][]byte{req.GetParentHash()},
+		Timestamp:      req.GetTimestamp(),
+		Attestations:   []*pbp2p.AggregatedAttestation{attestation},
 	}
 
 	block := types.NewBlock(data)
@@ -292,7 +292,7 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := casper.ValidatorShardID(
 		req.PublicKey,
-		cState.CurrentDynasty(),
+
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
@@ -310,7 +310,7 @@ func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.Pu
 
 	slot, responsibility, err := casper.ValidatorSlotAndResponsibility(
 		req.PublicKey,
-		cState.CurrentDynasty(),
+
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
@@ -335,7 +335,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 
 	index, err := casper.ValidatorIndex(
 		req.PublicKey,
-		cState.CurrentDynasty(),
+
 		cState.Validators(),
 	)
 	if err != nil {
@@ -361,7 +361,7 @@ func (s *Service) ValidatorAssignments(
 			var keys []*pb.PublicKey
 			if req.AllValidators {
 				for _, val := range cState.Validators() {
-					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPublicKey()})
+					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 				}
 			} else {
 				keys = req.GetPublicKeys()
@@ -406,7 +406,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// should act as a proposer or attester.
 		assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
 			val.GetPublicKey(),
-			cState.CurrentDynasty(),
+
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
 		)
@@ -425,7 +425,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// based on a public key and current crystallized state.
 		shardID, err := casper.ValidatorShardID(
 			val.GetPublicKey(),
-			cState.CurrentDynasty(),
+
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
 		)

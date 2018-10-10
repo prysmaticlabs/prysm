@@ -13,7 +13,7 @@ func TestSaveAndRemoveAttestations(t *testing.T) {
 
 	attestation := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:             1,
-		ShardId:          1,
+		Shard:            1,
 		AttesterBitfield: []byte{'A'},
 	})
 
@@ -44,7 +44,7 @@ func TestSaveAndRemoveAttestationHashList(t *testing.T) {
 	defer db.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	blockHash, err := block.Hash()
 	if err != nil {
@@ -53,7 +53,7 @@ func TestSaveAndRemoveAttestationHashList(t *testing.T) {
 
 	attestation := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:             1,
-		ShardId:          1,
+		Shard:            1,
 		AttesterBitfield: []byte{'A'},
 	})
 	attestationHash := attestation.Key()
