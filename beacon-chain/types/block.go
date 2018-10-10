@@ -83,7 +83,7 @@ func (b *Block) Hash() ([32]byte, error) {
 	var hash [32]byte
 	h := blake2b.Sum512(data)
 	copy(hash[:], h[:32])
-	return hash, err
+	return hash, nil
 }
 
 // ParentHash corresponding to parent beacon block.
@@ -98,7 +98,7 @@ func (b *Block) SlotNumber() uint64 {
 	return b.data.Slot
 }
 
-// PowChainRef returns a blake2b hash corresponding to a PoW chain block.
+// PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
 func (b *Block) PowChainRef() common.Hash {
 	return common.BytesToHash(b.data.PowChainRef)
 }
