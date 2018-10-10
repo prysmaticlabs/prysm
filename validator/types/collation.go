@@ -7,10 +7,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/shared/shardutil"
 	"github.com/prysmaticlabs/prysm/validator/params"
+	"golang.org/x/crypto/blake2b"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"
@@ -65,15 +65,14 @@ func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.In
 	return &CollationHeader{data: data}
 }
 
-// Hash takes the keccak256 of the collation header's data contents.
+// Hash takes the blake2b of the collation header's data contents.
 func (h *CollationHeader) Hash() (hash common.Hash) {
-	hw := sha3.NewKeccak256()
-
-	if err := rlp.Encode(hw, h.data); err != nil {
+	encoded, err := rlp.EncodeToBytes(h.data)
+	if err != nil {
 		log.Errorf("Failed to RLP encode data: %v", err)
 	}
-
-	hw.Sum(hash[:0])
+	blakeHash := blake2b.Sum512(encoded)
+	copy(hash[:], blakeHash[:32])
 	return hash
 }
 
