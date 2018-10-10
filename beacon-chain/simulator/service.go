@@ -205,12 +205,12 @@ func (sim *Simulator) run(delayChan <-chan time.Time) {
 			}
 
 			block := types.NewBlock(&pb.BeaconBlock{
-				SlotNumber:            blockSlot,
+				Slot:                  blockSlot,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
-				ActiveStateHash:       activeStateHash[:],
-				CrystallizedStateHash: crystallizedStateHash[:],
-				ParentHash:            parentHash,
+				ActiveStateRoot:       activeStateHash[:],
+				CrystallizedStateRoot: crystallizedStateHash[:],
+				AncestorHashes:        [][]byte{parentHash},
 				Attestations: []*pb.AggregatedAttestation{
 					{Slot: sim.slotNum - 1, AttesterBitfield: []byte{byte(255)}},
 				},

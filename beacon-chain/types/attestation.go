@@ -24,7 +24,7 @@ func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 		return &Attestation{
 			data: &pb.AggregatedAttestation{
 				Slot:                0,
-				ShardId:             0,
+				Shard:               0,
 				JustifiedSlot:       0,
 				JustifiedBlockHash:  []byte{},
 				ShardBlockHash:      []byte{},
@@ -84,7 +84,7 @@ func (a *Attestation) SlotNumber() uint64 {
 
 // ShardID of the block, which this attestation is attesting to.
 func (a *Attestation) ShardID() uint64 {
-	return a.data.ShardId
+	return a.data.Shard
 }
 
 // ShardBlockHash of the block, which this attestation is attesting to.
