@@ -185,7 +185,7 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	return depositInEth
 }
 
-// AddValidator gets be ran for every validator that is inducted as part of a log created on the PoW chain.
+// AddValidator runs for every validator that is inducted as part of a log created on the PoW chain.
 func AddValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
@@ -231,13 +231,13 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 		if validators[i].Status == uint64(params.PendingActivation) {
 			validators[i].Status = uint64(params.Active)
 			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
-			// TODO: Add validator set change
+			// TODO(#614): Add validator set change.
 		}
 		if validators[i].Status == uint64(params.PendingExit) {
 			validators[i].Status = uint64(params.PendingWithdraw)
 			validators[i].ExitSlot = currentSlot
 			totalChanged += validators[i].Balance
-			// TODO: Add validator set change
+			// TODO(#614): Add validator set change.
 		}
 		if totalChanged > maxAllowableChange {
 			break
