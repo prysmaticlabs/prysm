@@ -13,7 +13,7 @@ fi
 while read -r line ; do     
 linenum=`expr $line : '^\([0-9]*:\)'` 
 issueNum=${line//$linenum}
-issueState=$(GET https://api.github.com/repos/prysmaticlabs/prysm/issues/$issueNum | grep -o '"state":"closed"');
+issueState=$(curl -i https://api.github.com/repos/prysmaticlabs/prysm/issues/$issueNum | grep -o '"state":"closed"');
 
 if [ "$issueState" != "" ];
 then 
