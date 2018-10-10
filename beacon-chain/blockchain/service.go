@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -31,8 +30,8 @@ type ChainService struct {
 	canonicalCrystallizedStateFeed *event.Feed
 	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
-	genesisTimestamp               time.Time
-	slotAlignmentDuration          uint64
+	genesisTime                    time.Time
+	slotTicker                     utils.SlotTicker
 	enableCrossLinks               bool
 	enableRewardChecking           bool
 	enableAttestationValidity      bool
@@ -70,7 +69,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		enableCrossLinks:               cfg.EnableCrossLinks,
 		enableRewardChecking:           cfg.EnableRewardChecking,
 		enableAttestationValidity:      cfg.EnableAttestationValidity,
-		slotAlignmentDuration:          params.GetConfig().SlotDuration,
 	}, nil
 }
 
@@ -78,32 +76,23 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 func (c *ChainService) Start() {
 	log.Info("Starting service")
 
-	genesis, err := c.beaconDB.GetCanonicalBlockForSlot(0)
+	var err error
+	c.genesisTime, err = c.beaconDB.GetGenesisTime()
 	if err != nil {
-		log.Fatalf("Could not get genesis block: %v", err)
-	}
-	c.genesisTimestamp, err = genesis.Timestamp()
-	if err != nil {
-		log.Fatalf("Could not get genesis timestamp: %v", err)
+		log.Fatal(err)
+		return
 	}
 
-	// If the genesis time was at 12:00:00PM and the current time is 12:00:03PM,
-	// the next slot should tick at 12:00:08PM. We can accomplish this
-	// using utils.BlockingWait and passing in the desired
-	// slot duration.
-	//
-	// Instead of utilizing SlotDuration from config, we utilize a property of
-	// RPC service struct so this value can be set to 0 seconds
-	// as a parameter in tests. Otherwise, tests would sleep.
-	utils.BlockingWait(time.Duration(c.slotAlignmentDuration) * time.Second)
-
-	go c.updateHead(time.NewTicker(time.Second * time.Duration(params.GetConfig().SlotDuration)).C)
+	c.slotTicker = utils.GetSlotTicker(c.genesisTime)
+	go c.updateHead(c.slotTicker.C())
 	go c.blockProcessing()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
+	c.slotTicker.Done()
+
 	log.Info("Stopping service")
 	return nil
 }
@@ -142,13 +131,13 @@ func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 // at an in-memory slice of block hashes pending processing and
 // selects the best block according to the in-protocol fork choice
 // rule as canonical. This block is then persisted to storage.
-func (c *ChainService) updateHead(slotInterval <-chan time.Time) {
+func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
-		case <-slotInterval:
-			log.WithField("slotNumber", utils.CurrentSlot(c.genesisTimestamp)).Info("New beacon slot")
+		case slot := <-slotInterval:
+			log.WithField("slotNumber", slot).Info("New beacon slot")
 
 			// First, we check if there were any blocks processed in the previous slot.
 			// If there is, we fetch the first one from the DB.
@@ -297,7 +286,7 @@ func (c *ChainService) blockProcessing() {
 				cState,
 				parent.SlotNumber(),
 				c.enableAttestationValidity,
-				c.genesisTimestamp,
+				c.genesisTime,
 			); !valid {
 				log.Debugf("Block failed validity conditions: %v", err)
 				continue
