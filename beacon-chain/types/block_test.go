@@ -14,9 +14,9 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-type mockChainService struct{}
+type mockDB struct{}
 
-func (f *mockChainService) ContainsBlock(h [32]byte) (bool, error) {
+func (f *mockDB) HasBlock(h [32]byte) (bool, error) {
 	return true, nil
 }
 
@@ -42,7 +42,7 @@ func TestGenesisBlock(t *testing.T) {
 		t.Fatalf("genesis block hash should be identical: %x %x", h1, h2)
 	}
 
-	if b1.data.ParentHash == nil {
+	if b1.data.AncestorHashes == nil {
 		t.Fatalf("genesis block missing ParentHash field")
 	}
 
@@ -54,11 +54,11 @@ func TestGenesisBlock(t *testing.T) {
 		t.Fatalf("genesis block missing PowChainRef field")
 	}
 
-	if !bytes.Equal(b1.data.ActiveStateHash, aStateHash[:]) {
+	if !bytes.Equal(b1.data.ActiveStateRoot, aStateHash[:]) {
 		t.Fatalf("genesis block ActiveStateHash isn't initialized correctly")
 	}
 
-	if !bytes.Equal(b1.data.CrystallizedStateHash, cStateHash[:]) {
+	if !bytes.Equal(b1.data.CrystallizedStateRoot, cStateHash[:]) {
 		t.Fatalf("genesis block CrystallizedStateHash isn't initialized correctly")
 	}
 
@@ -89,11 +89,11 @@ func TestBlockValidity(t *testing.T) {
 	}, make(map[[32]byte]*VoteCache))
 
 	b := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 1,
+		Slot: 1,
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
-				ShardId:          0,
+				Shard:            1,
 				JustifiedSlot:    0,
 				AttesterBitfield: []byte{64, 0},
 			},
@@ -101,17 +101,17 @@ func TestBlockValidity(t *testing.T) {
 	})
 
 	parentSlot := uint64(1)
-	chainService := &mockChainService{}
+	db := &mockDB{}
 
-	if !b.isAttestationValid(0, chainService, aState, cState, parentSlot) {
+	if !b.isAttestationValid(0, db, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
 	genesisTime := params.GetConfig().GenesisTime
-	if !b.IsValid(chainService, aState, cState, parentSlot, false, genesisTime) {
+	if !b.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
-	if !b.IsValid(chainService, aState, cState, parentSlot, true, genesisTime) {
+	if !b.IsValid(db, aState, cState, parentSlot, true, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
 }

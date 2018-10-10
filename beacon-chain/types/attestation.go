@@ -24,7 +24,7 @@ func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 		return &Attestation{
 			data: &pb.AggregatedAttestation{
 				Slot:                0,
-				ShardId:             0,
+				Shard:               0,
 				JustifiedSlot:       0,
 				JustifiedBlockHash:  []byte{},
 				ShardBlockHash:      []byte{},
@@ -84,7 +84,7 @@ func (a *Attestation) SlotNumber() uint64 {
 
 // ShardID of the block, which this attestation is attesting to.
 func (a *Attestation) ShardID() uint64 {
-	return a.data.ShardId
+	return a.data.Shard
 }
 
 // ShardBlockHash of the block, which this attestation is attesting to.
@@ -162,4 +162,16 @@ func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shar
 	h := blake2b.Sum512(msg)
 	copy(hashMsg[:], h[:32])
 	return hashMsg
+}
+
+// ContainsValidator checks if the validator is included in the attestation.
+// TODO(#569): Modify method to accept a single index rather than a bitfield.
+func (a *Attestation) ContainsValidator(bitfield []byte) bool {
+	savedAttestationBitfield := a.AttesterBitfield()
+	for i := 0; i < len(bitfield); i++ {
+		if bitfield[i]&savedAttestationBitfield[i] != 0 {
+			return true
+		}
+	}
+	return false
 }

@@ -1,10 +1,9 @@
 package casper
 
 import (
-	"math"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,14 +17,12 @@ func CalculateRewards(
 	slot uint64,
 	voterIndices []uint32,
 	validators []*pb.ValidatorRecord,
-	dynasty uint64,
 	totalParticipatedDeposit uint64,
 	timeSinceFinality uint64) []*pb.ValidatorRecord {
-	totalDeposit := TotalActiveValidatorDeposit(dynasty, validators)
-	activeValidators := ActiveValidatorIndices(validators, dynasty)
-	rewardQuotient := uint64(RewardQuotient(dynasty, validators))
+	totalDeposit := TotalActiveValidatorDeposit(validators)
+	activeValidators := ActiveValidatorIndices(validators)
+	rewardQuotient := uint64(RewardQuotient(validators))
 	penaltyQuotient := uint64(quadraticPenaltyQuotient())
-	depositFactor := (totalParticipatedDeposit - totalDeposit) / totalDeposit
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
 	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
@@ -36,8 +33,8 @@ func CalculateRewards(
 				if voterIndex == validatorIndex {
 					voted = true
 					balance := validators[validatorIndex].GetBalance()
-					newbalance := uint64(balance + (balance/rewardQuotient)*depositFactor)
-					validators[validatorIndex].Balance = newbalance
+					newbalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalDeposit))/int64(totalDeposit)
+					validators[validatorIndex].Balance = uint64(newbalance)
 					break
 				}
 			}
@@ -74,23 +71,23 @@ func CalculateRewards(
 
 // RewardQuotient returns the reward quotient for validators which will be used to
 // reward validators for voting on blocks, or penalise them for being offline.
-func RewardQuotient(dynasty uint64, validators []*pb.ValidatorRecord) uint64 {
-	totalDepositETH := TotalActiveValidatorDepositInEth(dynasty, validators)
-	return params.GetConfig().BaseRewardQuotient * uint64(math.Pow(float64(totalDepositETH), 0.5))
+func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
+	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
+	return params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
 }
 
 // SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
 // rate is targeted for a compunded annual rate of 3.88%.
-func SlotMaxInterestRate(dynasty uint64, validators []*pb.ValidatorRecord) float64 {
-	rewardQuotient := float64(RewardQuotient(dynasty, validators))
+func SlotMaxInterestRate(validators []*pb.ValidatorRecord) float64 {
+	rewardQuotient := float64(RewardQuotient(validators))
 	return 1 / rewardQuotient
 }
 
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := float64(params.GetConfig().SqrtDropTime / params.GetConfig().SlotDuration)
-	return uint64(math.Pow(dropTimeFactor, 2))
+	dropTimeFactor := params.GetConfig().SqrtExpDropTime / params.GetConfig().SlotDuration
+	return dropTimeFactor * dropTimeFactor
 }
 
 // QuadraticPenalty returns the penalty that will be applied to an offline validator
@@ -102,17 +99,17 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 }
 
 // RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
+// TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
 func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	currentBalance := validator.Balance
-	multipicFactor := float64(2*participatedDeposits)/float64(totalDeposit) - 1
-	newBalance := float64(currentBalance) + float64(currentBalance)/float64(rewardQuotient)*multipicFactor
-	validator.Balance = uint64(newBalance)
+	currentBalance := int64(validator.Balance)
+	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
+	validator.Balance = uint64(currentBalance)
 }
 
 // PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
 func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	currentBalance := validator.Balance
+	newBalance := validator.Balance
 	quadraticQuotient := quadraticPenaltyQuotient()
-	newBalance := currentBalance - (currentBalance/rewardQuotient + timeSinceLastConfirmation/quadraticQuotient)
+	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
 	validator.Balance = newBalance
 }

@@ -1,4 +1,4 @@
-package blockchain
+package db
 
 import (
 	"encoding/binary"
@@ -15,17 +15,16 @@ import (
 
 // The fields below define the suffix of keys in the db.
 var (
-	// CanonicalHeadLookupKey tracks the latest canonical head.
+	// canonicalHeadLookupKey tracks the latest canonical head.
 	canonicalHeadLookupKey = []byte("latest-canonical-head")
 
-	// ActiveStateLookupKey tracks the current active state.
+	// activeStateLookupKey tracks the current active state.
 	activeStateLookupKey = []byte("beacon-active-state")
 
-	// CrystallizedStateLookupKey tracks the current crystallized state.
+	// crystallizedStateLookupKey tracks the current crystallized state.
 	crystallizedStateLookupKey = []byte("beacon-crystallized-state")
 
-	// GenesisLookupKey tracks the genesis block.
-	genesisLookupKey = []byte("genesis")
+	simulatedBlockKey = []byte("last-simulated-block")
 
 	// Data item suffixes.
 	blockSuffix             = []byte("-block")             // blockhash + blockPrefix -> block
@@ -51,12 +50,12 @@ func canonicalBlockKey(slotnumber uint64) []byte {
 	return append(encodeSlotNumber(slotnumber)[:], canonicalSuffix...)
 }
 
-// AttestationKey = attestationPrefix + attestationHash.
-func AttestationKey(hash [32]byte) []byte {
+// attestationKey = attestationPrefix + attestationHash.
+func attestationKey(hash [32]byte) []byte {
 	return append(hash[:], attestationSuffix...)
 }
 
 // AttestationHashListKey = attestationHashesPrefix + blockHash.
-func AttestationHashListKey(hash [32]byte) []byte {
+func attestationHashListKey(hash [32]byte) []byte {
 	return append(hash[:], attestationHashesSuffix...)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -139,7 +139,7 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 	existing := a.data.RecentBlockHashes
 	update := existing[distance:]
 	for len(update) < 2*int(params.GetConfig().CycleLength) {
-		update = append(update, block.data.ParentHash)
+		update = append(update, block.data.AncestorHashes[0])
 	}
 
 	return update, nil
@@ -180,7 +180,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 			// in the cache, then we add attester's index and balance to the block cache.
 			for i, attesterIndex := range attesterIndices {
 				var attesterExists bool
-				if !shared.CheckBit(attestation.AttesterBitfield, i) {
+				if !bitutil.CheckBit(attestation.AttesterBitfield, i) {
 					continue
 				}
 				for _, indexInCache := range update[h].VoterIndices {
@@ -216,7 +216,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
-	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalc())
+	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalculationSlot())
 
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
 	blockVoteCache := a.blockVoteCache

@@ -98,7 +98,7 @@ func TestAttesterLoop(t *testing.T) {
 		att.run(mockServiceAttester, mockServiceValidator)
 		<-exitRoutine
 	}()
-	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 33}
+	att.assignmentChan <- &pbp2p.BeaconBlock{Slot: 33}
 	att.cancel()
 	exitRoutine <- true
 
@@ -174,7 +174,7 @@ func TestAttesterErrorCantAttestHead(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
+	att.assignmentChan <- &pbp2p.BeaconBlock{Slot: 999}
 	att.cancel()
 	exitRoutine <- true
 
@@ -208,7 +208,7 @@ func TestAttesterErrorCantGetShardID(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
+	att.assignmentChan <- &pbp2p.BeaconBlock{Slot: 999}
 	att.cancel()
 	exitRoutine <- true
 
@@ -248,7 +248,7 @@ func TestAttesterErrorCantGetAttesterIndex(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	att.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 999}
+	att.assignmentChan <- &pbp2p.BeaconBlock{Slot: 999}
 	att.cancel()
 	exitRoutine <- true
 

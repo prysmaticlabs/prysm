@@ -129,7 +129,7 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 5}
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
@@ -219,7 +219,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 	attestation := &pbp2p.AggregatedAttestation{AttesterBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 5}
 
 	doneChan <- struct{}{}
 	doneChan <- struct{}{}
@@ -265,7 +265,7 @@ func TestProposerServiceErrors(t *testing.T) {
 
 	p.attestationChan <- &pbp2p.AggregatedAttestation{}
 	p.assignmentChan <- nil
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 9}
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 9}
 
 	doneChan <- struct{}{}
 	doneChan <- struct{}{}

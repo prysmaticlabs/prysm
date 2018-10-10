@@ -16,9 +16,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -31,6 +32,9 @@ type Config struct {
 	SyncPollingInterval         time.Duration
 	BlockBufferSize             int
 	CrystallizedStateBufferSize int
+	BeaconDB                    beaconDB
+	P2P                         p2pAPI
+	SyncService                 syncService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -45,15 +49,20 @@ func DefaultConfig() Config {
 	}
 }
 
-// ChainService is the interface for the blockchain package's ChainService struct.
-type ChainService interface {
+type p2pAPI interface {
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
+}
+
+type beaconDB interface {
 	HasStoredState() (bool, error)
 	SaveBlock(*types.Block) error
 }
 
 // SyncService is the interface for the Sync service.
 // InitialSync calls `Start` when initial sync completes.
-type SyncService interface {
+type syncService interface {
 	Start()
 }
 
@@ -62,23 +71,20 @@ type SyncService interface {
 type InitialSync struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
-	p2p                          shared.P2P
-	chainService                 ChainService
-	syncService                  SyncService
+	p2p                          p2pAPI
+	syncService                  syncService
+	db                           beaconDB
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
-	currentSlotNumber            uint64
+	currentSlot                  uint64
 	syncPollingInterval          time.Duration
-	initialCrystallizedStateHash [32]byte
+	initialCrystallizedStateRoot [32]byte
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
-	beaconp2p shared.P2P,
-	chainService ChainService,
-	syncService SyncService,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -88,9 +94,9 @@ func NewInitialSyncService(ctx context.Context,
 	return &InitialSync{
 		ctx:                  ctx,
 		cancel:               cancel,
-		p2p:                  beaconp2p,
-		chainService:         chainService,
-		syncService:          syncService,
+		p2p:                  cfg.P2P,
+		syncService:          cfg.SyncService,
+		db:                   cfg.BeaconDB,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
@@ -99,7 +105,7 @@ func NewInitialSyncService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
-	stored, err := s.chainService.HasStoredState()
+	stored, err := s.db.HasStoredState()
 	if err != nil {
 		log.Errorf("error retrieving stored state: %v", err)
 		return
@@ -146,7 +152,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delaychan:
-			if highestObservedSlot == s.currentSlotNumber {
+			if highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				// TODO(#426): Resume sync after completion of initial sync.
 				// See comment in Sync service's Start function for explanation.
@@ -155,12 +161,12 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
 
-			if data.Block.GetSlotNumber() > highestObservedSlot {
-				highestObservedSlot = data.Block.GetSlotNumber()
+			if data.Block.GetSlot() > highestObservedSlot {
+				highestObservedSlot = data.Block.GetSlot()
 			}
 
-			if s.currentSlotNumber == 0 {
-				if s.initialCrystallizedStateHash != [32]byte{} {
+			if s.currentSlot == 0 {
+				if s.initialCrystallizedStateRoot != [32]byte{} {
 					continue
 				}
 				if err := s.setBlockForInitialSync(data); err != nil {
@@ -173,7 +179,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
-			if data.Block.GetSlotNumber() != (s.currentSlotNumber + 1) {
+			if data.Block.GetSlot() != (s.currentSlot + 1) {
 				continue
 			}
 
@@ -184,7 +190,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case msg := <-s.crystallizedStateBuf:
 			data := msg.Data.(*pb.CrystallizedStateResponse)
 
-			if s.initialCrystallizedStateHash == [32]byte{} {
+			if s.initialCrystallizedStateRoot == [32]byte{} {
 				continue
 			}
 
@@ -194,11 +200,11 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				log.Errorf("Unable to hash crytsallized state: %v", err)
 			}
 
-			if hash != s.initialCrystallizedStateHash {
+			if hash != s.initialCrystallizedStateRoot {
 				continue
 			}
 
-			s.currentSlotNumber = crystallizedState.LastFinalizedSlot()
+			s.currentSlot = crystallizedState.LastFinalizedSlot()
 			s.requestNextBlock()
 			crystallizedStateSub.Unsubscribe()
 		}
@@ -209,7 +215,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 // for a beacon block.
 func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block := types.NewBlock(data.Block)
-	h := block.CrystallizedStateHash()
+	h := block.CrystallizedStateRoot()
 	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
 	s.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
 	return nil
@@ -230,7 +236,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 		return err
 	}
 
-	s.initialCrystallizedStateHash = block.CrystallizedStateHash()
+	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
 
 	log.Infof("Saved block with hash %x for initial sync", h)
 	return nil
@@ -238,7 +244,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 
 // requestNextBlock broadcasts a request for a block with the next slotnumber.
 func (s *InitialSync) requestNextBlock() {
-	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlotNumber + 1)})
+	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlot + 1)})
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
@@ -246,21 +252,21 @@ func (s *InitialSync) requestNextBlock() {
 func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 	block := types.NewBlock(data.Block)
 
-	if s.currentSlotNumber == uint64(0) {
+	if s.currentSlot == uint64(0) {
 		return errors.New("invalid slot number for syncing")
 	}
 
-	if (s.currentSlotNumber + 1) == block.SlotNumber() {
+	if (s.currentSlot + 1) == block.SlotNumber() {
 
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
 		}
-		s.currentSlotNumber = block.SlotNumber()
+		s.currentSlot = block.SlotNumber()
 	}
 	return nil
 }
 
 // writeBlockToDB saves the corresponding block to the local DB.
 func (s *InitialSync) writeBlockToDB(block *types.Block) error {
-	return s.chainService.SaveBlock(block)
+	return s.db.SaveBlock(block)
 }
