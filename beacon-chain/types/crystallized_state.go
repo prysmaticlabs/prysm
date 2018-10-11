@@ -205,7 +205,7 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 	return c.data.Validators
 }
 
-// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period
+// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period.
 func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 	return c.data.DepositsPenalizedInPeriod
 }
