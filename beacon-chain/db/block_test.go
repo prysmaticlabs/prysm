@@ -173,3 +173,43 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 		t.Fatal("there should be an error because block does not exist in the db")
 	}
 }
+
+func TestGetGenesisTime(t *testing.T) {
+	beaconDB := startInMemoryBeaconDB(t)
+	defer beaconDB.Close()
+
+	time, err := beaconDB.GetGenesisTime()
+	if err != nil {
+		t.Fatalf("GetGenesisTime failed: %v", err)
+	}
+
+	time2, err := beaconDB.GetGenesisTime()
+	if err != nil {
+		t.Fatalf("GetGenesisTime failed on second attempt: %v", err)
+	}
+
+	if time != time2 {
+		t.Fatalf("Expected GetGenesisTime to always return same value: %v %v", time, time2)
+	}
+
+}
+
+func TestGetGenesisTimeFailure(t *testing.T) {
+	beaconDB := startInMemoryBeaconDB(t)
+	defer beaconDB.Close()
+
+	genesisBlock, err := beaconDB.GetCanonicalBlockForSlot(0)
+	if err != nil {
+		t.Fatalf("Failed to get genesis block: %v", err)
+	}
+
+	hash, _ := genesisBlock.Hash()
+	err = beaconDB.removeBlock(hash)
+	if err != nil {
+		t.Fatalf("Failed to remove genesis block: %v", err)
+	}
+
+	if _, err := beaconDB.GetGenesisTime(); err == nil {
+		t.Fatalf("Expected GetGenesisTime to fail")
+	}
+}

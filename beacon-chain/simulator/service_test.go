@@ -80,7 +80,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 	sim := setupSimulator(t)
 
-	delayChan := make(chan time.Time)
+	delayChan := make(chan uint64)
 	exitRoutine := make(chan bool)
 
 	go func() {
@@ -88,7 +88,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	delayChan <- time.Time{}
+	delayChan <- 0
 	sim.cancel()
 	exitRoutine <- true
 
@@ -104,7 +104,7 @@ func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
 	sim := setupSimulator(t)
 
-	delayChan := make(chan time.Time)
+	delayChan := make(chan uint64)
 	exitRoutine := make(chan bool)
 
 	go func() {

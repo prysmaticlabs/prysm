@@ -36,7 +36,7 @@ type Simulator struct {
 	enablePOWChain         bool
 	delay                  time.Duration
 	slotNum                uint64
-	genesisTimestamp       time.Time
+	slotTicker             utils.SlotTicker
 	broadcastedBlocks      map[[32]byte]*types.Block
 	broadcastedBlockHashes [][32]byte
 	blockRequestChan       chan p2p.Message
@@ -60,6 +60,7 @@ type beaconDB interface {
 	GetCrystallizedState() *types.CrystallizedState
 	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
 	GetCanonicalBlock() (*types.Block, error)
+	GetGenesisTime() (time.Time, error)
 }
 
 // DefaultConfig options for the simulator.
@@ -91,22 +92,21 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	genesis, err := sim.beaconDB.GetCanonicalBlockForSlot(0)
+	genesisTime, err := sim.beaconDB.GetGenesisTime()
 	if err != nil {
-		log.Fatalf("Could not get genesis block: %v", err)
-	}
-	sim.genesisTimestamp, err = genesis.Timestamp()
-	if err != nil {
-		log.Fatalf("Could not get genesis timestamp: %v", err)
+		log.Fatal(err)
+		return
 	}
 
-	go sim.run(time.NewTicker(sim.delay).C)
+	sim.slotTicker = utils.GetSlotTicker(genesisTime)
+	go sim.run(sim.slotTicker.C())
 }
 
 // Stop the sim.
 func (sim *Simulator) Stop() error {
 	defer sim.cancel()
 	log.Info("Stopping service")
+	sim.slotTicker.Done()
 	// Persist the last simulated block in the DB for future sessions
 	// to continue from the last simulated slot number.
 	if len(sim.broadcastedBlockHashes) > 0 {
@@ -133,7 +133,7 @@ func (sim *Simulator) lastSimulatedSessionBlock() (*types.Block, error) {
 	return simulatedBlock, nil
 }
 
-func (sim *Simulator) run(delayChan <-chan time.Time) {
+func (sim *Simulator) run(slotInterval <-chan uint64) {
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 
@@ -158,7 +158,7 @@ func (sim *Simulator) run(delayChan <-chan time.Time) {
 		case <-sim.ctx.Done():
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
-		case <-delayChan:
+		case slot := <-slotInterval:
 			activeStateHash, err := sim.beaconDB.GetActiveState().Hash()
 			if err != nil {
 				log.Errorf("Could not fetch active state hash: %v", err)
@@ -198,14 +198,8 @@ func (sim *Simulator) run(delayChan <-chan time.Time) {
 				powChainRef = []byte{byte(sim.slotNum)}
 			}
 
-			blockSlot := utils.CurrentSlot(sim.genesisTimestamp)
-			if blockSlot == 0 {
-				// cannot process a genesis block, so we start from 1
-				blockSlot = 1
-			}
-
 			block := types.NewBlock(&pb.BeaconBlock{
-				Slot:                  blockSlot,
+				Slot:                  slot,
 				Timestamp:             ptypes.TimestampNow(),
 				PowChainRef:           powChainRef,
 				ActiveStateRoot:       activeStateHash[:],
