@@ -2,12 +2,14 @@ package types
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"os"
 	"strconv"
 	"testing"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -98,13 +100,13 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 
 	totalDeposits := cState.TotalDeposits()
 	recentShardBlockHashes := make([][]byte, 3*params.GetConfig().CycleLength)
-	voteCache := make(map[[32]byte]*VoteCache)
+	voteCache := make(map[[32]byte]*utils.VoteCache)
 	for i := 0; i < 3*int(params.GetConfig().CycleLength); i++ {
 		shardBlockHash := [32]byte{}
 		counter := []byte(strconv.Itoa(i))
 		copy(shardBlockHash[:], counter)
 		recentShardBlockHashes[i] = shardBlockHash[:]
-		voteCache[shardBlockHash] = &VoteCache{
+		voteCache[shardBlockHash] = &utils.VoteCache{
 			VoteTotalDeposit: totalDeposits * 3 / 4,
 		}
 	}
@@ -194,7 +196,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Process crosslinks happened at slot 50 and dynasty 2.
-	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(validators)
+	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(validators)
 	if err != nil {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}

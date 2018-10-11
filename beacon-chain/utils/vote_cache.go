@@ -1,4 +1,4 @@
-package types
+package utils
 
 // VoteCache is a helper cache to track which validators voted
 // for a certain block hash and total deposit supported for such block hash.
@@ -7,11 +7,11 @@ type VoteCache struct {
 	VoteTotalDeposit uint64
 }
 
-func newVoteCache() *VoteCache {
+func NewVoteCache() *VoteCache {
 	return &VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
 }
 
-func (v *VoteCache) copy() *VoteCache {
+func (v *VoteCache) Copy() *VoteCache {
 	voterIndices := make([]uint32, len(v.VoterIndices))
 	copy(voterIndices, v.VoterIndices)
 
@@ -21,13 +21,13 @@ func (v *VoteCache) copy() *VoteCache {
 	}
 }
 
-func voteCacheDeepCopy(old map[[32]byte]*VoteCache) map[[32]byte]*VoteCache {
+func VoteCacheDeepCopy(old map[[32]byte]*VoteCache) map[[32]byte]*VoteCache {
 	new := map[[32]byte]*VoteCache{}
 	for k, v := range old {
 		newK := [32]byte{}
 		copy(newK[:], k[:])
 
-		new[newK] = v.copy()
+		new[newK] = v.Copy()
 	}
 
 	return new
