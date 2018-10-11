@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -201,14 +199,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 	slotsStart := c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
 	// TODO(#267): ShardAndCommitteesForSlots will return default value because the spec for dynasty transition is not finalized.
-	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
-	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
-	for i := 0; i < len(shardCommittee); i++ {
-		if attestation.Shard == shardCommittee[i].Shard {
-			return shardCommittee[i].Committee, nil
-		}
-	}
-	return nil, fmt.Errorf("unable to find attestation based on slot: %v, Shard: %v", attestation.Slot, attestation.Shard)
+	return casper.CommitteeInShardAndSlot(slotIndex, attestation.GetShard(), c.data.GetShardAndCommitteesForSlots())
 }
 
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state

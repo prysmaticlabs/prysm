@@ -221,3 +221,16 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 
 	return depositInEth
 }
+
+// CommitteeinShardAndSlot returns the shard committee for a a particular slot index and shard.
+func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArray []*pb.ShardAndCommitteeArray) ([]uint32, error) {
+	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
+
+	for i := 0; i < len(shardCommittee); i++ {
+		if shardID == shardCommittee[i].Shard {
+			return shardCommittee[i].Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
+}
