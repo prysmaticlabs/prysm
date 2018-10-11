@@ -27,7 +27,6 @@ var (
 	simulatedBlockKey = []byte("last-simulated-block")
 
 	// Data item suffixes.
-	// TODO(#514): Change suffixes back to prefixes as originally designed after issue 514 is solved or after BoltDB migration
 	blockSuffix             = []byte("-block")             // blockhash + blockPrefix -> block
 	canonicalSuffix         = []byte("-canonical")         // num(uint64 big endian) + cannoicalSuffix -> blockhash
 	attestationSuffix       = []byte("-attestation")       // attestationHash + attestationSuffix -> attestation
