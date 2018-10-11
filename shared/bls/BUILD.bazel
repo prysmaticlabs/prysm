@@ -17,5 +17,5 @@ go_test(
     name = "go_default_test",
     srcs = ["bls_test.go"],
     embed = [":go_default_library"],
-    deps = ["@com_github_Nik-U_pbc//:go_default_library"],
+    deps = ["@com_github_prysmaticlabs_pbc//:go_default_library"],
 )

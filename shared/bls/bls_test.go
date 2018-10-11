@@ -3,7 +3,7 @@ package bls
 import (
 	"testing"
 
-	"github.com/Nik-U/pbc"
+	"github.com/prysmaticlabs/pbc"
 
 	"crypto/sha256"
 )

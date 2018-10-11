@@ -654,7 +654,7 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_Nik-U_pbc",
-    commit = "12f3f0abc76db4319de8036959dc3a6d060838fe",
-    importpath = "github.com/Nik-U/pbc",
+    name = "com_github_prysmaticlabs_pbc",
+    commit = "32faf318838254d4eed5e224f073d46c5c795e24",
+    importpath = "github.com/prysmaticlabs/pbc",
 )
