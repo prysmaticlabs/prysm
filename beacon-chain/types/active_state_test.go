@@ -50,12 +50,12 @@ func TestUpdateAttestations(t *testing.T) {
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:    0,
-			ShardId: 0,
+			Slot:  0,
+			Shard: 0,
 		},
 		{
-			Slot:    0,
-			ShardId: 1,
+			Slot:  0,
+			Shard: 1,
 		},
 	}
 
@@ -69,24 +69,24 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AggregatedAttestation{
 			{
-				Slot:    0,
-				ShardId: 0,
+				Slot:  0,
+				Shard: 0,
 			},
 			{
-				Slot:    0,
-				ShardId: 1,
+				Slot:  0,
+				Shard: 1,
 			},
 		},
 	}, nil)
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:    10,
-			ShardId: 2,
+			Slot:  10,
+			Shard: 2,
 		},
 		{
-			Slot:    9,
-			ShardId: 3,
+			Slot:  9,
+			Shard: 3,
 		},
 	}
 
@@ -100,8 +100,8 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 
 func TestUpdateRecentBlockHashes(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 10,
-		ParentHash: []byte{'A'},
+		Slot:           10,
+		AncestorHashes: [][]byte{{'A'}},
 	})
 
 	recentBlockHashes := [][]byte{}
@@ -127,8 +127,8 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %x got %x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], block.data.ParentHash) {
-			t.Fatalf("update failed: expected %x got %x", block.data.ParentHash[:], updated[i])
+		} else if !areBytesEqual(updated[i], block.data.AncestorHashes[0]) {
+			t.Fatalf("update failed: expected %x got %x", block.data.AncestorHashes[:], updated[i])
 		}
 	}
 }
@@ -152,7 +152,8 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	block := &Block{
 		data: &pb.BeaconBlock{
-			SlotNumber: 2,
+			Slot:           2,
+			AncestorHashes: [][]byte{{}},
 		},
 	}
 
@@ -192,11 +193,12 @@ func TestBlockVoteCache(t *testing.T) {
 		t.Fatalf("failed to initialize crystallized state: %v", err)
 	}
 	block := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 1,
+		Slot:           1,
+		AncestorHashes: [][]byte{},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
-				ShardId:          0,
+				Shard:            1,
 				AttesterBitfield: []byte{'F', 'F'},
 			},
 		},
@@ -226,7 +228,8 @@ func areBytesEqual(s1, s2 []byte) bool {
 
 func TestCalculateNewActiveState(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 10,
+		Slot:           10,
+		AncestorHashes: [][]byte{{}},
 	})
 
 	cState, err := NewGenesisCrystallizedState("")
@@ -242,12 +245,12 @@ func TestCalculateNewActiveState(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AggregatedAttestation{
 			{
-				Slot:    0,
-				ShardId: 0,
+				Slot:  0,
+				Shard: 0,
 			},
 			{
-				Slot:    0,
-				ShardId: 1,
+				Slot:  0,
+				Shard: 1,
 			},
 		},
 		RecentBlockHashes: recentBlockHashes,

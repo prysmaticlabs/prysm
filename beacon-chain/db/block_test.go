@@ -14,7 +14,7 @@ func TestSaveAndRemoveBlocks(t *testing.T) {
 	defer beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("a"),
 	})
 
@@ -29,7 +29,7 @@ func TestSaveAndRemoveBlocks(t *testing.T) {
 
 	// Adding a different block with the same key
 	newblock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  4,
+		Slot:        4,
 		PowChainRef: []byte("b"),
 	})
 
@@ -74,7 +74,7 @@ func TestCheckBlockBySlotNumber(t *testing.T) {
 	defer beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("a"),
 	})
 
@@ -101,7 +101,7 @@ func TestCheckBlockBySlotNumber(t *testing.T) {
 	}
 
 	alternateblock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("d"),
 	})
 
@@ -129,7 +129,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 	defer beaconDB.Close()
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("a"),
 	})
 
@@ -156,7 +156,7 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 	}
 
 	alternateblock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber:  64,
+		Slot:        64,
 		PowChainRef: []byte("d"),
 	})
 
@@ -171,5 +171,45 @@ func TestGetBlockBySlotNumber(t *testing.T) {
 
 	if _, err = beaconDB.GetCanonicalBlockForSlot(block.SlotNumber()); err == nil {
 		t.Fatal("there should be an error because block does not exist in the db")
+	}
+}
+
+func TestGetGenesisTime(t *testing.T) {
+	beaconDB := startInMemoryBeaconDB(t)
+	defer beaconDB.Close()
+
+	time, err := beaconDB.GetGenesisTime()
+	if err != nil {
+		t.Fatalf("GetGenesisTime failed: %v", err)
+	}
+
+	time2, err := beaconDB.GetGenesisTime()
+	if err != nil {
+		t.Fatalf("GetGenesisTime failed on second attempt: %v", err)
+	}
+
+	if time != time2 {
+		t.Fatalf("Expected GetGenesisTime to always return same value: %v %v", time, time2)
+	}
+
+}
+
+func TestGetGenesisTimeFailure(t *testing.T) {
+	beaconDB := startInMemoryBeaconDB(t)
+	defer beaconDB.Close()
+
+	genesisBlock, err := beaconDB.GetCanonicalBlockForSlot(0)
+	if err != nil {
+		t.Fatalf("Failed to get genesis block: %v", err)
+	}
+
+	hash, _ := genesisBlock.Hash()
+	err = beaconDB.removeBlock(hash)
+	if err != nil {
+		t.Fatalf("Failed to remove genesis block: %v", err)
+	}
+
+	if _, err := beaconDB.GetGenesisTime(); err == nil {
+		t.Fatalf("Expected GetGenesisTime to fail")
 	}
 }

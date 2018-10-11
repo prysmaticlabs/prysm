@@ -193,7 +193,7 @@ func TestAttestHead(t *testing.T) {
 	req := &pb.AttestRequest{
 		Attestation: &pbp2p.AggregatedAttestation{
 			Slot:           999,
-			ShardId:        1,
+			Shard:          1,
 			ShardBlockHash: []byte{'a'},
 		},
 	}
