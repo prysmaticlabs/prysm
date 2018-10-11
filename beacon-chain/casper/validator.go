@@ -248,15 +248,14 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	// apply their penalties if they were slashed.
 
 	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingWithdraw) ||
-			validators[i].Status == uint64(params.Penalized) &&
-				currentSlot >= validators[i].ExitSlot+params.GetConfig().WithdrawalPeriod {
+		if (validators[i].Status == uint64(params.PendingWithdraw) ||
+			validators[i].Status == uint64(params.Penalized)) &&
+			currentSlot >= validators[i].ExitSlot+params.GetConfig().WithdrawalPeriod {
 
 			penaltyFactor := totalPenalties * 3
 			if penaltyFactor > totalBalance {
 				penaltyFactor = totalBalance
 			}
-
 			if validators[i].Status == uint64(params.Penalized) {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}
