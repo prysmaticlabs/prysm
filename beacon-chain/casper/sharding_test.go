@@ -102,39 +102,27 @@ func TestSmallSampleValidators(t *testing.T) {
 func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
 	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize / 4)
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	committesPerSlot := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
-	}
-
-	if slotsPerCommittee != 4 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 4, slotsPerCommittee)
 	}
 }
 
 func TestGetCommitteeParamsRegularValidatorSet(t *testing.T) {
 	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize)
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	committesPerSlot := getCommitteeParams(numValidators)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
-	}
-
-	if slotsPerCommittee != 1 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 1, slotsPerCommittee)
 	}
 }
 
 func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
 	numValidators := int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize) * 8
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	committesPerSlot := getCommitteeParams(numValidators)
 	if committesPerSlot != 5 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 5, committesPerSlot)
-	}
-
-	if slotsPerCommittee != 1 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 1, slotsPerCommittee)
 	}
 }
 
