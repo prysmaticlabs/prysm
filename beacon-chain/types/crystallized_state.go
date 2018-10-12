@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"encoding/binary"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/jsonpb"
@@ -340,12 +341,22 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	// Clean up old attestations.
 	newPendingAttestations := aState.cleanUpAttestations(LastStateRecalculationSlot)
 
+	// For each special record object in active state.
+	for _, specialRecord := range aState.PendingSpecials() {
+
+		// Covers RANDAO updates for all the validators from last cycle.
+		if specialRecord.Kind == uint32(params.RandaoChanges) {
+			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
+			newValidators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
+		}
+	}
+
 	c.data.LastFinalizedSlot = finalizedSlot
 	// Entering new dynasty transition.
 	if c.isDynastyTransition(block.SlotNumber()) {
 		log.Info("Entering dynasty transition")
 		DynastyStartSlot = LastStateRecalculationSlot
-		Dynasty, ShardAndCommitteesForSlots, err = c.newDynastyRecalculations(block.ParentHash())
+		Dynasty, ShardAndCommitteesForSlots, err = c.newDynastyRecalculations(aState.RandaoMix())
 		if err != nil {
 			return nil, nil, err
 		}

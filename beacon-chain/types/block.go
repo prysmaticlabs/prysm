@@ -134,6 +134,11 @@ func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 
+// Specials returns an array of special objects in the block.
+func (b *Block) Specials() []*pb.SpecialRecord {
+	return b.data.Specials
+}
+
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
@@ -172,17 +177,18 @@ func (b *Block) IsValid(
 		return false
 	}
 
+	_, proposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		parentSlot)
+	if err != nil {
+		log.Errorf("Can not get proposer index %v", err)
+		return false
+	}
+	log.Infof("Proposer index: %v", proposerIndex)
+
 	if enableAttestationValidity {
 		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-		_, proposerIndex, err := casper.ProposerShardAndIndex(
-			cState.ShardAndCommitteesForSlots(),
-			cState.LastStateRecalculationSlot(),
-			parentSlot)
-		if err != nil {
-			log.Errorf("Can not get proposer index %v", err)
-			return false
-		}
-		log.Infof("Proposer index: %v", proposerIndex)
 		if !bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
@@ -194,6 +200,12 @@ func (b *Block) IsValid(
 				return false
 			}
 		}
+	}
+
+	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
+	if !b.isRandaoValid(cStateProposerRandaoSeed) {
+		log.Debugf("Invalid proposer RANDAO commitment. Wanted: %s. Got: %s", b.RandaoReveal(), cStateProposerRandaoSeed)
+		return false
 	}
 
 	return true
@@ -257,6 +269,17 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
+}
+
+// isRandaoValid verifies the validity of randao from block by comparing it with proposer's randao
+// from crystallized state.
+func (b *Block) isRandaoValid(cStateRandao []byte) bool {
+	// TODO(#646): Replace this with a hash function
+	var hash [32]byte
+	h := blake2b.Sum512(cStateRandao)
+	copy(hash[:], h[:32])
+
+	return b.RandaoReveal() == hash
 }
 
 func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {
