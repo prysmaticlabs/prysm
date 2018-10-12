@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "ghost.go",
         "incentives.go",
         "sharding.go",
         "validator.go",
@@ -11,6 +12,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/params:go_default_library",
+        "//beacon-chain/types:go_default_library",
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bitutil:go_default_library",
@@ -25,6 +27,7 @@ go_test(
     size = "large",
     timeout = "short",
     srcs = [
+        "ghost_test.go",
         "incentives_test.go",
         "sharding_test.go",
         "validator_test.go",

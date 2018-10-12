@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -146,130 +147,64 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 				continue
 			}
 
-			// We keep track of the highest scoring received block and its associated
-			// states.
-			var highestScoringBlock *types.Block
-			var highestScoringCrystallizedState *types.CrystallizedState
-			var highestScoringActiveState *types.ActiveState
-			var highestScore uint64
-
-			// We detect if this there is a cycle transition.
-			var cycleTransitioned bool
-
 			log.Info("Applying fork choice rule")
 
-			currentCanonicalCrystallizedState := c.beaconDB.GetCrystallizedState()
-			currentCanonicalActiveState := c.beaconDB.GetActiveState()
+			canonicalDecision, err := casper.GHOSTForkChoice(
+				c.beaconDB,
+				c.beaconDB.GetActiveState(),
+				c.beaconDB.GetCrystallizedState(),
+				c.blocksPendingProcessing,
+				c.enableCrossLinks,
+				c.enableRewardChecking,
+				c.enableAttestationValidity,
+			)
 
-			// We loop over every block pending processing in order to determine
-			// the highest scoring one.
-			for i := 0; i < len(c.blocksPendingProcessing); i++ {
-				block, err := c.beaconDB.GetBlock(c.blocksPendingProcessing[i])
-				if err != nil {
-					log.Errorf("Could not get block: %v", err)
-					continue
-				}
-
-				h, err := block.Hash()
-				if err != nil {
-					log.Errorf("Could not hash incoming block: %v", err)
-					continue
-				}
-
-				parentBlock, err := c.beaconDB.GetBlock(block.ParentHash())
-				if err != nil {
-					log.Errorf("Failed to get parent of block %x", h)
-					continue
-				}
-
-				cState := currentCanonicalCrystallizedState
-				aState := currentCanonicalActiveState
-
-				for cState.IsCycleTransition(parentBlock.SlotNumber()) {
-					cState, aState, err = cState.NewStateRecalculations(
-						aState,
-						block,
-						c.enableCrossLinks,
-						c.enableRewardChecking,
-					)
-					if err != nil {
-						log.Errorf("Initialize new cycle transition failed: %v", err)
-						continue
-					}
-					cycleTransitioned = true
-				}
-
-				aState, err = aState.CalculateNewActiveState(
-					block,
-					cState,
-					parentBlock.SlotNumber(),
-					c.enableAttestationValidity,
-				)
-				if err != nil {
-					log.Errorf("Compute active state failed: %v", err)
-					continue
-				}
-
-				// Initially, we set the highest scoring block to the first value in the
-				// processed blocks list.
-				if i == 0 {
-					highestScoringBlock = block
-					highestScoringCrystallizedState = cState
-					highestScoringActiveState = aState
-					continue
-				}
-				// Score the block and determine if its score is greater than the previously computed one.
-				if block.Score(cState.LastFinalizedSlot(), cState.LastJustifiedSlot()) > highestScore {
-					highestScoringBlock = block
-					highestScoringCrystallizedState = cState
-					highestScoringActiveState = aState
-				}
+			if err != nil {
+				log.Errorf("Could not apply fork choice rule: %v", err)
+				continue
 			}
 
 			// If no highest scoring block was determined, we do not update the head of the chain.
-			if highestScoringBlock == nil {
+			if canonicalDecision.CanonicalBlock == nil {
 				continue
 			}
 
-			if err := c.beaconDB.SaveActiveState(highestScoringActiveState); err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-				continue
-			}
-
-			if cycleTransitioned {
-				if err := c.beaconDB.SaveCrystallizedState(highestScoringCrystallizedState); err != nil {
-					log.Errorf("Write crystallized state to disk failed: %v", err)
-					continue
-				}
-			}
-
-			h, err := highestScoringBlock.Hash()
+			h, err := canonicalResponse.CanonicalBlock.Hash()
 			if err != nil {
 				log.Errorf("Could not hash highest scoring block: %v", err)
 				continue
 			}
 
+			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
+
 			// Save canonical block hash with slot number to DB.
-			if err := c.beaconDB.SaveCanonicalSlotNumber(highestScoringBlock.SlotNumber(), h); err != nil {
+			if err := c.beaconDB.SaveCanonicalSlotNumber(canonicalResponse.CanonicalBlock.SlotNumber(), h); err != nil {
 				log.Errorf("Unable to save slot number to db: %v", err)
 				continue
 			}
 
 			// Save canonical block to DB.
-			if err := c.beaconDB.SaveCanonicalBlock(highestScoringBlock); err != nil {
+			if err := c.beaconDB.SaveCanonicalBlock(canonicalResponse.CanonicalBlock); err != nil {
 				log.Errorf("Unable to save block to db: %v", err)
 				continue
 			}
 
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
+			if err := c.beaconDB.SaveActiveState(canonicalDecision.CanonicalActiveState); err != nil {
+				log.Errorf("Write active state to disk failed: %v", err)
+				continue
+			}
 
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
 			if cycleTransitioned {
-				c.canonicalCrystallizedStateFeed.Send(highestScoringCrystallizedState)
+				if err := c.beaconDB.SaveCrystallizedState(canonicalDecision.CanonicalCrystallizedState); err != nil {
+					log.Errorf("Write crystallized state to disk failed: %v", err)
+					continue
+				}
+				c.canonicalCrystallizedStateFeed.Send(canonicalResponse.CanonicalCrystallizedState)
 			}
-			c.canonicalBlockFeed.Send(highestScoringBlock)
+			c.canonicalBlockFeed.Send(canonicalResponse.CanonicalBlock)
 
 			// Clear the blocks pending processing, mutex lock for thread safety
 			// in updating this slice.
