@@ -234,3 +234,19 @@ func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArr
 
 	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
 }
+
+func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32, attestation *pb.AggregatedAttestation) (uint64, uint64) {
+	// find the total and vote balance of the shard committee.
+	var totalBalance uint64
+	var voteBalance uint64
+	for _, attesterIndex := range indices {
+		// find balance of validators who voted.
+		if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			voteBalance += validators[attesterIndex].Balance
+		}
+		// add to total balance of the committee.
+		totalBalance += validators[attesterIndex].Balance
+	}
+
+	return totalBalance, voteBalance
+}

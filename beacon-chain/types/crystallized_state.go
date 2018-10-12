@@ -205,7 +205,6 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // and the current active state. This method is called during a cycle transition.
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
-	var blockVoteBalance uint64
 	var LastStateRecalculationSlotCycleBack uint64
 	var newValidators []*pb.ValidatorRecord
 	var newCrosslinks []*pb.CrosslinkRecord
@@ -236,11 +235,12 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
+		var blockVoteBalance uint64
 
 		slot := LastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockVoteBalance, blockHash, slot,
+		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockHash, slot,
 			blockVoteCache, c.Validators(), timeSinceFinality, enableRewardChecking)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
@@ -333,34 +333,13 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 	crosslinkRecords := copyCrosslinks(c.data.Crosslinks)
 	rewardQuotient := casper.RewardQuotient(validators)
 
-	shardAttestationBalance := map[shardAttestation]uint64{}
 	for _, attestation := range pendingAttestations {
 		indices, err := c.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
 		}
 
-		shardBlockHash := [32]byte{}
-		copy(shardBlockHash[:], attestation.ShardBlockHash)
-		shardAtt := shardAttestation{
-			Shard:          attestation.Shard,
-			shardBlockHash: shardBlockHash,
-		}
-		if _, ok := shardAttestationBalance[shardAtt]; !ok {
-			shardAttestationBalance[shardAtt] = 0
-		}
-
-		// find the total and vote balance of the shard committee.
-		var totalBalance uint64
-		var voteBalance uint64
-		for _, attesterIndex := range indices {
-			// find balance of validators who voted.
-			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
-				voteBalance += validators[attesterIndex].Balance
-			}
-			// add to total balance of the committee.
-			totalBalance += validators[attesterIndex].Balance
-		}
+		totalBalance, voteBalance := casper.VotedBalanceInAttestation(validators, indices, attestation)
 
 		for _, attesterIndex := range indices {
 			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
@@ -373,8 +352,6 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 				}
 			}
 		}
-
-		shardAttestationBalance[shardAtt] += voteBalance
 
 		// if 2/3 of committee voted on this crosslink, update the crosslink
 		// with latest dynasty number, shard block hash, and slot number.
