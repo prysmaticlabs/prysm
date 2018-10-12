@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"golang.org/x/crypto/blake2b"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // Attestation is the primary source of load on the beacon chain, it's used to
@@ -53,10 +53,7 @@ func (a *Attestation) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not marshal attestation proto data: %v", err)
 	}
-	var hash [32]byte
-	h := blake2b.Sum512(data)
-	copy(hash[:], h[:32])
-	return hash, nil
+	return hashutil.Hash(data), nil
 }
 
 // Key generates the blake2b hash of the following attestation fields:
@@ -70,11 +67,7 @@ func (a *Attestation) Key() [32]byte {
 	for _, pHash := range a.ObliqueParentHashes() {
 		key = append(key, pHash[:]...)
 	}
-
-	var hash [32]byte
-	h := blake2b.Sum512(key)
-	copy(hash[:], h[:32])
-	return hash
+	return hashutil.Hash(key)
 }
 
 // SlotNumber of the block, which this attestation is attesting to.
@@ -157,11 +150,7 @@ func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shar
 	binary.PutUvarint(msg, shardID)
 	msg = append(msg, blockHash...)
 	binary.PutUvarint(msg, justifiedSlot)
-
-	var hashMsg [32]byte
-	h := blake2b.Sum512(msg)
-	copy(hashMsg[:], h[:32])
-	return hashMsg
+	return hashutil.Hash(msg)
 }
 
 // ContainsValidator checks if the validator is included in the attestation.

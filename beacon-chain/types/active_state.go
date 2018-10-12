@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"golang.org/x/crypto/blake2b"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // ActiveState contains fields of current state of beacon chain,
@@ -60,10 +60,7 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	var hash [32]byte
-	h := blake2b.Sum512(data)
-	copy(hash[:], h[:32])
-	return hash, nil
+	return hashutil.Hash(data), nil
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
