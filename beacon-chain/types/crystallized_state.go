@@ -5,7 +5,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -326,7 +325,6 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 	validators := c.data.Validators
 	dynasty := c.data.Dynasty
 	crosslinkRecords := copyCrosslinks(c.data.Crosslinks)
-	rewardQuotient := casper.RewardQuotient(validators)
 
 	for _, attestation := range pendingAttestations {
 		indices, err := c.getAttesterIndices(attestation)
@@ -336,27 +334,11 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 
 		totalBalance, voteBalance := casper.VotedBalanceInAttestation(validators, indices, attestation)
 
-		for _, attesterIndex := range indices {
-			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
+		casper.ApplyingCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
+			dynasty, validators, totalBalance, voteBalance)
 
-			if crosslinkRecords[attestation.Slot].GetDynasty() != dynasty {
-				if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
-					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
-				} else {
-					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
-				}
-			}
-		}
+		crosslinkRecords = casper.ApplyVotesOnCrosslink(slot, voteBalance, totalBalance, dynasty, attestation, crosslinkRecords)
 
-		// if 2/3 of committee voted on this crosslink, update the crosslink
-		// with latest dynasty number, shard block hash, and slot number.
-		if 3*voteBalance >= 2*totalBalance && dynasty > crosslinkRecords[attestation.Shard].Dynasty {
-			crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
-				Dynasty:        dynasty,
-				ShardBlockHash: attestation.ShardBlockHash,
-				Slot:           slot,
-			}
-		}
 	}
 	return crosslinkRecords, nil
 }
