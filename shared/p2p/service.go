@@ -173,7 +173,6 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg proto.Message) {
-	// TODO(#176): https://github.com/prysmaticlabs/prysm/issues/176
 	topic := s.topicMapping[messageType(msg)]
 	log.WithFields(logrus.Fields{
 		"topic": topic,
