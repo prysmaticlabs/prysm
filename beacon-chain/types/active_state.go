@@ -201,6 +201,20 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	return update, nil
 }
 
+// CleanUpActiveState removes the old attestations going from a cycle length behind
+// from the last state recalc and then generates the new active state. This is run after
+// a crystallized state transition.
+func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
+	slot := lastStateRecalc - params.GetConfig().CycleLength
+	newPendingAttestations := a.cleanUpAttestations(slot)
+
+	// Construct new active state after clean up pending attestations.
+	return NewActiveState(&pb.ActiveState{
+		PendingAttestations: newPendingAttestations,
+		RecentBlockHashes:   a.data.RecentBlockHashes,
+	}, a.blockVoteCache)
+}
+
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(
@@ -208,6 +222,7 @@ func (a *ActiveState) CalculateNewActiveState(
 	cState *CrystallizedState,
 	parentSlot uint64,
 	enableAttestationValidity bool) (*ActiveState, error) {
+
 	// Derive the new set of pending attestations.
 	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
 

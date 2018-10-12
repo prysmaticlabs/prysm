@@ -172,7 +172,7 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 			var stateTransitioned bool
 
 			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
-				cState, aState, err = cState.NewStateRecalculations(
+				cState, err = cState.NewStateRecalculations(
 					aState,
 					block,
 					c.enableCrossLinks,
@@ -184,6 +184,8 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 				}
 				stateTransitioned = true
 			}
+
+			aState = aState.CleanUpActiveState(cState.LastStateRecalculationSlot())
 
 			aState, err = aState.CalculateNewActiveState(
 				block,

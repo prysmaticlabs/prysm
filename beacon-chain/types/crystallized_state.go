@@ -204,7 +204,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, *ActiveState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
 	var blockVoteBalance uint64
 	var LastStateRecalculationSlotCycleBack uint64
 	var newValidators []*pb.ValidatorRecord
@@ -236,50 +236,23 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
-		var voterIndices []uint32
 
 		slot := LastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
-		if _, ok := blockVoteCache[blockHash]; ok {
-			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
-			voterIndices = blockVoteCache[blockHash].VoterIndices
 
-			// Apply Rewards for each slot.
-			if enableRewardChecking {
-				newValidators = casper.CalculateRewards(
-					slot,
-					voterIndices,
-					c.Validators(),
-					blockVoteBalance,
-					timeSinceFinality)
-			}
-		} else {
-			blockVoteBalance = 0
-		}
+		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockVoteBalance, blockHash, slot,
+			blockVoteCache, c.Validators(), timeSinceFinality, enableRewardChecking)
 
-		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
-			if slot > justifiedSlot {
-				justifiedSlot = slot
-			}
-			justifiedStreak++
-		} else {
-			justifiedStreak = 0
-		}
-
-		if slot > params.GetConfig().CycleLength && justifiedStreak >= params.GetConfig().CycleLength+1 && slot-params.GetConfig().CycleLength-1 > finalizedSlot {
-			finalizedSlot = slot - params.GetConfig().CycleLength - 1
-		}
+		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
+			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
 		if enableCrossLinks {
 			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
-
-	// Clean up old attestations.
-	newPendingAttestations := aState.cleanUpAttestations(LastStateRecalculationSlot)
 
 	c.data.LastFinalizedSlot = finalizedSlot
 	// Entering new dynasty transition.
@@ -288,7 +261,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		DynastyStartSlot = LastStateRecalculationSlot
 		Dynasty, ShardAndCommitteesForSlots, err = c.newDynastyRecalculations(block.ParentHash())
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -306,13 +279,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		Dynasty:                    Dynasty,
 	})
 
-	// Construct new active state after clean up pending attestations.
-	newActiveState := NewActiveState(&pb.ActiveState{
-		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes:   aState.data.RecentBlockHashes,
-	}, aState.blockVoteCache)
-
-	return newCrystallizedState, newActiveState, nil
+	return newCrystallizedState, nil
 }
 
 // newDynastyRecalculations recomputes the validator set. This method is called during a dynasty transition.
