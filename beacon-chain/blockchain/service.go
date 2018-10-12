@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -147,7 +146,7 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 
 			log.Info("Applying fork choice rule")
 
-			canonicalDecision, err := casper.GHOSTForkChoice(
+			result, err := ghostForkChoice(
 				c.beaconDB,
 				c.beaconDB.GetActiveState(),
 				c.beaconDB.GetCrystallizedState(),
@@ -163,11 +162,11 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 			}
 
 			// If no highest scoring block was determined, we do not update the head of the chain.
-			if canonicalDecision.CanonicalBlock == nil {
+			if result.canonicalBlock == nil {
 				continue
 			}
 
-			h, err := canonicalResponse.CanonicalBlock.Hash()
+			h, err := result.canonicalBlock.Hash()
 			if err != nil {
 				log.Errorf("Could not hash highest scoring block: %v", err)
 				continue
@@ -176,18 +175,18 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
 
 			// Save canonical block hash with slot number to DB.
-			if err := c.beaconDB.SaveCanonicalSlotNumber(canonicalResponse.CanonicalBlock.SlotNumber(), h); err != nil {
+			if err := c.beaconDB.SaveCanonicalSlotNumber(result.canonicalBlock.SlotNumber(), h); err != nil {
 				log.Errorf("Unable to save slot number to db: %v", err)
 				continue
 			}
 
 			// Save canonical block to DB.
-			if err := c.beaconDB.SaveCanonicalBlock(canonicalResponse.CanonicalBlock); err != nil {
+			if err := c.beaconDB.SaveCanonicalBlock(result.canonicalBlock); err != nil {
 				log.Errorf("Unable to save block to db: %v", err)
 				continue
 			}
 
-			if err := c.beaconDB.SaveActiveState(canonicalDecision.CanonicalActiveState); err != nil {
+			if err := c.beaconDB.SaveActiveState(result.canonicalActiveState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 				continue
 			}
@@ -195,14 +194,14 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if cycleTransitioned {
-				if err := c.beaconDB.SaveCrystallizedState(canonicalDecision.CanonicalCrystallizedState); err != nil {
+			if result.cycleDidTransition {
+				if err := c.beaconDB.SaveCrystallizedState(result.canonicalCrystallizedState); err != nil {
 					log.Errorf("Write crystallized state to disk failed: %v", err)
 					continue
 				}
-				c.canonicalCrystallizedStateFeed.Send(canonicalResponse.CanonicalCrystallizedState)
+				c.canonicalCrystallizedStateFeed.Send(result.canonicalCrystallizedState)
 			}
-			c.canonicalBlockFeed.Send(canonicalResponse.CanonicalBlock)
+			c.canonicalBlockFeed.Send(result.canonicalBlock)
 
 			// Clear the blocks pending processing, mutex lock for thread safety
 			// in updating this slice.

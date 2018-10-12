@@ -1,4 +1,4 @@
-package casper
+package blockchain
 
 import (
 	"fmt"
@@ -10,28 +10,28 @@ type beaconDB interface {
 	GetBlock(hash [32]byte) (*types.Block, error)
 }
 
-// CanonicalDecision is the result of the Casper fork choice rule
+// canonicalDecision is the result of the Casper fork choice rule
 // being applied by the beacon chain. It contains a block, crystallized, active
 // state triple that are determined to be canonical by the protocol.
-type CanonicalDecision struct {
-	CanonicalBlock             *types.Block
-	CanonicalCrystallizedState *types.CrystallizedState
-	CanonicalActiveState       *types.ActiveState
-	CycleDidTransition         bool
+type canonicalDecision struct {
+	canonicalBlock             *types.Block
+	canonicalCrystallizedState *types.CrystallizedState
+	canonicalActiveState       *types.ActiveState
+	cycleDidTransition         bool
 }
 
-// GHOSTForkChoice applies a trimmed-down version of
+// ghostForkChoice applies a trimmed-down version of
 // Latest-Message-Drive GHOST blockchain fork choice
 // rule.
-func GHOSTForkChoice(
+func ghostForkChoice(
 	db beaconDB,
 	currentActiveState *types.ActiveState,
 	currentCrystallizedState *types.CrystallizedState,
 	blockHashes [][32]byte,
-	enableCrossLinkCheck bool,
+	enableCrossLinksCheck bool,
 	enableRewardCheck bool,
 	enableAttestationValidityCheck bool,
-) (*CanonicalDecision, error) {
+) (*canonicalDecision, error) {
 	// We keep track of the highest scoring received block and
 	// its associated states.
 	var highestScoringBlock *types.Block
@@ -99,10 +99,10 @@ func GHOSTForkChoice(
 			highestScoringActiveState = aState
 		}
 	}
-	return &CanonicalResponse{
-		CanonicalBlock:             highestScoringBlock,
-		CanonicalCrystallizedState: highestScoringCrystallizedState,
-		CanonicalActiveState:       highestScoringActiveState,
-		CycleDidTransition:         cycleTransitioned,
+	return &canonicalDecision{
+		canonicalBlock:             highestScoringBlock,
+		canonicalCrystallizedState: highestScoringCrystallizedState,
+		canonicalActiveState:       highestScoringActiveState,
+		cycleDidTransition:         cycleTransitioned,
 	}, nil
 }
