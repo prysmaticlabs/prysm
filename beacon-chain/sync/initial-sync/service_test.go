@@ -93,7 +93,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	copy(hash[:], blockResponse.Block.CrystallizedStateRoot)
 
 	if hash != ss.initialCrystallizedStateRoot {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.CrystallizedStateRoot)
 	}
 
 	hook.Reset()
@@ -176,7 +176,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.crystallizedStateBuf <- msg2
 
 	if ss.currentSlot == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlot)
+		t.Fatalf("Crystallized state updated incorrectly: %#x", ss.currentSlot)
 	}
 
 	msg2.Data = stateResponse
@@ -185,7 +185,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	if crystallizedStateRoot != ss.initialCrystallizedStateRoot {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", br.Block.CrystallizedStateRoot)
 	}
 
 	msg1 = getBlockResponseMsg(30)

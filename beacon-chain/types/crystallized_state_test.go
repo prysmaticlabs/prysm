@@ -27,7 +27,7 @@ func TestGenesisCrystallizedState(t *testing.T) {
 	}
 
 	if h1 != h2 {
-		t.Fatalf("Hash of two genesis crystallized states should be equal: %x", h1)
+		t.Fatalf("Hash of two genesis crystallized states should be equal: %#x", h1)
 	}
 }
 
