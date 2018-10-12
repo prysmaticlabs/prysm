@@ -301,7 +301,6 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 	defaultConf := simulator.DefaultConfig()
 	cfg := &simulator.Config{
-		Delay:           defaultConf.Delay,
 		BlockRequestBuf: defaultConf.BlockRequestBuf,
 		BeaconDB:        b.db,
 		P2P:             p2pService,
