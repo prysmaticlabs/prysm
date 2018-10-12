@@ -323,17 +323,24 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	}
 }
 
+func TestInitGenesisJsonFailure(t *testing.T) {
+	fname := "/genesis.json"
+	pwd, _ := os.Getwd()
+	fnamePath := pwd + fname
+
+	_, err := NewGenesisCrystallizedState(fnamePath)
+	if err == nil {
+		t.Fatalf("genesis.json should have failed %v", err)
+	}
+}
+
 func TestInitGenesisJson(t *testing.T) {
 	fname := "/genesis.json"
 	pwd, _ := os.Getwd()
 	fnamePath := pwd + fname
 	os.Remove(fnamePath)
 
-	_, err := NewGenesisCrystallizedState(fnamePath)
-	if err == nil {
-		t.Fatalf("genesis.json should have failed %v", err)
-	}
-
+	params.SetEnv("demo")
 	cStateJSON := &pb.CrystallizedState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,
@@ -363,4 +370,19 @@ func TestInitGenesisJson(t *testing.T) {
 		t.Errorf("Failed to load of genesis json")
 	}
 	os.Remove(fnamePath)
+}
+
+func TestDemoGenesisJson(t *testing.T) {
+	fname := "/home/rawfalafel/gocode/src/github.com/prysmaticlabs/prysm/genesis.json"
+
+	params.SetEnv("demo")
+
+	cState, err := NewGenesisCrystallizedState(fname)
+	if err != nil {
+		t.Fatalf("genesis.json failed %v", err)
+	}
+
+	if cState.Validators()[0].Status != 1 {
+		t.Errorf("Failed to load of genesis json")
+	}
 }

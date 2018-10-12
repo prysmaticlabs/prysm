@@ -190,7 +190,6 @@ func (s *ShardEthereum) registerTXPool() error {
 // registerBeaconService registers a service that fetches streams from a beacon node
 // via RPC.
 func (s *ShardEthereum) registerBeaconService(pubKey []byte) error {
-
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
