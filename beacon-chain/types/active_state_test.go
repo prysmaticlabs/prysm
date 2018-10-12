@@ -21,7 +21,7 @@ func TestGenesisActiveState_HashEquality(t *testing.T) {
 	}
 
 	if h1 != h2 {
-		t.Fatalf("Hash of two genesis crystallized states should be equal: %x", h1)
+		t.Fatalf("Hash of two genesis crystallized states should be equal: %#x", h1)
 	}
 }
 
@@ -125,10 +125,10 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	for i := 0; i < len(updated); i++ {
 		if i < len(updated)-10 {
 			if !areBytesEqual(updated[i], []byte{0}) {
-				t.Fatalf("update failed: expected %x got %x", []byte{0}, updated[i])
+				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
 		} else if !areBytesEqual(updated[i], block.data.AncestorHashes[0]) {
-			t.Fatalf("update failed: expected %x got %x", block.data.AncestorHashes[:], updated[i])
+			t.Fatalf("update failed: expected %#x got %#x", block.data.AncestorHashes[:], updated[i])
 		}
 	}
 }
