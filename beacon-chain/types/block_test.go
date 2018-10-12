@@ -39,7 +39,7 @@ func TestGenesisBlock(t *testing.T) {
 	}
 
 	if h1 != h2 {
-		t.Fatalf("genesis block hash should be identical: %x %x", h1, h2)
+		t.Fatalf("genesis block hash should be identical: %#x %#x", h1, h2)
 	}
 
 	if b1.data.AncestorHashes == nil {
@@ -69,7 +69,7 @@ func TestGenesisBlock(t *testing.T) {
 	}
 
 	if h1 == h3 {
-		t.Fatalf("genesis block and new block should not have identical hash: %x", h1)
+		t.Fatalf("genesis block and new block should not have identical hash: %#x", h1)
 	}
 }
 
