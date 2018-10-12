@@ -170,7 +170,7 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 
 		if err != nil {
 			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
-			break
+			continue
 		}
 
 		for _, assign := range assignment.Assignments {

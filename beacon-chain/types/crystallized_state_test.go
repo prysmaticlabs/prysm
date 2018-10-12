@@ -371,18 +371,3 @@ func TestInitGenesisJson(t *testing.T) {
 	}
 	os.Remove(fnamePath)
 }
-
-func TestDemoGenesisJson(t *testing.T) {
-	fname := "/home/rawfalafel/gocode/src/github.com/prysmaticlabs/prysm/genesis.json"
-
-	params.SetEnv("demo")
-
-	cState, err := NewGenesisCrystallizedState(fname)
-	if err != nil {
-		t.Fatalf("genesis.json failed %v", err)
-	}
-
-	if cState.Validators()[0].Status != 1 {
-		t.Errorf("Failed to load of genesis json")
-	}
-}
