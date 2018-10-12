@@ -302,11 +302,6 @@ func (c *CrystallizedState) newDynastyRecalculations(seed [32]byte) (uint64, []*
 	return nextDynasty, append(c.data.ShardAndCommitteesForSlots[:params.GetConfig().CycleLength], newShardCommitteeArray...), nil
 }
 
-type shardAttestation struct {
-	Shard          uint64
-	shardBlockHash [32]byte
-}
-
 func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 	new := make([]*pb.CrosslinkRecord, len(existing))
 	for i := 0; i < len(existing); i++ {

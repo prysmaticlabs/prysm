@@ -6,11 +6,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-type shardAttestation struct {
-	Shard          uint64
-	shardBlockHash [32]byte
-}
-
 func TallyVoteBalances(
 	blockHash [32]byte,
 	slot uint64,
