@@ -185,8 +185,8 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	return depositInEth
 }
 
-// AddValidator runs for every validator that is inducted as part of a log created on the PoW chain.
-func AddValidator(
+// AddPendingValidator runs for every validator that is inducted as part of a log created on the PoW chain.
+func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
 	withdrawalShard uint64,
@@ -246,12 +246,12 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 
 	// Calculate withdraw validators that have been logged out long enough,
 	// apply their penalties if they were slashed.
-
 	for i := 0; i < len(validators); i++ {
-		if (validators[i].Status == uint64(params.PendingWithdraw) ||
-			validators[i].Status == uint64(params.Penalized)) &&
-			currentSlot >= validators[i].ExitSlot+params.GetConfig().WithdrawalPeriod {
+		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
+		isPenalized := validators[i].Status == uint64(params.Penalized)
+		withdrawalSlot := validators[i].ExitSlot + params.GetConfig().WithdrawalPeriod
 
+		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3
 			if penaltyFactor > totalBalance {
 				penaltyFactor = totalBalance
@@ -259,11 +259,9 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 			if validators[i].Status == uint64(params.Penalized) {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}
-
 			validators[i].Status = uint64(params.Withdrawn)
 		}
 	}
-
 	return validators
 }
 
