@@ -163,7 +163,7 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 
 			parentBlock, err := c.beaconDB.GetBlock(block.ParentHash())
 			if err != nil {
-				log.Errorf("Failed to get parent of block %x", h)
+				log.Errorf("Failed to get parent of block %#x", h)
 				continue
 			}
 
@@ -220,7 +220,7 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 				continue
 			}
 
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
+			log.WithField("blockHash", fmt.Sprintf("%#x", h)).Info("Canonical block determined")
 
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
@@ -297,7 +297,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 
-			log.Infof("Finished processing received block: 0x%x", blockHash)
+			log.Infof("Finished processing received block: %#x", blockHash)
 
 			// We push the hash of the block we just stored to a pending processing
 			// slice the fork choice rule will utilize.

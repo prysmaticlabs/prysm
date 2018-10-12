@@ -349,7 +349,7 @@ func TestUpdateHeadNoParent(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Failed to get parent of block %x", noParentBlockHash))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Failed to get parent of block %#x", noParentBlockHash))
 }
 
 func TestUpdateHead(t *testing.T) {

@@ -120,7 +120,7 @@ func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, er
 		}
 	}
 
-	return 0, fmt.Errorf("can't find validator index for public key %x", pubKey)
+	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
@@ -140,7 +140,7 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 		}
 	}
 
-	return 0, fmt.Errorf("can't find shard ID for validator with public key %x", pubKey)
+	return 0, fmt.Errorf("can't find shard ID for validator with public key %#x", pubKey)
 }
 
 // ValidatorSlotAndResponsibility returns a validator's assingned slot number
@@ -163,7 +163,7 @@ func ValidatorSlotAndResponsibility(pubKey []byte, validators []*pb.ValidatorRec
 			}
 		}
 	}
-	return 0, "", fmt.Errorf("can't find slot number for validator with public key %x", pubKey)
+	return 0, "", fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
 // TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
