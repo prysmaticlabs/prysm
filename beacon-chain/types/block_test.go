@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 )
 
 func init() {
@@ -88,8 +89,13 @@ func TestBlockValidity(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, make(map[[32]byte]*VoteCache))
 
+	var randaoReveal [32]byte
+	h := blake2b.Sum512(cState.Validators()[0].RandaoCommitment)
+	copy(randaoReveal[:], h[:32])
+
 	b := NewBlock(&pb.BeaconBlock{
-		Slot: 1,
+		Slot:         1,
+		RandaoReveal: randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,

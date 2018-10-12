@@ -1,10 +1,10 @@
 package types
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 
-	"encoding/binary"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/jsonpb"
@@ -30,12 +30,14 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 
 func initialValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
+	randaoCommitment := make([]byte, 32)
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
 			Balance:           uint64(params.GetConfig().DepositSize),
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
+			RandaoCommitment:  randaoCommitment,
 		}
 		validators = append(validators, validator)
 	}

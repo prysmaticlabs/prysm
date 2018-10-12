@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"golang.org/x/crypto/blake2b"
 )
 
 func init() {
@@ -182,12 +183,17 @@ func TestRunningChainService(t *testing.T) {
 	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	Shard := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].Shard
 
+	var randaoReveal [32]byte
+	h := blake2b.Sum512(crystallized.Validators()[0].RandaoCommitment)
+	copy(randaoReveal[:], h[:32])
+
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:                  currentSlot,
 		ActiveStateRoot:       activeStateRoot[:],
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 		AncestorHashes:        [][]byte{parentHash[:]},
 		PowChainRef:           []byte("a"),
+		RandaoReveal:          randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:               currentSlot,
 			AttesterBitfield:   []byte{128, 0},
@@ -200,10 +206,10 @@ func TestRunningChainService(t *testing.T) {
 		Slot:           currentSlot,
 		PowChainRef:    []byte("a"),
 		AncestorHashes: [][]byte{{}},
+		RandaoReveal:   randaoReveal[:],
 	})
 
 	exitRoutine := make(chan bool)
-	t.Log([][]byte{parentHash[:]})
 	go func() {
 		chainService.blockProcessing()
 		<-exitRoutine

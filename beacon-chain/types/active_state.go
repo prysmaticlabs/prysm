@@ -2,9 +2,9 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
-	"encoding/binary"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
@@ -262,6 +262,9 @@ func (a *ActiveState) CalculateNewActiveState(
 	a.setRandaoMix(block.RandaoReveal())
 
 	specialRecordData := make([][]byte, 2)
+	for i := range specialRecordData {
+		specialRecordData[i] = make([]byte, 32)
+	}
 	blockRandao := block.RandaoReveal()
 	binary.PutUvarint(specialRecordData[0], proposerIndex)
 	specialRecordData[1] = blockRandao[:]
