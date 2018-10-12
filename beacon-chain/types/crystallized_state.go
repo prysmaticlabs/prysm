@@ -34,7 +34,7 @@ func initialValidators() []*pb.ValidatorRecord {
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validator := &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           uint64(params.GetConfig().DepositSize),
+			Balance:           uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoCommitment,
@@ -208,7 +208,7 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 	return c.data.Validators
 }
 
-// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period
+// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period.
 func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 	return c.data.DepositsPenalizedInPeriod
 }
