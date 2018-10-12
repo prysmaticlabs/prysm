@@ -218,7 +218,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				continue
 			}
 
-			log.WithField("announcedBlockHash", fmt.Sprintf("0x%x", h)).Debug("Announcing block hash")
+			log.WithField("announcedBlockHash", fmt.Sprintf("%#x", h)).Debug("Announcing block hash")
 			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 				Hash: h[:],
 			})
@@ -238,7 +238,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				log.Errorf("Could not hash block: %v", err)
 				continue
 			}
-			log.Debugf("Responding to full block request for hash: 0x%x", h)
+			log.Debugf("Responding to full block request for hash: %#x", h)
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
 				Slot:             sim.slotNum - 1,
