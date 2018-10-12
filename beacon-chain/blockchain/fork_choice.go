@@ -10,7 +10,7 @@ type beaconDB interface {
 	GetBlock(hash [32]byte) (*types.Block, error)
 }
 
-// canonicalDecision is the result of the Casper fork choice rule
+// canonicalDecision is the result of the casper fork choice rule
 // being applied by the beacon chain. It contains a block, crystallized, active
 // state triple that are determined to be canonical by the protocol.
 type canonicalDecision struct {
@@ -40,7 +40,7 @@ func ghostForkChoice(
 	var highestScore uint64
 	var cycleTransitioned bool
 
-	// We loop over every blocks in order to determine
+	// We loop over every block in order to determine
 	// the highest scoring one.
 	for i := 0; i < len(blockHashes); i++ {
 		block, err := db.GetBlock(blockHashes[i])
