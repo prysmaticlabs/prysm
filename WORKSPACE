@@ -117,6 +117,11 @@ go_repository(
 )
 
 # External dependencies
+new_http_archive(
+    name = "pbc",
+    url = "https://crypto.stanford.edu/pbc/files/pbc-0.5.14.tar.gz",
+    build_file = "shared/bls/BUILD.pbc",
+)
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
@@ -646,4 +651,10 @@ go_repository(
     name = "com_github_aristanetworks_goarista",
     commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
     importpath = "github.com/aristanetworks/goarista",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_pbc",
+    commit = "32faf318838254d4eed5e224f073d46c5c795e24",
+    importpath = "github.com/prysmaticlabs/pbc",
 )

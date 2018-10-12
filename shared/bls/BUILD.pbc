@@ -1,0 +1,4 @@
+cc_library(
+    name = "pbc-lib",
+    visibility = ["//visibility:public"],
+)
