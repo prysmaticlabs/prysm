@@ -128,6 +128,7 @@ func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
 
 func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 	config := params.GetConfig()
+	oldShardCount := config.ShardCount
 	config.ShardCount = int(config.CycleLength) - 1
 
 	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize)
@@ -136,6 +137,8 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
+
+	config.ShardCount = oldShardCount
 }
 
 func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
