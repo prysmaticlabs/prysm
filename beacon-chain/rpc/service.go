@@ -310,7 +310,6 @@ func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.Pu
 
 	slot, responsibility, err := casper.ValidatorSlotAndResponsibility(
 		req.PublicKey,
-
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
@@ -406,7 +405,6 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// should act as a proposer or attester.
 		assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
 			val.GetPublicKey(),
-
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
 		)
@@ -425,7 +423,6 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// based on a public key and current crystallized state.
 		shardID, err := casper.ValidatorShardID(
 			val.GetPublicKey(),
-
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
 		)
