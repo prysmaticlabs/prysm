@@ -222,7 +222,7 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	return depositInEth
 }
 
-// CommitteeinShardAndSlot returns the shard committee for a a particular slot index and shard.
+// CommitteeInShardAndSlot returns the shard committee for a a particular slot index and shard.
 func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArray []*pb.ShardAndCommitteeArray) ([]uint32, error) {
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
 
@@ -235,6 +235,8 @@ func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArr
 	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
 }
 
+// VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
+// attestation.
 func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32, attestation *pb.AggregatedAttestation) (uint64, uint64) {
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64

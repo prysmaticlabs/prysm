@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 )
 
+// TallyVoteBalances calculates all the votes behind a block and then rewards validators for their
+// participation in voting for that block.
 func TallyVoteBalances(
 	blockHash [32]byte,
 	slot uint64,
@@ -36,6 +38,8 @@ func TallyVoteBalances(
 	return blockVoteBalance, validators
 }
 
+// FinalizeAndJustifySlots justifies slots and sets the justified streak according to Casper FFG
+// conditions. It also finalizes slots when the conditions are fulfilled.
 func FinalizeAndJustifySlots(
 	slot uint64, justifiedSlot uint64, finalizedSlot uint64,
 	justifiedStreak uint64, blockVoteBalance uint64, totalDeposits uint64) (uint64, uint64, uint64) {
@@ -60,6 +64,8 @@ func FinalizeAndJustifySlots(
 	return justifiedSlot, finalizedSlot, justifiedStreak
 }
 
+// ApplyCrosslinkRewardsAndPenalties applies the appropriate rewards and penalties according to the attestation
+// for a shard.
 func ApplyCrosslinkRewardsAndPenalties(
 	crosslinkRecords []*pb.CrosslinkRecord,
 	currentSlot uint64,
@@ -83,6 +89,8 @@ func ApplyCrosslinkRewardsAndPenalties(
 	}
 }
 
+// ProcessBalancesInCrosslink checks the vote balances and if there is a supermajority it sets the crosslink
+// for that shard.
 func ProcessBalancesInCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
 	dynasty uint64, attestation *pb.AggregatedAttestation, crosslinkRecords []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 

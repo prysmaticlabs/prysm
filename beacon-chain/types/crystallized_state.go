@@ -343,10 +343,10 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 
 		totalBalance, voteBalance := casper.VotedBalanceInAttestation(validators, indices, attestation)
 
-		casper.ApplyingCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
+		casper.ApplyCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
 			dynasty, validators, totalBalance, voteBalance)
 
-		crosslinkRecords = casper.ApplyVotesOnCrosslink(slot, voteBalance, totalBalance, dynasty, attestation, crosslinkRecords)
+		crosslinkRecords = casper.ProcessBalancesInCrosslink(slot, voteBalance, totalBalance, dynasty, attestation, crosslinkRecords)
 
 	}
 	return crosslinkRecords, nil

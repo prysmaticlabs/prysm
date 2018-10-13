@@ -5,9 +5,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestTallyVoteBalances(t *testing.T) {
@@ -139,22 +138,22 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 	validators[10].Status = uint64(params.Active)
 
 	crossLinks := []*pb.CrosslinkRecord{
-		&pb.CrosslinkRecord{
+		{
 			Dynasty:        0,
 			ShardBlockHash: []byte{'A'},
 			Slot:           10,
 		},
-		&pb.CrosslinkRecord{
+		{
 			Dynasty:        0,
 			ShardBlockHash: []byte{'B'},
 			Slot:           10,
 		},
-		&pb.CrosslinkRecord{
+		{
 			Dynasty:        0,
 			ShardBlockHash: []byte{'C'},
 			Slot:           10,
 		},
-		&pb.CrosslinkRecord{
+		{
 			Dynasty:        0,
 			ShardBlockHash: []byte{'D'},
 			Slot:           10,
@@ -184,26 +183,16 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 }
 
 func TestProcessBalancesInCrosslinks(t *testing.T) {
-	var validators []*pb.ValidatorRecord
-	initialBalance := uint64(1e9)
 	totalBalance := uint64(5e9)
 	voteBalance := uint64(4e9)
 
-	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{
-			WithdrawalShard: 0,
-			Balance:         initialBalance}
-
-		validators = append(validators, validator)
-	}
-
 	crossLinks := []*pb.CrosslinkRecord{
-		&pb.CrosslinkRecord{
+		{
 			Dynasty:        0,
 			ShardBlockHash: []byte{'A'},
 			Slot:           10,
 		},
-		&pb.CrosslinkRecord{
+		{
 			Dynasty:        0,
 			ShardBlockHash: []byte{'A'},
 			Slot:           10,
