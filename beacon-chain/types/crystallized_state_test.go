@@ -323,17 +323,24 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	}
 }
 
+func TestInitGenesisJsonFailure(t *testing.T) {
+	fname := "/genesis.json"
+	pwd, _ := os.Getwd()
+	fnamePath := pwd + fname
+
+	_, err := NewGenesisCrystallizedState(fnamePath)
+	if err == nil {
+		t.Fatalf("genesis.json should have failed %v", err)
+	}
+}
+
 func TestInitGenesisJson(t *testing.T) {
 	fname := "/genesis.json"
 	pwd, _ := os.Getwd()
 	fnamePath := pwd + fname
 	os.Remove(fnamePath)
 
-	_, err := NewGenesisCrystallizedState(fnamePath)
-	if err == nil {
-		t.Fatalf("genesis.json should have failed %v", err)
-	}
-
+	params.SetEnv("demo")
 	cStateJSON := &pb.CrystallizedState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,

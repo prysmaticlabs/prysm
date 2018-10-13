@@ -58,7 +58,7 @@ var demoConfig = &Config{
 	GenesisTime:               time.Now(),
 	ModuloBias:                16777216,
 	CycleLength:               uint64(5),
-	ShardCount:                3,
+	ShardCount:                5,
 	Gwei:                      1e9,
 	DepositSize:               32,
 	SlotDuration:              uint64(8),
