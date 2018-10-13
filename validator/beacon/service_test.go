@@ -316,7 +316,6 @@ func TestListenForAssignmentClientError(t *testing.T) {
 
 	b.listenForAssignmentChange(mockServiceValidator)
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
-	testutil.AssertLogsContain(t, hook, "could not fetch validator assigned slot and responsibility from beacon node")
 }
 
 func TestListenForAssignmentCancelContext(t *testing.T) {
