@@ -77,7 +77,6 @@ func (p *Proposer) Start() {
 
 	go p.run(p.ctx.Done(), client)
 	go p.processAttestation(p.ctx.Done())
-
 }
 
 // Stop the main loop.
@@ -183,7 +182,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				continue
 			}
 
-			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
+			log.Infof("Block proposed successfully with hash %#x", res.BlockHash)
 			p.pendingAttestation = nil
 			p.lock.Unlock()
 		}

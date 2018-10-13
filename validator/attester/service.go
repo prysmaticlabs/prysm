@@ -126,7 +126,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				log.Errorf("could not attest head: %v", err)
 				continue
 			}
-			log.Infof("Attestation proposed successfully with hash 0x%x", res.AttestationHash)
+			log.Infof("Attestation proposed successfully with hash %#x", res.AttestationHash)
 		}
 	}
 }

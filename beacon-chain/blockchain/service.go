@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +32,6 @@ type ChainService struct {
 	blocksPendingProcessing        [][32]byte
 	lock                           sync.Mutex
 	genesisTime                    time.Time
-	slotTicker                     utils.SlotTicker
 	enableCrossLinks               bool
 	enableRewardChecking           bool
 	enableAttestationValidity      bool
@@ -83,15 +83,17 @@ func (c *ChainService) Start() {
 		return
 	}
 
-	c.slotTicker = utils.GetSlotTicker(c.genesisTime)
-	go c.updateHead(c.slotTicker.C())
+	slotTicker := slotticker.GetSlotTicker(c.genesisTime, params.GetConfig().SlotDuration)
+	go func() {
+		c.updateHead(slotTicker.C())
+		slotTicker.Done()
+	}()
 	go c.blockProcessing()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
-	c.slotTicker.Done()
 
 	log.Info("Stopping service")
 	return nil

@@ -3,16 +3,16 @@ package beacon
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
-	"math"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/prysmaticlabs/prysm/validator/params"
-	"github.com/prysmaticlabs/prysm/validator/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -69,23 +69,21 @@ func (s *Service) Start() {
 	// Note: this does not validate the current system time against a global
 	// NTP server, which will be important to do in production.
 	// currently in a cycle we are supposed to participate in.
-	s.fetchCurrentAssignmentsAndGenesisTime(beaconServiceClient)
-
-	// Then, we kick off a routine that uses the begins a ticker based on the beacon node's
-	// genesis timestamp and the validator will use this slot ticker to
-	// determine when it is assigned to perform proposals or attestations.
-	//
-	// We block until the current time is a multiple of params.SlotDuration
-	// so the validator and beacon node's internal tickers are aligned.
-	utils.BlockingWait(s.slotAlignmentDuration)
+	if err := s.fetchCurrentAssignmentsAndGenesisTime(beaconServiceClient); err != nil {
+		log.Error(err)
+		return
+	}
 
 	// We kick off a routine that listens for stream of validator assignment coming from
 	// beacon node. This will update validator client on which slot, shard ID and what
 	// responsbility to perform.
 	go s.listenForAssignmentChange(beaconServiceClient)
 
-	slotTicker := time.NewTicker(s.slotAlignmentDuration)
-	go s.waitForAssignment(slotTicker.C, beaconServiceClient)
+	slotTicker := slotticker.GetSlotTicker(s.genesisTimestamp, params.DemoConfig().SlotDuration)
+	go func() {
+		s.waitForAssignment(slotTicker.C(), beaconServiceClient)
+		slotTicker.Done()
+	}()
 
 	go s.listenForProcessedAttestations(beaconServiceClient)
 }
@@ -110,7 +108,7 @@ func (s *Service) Stop() error {
 //
 // From this, the validator client can deduce what slot interval the beacon
 // node is in and determine when exactly it is time to propose or attest.
-func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceClient) {
+func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceClient) error {
 	// Currently fetches assignments for all validators.
 	req := &pb.ValidatorAssignmentRequest{
 		AllValidators: true,
@@ -119,32 +117,23 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	if err != nil {
 		// If this RPC request fails, the entire system should fatal as it is critical for
 		// the validator to begin this way.
-		log.Fatalf("could not fetch genesis time and latest canonical state from beacon node: %v", err)
+		return fmt.Errorf("could not fetch genesis time and latest canonical state from beacon node: %v", err)
 	}
 
 	// Determine what slot the beacon node is in by checking the number of seconds
 	// since the genesis block.
 	genesisTimestamp, err := ptypes.Timestamp(res.GetGenesisTimestamp())
 	if err != nil {
-		log.Fatalf("cannot compute genesis timestamp: %v", err)
+		return fmt.Errorf("cannot compute genesis timestamp: %v", err)
 	}
 
-	log.Infof("Setting validator genesis time to %s", genesisTimestamp.Format(time.UnixDate))
+	startSlot := s.startSlot()
+	if err := s.assignRole(res.Assignments, startSlot); err != nil {
+		return fmt.Errorf("unable to assign a role: %v", err)
+	}
+
 	s.genesisTimestamp = genesisTimestamp
-	for _, assign := range res.Assignments {
-		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
-			s.role = assign.Role
-			// + 1 to account for the genesis block being slot 0.
-			s.assignedSlot = s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) + assign.AssignedSlot + 1
-			s.shardID = assign.ShardId
-
-			log.Infof("Validator shuffled. Pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
-				string(s.pubKey),
-				s.shardID,
-				s.role,
-				s.assignedSlot)
-		}
-	}
+	return nil
 }
 
 // listenForAssignmentChange listens for validator assignment changes via a RPC stream.
@@ -173,55 +162,40 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 			break
 		}
 
-		for _, assign := range assignment.Assignments {
-			if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
-				s.role = assign.Role
-				if s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) == 0 {
-					// +1 to account for genesis block being slot 0.
-					s.assignedSlot = params.DemoConfig().CycleLength + assign.AssignedSlot + 1
-				} else {
-					s.assignedSlot = s.CurrentCycleStartSlot(params.DemoConfig().CycleLength) + assign.AssignedSlot + 1
-				}
-				s.shardID = assign.ShardId
-
-				log.Infof("Validator with pub key 0x%s re-assigned to shard ID %d for %v duty at slot %d",
-					string(s.pubKey),
-					s.shardID,
-					s.role,
-					s.assignedSlot)
-			}
+		startSlot := s.startSlot()
+		if err := s.assignRole(assignment.Assignments, startSlot); err != nil {
+			log.Errorf("Could not assign a role for validator: %v", err)
+			break
 		}
 	}
 }
 
 // waitForAssignment waits till it's validator's role to attest or propose. Then it forwards
 // the canonical block to the proposer service or attester service to process.
-func (s *Service) waitForAssignment(ticker <-chan time.Time, client pb.BeaconServiceClient) {
+func (s *Service) waitForAssignment(ticker <-chan uint64, client pb.BeaconServiceClient) {
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 
-		case <-ticker:
-			currentSlot := s.CurrentBeaconSlot()
-			log.Infof("role: %v, assigned slot: %d, current slot: %d", s.role, s.assignedSlot, currentSlot)
-			if s.role == pb.ValidatorRole_ATTESTER && s.assignedSlot == currentSlot {
-				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned attest slot number reached")
-				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
-				if err != nil {
-					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					continue
-				}
+		case slot := <-ticker:
+			log = log.WithField("slot", slot)
+			log.Infof("role: %v, assigned slot: %d, current slot: %d", s.role, s.assignedSlot, slot)
+			if s.assignedSlot != slot {
+				continue
+			}
+			block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
+			if err != nil {
+				log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
+				continue
+			}
+
+			if s.role == pb.ValidatorRole_ATTESTER {
+				log.Info("Assigned attestation slot number reached")
 				// We forward the latest canonical block to the attester service a feed.
 				s.attesterAssignmentFeed.Send(block)
-
-			} else if s.role == pb.ValidatorRole_PROPOSER && s.assignedSlot == currentSlot {
-				log.WithField("slotNumber", s.CurrentBeaconSlot()).Info("Assigned proposal slot number reached")
-				block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
-				if err != nil {
-					log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
-					continue
-				}
+			} else if s.role == pb.ValidatorRole_PROPOSER {
+				log.Info("Assigned proposal slot number reached")
 				// We forward the latest canonical block to the proposer service a feed.
 				s.proposerAssignmentFeed.Send(block)
 			}
@@ -282,18 +256,40 @@ func (s *Service) PublicKey() []byte {
 	return s.pubKey
 }
 
-// CurrentBeaconSlot based on the genesis timestamp of the protocol.
-func (s *Service) CurrentBeaconSlot() uint64 {
-	secondsSinceGenesis := time.Since(s.genesisTimestamp).Seconds()
-	if secondsSinceGenesis-params.DefaultConfig().SlotDuration < 0 {
-		return 0
-	}
-	return uint64(math.Floor(secondsSinceGenesis/params.DefaultConfig().SlotDuration)) - 1
+// startSlot returns the first slot of the given slot's cycle
+func (s *Service) startSlot() uint64 {
+	duration := params.DemoConfig().SlotDuration
+	cycleLength := params.DemoConfig().CycleLength
+	slot := slotticker.CurrentSlot(s.genesisTimestamp, duration, time.Since)
+	return slot - slot % cycleLength
 }
 
-// CurrentCycleStartSlot returns the slot at which the current cycle started.
-func (s *Service) CurrentCycleStartSlot(cycleLength uint64) uint64 {
-	currentSlot := s.CurrentBeaconSlot()
-	cycleNum := currentSlot / cycleLength
-	return uint64(cycleNum) * cycleLength
+func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) error {
+	var role pb.ValidatorRole
+	var assignedSlot uint64
+	var shardID uint64
+	for _, assign := range assignments {
+		if bytes.Equal(assign.PublicKey.PublicKey, s.pubKey) {
+			role = assign.Role
+			assignedSlot = startSlot + assign.AssignedSlot
+			shardID = assign.ShardId
+
+			log.Infof("Validator shuffled. Pub key %#x assigned to shard ID %d for %v duty at slot %d",
+				s.pubKey,
+				s.shardID,
+				s.role,
+				s.assignedSlot)
+
+			break
+		}
+	}
+
+	if s.role == pb.ValidatorRole_UNKNOWN {
+		return fmt.Errorf("validator role was not assigned for key: %x", s.pubKey)
+	}
+
+	s.role = role
+	s.assignedSlot = assignedSlot
+	s.shardID = shardID
+	return nil
 }
