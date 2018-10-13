@@ -239,7 +239,7 @@ func (s *Service) startSlot() uint64 {
 	duration := params.DemoConfig().SlotDuration
 	cycleLength := params.DemoConfig().CycleLength
 	slot := slotticker.CurrentSlot(s.genesisTimestamp, duration, time.Since)
-	return slot - slot % cycleLength
+	return slot - slot%cycleLength
 }
 
 func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) error {
