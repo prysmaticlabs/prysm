@@ -73,7 +73,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	for _, attesterIndex := range indices {
 		timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
 
-		if crosslinkRecords[attestation.Slot].GetDynasty() != dynasty {
+		if crosslinkRecords[attestation.Shard].GetDynasty() != dynasty {
 			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
 				RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 			} else {
@@ -88,7 +88,9 @@ func ProcessBalancesInCrosslink(slot uint64, voteBalance uint64, totalBalance ui
 
 	// if 2/3 of committee voted on this crosslink, update the crosslink
 	// with latest dynasty number, shard block hash, and slot number.
-	if 3*voteBalance >= 2*totalBalance && dynasty > crosslinkRecords[attestation.Shard].Dynasty {
+
+	voteMajority := 3*voteBalance >= 2*totalBalance
+	if voteMajority && dynasty > crosslinkRecords[attestation.Shard].Dynasty {
 		crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
 			Dynasty:        dynasty,
 			ShardBlockHash: attestation.ShardBlockHash,

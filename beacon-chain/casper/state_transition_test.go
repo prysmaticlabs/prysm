@@ -1,6 +1,7 @@
 package casper
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -115,6 +116,123 @@ func TestFinalizeAndJustifySlots(t *testing.T) {
 
 	if finalizedSlot == 6 {
 		t.Fatalf("finalized slot not updated when it was supposed to %d", finalizedSlot)
+	}
+
+}
+
+func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	initialBalance := uint64(1e9)
+	totalBalance := uint64(5e9)
+	voteBalance := uint64(4e9)
+	indices := []uint32{20, 10}
+
+	for i := 0; i < 1000; i++ {
+		validator := &pb.ValidatorRecord{
+			WithdrawalShard: 0,
+			Balance:         initialBalance}
+
+		validators = append(validators, validator)
+	}
+
+	validators[20].Status = uint64(params.Active)
+	validators[10].Status = uint64(params.Active)
+
+	crossLinks := []*pb.CrosslinkRecord{
+		&pb.CrosslinkRecord{
+			Dynasty:        0,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
+		},
+		&pb.CrosslinkRecord{
+			Dynasty:        0,
+			ShardBlockHash: []byte{'B'},
+			Slot:           10,
+		},
+		&pb.CrosslinkRecord{
+			Dynasty:        0,
+			ShardBlockHash: []byte{'C'},
+			Slot:           10,
+		},
+		&pb.CrosslinkRecord{
+			Dynasty:        0,
+			ShardBlockHash: []byte{'D'},
+			Slot:           10,
+		},
+	}
+
+	attestation := &pb.AggregatedAttestation{
+		Slot:             10,
+		Shard:            1,
+		AttesterBitfield: []byte{100, 128, 8},
+	}
+
+	ApplyCrosslinkRewardsAndPenalties(crossLinks, 12, indices, attestation, 1, validators, totalBalance, voteBalance)
+
+	if validators[20].Balance <= initialBalance {
+		t.Fatalf("validator balance has not been updated %d", validators[20].Balance)
+	}
+
+	if validators[10].Balance >= initialBalance {
+		t.Fatalf("validator balance has not been updated %d", validators[10].Balance)
+	}
+
+	if validators[1].Balance != initialBalance {
+		t.Fatalf("validator balance updated when it was not supposed to %d", validators[1].Balance)
+	}
+
+}
+
+func TestProcessBalancesInCrosslinks(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	initialBalance := uint64(1e9)
+	totalBalance := uint64(5e9)
+	voteBalance := uint64(4e9)
+
+	for i := 0; i < 1000; i++ {
+		validator := &pb.ValidatorRecord{
+			WithdrawalShard: 0,
+			Balance:         initialBalance}
+
+		validators = append(validators, validator)
+	}
+
+	crossLinks := []*pb.CrosslinkRecord{
+		&pb.CrosslinkRecord{
+			Dynasty:        0,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
+		},
+		&pb.CrosslinkRecord{
+			Dynasty:        0,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
+		},
+	}
+
+	attestation := &pb.AggregatedAttestation{
+		Slot:             10,
+		Shard:            1,
+		ShardBlockHash:   []byte{'B'},
+		AttesterBitfield: []byte{100, 128, 8},
+	}
+
+	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, 0, attestation, crossLinks)
+
+	if crossLinks[1].GetDynasty() != 0 {
+		t.Fatalf("dynasty updated when it was not supposed to %d", crossLinks[1].GetDynasty())
+	}
+
+	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, 2, attestation, crossLinks)
+
+	if crossLinks[1].GetDynasty() != 2 {
+		t.Fatalf("dynasty not updated when it was supposed to %d", crossLinks[1].GetDynasty())
+	}
+
+	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, 0, attestation, crossLinks)
+
+	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
+		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())
 	}
 
 }
