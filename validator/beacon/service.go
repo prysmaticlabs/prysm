@@ -273,9 +273,9 @@ func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) err
 	s.shardID = shardID
 
 	log = log.WithFields(logrus.Fields{
-		"role": role,
+		"role":         role,
 		"assignedSlot": assignedSlot,
-		"shardID": shardID,
+		"shardID":      shardID,
 	})
 	return nil
 }
