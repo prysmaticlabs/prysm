@@ -111,7 +111,6 @@ func (s *Service) Stop() error {
 // From this, the validator client can deduce what slot interval the beacon
 // node is in and determine when exactly it is time to propose or attest.
 func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceClient) {
-
 	// Currently fetches assignments for all validators.
 	req := &pb.ValidatorAssignmentRequest{
 		AllValidators: true,
