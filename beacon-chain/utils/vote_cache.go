@@ -7,10 +7,12 @@ type VoteCache struct {
 	VoteTotalDeposit uint64
 }
 
+// NewVoteCache generates a fresh new vote cache.
 func NewVoteCache() *VoteCache {
 	return &VoteCache{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
 }
 
+// Copy copies a vote cache from itself to a new one.
 func (v *VoteCache) Copy() *VoteCache {
 	voterIndices := make([]uint32, len(v.VoterIndices))
 	copy(voterIndices, v.VoterIndices)
@@ -21,6 +23,8 @@ func (v *VoteCache) Copy() *VoteCache {
 	}
 }
 
+// VoteCacheDeepCopy copies the vote cache from a mapping of the
+// blockhash to vote cache to a new mapping.
 func VoteCacheDeepCopy(old map[[32]byte]*VoteCache) map[[32]byte]*VoteCache {
 	new := map[[32]byte]*VoteCache{}
 	for k, v := range old {
