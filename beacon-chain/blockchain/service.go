@@ -152,7 +152,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			var stateTransitioned bool
 
 			for cState.IsCycleTransition(block.SlotNumber()) {
-				log.Infof("Recalculating active state")
+				log.Infof("Recalculating crystallized state")
 				cState, aState, err = cState.NewStateRecalculations(
 					aState,
 					block,
