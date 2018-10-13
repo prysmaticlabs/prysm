@@ -180,7 +180,7 @@ func (b *Block) IsValid(
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
-		parentSlot)
+		b.SlotNumber())
 	if err != nil {
 		log.Errorf("Can not get proposer index %v", err)
 		return false

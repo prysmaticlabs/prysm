@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -266,10 +265,9 @@ func (a *ActiveState) CalculateNewActiveState(
 		specialRecordData[i] = make([]byte, 32)
 	}
 	blockRandao := block.RandaoReveal()
-	binary.PutUvarint(specialRecordData[0], proposerIndex)
+	specialRecordData[0] = []byte{byte(proposerIndex)}
 	specialRecordData[1] = blockRandao[:]
 
-	a.setRandaoMix(block.RandaoReveal())
 	newPendingSpecials := a.appendNewSpecialObject(&pb.SpecialRecord{
 		Kind: uint32(params.RandaoChanges),
 		Data: specialRecordData,

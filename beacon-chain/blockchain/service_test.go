@@ -176,9 +176,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
-
+	currentSlot := uint64(1)
 	slotsStart := crystallized.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	Shard := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].Shard
