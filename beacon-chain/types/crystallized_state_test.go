@@ -2,10 +2,11 @@ package types
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"

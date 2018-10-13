@@ -56,7 +56,7 @@ func FinalizeAndJustifySlots(
 	return justifiedSlot, finalizedSlot, justifiedStreak
 }
 
-func ApplyingCrosslinkRewardsAndPenalties(
+func ApplyCrosslinkRewardsAndPenalties(
 	crosslinkRecords []*pb.CrosslinkRecord,
 	currentSlot uint64,
 	indices []uint32,
@@ -79,7 +79,7 @@ func ApplyingCrosslinkRewardsAndPenalties(
 	}
 }
 
-func ApplyVotesOnCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
+func ProcessBalancesInCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
 	dynasty uint64, attestation *pb.AggregatedAttestation, crosslinkRecords []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 
 	// if 2/3 of committee voted on this crosslink, update the crosslink
