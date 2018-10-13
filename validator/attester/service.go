@@ -23,7 +23,6 @@ type rpcClientService interface {
 
 type beaconClientService interface {
 	AttesterAssignmentFeed() *event.Feed
-	PublicKey() []byte
 }
 
 // Attester holds functionality required to run a block attester
@@ -35,6 +34,7 @@ type Attester struct {
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
 	shardID          uint64
+	publicKey        []byte
 }
 
 // Config options for an attester service.
@@ -43,6 +43,7 @@ type Config struct {
 	ShardID       uint64
 	Assigner      beaconClientService
 	Client        rpcClientService
+	PublicKey     []byte
 }
 
 // NewAttester creates a new attester instance.
@@ -54,6 +55,7 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 		beaconService:    cfg.Assigner,
 		rpcClientService: cfg.Client,
 		shardID:          cfg.ShardID,
+		publicKey:        cfg.PublicKey,
 		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 	}
 }
@@ -94,7 +96,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			latestBlockHash := blake2b.Sum512(data)
 
 			pubKeyReq := &pb.PublicKey{
-				PublicKey: a.beaconService.PublicKey(),
+				PublicKey: a.publicKey,
 			}
 			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {

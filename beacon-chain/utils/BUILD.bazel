@@ -6,7 +6,6 @@ go_library(
         "clock.go",
         "flags.go",
         "shuffle.go",
-        "slot_ticker.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -23,7 +22,6 @@ go_test(
     srcs = [
         "clock_test.go",
         "shuffle_test.go",
-        "slot_ticker_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

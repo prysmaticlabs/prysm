@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
@@ -153,7 +154,7 @@ func TestWaitForAssignmentAttester(t *testing.T) {
 	b.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Assigned attest slot number reached")
+	testutil.AssertLogsContain(t, hook, "Assigned attestation slot number reached")
 }
 
 func TestWaitForAssignmentAttesterError(t *testing.T) {
@@ -272,9 +273,11 @@ func TestListenForAssignmentProposer(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil)
 
+	b.genesisTimestamp = time.Now()
+	b.pubKey = []byte{'A'}
 	b.listenForAssignmentChange(mockServiceValidator)
 
-	testutil.AssertLogsContain(t, hook, "Validator with pub key 0xA re-assigned to shard ID 2 for PROPOSER duty")
+	testutil.AssertLogsContain(t, hook, "Validator shuffled. Pub key 0x41 assigned to shard ID 2 for PROPOSER duty")
 }
 
 func TestListenForAssignmentError(t *testing.T) {

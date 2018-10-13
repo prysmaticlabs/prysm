@@ -257,14 +257,14 @@ func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) err
 
 		log.Infof("Validator shuffled. Pub key %#x assigned to shard ID %d for %v duty at slot %d",
 			s.pubKey,
-			s.shardID,
-			s.role,
-			s.assignedSlot)
+			shardID,
+			role,
+			assignedSlot)
 
 		break
 	}
 
-	if s.role == pb.ValidatorRole_UNKNOWN {
+	if role == pb.ValidatorRole_UNKNOWN {
 		return fmt.Errorf("validator role was not assigned for key: %x", s.pubKey)
 	}
 
