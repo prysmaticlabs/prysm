@@ -125,12 +125,12 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 		return fmt.Errorf("cannot compute genesis timestamp: %v", err)
 	}
 
+	s.genesisTimestamp = genesisTimestamp
+
 	startSlot := s.startSlot()
 	if err := s.assignRole(res.Assignments, startSlot); err != nil {
 		return fmt.Errorf("unable to assign a role: %v", err)
 	}
-
-	s.genesisTimestamp = genesisTimestamp
 	return nil
 }
 
@@ -140,7 +140,7 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 	req := &pb.ValidatorAssignmentRequest{PublicKeys: []*pb.PublicKey{{PublicKey: s.pubKey}}}
 	stream, err := client.ValidatorAssignments(s.ctx, req)
 	if err != nil {
-		log.Errorf("could not fetch validator assigned slot and responsibility from beacon node: %v", err)
+		log.Errorf("failed to fetch validator assignments stream: %v", err)
 		return
 	}
 	for {
@@ -178,9 +178,9 @@ func (s *Service) waitForAssignment(ticker <-chan uint64, client pb.BeaconServic
 
 		case slot := <-ticker:
 			log = log.WithField("slot", slot)
-			log.Infof("role: %v, assigned slot: %d, current slot: %d", s.role, s.assignedSlot, slot)
+			log.Infof("tick")
 
-			// Special case: skip your responsibilities if assigned to the genesis block.
+			// Special case: skip responsibilities if assigned to the genesis block.
 			if s.assignedSlot != slot || s.assignedSlot == 0 {
 				continue
 			}
@@ -271,6 +271,12 @@ func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) err
 	s.role = role
 	s.assignedSlot = assignedSlot
 	s.shardID = shardID
+
+	log = log.WithFields(logrus.Fields{
+		"role": role,
+		"assignedSlot": assignedSlot,
+		"shardID": shardID,
+	})
 	return nil
 }
 
