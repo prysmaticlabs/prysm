@@ -32,7 +32,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	data := &pb.CrystallizedState{
 		Validators:        validators,
-		Dynasty:           1,
+		ValidatorSetChangeSlot:           1,
 		LastJustifiedSlot: 4,
 		LastFinalizedSlot: 3,
 	}

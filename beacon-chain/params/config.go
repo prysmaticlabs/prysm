@@ -25,14 +25,14 @@ type Config struct {
 	Gwei                          int       // Gwei is the denomination of Gwei in Ether.
 	CycleLength                   uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                  uint64    // SlotDuration is how many seconds are in a single slot.
-	MinCommiteeSize               uint64    // MinDynastyLength is the slots needed before dynasty transition happens.
-	MinValidatorSetChangeInterval uint64    // MinValidatorSetChangeInterval is the minimal number of validator needs to be in a committee.
+	MinValidatorSetChangeInterval uint64    // MinValidatorSetChangeInterval is the slots needed before validator set changes.
+	MinCommiteeSize               uint64    // MinCommiteeSize is the minimal number of validator needs to be in a committee.
 	BaseRewardQuotient            uint64    // BaseRewardQuotient is used to calculate validator per-slot interest rate.
 	SqrtExpDropTime               uint64    // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
 	GenesisTime                   time.Time // GenesisTime used by the protocol.
 	LogOutMessage                 string    // This is the message a validator will send in order to log out.
 	WithdrawalPeriod              uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
-	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change during each dynasty.
+	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 }
 
 var defaultConfig = &Config{

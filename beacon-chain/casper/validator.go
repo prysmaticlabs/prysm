@@ -11,7 +11,7 @@ import (
 
 const bitsInByte = 8
 
-// ActiveValidatorIndices filters out active validators based on start and end dynasty
+// ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	var indices = make([]uint32, len(validators))
@@ -23,7 +23,7 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices[len(validators):]
 }
 
-// ExitedValidatorIndices filters out exited validators based on start and end dynasty
+// ExitedValidatorIndices filters out exited validators based on validator status
 // and returns their indices in a list.
 func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	var indices = make([]uint32, len(validators))
@@ -35,7 +35,7 @@ func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices[len(validators):]
 }
 
-// QueuedValidatorIndices filters out queued validators based on start and end dynasty
+// QueuedValidatorIndices filters out queued validators based on validator status
 // and returns their indices in a list.
 func QueuedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	var indices = make([]uint32, len(validators))
