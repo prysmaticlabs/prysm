@@ -24,7 +24,7 @@ func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 		return &Attestation{
 			data: &pb.AggregatedAttestation{
 				Slot:                0,
-				ShardId:             0,
+				Shard:               0,
 				JustifiedSlot:       0,
 				JustifiedBlockHash:  []byte{},
 				ShardBlockHash:      []byte{},
@@ -84,7 +84,7 @@ func (a *Attestation) SlotNumber() uint64 {
 
 // ShardID of the block, which this attestation is attesting to.
 func (a *Attestation) ShardID() uint64 {
-	return a.data.ShardId
+	return a.data.Shard
 }
 
 // ShardBlockHash of the block, which this attestation is attesting to.
@@ -137,10 +137,10 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 		proposerShardID,
 		a.JustifiedSlotNumber())
 
-	log.Infof("Constructing attestation message for incoming block 0x%x", attestationMsg)
+	log.Infof("Constructing attestation message for incoming block %#x", attestationMsg)
 
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
-	log.Infof("Verifying attestation with public key 0x%x", pubKey)
+	log.Infof("Verifying attestation with public key %#x", pubKey)
 
 	log.Info("successfully verified attestation with incoming block")
 	return nil

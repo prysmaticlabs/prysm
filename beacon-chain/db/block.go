@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -112,33 +113,16 @@ func (db *BeaconDB) GetCanonicalBlockForSlot(slotNumber uint64) (*types.Block, e
 	return block, err
 }
 
-// GetSimulatedBlock retrieves the last block broadcast by the simulator.
-func (db *BeaconDB) GetSimulatedBlock() (*types.Block, error) {
-	enc, err := db.get(simulatedBlockKey)
+// GetGenesisTime returns the timestamp for the genesis block
+func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
+	genesis, err := db.GetCanonicalBlockForSlot(0)
 	if err != nil {
-		return nil, err
+		return time.Time{}, fmt.Errorf("Could not get genesis block: %v", err)
+	}
+	genesisTime, err := genesis.Timestamp()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("Could not get genesis timestamp: %v", err)
 	}
 
-	protoBlock := &pb.BeaconBlock{}
-	err = proto.Unmarshal(enc, protoBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	return types.NewBlock(protoBlock), nil
-}
-
-// SaveSimulatedBlock saves the last broadcast block to the database.
-func (db *BeaconDB) SaveSimulatedBlock(block *types.Block) error {
-	enc, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-
-	return db.put(simulatedBlockKey, enc)
-}
-
-// HasSimulatedBlock checks if a block was broadcast by the simulator.
-func (db *BeaconDB) HasSimulatedBlock() (bool, error) {
-	return db.has(simulatedBlockKey)
+	return genesisTime, nil
 }

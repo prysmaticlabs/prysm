@@ -130,7 +130,7 @@ func TestProcessBlock(t *testing.T) {
 	}()
 
 	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -141,12 +141,12 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  parentHash[:],
+		PowChainRef:    []byte{1, 2, 3, 4, 5},
+		AncestorHashes: [][]byte{parentHash[:]},
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
-		ShardId:        0,
+		Shard:          0,
 		ShardBlockHash: []byte{'A'},
 	}
 
@@ -191,7 +191,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}()
 
 	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -202,8 +202,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  parentHash[:],
+		PowChainRef:    []byte{1, 2, 3, 4, 5},
+		AncestorHashes: [][]byte{parentHash[:]},
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -218,8 +218,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		PowChainRef: []byte{6, 7, 8, 9, 10},
-		ParentHash:  make([]byte, 32),
+		PowChainRef:    []byte{6, 7, 8, 9, 10},
+		AncestorHashes: [][]byte{make([]byte, 32)},
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -251,7 +251,7 @@ func TestBlockRequestErrors(t *testing.T) {
 
 	go func() {
 		ss.run()
-		exitRoutine <- true
+		<-exitRoutine
 	}()
 
 	malformedRequest := &pb.BeaconBlockHashAnnounce{
@@ -265,7 +265,22 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- invalidmsg
+	ss.cancel()
+	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
+}
+
+func TestBlockRequest(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	ss := setupService(t)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
 
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
@@ -278,9 +293,10 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- msg1
-	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
-	hook.Reset()
+	ss.cancel()
+	exitRoutine <- true
 
+	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 }
 
 func TestReceiveAttestation(t *testing.T) {

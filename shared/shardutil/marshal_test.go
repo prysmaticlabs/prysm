@@ -1,4 +1,4 @@
-package shared
+package shardutil
 
 import (
 	"math/rand"
@@ -151,12 +151,12 @@ func TestSerializeSkipEvm(t *testing.T) {
 	}
 
 	if data[0] != 0 {
-		t.Errorf("Indicating byte for first chunk should be %x but is %x", 0, data[0])
+		t.Errorf("Indicating byte for first chunk should be %#x but is %#x", 0, data[0])
 	}
 
 	indicatingByte := byte(0x81)
 	if data[32] != indicatingByte {
-		t.Errorf("Indicating byte for second chunk should be %x but is %x", indicatingByte, data[32])
+		t.Errorf("Indicating byte for second chunk should be %#x but is %#x", indicatingByte, data[32])
 	}
 }
 
@@ -176,7 +176,7 @@ func TestSerializeSkipEvmFalse(t *testing.T) {
 
 	indicatingByte := byte(0x1f)
 	if data[0] != indicatingByte {
-		t.Errorf("Indicating byte for first chunk should be %x but is %x", indicatingByte, data[0])
+		t.Errorf("Indicating byte for first chunk should be %#x but is %#x", indicatingByte, data[0])
 	}
 }
 
@@ -200,18 +200,18 @@ func TestSerializeTestData(t *testing.T) {
 
 	indicatingByte := byte(0x1D)
 	if data[32] != indicatingByte {
-		t.Errorf("Indicating byte for second chunk should be %x but is %x", indicatingByte, data[32])
+		t.Errorf("Indicating byte for second chunk should be %#x but is %#x", indicatingByte, data[32])
 	}
 
 	for i := 1; i < 32; i++ {
 		if data[i] != byte(i-1) {
-			t.Errorf("Data byte incorrect. Should be %x but is %x", byte(i-1), data[i])
+			t.Errorf("Data byte incorrect. Should be %#x but is %#x", byte(i-1), data[i])
 		}
 	}
 
 	for i := 33; i < 62; i++ {
 		if data[i] != byte(i-2) {
-			t.Errorf("Data byte incorrect. Should be %x but is %x", byte(i-2), data[i])
+			t.Errorf("Data byte incorrect. Should be %#x but is %#x", byte(i-2), data[i])
 		}
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
@@ -34,14 +34,16 @@ type beaconDB interface {
 // Return block with default fields if data is nil.
 func NewBlock(data *pb.BeaconBlock) *Block {
 	if data == nil {
+		var ancestorHashes = make([][]byte, 0, 32)
+
 		//It is assumed when data==nil, you're asking for a Genesis Block
 		return &Block{
 			data: &pb.BeaconBlock{
-				ParentHash:            []byte{0},
+				AncestorHashes:        ancestorHashes,
 				RandaoReveal:          []byte{0},
 				PowChainRef:           []byte{0},
-				ActiveStateHash:       []byte{0},
-				CrystallizedStateHash: []byte{0},
+				ActiveStateRoot:       []byte{0},
+				CrystallizedStateRoot: []byte{0},
 			},
 		}
 	}
@@ -50,15 +52,15 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock(activeStateHash [32]byte, crystallizedStateHash [32]byte) *Block {
+func NewGenesisBlock(activeStateRoot [32]byte, crystallizedStateRoot [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 
-	gb.data.ActiveStateHash = activeStateHash[:]
-	gb.data.CrystallizedStateHash = crystallizedStateHash[:]
+	gb.data.ActiveStateRoot = activeStateRoot[:]
+	gb.data.CrystallizedStateRoot = crystallizedStateRoot[:]
 	return gb
 }
 
@@ -87,13 +89,13 @@ func (b *Block) Hash() ([32]byte, error) {
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ParentHash)
+	copy(h[:], b.data.AncestorHashes[0])
 	return h
 }
 
 // SlotNumber of the beacon block.
 func (b *Block) SlotNumber() uint64 {
-	return b.data.SlotNumber
+	return b.data.Slot
 }
 
 // PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
@@ -108,17 +110,17 @@ func (b *Block) RandaoReveal() [32]byte {
 	return h
 }
 
-// ActiveStateHash returns the active state hash.
-func (b *Block) ActiveStateHash() [32]byte {
+// ActiveStateRoot returns the active state hash.
+func (b *Block) ActiveStateRoot() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ActiveStateHash)
+	copy(h[:], b.data.ActiveStateRoot)
 	return h
 }
 
-// CrystallizedStateHash returns the crystallized state hash.
-func (b *Block) CrystallizedStateHash() [32]byte {
+// CrystallizedStateRoot returns the crystallized state hash.
+func (b *Block) CrystallizedStateRoot() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.CrystallizedStateHash)
+	copy(h[:], b.data.CrystallizedStateRoot)
 	return h
 }
 
@@ -138,9 +140,9 @@ func (b *Block) Timestamp() (time.Time, error) {
 }
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
-func (b *Block) isSlotValid(genesisTimestamp time.Time) bool {
+func (b *Block) isSlotValid(genesisTime time.Time) bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTimestamp.Add(slotDuration)
+	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 
@@ -153,7 +155,7 @@ func (b *Block) IsValid(
 	cState *CrystallizedState,
 	parentSlot uint64,
 	enableAttestationValidity bool,
-	genesisTimestamp time.Time) bool {
+	genesisTime time.Time) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Errorf("Could not hash incoming block: %v", err)
@@ -165,7 +167,7 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	if !b.isSlotValid(genesisTimestamp) {
+	if !b.isSlotValid(genesisTime) {
 		log.Errorf("Slot of block is too high: %d", b.SlotNumber())
 		return false
 	}
@@ -174,14 +176,14 @@ func (b *Block) IsValid(
 		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
 		_, proposerIndex, err := casper.ProposerShardAndIndex(
 			cState.ShardAndCommitteesForSlots(),
-			cState.LastStateRecalc(),
+			cState.LastStateRecalculationSlot(),
 			parentSlot)
 		if err != nil {
 			log.Errorf("Can not get proposer index %v", err)
 			return false
 		}
 		log.Infof("Proposer index: %v", proposerIndex)
-		if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
+		if !bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
 		}
@@ -247,11 +249,11 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		parentHashes,
 		attestation.ShardBlockHash,
 		attestation.Slot,
-		attestation.ShardId,
+		attestation.Shard,
 		attestation.JustifiedSlot)
 
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
-		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
+		attestation.Shard, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true

@@ -8,10 +8,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
+	"golang.org/x/crypto/blake2b"
 )
 
 type mockShardDB struct {
@@ -43,11 +43,15 @@ func (m *mockShardDB) NewBatch() ethdb.Batch {
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.
 func (c *Collation) Hash() (hash common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, c)
-	hw.Sum(hash[:0])
+	encoded, err := rlp.EncodeToBytes(c)
+	if err != nil {
+		log.Errorf("Failed to RLP encode data: %v", err)
+	}
+	blakeHash := blake2b.Sum512(encoded)
+	copy(hash[:], blakeHash[:32])
 	return hash
 }
+
 func TestShard_ValidateShardID(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	emptyAddr := common.BytesToAddress([]byte{})

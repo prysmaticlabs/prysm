@@ -11,7 +11,7 @@ import (
 func TestAttestation(t *testing.T) {
 	data := &pb.AggregatedAttestation{
 		Slot:                0,
-		ShardId:             0,
+		Shard:               0,
 		JustifiedSlot:       0,
 		JustifiedBlockHash:  []byte{0},
 		ShardBlockHash:      []byte{0},
@@ -60,7 +60,7 @@ func TestAttestation(t *testing.T) {
 func TestContainsValidator(t *testing.T) {
 	attestation := NewAttestation(&pb.AggregatedAttestation{
 		Slot:             0,
-		ShardId:          0,
+		Shard:            0,
 		AttesterBitfield: []byte{7}, // 0000 0111
 	})
 

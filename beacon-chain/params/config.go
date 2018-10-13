@@ -2,7 +2,6 @@
 package params
 
 import (
-	"math/big"
 	"time"
 )
 
@@ -20,10 +19,10 @@ type ValidatorSetDeltaFlags int
 // Config contains configs for node to participate in beacon chain.
 type Config struct {
 	ShardCount                  int       // ShardCount is the fixed number of shards in Ethereum 2.0.
-	DepositSize                 *big.Int  // DepositSize is how much a validator has deposited in wei.
+	DepositSize                 int       // DepositSize is how much a validator has deposited in Gwei.
 	BootstrappedValidatorsCount int       // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
 	ModuloBias                  int       // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
-	EtherDenomination           int       // EtherDenomination is the denomination of ether in wei.
+	Gwei                        int       // Gwei is the denomination of Gwei in Ether.
 	CycleLength                 uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                uint64    // SlotDuration is how many seconds are in a single slot.
 	MinCommiteeSize             uint64    // MinDynastyLength is the slots needed before dynasty transition happens.
@@ -42,8 +41,8 @@ var defaultConfig = &Config{
 	ModuloBias:                  16777216,
 	CycleLength:                 uint64(64),
 	ShardCount:                  1024,
-	EtherDenomination:           1e18,
-	DepositSize:                 new(big.Int).Div(big.NewInt(32), big.NewInt(int64(1e18))),
+	Gwei:                        1e9,
+	DepositSize:                 32,
 	SlotDuration:                uint64(8),
 	MinCommiteeSize:             uint64(128),
 	DefaultEndDynasty:           uint64(999999999999999999),
@@ -59,9 +58,9 @@ var demoConfig = &Config{
 	GenesisTime:               time.Now(),
 	ModuloBias:                16777216,
 	CycleLength:               uint64(5),
-	ShardCount:                3,
-	EtherDenomination:         1e18,
-	DepositSize:               new(big.Int).Div(big.NewInt(32), big.NewInt(int64(1e18))),
+	ShardCount:                5,
+	Gwei:                      1e9,
+	DepositSize:               32,
 	SlotDuration:              uint64(8),
 	MinCommiteeSize:           uint64(3),
 	DefaultEndDynasty:         uint64(999999999999999999),
@@ -90,7 +89,7 @@ const (
 const (
 	// Logout means a validator is requesting to exit the validator pool.
 	Logout SpecialRecordType = iota
-	// CasperSlashing means a validator has committed slashing penalty, you want to submit a msg
+	// CasperSlashing means a validator has committed slashing penalty, you want to submit a message.
 	// to report and earn rewards.
 	CasperSlashing
 )

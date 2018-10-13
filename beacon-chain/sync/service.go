@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -36,6 +36,12 @@ type beaconDB interface {
 	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
 }
 
+type p2pAPI interface {
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
+}
+
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
 // In broad terms, a new block is synced in 4 steps:
 //     1. Receive a block hash from a peer
@@ -51,7 +57,7 @@ type beaconDB interface {
 type Service struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	p2p                       shared.P2P
+	p2p                       p2pAPI
 	chainService              chainService
 	attestationService        attestationService
 	db                        beaconDB
@@ -72,7 +78,7 @@ type Config struct {
 	ChainService              chainService
 	AttestService             attestationService
 	BeaconDB                  beaconDB
-	P2P                       shared.P2P
+	P2P                       p2pAPI
 	EnableAttestationValidity bool
 }
 
@@ -186,7 +192,7 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 		return
 	}
 
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
+	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
@@ -205,6 +211,8 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		log.Errorf("Could not hash received block: %v", err)
 	}
 
+	log.Infof("Processing response to block request: %#x", blockHash)
+
 	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
 	blockExists, err := ss.db.HasBlock(blockHash)
 	containsBlockSpan.End()
@@ -213,6 +221,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 	if blockExists {
+		log.Debug("Received a block that already exists. Exiting...")
 		return
 	}
 
@@ -226,7 +235,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 			return
 		}
 		parentSlot := parentBlock.SlotNumber()
-		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), parentSlot)
 		if err != nil {
 			log.Errorf("Failed to get proposer shard ID: %v", err)
 			return
@@ -237,13 +246,13 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 			return
 		}
 		_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-		log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+		log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
 		ss.attestationService.IncomingAttestationFeed().Send(attestation)
 		sendAttestationSpan.End()
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
+	log.WithField("blockHash", fmt.Sprintf("%#x", blockHash)).Debug("Sending newly received block to subscribers")
 	ss.chainService.IncomingBlockFeed().Send(block)
 	sendBlockSpan.End()
 }
@@ -315,7 +324,7 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 		}
 	}
 
-	log.WithField("attestationHash", fmt.Sprintf("0x%x", h)).Debug("Forwarding attestation to subscribed services")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
 	// Request the full block data from peer that sent the block hash.
 	ss.attestationService.IncomingAttestationFeed().Send(a)
 }
