@@ -4,6 +4,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"golang.org/x/crypto/blake2b"
 )
@@ -29,7 +30,7 @@ func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, er
 	var err error
 	if genesisJSONPath != "" {
 		log.Infof("Initializing crystallized state from %s", genesisJSONPath)
-		genesisValidators, err = casper.InitialValidatorsFromJSON(genesisJSONPath)
+		genesisValidators, err = utils.InitialValidatorsFromJSON(genesisJSONPath)
 		if err != nil {
 			return nil, err
 		}
