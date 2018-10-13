@@ -40,6 +40,8 @@ func FinalizeAndJustifySlots(
 	slot uint64, justifiedSlot uint64, finalizedSlot uint64,
 	justifiedStreak uint64, blockVoteBalance uint64, totalDeposits uint64) (uint64, uint64, uint64) {
 
+	cycleLength := params.GetConfig().CycleLength
+
 	if 3*blockVoteBalance >= 2*totalDeposits {
 		if slot > justifiedSlot {
 			justifiedSlot = slot
@@ -49,8 +51,10 @@ func FinalizeAndJustifySlots(
 		justifiedStreak = 0
 	}
 
-	if slot > params.GetConfig().CycleLength && justifiedStreak >= params.GetConfig().CycleLength+1 && slot-params.GetConfig().CycleLength-1 > finalizedSlot {
-		finalizedSlot = slot - params.GetConfig().CycleLength - 1
+	newFinalizedSlot := slot - cycleLength - 1
+
+	if slot > cycleLength && justifiedStreak >= cycleLength+1 && newFinalizedSlot > finalizedSlot {
+		finalizedSlot = newFinalizedSlot
 	}
 
 	return justifiedSlot, finalizedSlot, justifiedStreak
