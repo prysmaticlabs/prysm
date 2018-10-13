@@ -24,8 +24,6 @@ var (
 	// crystallizedStateLookupKey tracks the current crystallized state.
 	crystallizedStateLookupKey = []byte("beacon-crystallized-state")
 
-	simulatedBlockKey = []byte("last-simulated-block")
-
 	// Data item suffixes.
 	blockSuffix             = []byte("-block")             // blockhash + blockPrefix -> block
 	canonicalSuffix         = []byte("-canonical")         // num(uint64 big endian) + cannoicalSuffix -> blockhash

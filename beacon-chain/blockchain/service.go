@@ -268,7 +268,7 @@ func (c *ChainService) blockProcessing() {
 				continue
 			}
 			if !parentExists {
-				log.Debugf("Block points to nil parent: %v", err)
+				log.Debugf("Block points to nil parent: %#x", block.ParentHash())
 				continue
 			}
 			parent, err := c.beaconDB.GetBlock(block.ParentHash())
