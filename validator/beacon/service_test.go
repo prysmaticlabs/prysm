@@ -319,13 +319,19 @@ func TestListenForAssignmentProposer(t *testing.T) {
 	b.listenForAssignmentChange(mockServiceValidator)
 
 	testutil.AssertLogsContain(t, hook, "Validator with pub key 0xA re-assigned to shard ID 2 for PROPOSER duty")
+}
+
+func TestListenForAssignmentError(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), []byte{'A'}, &mockClient{ctrl})
 
 	// Testing an error coming from the stream.
-	stream = internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
+	stream := internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
 	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, errors.New("stream error"))
-	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
 
-	mockServiceValidator = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceValidator := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceValidator.EXPECT().ValidatorAssignments(
 		gomock.Any(),
 		gomock.Any(),
@@ -334,24 +340,38 @@ func TestListenForAssignmentProposer(t *testing.T) {
 	b.listenForAssignmentChange(mockServiceValidator)
 
 	testutil.AssertLogsContain(t, hook, "stream error")
+}
+
+func TestListenForAssignmentClientError(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), []byte{'A'}, &mockClient{ctrl})
 
 	// Creating a faulty stream will trigger error.
-	mockServiceValidator = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceValidator := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceValidator.EXPECT().ValidatorAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(stream, errors.New("stream creation failed"))
+	).Return(nil, errors.New("stream creation failed"))
 
 	b.listenForAssignmentChange(mockServiceValidator)
 	testutil.AssertLogsContain(t, hook, "stream creation failed")
 	testutil.AssertLogsContain(t, hook, "could not fetch validator assigned slot and responsibility from beacon node")
+}
+
+func TestListenForAssignmentCancelContext(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), []byte{'A'}, &mockClient{ctrl})
 
 	// Test that the routine exits when context is closed
-	stream = internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
+	stream := internal.NewMockBeaconService_ValidatorAssignmentsClient(ctrl)
 	stream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, nil)
 
 	//mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
-	mockServiceValidator = internal.NewMockBeaconServiceClient(ctrl)
+	mockServiceValidator := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceValidator.EXPECT().ValidatorAssignments(
 		gomock.Any(),
 		gomock.Any(),

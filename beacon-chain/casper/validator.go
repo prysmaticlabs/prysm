@@ -120,7 +120,7 @@ func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, er
 		}
 	}
 
-	return 0, fmt.Errorf("can't find validator index for public key %d", pubKey)
+	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
@@ -140,7 +140,7 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 		}
 	}
 
-	return 0, fmt.Errorf("can't find shard ID for validator with public key %x", pubKey)
+	return 0, fmt.Errorf("can't find shard ID for validator with public key %#x", pubKey)
 }
 
 // ValidatorSlotAndResponsibility returns a validator's assingned slot number
@@ -163,7 +163,7 @@ func ValidatorSlotAndResponsibility(pubKey []byte, validators []*pb.ValidatorRec
 			}
 		}
 	}
-	return 0, "", fmt.Errorf("can't find slot number for validator with public key %d", pubKey)
+	return 0, "", fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
 // TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
@@ -185,8 +185,8 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	return depositInEth
 }
 
-// AddValidator gets be ran for every validator that is inducted as part of a log created on the PoW chain.
-func AddValidator(
+// AddPendingValidator runs for every validator that is inducted as part of a log created on the PoW chain.
+func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
 	withdrawalShard uint64,
@@ -231,13 +231,15 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 		if validators[i].Status == uint64(params.PendingActivation) {
 			validators[i].Status = uint64(params.Active)
 			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
-			// TODO: Add validator set change
+
+			// TODO(#614): Add validator set change.
 		}
 		if validators[i].Status == uint64(params.PendingExit) {
 			validators[i].Status = uint64(params.PendingWithdraw)
 			validators[i].ExitSlot = currentSlot
 			totalChanged += validators[i].Balance
-			// TODO: Add validator set change
+
+			// TODO(#614): Add validator set change.
 		}
 		if totalChanged > maxAllowableChange {
 			break
@@ -246,12 +248,12 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 
 	// Calculate withdraw validators that have been logged out long enough,
 	// apply their penalties if they were slashed.
-
 	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingWithdraw) ||
-			validators[i].Status == uint64(params.Penalized) &&
-				currentSlot >= validators[i].ExitSlot+params.GetConfig().WithdrawalPeriod {
+		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
+		isPenalized := validators[i].Status == uint64(params.Penalized)
+		withdrawalSlot := validators[i].ExitSlot + params.GetConfig().WithdrawalPeriod
 
+		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3
 			if penaltyFactor > totalBalance {
 				penaltyFactor = totalBalance
@@ -260,11 +262,9 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 			if validators[i].Status == uint64(params.Penalized) {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}
-
 			validators[i].Status = uint64(params.Withdrawn)
 		}
 	}
-
 	return validators
 }
 

@@ -137,10 +137,10 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 		proposerShardID,
 		a.JustifiedSlotNumber())
 
-	log.Infof("Constructing attestation message for incoming block 0x%x", attestationMsg)
+	log.Infof("Constructing attestation message for incoming block %#x", attestationMsg)
 
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
-	log.Infof("Verifying attestation with public key 0x%x", pubKey)
+	log.Infof("Verifying attestation with public key %#x", pubKey)
 
 	log.Info("successfully verified attestation with incoming block")
 	return nil
