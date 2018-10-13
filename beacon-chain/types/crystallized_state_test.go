@@ -55,6 +55,9 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		}},
 	})
 
+	aState.data.PendingSpecials = []*pb.SpecialRecord{
+		{Kind: uint32(params.RandaoChanges), Data: [][]byte{{byte(0)}, {byte('A')}}}}
+
 	newCState, _, err := cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
@@ -74,6 +77,11 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 
 	if newCState.LastFinalizedSlot() != 0 {
 		t.Fatalf("xpected finalized slot to equal %d, got %d", 0, newCState.LastFinalizedSlot())
+	}
+
+	t.Log(newCState.Validators()[0].RandaoCommitment)
+	if !(bytes.Equal(newCState.Validators()[0].RandaoCommitment, []byte{'A'})) {
+		t.Fatal("failed to set validator 100's randao reveal")
 	}
 }
 

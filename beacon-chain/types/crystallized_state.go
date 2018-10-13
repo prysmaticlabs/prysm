@@ -1,9 +1,9 @@
 package types
 
 import (
-	"encoding/binary"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -348,7 +348,10 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 		// Covers RANDAO updates for all the validators from last cycle.
 		if specialRecord.Kind == uint32(params.RandaoChanges) {
-			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
+			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
+			if err != nil {
+				return nil, nil, err
+			}
 			newValidators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
 		}
 	}

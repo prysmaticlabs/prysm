@@ -44,6 +44,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				PowChainRef:           []byte{0},
 				ActiveStateRoot:       []byte{0},
 				CrystallizedStateRoot: []byte{0},
+				Specials:              []*pb.SpecialRecord{},
 			},
 		}
 	}

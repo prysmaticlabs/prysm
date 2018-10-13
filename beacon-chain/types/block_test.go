@@ -44,23 +44,27 @@ func TestGenesisBlock(t *testing.T) {
 	}
 
 	if b1.data.AncestorHashes == nil {
-		t.Fatalf("genesis block missing ParentHash field")
+		t.Fatal("genesis block missing ParentHash field")
+	}
+
+	if b1.Specials() == nil {
+		t.Fatal("genesis block missing Special field")
 	}
 
 	if b1.data.RandaoReveal == nil {
-		t.Fatalf("genesis block missing RandaoReveal field")
+		t.Fatal("genesis block missing RandaoReveal field")
 	}
 
 	if b1.data.PowChainRef == nil {
-		t.Fatalf("genesis block missing PowChainRef field")
+		t.Fatal("genesis block missing PowChainRef field")
 	}
 
 	if !bytes.Equal(b1.data.ActiveStateRoot, aStateHash[:]) {
-		t.Fatalf("genesis block ActiveStateHash isn't initialized correctly")
+		t.Fatal("genesis block ActiveStateHash isn't initialized correctly")
 	}
 
 	if !bytes.Equal(b1.data.CrystallizedStateRoot, cStateHash[:]) {
-		t.Fatalf("genesis block CrystallizedStateHash isn't initialized correctly")
+		t.Fatal("genesis block CrystallizedStateHash isn't initialized correctly")
 	}
 
 	b3 := NewBlock(nil)
@@ -119,6 +123,23 @@ func TestBlockValidity(t *testing.T) {
 	}
 	if !b.IsValid(db, aState, cState, parentSlot, true, genesisTime) {
 		t.Fatalf("failed block validation")
+	}
+
+	// Test case with invalid RANDAO reveal.
+	badRandaoBlock := NewBlock(&pb.BeaconBlock{
+		Slot:         1,
+		RandaoReveal: []byte{'A'},
+		Attestations: []*pb.AggregatedAttestation{
+			{
+				Slot:             0,
+				Shard:            1,
+				JustifiedSlot:    0,
+				AttesterBitfield: []byte{64, 0},
+			},
+		},
+	})
+	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+		t.Fatalf("should have failed with invalid RANDAO")
 	}
 }
 
