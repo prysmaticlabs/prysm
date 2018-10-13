@@ -276,3 +276,111 @@ func TestTotalActiveValidatorDeposit(t *testing.T) {
 		t.Fatalf("incorrect total deposit in ETH calculated %d", totalDepositETH)
 	}
 }
+
+func TestAddValidators(t *testing.T) {
+	var existingValidators []*pb.ValidatorRecord
+	for i := 0; i < 10; i++ {
+		existingValidators = append(existingValidators, &pb.ValidatorRecord{Status: uint64(params.Active)})
+	}
+
+	// Create a new validator.
+	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'})
+
+	// The newly added validator should be indexed 10.
+	if validators[10].Status != uint64(params.PendingActivation) {
+		t.Errorf("Newly added validator should be pending")
+	}
+	if validators[10].WithdrawalShard != 99 {
+		t.Errorf("Newly added validator's withdrawal shard should be 99. Got: %d", validators[10].WithdrawalShard)
+	}
+	if validators[10].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+		t.Errorf("Incorrect deposit size")
+	}
+
+	// Set validator 6 to withdrawn
+	existingValidators[5].Status = uint64(params.Withdrawn)
+	validators = AddPendingValidator(existingValidators, []byte{'D'}, 100, []byte{'E'}, []byte{'F'})
+
+	// The newly added validator should be indexed 5.
+	if validators[5].Status != uint64(params.PendingActivation) {
+		t.Errorf("Newly added validator should be pending")
+	}
+	if validators[5].WithdrawalShard != 100 {
+		t.Errorf("Newly added validator's withdrawal shard should be 100. Got: %d", validators[10].WithdrawalShard)
+	}
+	if validators[5].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+		t.Errorf("Incorrect deposit size")
+	}
+}
+
+func TestChangeValidators(t *testing.T) {
+	existingValidators := []*pb.ValidatorRecord{
+		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
+		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
+		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
+		{Pubkey: []byte{4}, Status: uint64(params.PendingExit), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
+		{Pubkey: []byte{5}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
+		{Pubkey: []byte{6}, Status: uint64(params.PendingExit), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
+		{Pubkey: []byte{7}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{8}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{9}, Status: uint64(params.Penalized), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{10}, Status: uint64(params.Penalized), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{11}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{12}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{13}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{14}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+	}
+
+	validators := ChangeValidators(params.GetConfig().WithdrawalPeriod+1, 50*10e9, existingValidators)
+
+	if validators[0].Status != uint64(params.Active) {
+		t.Errorf("Wanted status Active. Got: %d", validators[0].Status)
+	}
+	if validators[0].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+		t.Error("Failed to set validator balance")
+	}
+	if validators[1].Status != uint64(params.PendingWithdraw) {
+		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[1].Status)
+	}
+	if validators[1].ExitSlot != params.GetConfig().WithdrawalPeriod+1 {
+		t.Errorf("Failed to set validator exit slot")
+	}
+	if validators[2].Status != uint64(params.Active) {
+		t.Errorf("Wanted status Active. Got: %d", validators[2].Status)
+	}
+	if validators[2].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+		t.Error("Failed to set validator balance")
+	}
+	if validators[3].Status != uint64(params.PendingWithdraw) {
+		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[3].Status)
+	}
+	if validators[3].ExitSlot != params.GetConfig().WithdrawalPeriod+1 {
+		t.Errorf("Failed to set validator exit slot")
+	}
+	// Reach max validation rotation case, this validator couldn't be rotated.
+	if validators[5].Status != uint64(params.PendingExit) {
+		t.Errorf("Wanted status PendingExit. Got: %d", validators[5].Status)
+	}
+	if validators[7].Status != uint64(params.Withdrawn) {
+		t.Errorf("Wanted status Withdrawn. Got: %d", validators[7].Status)
+	}
+	if validators[8].Status != uint64(params.Withdrawn) {
+		t.Errorf("Wanted status Withdrawn. Got: %d", validators[8].Status)
+	}
+}
+
+func TestMinEmptyValidator(t *testing.T) {
+	validators := []*pb.ValidatorRecord{
+		{Status: uint64(params.Active)},
+		{Status: uint64(params.Withdrawn)},
+		{Status: uint64(params.Active)},
+	}
+	if minEmptyValidator(validators) != 1 {
+		t.Errorf("Min vaidator index should be 1")
+	}
+
+	validators[1].Status = uint64(params.Active)
+	if minEmptyValidator(validators) != -1 {
+		t.Errorf("Min vaidator index should be -1")
+	}
+}
