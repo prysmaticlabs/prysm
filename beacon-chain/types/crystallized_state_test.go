@@ -29,7 +29,7 @@ func TestGenesisCrystallizedState(t *testing.T) {
 	}
 
 	if h1 != h2 {
-		t.Fatalf("Hash of two genesis crystallized states should be equal: %x", h1)
+		t.Fatalf("Hash of two genesis crystallized states should be equal: %#x", h1)
 	}
 }
 
@@ -94,7 +94,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	}
 
 	cState.data.Validators = []*pb.ValidatorRecord{
-		{Balance: uint64(params.GetConfig().DepositSize),
+		{Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
 			Status: uint64(params.Active)},
 	}
 
@@ -325,17 +325,24 @@ func TestNewDynastyRecalculations(t *testing.T) {
 	}
 }
 
+func TestInitGenesisJsonFailure(t *testing.T) {
+	fname := "/genesis.json"
+	pwd, _ := os.Getwd()
+	fnamePath := pwd + fname
+
+	_, err := NewGenesisCrystallizedState(fnamePath)
+	if err == nil {
+		t.Fatalf("genesis.json should have failed %v", err)
+	}
+}
+
 func TestInitGenesisJson(t *testing.T) {
 	fname := "/genesis.json"
 	pwd, _ := os.Getwd()
 	fnamePath := pwd + fname
 	os.Remove(fnamePath)
 
-	_, err := NewGenesisCrystallizedState(fnamePath)
-	if err == nil {
-		t.Fatalf("genesis.json should have failed %v", err)
-	}
-
+	params.SetEnv("demo")
 	cStateJSON := &pb.CrystallizedState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,
@@ -365,4 +372,29 @@ func TestInitGenesisJson(t *testing.T) {
 		t.Errorf("Failed to load of genesis json")
 	}
 	os.Remove(fnamePath)
+}
+
+func TestPenalizedETH(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState("")
+	if err != nil {
+		t.Fatalf("Failed to initialize crystallized state: %v", err)
+	}
+	cState.data.DepositsPenalizedInPeriod = []uint32{100, 200, 300, 400, 500}
+	cState.penalizedETH(2)
+
+	tests := []struct {
+		a uint64
+		b uint64
+	}{
+		{a: 0, b: 100},
+		{a: 1, b: 300},
+		{a: 2, b: 600},
+		{a: 3, b: 900},
+		{a: 4, b: 1200},
+	}
+	for _, tt := range tests {
+		if cState.penalizedETH(tt.a) != tt.b {
+			t.Errorf("PenalizedETH(%d) = %v, want = %d", tt.a, cState.penalizedETH(tt.a), tt.b)
+		}
+	}
 }
