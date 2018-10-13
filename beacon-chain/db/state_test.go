@@ -35,7 +35,7 @@ func TestSaveCrystallizedState(t *testing.T) {
 	defer beaconDB.Close()
 
 	data := &pb.CrystallizedState{
-		ValidatorSetChangeSlot:     3,
+		ValidatorSetChangeSlot: 3,
 	}
 	crystallized := types.NewCrystallizedState(data)
 
