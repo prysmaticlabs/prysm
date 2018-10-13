@@ -231,14 +231,12 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 		if validators[i].Status == uint64(params.PendingActivation) {
 			validators[i].Status = uint64(params.Active)
 			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
-
 			// TODO(#614): Add validator set change.
 		}
 		if validators[i].Status == uint64(params.PendingExit) {
 			validators[i].Status = uint64(params.PendingWithdraw)
 			validators[i].ExitSlot = currentSlot
 			totalChanged += validators[i].Balance
-
 			// TODO(#614): Add validator set change.
 		}
 		if totalChanged > maxAllowableChange {
@@ -258,7 +256,6 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 			if penaltyFactor > totalBalance {
 				penaltyFactor = totalBalance
 			}
-
 			if validators[i].Status == uint64(params.Penalized) {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}
