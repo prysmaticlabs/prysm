@@ -211,6 +211,8 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		log.Errorf("Could not hash received block: %v", err)
 	}
 
+	log.Infof("Processing response to block request: %#x", blockHash)
+
 	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
 	blockExists, err := ss.db.HasBlock(blockHash)
 	containsBlockSpan.End()
@@ -219,6 +221,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 	if blockExists {
+		log.Debug("Received a block that already exists. Exiting...")
 		return
 	}
 
