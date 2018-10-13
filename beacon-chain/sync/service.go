@@ -221,7 +221,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 	if blockExists {
-		log.Debug("Recieved a block that already exists. Exiting...")
+		log.Debug("Received a block that already exists. Exiting...")
 		return
 	}
 
