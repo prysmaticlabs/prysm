@@ -213,10 +213,7 @@ func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
-	if c.LastStateRecalculationSlot() == 0 && slotNumber == params.GetConfig().CycleLength-1 {
-		return true
-	}
-	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength-1
+	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
 }
 
 // isDynastyTransition checks if a dynasty transition can be processed. At that point,
