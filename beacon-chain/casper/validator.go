@@ -237,7 +237,9 @@ func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArr
 
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
 // attestation.
-func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32, attestation *pb.AggregatedAttestation) (uint64, uint64) {
+func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
+	attestation *pb.AggregatedAttestation) (uint64, uint64) {
+
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64
 	var voteBalance uint64
