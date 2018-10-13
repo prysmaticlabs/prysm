@@ -126,34 +126,3 @@ func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
 
 	return genesisTime, nil
 }
-
-// GetSimulatedBlock retrieves the last block broadcast by the simulator.
-func (db *BeaconDB) GetSimulatedBlock() (*types.Block, error) {
-	enc, err := db.get(simulatedBlockKey)
-	if err != nil {
-		return nil, err
-	}
-
-	protoBlock := &pb.BeaconBlock{}
-	err = proto.Unmarshal(enc, protoBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	return types.NewBlock(protoBlock), nil
-}
-
-// SaveSimulatedBlock saves the last broadcast block to the database.
-func (db *BeaconDB) SaveSimulatedBlock(block *types.Block) error {
-	enc, err := block.Marshal()
-	if err != nil {
-		return err
-	}
-
-	return db.put(simulatedBlockKey, enc)
-}
-
-// HasSimulatedBlock checks if a block was broadcast by the simulator.
-func (db *BeaconDB) HasSimulatedBlock() (bool, error) {
-	return db.has(simulatedBlockKey)
-}
