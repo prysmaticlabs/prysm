@@ -177,7 +177,12 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 			// in the cache, then we add attester's index and balance to the block cache.
 			for i, attesterIndex := range attesterIndices {
 				var attesterExists bool
-				if !bitutil.CheckBit(attestation.AttesterBitfield, i) {
+				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, i)
+				if err != nil {
+					log.Errorf("Bitfield check for cache adding failed at index: %d with: %v", i, err)
+				}
+
+				if !isBitSet {
 					continue
 				}
 				for _, indexInCache := range update[h].VoterIndices {
