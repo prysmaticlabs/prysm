@@ -12,9 +12,9 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/params:go_default_library",
+        "//shared/hashutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
-        "@org_golang_x_crypto//blake2b:go_default_library",
     ],
 )
 

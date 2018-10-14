@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"golang.org/x/crypto/blake2b"
 )
 
 func init() {
@@ -88,7 +88,7 @@ func TestProcessBlockHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum512([]byte{})
+	announceHash := hashutil.Hash([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}

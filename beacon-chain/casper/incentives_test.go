@@ -31,10 +31,10 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	timeSinceFinality := uint64(5)
 
 	data := &pb.CrystallizedState{
-		Validators:        validators,
-		Dynasty:           1,
-		LastJustifiedSlot: 4,
-		LastFinalizedSlot: 3,
+		Validators:             validators,
+		ValidatorSetChangeSlot: 1,
+		LastJustifiedSlot:      4,
+		LastFinalizedSlot:      3,
 	}
 
 	rewardedValidators := CalculateRewards(

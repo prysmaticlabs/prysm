@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/shardutil"
 	"github.com/prysmaticlabs/prysm/validator/params"
-	"golang.org/x/crypto/blake2b"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"
@@ -71,9 +71,7 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 	if err != nil {
 		log.Errorf("Failed to RLP encode data: %v", err)
 	}
-	blakeHash := blake2b.Sum512(encoded)
-	copy(hash[:], blakeHash[:32])
-	return hash
+	return hashutil.Hash(encoded)
 }
 
 // AddSig adds the signature of proposer after collationHeader gets signed.
