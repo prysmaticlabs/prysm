@@ -2,9 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/golang/protobuf/jsonpb"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"os"
 )
 
 // InitialValidatorsFromJSON retrieves the validator set that is stored in

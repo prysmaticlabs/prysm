@@ -1,11 +1,12 @@
 package utils
 
 import (
+	"os"
+	"testing"
+
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"os"
-	"testing"
 )
 
 func TestInitGenesisJsonFailure(t *testing.T) {
