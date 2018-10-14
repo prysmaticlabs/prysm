@@ -26,12 +26,15 @@ go_test(
     name = "go_default_test",
     srcs = [
         "clock_test.go",
+        "genesis_json_test.go",
         "shuffle_test.go",
         "slot_ticker_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/params:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_gogo_protobuf//jsonpb:go_default_library",
     ],
 )

@@ -4,7 +4,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -23,21 +22,14 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 }
 
 // NewGenesisCrystallizedState initializes the crystallized state for slot 0.
-func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, error) {
+func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*CrystallizedState, error) {
 	// We seed the genesis crystallized state with a bunch of validators to
 	// bootstrap the system.
-	var genesisValidators []*pb.ValidatorRecord
 	var err error
-	if genesisJSONPath != "" {
-		log.Infof("Initializing crystallized state from %s", genesisJSONPath)
-		genesisValidators, err = utils.InitialValidatorsFromJSON(genesisJSONPath)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+	if genesisValidators == nil {
 		genesisValidators = casper.InitialValidators()
-	}
 
+	}
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
 	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {

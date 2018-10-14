@@ -135,7 +135,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockDB := &mockDB{}
 	mockDB.genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
 	var err error
-	mockDB.cState, err = types.NewGenesisCrystallizedState("")
+	mockDB.cState, err = types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 func TestProposeBlock(t *testing.T) {
 	mockChain := &mockChainService{}
 	db := &mockDB{}
-	db.cState, _ = types.NewGenesisCrystallizedState("")
+	db.cState, _ = types.NewGenesisCrystallizedState(nil)
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:            "6372",
 		ChainService:    mockChain,
@@ -285,7 +285,7 @@ func TestLatestAttestation(t *testing.T) {
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to instantiate genesis state: %v", err)
 	}
@@ -307,7 +307,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 func TestValidatorIndex(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to instantiate genesis state: %v", err)
 	}
@@ -329,7 +329,7 @@ func TestValidatorIndex(t *testing.T) {
 func TestValidatorShardID(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to instantiate genesis state: %v", err)
 	}
@@ -381,7 +381,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	genesisState, err := types.NewGenesisCrystallizedState("")
+	genesisState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
