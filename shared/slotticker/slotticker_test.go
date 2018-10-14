@@ -1,4 +1,4 @@
-package utils
+package slotticker
 
 import (
 	"testing"
@@ -98,5 +98,28 @@ func TestSlotTickerGenesis(t *testing.T) {
 	slot = <-ticker.C()
 	if slot != 1 {
 		t.Fatalf("Expected 1, got %d", slot)
+	}
+}
+
+func TestCurrentSlot(t *testing.T) {
+	// Test slot 0
+	genesisTime := time.Now()
+	slot := CurrentSlot(genesisTime, 5, time.Since)
+	if slot != 0 {
+		t.Errorf("Expected 0, got: %d", slot)
+	}
+
+	// Test a future genesis time
+	genesisTime = genesisTime.Add(3 * time.Second)
+	slot = CurrentSlot(genesisTime, 5, time.Since)
+	if slot != 0 {
+		t.Errorf("Expected 0, got: %d", slot)
+	}
+
+	// Test slot 3
+	genesisTime = genesisTime.Add(-18 * time.Second)
+	slot = CurrentSlot(genesisTime, 5, time.Since)
+	if slot != 3 {
+		t.Errorf("Expected 3, got: %d", slot)
 	}
 }
