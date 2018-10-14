@@ -28,7 +28,7 @@ func (s *SlotTicker) Done() {
 	}()
 }
 
-// GetSlotTicker is the constructor for SlotTicker
+// GetSlotTicker is the constructor for SlotTicker.
 func GetSlotTicker(genesisTime time.Time, slotDuration uint64) SlotTicker {
 	ticker := SlotTicker{
 		c:    make(chan uint64),
@@ -39,7 +39,7 @@ func GetSlotTicker(genesisTime time.Time, slotDuration uint64) SlotTicker {
 	return ticker
 }
 
-// CurrentSlot accepts the genesis time and returns the current time's slot
+// CurrentSlot accepts the genesis time and returns the current time's slot.
 func CurrentSlot(
 	genesisTime time.Time,
 	slotDuration uint64,
