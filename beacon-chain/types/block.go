@@ -169,7 +169,7 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Can not process a genesis block")
+		log.Error("Cannot process a genesis block")
 		return false
 	}
 
@@ -183,7 +183,7 @@ func (b *Block) IsValid(
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
 	if err != nil {
-		log.Errorf("Can not get proposer index %v", err)
+		log.Errorf("Cannot get proposer index %v", err)
 		return false
 	}
 	log.Infof("Proposer index: %v", proposerIndex)
@@ -191,7 +191,7 @@ func (b *Block) IsValid(
 	if enableAttestationValidity {
 		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
 		if !bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
-			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+			log.Errorf("Cannot locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
 		}
 
