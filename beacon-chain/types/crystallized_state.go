@@ -185,7 +185,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // and the current active state. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new committees if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
-	var LastStateRecalculationSlotCycleBack uint64
+	var lastStateRecalculationSlotCycleBack uint64
 	var newCrosslinks []*pb.CrosslinkRecord
 	var err error
 
@@ -195,15 +195,15 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	lastStateRecalculationSlot := c.LastStateRecalculationSlot()
 	validatorSetChangeSlot := c.ValidatorSetChangeSlot()
 	blockVoteCache := aState.GetBlockVoteCache()
-	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
+	shardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
 	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
 	newValidators := casper.DeepCopyValidators(c.Validators())
 
 	if lastStateRecalculationSlot < params.GetConfig().CycleLength {
-		LastStateRecalculationSlotCycleBack = 0
+		lastStateRecalculationSlotCycleBack = 0
 	} else {
-		LastStateRecalculationSlotCycleBack = lastStateRecalculationSlot - params.GetConfig().CycleLength
+		lastStateRecalculationSlotCycleBack = lastStateRecalculationSlot - params.GetConfig().CycleLength
 	}
 
 	// If reward checking is disabled, the new set of validators for the cycle
@@ -216,7 +216,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
 		var blockVoteBalance uint64
 
-		slot := LastStateRecalculationSlotCycleBack + i
+		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
 		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockHash, slot,
@@ -238,7 +238,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	if c.isValidatorSetChange(block.SlotNumber()) {
 		log.Info("Entering validator set change transition")
 		validatorSetChangeSlot = lastStateRecalculationSlot
-		ShardAndCommitteesForSlots, err = c.newValidatorSetRecalculations(block.ParentHash())
+		shardAndCommitteesForSlots, err = c.newValidatorSetRecalculations(block.ParentHash())
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +250,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// Construct new crystallized state after cycle and validator set changed.
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
-		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
+		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		Validators:                 newValidators,
 		LastStateRecalculationSlot: lastStateRecalculationSlot + params.GetConfig().CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
