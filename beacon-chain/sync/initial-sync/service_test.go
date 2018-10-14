@@ -78,7 +78,6 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{Block: block}
-
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: blockResponse,
