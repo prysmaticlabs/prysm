@@ -87,8 +87,14 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		if bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i) {
-			log.Debugf("attestation has non-zero trailing bits")
+		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
+		if err != nil {
+			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
+			return false
+		}
+
+		if isBitSet {
+			log.Error("attestation has non-zero trailing bits")
 			return false
 		}
 	}

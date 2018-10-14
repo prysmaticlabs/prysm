@@ -426,7 +426,12 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		var voteBalance uint64
 		for _, attesterIndex := range indices {
 			// find balance of validators who voted.
-			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+			if err != nil {
+				log.Errorf("Bitfield check for attester failed at index: %d with: %v", attesterIndex, err)
+			}
+
+			if isBitSet {
 				voteBalance += validators[attesterIndex].Balance
 			}
 			// add to total balance of the committee.
@@ -437,7 +442,12 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
 
 			if !crosslinkRecords[attestation.Shard].RecentlyChanged {
-				if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+				if err != nil {
+					log.Errorf("Bitfield check for attester failed at index: %d with: %v", attesterIndex, err)
+				}
+
+				if isBitSet {
 					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 				} else {
 					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])

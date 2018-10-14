@@ -180,7 +180,7 @@ func (b *Block) IsValid(
 			return false
 		}
 		log.Infof("Proposer index: %v", proposerIndex)
-		if !bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
+		if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
 		}
