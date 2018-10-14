@@ -49,7 +49,7 @@ func TestValidatorIndices(t *testing.T) {
 			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
 			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
 		},
-		Dynasty: 1,
+		ValidatorSetChangeSlot: 1,
 	}
 
 	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators), []uint32{0, 1, 2, 3, 4}) {
@@ -238,12 +238,12 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 			{Shard: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
 		}},
 	}
-	if _, _, err := ValidatorSlotAndResponsibility([]byte("100"), validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, there's no validator with pubkey 100")
 	}
 
 	validators[59].Pubkey = []byte("100")
-	slot, _, err := ValidatorSlotAndResponsibility([]byte("100"), validators, shardCommittees)
+	slot, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees)
 	if err != nil {
 		t.Fatalf("call ValidatorSlot failed: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	}
 
 	validators[60].Pubkey = []byte("101")
-	if _, _, err := ValidatorSlotAndResponsibility([]byte("101"), validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndRole([]byte("101"), validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
 	}
 }
