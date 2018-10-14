@@ -2,11 +2,7 @@ package slotticker
 
 import (
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("prefix", "slotticker")
 
 // SlotTicker is a special ticker for the beacon chain block.
 // The channel emits over the slot interval, and ensures that

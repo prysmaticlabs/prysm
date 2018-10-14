@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -38,37 +37,6 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 		gomock.Any(),
 		&empty.Empty{},
 	).Return(attesterStream, nil)
-
-	return mockServiceClient
-}
-
-type mockLifecycleClient struct {
-	ctrl *gomock.Controller
-}
-
-func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
-	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
-
-	mockServiceClient.EXPECT().CurrentAssignmentsAndGenesisTime(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&pb.CurrentAssignmentsResponse{
-		GenesisTimestamp: ptypes.TimestampNow(),
-	}, nil)
-
-	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
-	mockServiceClient.EXPECT().LatestAttestation(
-		gomock.Any(),
-		&empty.Empty{},
-	).Return(attesterStream, nil)
-	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
-
-	cycleStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
-	mockServiceClient.EXPECT().ValidatorAssignments(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(cycleStream, nil)
-	cycleStream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
 
 	return mockServiceClient
 }

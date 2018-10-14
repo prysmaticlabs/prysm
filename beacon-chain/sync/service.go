@@ -229,13 +229,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		// Verify attestation coming from proposer then forward block to the subscribers.
 		attestation := types.NewAttestation(response.Attestation)
 		cState := ss.db.GetCrystallizedState()
-		parentBlock, err := ss.db.GetBlock(block.ParentHash())
-		if err != nil {
-			log.Errorf("Failed to get parent slot: %v", err)
-			return
-		}
-		parentSlot := parentBlock.SlotNumber()
-		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), parentSlot)
+		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 		if err != nil {
 			log.Errorf("Failed to get proposer shard ID: %v", err)
 			return
