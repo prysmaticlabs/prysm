@@ -10,8 +10,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "attester")
@@ -91,7 +91,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				log.Errorf("could not marshal latest beacon block: %v", err)
 				continue
 			}
-			latestBlockHash := blake2b.Sum512(data)
+			latestBlockHash := hashutil.Hash(data)
 
 			pubKeyReq := &pb.PublicKey{
 				PublicKey: a.beaconService.PublicKey(),
