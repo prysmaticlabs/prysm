@@ -234,7 +234,7 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 	}
 }
 
-// startSlot returns the first slot of the given slot's cycle
+// startSlot returns the first slot of the given slot's cycle.
 func (s *Service) startSlot() uint64 {
 	duration := params.DemoConfig().SlotDuration
 	cycleLength := params.DemoConfig().CycleLength
