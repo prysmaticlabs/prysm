@@ -35,8 +35,7 @@ func TestSaveCrystallizedState(t *testing.T) {
 	defer beaconDB.Close()
 
 	data := &pb.CrystallizedState{
-		Dynasty:     3,
-		DynastySeed: []byte{'A'},
+		ValidatorSetChangeSlot: 3,
 	}
 	crystallized := types.NewCrystallizedState(data)
 

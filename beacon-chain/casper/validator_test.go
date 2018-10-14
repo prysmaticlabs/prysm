@@ -49,7 +49,7 @@ func TestValidatorIndices(t *testing.T) {
 			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
 			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
 		},
-		Dynasty: 1,
+		ValidatorSetChangeSlot: 1,
 	}
 
 	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators), []uint32{0, 1, 2, 3, 4}) {
