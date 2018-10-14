@@ -147,10 +147,12 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				continue
 			}
 
-			cState := c.beaconDB.GetCrystallizedState()
-			aState := c.beaconDB.GetActiveState()
-			var stateTransitioned bool
+			aState, cState, err := c.beaconDB.GetState()
+			if err != nil {
+				log.Errorf("Failed to get state: %v", err)
+			}
 
+			var stateTransitioned bool
 			for cState.IsCycleTransition(block.SlotNumber()) {
 				log.Infof("Recalculating crystallized state")
 				cState, err = cState.NewStateRecalculations(
@@ -177,28 +179,12 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				continue
 			}
 
-			if err := c.beaconDB.SaveActiveState(aState); err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
-				continue
-			}
-
+			var newCState *types.CrystallizedState
 			if stateTransitioned {
-				if err := c.beaconDB.SaveCrystallizedState(cState); err != nil {
-					log.Errorf("Write crystallized state to disk failed: %v", err)
-					continue
-				}
+				newCState = cState
 			}
-
-			// Save canonical block hash with slot number to DB.
-			if err := c.beaconDB.SaveCanonicalSlotNumber(block.SlotNumber(), h); err != nil {
-				log.Errorf("Unable to save slot number to db: %v", err)
-				continue
-			}
-
-			// Save canonical block to DB.
-			if err := c.beaconDB.SaveCanonicalBlock(block); err != nil {
-				log.Errorf("Unable to save block to db: %v", err)
-				continue
+			if err := c.beaconDB.RecordChainTip(block, aState, newCState); err != nil {
+				log.Errorf("Failed to update chain: %v", err)
 			}
 
 			log.WithField("blockHash", fmt.Sprintf("%#x", h)).Info("Canonical block determined")
@@ -232,28 +218,24 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			}
 
 			if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-				log.Debugf("Proof-of-Work chain reference in block does not exist")
+				log.Errorf("Proof-of-Work chain reference in block does not exist")
 				continue
 			}
 
-			// Check if we have received the parent block.
-			parentExists, err := c.beaconDB.HasBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Could not check existence of parent: %v", err)
-				continue
-			}
-			if !parentExists {
-				log.Debugf("Block points to nil parent: %#x", block.ParentHash())
-				continue
-			}
 			parent, err := c.beaconDB.GetBlock(block.ParentHash())
 			if err != nil {
-				log.Debugf("Could not get parent block: %v", err)
+				log.Errorf("Could not get parent block: %v", err)
+				continue
+			}
+			if parent == nil {
+				log.Errorf("Block points to nil parent: %#x", block.ParentHash())
 				continue
 			}
 
-			aState := c.beaconDB.GetActiveState()
-			cState := c.beaconDB.GetCrystallizedState()
+			aState, cState, err := c.beaconDB.GetState()
+			if err != nil {
+				log.Errorf("Failed to get state: %v", err)
+			}
 
 			if valid := block.IsValid(
 				c.beaconDB,

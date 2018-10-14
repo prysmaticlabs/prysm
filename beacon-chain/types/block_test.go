@@ -17,8 +17,8 @@ func init() {
 
 type mockDB struct{}
 
-func (f *mockDB) HasBlock(h [32]byte) (bool, error) {
-	return true, nil
+func (f *mockDB) HasBlock(h [32]byte) bool {
+	return true
 }
 
 func TestGenesisBlock(t *testing.T) {
