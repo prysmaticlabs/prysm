@@ -273,3 +273,15 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 
 	return true
 }
+
+// updateAncestorHashes updates the skip list of ancestor block hashes.
+// i'th item is 2**i'th ancestor for i = 0, ..., 31.
+func updateAncestorHashes(parentAncestorHashes [][32]byte, parentSlotNum uint64, parentHash [32]byte) [][32]byte {
+	newAncestorHashes := parentAncestorHashes
+	for i := range parentAncestorHashes {
+		if parentSlotNum == (1 << uint64(i)) {
+			newAncestorHashes[i] = parentHash
+		}
+	}
+	return newAncestorHashes
+}
