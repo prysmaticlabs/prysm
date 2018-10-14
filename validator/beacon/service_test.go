@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -39,6 +40,71 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	).Return(attesterStream, nil)
 
 	return mockServiceClient
+}
+
+type mockLifecycleClient struct {
+	ctrl *gomock.Controller
+}
+
+func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
+	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
+
+	mockServiceClient.EXPECT().CurrentAssignmentsAndGenesisTime(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pb.CurrentAssignmentsResponse{
+		GenesisTimestamp: ptypes.TimestampNow(),
+		Assignments: []*pb.Assignment{
+			&pb.Assignment{
+				PublicKey: &pb.PublicKey {
+					PublicKey: []byte{0},
+				},
+				ShardId: 0,
+				Role: pb.ValidatorRole_PROPOSER,
+			},
+		},
+	}, nil)
+
+	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
+	mockServiceClient.EXPECT().LatestAttestation(
+		gomock.Any(),
+		&empty.Empty{},
+	).Return(attesterStream, nil)
+	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+
+	cycleStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
+	mockServiceClient.EXPECT().ValidatorAssignments(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(cycleStream, nil)
+	cycleStream.EXPECT().Recv().Return(&pb.ValidatorAssignmentResponse{}, io.EOF)
+
+	return mockServiceClient
+}
+
+func TestLifecycle(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	b := NewBeaconValidator(context.Background(), []byte{}, &mockLifecycleClient{ctrl})
+	// Testing basic feeds.
+	if b.AttesterAssignmentFeed() == nil {
+		t.Error("AttesterAssignmentFeed empty")
+	}
+	if b.ProposerAssignmentFeed() == nil {
+		t.Error("ProposerAssignmentFeed empty")
+	}
+	if b.ProcessedAttestationFeed() == nil {
+		t.Error("ProcessedAttestationFeed empty")
+	}
+
+	b.pubKey = []byte{0}
+
+	b.Start()
+	time.Sleep(time.Millisecond * 10)
+	testutil.AssertLogsContain(t, hook, "Starting service")
+	b.Stop()
+	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestWaitForAssignmentProposer(t *testing.T) {
