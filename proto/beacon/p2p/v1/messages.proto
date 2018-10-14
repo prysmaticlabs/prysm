@@ -64,17 +64,15 @@ message CrystallizedState {
   uint64 justified_streak = 2;
   uint64 last_justified_slot = 3;
   uint64 last_finalized_slot = 4;
-  uint64 dynasty = 5;
-  bytes dynasty_seed = 6;
-  uint64 dynasty_start_slot = 7;
-  repeated CrosslinkRecord crosslinks = 8;
-  repeated ValidatorRecord validators = 9;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 10;
-  repeated uint32 deposits_penalized_in_period = 11;
-  bytes validator_set_delta_hash_chain = 12;
-  uint32 pre_fork_version = 13;
-  uint32 post_fork_version = 14;
-  uint64 fork_slot_number =15;
+  uint64 validator_set_change_slot = 5;
+  repeated CrosslinkRecord crosslinks = 6;
+  repeated ValidatorRecord validators = 7;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
+  repeated uint32 deposits_penalized_in_period = 9;
+  bytes validator_set_delta_hash_chain = 10;
+  uint32 pre_fork_version = 11;
+  uint32 post_fork_version = 12;
+  uint64 fork_slot_number =13;
 }
 
 message ShardAndCommitteeArray {
@@ -136,7 +134,7 @@ message AttestationSignedData {
 }
 
 message CrosslinkRecord {
-  uint64 dynasty = 1;
+  bool recently_changed = 1;
   bytes shard_block_hash = 2;
   uint64 slot = 3;
 }
