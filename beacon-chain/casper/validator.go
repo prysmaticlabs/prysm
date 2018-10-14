@@ -323,3 +323,22 @@ func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 	}
 	return -1
 }
+
+// DeepCopyValidators creates a fresh new validator set by copying all the validator details
+// from the old validator set.
+func DeepCopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
+
+	for i, validator := range validatorSet {
+		newValidatorSet[i] = &pb.ValidatorRecord{
+			Pubkey:            validator.Pubkey,
+			WithdrawalShard:   validator.WithdrawalShard,
+			WithdrawalAddress: validator.WithdrawalAddress,
+			RandaoCommitment:  validator.RandaoCommitment,
+			Balance:           validator.Balance,
+			Status:            validator.Status,
+			ExitSlot:          validator.ExitSlot,
+		}
+	}
+	return newValidatorSet
+}

@@ -185,10 +185,6 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 				stateTransitioned = true
 			}
 
-			// Cleans up old attestations and generates a new active state after
-			// they have been used to recalculate the crystallized state above.
-			aState = aState.CleanUpActiveState(cState.LastStateRecalculationSlot())
-
 			aState, err = aState.CalculateNewActiveState(
 				block,
 				cState,

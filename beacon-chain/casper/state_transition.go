@@ -16,23 +16,18 @@ func TallyVoteBalances(
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64,
 	enableRewardChecking bool) (uint64, []*pb.ValidatorRecord) {
-	var blockVoteBalance uint64
 
-	if _, ok := blockVoteCache[blockHash]; ok {
-		blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
-		voterIndices := blockVoteCache[blockHash].VoterIndices
+	cache, ok := blockVoteCache[blockHash]
 
-		// Apply Rewards for each slot.
-		if enableRewardChecking {
-			validators = CalculateRewards(
-				slot,
-				voterIndices,
-				validators,
-				blockVoteBalance,
-				timeSinceFinality)
-		}
-	} else {
-		blockVoteBalance = 0
+	if !ok {
+		return 0, validators
+	}
+
+	blockVoteBalance := cache.VoteTotalDeposit
+	voterIndices := cache.VoterIndices
+	if enableRewardChecking {
+		validators = CalculateRewards(slot, voterIndices, validators,
+			blockVoteBalance, timeSinceFinality)
 	}
 
 	return blockVoteBalance, validators
@@ -68,16 +63,18 @@ func FinalizeAndJustifySlots(
 // for a shard.
 func ApplyCrosslinkRewardsAndPenalties(
 	crosslinkRecords []*pb.CrosslinkRecord,
-	currentSlot uint64,
-	indices []uint32,
+	slot uint64,
+	attesterIndices []uint32,
 	attestation *pb.AggregatedAttestation,
 	dynasty uint64,
 	validators []*pb.ValidatorRecord,
 	totalBalance uint64,
 	voteBalance uint64) {
+
 	rewardQuotient := RewardQuotient(validators)
-	for _, attesterIndex := range indices {
-		timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
+
+	for _, attesterIndex := range attesterIndices {
+		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
 
 		if crosslinkRecords[attestation.Shard].GetDynasty() != dynasty {
 			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {

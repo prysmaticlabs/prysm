@@ -223,6 +223,9 @@ func (a *ActiveState) CalculateNewActiveState(
 	parentSlot uint64,
 	enableAttestationValidity bool) (*ActiveState, error) {
 
+	// Cleans up old attestations.
+	a.CleanUpActiveState(cState.LastStateRecalculationSlot())
+
 	// Derive the new set of pending attestations.
 	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
 

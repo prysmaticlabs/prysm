@@ -211,7 +211,6 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // We also check for dynasty transition and compute for a new dynasty if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
 	var LastStateRecalculationSlotCycleBack uint64
-	var newValidators []*pb.ValidatorRecord
 	var newCrosslinks []*pb.CrosslinkRecord
 	var err error
 
@@ -225,6 +224,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
 	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
+	newValidators := casper.DeepCopyValidators(c.Validators())
 
 	if LastStateRecalculationSlot < params.GetConfig().CycleLength {
 		LastStateRecalculationSlotCycleBack = 0
@@ -246,13 +246,13 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		blockHash := recentBlockHashes[i]
 
 		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockHash, slot,
-			blockVoteCache, c.Validators(), timeSinceFinality, enableRewardChecking)
+			blockVoteCache, newValidators, timeSinceFinality, enableRewardChecking)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
 		if enableCrossLinks {
-			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
+			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, newValidators, block.SlotNumber())
 			if err != nil {
 				return nil, err
 			}
@@ -331,8 +331,8 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 // processCrosslinks checks if the proposed shard block has recevied
 // 2/3 of the votes. If yes, we update crosslink record to point to
 // the proposed shard block with latest dynasty and slot numbers.
-func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
-	validators := c.data.Validators
+func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64,
+	validators []*pb.ValidatorRecord, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
 	dynasty := c.data.Dynasty
 	crosslinkRecords := copyCrosslinks(c.data.Crosslinks)
 
