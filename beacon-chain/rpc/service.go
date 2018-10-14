@@ -292,7 +292,6 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := casper.ValidatorShardID(
 		req.PublicKey,
-
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
