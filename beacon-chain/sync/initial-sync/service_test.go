@@ -71,9 +71,9 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: genericHash,
 	}
 
@@ -93,7 +93,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	copy(hash[:], blockResponse.Block.CrystallizedStateRoot)
 
 	if hash != ss.initialCrystallizedStateRoot {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.CrystallizedStateRoot)
 	}
 
 	hook.Reset()
@@ -149,9 +149,9 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
+			PowChainRef:           []byte{1, 2, 3},
+			AncestorHashes:        [][]byte{genericHash},
+			Slot:                  Slot,
 			CrystallizedStateRoot: crystallizedStateRoot[:],
 		}
 
@@ -176,7 +176,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.crystallizedStateBuf <- msg2
 
 	if ss.currentSlot == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlot)
+		t.Fatalf("Crystallized state updated incorrectly: %#x", ss.currentSlot)
 	}
 
 	msg2.Data = stateResponse
@@ -185,7 +185,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	if crystallizedStateRoot != ss.initialCrystallizedStateRoot {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", br.Block.CrystallizedStateRoot)
 	}
 
 	msg1 = getBlockResponseMsg(30)
@@ -248,9 +248,9 @@ func TestDelayChan(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 	}
 

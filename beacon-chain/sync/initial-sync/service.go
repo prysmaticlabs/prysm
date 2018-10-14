@@ -216,7 +216,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block := types.NewBlock(data.Block)
 	h := block.CrystallizedStateRoot()
-	log.Debugf("Successfully processed incoming block with crystallized state hash: %x", h)
+	log.Debugf("Successfully processed incoming block with crystallized state hash: %#x", h)
 	s.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
 	return nil
 }
@@ -230,7 +230,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	if err != nil {
 		return err
 	}
-	log.WithField("blockhash", fmt.Sprintf("%x", h)).Debug("Crystallized state hash exists locally")
+	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Crystallized state hash exists locally")
 
 	if err := s.writeBlockToDB(block); err != nil {
 		return err
@@ -238,7 +238,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 
 	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
 
-	log.Infof("Saved block with hash %x for initial sync", h)
+	log.Infof("Saved block with hash %#x for initial sync", h)
 	return nil
 }
 
