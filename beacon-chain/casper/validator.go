@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 )
 
@@ -149,27 +150,29 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 	return 0, fmt.Errorf("can't find shard ID for validator with public key %#x", pubKey)
 }
 
-// ValidatorSlotAndResponsibility returns a validator's assingned slot number
+// ValidatorSlotAndRole returns a validator's assingned slot number
 // and whether it should act as an attester or proposer.
-func ValidatorSlotAndResponsibility(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, string, error) {
+func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
-		return 0, "", err
+		return 0, pbrpc.ValidatorRole_UNKNOWN, err
 	}
 
 	for slot, slotCommittee := range shardCommittees {
 		for i, committee := range slotCommittee.ArrayShardAndCommittee {
 			for v, validator := range committee.Committee {
-				if i == 0 && v == slot%len(committee.Committee) && validator == index {
-					return uint64(slot), "proposer", nil
+				if validator != index {
+					continue
 				}
-				if validator == index {
-					return uint64(slot), "attester", nil
+				if i == 0 && v == slot%len(committee.Committee) {
+					return uint64(slot), pbrpc.ValidatorRole_PROPOSER, nil
 				}
+
+				return uint64(slot), pbrpc.ValidatorRole_ATTESTER, nil
 			}
 		}
 	}
-	return 0, "", fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
+	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
 // TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
