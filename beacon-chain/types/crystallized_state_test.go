@@ -197,7 +197,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Process crosslinks happened at slot 50.
-	shardAndCommitteesForSlots, err := casper.initialShardAndCommitteesForSlots(validators)
+	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(validators)
 	if err != nil {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}

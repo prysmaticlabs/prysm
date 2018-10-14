@@ -139,24 +139,24 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			Dynasty:        0,
-			ShardBlockHash: []byte{'A'},
-			Slot:           10,
+			RecentlyChanged: false,
+			ShardBlockHash:  []byte{'A'},
+			Slot:            10,
 		},
 		{
-			Dynasty:        0,
-			ShardBlockHash: []byte{'B'},
-			Slot:           10,
+			RecentlyChanged: false,
+			ShardBlockHash:  []byte{'B'},
+			Slot:            10,
 		},
 		{
-			Dynasty:        0,
-			ShardBlockHash: []byte{'C'},
-			Slot:           10,
+			RecentlyChanged: false,
+			ShardBlockHash:  []byte{'C'},
+			Slot:            10,
 		},
 		{
-			Dynasty:        0,
-			ShardBlockHash: []byte{'D'},
-			Slot:           10,
+			RecentlyChanged: false,
+			ShardBlockHash:  []byte{'D'},
+			Slot:            10,
 		},
 	}
 
@@ -166,7 +166,7 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	ApplyCrosslinkRewardsAndPenalties(crossLinks, 12, indices, attestation, 1, validators, totalBalance, voteBalance)
+	ApplyCrosslinkRewardsAndPenalties(crossLinks, 12, indices, attestation, validators, totalBalance, voteBalance)
 
 	if validators[20].Balance <= initialBalance {
 		t.Fatalf("validator balance has not been updated %d", validators[20].Balance)
@@ -188,14 +188,14 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			Dynasty:        0,
-			ShardBlockHash: []byte{'A'},
-			Slot:           10,
+			RecentlyChanged: false,
+			ShardBlockHash:  []byte{'A'},
+			Slot:            10,
 		},
 		{
-			Dynasty:        0,
-			ShardBlockHash: []byte{'A'},
-			Slot:           10,
+			RecentlyChanged: true,
+			ShardBlockHash:  []byte{'A'},
+			Slot:            10,
 		},
 	}
 
@@ -206,19 +206,15 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, 0, attestation, crossLinks)
+	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
-	if crossLinks[1].GetDynasty() != 0 {
-		t.Fatalf("dynasty updated when it was not supposed to %d", crossLinks[1].GetDynasty())
+	if bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
+		t.Fatal("crosslink updated when it was not supposed to")
 	}
 
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, 2, attestation, crossLinks)
+	crossLinks[1].RecentlyChanged = false
 
-	if crossLinks[1].GetDynasty() != 2 {
-		t.Fatalf("dynasty not updated when it was supposed to %d", crossLinks[1].GetDynasty())
-	}
-
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, 0, attestation, crossLinks)
+	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())
