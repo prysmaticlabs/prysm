@@ -272,12 +272,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 // isRandaoValid verifies the validity of randao from block by comparing it with proposer's randao
 // from crystallized state.
 func (b *Block) isRandaoValid(cStateRandao []byte) bool {
-	// TODO(#646): Replace this with a hash function
-	var hash [32]byte
-	h := blake2b.Sum512(cStateRandao)
-	copy(hash[:], h[:32])
-
-	return b.RandaoReveal() == hash
+	return b.RandaoReveal() == hashutil.Hash(cStateRandao)
 }
 
 func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {
