@@ -55,12 +55,12 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 	).Return(&pb.CurrentAssignmentsResponse{
 		GenesisTimestamp: ptypes.TimestampNow(),
 		Assignments: []*pb.Assignment{
-			&pb.Assignment{
-				PublicKey: &pb.PublicKey {
+			{
+				PublicKey: &pb.PublicKey{
 					PublicKey: []byte{0},
 				},
 				ShardId: 0,
-				Role: pb.ValidatorRole_PROPOSER,
+				Role:    pb.ValidatorRole_PROPOSER,
 			},
 		},
 	}, nil)
