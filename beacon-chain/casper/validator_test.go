@@ -39,6 +39,17 @@ func TestHasVoted(t *testing.T) {
 	}
 }
 
+func TestInitialValidators(t *testing.T) {
+	validators := InitialValidators()
+	for _, validator := range validators {
+		if validator.GetBalance() != uint64(params.GetConfig().DepositSize) {
+			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
+		}
+		if validator.GetStatus() != uint64(params.Active) {
+			t.Errorf("validator status is not active: %d", validator.GetStatus())
+		}
+	}
+}
 func TestValidatorIndices(t *testing.T) {
 	data := &pb.CrystallizedState{
 		Validators: []*pb.ValidatorRecord{
@@ -275,6 +286,92 @@ func TestTotalActiveValidatorDeposit(t *testing.T) {
 	if totalDepositETH != 10 {
 		t.Fatalf("incorrect total deposit in ETH calculated %d", totalDepositETH)
 	}
+}
+
+func TestCommitteeInShardAndSlot(t *testing.T) {
+
+	testCommittee := []uint32{20, 21, 22, 23, 24, 25, 26}
+
+	shardCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
+			{Shard: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
+			{Shard: 3, Committee: []uint32{14, 15, 16, 17, 18, 19}},
+		}},
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 3, Committee: testCommittee},
+			{Shard: 4, Committee: []uint32{27, 28, 29, 30, 31, 32, 33}},
+			{Shard: 5, Committee: []uint32{34, 35, 36, 37, 38, 39}},
+		}},
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 3, Committee: []uint32{40, 41, 42, 43, 44, 45, 46}},
+			{Shard: 7, Committee: []uint32{47, 48, 49, 50, 51, 52, 53}},
+			{Shard: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
+		}},
+	}
+	_, err := CommitteeInShardAndSlot(2, 5, shardCommittees)
+	if err == nil {
+		t.Fatalf("function did not return error even though committee for shard does not exist")
+	}
+
+	committee, err := CommitteeInShardAndSlot(1, 3, shardCommittees)
+	if err != nil {
+		t.Fatalf("unable to get committees for shard: %v", err)
+	}
+
+	if len(committee) != len(testCommittee) {
+		t.Fatalf("the committees are not of the same sizes %d : %d", len(committee), len(testCommittee))
+	}
+	for i, indice := range committee {
+		if indice != testCommittee[i] {
+			t.Errorf("retrieved indice is not the same as the one put in the committee %d , %d", indice, testCommittee[i])
+		}
+	}
+}
+
+func TestVotedBalanceInAttestation(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+	defaultBalance := uint64(1e9)
+	for i := 0; i < 100; i++ {
+		validators = append(validators, &pb.ValidatorRecord{Balance: defaultBalance, Status: uint64(params.Active)})
+	}
+
+	// Calculateing balances with zero votes by attesters.
+	attestation := &pb.AggregatedAttestation{
+		AttesterBitfield: []byte{0, 0, 0, 0},
+	}
+
+	indices := []uint32{4, 8, 10, 14, 30}
+	expectedTotalBalance := uint64(len(indices)) * defaultBalance
+
+	totalBalance, voteBalance := VotedBalanceInAttestation(validators, indices, attestation)
+
+	if totalBalance != expectedTotalBalance {
+		t.Errorf("incorrect total balance calculated %d", totalBalance)
+	}
+
+	if voteBalance != 0 {
+		t.Errorf("incorrect vote balance calculated %d", voteBalance)
+	}
+
+	// Calculating balances with 3 votes by attesters.
+
+	newAttestation := &pb.AggregatedAttestation{
+		AttesterBitfield: []byte{8, 128, 0, 2},
+	}
+
+	expectedTotalBalance = uint64(len(indices)) * defaultBalance
+
+	totalBalance, voteBalance = VotedBalanceInAttestation(validators, indices, newAttestation)
+
+	if totalBalance != expectedTotalBalance {
+		t.Errorf("incorrect total balance calculated %d", totalBalance)
+	}
+
+	if voteBalance != defaultBalance*3 {
+		t.Errorf("incorrect vote balance calculated %d", voteBalance)
+	}
+
 }
 
 func TestAddValidators(t *testing.T) {
