@@ -4,13 +4,11 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
@@ -26,12 +24,10 @@ type ChainService struct {
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
+	processedBlockChan             chan *types.Block
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
-	blocksPendingProcessing        [][32]byte
-	lock                           sync.Mutex
 	genesisTime                    time.Time
-	slotTicker                     utils.SlotTicker
 	enableCrossLinks               bool
 	enableRewardChecking           bool
 	enableAttestationValidity      bool
@@ -61,10 +57,10 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		beaconDB:                       cfg.BeaconDB,
 		web3Service:                    cfg.Web3Service,
 		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
+		processedBlockChan:             make(chan *types.Block),
 		incomingBlockFeed:              new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
-		blocksPendingProcessing:        [][32]byte{},
 		enablePOWChain:                 cfg.EnablePOWChain,
 		enableCrossLinks:               cfg.EnableCrossLinks,
 		enableRewardChecking:           cfg.EnableRewardChecking,
@@ -83,15 +79,13 @@ func (c *ChainService) Start() {
 		return
 	}
 
-	c.slotTicker = utils.GetSlotTicker(c.genesisTime)
-	go c.updateHead(c.slotTicker.C())
-	go c.blockProcessing()
+	go c.updateHead(c.processedBlockChan)
+	go c.blockProcessing(c.processedBlockChan)
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
 func (c *ChainService) Stop() error {
 	defer c.cancel()
-	c.slotTicker.Done()
 
 	log.Info("Stopping service")
 	return nil
@@ -131,27 +125,13 @@ func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
 // at an in-memory slice of block hashes pending processing and
 // selects the best block according to the in-protocol fork choice
 // rule as canonical. This block is then persisted to storage.
-func (c *ChainService) updateHead(slotInterval <-chan uint64) {
+func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
-		case slot := <-slotInterval:
-			log.WithField("slotNumber", slot).Info("New beacon slot")
-
-			// First, we check if there were any blocks processed in the previous slot.
-			// If there is, we fetch the first one from the DB.
-			if len(c.blocksPendingProcessing) == 0 {
-				continue
-			}
-
-			// Naive fork choice rule: we pick the first block we processed for the previous slot
-			// as canonical.
-			block, err := c.beaconDB.GetBlock(c.blocksPendingProcessing[0])
-			if err != nil {
-				log.Errorf("Could not get block: %v", err)
-				continue
-			}
+		case block := <-processedBlock:
+			log.WithField("slot", block.SlotNumber()).Info("New beacon slot")
 
 			h, err := block.Hash()
 			if err != nil {
@@ -171,7 +151,8 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 			aState := c.beaconDB.GetActiveState()
 			var stateTransitioned bool
 
-			for cState.IsCycleTransition(parentBlock.SlotNumber()) {
+			for cState.IsCycleTransition(block.SlotNumber()) {
+				log.Infof("Recalculating crystallized state")
 				cState, err = cState.NewStateRecalculations(
 					aState,
 					block,
@@ -229,17 +210,11 @@ func (c *ChainService) updateHead(slotInterval <-chan uint64) {
 				c.canonicalCrystallizedStateFeed.Send(cState)
 			}
 			c.canonicalBlockFeed.Send(block)
-
-			// Clear the blocks pending processing, mutex lock for thread safety
-			// in updating this slice.
-			c.lock.Lock()
-			c.blocksPendingProcessing = [][32]byte{}
-			c.lock.Unlock()
 		}
 	}
 }
 
-func (c *ChainService) blockProcessing() {
+func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
 	for {
@@ -299,11 +274,8 @@ func (c *ChainService) blockProcessing() {
 
 			log.Infof("Finished processing received block: %#x", blockHash)
 
-			// We push the hash of the block we just stored to a pending processing
-			// slice the fork choice rule will utilize.
-			c.lock.Lock()
-			c.blocksPendingProcessing = append(c.blocksPendingProcessing, blockHash)
-			c.lock.Unlock()
+			// Push the block to trigger the fork choice rule
+			processedBlock <- block
 		}
 	}
 }

@@ -7,7 +7,6 @@ go_library(
         "flags.go",
         "genesis_json.go",
         "shuffle.go",
-        "slot_ticker.go",
         "vote_cache.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils",
@@ -28,7 +27,6 @@ go_test(
         "clock_test.go",
         "genesis_json_test.go",
         "shuffle_test.go",
-        "slot_ticker_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

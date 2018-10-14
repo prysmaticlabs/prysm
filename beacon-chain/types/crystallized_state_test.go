@@ -2,12 +2,12 @@ package types
 
 import (
 	"bytes"
-	//"strconv"
+	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	//"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -77,7 +77,6 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 }
 
-/*
 func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -165,7 +164,6 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 }
-*/
 
 func TestProcessCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.

@@ -9,11 +9,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,7 +83,7 @@ func (sim *Simulator) Start() {
 		return
 	}
 
-	slotTicker := utils.GetSlotTicker(genesisTime)
+	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetConfig().SlotDuration)
 	go func() {
 		sim.run(slotTicker.C(), sim.blockRequestChan)
 		close(sim.blockRequestChan)
