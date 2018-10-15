@@ -18,7 +18,11 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		if err != nil {
+			t.Errorf("checking bit failed at index: %d with : %v", i, err)
+		}
+
 		if !voted {
 			t.Error("validator voted but received didn't vote")
 		}
@@ -30,7 +34,11 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		if err != nil {
+			t.Errorf("checking bit failed at index: %d : %v", i, err)
+		}
+
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
