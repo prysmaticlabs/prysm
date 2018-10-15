@@ -228,7 +228,12 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	}
 
 	// Get all the block hashes up to cycle length.
-	parentHashes := aState.getSignedParentHashes(b, attestation)
+	parentHashes, err := aState.getSignedParentHashes(b, attestation)
+	if err != nil {
+		log.Errorf("unable to get signed parent hashes: %v", err)
+		return false
+	}
+
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
 		log.Debugf("Unable to get validator committee: %v", attesterIndices)
