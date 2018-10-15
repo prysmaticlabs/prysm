@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -74,7 +75,7 @@ func TestGenesisBlock(t *testing.T) {
 }
 
 func TestBlockValidity(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
@@ -86,7 +87,7 @@ func TestBlockValidity(t *testing.T) {
 	}
 	aState := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*VoteCache))
+	}, make(map[[32]byte]*utils.VoteCache))
 
 	b := NewBlock(&pb.BeaconBlock{
 		Slot: 1,

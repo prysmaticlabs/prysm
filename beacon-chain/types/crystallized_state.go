@@ -1,16 +1,10 @@
 package types
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -27,66 +21,17 @@ func NewCrystallizedState(data *pb.CrystallizedState) *CrystallizedState {
 	return &CrystallizedState{data: data}
 }
 
-func initialValidators() []*pb.ValidatorRecord {
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
-		validator := &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
-			WithdrawalAddress: []byte{},
-			Pubkey:            []byte{},
-		}
-		validators = append(validators, validator)
-	}
-	return validators
-}
-
-func initialValidatorsFromJSON(genesisJSONPath string) ([]*pb.ValidatorRecord, error) {
-	// #nosec G304
-	// genesisJSONPath is a user input for the path of genesis.json.
-	// Ex: /path/to/my/genesis.json.
-	f, err := os.Open(genesisJSONPath)
-	if err != nil {
-		return nil, err
-	}
-
-	cState := &pb.CrystallizedState{}
-	if err := jsonpb.Unmarshal(f, cState); err != nil {
-		return nil, fmt.Errorf("error converting JSON to proto: %v", err)
-	}
-
-	return cState.Validators, nil
-}
-
-func initialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
-	seed := make([]byte, 0, 32)
-	committees, err := casper.ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	// Starting with 2 cycles (128 slots) with the same committees.
-	return append(committees, committees...), nil
-}
-
 // NewGenesisCrystallizedState initializes the crystallized state for slot 0.
-func NewGenesisCrystallizedState(genesisJSONPath string) (*CrystallizedState, error) {
+func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*CrystallizedState, error) {
 	// We seed the genesis crystallized state with a bunch of validators to
 	// bootstrap the system.
-	var genesisValidators []*pb.ValidatorRecord
 	var err error
-	if genesisJSONPath != "" {
-		log.Infof("Initializing crystallized state from %s", genesisJSONPath)
-		genesisValidators, err = initialValidatorsFromJSON(genesisJSONPath)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		genesisValidators = initialValidators()
-	}
+	if genesisValidators == nil {
+		genesisValidators = casper.InitialValidators()
 
+	}
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(genesisValidators)
+	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {
 		return nil, err
 	}
@@ -230,23 +175,14 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
 	slotsStart := c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
-	shardCommitteeArray := c.data.ShardAndCommitteesForSlots
-	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
-	for i := 0; i < len(shardCommittee); i++ {
-		if attestation.Shard == shardCommittee[i].Shard {
-			return shardCommittee[i].Committee, nil
-		}
-	}
-	return nil, fmt.Errorf("unable to find attestation based on slot: %v, Shard: %v", attestation.Slot, attestation.Shard)
+	return casper.CommitteeInShardAndSlot(slotIndex, attestation.GetShard(), c.data.GetShardAndCommitteesForSlots())
 }
 
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new committees if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, *ActiveState, error) {
-	var blockVoteBalance uint64
-	var LastStateRecalculationSlotCycleBack uint64
-	var newValidators []*pb.ValidatorRecord
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
+	var lastStateRecalculationSlotCycleBack uint64
 	var newCrosslinks []*pb.CrosslinkRecord
 	var err error
 
@@ -256,14 +192,15 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	lastStateRecalculationSlot := c.LastStateRecalculationSlot()
 	validatorSetChangeSlot := c.ValidatorSetChangeSlot()
 	blockVoteCache := aState.GetBlockVoteCache()
-	ShardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
+	shardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
 	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
+	newValidators := casper.CopyValidators(c.Validators())
 
 	if lastStateRecalculationSlot < params.GetConfig().CycleLength {
-		LastStateRecalculationSlotCycleBack = 0
+		lastStateRecalculationSlotCycleBack = 0
 	} else {
-		LastStateRecalculationSlotCycleBack = lastStateRecalculationSlot - params.GetConfig().CycleLength
+		lastStateRecalculationSlotCycleBack = lastStateRecalculationSlot - params.GetConfig().CycleLength
 	}
 
 	// If reward checking is disabled, the new set of validators for the cycle
@@ -274,59 +211,33 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
-		var voterIndices []uint32
+		var blockVoteBalance uint64
 
-		slot := LastStateRecalculationSlotCycleBack + i
+		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
-		if _, ok := blockVoteCache[blockHash]; ok {
-			blockVoteBalance = blockVoteCache[blockHash].VoteTotalDeposit
-			voterIndices = blockVoteCache[blockHash].VoterIndices
 
-			// Apply Rewards for each slot.
-			if enableRewardChecking {
-				newValidators = casper.CalculateRewards(
-					slot,
-					voterIndices,
-					c.Validators(),
-					blockVoteBalance,
-					timeSinceFinality)
-			}
-		} else {
-			blockVoteBalance = 0
-		}
+		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockHash, slot,
+			blockVoteCache, newValidators, timeSinceFinality, enableRewardChecking)
 
-		if 3*blockVoteBalance >= 2*c.TotalDeposits() {
-			if slot > justifiedSlot {
-				justifiedSlot = slot
-			}
-			justifiedStreak++
-		} else {
-			justifiedStreak = 0
-		}
-
-		if slot > params.GetConfig().CycleLength && justifiedStreak >= params.GetConfig().CycleLength+1 && slot-params.GetConfig().CycleLength-1 > finalizedSlot {
-			finalizedSlot = slot - params.GetConfig().CycleLength - 1
-		}
+		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
+			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
 		if enableCrossLinks {
-			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, block.SlotNumber())
+			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, newValidators, block.SlotNumber())
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
-
-	// Clean up old attestations.
-	newPendingAttestations := aState.cleanUpAttestations(lastStateRecalculationSlot)
 
 	c.data.LastFinalizedSlot = finalizedSlot
 	// Entering new validator set change transition.
 	if c.isValidatorSetChange(block.SlotNumber()) {
 		log.Info("Entering validator set change transition")
 		validatorSetChangeSlot = lastStateRecalculationSlot
-		ShardAndCommitteesForSlots, err = c.newValidatorSetRecalculations(block.ParentHash())
+		shardAndCommitteesForSlots, err = c.newValidatorSetRecalculations(block.ParentHash())
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		period := block.SlotNumber() / params.GetConfig().WithdrawalPeriod
@@ -336,7 +247,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// Construct new crystallized state after cycle and validator set changed.
 	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
-		ShardAndCommitteesForSlots: ShardAndCommitteesForSlots,
+		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		Validators:                 newValidators,
 		LastStateRecalculationSlot: lastStateRecalculationSlot + params.GetConfig().CycleLength,
 		LastJustifiedSlot:          justifiedSlot,
@@ -346,13 +257,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		ValidatorSetChangeSlot:     validatorSetChangeSlot,
 	})
 
-	// Construct new active state after clean up pending attestations.
-	newActiveState := NewActiveState(&pb.ActiveState{
-		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes:   aState.data.RecentBlockHashes,
-	}, aState.blockVoteCache)
-
-	return newCrystallizedState, newActiveState, nil
+	return newCrystallizedState, nil
 }
 
 // newValidatorSetRecalculations recomputes the validator set.
@@ -372,11 +277,6 @@ func (c *CrystallizedState) newValidatorSetRecalculations(seed [32]byte) ([]*pb.
 	}
 
 	return append(c.data.ShardAndCommitteesForSlots[:params.GetConfig().CycleLength], newShardCommitteeArray...), nil
-}
-
-type shardAttestation struct {
-	Shard          uint64
-	shardBlockHash [32]byte
 }
 
 func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
@@ -399,73 +299,29 @@ func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 // processCrosslinks checks if the proposed shard block has recevied
 // 2/3 of the votes. If yes, we update crosslink record to point to
 // the proposed shard block with latest beacon chain slot numbers.
-func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
-	validators := c.data.Validators
+func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation, slot uint64,
+	validators []*pb.ValidatorRecord, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
 	crosslinkRecords := copyCrosslinks(c.data.Crosslinks)
-	rewardQuotient := casper.RewardQuotient(validators)
 
-	shardAttestationBalance := map[shardAttestation]uint64{}
 	for _, attestation := range pendingAttestations {
 		indices, err := c.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
 		}
 
-		shardBlockHash := [32]byte{}
-		copy(shardBlockHash[:], attestation.ShardBlockHash)
-		shardAtt := shardAttestation{
-			Shard:          attestation.Shard,
-			shardBlockHash: shardBlockHash,
-		}
-		if _, ok := shardAttestationBalance[shardAtt]; !ok {
-			shardAttestationBalance[shardAtt] = 0
+		totalBalance, voteBalance, err := casper.VotedBalanceInAttestation(validators, indices, attestation)
+		if err != nil {
+			return nil, err
 		}
 
-		// find the total and vote balance of the shard committee.
-		var totalBalance uint64
-		var voteBalance uint64
-		for _, attesterIndex := range indices {
-			// find balance of validators who voted.
-			isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
-			if err != nil {
-				log.Errorf("Bitfield check for attester failed at index: %d with: %v", attesterIndex, err)
-			}
-
-			if isBitSet {
-				voteBalance += validators[attesterIndex].Balance
-			}
-			// add to total balance of the committee.
-			totalBalance += validators[attesterIndex].Balance
+		err = casper.ApplyCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
+			validators, totalBalance, voteBalance)
+		if err != nil {
+			return nil, err
 		}
 
-		for _, attesterIndex := range indices {
-			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
+		crosslinkRecords = casper.ProcessBalancesInCrosslink(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
 
-			if !crosslinkRecords[attestation.Shard].RecentlyChanged {
-				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
-				if err != nil {
-					log.Errorf("Bitfield check for attester failed at index: %d with: %v", attesterIndex, err)
-				}
-
-				if isBitSet {
-					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
-				} else {
-					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
-				}
-			}
-		}
-
-		shardAttestationBalance[shardAtt] += voteBalance
-
-		// if 2/3 of committee voted on this crosslink, update the crosslink
-		// with latest shard block hash, and slot number.
-		if 3*voteBalance >= 2*totalBalance && !crosslinkRecords[attestation.Shard].RecentlyChanged {
-			crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
-				RecentlyChanged: true,
-				ShardBlockHash:  attestation.ShardBlockHash,
-				Slot:            slot,
-			}
-		}
 	}
 	return crosslinkRecords, nil
 }

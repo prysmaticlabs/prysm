@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -18,7 +19,7 @@ type ActiveState struct {
 	data *pb.ActiveState
 	// blockVoteCache is not part of protocol state, it is
 	// used as a helper cache for cycle init calculations.
-	blockVoteCache map[[32]byte]*VoteCache
+	blockVoteCache map[[32]byte]*utils.VoteCache
 }
 
 // NewGenesisActiveState initializes the active state for slot 0.
@@ -34,12 +35,12 @@ func NewGenesisActiveState() *ActiveState {
 			PendingAttestations: []*pb.AggregatedAttestation{},
 			RecentBlockHashes:   recentBlockHashes,
 		},
-		blockVoteCache: make(map[[32]byte]*VoteCache),
+		blockVoteCache: make(map[[32]byte]*utils.VoteCache),
 	}
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveState, blockVoteCache map[[32]byte]*VoteCache) *ActiveState {
+func NewActiveState(data *pb.ActiveState, blockVoteCache map[[32]byte]*utils.VoteCache) *ActiveState {
 	return &ActiveState{data: data, blockVoteCache: blockVoteCache}
 }
 
@@ -84,7 +85,7 @@ func (a *ActiveState) isVoteCacheEmpty(blockHash [32]byte) bool {
 }
 
 // GetBlockVoteCache returns the entire set of block vote cache.
-func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
+func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*utils.VoteCache {
 	return a.blockVoteCache
 }
 
@@ -143,8 +144,8 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 }
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*VoteCache, error) {
-	update := voteCacheDeepCopy(a.GetBlockVoteCache())
+func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*utils.VoteCache, error) {
+	update := utils.VoteCacheDeepCopy(a.GetBlockVoteCache())
 
 	for i := 0; i < len(block.Attestations()); i++ {
 		attestation := block.Attestations()[i]
@@ -174,7 +175,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 
 			// Initialize vote cache of a given block hash if it doesn't exist already.
 			if !a.isVoteCacheEmpty(h) {
-				update[h] = newVoteCache()
+				update[h] = utils.NewVoteCache()
 			}
 
 			// Loop through attester indices, if the attester has voted but was not accounted for
@@ -206,6 +207,20 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	return update, nil
 }
 
+// CleanUpActiveState removes the old attestations going from a cycle length behind
+// from the last state recalc and then generates the new active state. This is run after
+// a crystallized state transition.
+func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
+	slot := lastStateRecalc - params.GetConfig().CycleLength
+	newPendingAttestations := a.cleanUpAttestations(slot)
+
+	// Construct new active state after clean up pending attestations.
+	return NewActiveState(&pb.ActiveState{
+		PendingAttestations: newPendingAttestations,
+		RecentBlockHashes:   a.data.RecentBlockHashes,
+	}, a.blockVoteCache)
+}
+
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(
@@ -213,6 +228,10 @@ func (a *ActiveState) CalculateNewActiveState(
 	cState *CrystallizedState,
 	parentSlot uint64,
 	enableAttestationValidity bool) (*ActiveState, error) {
+
+	// Cleans up old attestations.
+	a.CleanUpActiveState(cState.LastStateRecalculationSlot())
+
 	// Derive the new set of pending attestations.
 	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
 
