@@ -282,3 +282,102 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 }
+
+func createHashFromByte(repeatedByte byte) []byte {
+	hash := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		hash[i] = repeatedByte
+	}
+
+	return hash
+}
+
+func TestGetSignedParentHashes(t *testing.T) {
+	// Test the scenario described in the spec:
+	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
+	cfg := params.GetConfig()
+	oldCycleLength := cfg.CycleLength
+	cycleLength := uint64(4)
+	cfg.CycleLength = cycleLength
+	defer func() {
+		cfg.CycleLength = oldCycleLength
+	}()
+
+	recentBlockHashes := make([][]byte, 11)
+	recentBlockHashes[0] = createHashFromByte('Z')
+	recentBlockHashes[1] = createHashFromByte('A')
+	recentBlockHashes[2] = createHashFromByte('B')
+	recentBlockHashes[3] = createHashFromByte('C')
+	recentBlockHashes[4] = createHashFromByte('D')
+	recentBlockHashes[5] = createHashFromByte('E')
+	recentBlockHashes[6] = createHashFromByte('F')
+	recentBlockHashes[7] = createHashFromByte('G')
+	recentBlockHashes[8] = createHashFromByte('H')
+	recentBlockHashes[9] = createHashFromByte('I')
+	recentBlockHashes[10] = createHashFromByte('J')
+
+	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, nil)
+
+	b := NewBlock(&pb.BeaconBlock{Slot: 11})
+
+	obliqueParentHashes := make([][]byte, 2)
+	obliqueParentHashes[0] = createHashFromByte(0)
+	obliqueParentHashes[1] = createHashFromByte(1)
+	a := &pb.AggregatedAttestation{
+		ObliqueParentHashes: obliqueParentHashes,
+		Slot:                5,
+	}
+
+	hashes, err := aState.getSignedParentHashes(b, a)
+	if err != nil {
+		t.Fatalf("failed to getSignedParentHashes: %v", err)
+	}
+	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
+		t.Fatalf("getSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
+	}
+	if hashes[2][0] != 0 || hashes[3][0] != 1 {
+		t.Fatalf("getSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
+	}
+}
+
+func TestGetSignedParentHashesIndexFail(t *testing.T) {
+	cfg := params.GetConfig()
+	oldCycleLength := cfg.CycleLength
+	cycleLength := uint64(4)
+	cfg.CycleLength = cycleLength
+	defer func() {
+		cfg.CycleLength = oldCycleLength
+	}()
+
+	recentBlockHashes := make([][]byte, 8)
+	recentBlockHashes[0] = createHashFromByte('Z')
+	recentBlockHashes[1] = createHashFromByte('A')
+	recentBlockHashes[2] = createHashFromByte('B')
+	recentBlockHashes[3] = createHashFromByte('C')
+	recentBlockHashes[4] = createHashFromByte('D')
+	recentBlockHashes[5] = createHashFromByte('E')
+	recentBlockHashes[6] = createHashFromByte('F')
+	recentBlockHashes[7] = createHashFromByte('G')
+
+	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, nil)
+
+	b := NewBlock(&pb.BeaconBlock{Slot: 8})
+	a := &pb.AggregatedAttestation{
+		ObliqueParentHashes: [][]byte{},
+		Slot:                2,
+	}
+
+	_, err := aState.getSignedParentHashes(b, a)
+	if err == nil {
+		t.Error("expected getSignedParentHashes to fail")
+	}
+
+	a2 := &pb.AggregatedAttestation{
+		ObliqueParentHashes: [][]byte{},
+		Slot:                8,
+	}
+	_, err = aState.getSignedParentHashes(b, a2)
+	if err == nil {
+		t.Error("expected getSignedParentHashes to fail")
+	}
+}

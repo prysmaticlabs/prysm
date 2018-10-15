@@ -149,7 +149,11 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	for i := 0; i < len(block.Attestations()); i++ {
 		attestation := block.Attestations()[i]
 
-		parentHashes := a.getSignedParentHashes(block, attestation)
+		parentHashes, err := a.getSignedParentHashes(block, attestation)
+		if err != nil {
+			return nil, err
+		}
+
 		attesterIndices, err := cState.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
@@ -237,17 +241,27 @@ func (a *ActiveState) CalculateNewActiveState(
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) [][32]byte {
-	var signedParentHashes [][32]byte
-	start := block.SlotNumber() - attestation.Slot
-	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.GetConfig().CycleLength
-
+func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
 	recentBlockHashes := a.RecentBlockHashes()
-	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)
+	obliqueParentHashes := attestation.ObliqueParentHashes
+	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
 
-	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
-		hashes := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, hashes)
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
+	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
+
+	if startIdx < 0 || endIdx > len(recentBlockHashes) {
+		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}
-	return signedParentHashes
+
+	hashes := make([][32]byte, 0, params.GetConfig().CycleLength)
+	for i := startIdx; i < endIdx; i++ {
+		hashes = append(hashes, recentBlockHashes[i])
+	}
+
+	for i := 0; i < len(obliqueParentHashes); i++ {
+		hash := common.BytesToHash(obliqueParentHashes[i])
+		hashes = append(hashes, hash)
+	}
+
+	return hashes, nil
 }
