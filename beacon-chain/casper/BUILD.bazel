@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "incentives.go",
         "sharding.go",
+        "state_transition.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/casper",
@@ -28,12 +29,14 @@ go_test(
     srcs = [
         "incentives_test.go",
         "sharding_test.go",
+        "state_transition_test.go",
         "validator_test.go",
     ],
     embed = [":go_default_library"],
     race = "off",  # TODO(#604): fix issues with tests failing with race on.
     deps = [
         "//beacon-chain/params:go_default_library",
+        "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bitutil:go_default_library",
         "//shared/mathutil:go_default_library",

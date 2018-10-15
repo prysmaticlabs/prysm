@@ -160,7 +160,7 @@ func TestRunningChainService(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestUpdateHead(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

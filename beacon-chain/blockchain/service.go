@@ -153,7 +153,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 
 			for cState.IsCycleTransition(block.SlotNumber()) {
 				log.Infof("Recalculating crystallized state")
-				cState, aState, err = cState.NewStateRecalculations(
+				cState, err = cState.NewStateRecalculations(
 					aState,
 					block,
 					c.enableCrossLinks,
