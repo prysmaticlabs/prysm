@@ -225,21 +225,25 @@ func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArr
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
 // attestation.
 func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
-	attestation *pb.AggregatedAttestation) (uint64, uint64) {
+	attestation *pb.AggregatedAttestation) (uint64, uint64, error) {
 
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64
 	var voteBalance uint64
 	for _, attesterIndex := range indices {
 		// find balance of validators who voted.
-		if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		if err != nil {
+			return 0, 0, err
+		}
+		if bitCheck {
 			voteBalance += validators[attesterIndex].Balance
 		}
 		// add to total balance of the committee.
 		totalBalance += validators[attesterIndex].Balance
 	}
 
-	return totalBalance, voteBalance
+	return totalBalance, voteBalance, nil
 }
 
 // AddPendingValidator runs for every validator that is inducted as part of a log created on the PoW chain.

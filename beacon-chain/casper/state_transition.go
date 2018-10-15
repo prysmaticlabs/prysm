@@ -68,7 +68,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	attestation *pb.AggregatedAttestation,
 	validators []*pb.ValidatorRecord,
 	totalBalance uint64,
-	voteBalance uint64) {
+	voteBalance uint64) error {
 
 	rewardQuotient := RewardQuotient(validators)
 
@@ -76,13 +76,19 @@ func ApplyCrosslinkRewardsAndPenalties(
 		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
 
 		if !crosslinkRecords[attestation.Shard].GetRecentlyChanged() {
-			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+			if err != nil {
+				return err
+			}
+
+			if checkBit {
 				RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 			} else {
 				PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 			}
 		}
 	}
+	return nil
 }
 
 // ProcessBalancesInCrosslink checks the vote balances and if there is a supermajority it sets the crosslink

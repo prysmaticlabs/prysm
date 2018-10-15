@@ -353,7 +353,11 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	indices := []uint32{4, 8, 10, 14, 30}
 	expectedTotalBalance := uint64(len(indices)) * defaultBalance
 
-	totalBalance, voteBalance := VotedBalanceInAttestation(validators, indices, attestation)
+	totalBalance, voteBalance, err := VotedBalanceInAttestation(validators, indices, attestation)
+
+	if err != nil {
+		t.Fatalf("unable to get voted balances in attestation %v", err)
+	}
 
 	if totalBalance != expectedTotalBalance {
 		t.Errorf("incorrect total balance calculated %d", totalBalance)
@@ -371,7 +375,11 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 
 	expectedTotalBalance = uint64(len(indices)) * defaultBalance
 
-	totalBalance, voteBalance = VotedBalanceInAttestation(validators, indices, newAttestation)
+	totalBalance, voteBalance, err = VotedBalanceInAttestation(validators, indices, newAttestation)
+
+	if err != nil {
+		t.Fatalf("unable to get voted balances in attestation %v", err)
+	}
 
 	if totalBalance != expectedTotalBalance {
 		t.Errorf("incorrect total balance calculated %d", totalBalance)
