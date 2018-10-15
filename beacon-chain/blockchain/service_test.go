@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -137,9 +136,10 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		PowChainRef: []byte("a"),
 	})
 
+	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing()
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
 
@@ -207,9 +207,10 @@ func TestRunningChainService(t *testing.T) {
 		RandaoReveal:   randaoReveal[:],
 	})
 
+	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing()
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
 
@@ -219,9 +220,10 @@ func TestRunningChainService(t *testing.T) {
 
 	chainService.incomingBlockChan <- blockNoParent
 	chainService.incomingBlockChan <- block
+	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
-	testutil.WaitForLog(t, hook, "Chain service context closed, exiting goroutine")
+	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
 	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
 	testutil.AssertLogsContain(t, hook, "Finished processing received block")
 }
@@ -241,119 +243,6 @@ func TestDoesPOWBlockExist(t *testing.T) {
 		t.Error("Block corresponding to nil powchain reference should not exist")
 	}
 	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
-}
-
-func TestUpdateHeadEmpty(t *testing.T) {
-	hook := logTest.NewGlobal()
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
-
-	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
-	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
-	}
-	ActiveStateRoot, _ := active.Hash()
-	CrystallizedStateRoot, _ := crystallized.Hash()
-
-	genesis := types.NewGenesisBlock(ActiveStateRoot, CrystallizedStateRoot)
-	genesisHash, err := genesis.Hash()
-	if err != nil {
-		t.Fatalf("Could not get genesis block hash: %v", err)
-	}
-
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:                  64,
-		ActiveStateRoot:       ActiveStateRoot[:],
-		CrystallizedStateRoot: CrystallizedStateRoot[:],
-		AncestorHashes:        [][]byte{genesisHash[:]},
-		PowChainRef:           []byte("a"),
-	})
-
-	exitRoutine := make(chan bool)
-	slotChan := make(chan uint64)
-	go func() {
-		chainService.updateHead(slotChan)
-		<-exitRoutine
-	}()
-
-	if err := chainService.beaconDB.SaveBlock(block); err != nil {
-		t.Fatal(err)
-	}
-
-	// If blocks pending processing is empty, the updateHead routine does nothing.
-	chainService.blocksPendingProcessing = [][32]byte{}
-	slotChan <- 0
-	chainService.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsDoNotContain(t, hook, "Applying fork choice rule")
-}
-
-func TestUpdateHeadNoBlock(t *testing.T) {
-	hook := logTest.NewGlobal()
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
-
-	exitRoutine := make(chan bool)
-	slotChan := make(chan uint64)
-	go func() {
-		chainService.updateHead(slotChan)
-		<-exitRoutine
-	}()
-
-	// If blocks pending processing contains a hash of a block that does not exist
-	// in persistent storage, we expect an error log to be thrown as
-	// that is unexpected behavior given the block should have been saved during
-	// processing.
-	fakeBlock := types.NewBlock(&pb.BeaconBlock{Slot: 100})
-	fakeBlockHash, err := fakeBlock.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-	chainService.blocksPendingProcessing = [][32]byte{}
-	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, fakeBlockHash)
-	slotChan <- 0
-	chainService.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, "Could not get block")
-}
-
-func TestUpdateHeadNoParent(t *testing.T) {
-	hook := logTest.NewGlobal()
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
-
-	exitRoutine := make(chan bool)
-	slotChan := make(chan uint64)
-	go func() {
-		chainService.updateHead(slotChan)
-		<-exitRoutine
-	}()
-
-	// non-existent parent hash should log an error in updateHead.
-	noParentBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot:           64,
-		AncestorHashes: [][]byte{{}},
-	})
-	noParentBlockHash, err := noParentBlock.Hash()
-	if err != nil {
-		t.Fatalf("Could not hash block: %v", err)
-	}
-
-	if err := chainService.beaconDB.SaveBlock(noParentBlock); err != nil {
-		t.Fatal(err)
-	}
-
-	chainService.blocksPendingProcessing = [][32]byte{}
-	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, noParentBlockHash)
-
-	slotChan <- 0
-	chainService.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Failed to get parent of block %#x", noParentBlockHash))
 }
 
 func TestUpdateHead(t *testing.T) {
@@ -382,15 +271,11 @@ func TestUpdateHead(t *testing.T) {
 		AncestorHashes:        [][]byte{genesisHash[:]},
 		PowChainRef:           []byte("a"),
 	})
-	hash, err := block.Hash()
-	if err != nil {
-		t.Fatalf("Could not hash block: %v", err)
-	}
 
 	exitRoutine := make(chan bool)
-	slotChan := make(chan uint64)
+	blockChan := make(chan *types.Block)
 	go func() {
-		chainService.updateHead(slotChan)
+		chainService.updateHead(blockChan)
 		<-exitRoutine
 	}()
 
@@ -399,9 +284,7 @@ func TestUpdateHead(t *testing.T) {
 	}
 
 	// If blocks pending processing is empty, the updateHead routine does nothing.
-	chainService.blocksPendingProcessing = [][32]byte{}
-	chainService.blocksPendingProcessing = append(chainService.blocksPendingProcessing, hash)
-	slotChan <- 0
+	blockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
 
@@ -447,13 +330,19 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		}},
 	})
 
+	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing()
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
 
 	chainService.incomingBlockChan <- block1
+	block1Returned := <-blockChan
+
+	if block1 != block1Returned {
+		t.Fatalf("expected %v and %v to be the same", block1, block1Returned)
+	}
 
 	block1Hash, err := block1.Hash()
 	if err != nil {
@@ -488,8 +377,11 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		}})
 
 	chainService.incomingBlockChan <- block1
+	<-blockChan
 	chainService.incomingBlockChan <- block2
+	<-blockChan
 	chainService.incomingBlockChan <- block3
+	<-blockChan
 
 	chainService.cancel()
 	exitRoutine <- true

@@ -199,10 +199,7 @@ func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
-	if c.LastStateRecalculationSlot() == 0 && slotNumber == params.GetConfig().CycleLength-1 {
-		return true
-	}
-	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength-1
+	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
 }
 
 // isValidatorSetChange checks if a validator set change transition can be processed. At that point,
@@ -445,7 +442,12 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 		var voteBalance uint64
 		for _, attesterIndex := range indices {
 			// find balance of validators who voted.
-			if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+			isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+			if err != nil {
+				log.Errorf("Bitfield check for attester failed at index: %d with: %v", attesterIndex, err)
+			}
+
+			if isBitSet {
 				voteBalance += validators[attesterIndex].Balance
 			}
 			// add to total balance of the committee.
@@ -456,7 +458,12 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			timeSinceLastConfirmation := currentSlot - crosslinkRecords[attestation.Shard].GetSlot()
 
 			if !crosslinkRecords[attestation.Shard].RecentlyChanged {
-				if bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex)) {
+				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+				if err != nil {
+					log.Errorf("Bitfield check for attester failed at index: %d with: %v", attesterIndex, err)
+				}
+
+				if isBitSet {
 					casper.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 				} else {
 					casper.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])

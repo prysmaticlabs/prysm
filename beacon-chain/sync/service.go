@@ -313,7 +313,7 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 		}
 		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
 		if validatorExists {
-			log.Debugf("Received attestation 0x%v already", h)
+			log.Debugf("Received attestation %#x already", h)
 			return
 		}
 	}

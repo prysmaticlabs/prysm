@@ -17,7 +17,11 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		if err != nil {
+			t.Errorf("checking bit failed at index: %d with : %v", i, err)
+		}
+
 		if !voted {
 			t.Error("validator voted but received didn't vote")
 		}
@@ -29,7 +33,11 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+		if err != nil {
+			t.Errorf("checking bit failed at index: %d : %v", i, err)
+		}
+
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
@@ -238,12 +246,12 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 			{Shard: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
 		}},
 	}
-	if _, _, err := ValidatorSlotAndResponsibility([]byte("100"), validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, there's no validator with pubkey 100")
 	}
 
 	validators[59].Pubkey = []byte("100")
-	slot, _, err := ValidatorSlotAndResponsibility([]byte("100"), validators, shardCommittees)
+	slot, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees)
 	if err != nil {
 		t.Fatalf("call ValidatorSlot failed: %v", err)
 	}
@@ -252,7 +260,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	}
 
 	validators[60].Pubkey = []byte("101")
-	if _, _, err := ValidatorSlotAndResponsibility([]byte("101"), validators, shardCommittees); err == nil {
+	if _, _, err := ValidatorSlotAndRole([]byte("101"), validators, shardCommittees); err == nil {
 		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
 	}
 }
