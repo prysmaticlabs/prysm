@@ -6,9 +6,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 func init() {
@@ -79,7 +80,7 @@ func TestGenesisBlock(t *testing.T) {
 }
 
 func TestBlockValidity(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
@@ -91,15 +92,15 @@ func TestBlockValidity(t *testing.T) {
 	}
 	aState := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*VoteCache))
+	}, make(map[[32]byte]*utils.VoteCache))
 
-	var randaoReveal [32]byte
-	h := blake2b.Sum512(cState.Validators()[0].RandaoCommitment)
-	copy(randaoReveal[:], h[:32])
+	randaoPreCommit := [32]byte{'A'}
+	hashedRandaoPreCommit := hashutil.Hash(randaoPreCommit[:])
+	cState.data.Validators[1].RandaoCommitment = hashedRandaoPreCommit[:]
 
 	b := NewBlock(&pb.BeaconBlock{
 		Slot:         1,
-		RandaoReveal: randaoReveal[:],
+		RandaoReveal: randaoPreCommit[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
@@ -128,7 +129,7 @@ func TestBlockValidity(t *testing.T) {
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := NewBlock(&pb.BeaconBlock{
 		Slot:         1,
-		RandaoReveal: []byte{'A'},
+		RandaoReveal: []byte{'B'},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,

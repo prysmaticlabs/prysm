@@ -2,18 +2,18 @@ package types
 
 import (
 	"bytes"
-	"os"
 	"strconv"
 	"testing"
 
-	"github.com/golang/protobuf/jsonpb"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestGenesisCrystallizedState(t *testing.T) {
-	cState1, err1 := NewGenesisCrystallizedState("")
-	cState2, err2 := NewGenesisCrystallizedState("")
+	cState1, err1 := NewGenesisCrystallizedState(nil)
+	cState2, err2 := NewGenesisCrystallizedState(nil)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v %v", err1, err2)
@@ -32,7 +32,7 @@ func TestGenesisCrystallizedState(t *testing.T) {
 }
 
 func TestInitialDeriveCrystallizedState(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -56,10 +56,9 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	})
 
 	// Set validator index 9's RANDAO reveal to be A
-	aState.data.PendingSpecials = []*pb.SpecialRecord{
-		{Kind: uint32(params.RandaoChanges), Data: [][]byte{{byte(57)}, {byte('A')}}}}
+	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{{byte(57)}, {byte('A')}}}}
 
-	newCState, _, err := cState.NewStateRecalculations(aState, block, false, false)
+	newCState, err := cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
@@ -81,12 +80,12 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	if !(bytes.Equal(newCState.Validators()[9].RandaoCommitment, []byte{'A'})) {
-		t.Fatal("failed to set validator 100's randao reveal")
+		t.Fatal("failed to set validator 9's randao reveal")
 	}
 }
 
 func TestNextDeriveCrystallizedSlot(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialized crystallized state: %v", err)
 	}
@@ -94,7 +93,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	aState := NewGenesisActiveState()
 	block := NewBlock(nil)
 
-	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
+	cState, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -106,13 +105,13 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 
 	totalDeposits := cState.TotalDeposits()
 	recentShardBlockHashes := make([][]byte, 3*params.GetConfig().CycleLength)
-	voteCache := make(map[[32]byte]*VoteCache)
+	voteCache := make(map[[32]byte]*utils.VoteCache)
 	for i := 0; i < 3*int(params.GetConfig().CycleLength); i++ {
 		shardBlockHash := [32]byte{}
 		counter := []byte(strconv.Itoa(i))
 		copy(shardBlockHash[:], counter)
 		recentShardBlockHashes[i] = shardBlockHash[:]
-		voteCache[shardBlockHash] = &VoteCache{
+		voteCache[shardBlockHash] = &utils.VoteCache{
 			VoteTotalDeposit: totalDeposits * 3 / 4,
 		}
 	}
@@ -121,7 +120,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentShardBlockHashes,
 	}, voteCache)
 
-	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
+	cState, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -138,7 +137,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
 
-	cState, _, err = cState.NewStateRecalculations(aState, block, false, false)
+	cState, err = cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -155,20 +154,20 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 
-	cState, _, err = cState.NewStateRecalculations(aState, block, true, true)
+	cState, err = cState.NewStateRecalculations(aState, block, true, true)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
 	if cState.LastStateRecalculationSlot() != 4*params.GetConfig().CycleLength {
 		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.GetConfig().CycleLength, cState.LastStateRecalculationSlot())
 	}
-	if cState.LastJustifiedSlot() != 2*params.GetConfig().CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
+	if cState.LastJustifiedSlot() != 3*params.GetConfig().CycleLength-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 3*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
 	}
-	if cState.JustifiedStreak() != 0 {
+	if cState.JustifiedStreak() != 3*params.GetConfig().CycleLength {
 		t.Fatalf("expected justified streak to equal %d: got %d", 0, cState.JustifiedStreak())
 	}
-	if cState.LastFinalizedSlot() != params.GetConfig().CycleLength-2 {
+	if cState.LastFinalizedSlot() != 2*params.GetConfig().CycleLength-2 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 }
@@ -202,7 +201,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Process crosslinks happened at slot 50.
-	shardAndCommitteesForSlots, err := initialShardAndCommitteesForSlots(validators)
+	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(validators)
 	if err != nil {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
@@ -216,7 +215,7 @@ func TestProcessCrosslinks(t *testing.T) {
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50, 100)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50, cState.Validators(), 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
@@ -231,7 +230,7 @@ func TestProcessCrosslinks(t *testing.T) {
 }
 
 func TestIsNewValidatorSetTransition(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -277,7 +276,7 @@ func TestIsNewValidatorSetTransition(t *testing.T) {
 }
 
 func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -296,7 +295,7 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 }
 
 func TestNewValidatorSetRecalculations(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}
@@ -322,57 +321,8 @@ func TestNewValidatorSetRecalculations(t *testing.T) {
 	}
 }
 
-func TestInitGenesisJsonFailure(t *testing.T) {
-	fname := "/genesis.json"
-	pwd, _ := os.Getwd()
-	fnamePath := pwd + fname
-
-	_, err := NewGenesisCrystallizedState(fnamePath)
-	if err == nil {
-		t.Fatalf("genesis.json should have failed %v", err)
-	}
-}
-
-func TestInitGenesisJson(t *testing.T) {
-	fname := "/genesis.json"
-	pwd, _ := os.Getwd()
-	fnamePath := pwd + fname
-	os.Remove(fnamePath)
-
-	params.SetEnv("demo")
-	cStateJSON := &pb.CrystallizedState{
-		LastStateRecalculationSlot: 0,
-		JustifiedStreak:            1,
-		LastFinalizedSlot:          99,
-		Validators: []*pb.ValidatorRecord{
-			{Pubkey: []byte{}, Balance: 32, Status: uint64(params.Active)},
-		},
-	}
-	os.Create(fnamePath)
-	f, err := os.OpenFile(fnamePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		t.Fatalf("can't open file %v", err)
-	}
-
-	ma := jsonpb.Marshaler{}
-	err = ma.Marshal(f, cStateJSON)
-	if err != nil {
-		t.Fatalf("can't marshal file %v", err)
-	}
-
-	cState, err := NewGenesisCrystallizedState(fnamePath)
-	if err != nil {
-		t.Fatalf("genesis.json failed %v", err)
-	}
-
-	if cState.Validators()[0].Status != 1 {
-		t.Errorf("Failed to load of genesis json")
-	}
-	os.Remove(fnamePath)
-}
-
 func TestPenalizedETH(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize crystallized state: %v", err)
 	}

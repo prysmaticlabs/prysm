@@ -200,10 +200,10 @@ func (b *Block) IsValid(
 			}
 		}
 	}
-
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
+	blockRandaoReveal := b.RandaoReveal()
 	if !b.isRandaoValid(cStateProposerRandaoSeed) {
-		log.Errorf("Wanted pre-image of %#x, Got: %#x", cStateProposerRandaoSeed, b.RandaoReveal())
+		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
 	}
 
@@ -242,7 +242,12 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	}
 
 	// Get all the block hashes up to cycle length.
-	parentHashes := aState.getSignedParentHashes(b, attestation)
+	parentHashes, err := aState.getSignedParentHashes(b, attestation)
+	if err != nil {
+		log.Errorf("unable to get signed parent hashes: %v", err)
+		return false
+	}
+
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
 		log.Debugf("Unable to get validator committee: %v", attesterIndices)
@@ -273,7 +278,10 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 // isRandaoValid verifies the validity of randao from block by comparing it with proposer's randao
 // from crystallized state.
 func (b *Block) isRandaoValid(cStateRandao []byte) bool {
-	return b.RandaoReveal() == hashutil.Hash(cStateRandao)
+	var h [32]byte
+	copy(h[:], cStateRandao)
+	blockRandaoReveal := b.RandaoReveal()
+	return hashutil.Hash(blockRandaoReveal[:]) == h
 }
 
 func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {

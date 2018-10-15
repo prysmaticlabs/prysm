@@ -89,8 +89,8 @@ const (
 	// CasperSlashing means a validator has committed slashing penalty, other nodes can submit a message.
 	// to report and earn rewards.
 	CasperSlashing
-	// RandaoChanges means a validator revealed the pre-image of its randao commitment.
-	RandaoChanges
+	// RandaoChange means a validator revealed the pre-image of its randao commitment.
+	RandaoChange
 )
 
 const (

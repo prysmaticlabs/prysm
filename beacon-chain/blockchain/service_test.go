@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -159,7 +158,7 @@ func TestRunningChainService(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -179,15 +178,12 @@ func TestRunningChainService(t *testing.T) {
 	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	Shard := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].Shard
 
-	randaoReveal := hashutil.Hash(crystallized.Validators()[0].RandaoCommitment)
-
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:                  currentSlot,
 		ActiveStateRoot:       activeStateRoot[:],
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 		AncestorHashes:        [][]byte{parentHash[:]},
 		PowChainRef:           []byte("a"),
-		RandaoReveal:          randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:               currentSlot,
 			AttesterBitfield:   []byte{128, 0},
@@ -200,7 +196,6 @@ func TestRunningChainService(t *testing.T) {
 		Slot:           currentSlot,
 		PowChainRef:    []byte("a"),
 		AncestorHashes: [][]byte{{}},
-		RandaoReveal:   randaoReveal[:],
 	})
 
 	blockChan := make(chan *types.Block)
@@ -247,7 +242,7 @@ func TestUpdateHead(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -292,7 +287,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	defer chainService.beaconDB.Close()
 
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState("")
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -312,14 +307,12 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	}
 
 	currentSlot := uint64(1)
-	randaoReveal := hashutil.Hash(crystallized.Validators()[0].RandaoCommitment)
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes:        [][]byte{block0Hash[:]},
 		Slot:                  currentSlot,
 		ActiveStateRoot:       ActiveStateRoot[:],
 		CrystallizedStateRoot: CrystallizedStateRoot[:],
-		RandaoReveal:          randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             currentSlot,
 			AttesterBitfield: []byte{16, 0},
@@ -352,7 +345,6 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	block2 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{block1Hash[:]},
 		Slot:           currentSlot,
-		RandaoReveal:   randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{Slot: currentSlot - 1, AttesterBitfield: []byte{8, 0}, Shard: 0},
 			{Slot: currentSlot, AttesterBitfield: []byte{8, 0}, Shard: 0},
@@ -368,7 +360,6 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	block3 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{block2Hash[:]},
 		Slot:           currentSlot,
-		RandaoReveal:   randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{Slot: currentSlot - 2, AttesterBitfield: []byte{4, 0}, Shard: 0},
 			{Slot: currentSlot - 1, AttesterBitfield: []byte{4, 0}, Shard: 0},

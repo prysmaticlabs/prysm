@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,7 +20,7 @@ type ActiveState struct {
 	data *pb.ActiveState
 	// blockVoteCache is not part of protocol state, it is
 	// used as a helper cache for cycle init calculations.
-	blockVoteCache map[[32]byte]*VoteCache
+	blockVoteCache map[[32]byte]*utils.VoteCache
 }
 
 // NewGenesisActiveState initializes the active state for slot 0.
@@ -37,12 +38,12 @@ func NewGenesisActiveState() *ActiveState {
 			RecentBlockHashes:   recentBlockHashes,
 			RandaoMix:           make([]byte, 0, 32),
 		},
-		blockVoteCache: make(map[[32]byte]*VoteCache),
+		blockVoteCache: make(map[[32]byte]*utils.VoteCache),
 	}
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveState, blockVoteCache map[[32]byte]*VoteCache) *ActiveState {
+func NewActiveState(data *pb.ActiveState, blockVoteCache map[[32]byte]*utils.VoteCache) *ActiveState {
 	return &ActiveState{data: data, blockVoteCache: blockVoteCache}
 }
 
@@ -99,7 +100,7 @@ func (a *ActiveState) isVoteCacheEmpty(blockHash [32]byte) bool {
 }
 
 // GetBlockVoteCache returns the entire set of block vote cache.
-func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*VoteCache {
+func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*utils.VoteCache {
 	return a.blockVoteCache
 }
 
@@ -165,13 +166,17 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 }
 
 // calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*VoteCache, error) {
-	update := voteCacheDeepCopy(a.GetBlockVoteCache())
+func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*utils.VoteCache, error) {
+	update := utils.VoteCacheDeepCopy(a.GetBlockVoteCache())
 
 	for i := 0; i < len(block.Attestations()); i++ {
 		attestation := block.Attestations()[i]
 
-		parentHashes := a.getSignedParentHashes(block, attestation)
+		parentHashes, err := a.getSignedParentHashes(block, attestation)
+		if err != nil {
+			return nil, err
+		}
+
 		attesterIndices, err := cState.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
@@ -192,7 +197,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 
 			// Initialize vote cache of a given block hash if it doesn't exist already.
 			if !a.isVoteCacheEmpty(h) {
-				update[h] = newVoteCache()
+				update[h] = utils.NewVoteCache()
 			}
 
 			// Loop through attester indices, if the attester has voted but was not accounted for
@@ -224,6 +229,20 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	return update, nil
 }
 
+// CleanUpActiveState removes the old attestations going from a cycle length behind
+// from the last state recalc and then generates the new active state. This is run after
+// a crystallized state transition.
+func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
+	slot := lastStateRecalc - params.GetConfig().CycleLength
+	newPendingAttestations := a.cleanUpAttestations(slot)
+
+	// Construct new active state after clean up pending attestations.
+	return NewActiveState(&pb.ActiveState{
+		PendingAttestations: newPendingAttestations,
+		RecentBlockHashes:   a.data.RecentBlockHashes,
+	}, a.blockVoteCache)
+}
+
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(
@@ -231,6 +250,10 @@ func (a *ActiveState) CalculateNewActiveState(
 	cState *CrystallizedState,
 	parentSlot uint64,
 	enableAttestationValidity bool) (*ActiveState, error) {
+
+	// Cleans up old attestations.
+	a.CleanUpActiveState(cState.LastStateRecalculationSlot())
+
 	// Derive the new set of pending attestations.
 	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
 
@@ -271,7 +294,7 @@ func (a *ActiveState) CalculateNewActiveState(
 	specialRecordData[1] = blockRandao[:]
 
 	newPendingSpecials := a.appendNewSpecialObject(&pb.SpecialRecord{
-		Kind: uint32(params.RandaoChanges),
+		Kind: uint32(params.RandaoChange),
 		Data: specialRecordData,
 	})
 
@@ -284,19 +307,29 @@ func (a *ActiveState) CalculateNewActiveState(
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) [][32]byte {
-	var signedParentHashes [][32]byte
-	start := block.SlotNumber() - attestation.Slot
-	end := block.SlotNumber() - attestation.Slot - uint64(len(attestation.ObliqueParentHashes)) + params.GetConfig().CycleLength
-
+func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
 	recentBlockHashes := a.RecentBlockHashes()
-	signedParentHashes = append(signedParentHashes, recentBlockHashes[start:end]...)
+	obliqueParentHashes := attestation.ObliqueParentHashes
+	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
 
-	for _, obliqueParentHashes := range attestation.ObliqueParentHashes {
-		hashes := common.BytesToHash(obliqueParentHashes)
-		signedParentHashes = append(signedParentHashes, hashes)
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
+	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
+
+	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
+		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}
-	return signedParentHashes
+
+	hashes := make([][32]byte, 0, params.GetConfig().CycleLength)
+	for i := startIdx; i < endIdx; i++ {
+		hashes = append(hashes, recentBlockHashes[i])
+	}
+
+	for i := 0; i < len(obliqueParentHashes); i++ {
+		hash := common.BytesToHash(obliqueParentHashes[i])
+		hashes = append(hashes, hash)
+	}
+
+	return hashes, nil
 }
 
 // setRandaoMix sets the current randao seed into active state.
