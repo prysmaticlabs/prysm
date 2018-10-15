@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"golang.org/x/crypto/blake2b"
 )
 
 func init() {
@@ -179,9 +179,7 @@ func TestRunningChainService(t *testing.T) {
 	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	Shard := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].Shard
 
-	var randaoReveal [32]byte
-	h := blake2b.Sum512(crystallized.Validators()[0].RandaoCommitment)
-	copy(randaoReveal[:], h[:32])
+	randaoReveal := hashutil.Hash(crystallized.Validators()[0].RandaoCommitment)
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:                  currentSlot,
@@ -314,9 +312,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	}
 
 	currentSlot := uint64(1)
-	var randaoReveal [32]byte
-	h := blake2b.Sum512(crystallized.Validators()[0].RandaoCommitment)
-	copy(randaoReveal[:], h[:32])
+	randaoReveal := hashutil.Hash(crystallized.Validators()[0].RandaoCommitment)
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes:        [][]byte{block0Hash[:]},

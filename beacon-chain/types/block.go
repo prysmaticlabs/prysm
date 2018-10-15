@@ -203,7 +203,7 @@ func (b *Block) IsValid(
 
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	if !b.isRandaoValid(cStateProposerRandaoSeed) {
-		log.Errorf("Invalid proposer RANDAO commitment. Wanted: %s. Got: %s", b.RandaoReveal(), cStateProposerRandaoSeed)
+		log.Errorf("Wanted pre-image of %#x, Got: %#x", cStateProposerRandaoSeed, b.RandaoReveal())
 		return false
 	}
 

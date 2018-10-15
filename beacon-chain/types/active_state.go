@@ -260,7 +260,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		return nil, fmt.Errorf("Can not get proposer index %v", err)
 	}
 
-	a.setRandaoMix(block.RandaoReveal())
+	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
 
 	specialRecordData := make([][]byte, 2)
 	for i := range specialRecordData {
@@ -279,6 +279,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		PendingAttestations: newPendingAttestations,
 		PendingSpecials:     newPendingSpecials,
 		RecentBlockHashes:   newRecentBlockHashes,
+		RandaoMix:           newRandao[:],
 	}, blockVoteCache), nil
 }
 
@@ -299,10 +300,9 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 }
 
 // setRandaoMix sets the current randao seed into active state.
-func (a *ActiveState) setRandaoMix(blockRandao [32]byte) {
-	for i, byte := range a.RandaoMix() {
-		blockRandao[i] ^= byte
+func setRandaoMix(blockRandao [32]byte, aStateRandao [32]byte) [32]byte {
+	for i, b := range blockRandao {
+		aStateRandao[i] ^= b
 	}
-
-	a.data.RandaoMix = blockRandao[:]
+	return aStateRandao
 }
