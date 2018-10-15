@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"testing"
-	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -315,14 +313,17 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
+	currentSlot := uint64(1)
+	var randaoReveal [32]byte
+	h := blake2b.Sum512(crystallized.Validators()[0].RandaoCommitment)
+	copy(randaoReveal[:], h[:32])
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes:        [][]byte{block0Hash[:]},
 		Slot:                  currentSlot,
 		ActiveStateRoot:       ActiveStateRoot[:],
 		CrystallizedStateRoot: CrystallizedStateRoot[:],
+		RandaoReveal:          randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             currentSlot,
 			AttesterBitfield: []byte{16, 0},
@@ -355,6 +356,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	block2 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{block1Hash[:]},
 		Slot:           currentSlot,
+		RandaoReveal:   randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{Slot: currentSlot - 1, AttesterBitfield: []byte{8, 0}, Shard: 0},
 			{Slot: currentSlot, AttesterBitfield: []byte{8, 0}, Shard: 0},
@@ -370,6 +372,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	block3 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{block2Hash[:]},
 		Slot:           currentSlot,
+		RandaoReveal:   randaoReveal[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{Slot: currentSlot - 2, AttesterBitfield: []byte{4, 0}, Shard: 0},
 			{Slot: currentSlot - 1, AttesterBitfield: []byte{4, 0}, Shard: 0},

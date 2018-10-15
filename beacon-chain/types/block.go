@@ -187,14 +187,6 @@ func (b *Block) IsValid(
 
 	if enableAttestationValidity {
 		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-		_, proposerIndex, err := casper.ProposerShardAndIndex(
-			cState.ShardAndCommitteesForSlots(),
-			cState.LastStateRecalculationSlot(),
-			parentSlot)
-		if err != nil {
-			log.Errorf("Can not get proposer index %v", err)
-			return false
-		}
 		log.Infof("Proposer index: %v", proposerIndex)
 		if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
@@ -203,7 +195,7 @@ func (b *Block) IsValid(
 
 		for index, attestation := range b.Attestations() {
 			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
+				log.Errorf("attestation invalid: %v", attestation)
 				return false
 			}
 		}
@@ -211,7 +203,7 @@ func (b *Block) IsValid(
 
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	if !b.isRandaoValid(cStateProposerRandaoSeed) {
-		log.Debugf("Invalid proposer RANDAO commitment. Wanted: %s. Got: %s", b.RandaoReveal(), cStateProposerRandaoSeed)
+		log.Errorf("Invalid proposer RANDAO commitment. Wanted: %s. Got: %s", b.RandaoReveal(), cStateProposerRandaoSeed)
 		return false
 	}
 
