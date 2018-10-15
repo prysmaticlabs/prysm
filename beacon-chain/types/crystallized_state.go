@@ -195,7 +195,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	shardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
 	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
-	newValidators := casper.DeepCopyValidators(c.Validators())
+	newValidators := casper.CopyValidators(c.Validators())
 
 	if lastStateRecalculationSlot < params.GetConfig().CycleLength {
 		lastStateRecalculationSlotCycleBack = 0

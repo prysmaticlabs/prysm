@@ -15,15 +15,14 @@ const bitsInByte = 8
 // InitialValidators creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidators() []*pb.ValidatorRecord {
-	var validators []*pb.ValidatorRecord
+	validators := make([]*pb.ValidatorRecord, params.GetConfig().BootstrappedValidatorsCount)
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
-		validator := &pb.ValidatorRecord{
+		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
 			Balance:           uint64(params.GetConfig().DepositSize),
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 		}
-		validators = append(validators, validator)
 	}
 	return validators
 }
@@ -327,9 +326,10 @@ func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 	return -1
 }
 
-// DeepCopyValidators creates a fresh new validator set by copying all the validator details
-// from the old validator set.
-func DeepCopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+// CopyValidators creates a fresh new validator set by copying all the validator information
+// from the old validator set. This is used in calculating the new state of the crystallized
+// state, where the changes to the validator balances are applied to the new validator set.
+func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
 
 	for i, validator := range validatorSet {

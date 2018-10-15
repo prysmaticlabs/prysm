@@ -498,34 +498,46 @@ func TestDeepCopyValidators(t *testing.T) {
 		validators = append(validators, defaultValidator)
 	}
 
-	newValidatorSet := DeepCopyValidators(validators)
+	newValidatorSet := CopyValidators(validators)
+
+	defaultValidator.Pubkey = []byte{'n', 'e', 'w', 'k', 'e', 'y'}
+	defaultValidator.WithdrawalShard = 3
+	defaultValidator.WithdrawalAddress = []byte{'n', 'e', 'w', 'a', 'd', 'd', 'r', 'e', 's', 's'}
+	defaultValidator.RandaoCommitment = []byte{'n', 'e', 'w', 'r', 'a', 'n', 'd', 'a', 'o'}
+	defaultValidator.Balance = uint64(2e9)
+	defaultValidator.Status = uint64(params.PendingExit)
+	defaultValidator.ExitSlot = 5
+
+	if len(newValidatorSet) != len(validators) {
+		t.Fatalf("validator set length is unequal, copy of set failed: %d", len(newValidatorSet))
+	}
 
 	for i, validator := range newValidatorSet {
-		if !bytes.Equal(validator.Pubkey, defaultValidator.Pubkey) {
+		if bytes.Equal(validator.Pubkey, defaultValidator.Pubkey) {
 			t.Errorf("validator with index %d was unable to have their pubkey copied correctly %v", i, validator.Pubkey)
 		}
 
-		if validator.WithdrawalShard != defaultValidator.WithdrawalShard {
+		if validator.WithdrawalShard == defaultValidator.WithdrawalShard {
 			t.Errorf("validator with index %d was unable to have their withdrawal shard copied correctly %v", i, validator.WithdrawalShard)
 		}
 
-		if !bytes.Equal(validator.WithdrawalAddress, defaultValidator.WithdrawalAddress) {
+		if bytes.Equal(validator.WithdrawalAddress, defaultValidator.WithdrawalAddress) {
 			t.Errorf("validator with index %d was unable to have their withdrawal address copied correctly %v", i, validator.WithdrawalAddress)
 		}
 
-		if !bytes.Equal(validator.RandaoCommitment, defaultValidator.RandaoCommitment) {
+		if bytes.Equal(validator.RandaoCommitment, defaultValidator.RandaoCommitment) {
 			t.Errorf("validator with index %d was unable to have their randao commitment copied correctly %v", i, validator.RandaoCommitment)
 		}
 
-		if validator.Balance != defaultValidator.Balance {
+		if validator.Balance == defaultValidator.Balance {
 			t.Errorf("validator with index %d was unable to have their balance copied correctly %d", i, validator.Balance)
 		}
 
-		if validator.Status != defaultValidator.Status {
+		if validator.Status == defaultValidator.Status {
 			t.Errorf("validator with index %d was unable to have their status copied correctly %d", i, validator.Status)
 		}
 
-		if validator.ExitSlot != defaultValidator.ExitSlot {
+		if validator.ExitSlot == defaultValidator.ExitSlot {
 			t.Errorf("validator with index %d was unable to have their exit slot copied correctly %d", i, validator.ExitSlot)
 		}
 	}
