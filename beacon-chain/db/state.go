@@ -33,13 +33,3 @@ func (db *BeaconDB) SaveCrystallizedState(crystallizedState *types.CrystallizedS
 	}
 	return db.put(crystallizedStateLookupKey, encodedState)
 }
-
-// HasStoredState checks if state has been stored to the database.
-func (db *BeaconDB) HasStoredState() (bool, error) {
-	hasState, err := db.has(crystallizedStateLookupKey)
-	if err != nil {
-		return false, err
-	}
-
-	return hasState, nil
-}
