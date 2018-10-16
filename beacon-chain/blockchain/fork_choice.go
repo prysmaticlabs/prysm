@@ -38,7 +38,6 @@ func ghostForkChoice(
 	var highestScoringCrystallizedState *types.CrystallizedState
 	var highestScoringActiveState *types.ActiveState
 	var highestScore uint64
-	var cycleTransitioned bool
 
 	// We loop over every block in order to determine
 	// the highest scoring one.
@@ -62,7 +61,7 @@ func ghostForkChoice(
 		aState := currentActiveState
 
 		for cState.IsCycleTransition(parentBlock.SlotNumber()) {
-			cState, aState, err = cState.NewStateRecalculations(
+			cState, err = cState.NewStateRecalculations(
 				aState,
 				block,
 				enableCrossLinksCheck,
