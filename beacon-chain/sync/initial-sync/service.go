@@ -56,7 +56,6 @@ type p2pAPI interface {
 }
 
 type beaconDB interface {
-	HasStoredState() (bool, error)
 	SaveBlock(*types.Block) error
 }
 
@@ -64,6 +63,7 @@ type beaconDB interface {
 // InitialSync calls `Start` when initial sync completes.
 type syncService interface {
 	Start()
+	IsSyncedWithNetwork() bool
 }
 
 // InitialSync defines the main class in this package.
@@ -105,14 +105,8 @@ func NewInitialSyncService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
-	stored, err := s.db.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-		return
-	}
-
-	if stored {
-		// TODO(555): Bail out of the sync service if the chain is only partially synced.
+	if s.syncService.IsSyncedWithNetwork() {
+		// TODO(#661): Bail out of the sync service if the chain is only partially synced.
 		log.Info("Chain state detected, exiting initial sync")
 		return
 	}
@@ -154,8 +148,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case <-delaychan:
 			if highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
-				// TODO(#426): Resume sync after completion of initial sync.
-				// See comment in Sync service's Start function for explanation.
+				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
 		case msg := <-s.blockBuf:

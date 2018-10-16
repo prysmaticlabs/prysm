@@ -18,21 +18,6 @@ type P2P interface {
 	Broadcast(msg proto.Message)
 }
 
-// ChainService is the interface for the local beacon chain.
-type ChainService interface {
-	BlockChainService
-}
-
-// BlockChainService is the interface for block related functions in local beacon chain.
-type BlockChainService interface {
-	ProcessedBlockHashes() [][32]byte
-	ProcessBlock(b *Block)
-	HasStoredState() (bool, error)
-	ContainsBlock(h [32]byte) (bool, error)
-	SaveBlock(b *Block) error
-	GetBlockSlotNumber(h [32]byte) (uint64, error)
-}
-
 // CrystallizedStateChainService is the interface for crystallized state related functions in local beacon chain.
 type CrystallizedStateChainService interface {
 	ProcessedCrystallizedStateHashes() [][32]byte
