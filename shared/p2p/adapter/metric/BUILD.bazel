@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["metric.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//shared/p2p:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["metric_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//shared/p2p:go_default_library"],
+)

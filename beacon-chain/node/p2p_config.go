@@ -4,6 +4,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
 	"github.com/urfave/cli"
 
@@ -36,9 +37,10 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	metricAdapter := metric.New()
 
-	// TODO(437): Define default adapters for logging, monitoring, etc.
-	adapters := []p2p.Adapter{traceAdapter}
+	// TODO: Define default adapters for logging.
+	adapters := []p2p.Adapter{traceAdapter, metricAdapter}
 	for k, v := range topicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
 	}

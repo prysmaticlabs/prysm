@@ -60,4 +60,15 @@ var (
 		Usage: "Indicate what fraction of p2p messages are sampled for tracing.",
 		Value: 0.20,
 	}
+	// DisableMonitoringFlag defines a flag to disable the metrics collection.
+	DisableMonitoringFlag = cli.BoolFlag{
+		Name:  "disable-monitoring",
+		Usage: "Disable monitoring service.",
+	}
+	// MonitoringEndpointFlag defines the http address and port used to serve prometheus metrics.
+	MonitoringEndpointFlag = cli.StringFlag{
+		Name:  "monitoring-endpoint",
+		Usage: "address and port used to listening and respond metrics for prometheus.",
+		Value: ":8080",
+	}
 )

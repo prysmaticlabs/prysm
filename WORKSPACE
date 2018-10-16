@@ -647,3 +647,45 @@ go_repository(
     commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
     importpath = "github.com/aristanetworks/goarista",
 )
+
+go_repository(
+    name = "com_github_prometheus_client_golang",
+    commit = "1cafe34db7fdec6022e17e00e1c1ea501022f3e4",
+    importpath = "github.com/prometheus/client_golang",
+)
+
+go_repository(
+    name = "com_github_prometheus_client_model",
+    commit = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f",
+    importpath = "github.com/prometheus/client_model",
+)
+
+go_repository(
+    name = "com_github_prometheus_common",
+    commit = "bcb74de08d37a417cb6789eec1d6c810040f0470",
+    importpath = "github.com/prometheus/common",
+)
+
+go_repository(
+    name = "com_github_prometheus_procfs",
+    commit = "185b4288413d2a0dd0806f78c90dde719829e5ae",
+    importpath = "github.com/prometheus/procfs",
+)
+
+go_repository(
+    name = "com_github_prometheus_prometheus",
+    commit = "3101606756c53221ed58ba94ecba6b26adf89dcc",
+    importpath = "github.com/prometheus/prometheus",
+)
+
+go_repository(
+    name = "com_github_beorn7_perks",
+    commit = "3a771d992973f24aa725d07868b467d1ddfceafb",
+    importpath = "github.com/beorn7/perks",
+)
+
+go_repository(
+    name = "com_github_matttproud_golang_protobuf_extensions",
+    commit = "c12348ce28de40eed0136aa2b644d0ee0650e56c",
+    importpath = "github.com/matttproud/golang_protobuf_extensions",
+)

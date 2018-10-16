@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -94,6 +95,12 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	if err := beacon.registerRPCService(ctx); err != nil {
 		return nil, err
+	}
+
+	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
+		if err := beacon.registerPrometheusService(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return beacon, nil
@@ -346,4 +353,10 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	})
 
 	return b.services.RegisterService(rpcService)
+}
+
+func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
+	service := prometheus.NewPrometheusService(ctx.GlobalString(cmd.MonitoringEndpointFlag.Name))
+
+	return b.services.RegisterService(service)
 }
