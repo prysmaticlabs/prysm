@@ -1,8 +1,6 @@
 package types
 
 import (
-	"strconv"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -232,28 +230,10 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		}
 	}
 
-	// For each special record object in active state.
-	for _, specialRecord := range aState.PendingSpecials() {
-
-		// Covers validators submitted logouts from last cycle.
-		if specialRecord.Kind == uint32(params.Logout) {
-			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
-			if err != nil {
-				return nil, err
-			}
-			exitedValidator := casper.ExitValidator(newValidators[validatorIndex], block.SlotNumber(), false)
-			newValidators[validatorIndex] = exitedValidator
-			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
-		}
-
-		// Covers RANDAO updates for all the validators from last cycle.
-		if specialRecord.Kind == uint32(params.RandaoChange) {
-			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
-			if err != nil {
-				return nil, err
-			}
-			newValidators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
-		}
+	// Process the pending special records gathered from last cycle.
+	newValidators, err = casper.ProcessSpeicalRecords(block.SlotNumber(), newValidators, aState.PendingSpecials())
+	if err != nil {
+		return nil, err
 	}
 
 	// Exit the validators when their balance fall below min online deposit size.

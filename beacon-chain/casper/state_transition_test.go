@@ -221,3 +221,67 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 	}
 
 }
+
+func TestProcessSpecialRecords(t *testing.T) {
+	specialRecords := []*pb.SpecialRecord{
+		{Kind: uint32(params.Logout), Data: [][]byte{{byte(52)}}},                    // Validator 4
+		{Kind: uint32(params.Logout), Data: [][]byte{{byte(53)}}},                    // Validator 5
+		{Kind: uint32(params.Logout), Data: [][]byte{{byte(54)}}},                    // Validator 6
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{{byte(55)}, {byte('A')}}}, // Validator 7
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{{byte(56)}, {byte('B')}}}, // Validator 8
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{{byte(57)}, {byte('C')}}}, // Validator 9
+	}
+
+	validators := make([]*pb.ValidatorRecord, 10)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{Status: uint64(params.Active)}
+	}
+
+	newValidators, err := ProcessSpeicalRecords(99, validators, specialRecords)
+	if err != nil {
+		t.Fatalf("Failed to call process special records %v", err)
+	}
+
+	if newValidators[4].Status != uint64(params.PendingExit) {
+		t.Error("Validator 4 status is not PendingExit")
+	}
+	if newValidators[4].ExitSlot != 99 {
+		t.Error("Validator 4 exit slot is not 99")
+	}
+	if newValidators[5].Status != uint64(params.PendingExit) {
+		t.Error("Validator 5 status is not PendingExit")
+	}
+	if newValidators[5].ExitSlot != 99 {
+		t.Error("Validator 5 exit slot is not 99")
+	}
+	if newValidators[6].Status != uint64(params.PendingExit) {
+		t.Error("Validator 6 status is not PendingExit")
+	}
+	if newValidators[6].ExitSlot != 99 {
+		t.Error("Validator 6 exit slot is not 99")
+	}
+	if !(bytes.Equal(newValidators[7].RandaoCommitment, []byte{'A'})) {
+		t.Error("Failed to set validator 7's randao reveal")
+	}
+	if !(bytes.Equal(newValidators[8].RandaoCommitment, []byte{'B'})) {
+		t.Error("Failed to set validator 8's randao reveal")
+	}
+	if !(bytes.Equal(newValidators[9].RandaoCommitment, []byte{'C'})) {
+		t.Error("Failed to set validator 9's randao reveal")
+	}
+
+	// Negative test cases for data.
+	specialRecords = []*pb.SpecialRecord{
+		{Kind: uint32(params.Logout), Data: [][]byte{{}}},
+	}
+	if _, err := ProcessSpeicalRecords(99, validators, specialRecords); err == nil {
+		t.Fatal("Process special records should have failed with invalid data records")
+	}
+	specialRecords = []*pb.SpecialRecord{
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{{}}},
+	}
+	if _, err := ProcessSpeicalRecords(99, validators, specialRecords); err == nil {
+		t.Fatal("Process special records should have failed with invalid data records")
+	}
+
+}

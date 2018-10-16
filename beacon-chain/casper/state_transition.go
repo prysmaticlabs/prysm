@@ -1,6 +1,8 @@
 package casper
 
 import (
+	"strconv"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -108,4 +110,33 @@ func ProcessBalancesInCrosslink(slot uint64, voteBalance uint64, totalBalance ui
 		}
 	}
 	return crosslinkRecords
+}
+
+// ProcessSpeicalRecords processes the pending special record objects,
+// this is called during cyrstallized state transition.
+func ProcessSpeicalRecords(slotNumber uint64, validators []*pb.ValidatorRecord, pendingSpecials []*pb.SpecialRecord) ([]*pb.ValidatorRecord, error) {
+	// For each special record object in active state.
+	for _, specialRecord := range pendingSpecials {
+
+		// Covers validators submitted logouts from last cycle.
+		if specialRecord.Kind == uint32(params.Logout) {
+			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
+			if err != nil {
+				return nil, err
+			}
+			exitedValidator := ExitValidator(validators[validatorIndex], slotNumber, false)
+			validators[validatorIndex] = exitedValidator
+			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
+		}
+
+		// Covers RANDAO updates for all the validators from last cycle.
+		if specialRecord.Kind == uint32(params.RandaoChange) {
+			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
+			if err != nil {
+				return nil, err
+			}
+			validators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
+		}
+	}
+	return validators, nil
 }
