@@ -86,9 +86,11 @@ const (
 const (
 	// Logout means a validator is requesting to exit the validator pool.
 	Logout SpecialRecordType = iota
-	// CasperSlashing means a validator has committed slashing penalty, you want to submit a message.
+	// CasperSlashing means a validator has committed slashing penalty, other nodes can submit a message.
 	// to report and earn rewards.
 	CasperSlashing
+	// RandaoChange means a validator revealed the pre-image of its randao commitment.
+	RandaoChange
 )
 
 const (
