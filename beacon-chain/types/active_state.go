@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -33,7 +34,9 @@ func NewGenesisActiveState() *ActiveState {
 	return &ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: []*pb.AggregatedAttestation{},
+			PendingSpecials:     []*pb.SpecialRecord{},
 			RecentBlockHashes:   recentBlockHashes,
+			RandaoMix:           make([]byte, 0, 32),
 		},
 		blockVoteCache: make(map[[32]byte]*utils.VoteCache),
 	}
@@ -69,6 +72,11 @@ func (a *ActiveState) PendingAttestations() []*pb.AggregatedAttestation {
 	return a.data.PendingAttestations
 }
 
+// PendingSpecials returns special records that have not yet been processed.
+func (a *ActiveState) PendingSpecials() []*pb.SpecialRecord {
+	return a.data.PendingSpecials
+}
+
 // RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
 func (a *ActiveState) RecentBlockHashes() [][32]byte {
 	var blockhashes [][32]byte
@@ -76,6 +84,13 @@ func (a *ActiveState) RecentBlockHashes() [][32]byte {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
 	return blockhashes
+}
+
+// RandaoMix tracks the current RANDAO state.
+func (a *ActiveState) RandaoMix() [32]byte {
+	var h [32]byte
+	copy(h[:], a.data.RandaoMix)
+	return h
 }
 
 // IsVoteCacheEmpty returns false if vote cache of an input block hash doesn't exist.
@@ -90,10 +105,17 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*utils.VoteCache {
 }
 
 // appendNewAttestations appends new attestations from block in to active state.
-// this is called during cycle transition.
+// this is called during block processing.
 func (a *ActiveState) appendNewAttestations(add []*pb.AggregatedAttestation) []*pb.AggregatedAttestation {
 	existing := a.data.PendingAttestations
 	return append(existing, add...)
+}
+
+// appendNewSpecialObject appends new special record object from block in to active state.
+// this is called during block processing.
+func (a *ActiveState) appendNewSpecialObject(record *pb.SpecialRecord) []*pb.SpecialRecord {
+	existing := a.data.PendingSpecials
+	return append(existing, record)
 }
 
 // cleanUpAttestations removes attestations older than last state recalc slot.
@@ -253,9 +275,34 @@ func (a *ActiveState) CalculateNewActiveState(
 		}
 	}
 
+	_, proposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		parentSlot)
+	if err != nil {
+		return nil, fmt.Errorf("Can not get proposer index %v", err)
+	}
+
+	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
+
+	specialRecordData := make([][]byte, 2)
+	for i := range specialRecordData {
+		specialRecordData[i] = make([]byte, 32)
+	}
+	blockRandao := block.RandaoReveal()
+	specialRecordData[0] = []byte{byte(proposerIndex)}
+	specialRecordData[1] = blockRandao[:]
+
+	newPendingSpecials := a.appendNewSpecialObject(&pb.SpecialRecord{
+		Kind: uint32(params.RandaoChange),
+		Data: specialRecordData,
+	})
+
 	return NewActiveState(&pb.ActiveState{
 		PendingAttestations: newPendingAttestations,
+		PendingSpecials:     newPendingSpecials,
 		RecentBlockHashes:   newRecentBlockHashes,
+		RandaoMix:           newRandao[:],
 	}, blockVoteCache), nil
 }
 
@@ -283,4 +330,12 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 	}
 
 	return hashes, nil
+}
+
+// setRandaoMix sets the current randao seed into active state.
+func setRandaoMix(blockRandao [32]byte, aStateRandao [32]byte) [32]byte {
+	for i, b := range blockRandao {
+		aStateRandao[i] ^= b
+	}
+	return aStateRandao
 }
