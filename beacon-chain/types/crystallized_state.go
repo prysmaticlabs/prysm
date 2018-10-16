@@ -235,6 +235,17 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	// For each special record object in active state.
 	for _, specialRecord := range aState.PendingSpecials() {
 
+		// Covers validators submitted logouts from last cycle.
+		if specialRecord.Kind == uint32(params.Logout) {
+			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
+			if err != nil {
+				return nil, err
+			}
+			exitedValidator := casper.ExitValidator(newValidators[validatorIndex], block.SlotNumber(), false)
+			newValidators[validatorIndex] = exitedValidator
+			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
+		}
+
 		// Covers RANDAO updates for all the validators from last cycle.
 		if specialRecord.Kind == uint32(params.RandaoChange) {
 			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
@@ -244,6 +255,9 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			newValidators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
 		}
 	}
+
+	// Exit the validators when their balance fall below min online deposit size.
+	newValidators = casper.CheckValidatorMinDeposit(newValidators, block.SlotNumber())
 
 	c.data.LastFinalizedSlot = finalizedSlot
 	// Entering new validator set change transition.

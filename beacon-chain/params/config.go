@@ -33,6 +33,7 @@ type Config struct {
 	LogOutMessage                 string    // This is the message a validator will send in order to log out.
 	WithdrawalPeriod              uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
+	MinOnlineDepositSize          int       // MinOnlineDepositSize defines the min amount of Ether a validator needs to be active.
 }
 
 var defaultConfig = &Config{
@@ -42,6 +43,7 @@ var defaultConfig = &Config{
 	ShardCount:                    1024,
 	Gwei:                          1e9,
 	DepositSize:                   32,
+	MinOnlineDepositSize:          16,
 	SlotDuration:                  uint64(8),
 	MinCommiteeSize:               uint64(128),
 	BootstrappedValidatorsCount:   1000,
@@ -59,6 +61,7 @@ var demoConfig = &Config{
 	ShardCount:                    5,
 	Gwei:                          1e9,
 	DepositSize:                   32,
+	MinOnlineDepositSize:          16,
 	SlotDuration:                  uint64(8),
 	MinCommiteeSize:               uint64(3),
 	MinValidatorSetChangeInterval: uint64(256),
