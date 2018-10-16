@@ -282,7 +282,7 @@ func AddPendingValidator(
 }
 
 // ExitValidator exits validator from the active list. It returns
-// updated validator record with an appropriate status and penalized amount if the validator was slashed.
+// updated validator record with an appropriate status of each validator.
 func ExitValidator(
 	validator *pb.ValidatorRecord,
 	currentSlot uint64,
