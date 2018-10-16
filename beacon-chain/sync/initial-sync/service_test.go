@@ -28,17 +28,18 @@ func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 
 type mockSyncService struct {
 	hasStarted bool
+	isSynced   bool
 }
 
 func (ms *mockSyncService) Start() {
 	ms.hasStarted = true
 }
 
-type mockDB struct{}
-
-func (m *mockDB) HasStoredState() (bool, error) {
-	return true, nil
+func (ms *mockSyncService) IsSyncedWithNetwork() bool {
+	return ms.isSynced
 }
+
+type mockDB struct{}
 
 func (m *mockDB) SaveBlock(*types.Block) error {
 	return nil
@@ -282,6 +283,48 @@ func TestDelayChan(t *testing.T) {
 	<-exitRoutine
 
 	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+
+	hook.Reset()
+}
+
+func TestIsSyncedWithNetwork(t *testing.T) {
+	hook := logTest.NewGlobal()
+	mockSync := &mockSyncService{}
+	cfg := Config{
+		P2P:                 &mockP2P{},
+		SyncService:         mockSync,
+		BeaconDB:            &mockDB{},
+		SyncPollingInterval: 1,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	mockSync.isSynced = true
+	ss.Start()
+	ss.Stop()
+
+	testutil.AssertLogsContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Stopping service")
+
+	hook.Reset()
+}
+
+func TestIsNotSyncedWithNetwork(t *testing.T) {
+	hook := logTest.NewGlobal()
+	mockSync := &mockSyncService{}
+	cfg := Config{
+		P2P:                 &mockP2P{},
+		SyncService:         mockSync,
+		BeaconDB:            &mockDB{},
+		SyncPollingInterval: 1,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	mockSync.isSynced = false
+	ss.Start()
+	ss.Stop()
+
+	testutil.AssertLogsDoNotContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
 }

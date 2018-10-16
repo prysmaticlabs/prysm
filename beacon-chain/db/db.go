@@ -5,6 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/sirupsen/logrus"
@@ -82,8 +83,18 @@ func NewDB(cfg Config) (*BeaconDB, error) {
 		return nil, err
 	}
 
+	var genesisValidators []*pb.ValidatorRecord
+
+	if cfg.GenesisJSON != "" {
+		log.Infof("Initializing Crystallized State from %s", cfg.GenesisJSON)
+		genesisValidators, err = utils.InitialValidatorsFromJSON(cfg.GenesisJSON)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState(cfg.GenesisJSON)
+	crystallized, err := types.NewGenesisCrystallizedState(genesisValidators)
 	if err != nil {
 		return nil, err
 	}

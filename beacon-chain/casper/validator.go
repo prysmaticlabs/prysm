@@ -8,9 +8,29 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 const bitsInByte = 8
+
+// InitialValidators creates a new validator set that is used to
+// generate a new crystallized state.
+func InitialValidators() []*pb.ValidatorRecord {
+
+	randaoPreCommit := [32]byte{}
+	randaoReveal := hashutil.Hash(randaoPreCommit[:])
+	validators := make([]*pb.ValidatorRecord, params.GetConfig().BootstrappedValidatorsCount)
+	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
+		validators[i] = &pb.ValidatorRecord{
+			Status:            uint64(params.Active),
+			Balance:           uint64(params.GetConfig().DepositSize),
+			WithdrawalAddress: []byte{},
+			Pubkey:            []byte{},
+			RandaoCommitment:  randaoReveal[:],
+		}
+	}
+	return validators
+}
 
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
@@ -87,8 +107,14 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		if bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i) {
-			log.Debugf("attestation has non-zero trailing bits")
+		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
+		if err != nil {
+			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
+			return false
+		}
+
+		if isBitSet {
+			log.Error("attestation has non-zero trailing bits")
 			return false
 		}
 	}
@@ -188,6 +214,43 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	return depositInEth
 }
 
+// CommitteeInShardAndSlot returns the shard committee for a a particular slot index and shard.
+func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArray []*pb.ShardAndCommitteeArray) ([]uint32, error) {
+	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
+
+	for i := 0; i < len(shardCommittee); i++ {
+		if shardID == shardCommittee[i].Shard {
+			return shardCommittee[i].Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
+}
+
+// VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
+// attestation.
+func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
+	attestation *pb.AggregatedAttestation) (uint64, uint64, error) {
+
+	// find the total and vote balance of the shard committee.
+	var totalBalance uint64
+	var voteBalance uint64
+	for _, attesterIndex := range indices {
+		// find balance of validators who voted.
+		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		if err != nil {
+			return 0, 0, err
+		}
+		if bitCheck {
+			voteBalance += validators[attesterIndex].Balance
+		}
+		// add to total balance of the committee.
+		totalBalance += validators[attesterIndex].Balance
+	}
+
+	return totalBalance, voteBalance, nil
+}
+
 // AddPendingValidator runs for every validator that is inducted as part of a log created on the PoW chain.
 func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
@@ -279,4 +342,24 @@ func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 		}
 	}
 	return -1
+}
+
+// CopyValidators creates a fresh new validator set by copying all the validator information
+// from the old validator set. This is used in calculating the new state of the crystallized
+// state, where the changes to the validator balances are applied to the new validator set.
+func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
+
+	for i, validator := range validatorSet {
+		newValidatorSet[i] = &pb.ValidatorRecord{
+			Pubkey:            validator.Pubkey,
+			WithdrawalShard:   validator.WithdrawalShard,
+			WithdrawalAddress: validator.WithdrawalAddress,
+			RandaoCommitment:  validator.RandaoCommitment,
+			Balance:           validator.Balance,
+			Status:            validator.Status,
+			ExitSlot:          validator.ExitSlot,
+		}
+	}
+	return newValidatorSet
 }

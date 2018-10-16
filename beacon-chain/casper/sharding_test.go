@@ -65,6 +65,23 @@ func BenchmarkMaxValidators(b *testing.B) {
 	}
 }
 
+func TestInitialShardAndCommiteeForSlots(t *testing.T) {
+	// Create 1000 validators in ActiveValidators.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 1000; i++ {
+		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+		validators = append(validators, validator)
+	}
+	shardAndCommitteeArray, err := InitialShardAndCommitteesForSlots(validators)
+	if err != nil {
+		t.Fatalf("unable to get initial shard committees %v", err)
+	}
+
+	if uint64(len(shardAndCommitteeArray)) != 2*params.GetConfig().CycleLength {
+		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 2*params.GetConfig().CycleLength)
+	}
+
+}
 func TestShuffleActiveValidators(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
