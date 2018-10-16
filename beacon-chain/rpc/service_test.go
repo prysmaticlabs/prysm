@@ -70,7 +70,7 @@ type mockDB struct {
 	cState  *types.CrystallizedState
 }
 
-func (m *mockDB) GetChainTip() (*types.Block, error) {
+func (m *mockDB) GetChainHead() (*types.Block, error) {
 	return m.block, nil
 }
 

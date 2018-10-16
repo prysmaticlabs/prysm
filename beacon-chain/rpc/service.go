@@ -27,7 +27,7 @@ var log = logrus.WithField("prefix", "rpc")
 type beaconDB interface {
 	// These methods can be called on-demand by a validator
 	// to fetch canonical head and state.
-	GetChainTip() (*types.Block, error)
+	GetChainHead() (*types.Block, error)
 	GetBlockBySlot(uint64) (*types.Block, error)
 	GetCrystallizedState() (*types.CrystallizedState, error)
 }
@@ -153,7 +153,7 @@ func (s *Service) Stop() error {
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.BeaconBlock, error) {
-	block, err := s.beaconDB.GetChainTip()
+	block, err := s.beaconDB.GetChainHead()
 	if err != nil {
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}

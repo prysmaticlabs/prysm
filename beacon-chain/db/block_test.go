@@ -84,7 +84,7 @@ func TestGetBlockBySlotEmptyChain(t *testing.T) {
 	}
 }
 
-func TestRecordChainTipNoBlock(t *testing.T) {
+func TestUpdateChainHeadNoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -98,12 +98,12 @@ func TestRecordChainTipNoBlock(t *testing.T) {
 	}
 
 	b := types.NewBlock(&pb.BeaconBlock{Slot: 1})
-	if err := db.RecordChainTip(b, aState, nil); err == nil {
-		t.Fatalf("expected RecordChainTip to fail if the block does not exist: %v", err)
+	if err := db.UpdateChainHead(b, aState, nil); err == nil {
+		t.Fatalf("expected UpdateChainHead to fail if the block does not exist: %v", err)
 	}
 }
 
-func TestRecordChainTip(t *testing.T) {
+func TestUpdateChainHead(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -137,17 +137,17 @@ func TestRecordChainTip(t *testing.T) {
 	if err := db.SaveBlock(b2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.RecordChainTip(b2, aState, nil); err != nil {
-		t.Fatalf("failed to record the new tip of the main chain: %v", err)
+	if err := db.UpdateChainHead(b2, aState, nil); err != nil {
+		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
 	b2Prime, err := db.GetBlockBySlot(1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}
-	b2Sigma, err := db.GetChainTip()
+	b2Sigma, err := db.GetChainHead()
 	if err != nil {
-		t.Fatalf("failed to retrieve chain tip: %v", err)
+		t.Fatalf("failed to retrieve head: %v", err)
 	}
 
 	b2PrimeHash, err := b2Prime.Hash()
@@ -186,12 +186,12 @@ func TestChainProgress(t *testing.T) {
 	if err := db.SaveBlock(b1); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.RecordChainTip(b1, aState, nil); err != nil {
-		t.Fatalf("failed to record the new tip: %v", err)
+	if err := db.UpdateChainHead(b1, aState, nil); err != nil {
+		t.Fatalf("failed to record the new head: %v", err)
 	}
-	heighestBlock, err := db.GetChainTip()
+	heighestBlock, err := db.GetChainHead()
 	if err != nil {
-		t.Fatalf("failed to get chain tip: %v", err)
+		t.Fatalf("failed to get chain head: %v", err)
 	}
 	if heighestBlock.SlotNumber() != b1.SlotNumber() {
 		t.Fatalf("expected height to equal %d, got %d", b1.SlotNumber(), heighestBlock.SlotNumber())
@@ -201,12 +201,12 @@ func TestChainProgress(t *testing.T) {
 	if err := db.SaveBlock(b2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.RecordChainTip(b2, aState, nil); err != nil {
-		t.Fatalf("failed to record the new tip: %v", err)
+	if err := db.UpdateChainHead(b2, aState, nil); err != nil {
+		t.Fatalf("failed to record the new head: %v", err)
 	}
-	heighestBlock, err = db.GetChainTip()
+	heighestBlock, err = db.GetChainHead()
 	if err != nil {
-		t.Fatalf("failed to get chain tip: %v", err)
+		t.Fatalf("failed to get block: %v", err)
 	}
 	if heighestBlock.SlotNumber() != b2.SlotNumber() {
 		t.Fatalf("expected height to equal %d, got %d", b2.SlotNumber(), heighestBlock.SlotNumber())
@@ -216,12 +216,12 @@ func TestChainProgress(t *testing.T) {
 	if err := db.SaveBlock(b3); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.RecordChainTip(b3, aState, cState); err != nil {
-		t.Fatalf("failed to record the new tip: %v", err)
+	if err := db.UpdateChainHead(b3, aState, cState); err != nil {
+		t.Fatalf("failed to update head: %v", err)
 	}
-	heighestBlock, err = db.GetChainTip()
+	heighestBlock, err = db.GetChainHead()
 	if err != nil {
-		t.Fatalf("failed to get chain tip: %v", err)
+		t.Fatalf("failed to get chain head: %v", err)
 	}
 	if heighestBlock.SlotNumber() != b3.SlotNumber() {
 		t.Fatalf("expected height to equal %d, got %d", b3.SlotNumber(), heighestBlock.SlotNumber())

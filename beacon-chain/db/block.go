@@ -78,8 +78,8 @@ func (db *BeaconDB) SaveBlock(block *types.Block) error {
 	})
 }
 
-// GetChainTip returns the tip (highest slot) of the main chain.
-func (db *BeaconDB) GetChainTip() (*types.Block, error) {
+// GetChainHead returns the head of the main chain.
+func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 	var block *types.Block
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -94,7 +94,7 @@ func (db *BeaconDB) GetChainTip() (*types.Block, error) {
 
 		blockhash := mainChain.Get(height)
 		if blockhash == nil {
-			return fmt.Errorf("hash for current chain tip not found: %d", height)
+			return fmt.Errorf("hash at the current height not found: %d", height)
 		}
 
 		enc := blockBkt.Get(blockhash)
@@ -111,8 +111,9 @@ func (db *BeaconDB) GetChainTip() (*types.Block, error) {
 	return block, err
 }
 
-// RecordChainTip atomically updates the new head of the chain as well as the corresponding state changes
-func (db *BeaconDB) RecordChainTip(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
+// UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
+// Including a new crystallized state is optional.
+func (db *BeaconDB) UpdateChainHead(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
 	blockhash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("unable to get the block hash: %v", err)
@@ -139,7 +140,7 @@ func (db *BeaconDB) RecordChainTip(block *types.Block, aState *types.ActiveState
 		mainChain := tx.Bucket(mainChainBucket)
 
 		if blockBucket.Get(blockhash[:]) == nil {
-			return fmt.Errorf("expected block %#x to have already been saved before updating tip: %v", blockhash, err)
+			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockhash, err)
 		}
 
 		if err := mainChain.Put(slotBinary, blockhash[:]); err != nil {
@@ -147,7 +148,7 @@ func (db *BeaconDB) RecordChainTip(block *types.Block, aState *types.ActiveState
 		}
 
 		if err := chainInfo.Put(mainChainHeightKey, slotBinary); err != nil {
-			return fmt.Errorf("failed to record the block as the tip of the main chain: %v", err)
+			return fmt.Errorf("failed to record the block as the head of the main chain: %v", err)
 		}
 
 		if err := chainInfo.Put(aStateLookupKey, aStateEnc); err != nil {

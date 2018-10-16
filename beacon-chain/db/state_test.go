@@ -12,9 +12,9 @@ func TestInitializeState(t *testing.T) {
 	if err := db.InitializeState(nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	b, err := db.GetChainTip()
+	b, err := db.GetChainHead()
 	if err != nil {
-		t.Fatalf("Failed to get the tip: %v", err)
+		t.Fatalf("Failed to get chain head: %v", err)
 	}
 	if b.SlotNumber() != 0 {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.SlotNumber())

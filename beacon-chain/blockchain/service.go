@@ -183,7 +183,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			if stateTransitioned {
 				newCState = cState
 			}
-			if err := c.beaconDB.RecordChainTip(block, aState, newCState); err != nil {
+			if err := c.beaconDB.UpdateChainHead(block, aState, newCState); err != nil {
 				log.Errorf("Failed to update chain: %v", err)
 			}
 

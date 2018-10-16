@@ -47,7 +47,7 @@ type Config struct {
 }
 
 type beaconDB interface {
-	GetChainTip() (*types.Block, error)
+	GetChainHead() (*types.Block, error)
 	GetGenesisTime() (time.Time, error)
 	GetState() (*types.ActiveState, *types.CrystallizedState, error)
 }
@@ -101,7 +101,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 
-	lastBlock, err := sim.beaconDB.GetChainTip()
+	lastBlock, err := sim.beaconDB.GetChainHead()
 	if err != nil {
 		log.Errorf("Could not fetch latest block: %v", err)
 		return
