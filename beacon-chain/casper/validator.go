@@ -8,6 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 const bitsInByte = 8
@@ -15,6 +16,9 @@ const bitsInByte = 8
 // InitialValidators creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidators() []*pb.ValidatorRecord {
+
+	randaoPreCommit := [32]byte{}
+	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, params.GetConfig().BootstrappedValidatorsCount)
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
@@ -22,6 +26,7 @@ func InitialValidators() []*pb.ValidatorRecord {
 			Balance:           uint64(params.GetConfig().DepositSize),
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
+			RandaoCommitment:  randaoReveal[:],
 		}
 	}
 	return validators
@@ -317,6 +322,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 			if penaltyFactor > totalBalance {
 				penaltyFactor = totalBalance
 			}
+
 			if validators[i].Status == uint64(params.Penalized) {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}

@@ -44,6 +44,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				PowChainRef:           []byte{0},
 				ActiveStateRoot:       []byte{0},
 				CrystallizedStateRoot: []byte{0},
+				Specials:              []*pb.SpecialRecord{},
 			},
 		}
 	}
@@ -131,6 +132,11 @@ func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 
+// Specials returns an array of special objects in the block.
+func (b *Block) Specials() []*pb.SpecialRecord {
+	return b.data.Specials
+}
+
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
@@ -160,7 +166,7 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Can not process a genesis block")
+		log.Error("Cannot process a genesis block")
 		return false
 	}
 
@@ -169,16 +175,18 @@ func (b *Block) IsValid(
 		return false
 	}
 
+	_, proposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		b.SlotNumber())
+	if err != nil {
+		log.Errorf("Cannot get proposer index %v", err)
+		return false
+	}
+	log.Infof("Proposer index: %v", proposerIndex)
+
 	if enableAttestationValidity {
 		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-		_, proposerIndex, err := casper.ProposerShardAndIndex(
-			cState.ShardAndCommitteesForSlots(),
-			cState.LastStateRecalculationSlot(),
-			parentSlot)
-		if err != nil {
-			log.Errorf("Can not get proposer index %v", err)
-			return false
-		}
 		log.Infof("Proposer index: %v", proposerIndex)
 		if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
@@ -187,10 +195,16 @@ func (b *Block) IsValid(
 
 		for index, attestation := range b.Attestations() {
 			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
+				log.Errorf("attestation invalid: %v", attestation)
 				return false
 			}
 		}
+	}
+	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
+	blockRandaoReveal := b.RandaoReveal()
+	if !b.isRandaoValid(cStateProposerRandaoSeed) {
+		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
+		return false
 	}
 
 	return true
@@ -255,6 +269,15 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
+}
+
+// isRandaoValid verifies the validity of randao from block by comparing it with proposer's randao
+// from crystallized state.
+func (b *Block) isRandaoValid(cStateRandao []byte) bool {
+	var h [32]byte
+	copy(h[:], cStateRandao)
+	blockRandaoReveal := b.RandaoReveal()
+	return hashutil.Hash(blockRandaoReveal[:]) == h
 }
 
 func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {

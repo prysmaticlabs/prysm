@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"testing"
-	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -174,9 +172,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
-
+	currentSlot := uint64(1)
 	slotsStart := crystallized.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	slotIndex := (currentSlot - slotsStart) % params.GetConfig().CycleLength
 	Shard := crystallized.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].Shard
@@ -203,7 +199,6 @@ func TestRunningChainService(t *testing.T) {
 
 	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
-	t.Log([][]byte{parentHash[:]})
 	go func() {
 		chainService.blockProcessing(blockChan)
 		<-exitRoutine
@@ -313,8 +308,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
-	secondsSinceGenesis := time.Since(params.GetConfig().GenesisTime).Seconds()
-	currentSlot := uint64(math.Floor(secondsSinceGenesis / float64(params.GetConfig().SlotDuration)))
+	currentSlot := uint64(1)
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes:        [][]byte{block0Hash[:]},
