@@ -28,17 +28,18 @@ func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 
 type mockSyncService struct {
 	hasStarted bool
+	isSynced   bool
 }
 
 func (ms *mockSyncService) Start() {
 	ms.hasStarted = true
 }
 
-type mockDB struct{}
-
-func (m *mockDB) HasStoredState() (bool, error) {
-	return true, nil
+func (ms *mockSyncService) IsSyncedWithNetwork() bool {
+	return ms.isSynced
 }
+
+type mockDB struct{}
 
 func (m *mockDB) SaveBlock(*types.Block) error {
 	return nil
@@ -71,14 +72,13 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: genericHash,
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{Block: block}
-
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: blockResponse,
@@ -93,7 +93,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	copy(hash[:], blockResponse.Block.CrystallizedStateRoot)
 
 	if hash != ss.initialCrystallizedStateRoot {
-		t.Fatalf("Crystallized state hash not updated: %x", blockResponse.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.CrystallizedStateRoot)
 	}
 
 	hook.Reset()
@@ -149,9 +149,9 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
+			PowChainRef:           []byte{1, 2, 3},
+			AncestorHashes:        [][]byte{genericHash},
+			Slot:                  Slot,
 			CrystallizedStateRoot: crystallizedStateRoot[:],
 		}
 
@@ -176,7 +176,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.crystallizedStateBuf <- msg2
 
 	if ss.currentSlot == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %x", ss.currentSlot)
+		t.Fatalf("Crystallized state updated incorrectly: %#x", ss.currentSlot)
 	}
 
 	msg2.Data = stateResponse
@@ -185,7 +185,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	if crystallizedStateRoot != ss.initialCrystallizedStateRoot {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("Crystallized state hash not updated: %x", br.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", br.Block.CrystallizedStateRoot)
 	}
 
 	msg1 = getBlockResponseMsg(30)
@@ -248,9 +248,9 @@ func TestDelayChan(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 	}
 
@@ -283,6 +283,48 @@ func TestDelayChan(t *testing.T) {
 	<-exitRoutine
 
 	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+
+	hook.Reset()
+}
+
+func TestIsSyncedWithNetwork(t *testing.T) {
+	hook := logTest.NewGlobal()
+	mockSync := &mockSyncService{}
+	cfg := Config{
+		P2P:                 &mockP2P{},
+		SyncService:         mockSync,
+		BeaconDB:            &mockDB{},
+		SyncPollingInterval: 1,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	mockSync.isSynced = true
+	ss.Start()
+	ss.Stop()
+
+	testutil.AssertLogsContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Stopping service")
+
+	hook.Reset()
+}
+
+func TestIsNotSyncedWithNetwork(t *testing.T) {
+	hook := logTest.NewGlobal()
+	mockSync := &mockSyncService{}
+	cfg := Config{
+		P2P:                 &mockP2P{},
+		SyncService:         mockSync,
+		BeaconDB:            &mockDB{},
+		SyncPollingInterval: 1,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	mockSync.isSynced = false
+	ss.Start()
+	ss.Stop()
+
+	testutil.AssertLogsDoNotContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
 }

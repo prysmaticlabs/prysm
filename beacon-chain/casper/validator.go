@@ -6,12 +6,33 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 const bitsInByte = 8
 
-// ActiveValidatorIndices filters out active validators based on start and end dynasty
+// InitialValidators creates a new validator set that is used to
+// generate a new crystallized state.
+func InitialValidators() []*pb.ValidatorRecord {
+
+	randaoPreCommit := [32]byte{}
+	randaoReveal := hashutil.Hash(randaoPreCommit[:])
+	validators := make([]*pb.ValidatorRecord, params.GetConfig().BootstrappedValidatorsCount)
+	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
+		validators[i] = &pb.ValidatorRecord{
+			Status:            uint64(params.Active),
+			Balance:           uint64(params.GetConfig().DepositSize),
+			WithdrawalAddress: []byte{},
+			Pubkey:            []byte{},
+			RandaoCommitment:  randaoReveal[:],
+		}
+	}
+	return validators
+}
+
+// ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	var indices = make([]uint32, len(validators))
@@ -23,7 +44,7 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices[len(validators):]
 }
 
-// ExitedValidatorIndices filters out exited validators based on start and end dynasty
+// ExitedValidatorIndices filters out exited validators based on validator status
 // and returns their indices in a list.
 func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	var indices = make([]uint32, len(validators))
@@ -35,7 +56,7 @@ func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices[len(validators):]
 }
 
-// QueuedValidatorIndices filters out queued validators based on start and end dynasty
+// QueuedValidatorIndices filters out queued validators based on validator status
 // and returns their indices in a list.
 func QueuedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	var indices = make([]uint32, len(validators))
@@ -86,8 +107,14 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		if bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i) {
-			log.Debugf("attestation has non-zero trailing bits")
+		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
+		if err != nil {
+			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
+			return false
+		}
+
+		if isBitSet {
+			log.Error("attestation has non-zero trailing bits")
 			return false
 		}
 	}
@@ -120,7 +147,7 @@ func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, er
 		}
 	}
 
-	return 0, fmt.Errorf("can't find validator index for public key %x", pubKey)
+	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
@@ -140,33 +167,35 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 		}
 	}
 
-	return 0, fmt.Errorf("can't find shard ID for validator with public key %x", pubKey)
+	return 0, fmt.Errorf("can't find shard ID for validator with public key %#x", pubKey)
 }
 
-// ValidatorSlotAndResponsibility returns a validator's assingned slot number
+// ValidatorSlotAndRole returns a validator's assingned slot number
 // and whether it should act as an attester or proposer.
-func ValidatorSlotAndResponsibility(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, string, error) {
+func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
-		return 0, "", err
+		return 0, pbrpc.ValidatorRole_UNKNOWN, err
 	}
 
 	for slot, slotCommittee := range shardCommittees {
 		for i, committee := range slotCommittee.ArrayShardAndCommittee {
 			for v, validator := range committee.Committee {
-				if i == 0 && v == slot%len(committee.Committee) && validator == index {
-					return uint64(slot), "proposer", nil
+				if validator != index {
+					continue
 				}
-				if validator == index {
-					return uint64(slot), "attester", nil
+				if i == 0 && v == slot%len(committee.Committee) {
+					return uint64(slot), pbrpc.ValidatorRole_PROPOSER, nil
 				}
+
+				return uint64(slot), pbrpc.ValidatorRole_ATTESTER, nil
 			}
 		}
 	}
-	return 0, "", fmt.Errorf("can't find slot number for validator with public key %x", pubKey)
+	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
-// TotalActiveValidatorDeposit returns the total deposited amount in wei for all active validators.
+// TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
 func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
 	activeValidators := ActiveValidatorIndices(validators)
@@ -183,4 +212,152 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	depositInEth := totalDeposit / uint64(params.GetConfig().Gwei)
 
 	return depositInEth
+}
+
+// CommitteeInShardAndSlot returns the shard committee for a a particular slot index and shard.
+func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArray []*pb.ShardAndCommitteeArray) ([]uint32, error) {
+	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
+
+	for i := 0; i < len(shardCommittee); i++ {
+		if shardID == shardCommittee[i].Shard {
+			return shardCommittee[i].Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
+}
+
+// VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
+// attestation.
+func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
+	attestation *pb.AggregatedAttestation) (uint64, uint64, error) {
+
+	// find the total and vote balance of the shard committee.
+	var totalBalance uint64
+	var voteBalance uint64
+	for _, attesterIndex := range indices {
+		// find balance of validators who voted.
+		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		if err != nil {
+			return 0, 0, err
+		}
+		if bitCheck {
+			voteBalance += validators[attesterIndex].Balance
+		}
+		// add to total balance of the committee.
+		totalBalance += validators[attesterIndex].Balance
+	}
+
+	return totalBalance, voteBalance, nil
+}
+
+// AddPendingValidator runs for every validator that is inducted as part of a log created on the PoW chain.
+func AddPendingValidator(
+	validators []*pb.ValidatorRecord,
+	pubKey []byte,
+	withdrawalShard uint64,
+	withdrawalAddr []byte,
+	randaoCommitment []byte) []*pb.ValidatorRecord {
+
+	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
+
+	newValidatorRecord := &pb.ValidatorRecord{
+		Pubkey:            pubKey,
+		WithdrawalShard:   withdrawalShard,
+		WithdrawalAddress: withdrawalAddr,
+		RandaoCommitment:  randaoCommitment,
+		Balance:           uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
+		Status:            uint64(params.PendingActivation),
+		ExitSlot:          0,
+	}
+
+	index := minEmptyValidator(validators)
+	if index > 0 {
+		validators[index] = newValidatorRecord
+		return validators
+	}
+
+	validators = append(validators, newValidatorRecord)
+	return validators
+}
+
+// ChangeValidators updates the validator set during state transition.
+func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+	maxAllowableChange := uint64(2 * params.GetConfig().DepositSize * params.GetConfig().Gwei)
+
+	totalBalance := TotalActiveValidatorDeposit(validators)
+
+	// Determine the max total wei that can deposit and withdraw.
+	if totalBalance > maxAllowableChange {
+		maxAllowableChange = totalBalance
+	}
+
+	var totalChanged uint64
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.PendingActivation) {
+			validators[i].Status = uint64(params.Active)
+			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
+			// TODO(#614): Add validator set change.
+		}
+		if validators[i].Status == uint64(params.PendingExit) {
+			validators[i].Status = uint64(params.PendingWithdraw)
+			validators[i].ExitSlot = currentSlot
+			totalChanged += validators[i].Balance
+			// TODO(#614): Add validator set change.
+		}
+		if totalChanged > maxAllowableChange {
+			break
+		}
+	}
+
+	// Calculate withdraw validators that have been logged out long enough,
+	// apply their penalties if they were slashed.
+	for i := 0; i < len(validators); i++ {
+		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
+		isPenalized := validators[i].Status == uint64(params.Penalized)
+		withdrawalSlot := validators[i].ExitSlot + params.GetConfig().WithdrawalPeriod
+
+		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
+			penaltyFactor := totalPenalties * 3
+			if penaltyFactor > totalBalance {
+				penaltyFactor = totalBalance
+			}
+
+			if validators[i].Status == uint64(params.Penalized) {
+				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
+			}
+			validators[i].Status = uint64(params.Withdrawn)
+		}
+	}
+	return validators
+}
+
+// minEmptyValidator returns the lowest validator index which the status is withdrawn.
+func minEmptyValidator(validators []*pb.ValidatorRecord) int {
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.Withdrawn) {
+			return i
+		}
+	}
+	return -1
+}
+
+// CopyValidators creates a fresh new validator set by copying all the validator information
+// from the old validator set. This is used in calculating the new state of the crystallized
+// state, where the changes to the validator balances are applied to the new validator set.
+func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
+
+	for i, validator := range validatorSet {
+		newValidatorSet[i] = &pb.ValidatorRecord{
+			Pubkey:            validator.Pubkey,
+			WithdrawalShard:   validator.WithdrawalShard,
+			WithdrawalAddress: validator.WithdrawalAddress,
+			RandaoCommitment:  validator.RandaoCommitment,
+			Balance:           validator.Balance,
+			Status:            validator.Status,
+			ExitSlot:          validator.ExitSlot,
+		}
+	}
+	return newValidatorSet
 }

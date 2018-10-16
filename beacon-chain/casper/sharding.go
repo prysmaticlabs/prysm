@@ -20,11 +20,24 @@ func ShuffleValidatorsToCommittees(seed common.Hash, activeValidators []*pb.Vali
 	return splitBySlotShard(shuffledValidators, crosslinkStartShard), nil
 }
 
+// InitialShardAndCommitteesForSlots initialises the committees for shards by shuffling the validators
+// and assigning them to specific shards.
+func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
+	seed := make([]byte, 0, 32)
+	committees, err := ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Starting with 2 cycles (128 slots) with the same committees.
+	return append(committees, committees...), nil
+}
+
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
-// to a single slot and shard. See getCommitteeParams for more details.
+// to a single slot and shard. See getCommitteesPerSlot for more details.
 func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) []*pb.ShardAndCommitteeArray {
-	committeesPerSlot := getCommitteeParams(len(shuffledValidators))
+	committeesPerSlot := getCommitteesPerSlot(len(shuffledValidators))
 
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
@@ -51,16 +64,21 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 	return committeBySlotAndShard
 }
 
-// getCommitteeParams calculates the parameters for ShuffleValidatorsToCommittees.
-// If numActiveValidators > CycleLength * MinCommitteeSize, committees are based off a max amount
-// from either numActiveValidators / CycleLength /  MinCommitteeSize or
-// it is decided from the ShardCount / CycleLength.
-func getCommitteeParams(numActiveValidators int) (committeesPerSlot int) {
+// getCommitteesPerSlot calculates the parameters for ShuffleValidatorsToCommittees.
+// The minimum value for committeesPerSlot is 1.
+// Otherwise, the value for committeesPerSlot is the smaller of
+// numActiveValidators / CycleLength /  (MinCommitteeSize*2) + 1 or
+// ShardCount / CycleLength.
+func getCommitteesPerSlot(numActiveValidators int) int {
 	cycleLength := int(params.GetConfig().CycleLength)
-	boundOnAVS := numActiveValidators/cycleLength/int(params.GetConfig().MinCommiteeSize*2) + 1
+	boundOnValidators := numActiveValidators/cycleLength/int(params.GetConfig().MinCommiteeSize*2) + 1
 	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
-	if boundOnAVS > boundOnShardCount {
+
+	// Ensure that comitteesPerSlot is at least 1.
+	if boundOnShardCount == 0 {
+		return 1
+	} else if boundOnValidators > boundOnShardCount {
 		return boundOnShardCount
 	}
-	return boundOnAVS
+	return boundOnValidators
 }

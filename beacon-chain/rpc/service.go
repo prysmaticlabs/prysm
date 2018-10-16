@@ -210,13 +210,12 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	//TODO(#589) The attestation should be aggregated in the validator client side not in the beacon node.
-	parentSlot := req.GetSlotNumber() - 1
 	cState := s.beaconDB.GetCrystallizedState()
 
 	_, prevProposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
-		parentSlot,
+		req.GetSlotNumber(),
 	)
 
 	if err != nil {
@@ -241,7 +240,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debugf("Block proposal received via RPC")
+	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
 	// We relay the received block from the proposer to the chain service for processing.
 	s.chainService.IncomingBlockFeed().Send(block)
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
@@ -292,7 +291,6 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := casper.ValidatorShardID(
 		req.PublicKey,
-
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
@@ -308,20 +306,13 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponsibilityResponse, error) {
 	cState := s.beaconDB.GetCrystallizedState()
 
-	slot, responsibility, err := casper.ValidatorSlotAndResponsibility(
+	slot, role, err := casper.ValidatorSlotAndRole(
 		req.PublicKey,
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
-	}
-
-	var role pb.ValidatorRole
-	if responsibility == "proposer" {
-		role = pb.ValidatorRole_PROPOSER
-	} else if responsibility == "attester" {
-		role = pb.ValidatorRole_ATTESTER
 	}
 
 	return &pb.SlotResponsibilityResponse{Slot: slot, Role: role}, nil
@@ -350,6 +341,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
 	stream pb.BeaconService_ValidatorAssignmentsServer) error {
+
 	sub := s.chainService.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
@@ -403,20 +395,13 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
-		assignedSlot, responsibility, err := casper.ValidatorSlotAndResponsibility(
+		assignedSlot, role, err := casper.ValidatorSlotAndRole(
 			val.GetPublicKey(),
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {
 			return nil, err
-		}
-
-		var role pb.ValidatorRole
-		if responsibility == "proposer" {
-			role = pb.ValidatorRole_PROPOSER
-		} else {
-			role = pb.ValidatorRole_ATTESTER
 		}
 
 		// We determine the assigned shard ID for the validator
