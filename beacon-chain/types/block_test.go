@@ -183,8 +183,8 @@ func TestUpdateAncestorHashes(t *testing.T) {
 		{a: 1 << 31, b: [32]byte{'h'}, c: 31},
 	}
 	for _, tt := range tests {
-		if updateAncestorHashes(parentHashes, tt.a, tt.b)[tt.c] != tt.b {
-			t.Errorf("Failed to update ancestor hash at index %d. Wanted: %v, got: %v", tt.c, tt.b, updateAncestorHashes(parentHashes, tt.a, tt.b)[tt.c])
+		if UpdateAncestorHashes(parentHashes, tt.a, tt.b)[tt.c] != tt.b {
+			t.Errorf("Failed to update ancestor hash at index %d. Wanted: %v, got: %v", tt.c, tt.b, UpdateAncestorHashes(parentHashes, tt.a, tt.b)[tt.c])
 		}
 	}
 }
