@@ -647,3 +647,9 @@ go_repository(
     commit = "ff33da284e760fcdb03c33d37a719e5ed30ba844",
     importpath = "github.com/aristanetworks/goarista",
 )
+
+go_repository(
+    name = "com_github_boltdb_bolt",
+    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    importpath = "github.com/boltdb/bolt",
+)
