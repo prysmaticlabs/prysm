@@ -20,9 +20,13 @@ func TestInitializeState(t *testing.T) {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.SlotNumber())
 	}
 
-	aState, cState, err := db.GetState()
+	aState, err := db.GetActiveState()
 	if err != nil {
-		t.Fatalf("Failed to get state: %v", err)
+		t.Fatalf("Failed to get active state: %v", err)
+	}
+	cState, err := db.GetCrystallizedState()
+	if err != nil {
+		t.Fatalf("Failed to get crystallized state: %v", err)
 	}
 	if aState == nil || cState == nil {
 		t.Fatalf("Failed to retrieve state: %v, %v", aState, cState)

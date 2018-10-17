@@ -65,29 +65,6 @@ func (db *BeaconDB) InitializeState(genesisValidators []*pb.ValidatorRecord) err
 	})
 }
 
-// GetState fetches the current active and crystallized state.
-func (db *BeaconDB) GetState() (*types.ActiveState, *types.CrystallizedState, error) {
-	var aState *types.ActiveState
-	var cState *types.CrystallizedState
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-
-		aStateEnc := chainInfo.Get(aStateLookupKey)
-		cStateEnc := chainInfo.Get(cStateLookupKey)
-
-		var err error
-		aState, err = createActiveState(aStateEnc)
-		if err != nil {
-			return err
-		}
-
-		cState, err = createCrystallizedState(cStateEnc)
-		return err
-	})
-
-	return aState, cState, err
-}
-
 // GetActiveState fetches the current active state.
 func (db *BeaconDB) GetActiveState() (*types.ActiveState, error) {
 	var aState *types.ActiveState

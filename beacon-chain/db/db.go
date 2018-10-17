@@ -44,7 +44,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, "rbc.db")
+	datafile := path.Join(dirPath, "beaconchain.db")
 	boltDB, err := bolt.Open(datafile, 0600, nil)
 	if err != nil {
 		return nil, err

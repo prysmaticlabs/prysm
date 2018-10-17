@@ -147,9 +147,13 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				continue
 			}
 
-			aState, cState, err := c.beaconDB.GetState()
+			aState, err := c.beaconDB.GetActiveState()
 			if err != nil {
-				log.Errorf("Failed to get state: %v", err)
+				log.Errorf("Failed to get active state: %v", err)
+			}
+			cState, err := c.beaconDB.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Failed to get crystallized state: %v", err)
 			}
 
 			var stateTransitioned bool
@@ -232,9 +236,13 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				continue
 			}
 
-			aState, cState, err := c.beaconDB.GetState()
+			aState, err := c.beaconDB.GetActiveState()
 			if err != nil {
-				log.Errorf("Failed to get state: %v", err)
+				log.Errorf("Failed to get active state: %v", err)
+			}
+			cState, err := c.beaconDB.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Failed to get crystallized state: %v", err)
 			}
 
 			if valid := block.IsValid(

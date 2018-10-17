@@ -176,9 +176,13 @@ func TestChainProgress(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	aState, cState, err := db.GetState()
+	aState, err := db.GetActiveState()
 	if err != nil {
-		t.Fatalf("failed to get state: %v", err)
+		t.Fatalf("Failed to get active state: %v", err)
+	}
+	cState, err := db.GetCrystallizedState()
+	if err != nil {
+		t.Fatalf("Failed to get crystallized state: %v", err)
 	}
 	cycleLength := params.GetConfig().CycleLength
 

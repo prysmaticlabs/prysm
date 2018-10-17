@@ -49,7 +49,8 @@ type Config struct {
 type beaconDB interface {
 	GetChainHead() (*types.Block, error)
 	GetGenesisTime() (time.Time, error)
-	GetState() (*types.ActiveState, *types.CrystallizedState, error)
+	GetActiveState() (*types.ActiveState, error)
+	GetCrystallizedState() (*types.CrystallizedState, error)
 }
 
 // DefaultConfig options for the simulator.
@@ -119,9 +120,14 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case slot := <-slotInterval:
-			aState, cState, err := sim.beaconDB.GetState()
+			aState, err := sim.beaconDB.GetActiveState()
 			if err != nil {
-				log.Errorf("Failed to get state: %v", err)
+				log.Errorf("Failed to get active state: %v", err)
+				continue
+			}
+			cState, err := sim.beaconDB.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Failed to get crystallized state: %v", err)
 				continue
 			}
 
