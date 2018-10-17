@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -46,18 +47,7 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func setupDB(t *testing.T) *db.BeaconDB {
-	dbConfig := db.Config{Path: "", Name: "", InMemory: true}
-	db, err := db.NewDB(dbConfig)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
-	return db
-}
-
-func setupService(t *testing.T) *Service {
-	db := setupDB(t)
-
+func setupService(t *testing.T, db *db.BeaconDB) *Service {
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -71,13 +61,16 @@ func setupService(t *testing.T) *Service {
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
 		ChainService:        &mockChainService{},
 		P2P:                 &mockP2P{},
-		BeaconDB:            setupDB(t),
+		BeaconDB:            db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -112,7 +105,9 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := setupDB(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -172,7 +167,8 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := setupDB(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -245,7 +241,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestBlockRequestErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	ss := setupService(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	ss := setupService(t, db)
 
 	exitRoutine := make(chan bool)
 
@@ -273,7 +271,9 @@ func TestBlockRequestErrors(t *testing.T) {
 func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	ss := setupService(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	ss := setupService(t, db)
 
 	exitRoutine := make(chan bool)
 
@@ -303,6 +303,10 @@ func TestReceiveAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	as := &mockAttestService{}
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	cfg := Config{
 		BlockHashBufferSize:    0,
 		BlockBufferSize:        0,
@@ -310,12 +314,11 @@ func TestReceiveAttestation(t *testing.T) {
 		ChainService:           ms,
 		AttestService:          as,
 		P2P:                    &mockP2P{},
-		BeaconDB:               setupDB(t),
+		BeaconDB:               db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
-
 	go func() {
 		ss.run()
 		exitRoutine <- true
@@ -340,7 +343,10 @@ func TestReceiveAttestation(t *testing.T) {
 
 func TestStartNotSynced(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := setupDB(t)
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	cfg := DefaultConfig()
 	cfg.ChainService = &mockChainService{}
 	cfg.P2P = &mockP2P{}
