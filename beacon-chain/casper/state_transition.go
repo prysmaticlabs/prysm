@@ -1,7 +1,7 @@
 package casper
 
 import (
-	"strconv"
+	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -120,10 +120,7 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, 
 
 		// Covers validators submitted logouts from last cycle.
 		if specialRecord.Kind == uint32(params.Logout) {
-			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
-			if err != nil {
-				return nil, err
-			}
+			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
 			exitedValidator := ExitValidator(validators[validatorIndex], slotNumber, false)
 			validators[validatorIndex] = exitedValidator
 			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
@@ -131,10 +128,7 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, 
 
 		// Covers RANDAO updates for all the validators from last cycle.
 		if specialRecord.Kind == uint32(params.RandaoChange) {
-			validatorIndex, err := strconv.Atoi(string(specialRecord.Data[0]))
-			if err != nil {
-				return nil, err
-			}
+			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
 			validators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
 		}
 	}
