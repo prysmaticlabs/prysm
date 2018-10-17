@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -43,7 +44,7 @@ type Config struct {
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
 func DefaultConfig() Config {
 	return Config{
-		SyncPollingInterval:         1 * time.Second,
+		SyncPollingInterval:         time.Duration(int64(params.GetConfig().SlotDuration)) * time.Second,
 		BlockBufferSize:             100,
 		CrystallizedStateBufferSize: 100,
 	}
@@ -97,6 +98,7 @@ func NewInitialSyncService(ctx context.Context,
 		p2p:                  cfg.P2P,
 		syncService:          cfg.SyncService,
 		db:                   cfg.BeaconDB,
+		currentSlot:          0,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
@@ -146,8 +148,12 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delaychan:
+			if s.currentSlot == 0 {
+				continue
+			}
 			if highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
+				s.syncService.Start()
 				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
