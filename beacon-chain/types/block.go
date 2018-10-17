@@ -2,8 +2,8 @@
 package types
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"

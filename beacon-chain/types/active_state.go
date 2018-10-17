@@ -2,8 +2,8 @@ package types
 
 import (
 	"bytes"
-	"fmt"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
