@@ -70,15 +70,15 @@ type mockDB struct {
 	cState  *types.CrystallizedState
 }
 
-func (m *mockDB) GetCanonicalBlock() (*types.Block, error) {
+func (m *mockDB) GetChainHead() (*types.Block, error) {
 	return m.block, nil
 }
 
-func (m *mockDB) GetCrystallizedState() *types.CrystallizedState {
-	return m.cState
+func (m *mockDB) GetCrystallizedState() (*types.CrystallizedState, error) {
+	return m.cState, nil
 }
 
-func (m *mockDB) GetCanonicalBlockForSlot(uint64) (*types.Block, error) {
+func (m *mockDB) GetBlockBySlot(uint64) (*types.Block, error) {
 	return m.genesis, nil
 }
 
