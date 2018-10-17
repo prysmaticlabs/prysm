@@ -257,8 +257,8 @@ func AddPendingValidator(
 	pubKey []byte,
 	withdrawalShard uint64,
 	withdrawalAddr []byte,
-	randaoCommitment []byte) []*pb.ValidatorRecord {
-
+	randaoCommitment []byte) (newValidators []*pb.ValidatorRecord) {
+	newValidators = validators
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
 	newValidatorRecord := &pb.ValidatorRecord{
@@ -271,14 +271,14 @@ func AddPendingValidator(
 		ExitSlot:          0,
 	}
 
-	index := minEmptyValidator(validators)
+	index := minEmptyValidator(newValidators)
 	if index > 0 {
-		validators[index] = newValidatorRecord
-		return validators
+		newValidators[index] = newValidatorRecord
+		return newValidators
 	}
 
-	validators = append(validators, newValidatorRecord)
-	return validators
+	newValidators = append(newValidators, newValidatorRecord)
+	return newValidators
 }
 
 // ExitValidator exits validator from the active list. It returns
@@ -298,7 +298,8 @@ func ExitValidator(
 }
 
 // ChangeValidators updates the validator set during state transition.
-func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) (newValidators []*pb.ValidatorRecord) {
+	newValidators = validators
 	maxAllowableChange := uint64(2 * params.GetConfig().DepositSize * params.GetConfig().Gwei)
 
 	totalBalance := TotalActiveValidatorDeposit(validators)
@@ -310,17 +311,16 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 
 	var totalChanged uint64
 	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingActivation) {
-			validators[i].Status = uint64(params.Active)
+		if newValidators[i].Status == uint64(params.PendingActivation) {
+			newValidators[i].Status = uint64(params.Active)
 			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
 
 			// TODO(#614): Add validator set change.
 		}
-		if validators[i].Status == uint64(params.PendingExit) {
-			validators[i].Status = uint64(params.PendingWithdraw)
-			validators[i].ExitSlot = currentSlot
-			totalChanged += validators[i].Balance
-
+		if newValidators[i].Status == uint64(params.PendingExit) {
+			newValidators[i].Status = uint64(params.PendingWithdraw)
+			newValidators[i].ExitSlot = currentSlot
+			totalChanged += newValidators[i].Balance
 			// TODO(#614): Add validator set change.
 		}
 		if totalChanged > maxAllowableChange {
@@ -331,9 +331,9 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	// Calculate withdraw validators that have been logged out long enough,
 	// apply their penalties if they were slashed.
 	for i := 0; i < len(validators); i++ {
-		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
-		isPenalized := validators[i].Status == uint64(params.Penalized)
-		withdrawalSlot := validators[i].ExitSlot + params.GetConfig().WithdrawalPeriod
+		isPendingWithdraw := newValidators[i].Status == uint64(params.PendingWithdraw)
+		isPenalized := newValidators[i].Status == uint64(params.Penalized)
+		withdrawalSlot := newValidators[i].ExitSlot + params.GetConfig().WithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3
@@ -341,13 +341,13 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 				penaltyFactor = totalBalance
 			}
 
-			if validators[i].Status == uint64(params.Penalized) {
-				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
+			if newValidators[i].Status == uint64(params.Penalized) {
+				newValidators[i].Balance -= newValidators[i].Balance * totalBalance / newValidators[i].Balance
 			}
-			validators[i].Status = uint64(params.Withdrawn)
+			newValidators[i].Status = uint64(params.Withdrawn)
 		}
 	}
-	return validators
+	return newValidators
 }
 
 // CopyValidators creates a fresh new validator set by copying all the validator information

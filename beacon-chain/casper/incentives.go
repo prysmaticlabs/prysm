@@ -18,7 +18,8 @@ func CalculateRewards(
 	voterIndices []uint32,
 	validators []*pb.ValidatorRecord,
 	totalParticipatedDeposit uint64,
-	timeSinceFinality uint64) []*pb.ValidatorRecord {
+	timeSinceFinality uint64) (newValidators []*pb.ValidatorRecord) {
+	newValidators = validators
 	totalDeposit := TotalActiveValidatorDeposit(validators)
 	activeValidators := ActiveValidatorIndices(validators)
 	rewardQuotient := uint64(RewardQuotient(validators))
@@ -32,17 +33,17 @@ func CalculateRewards(
 			for _, voterIndex := range voterIndices {
 				if voterIndex == validatorIndex {
 					voted = true
-					balance := validators[validatorIndex].GetBalance()
-					newbalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalDeposit))/int64(totalDeposit)
-					validators[validatorIndex].Balance = uint64(newbalance)
+					balance := newValidators[validatorIndex].GetBalance()
+					newBalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalDeposit))/int64(totalDeposit)
+					newValidators[validatorIndex].Balance = uint64(newBalance)
 					break
 				}
 			}
 
 			if !voted {
-				newBalance := validators[validatorIndex].GetBalance()
+				newBalance := newValidators[validatorIndex].GetBalance()
 				newBalance -= newBalance / rewardQuotient
-				validators[validatorIndex].Balance = newBalance
+				newValidators[validatorIndex].Balance = newBalance
 			}
 		}
 
@@ -58,15 +59,14 @@ func CalculateRewards(
 			}
 
 			if !voted {
-				newBalance := validators[validatorIndex].GetBalance()
+				newBalance := newValidators[validatorIndex].GetBalance()
 				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/penaltyQuotient
-				validators[validatorIndex].Balance = newBalance
+				newValidators[validatorIndex].Balance = newBalance
 			}
 		}
-
 	}
 
-	return validators
+	return newValidators
 }
 
 // RewardQuotient returns the reward quotient for validators which will be used to
@@ -100,16 +100,18 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 
 // RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
 // TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
-func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	currentBalance := int64(validator.Balance)
-	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
-	validator.Balance = uint64(currentBalance)
+func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) (newValidator *pb.ValidatorRecord) {
+	newValidator = validator
+	currentBalance := newValidator.Balance
+	newValidator.Balance += uint64(int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit))
+	return newValidator
 }
 
 // PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
-func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	newBalance := validator.Balance
+func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) (newValidator *pb.ValidatorRecord) {
+	newValidator = validator
+	currentBalance := newValidator.Balance
 	quadraticQuotient := quadraticPenaltyQuotient()
-	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
-	validator.Balance = newBalance
+	newValidator.Balance -= currentBalance/rewardQuotient + currentBalance*timeSinceLastConfirmation/quadraticQuotient
+	return newValidator
 }

@@ -323,7 +323,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			return nil, err
 		}
 
-		err = casper.ApplyCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
+		validators, err = casper.ApplyCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
 			validators, totalBalance, voteBalance)
 		if err != nil {
 			return nil, err
