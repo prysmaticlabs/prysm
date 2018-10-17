@@ -156,11 +156,39 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				log.Errorf("Could not get current chain head: %v", err)
 				continue
 			}
-			newHead := currentHead
-			if currentHead.CrystallizedStateRoot() == block.CrystallizedStateRoot() {
-				newHead = currentHead
+			currentCrystallizedState, err := c.beaconDB.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Could not get current crystallized state: %v", err)
+				continue
 			}
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+
+			var headUpdated bool
+			newHead := currentHead
+			// If both blocks have the same crystallized state root, we favor one which has
+			// the higher slot.
+			if currentHead.CrystallizedStateRoot() == block.CrystallizedStateRoot() {
+				if block.SlotNumber() > currentHead.SlotNumber() {
+					newHead = block
+					headUpdated = true
+				}
+			} else {
+				// 2a. Pick the block with the higher last_finalized_slot
+				// 2b. If same, pick the block with the higher last_justified_slot
+				if c.unfinalizedBlocks[h].crystallizedState.LastFinalizedSlot() > currentCrystallizedState.LastFinalizedSlot() {
+					newHead = block
+					headUpdated = true
+				} else if c.unfinalizedBlocks[h].crystallizedState.LastFinalizedSlot() == currentCrystallizedState.LastFinalizedSlot() {
+					if c.unfinalizedBlocks[h].crystallizedState.LastJustifiedSlot() > currentCrystallizedState.LastJustifiedSlot() {
+						newHead = block
+						headUpdated = true
+					}
+				}
+			}
+
+			// If no new head was found, we do not update the chain.
+			if !headUpdated {
+				continue
+			}
 
 			var newCState *types.CrystallizedState
 			if c.unfinalizedBlocks[h].cycleTransition {
@@ -170,13 +198,14 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				log.Errorf("Failed to update chain: %v", err)
 				continue
 			}
+			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
 			if c.unfinalizedBlocks[h].cycleTransition {
 				c.canonicalCrystallizedStateFeed.Send(c.unfinalizedBlocks[h].crystallizedState)
 			}
-			c.canonicalBlockFeed.Send(block)
+			c.canonicalBlockFeed.Send(newHead)
 		}
 	}
 }
@@ -266,7 +295,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			}
 			// TODO: Use the boltDB changes to persist crystallized and active for
 			// this unfinalized block as well.
-
 			log.Infof("Finished processing received block: %#x", blockHash)
 
 			c.unfinalizedBlocks[blockHash] = &statePair{
