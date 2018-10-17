@@ -156,11 +156,12 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				log.Errorf("Could not get current chain head: %v", err)
 				continue
 			}
-			currentCrystallizedState, err := c.beaconDB.GetCrystallizedState()
+			currentcState, err := c.beaconDB.GetCrystallizedState()
 			if err != nil {
 				log.Errorf("Could not get current crystallized state: %v", err)
 				continue
 			}
+			blockcState := c.unfinalizedBlocks[h].crystallizedState
 
 			var headUpdated bool
 			newHead := currentHead
@@ -174,11 +175,11 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			} else {
 				// 2a. Pick the block with the higher last_finalized_slot
 				// 2b. If same, pick the block with the higher last_justified_slot
-				if c.unfinalizedBlocks[h].crystallizedState.LastFinalizedSlot() > currentCrystallizedState.LastFinalizedSlot() {
+				if blockcState.LastFinalizedSlot() > currentcState.LastFinalizedSlot() {
 					newHead = block
 					headUpdated = true
-				} else if c.unfinalizedBlocks[h].crystallizedState.LastFinalizedSlot() == currentCrystallizedState.LastFinalizedSlot() {
-					if c.unfinalizedBlocks[h].crystallizedState.LastJustifiedSlot() > currentCrystallizedState.LastJustifiedSlot() {
+				} else if blockcState.LastFinalizedSlot() == currentcState.LastFinalizedSlot() {
+					if blockcState.LastJustifiedSlot() > currentcState.LastJustifiedSlot() {
 						newHead = block
 						headUpdated = true
 					}
@@ -192,7 +193,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 
 			var newCState *types.CrystallizedState
 			if c.unfinalizedBlocks[h].cycleTransition {
-				newCState = c.unfinalizedBlocks[h].crystallizedState
+				newCState = blockcState
 			}
 			if err := c.beaconDB.UpdateChainHead(newHead, c.unfinalizedBlocks[h].activeState, newCState); err != nil {
 				log.Errorf("Failed to update chain: %v", err)
@@ -203,7 +204,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
 			if c.unfinalizedBlocks[h].cycleTransition {
-				c.canonicalCrystallizedStateFeed.Send(c.unfinalizedBlocks[h].crystallizedState)
+				c.canonicalCrystallizedStateFeed.Send(blockcState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
 		}
