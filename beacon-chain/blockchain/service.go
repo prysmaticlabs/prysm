@@ -28,6 +28,7 @@ type ChainService struct {
 	canonicalBlockFeed             *event.Feed
 	canonicalCrystallizedStateFeed *event.Feed
 	genesisTime                    time.Time
+	unfinalizedBlocks              map[[32]byte]*statePair
 	enableCrossLinks               bool
 	enableRewardChecking           bool
 	enableAttestationValidity      bool
@@ -47,6 +48,14 @@ type Config struct {
 	EnablePOWChain            bool
 }
 
+// Struct used to represent an unfinalized block's state pair
+// (active state, crystallized state) tuple.
+type statePair struct {
+	crystallizedState *types.CrystallizedState
+	activeState       *types.ActiveState
+	cycleTransition   bool
+}
+
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
@@ -61,6 +70,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:              new(event.Feed),
 		canonicalBlockFeed:             new(event.Feed),
 		canonicalCrystallizedStateFeed: new(event.Feed),
+		unfinalizedBlocks:              make(map[[32]byte]*statePair),
 		enablePOWChain:                 cfg.EnablePOWChain,
 		enableCrossLinks:               cfg.EnableCrossLinks,
 		enableRewardChecking:           cfg.EnableRewardChecking,
@@ -131,70 +141,41 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 		case <-c.ctx.Done():
 			return
 		case block := <-processedBlock:
-			log.WithField("slot", block.SlotNumber()).Info("New beacon slot")
-
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash incoming block: %v", err)
 				continue
 			}
 
-			log.Info("Applying fork choice rule")
+			log.Info("Updating chain head...")
+			// currentHead, err := c.beaconDB.ChainHead()
+			// if err != nil {
+			// 	log.Errorf("Could not retrieve chain head: %v", err)
+			// 	continue
+			// }
 
-			result, err := ghostForkChoice(
-				c.beaconDB,
-				c.beaconDB.GetActiveState(),
-				c.beaconDB.GetCrystallizedState(),
-				c.enableCrossLinks,
-				c.enableRewardChecking,
-				c.enableAttestationValidity,
-			)
+			// If the block's score is less than the current head, we continue and do not
+			// update the chain head.
+			// if block.Score() < currentHead.Score() {
+			// 	continue
+			// }
+			// Detect if we have a reorg here.
+			// Update chain head in DB once everything is good.
+			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
-			if err != nil {
-				log.Errorf("Could not apply fork choice rule: %v", err)
-				continue
-			}
-
-			// If no highest scoring block was determined, we do not update the head of the chain.
-			if result.canonicalBlock == nil {
-				continue
-			}
-
-			h, err := result.canonicalBlock.Hash()
-			if err != nil {
-				log.Errorf("Could not hash highest scoring block: %v", err)
-				continue
-			}
-
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Canonical block determined")
-
-			// Save canonical block hash with slot number to DB.
-			if err := c.beaconDB.SaveCanonicalSlotNumber(result.canonicalBlock.SlotNumber(), h); err != nil {
-				log.Errorf("Unable to save slot number to db: %v", err)
-				continue
-			}
-
-			// Save canonical block to DB.
-			if err := c.beaconDB.SaveCanonicalBlock(result.canonicalBlock); err != nil {
-				log.Errorf("Unable to save block to db: %v", err)
-				continue
-			}
-
-			if err := c.beaconDB.SaveActiveState(result.canonicalActiveState); err != nil {
+			if err := c.beaconDB.SaveActiveState(c.unfinalizedBlocks[h].activeState); err != nil {
 				log.Errorf("Write active state to disk failed: %v", err)
 				continue
 			}
-			log.WithField("blockHash", fmt.Sprintf("%#x", h)).Info("Canonical block determined")
-
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if result.cycleDidTransition {
-				if err := c.beaconDB.SaveCrystallizedState(result.canonicalCrystallizedState); err != nil {
+			if c.unfinalizedBlocks[h].cycleTransition {
+				if err := c.beaconDB.SaveCrystallizedState(c.unfinalizedBlocks[h].crystallizedState); err != nil {
 					log.Errorf("Write crystallized state to disk failed: %v", err)
 					continue
 				}
-				c.canonicalCrystallizedStateFeed.Send(result.canonicalCrystallizedState)
+				c.canonicalCrystallizedStateFeed.Send(c.unfinalizedBlocks[h].crystallizedState)
 			}
 			c.canonicalBlockFeed.Send(block)
 		}
@@ -256,6 +237,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 
 			// If the block is valid, we compute its associated state tuple (active, crystallized)
 			// and apply a block scoring function.
+			var didCycleTransition bool
 			for cState.IsCycleTransition(parent.SlotNumber()) {
 				cState, err = cState.NewStateRecalculations(
 					aState,
@@ -264,26 +246,40 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 					c.enableRewardChecking,
 				)
 				if err != nil {
-					log.Errorf("initialize new cycle transition failed: %v", err)
+					log.Errorf("Initialize new cycle transition failed: %v", err)
 				}
+				didCycleTransition = true
 			}
 
+			aState, err = aState.CalculateNewActiveState(
+				block,
+				cState,
+				parent.SlotNumber(),
+				c.enableAttestationValidity,
+			)
 			if err != nil {
-				log.Errorf("compute active state failed: %v", err)
+				log.Errorf("Compute active state failed: %v", err)
 			}
 
-			// TODO: Use the block score and store it the actual block.
-			// Keep a map of active/crystallized states in the chain service for
-			// unfinalized blocks.
-			score := block.Score(cState.LastFinalizedSlot(), cState.LastJustifiedSlot())
-			log.Infof("Block score is %v", score)
+			// We update the block's score and persist its state tuple on disk
+			// and in memory for faster access during updateHead and historical
+			// access for reorgs.
+			block.SetScore(cState.LastFinalizedSlot(), cState.LastJustifiedSlot())
 
 			if err := c.beaconDB.SaveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
+			// TODO: Use the boltDB changes to persist crystallized and active for
+			// this unfinalized block as well.
 
 			log.Infof("Finished processing received block: %#x", blockHash)
+
+			c.unfinalizedBlocks[blockHash] = &statePair{
+				crystallizedState: cState,
+				activeState:       aState,
+				cycleTransition:   didCycleTransition,
+			}
 
 			// Push the block to trigger the fork choice rule
 			processedBlock <- block

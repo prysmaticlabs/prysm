@@ -148,9 +148,10 @@ func (b *Block) Timestamp() (time.Time, error) {
 // block's associated crystallized state as well as the block's slot number.
 // Currently, this uses the block's slot number as a factor in the calculations but the final, production
 // fork choice scoring rule may utilize the number of votes in the block.
-func (b *Block) SetScore(lastFinalizedSlot uint64, lastJustifiedSlot uint64) {
+func (b *Block) SetScore(lastFinalizedSlot uint64, lastJustifiedSlot uint64) uint64 {
 	score := lastFinalizedSlot*uint64(math.Pow(10, 20)) + lastJustifiedSlot*uint64(math.Pow(10, 10)) + b.SlotNumber()
-	block.data.Score = score
+	b.data.Score = score
+	return score
 }
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
