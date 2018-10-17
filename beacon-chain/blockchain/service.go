@@ -89,6 +89,9 @@ func (c *ChainService) Start() {
 		return
 	}
 
+	// TODO: Populate unfinalized blocks from disk in case of beacon node
+	// restarts.
+
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
 }
