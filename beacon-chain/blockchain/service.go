@@ -151,38 +151,29 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			}
 
 			log.Info("Updating chain head...")
-			currentHead, err := c.beaconDB.GetCanonicalBlock()
+			currentHead, err := c.beaconDB.GetChainHead()
 			if err != nil {
-				log.Errorf("Could not retrieve chain head block: %v", err)
+				log.Errorf("Could not get current chain head: %v", err)
 				continue
 			}
-
-			// If the block's score is less than the current head, we continue and do not
-			// update the chain head.
-			if block.Score() < currentHead.Score() {
-				continue
-			}
-			// NOTE: Detect if we have a reorg here.
-
-			// Update chain head in DB once everything is good.
-			if err := c.beaconDB.SaveCanonicalBlock(block); err != nil {
-				log.Errorf("Could not save new chain head to disk: %v")
-				continue
+			newHead := currentHead
+			if currentHead.CrystallizedStateRoot() == block.CrystallizedStateRoot() {
+				newHead = currentHead
 			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
-			if err := c.beaconDB.SaveActiveState(c.unfinalizedBlocks[h].activeState); err != nil {
-				log.Errorf("Write active state to disk failed: %v", err)
+			var newCState *types.CrystallizedState
+			if c.unfinalizedBlocks[h].cycleTransition {
+				newCState = c.unfinalizedBlocks[h].crystallizedState
+			}
+			if err := c.beaconDB.UpdateChainHead(newHead, c.unfinalizedBlocks[h].activeState, newCState); err != nil {
+				log.Errorf("Failed to update chain: %v", err)
 				continue
 			}
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
 			if c.unfinalizedBlocks[h].cycleTransition {
-				if err := c.beaconDB.SaveCrystallizedState(c.unfinalizedBlocks[h].crystallizedState); err != nil {
-					log.Errorf("Write crystallized state to disk failed: %v", err)
-					continue
-				}
 				c.canonicalCrystallizedStateFeed.Send(c.unfinalizedBlocks[h].crystallizedState)
 			}
 			c.canonicalBlockFeed.Send(block)
@@ -208,28 +199,28 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			}
 
 			if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-				log.Debugf("Proof-of-Work chain reference in block does not exist")
+				log.Errorf("Proof-of-Work chain reference in block does not exist")
 				continue
 			}
 
-			// Check if we have received the parent block.
-			parentExists, err := c.beaconDB.HasBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Could not check existence of parent: %v", err)
-				continue
-			}
-			if !parentExists {
-				log.Debugf("Block points to nil parent: %#x", block.ParentHash())
-				continue
-			}
 			parent, err := c.beaconDB.GetBlock(block.ParentHash())
 			if err != nil {
-				log.Debugf("Could not get parent block: %v", err)
+				log.Errorf("Could not get parent block: %v", err)
+				continue
+			}
+			if parent == nil {
+				log.Errorf("Block points to nil parent: %#x", block.ParentHash())
 				continue
 			}
 
-			aState := c.beaconDB.GetActiveState()
-			cState := c.beaconDB.GetCrystallizedState()
+			aState, err := c.beaconDB.GetActiveState()
+			if err != nil {
+				log.Errorf("Failed to get active state: %v", err)
+			}
+			cState, err := c.beaconDB.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Failed to get crystallized state: %v", err)
+			}
 
 			if valid := block.IsValid(
 				c.beaconDB,
@@ -269,16 +260,11 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				log.Errorf("Compute active state failed: %v", err)
 			}
 
-			// We update the block's score and persist its state tuple on disk
-			// and in memory for faster access during updateHead and historical
-			// access for reorgs.
-			block.SetScore(cState.LastFinalizedSlot(), cState.LastJustifiedSlot())
-
 			if err := c.beaconDB.SaveBlock(block); err != nil {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
-			// NOTE: Use the boltDB changes to persist crystallized and active for
+			// TODO: Use the boltDB changes to persist crystallized and active for
 			// this unfinalized block as well.
 
 			log.Infof("Finished processing received block: %#x", blockHash)

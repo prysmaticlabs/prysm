@@ -3,7 +3,6 @@ package types
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,7 +27,7 @@ type Block struct {
 }
 
 type beaconDB interface {
-	HasBlock(h [32]byte) (bool, error)
+	HasBlock(h [32]byte) bool
 }
 
 // NewBlock explicitly sets the data field of a block.
@@ -143,24 +142,6 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
-// Score returns the block's determined score based on its associated
-// crystallized state's last_finalized and last_justified slots used in the fork choice
-// rule of the beacon chain.
-func (b *Block) Score() uint64 {
-	return b.data.GetScore()
-}
-
-// SetScore determines the weighted block score utilized by the fork choice rule of the beacon chain.
-// This score currently depends on the last finalized and last justified slots of the
-// block's associated crystallized state as well as the block's slot number.
-// Currently, this uses the block's slot number as a factor in the calculations but the final, production
-// fork choice scoring rule may utilize the number of votes in the block.
-func (b *Block) SetScore(lastFinalizedSlot uint64, lastJustifiedSlot uint64) uint64 {
-	score := lastFinalizedSlot*uint64(math.Pow(10, 20)) + lastJustifiedSlot*uint64(math.Pow(10, 10)) + b.SlotNumber()
-	b.data.Score = score
-	return score
-}
-
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid(genesisTime time.Time) bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
@@ -248,11 +229,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	hash := [32]byte{}
 	copy(hash[:], attestation.JustifiedBlockHash)
-	blockInChain, err := db.HasBlock(hash)
-	if err != nil {
-		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
-		return false
-	}
+	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
 		log.Debugf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",

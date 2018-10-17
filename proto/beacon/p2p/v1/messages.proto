@@ -42,10 +42,9 @@ message BeaconBlock {
   bytes pow_chain_ref = 4;
   bytes active_state_root = 5;
   bytes crystallized_state_root = 6;
-  uint64 score = 7;
-  google.protobuf.Timestamp timestamp = 8;
-  repeated AggregatedAttestation attestations = 9;
-  repeated SpecialRecord specials = 10;
+  google.protobuf.Timestamp timestamp = 7;
+  repeated AggregatedAttestation attestations = 8;
+  repeated SpecialRecord specials = 9;
 }
 
 message CrystallizedStateHashAnnounce {
