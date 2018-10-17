@@ -281,6 +281,22 @@ func AddPendingValidator(
 	return validators
 }
 
+// ExitValidator exits validator from the active list. It returns
+// updated validator record with an appropriate status of each validator.
+func ExitValidator(
+	validator *pb.ValidatorRecord,
+	currentSlot uint64,
+	panalize bool) *pb.ValidatorRecord {
+	// TODO(#614): Add validator set change
+	validator.ExitSlot = currentSlot
+	if panalize {
+		validator.Status = uint64(params.Penalized)
+	} else {
+		validator.Status = uint64(params.PendingExit)
+	}
+	return validator
+}
+
 // ChangeValidators updates the validator set during state transition.
 func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 	maxAllowableChange := uint64(2 * params.GetConfig().DepositSize * params.GetConfig().Gwei)
@@ -334,16 +350,6 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	return validators
 }
 
-// minEmptyValidator returns the lowest validator index which the status is withdrawn.
-func minEmptyValidator(validators []*pb.ValidatorRecord) int {
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.Withdrawn) {
-			return i
-		}
-	}
-	return -1
-}
-
 // CopyValidators creates a fresh new validator set by copying all the validator information
 // from the old validator set. This is used in calculating the new state of the crystallized
 // state, where the changes to the validator balances are applied to the new validator set.
@@ -362,4 +368,27 @@ func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 		}
 	}
 	return newValidatorSet
+}
+
+// CheckValidatorMinDeposit checks if a validator deposit has fallen below min online deposit size,
+// it exits the validator if it's below.
+func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot uint64) []*pb.ValidatorRecord {
+	for index, validator := range validatorSet {
+		MinDepositInGWei := params.GetConfig().MinDeposit * params.GetConfig().Gwei
+		isValidatorActive := validator.Status == uint64(params.Active)
+		if (int(validator.Balance) < MinDepositInGWei) && isValidatorActive {
+			validatorSet[index] = ExitValidator(validator, currentSlot, false)
+		}
+	}
+	return validatorSet
+}
+
+// minEmptyValidator returns the lowest validator index which the status is withdrawn.
+func minEmptyValidator(validators []*pb.ValidatorRecord) int {
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.Withdrawn) {
+			return i
+		}
+	}
+	return -1
 }

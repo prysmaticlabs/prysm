@@ -26,13 +26,11 @@ type attestationService interface {
 }
 
 type beaconDB interface {
-	GetCrystallizedState() *types.CrystallizedState
+	GetCrystallizedState() (*types.CrystallizedState, error)
 	GetBlock([32]byte) (*types.Block, error)
+	HasBlock([32]byte) bool
 	GetAttestation([32]byte) (*types.Attestation, error)
-	HasAttestation([32]byte) (bool, error)
-	HasBlock([32]byte) (bool, error)
-	HasCanonicalBlockForSlot(uint64) (bool, error)
-	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
+	GetBlockBySlot(uint64) (*types.Block, error)
 }
 
 type p2pAPI interface {
@@ -181,13 +179,8 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 
-	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.db.HasBlock(h)
-	containsBlockSpan.End()
-	if err != nil {
-		log.Errorf("Received block hash failed: %v", err)
-	}
-	if blockExists {
+	if ss.db.HasBlock(h) {
+		log.Debugf("Received a hash for a block that has already been processed: %#x", h)
 		return
 	}
 
@@ -212,14 +205,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 
 	log.Infof("Processing response to block request: %#x", blockHash)
 
-	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.db.HasBlock(blockHash)
-	containsBlockSpan.End()
-	if err != nil {
-		log.Errorf("Can not check for block in DB: %v", err)
-		return
-	}
-	if blockExists {
+	if ss.db.HasBlock(blockHash) {
 		log.Debug("Received a block that already exists. Exiting...")
 		return
 	}
@@ -227,17 +213,24 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	if ss.enableAttestationValidity {
 		// Verify attestation coming from proposer then forward block to the subscribers.
 		attestation := types.NewAttestation(response.Attestation)
-		cState := ss.db.GetCrystallizedState()
+		cState, err := ss.db.GetCrystallizedState()
+		if err != nil {
+			log.Errorf("Failed to get crystallized state: %v", err)
+			return
+		}
+
 		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 		if err != nil {
 			log.Errorf("Failed to get proposer shard ID: %v", err)
 			return
 		}
+
 		// TODO(#258): stubbing public key with empty 32 bytes.
 		if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
 			log.Errorf("Failed to verify proposer attestation: %v", err)
 			return
 		}
+
 		_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
 		log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
 		ss.attestationService.IncomingAttestationFeed().Send(attestation)
@@ -262,21 +255,10 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 		return
 	}
 
-	ctx, checkForBlockSpan := trace.StartSpan(ctx, "checkForBlockBySlot")
-	blockExists, err := ss.db.HasCanonicalBlockForSlot(request.GetSlotNumber())
-	checkForBlockSpan.End()
-	if err != nil {
-		log.Errorf("Error checking db for block %v", err)
-		return
-	}
-	if !blockExists {
-		return
-	}
-
 	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := ss.db.GetCanonicalBlockForSlot(request.GetSlotNumber())
+	block, err := ss.db.GetBlockBySlot(request.GetSlotNumber())
 	getBlockSpan.End()
-	if err != nil {
+	if err != nil || block == nil {
 		log.Errorf("Error retrieving block from db: %v", err)
 		return
 	}
@@ -291,25 +273,16 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // service if we have not.
 func (ss *Service) receiveAttestation(msg p2p.Message) {
-	ctx, receiveAttestationSpan := trace.StartSpan(msg.Ctx, "receiveAttestation")
-	defer receiveAttestationSpan.End()
-
 	data := msg.Data.(*pb.AggregatedAttestation)
 	a := types.NewAttestation(data)
 	h := a.Key()
 
-	_, containsAttestationSpan := trace.StartSpan(ctx, "containsAttestation")
-	containsAttestationSpan.End()
-	hasAttestation, err := ss.db.HasAttestation(h)
+	attestation, err := ss.db.GetAttestation(h)
 	if err != nil {
-		log.Errorf("Failed check for existence of attestation: %v", err)
+		log.Errorf("Can not check for attestation in DB: %v", err)
+		return
 	}
-	if hasAttestation {
-		attestation, err := ss.db.GetAttestation(h)
-		if err != nil {
-			log.Errorf("Can not check for attestation in DB: %v", err)
-			return
-		}
+	if attestation != nil {
 		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
 		if validatorExists {
 			log.Debugf("Received attestation %#x already", h)

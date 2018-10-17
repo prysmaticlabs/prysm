@@ -483,6 +483,29 @@ func TestChangeValidators(t *testing.T) {
 	}
 }
 
+func TestValidatorMinDeposit(t *testing.T) {
+	minDeposit := params.GetConfig().MinDeposit * params.GetConfig().Gwei
+	currentSlot := uint64(99)
+	validators := []*pb.ValidatorRecord{
+		{Status: uint64(params.Active), Balance: uint64(minDeposit) + 1},
+		{Status: uint64(params.Active), Balance: uint64(minDeposit)},
+		{Status: uint64(params.Active), Balance: uint64(minDeposit) - 1},
+	}
+	newValidators := CheckValidatorMinDeposit(validators, currentSlot)
+	if newValidators[0].Status != uint64(params.Active) {
+		t.Error("Validator should be active")
+	}
+	if newValidators[1].Status != uint64(params.Active) {
+		t.Error("Validator should be active")
+	}
+	if newValidators[2].Status != uint64(params.PendingExit) {
+		t.Error("Validator should be pending exit")
+	}
+	if newValidators[2].ExitSlot != currentSlot {
+		t.Errorf("Validator's exit slot should be %d got %d", currentSlot, newValidators[2].ExitSlot)
+	}
+}
+
 func TestMinEmptyValidator(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
 		{Status: uint64(params.Active)},

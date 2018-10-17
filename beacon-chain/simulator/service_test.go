@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -41,22 +42,21 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{})
 }
 
-func setupSimulator(t *testing.T) (*Simulator, *mockP2P) {
+func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) {
 	ctx := context.Background()
 
-	config := db.Config{Path: "", Name: "", InMemory: true}
-	db, err := db.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
-
 	p2pService := &mockP2P{}
+
+	err := beaconDB.InitializeState(nil)
+	if err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
 
 	cfg := &Config{
 		BlockRequestBuf: 0,
 		P2P:             p2pService,
 		Web3Service:     &mockPOWChainService{},
-		BeaconDB:        db,
+		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
 	}
 
@@ -65,7 +65,10 @@ func setupSimulator(t *testing.T) (*Simulator, *mockP2P) {
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	sim, _ := setupSimulator(t)
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	sim, _ := setupSimulator(t, db)
 
 	sim.Start()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -80,7 +83,10 @@ func TestLifecycle(t *testing.T) {
 
 func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
-	sim, p2pService := setupSimulator(t)
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	sim, p2pService := setupSimulator(t, db)
 
 	slotChan := make(chan uint64)
 	requestChan := make(chan p2p.Message)
