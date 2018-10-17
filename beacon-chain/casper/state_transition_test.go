@@ -166,7 +166,10 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	ApplyCrosslinkRewardsAndPenalties(crossLinks, 12, indices, attestation, validators, totalBalance, voteBalance)
+	validators, err := ApplyCrosslinkRewardsAndPenalties(crossLinks, 12, indices, attestation, validators, totalBalance, voteBalance)
+	if err != nil {
+		t.Fatalf("Failed to apply crosslink rewards  %d", err)
+	}
 
 	if validators[20].Balance <= initialBalance {
 		t.Fatalf("validator balance has not been updated %d", validators[20].Balance)
