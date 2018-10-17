@@ -173,8 +173,8 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 					headUpdated = true
 				}
 			} else {
-				// 2a. Pick the block with the higher last_finalized_slot
-				// 2b. If same, pick the block with the higher last_justified_slot
+				// 2a. Pick the block with the higher last_finalized_slot.
+				// 2b. If same, pick the block with the higher last_justified_slot.
 				if blockcState.LastFinalizedSlot() > currentcState.LastFinalizedSlot() {
 					newHead = block
 					headUpdated = true
@@ -304,7 +304,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				cycleTransition:   didCycleTransition,
 			}
 
-			// Push the block to trigger the fork choice rule
+			// Push the block to trigger the fork choice rule.
 			processedBlock <- block
 		}
 	}
