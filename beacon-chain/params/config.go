@@ -34,7 +34,7 @@ type Config struct {
 	WithdrawalPeriod              uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 	MinDeposit                    int       // MinDeposit is the minimal amount of Ether a validator needs to participate.
-	SimulatedBlockRandao	      [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
+	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
 }
 
 var defaultConfig = &Config{
@@ -70,7 +70,7 @@ var demoConfig = &Config{
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(128),
 	MaxValidatorChurnQuotient:     uint64(32),
-	SimulatedBlockRandao:          [32]byte{'S','I','M','U','L','A','T','E','R'},
+	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
 
 const (
