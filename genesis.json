@@ -4,61 +4,71 @@
       "pubkey": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJC",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0ND",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "RUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVF",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZG",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "R0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dH",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "SEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "SUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJ",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     },
     {
       "pubkey": "SkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpK",
       "balance": "32",
       "exitSlot": "999999999999999999",
-      "status": "1"
+      "status": "1",
+      "randaoCommitment":"mrenOpehowMUBrbBaWNKnAbPuB3sMyO7TeXOb0t8oQc="
     }
   ]
 }
