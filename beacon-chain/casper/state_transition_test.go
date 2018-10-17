@@ -237,7 +237,7 @@ func TestProcessSpecialRecords(t *testing.T) {
 		validators[i] = &pb.ValidatorRecord{Status: uint64(params.Active)}
 	}
 
-	newValidators, err := ProcessSpeicalRecords(99, validators, specialRecords)
+	newValidators, err := ProcessSpecialRecords(99, validators, specialRecords)
 	if err != nil {
 		t.Fatalf("Failed to call process special records %v", err)
 	}
@@ -274,13 +274,13 @@ func TestProcessSpecialRecords(t *testing.T) {
 	specialRecords = []*pb.SpecialRecord{
 		{Kind: uint32(params.Logout), Data: [][]byte{{}}},
 	}
-	if _, err := ProcessSpeicalRecords(99, validators, specialRecords); err == nil {
+	if _, err := ProcessSpecialRecords(99, validators, specialRecords); err == nil {
 		t.Fatal("Process special records should have failed with invalid data records")
 	}
 	specialRecords = []*pb.SpecialRecord{
 		{Kind: uint32(params.RandaoChange), Data: [][]byte{{}}},
 	}
-	if _, err := ProcessSpeicalRecords(99, validators, specialRecords); err == nil {
+	if _, err := ProcessSpecialRecords(99, validators, specialRecords); err == nil {
 		t.Fatal("Process special records should have failed with invalid data records")
 	}
 

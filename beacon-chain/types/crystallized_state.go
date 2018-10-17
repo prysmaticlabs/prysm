@@ -231,7 +231,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	}
 
 	// Process the pending special records gathered from last cycle.
-	newValidators, err = casper.ProcessSpeicalRecords(block.SlotNumber(), newValidators, aState.PendingSpecials())
+	newValidators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newValidators, aState.PendingSpecials())
 	if err != nil {
 		return nil, err
 	}

@@ -112,9 +112,9 @@ func ProcessBalancesInCrosslink(slot uint64, voteBalance uint64, totalBalance ui
 	return crosslinkRecords
 }
 
-// ProcessSpeicalRecords processes the pending special record objects,
-// this is called during cyrstallized state transition.
-func ProcessSpeicalRecords(slotNumber uint64, validators []*pb.ValidatorRecord, pendingSpecials []*pb.SpecialRecord) ([]*pb.ValidatorRecord, error) {
+// ProcessSpecialRecords processes the pending special record objects,
+// this is called during crystallized state transition.
+func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, pendingSpecials []*pb.SpecialRecord) ([]*pb.ValidatorRecord, error) {
 	// For each special record object in active state.
 	for _, specialRecord := range pendingSpecials {
 
