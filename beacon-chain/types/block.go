@@ -143,13 +143,14 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
-// Score determines the weighted block score utilized by the fork choice rule of the beacon chain.
+// SetScore determines the weighted block score utilized by the fork choice rule of the beacon chain.
 // This score currently depends on the last finalized and last justified slots of the
 // block's associated crystallized state as well as the block's slot number.
 // Currently, this uses the block's slot number as a factor in the calculations but the final, production
 // fork choice scoring rule may utilize the number of votes in the block.
-func (b *Block) Score(lastFinalizedSlot uint64, lastJustifiedSlot uint64) uint64 {
-	return lastFinalizedSlot*uint64(math.Pow(10, 20)) + lastJustifiedSlot*uint64(math.Pow(10, 10)) + b.SlotNumber()
+func (b *Block) SetScore(lastFinalizedSlot uint64, lastJustifiedSlot uint64) {
+	score := lastFinalizedSlot*uint64(math.Pow(10, 20)) + lastJustifiedSlot*uint64(math.Pow(10, 10)) + b.SlotNumber()
+	block.data.Score = score
 }
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.

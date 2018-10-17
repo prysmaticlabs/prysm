@@ -260,8 +260,8 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				cState, err = cState.NewStateRecalculations(
 					aState,
 					block,
-					c.enableCrossLinksCheck,
-					c.enableRewardCheck,
+					c.enableCrossLinks,
+					c.enableRewardChecking,
 				)
 				if err != nil {
 					log.Errorf("initialize new cycle transition failed: %v", err)
@@ -275,7 +275,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			// TODO: Use the block score and store it the actual block.
 			// Keep a map of active/crystallized states in the chain service for
 			// unfinalized blocks.
-			score := block.Score(cState.LastFinalizedSlot, cState.LastJustifiedSlot)
+			score := block.Score(cState.LastFinalizedSlot(), cState.LastJustifiedSlot())
 			log.Infof("Block score is %v", score)
 
 			if err := c.beaconDB.SaveBlock(block); err != nil {
