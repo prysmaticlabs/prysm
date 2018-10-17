@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -63,20 +64,11 @@ func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-}
-
-func setupBeaconChain(t *testing.T, faultyPoWClient bool) *ChainService {
-	config := db.Config{Path: "", Name: "", InMemory: true}
-	db, err := db.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
-
+func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service
+	var err error
 	if faultyPoWClient {
 		client := &faultyClient{}
 		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
@@ -87,9 +79,13 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool) *ChainService {
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
+	if err := beaconDB.InitializeState(nil); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
 	cfg := &Config{
 		BeaconBlockBuf: 0,
-		BeaconDB:       db,
+		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
 		EnablePOWChain: true,
 	}
@@ -105,8 +101,9 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool) *ChainService {
 }
 
 func TestStartStop(t *testing.T) {
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
 
 	chainService.IncomingBlockFeed()
 
@@ -125,8 +122,9 @@ func TestStartStop(t *testing.T) {
 
 func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := setupBeaconChain(t, true)
-	defer chainService.beaconDB.Close()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:        1,
@@ -154,8 +152,9 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
@@ -221,8 +220,9 @@ func TestRunningChainService(t *testing.T) {
 
 func TestDoesPOWBlockExist(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := setupBeaconChain(t, true)
-	defer chainService.beaconDB.Close()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot: 10,
@@ -238,8 +238,9 @@ func TestDoesPOWBlockExist(t *testing.T) {
 
 func TestUpdateHead(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
@@ -283,8 +284,9 @@ func TestUpdateHead(t *testing.T) {
 }
 
 func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
-	chainService := setupBeaconChain(t, false)
-	defer chainService.beaconDB.Close()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
 
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
