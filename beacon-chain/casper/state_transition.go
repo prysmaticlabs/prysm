@@ -70,8 +70,8 @@ func ApplyCrosslinkRewardsAndPenalties(
 	attestation *pb.AggregatedAttestation,
 	validators []*pb.ValidatorRecord,
 	totalBalance uint64,
-	voteBalance uint64) (newValidators []*pb.ValidatorRecord, err error) {
-	newValidators = validators
+	voteBalance uint64) ([]*pb.ValidatorRecord, error) {
+	newValidators := validators
 	rewardQuotient := RewardQuotient(validators)
 
 	for _, attesterIndex := range attesterIndices {

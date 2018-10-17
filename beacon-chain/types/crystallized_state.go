@@ -251,7 +251,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 		period := block.SlotNumber() / params.GetConfig().WithdrawalPeriod
 		totalPenalties := c.penalizedETH(period)
-		casper.ChangeValidators(block.SlotNumber(), totalPenalties, newValidators)
+		newValidators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newValidators)
 	}
 
 	// Construct new crystallized state after cycle and validator set changed.
