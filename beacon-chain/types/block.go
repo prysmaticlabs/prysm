@@ -27,7 +27,7 @@ type Block struct {
 }
 
 type beaconDB interface {
-	HasBlock(h [32]byte) (bool, error)
+	HasBlock(h [32]byte) bool
 }
 
 // NewBlock explicitly sets the data field of a block.
@@ -229,11 +229,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	hash := [32]byte{}
 	copy(hash[:], attestation.JustifiedBlockHash)
-	blockInChain, err := db.HasBlock(hash)
-	if err != nil {
-		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
-		return false
-	}
+	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
 		log.Debugf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
