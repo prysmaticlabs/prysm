@@ -159,7 +159,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			if block.Score() < currentHead.Score() {
 				continue
 			}
-			// TODO: Detect if we have a reorg here.
+			// NOTE: Detect if we have a reorg here.
 
 			// Update chain head in DB once everything is good.
 			if err := c.beaconDB.SaveCanonicalBlock(block); err != nil {
@@ -275,7 +275,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
-			// TODO: Use the boltDB changes to persist crystallized and active for
+			// NOTE: Use the boltDB changes to persist crystallized and active for
 			// this unfinalized block as well.
 
 			log.Infof("Finished processing received block: %#x", blockHash)
