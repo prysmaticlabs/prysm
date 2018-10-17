@@ -148,19 +148,24 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			}
 
 			log.Info("Updating chain head...")
-			// currentHead, err := c.beaconDB.ChainHead()
-			// if err != nil {
-			// 	log.Errorf("Could not retrieve chain head: %v", err)
-			// 	continue
-			// }
+			currentHead, err := c.beaconDB.GetCanonicalBlock()
+			if err != nil {
+				log.Errorf("Could not retrieve chain head block: %v", err)
+				continue
+			}
 
 			// If the block's score is less than the current head, we continue and do not
 			// update the chain head.
-			// if block.Score() < currentHead.Score() {
-			// 	continue
-			// }
-			// Detect if we have a reorg here.
+			if block.Score() < currentHead.Score() {
+				continue
+			}
+			// TODO: Detect if we have a reorg here.
+
 			// Update chain head in DB once everything is good.
+			if err := c.beaconDB.SaveCanonicalBlock(block); err != nil {
+				log.Errorf("Could not save new chain head to disk: %v")
+				continue
+			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
 			if err := c.beaconDB.SaveActiveState(c.unfinalizedBlocks[h].activeState); err != nil {

@@ -143,6 +143,13 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
+// Score returns the block's determined score based on its associated
+// crystallized state's last_finalized and last_justified slots used in the fork choice
+// rule of the beacon chain.
+func (b *Block) Score() uint64 {
+	return b.data.GetScore()
+}
+
 // SetScore determines the weighted block score utilized by the fork choice rule of the beacon chain.
 // This score currently depends on the last finalized and last justified slots of the
 // block's associated crystallized state as well as the block's slot number.

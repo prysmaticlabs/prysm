@@ -244,7 +244,7 @@ func TestUpdateHead(t *testing.T) {
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
+		t.Fatalf("Could not generate genesis state: %v", err)
 	}
 	ActiveStateRoot, _ := active.Hash()
 	CrystallizedStateRoot, _ := crystallized.Hash()
@@ -261,7 +261,12 @@ func TestUpdateHead(t *testing.T) {
 		CrystallizedStateRoot: CrystallizedStateRoot[:],
 		AncestorHashes:        [][]byte{genesisHash[:]},
 		PowChainRef:           []byte("a"),
+		Score:                 10,
 	})
+	h, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	exitRoutine := make(chan bool)
 	blockChan := make(chan *types.Block)
@@ -273,13 +278,14 @@ func TestUpdateHead(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	chainService.unfinalizedBlocks[h] = &statePair{activeState: active, crystallizedState: crystallized}
 
 	// If blocks pending processing is empty, the updateHead routine does nothing.
 	blockChan <- block
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Canonical block determined")
+	testutil.AssertLogsContain(t, hook, "Chain head block and state updated")
 }
 
 func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
