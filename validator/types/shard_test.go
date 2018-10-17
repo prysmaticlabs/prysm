@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
-	"golang.org/x/crypto/blake2b"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 type mockShardDB struct {
@@ -42,14 +42,12 @@ func (m *mockShardDB) NewBatch() ethdb.Batch {
 }
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.
-func (c *Collation) Hash() (hash common.Hash) {
+func (c *Collation) Hash() common.Hash {
 	encoded, err := rlp.EncodeToBytes(c)
 	if err != nil {
 		log.Errorf("Failed to RLP encode data: %v", err)
 	}
-	blakeHash := blake2b.Sum512(encoded)
-	copy(hash[:], blakeHash[:32])
-	return hash
+	return hashutil.Hash(encoded)
 }
 
 func TestShard_ValidateShardID(t *testing.T) {

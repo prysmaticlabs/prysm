@@ -5,16 +5,19 @@ go_library(
     srcs = [
         "clock.go",
         "flags.go",
+        "genesis_json.go",
         "shuffle.go",
-        "slot_ticker.go",
+        "vote_cache.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/params:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/hashutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_golang_protobuf//jsonpb:go_default_library_gen",
         "@com_github_urfave_cli//:go_default_library",
-        "@org_golang_x_crypto//blake2b:go_default_library",
     ],
 )
 
@@ -22,12 +25,14 @@ go_test(
     name = "go_default_test",
     srcs = [
         "clock_test.go",
+        "genesis_json_test.go",
         "shuffle_test.go",
-        "slot_ticker_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/params:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_gogo_protobuf//jsonpb:go_default_library",
     ],
 )

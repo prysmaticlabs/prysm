@@ -1,13 +1,14 @@
 package bitutil
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/steakknife/hamming"
 )
 
 // CheckBit checks if a bit in a bit field is one.
-func CheckBit(bitfield []byte, index int) bool {
+func CheckBit(bitfield []byte, index int) (bool, error) {
 	chunkLocation := (index + 1) / 8
 	indexLocation := (index + 1) % 8
 	if indexLocation == 0 {
@@ -16,8 +17,13 @@ func CheckBit(bitfield []byte, index int) bool {
 		chunkLocation++
 	}
 
+	if chunkLocation > len(bitfield) {
+		return false, fmt.Errorf("index out of range for bitfield: length: %d, position: %d ",
+			len(bitfield), chunkLocation-1)
+	}
+
 	field := bitfield[chunkLocation-1] >> (8 - uint(indexLocation))
-	return field%2 != 0
+	return field%2 != 0, nil
 }
 
 // BitSetCount counts the number of 1s in a byte using Hamming weight.

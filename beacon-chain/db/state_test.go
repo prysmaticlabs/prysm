@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -20,7 +21,7 @@ func TestSaveActiveState(t *testing.T) {
 			{'A'}, {'B'}, {'C'}, {'D'},
 		},
 	}
-	active := types.NewActiveState(data, make(map[[32]byte]*types.VoteCache))
+	active := types.NewActiveState(data, make(map[[32]byte]*utils.VoteCache))
 
 	if err := beaconDB.SaveActiveState(active); err != nil {
 		t.Fatalf("unable to mutate active state: %v", err)
@@ -35,8 +36,7 @@ func TestSaveCrystallizedState(t *testing.T) {
 	defer beaconDB.Close()
 
 	data := &pb.CrystallizedState{
-		Dynasty:     3,
-		DynastySeed: []byte{'A'},
+		ValidatorSetChangeSlot: 3,
 	}
 	crystallized := types.NewCrystallizedState(data)
 

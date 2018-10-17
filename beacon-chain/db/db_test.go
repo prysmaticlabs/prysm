@@ -31,7 +31,7 @@ func TestNewDB(t *testing.T) {
 
 	hook.Reset()
 	aState := types.NewGenesisActiveState()
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Errorf("Creating new genesis state failed %v", err)
 	}

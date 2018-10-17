@@ -30,7 +30,6 @@ type beaconDB interface {
 	GetBlock([32]byte) (*types.Block, error)
 	GetAttestation([32]byte) (*types.Attestation, error)
 	HasAttestation([32]byte) (bool, error)
-	HasStoredState() (bool, error)
 	HasBlock([32]byte) (bool, error)
 	HasCanonicalBlockForSlot(uint64) (bool, error)
 	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
@@ -111,19 +110,19 @@ func NewSyncService(ctx context.Context, cfg Config) *Service {
 	}
 }
 
+// IsSyncedWithNetwork polls other nodes in the network
+// to determine whether or not the local chain is synced
+// with the rest of the network.
+// TODO(#661): Implement this method.
+func (ss *Service) IsSyncedWithNetwork() bool {
+	return false
+}
+
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
-	stored, err := ss.db.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-		return
-	}
-
-	if !stored {
-		// TODO(#426): Resume sync after completion of initial sync.
-		// Currently, `Simulator` only supports sync from genesis block, therefore
-		// new nodes with a fresh database must skip InitialSync and immediately run the Sync goroutine.
-		log.Info("Empty chain state, but continue sync")
+	if !ss.IsSyncedWithNetwork() {
+		log.Info("Not caught up with network, but continue sync")
+		// TODO(#661): Exit early if not synced.
 	}
 
 	go ss.run()
@@ -229,13 +228,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		// Verify attestation coming from proposer then forward block to the subscribers.
 		attestation := types.NewAttestation(response.Attestation)
 		cState := ss.db.GetCrystallizedState()
-		parentBlock, err := ss.db.GetBlock(block.ParentHash())
-		if err != nil {
-			log.Errorf("Failed to get parent slot: %v", err)
-			return
-		}
-		parentSlot := parentBlock.SlotNumber()
-		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), parentSlot)
+		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 		if err != nil {
 			log.Errorf("Failed to get proposer shard ID: %v", err)
 			return
@@ -319,7 +312,7 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 		}
 		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
 		if validatorExists {
-			log.Debugf("Received attestation 0x%v already", h)
+			log.Debugf("Received attestation %#x already", h)
 			return
 		}
 	}
