@@ -216,7 +216,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 	if block.SlotNumber() < cState.LastFinalizedSlot() {
-		log.Debug("Received block with a slot number smaller than the last finalized slot")
+		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
 
