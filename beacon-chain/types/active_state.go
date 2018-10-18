@@ -251,7 +251,20 @@ func (a *ActiveState) CalculateNewActiveState(
 	parentSlot uint64,
 	enableAttestationValidity bool) (*ActiveState, error) {
 	var err error
-	newA := *a
+
+	newRandao := a.RandaoMix()
+	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
+	for i := 0; i < len(a.RecentBlockHashes()); i++ {
+		recentBlockHashes[i] = a.RecentBlockHashes()[i][:]
+	}
+	newA := ActiveState{
+		data: &pb.ActiveState{
+			PendingAttestations: a.PendingAttestations(),
+			RecentBlockHashes:   recentBlockHashes,
+			PendingSpecials:     a.PendingSpecials(),
+			RandaoMix:           newRandao[:],
+		},
+	}
 	// Cleans up old attestations.
 	newA.CleanUpActiveState(cState.LastStateRecalculationSlot())
 
@@ -283,7 +296,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		return nil, fmt.Errorf("Can not get proposer index %v", err)
 	}
 
-	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
+	newRandao = setRandaoMix(block.RandaoReveal(), a.RandaoMix())
 	newA.data.RandaoMix = newRandao[:]
 
 	specialRecordData := make([][]byte, 2)

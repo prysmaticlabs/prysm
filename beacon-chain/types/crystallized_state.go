@@ -183,29 +183,41 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // We also check for validator set change transition and compute for new committees if necessary during this transition.
 func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
-	var newCrosslinks []*pb.CrosslinkRecord
 	var err error
 
-	newC := *c
+	newC := CrystallizedState{&pb.CrystallizedState{
+		LastStateRecalculationSlot: c.LastStateRecalculationSlot(),
+		JustifiedStreak:            c.JustifiedStreak(),
+		LastJustifiedSlot:          c.LastJustifiedSlot(),
+		LastFinalizedSlot:          c.LastFinalizedSlot(),
+		ValidatorSetChangeSlot:     c.ValidatorSetChangeSlot(),
+		Crosslinks:                 c.Crosslinks(),
+		Validators:                 c.Validators(),
+		ShardAndCommitteesForSlots: c.ShardAndCommitteesForSlots(),
+		DepositsPenalizedInPeriod:  c.DepositsPenalizedInPeriod(),
+		ValidatorSetDeltaHashChain: c.data.ValidatorSetDeltaHashChain,
+		PreForkVersion:             c.data.PreForkVersion,
+		PostForkVersion:            c.data.PostForkVersion,
+		ForkSlotNumber:             c.data.ForkSlotNumber,
+	}}
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
-	lastStateRecalculationSlot := c.LastStateRecalculationSlot()
 	blockVoteCache := aState.GetBlockVoteCache()
-	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
+	timeSinceFinality := block.SlotNumber() - newC.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
-	newValidators := casper.CopyValidators(c.Validators())
+	newC.data.Validators = casper.CopyValidators(newC.Validators())
 
-	if lastStateRecalculationSlot < params.GetConfig().CycleLength {
+	if c.LastStateRecalculationSlot() < params.GetConfig().CycleLength {
 		lastStateRecalculationSlotCycleBack = 0
 	} else {
-		lastStateRecalculationSlotCycleBack = lastStateRecalculationSlot - params.GetConfig().CycleLength
+		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	}
 
 	// If reward checking is disabled, the new set of validators for the cycle
 	// will remain the same.
 	if !enableRewardChecking {
-		newValidators = c.data.Validators
+		newC.data.Validators = c.Validators()
 	}
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
@@ -215,35 +227,40 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockHash, slot,
-			blockVoteCache, newValidators, timeSinceFinality, enableRewardChecking)
+		blockVoteBalance, newC.data.Validators = casper.TallyVoteBalances(blockHash, slot,
+			blockVoteCache, newC.Validators(), timeSinceFinality, enableRewardChecking)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
 		if enableCrossLinks {
-			newCrosslinks, err = newC.processCrosslinks(aState.PendingAttestations(), slot, newValidators, block.SlotNumber())
+			newC.data.Crosslinks, err = newC.processCrosslinks(aState.PendingAttestations(), slot, newC.Validators(), block.SlotNumber())
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
+	newC.data.LastJustifiedSlot = justifiedSlot
+	newC.data.LastFinalizedSlot = finalizedSlot
+	newC.data.JustifiedStreak = justifiedStreak
+	newC.data.LastStateRecalculationSlot = newC.LastStateRecalculationSlot() + params.GetConfig().CycleLength
+
 	// Process the pending special records gathered from last cycle.
-	newValidators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newValidators, aState.PendingSpecials())
+	newC.data.Validators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newC.Validators(), aState.PendingSpecials())
 	if err != nil {
 		return nil, err
 	}
 
 	// Exit the validators when their balance fall below min online deposit size.
-	newValidators = casper.CheckValidatorMinDeposit(newValidators, block.SlotNumber())
+	newC.data.Validators = casper.CheckValidatorMinDeposit(newC.Validators(), block.SlotNumber())
 
 	newC.data.LastFinalizedSlot = finalizedSlot
 
 	// Entering new validator set change transition.
 	if c.isValidatorSetChange(block.SlotNumber()) {
 		log.Info("Entering validator set change transition")
-		newC.data.ValidatorSetChangeSlot = lastStateRecalculationSlot
+		newC.data.ValidatorSetChangeSlot = newC.LastStateRecalculationSlot()
 		newC.data.ShardAndCommitteesForSlots, err = newC.newValidatorSetRecalculations(block.ParentHash())
 		if err != nil {
 			return nil, err
@@ -251,14 +268,8 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 		period := block.SlotNumber() / params.GetConfig().WithdrawalPeriod
 		totalPenalties := newC.penalizedETH(period)
-		newValidators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newValidators)
+		newC.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newC.Validators())
 	}
-
-	newC.data.Validators = newValidators
-	newC.data.LastStateRecalculationSlot = lastStateRecalculationSlot + params.GetConfig().CycleLength
-	newC.data.LastJustifiedSlot = justifiedSlot
-	newC.data.JustifiedStreak = justifiedStreak
-	newC.data.Crosslinks = newCrosslinks
 
 	return &newC, nil
 }
