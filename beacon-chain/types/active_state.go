@@ -67,6 +67,34 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
+// CopyState returns a deep copy of the current active state.
+func (a *ActiveState) CopyState() *ActiveState {
+	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.PendingAttestations()))
+	for index, pendingAttestation := range a.PendingAttestations() {
+		pendingAttestations[index] = pendingAttestation
+	}
+	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
+	for i := 0; i < len(a.RecentBlockHashes()); i++ {
+		recentBlockHashes[i] = a.RecentBlockHashes()[i][:]
+	}
+	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
+	for index, pendingSpecial := range a.PendingSpecials() {
+		pendingSpecials[index] = pendingSpecial
+	}
+	randaoMix := a.RandaoMix()
+
+	newC := ActiveState{
+		data: &pb.ActiveState{
+			PendingAttestations: pendingAttestations,
+			RecentBlockHashes:   recentBlockHashes,
+			PendingSpecials:     pendingSpecials,
+			RandaoMix:           randaoMix[:],
+		},
+	}
+
+	return &newC
+}
+
 // PendingAttestations returns attestations that have not yet been processed.
 func (a *ActiveState) PendingAttestations() []*pb.AggregatedAttestation {
 	return a.data.PendingAttestations
@@ -252,19 +280,7 @@ func (a *ActiveState) CalculateNewActiveState(
 	enableAttestationValidity bool) (*ActiveState, error) {
 	var err error
 
-	newRandao := a.RandaoMix()
-	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
-	for i := 0; i < len(a.RecentBlockHashes()); i++ {
-		recentBlockHashes[i] = a.RecentBlockHashes()[i][:]
-	}
-	newA := ActiveState{
-		data: &pb.ActiveState{
-			PendingAttestations: a.PendingAttestations(),
-			RecentBlockHashes:   recentBlockHashes,
-			PendingSpecials:     a.PendingSpecials(),
-			RandaoMix:           newRandao[:],
-		},
-	}
+	newA := a.CopyState()
 	// Cleans up old attestations.
 	newA.CleanUpActiveState(cState.LastStateRecalculationSlot())
 
@@ -296,7 +312,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		return nil, fmt.Errorf("Can not get proposer index %v", err)
 	}
 
-	newRandao = setRandaoMix(block.RandaoReveal(), a.RandaoMix())
+	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
 	newA.data.RandaoMix = newRandao[:]
 
 	specialRecordData := make([][]byte, 2)
@@ -312,7 +328,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		Data: specialRecordData,
 	})
 
-	return &newA, nil
+	return newA, nil
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.

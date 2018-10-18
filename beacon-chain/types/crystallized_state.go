@@ -86,6 +86,40 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
+// CopyState returns a deep copy of the current state.
+func (c *CrystallizedState) CopyState() *CrystallizedState {
+	crosslinks := make([]*pb.CrosslinkRecord, len(c.Crosslinks()))
+	for index, crossLink := range c.Crosslinks() {
+		crosslinks[index] = crossLink
+	}
+	validators := make([]*pb.ValidatorRecord, len(c.Validators()))
+	for index, validator := range c.Validators() {
+		validators[index] = validator
+	}
+	shardAndCommitteesForSlots := make([]*pb.ShardAndCommitteeArray, len(c.ShardAndCommitteesForSlots()))
+	for index, ShardAndCommitteesForSlot := range c.ShardAndCommitteesForSlots() {
+		shardAndCommitteesForSlots[index] = ShardAndCommitteesForSlot
+	}
+
+	newC := CrystallizedState{&pb.CrystallizedState{
+		LastStateRecalculationSlot: c.LastStateRecalculationSlot(),
+		JustifiedStreak:            c.JustifiedStreak(),
+		LastJustifiedSlot:          c.LastJustifiedSlot(),
+		LastFinalizedSlot:          c.LastFinalizedSlot(),
+		ValidatorSetChangeSlot:     c.ValidatorSetChangeSlot(),
+		Crosslinks:                 crosslinks,
+		Validators:                 validators,
+		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+		DepositsPenalizedInPeriod:  c.DepositsPenalizedInPeriod(),
+		ValidatorSetDeltaHashChain: c.data.ValidatorSetDeltaHashChain,
+		PreForkVersion:             c.data.PreForkVersion,
+		PostForkVersion:            c.data.PostForkVersion,
+		ForkSlotNumber:             c.data.ForkSlotNumber,
+	}}
+
+	return &newC
+}
+
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.
 func (c *CrystallizedState) LastStateRecalculationSlot() uint64 {
 	return c.data.LastStateRecalculationSlot
@@ -185,21 +219,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	var lastStateRecalculationSlotCycleBack uint64
 	var err error
 
-	newC := CrystallizedState{&pb.CrystallizedState{
-		LastStateRecalculationSlot: c.LastStateRecalculationSlot(),
-		JustifiedStreak:            c.JustifiedStreak(),
-		LastJustifiedSlot:          c.LastJustifiedSlot(),
-		LastFinalizedSlot:          c.LastFinalizedSlot(),
-		ValidatorSetChangeSlot:     c.ValidatorSetChangeSlot(),
-		Crosslinks:                 c.Crosslinks(),
-		Validators:                 c.Validators(),
-		ShardAndCommitteesForSlots: c.ShardAndCommitteesForSlots(),
-		DepositsPenalizedInPeriod:  c.DepositsPenalizedInPeriod(),
-		ValidatorSetDeltaHashChain: c.data.ValidatorSetDeltaHashChain,
-		PreForkVersion:             c.data.PreForkVersion,
-		PostForkVersion:            c.data.PostForkVersion,
-		ForkSlotNumber:             c.data.ForkSlotNumber,
-	}}
+	newC := c.CopyState()
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
@@ -271,7 +291,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		newC.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newC.Validators())
 	}
 
-	return &newC, nil
+	return newC, nil
 }
 
 // newValidatorSetRecalculations recomputes the validator set.
