@@ -89,9 +89,8 @@ func (c *ChainService) Start() {
 		return
 	}
 
-	// NOTE: Populate unfinalized blocks from disk in case of beacon node
-	// restarts.
-
+	// TODO: Populate unfinalized blocks map from disk in case
+	// of beacon node restarts.
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
 }
@@ -294,8 +293,11 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				log.Errorf("Failed to save block: %v", err)
 				continue
 			}
-			// NOTE: Use the boltDB changes to persist crystallized and active for
-			// this unfinalized block as well.
+			if err := c.beaconDB.SaveUnfinalizedBlockState(aState, cState); err != nil {
+				log.Errorf("Error persisting unfinalized block's state: %v", err)
+				continue
+			}
+
 			log.Infof("Finished processing received block: %#x", blockHash)
 
 			c.unfinalizedBlocks[blockHash] = &statePair{
