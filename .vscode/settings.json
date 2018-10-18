@@ -1,0 +1,6 @@
+{
+    "files.exclude": {
+        "**/.*": true,
+        "**/bazel-*": true
+    }
+}
