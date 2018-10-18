@@ -89,6 +89,8 @@ func (c *ChainService) Start() {
 		return
 	}
 
+	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
+	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
 }
@@ -189,8 +191,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				continue
 			}
 
-			// TODO: Handle chain reorg.
-
+			// TODO(#674): Handle chain reorgs.
 			var newCState *types.CrystallizedState
 			if c.unfinalizedBlocks[h].cycleTransition {
 				newCState = blockcState
