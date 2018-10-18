@@ -5,11 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -101,33 +98,5 @@ func TestGetUnfinalizedBlockState(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got2, cState) {
 		t.Errorf("CrystallizedState not equal: got = %v, want %v", got2, cState)
-	}
-}
-
-func TestBeaconDB_SaveUnfinalizedBlockState(t *testing.T) {
-	type fields struct {
-		db *bolt.DB
-	}
-	type args struct {
-		aState *types.ActiveState
-		cState *types.CrystallizedState
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := &BeaconDB{
-				db: tt.fields.db,
-			}
-			if err := db.SaveUnfinalizedBlockState(tt.args.aState, tt.args.cState); (err != nil) != tt.wantErr {
-				t.Errorf("BeaconDB.SaveUnfinalizedBlockState() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
 	}
 }
