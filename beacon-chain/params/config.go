@@ -33,6 +33,8 @@ type Config struct {
 	LogOutMessage                 string    // This is the message a validator will send in order to log out.
 	WithdrawalPeriod              uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
+	MinDeposit                    int       // MinDeposit is the minimal amount of Ether a validator needs to participate.
+	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
 }
 
 var defaultConfig = &Config{
@@ -42,6 +44,7 @@ var defaultConfig = &Config{
 	ShardCount:                    1024,
 	Gwei:                          1e9,
 	DepositSize:                   32,
+	MinDeposit:                    16,
 	SlotDuration:                  uint64(8),
 	MinCommiteeSize:               uint64(128),
 	BootstrappedValidatorsCount:   1000,
@@ -59,6 +62,7 @@ var demoConfig = &Config{
 	ShardCount:                    5,
 	Gwei:                          1e9,
 	DepositSize:                   32,
+	MinDeposit:                    16,
 	SlotDuration:                  uint64(8),
 	MinCommiteeSize:               uint64(3),
 	MinValidatorSetChangeInterval: uint64(256),
@@ -66,6 +70,7 @@ var demoConfig = &Config{
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(128),
 	MaxValidatorChurnQuotient:     uint64(32),
+	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
 
 const (
