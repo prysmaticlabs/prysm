@@ -210,14 +210,19 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
+	cState, err := ss.db.GetCrystallizedState()
+	if err != nil {
+		log.Errorf("Failed to get crystallized state: %v", err)
+		return
+	}
+	if block.SlotNumber() < cState.LastFinalizedSlot() {
+		log.Debug("Received block with a slot number smaller than the last finalized slot")
+		return
+	}
+
 	if ss.enableAttestationValidity {
 		// Verify attestation coming from proposer then forward block to the subscribers.
 		attestation := types.NewAttestation(response.Attestation)
-		cState, err := ss.db.GetCrystallizedState()
-		if err != nil {
-			log.Errorf("Failed to get crystallized state: %v", err)
-			return
-		}
 
 		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 		if err != nil {
