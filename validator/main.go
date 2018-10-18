@@ -21,7 +21,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	shardingNode, err := node.NewShardInstance(ctx)
+	shardingNode, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
 	}
