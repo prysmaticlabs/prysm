@@ -353,24 +353,32 @@ func TestUpdateHead(t *testing.T) {
 		cState    *types.CrystallizedState
 		logAssert string
 	}{
+		// Higher slot but same crystallized state should trigger chain update.
 		{
 			blockSlot: 64,
 			aState:    genesisActive,
 			cState:    genesisCrystallized,
 			logAssert: "Chain head block and state updated",
 		},
+		// Higher slot, different crystallized state, but higher last finalized slot.
 		{
 			blockSlot: 64,
 			aState:    genesisActive,
 			cState:    types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 10}),
 			logAssert: "Chain head block and state updated",
 		},
+		// Higher slot, different crystallized state, same last finalized slot,
+		// but last justified slot.
 		{
 			blockSlot: 64,
 			aState:    genesisActive,
-			cState:    types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 0, LastJustifiedSlot: 10}),
+			cState: types.NewCrystallizedState(&pb.CrystallizedState{
+				LastFinalizedSlot: 0,
+				LastJustifiedSlot: 10,
+			}),
 			logAssert: "Chain head block and state updated",
 		},
+		// Same slot should not trigger a head update.
 		{
 			blockSlot: 0,
 			aState:    genesisActive,
