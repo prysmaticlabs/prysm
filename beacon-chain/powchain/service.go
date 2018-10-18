@@ -16,6 +16,29 @@ import (
 
 var log = logrus.WithField("prefix", "powchain")
 
+// Reader defines a struct that can fetch latest header events from a web3 endpoint.
+type Reader interface {
+	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
+}
+
+// POWBlockFetcher defines a struct that can retrieve mainchain blocks.
+type POWBlockFetcher interface {
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+}
+
+// Logger defines a struct that subscribes to filtered logs on the PoW chain.
+type Logger interface {
+	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
+}
+
+// POWChainClient defines a struct that combines all relevant PoW mainchain interactions required
+// by the beacon chain node.
+type POWChainClient interface {
+	Reader
+	POWBlockFetcher
+	Logger
+}
+
 // Web3Service fetches important information about the canonical
 // Ethereum PoW chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the PoW chain's current

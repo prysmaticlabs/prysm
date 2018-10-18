@@ -1,4 +1,4 @@
-// Package node defines a validator node which connects to a
+// Package node defines a validator client which connects to a
 // full beacon node as part of the Ethereum 2.0 specification.
 package node
 
@@ -30,10 +30,10 @@ var log = logrus.WithField("prefix", "node")
 
 const shardChainDBName = "shardchaindata"
 
-// ShardEthereum defines an instance of a sharding validator that manages
+// ValidatorClient defines an instance of a sharding validator that manages
 // the entire lifecycle of services attached to it participating in
 // Ethereum 2.0.
-type ShardEthereum struct {
+type ValidatorClient struct {
 	ctx      *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
@@ -49,10 +49,10 @@ func GeneratePubKey() ([]byte, error) {
 	return pubkey, err
 }
 
-// NewShardInstance creates a new, Ethereum 2.0 sharding validator.
-func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
+// NewValidatorClient creates a new, Ethereum 2.0 validator client.
+func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	registry := shared.NewServiceRegistry()
-	shardEthereum := &ShardEthereum{
+	ValidatorClient := &ValidatorClient{
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
@@ -67,45 +67,45 @@ func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Warnf("Public Key not detected, generating a new one: %v", pubKey)
+		log.Warnf("PublicKey not detected, generating a new one: %v", pubKey)
 
 	} else {
 		pubKey = []byte(inputKey)
 	}
 
-	if err := shardEthereum.startDB(ctx); err != nil {
+	if err := ValidatorClient.startDB(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerP2P(ctx); err != nil {
+	if err := ValidatorClient.registerP2P(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerTXPool(); err != nil {
+	if err := ValidatorClient.registerTXPool(); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerRPCClientService(ctx); err != nil {
+	if err := ValidatorClient.registerRPCClientService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconService(pubKey); err != nil {
+	if err := ValidatorClient.registerBeaconService(pubKey); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerAttesterService(pubKey); err != nil {
+	if err := ValidatorClient.registerAttesterService(pubKey); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerProposerService(); err != nil {
+	if err := ValidatorClient.registerProposerService(); err != nil {
 		return nil, err
 	}
 
-	return shardEthereum, nil
+	return ValidatorClient, nil
 }
 
-// Start every service in the sharding validator.
-func (s *ShardEthereum) Start() {
+// Start every service in the validator client.
+func (s *ValidatorClient) Start() {
 	s.lock.Lock()
 
 	log.Info("Starting sharding validator")
@@ -137,7 +137,7 @@ func (s *ShardEthereum) Start() {
 }
 
 // Close handles graceful shutdown of the system.
-func (s *ShardEthereum) Close() {
+func (s *ValidatorClient) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -148,8 +148,8 @@ func (s *ShardEthereum) Close() {
 	close(s.stop)
 }
 
-// startDB attaches a LevelDB wrapped object to the shardEthereum instance.
-func (s *ShardEthereum) startDB(ctx *cli.Context) error {
+// startDB attaches a LevelDB wrapped object to the ValidatorClient instance.
+func (s *ValidatorClient) startDB(ctx *cli.Context) error {
 	path := ctx.GlobalString(cmd.DataDirFlag.Name)
 	config := &database.DBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
 	db, err := database.NewDB(config)
@@ -161,8 +161,8 @@ func (s *ShardEthereum) startDB(ctx *cli.Context) error {
 	return nil
 }
 
-// registerP2P attaches a p2p server to the ShardEthereum instance.
-func (s *ShardEthereum) registerP2P(ctx *cli.Context) error {
+// registerP2P attaches a p2p server to the ValidatorClient instance.
+func (s *ValidatorClient) registerP2P(ctx *cli.Context) error {
 	shardp2p, err := configureP2P(ctx)
 	if err != nil {
 		return fmt.Errorf("could not register shardp2p service: %v", err)
@@ -175,7 +175,7 @@ func (s *ShardEthereum) registerP2P(ctx *cli.Context) error {
 // event feed. For our first releases, this can just relay test/fake transaction data
 // the proposer can serialize into collation blobs.
 // TODO(#161): design this txpool system for our first release.
-func (s *ShardEthereum) registerTXPool() error {
+func (s *ValidatorClient) registerTXPool() error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
@@ -189,7 +189,7 @@ func (s *ShardEthereum) registerTXPool() error {
 
 // registerBeaconService registers a service that fetches streams from a beacon node
 // via RPC.
-func (s *ShardEthereum) registerBeaconService(pubKey []byte) error {
+func (s *ValidatorClient) registerBeaconService(pubKey []byte) error {
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
@@ -199,7 +199,7 @@ func (s *ShardEthereum) registerBeaconService(pubKey []byte) error {
 }
 
 // registerAttesterService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerAttesterService(pubKey []byte) error {
+func (s *ValidatorClient) registerAttesterService(pubKey []byte) error {
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
@@ -220,7 +220,7 @@ func (s *ShardEthereum) registerAttesterService(pubKey []byte) error {
 }
 
 // registerProposerService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerProposerService() error {
+func (s *ValidatorClient) registerProposerService() error {
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
@@ -241,7 +241,7 @@ func (s *ShardEthereum) registerProposerService() error {
 }
 
 // registerRPCClientService registers a new RPC client that connects to a beacon node.
-func (s *ShardEthereum) registerRPCClientService(ctx *cli.Context) error {
+func (s *ValidatorClient) registerRPCClientService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	rpcService := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{
 		Endpoint: endpoint,

@@ -18,9 +18,9 @@ func TestNode_Builds(t *testing.T) {
 	set.String("pukey", "f24f252", "set public key of validator")
 	context := cli.NewContext(app, set, nil)
 
-	_, err := NewShardInstance(context)
+	_, err := NewValidatorClient(context)
 	if err != nil {
-		t.Fatalf("Failed to create ShardEthereum: %v", err)
+		t.Fatalf("Failed to create ValidatorClient: %v", err)
 	}
 
 	testutil.AssertLogsContain(t, hook, "Public Key not detected, generating a new one")

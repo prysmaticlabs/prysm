@@ -57,8 +57,8 @@ VERSION:
 `
 
 	app := cli.NewApp()
-	app.Name = "sharding"
-	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
+	app.Name = "validator"
+	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
 	app.Action = startNode
 	app.Flags = []cli.Flag{
