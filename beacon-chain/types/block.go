@@ -2,6 +2,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -202,7 +203,8 @@ func (b *Block) IsValid(
 	}
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	blockRandaoReveal := b.RandaoReveal()
-	if !b.isRandaoValid(cStateProposerRandaoSeed) {
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
 		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
 	}
