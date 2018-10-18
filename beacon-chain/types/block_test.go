@@ -119,10 +119,10 @@ func TestBlockValidity(t *testing.T) {
 	}
 
 	genesisTime := params.GetConfig().GenesisTime
-	if !b.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+	if !b.IsValid(db, aState, cState, parentSlot, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
-	if !b.IsValid(db, aState, cState, parentSlot, true, genesisTime) {
+	if !b.IsValid(db, aState, cState, parentSlot, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
 
@@ -139,7 +139,7 @@ func TestBlockValidity(t *testing.T) {
 			},
 		},
 	})
-	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, genesisTime) {
 		t.Fatalf("should have failed with invalid RANDAO")
 	}
 }

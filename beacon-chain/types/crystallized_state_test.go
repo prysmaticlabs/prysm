@@ -61,7 +61,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	binary.BigEndian.PutUint64(validator9Index, 9)
 	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{validator9Index, {byte('A')}}}}
 
-	newCState, err := cState.NewStateRecalculations(aState, block, false, false)
+	newCState, err := cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive new crystallized state: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 	aState := NewGenesisActiveState()
 	block := NewBlock(nil)
 
-	cState, err = cState.NewStateRecalculations(aState, block, false, false)
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		RecentBlockHashes: recentShardBlockHashes,
 	}, voteCache)
 
-	cState, err = cState.NewStateRecalculations(aState, block, false, false)
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, cState.LastFinalizedSlot())
 	}
 
-	cState, err = cState.NewStateRecalculations(aState, block, false, false)
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
@@ -157,20 +157,20 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 
-	cState, err = cState.NewStateRecalculations(aState, block, true, true)
+	cState, err = cState.NewStateRecalculations(aState, block)
 	if err != nil {
 		t.Fatalf("failed to derive crystallized state: %v", err)
 	}
 	if cState.LastStateRecalculationSlot() != 4*params.GetConfig().CycleLength {
 		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.GetConfig().CycleLength, cState.LastStateRecalculationSlot())
 	}
-	if cState.LastJustifiedSlot() != 3*params.GetConfig().CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 3*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
+	if cState.LastJustifiedSlot() != 2*params.GetConfig().CycleLength-1 {
+		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.GetConfig().CycleLength-1, cState.LastJustifiedSlot())
 	}
-	if cState.JustifiedStreak() != 3*params.GetConfig().CycleLength {
+	if cState.JustifiedStreak() != 0 {
 		t.Fatalf("expected justified streak to equal %d: got %d", 0, cState.JustifiedStreak())
 	}
-	if cState.LastFinalizedSlot() != 2*params.GetConfig().CycleLength-2 {
+	if cState.LastFinalizedSlot() != params.GetConfig().CycleLength-2 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.GetConfig().CycleLength-2, cState.LastFinalizedSlot())
 	}
 }

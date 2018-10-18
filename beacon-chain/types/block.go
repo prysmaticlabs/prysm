@@ -158,7 +158,6 @@ func (b *Block) IsValid(
 	aState *ActiveState,
 	cState *CrystallizedState,
 	parentSlot uint64,
-	enableAttestationValidity bool,
 	genesisTime time.Time) bool {
 	_, err := b.Hash()
 	if err != nil {

@@ -249,8 +249,7 @@ func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
 func (a *ActiveState) CalculateNewActiveState(
 	block *Block,
 	cState *CrystallizedState,
-	parentSlot uint64,
-	enableAttestationValidity bool) (*ActiveState, error) {
+	parentSlot uint64) (*ActiveState, error) {
 
 	// Cleans up old attestations.
 	a.CleanUpActiveState(cState.LastStateRecalculationSlot())
@@ -313,9 +312,8 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 	obliqueParentHashes := attestation.ObliqueParentHashes
 	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
 
-	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength)
 	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
-
 	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
 		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}

@@ -63,7 +63,7 @@ var demoConfig = &Config{
 	Gwei:                          1e9,
 	DepositSize:                   32,
 	MinDeposit:                    16,
-	SlotDuration:                  uint64(8),
+	SlotDuration:                  uint64(2),
 	MinCommiteeSize:               uint64(3),
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),

@@ -155,12 +155,13 @@ func TestRunningChainService(t *testing.T) {
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-
+	chainService.enablePOWChain = false
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	db.SaveUnfinalizedBlockState(active, crystallized)
 
 	activeStateRoot, _ := active.Hash()
 	crystallizedStateRoot, _ := crystallized.Hash()
@@ -191,12 +192,6 @@ func TestRunningChainService(t *testing.T) {
 		}},
 	})
 
-	blockNoParent := types.NewBlock(&pb.BeaconBlock{
-		Slot:           currentSlot,
-		PowChainRef:    []byte("a"),
-		AncestorHashes: [][]byte{{}},
-	})
-
 	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -208,13 +203,11 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService.incomingBlockChan <- blockNoParent
 	chainService.incomingBlockChan <- block
 	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
-	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
 	testutil.AssertLogsContain(t, hook, "Finished processing received block")
 }
 
@@ -240,12 +233,13 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-
+	chainService.enablePOWChain = false
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	db.SaveUnfinalizedBlockState(active, crystallized)
 
 	ActiveStateRoot, _ := active.Hash()
 	CrystallizedStateRoot, _ := crystallized.Hash()
@@ -269,9 +263,10 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		ActiveStateRoot:       ActiveStateRoot[:],
 		CrystallizedStateRoot: CrystallizedStateRoot[:],
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:             currentSlot,
-			AttesterBitfield: []byte{16, 0},
-			Shard:            0,
+			Slot:               currentSlot - 1,
+			AttesterBitfield:   []byte{255, 254},
+			Shard:              1,
+			JustifiedBlockHash: block0Hash[:],
 		}},
 	})
 
@@ -301,8 +296,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		AncestorHashes: [][]byte{block1Hash[:]},
 		Slot:           currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
-			{Slot: currentSlot - 1, AttesterBitfield: []byte{8, 0}, Shard: 0},
-			{Slot: currentSlot, AttesterBitfield: []byte{8, 0}, Shard: 0},
+			{Slot: currentSlot - 2, AttesterBitfield: []byte{255, 254}, Shard: 1, JustifiedBlockHash: block0Hash[:]},
+			{Slot: currentSlot - 1, AttesterBitfield: []byte{255, 254}, Shard: 2, JustifiedBlockHash: block0Hash[:]},
 		}})
 	block2Hash, err := block2.Hash()
 	if err != nil {
@@ -316,9 +311,9 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		AncestorHashes: [][]byte{block2Hash[:]},
 		Slot:           currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
-			{Slot: currentSlot - 2, AttesterBitfield: []byte{4, 0}, Shard: 0},
-			{Slot: currentSlot - 1, AttesterBitfield: []byte{4, 0}, Shard: 0},
-			{Slot: currentSlot, AttesterBitfield: []byte{4, 0}, Shard: 0},
+			{Slot: currentSlot - 3, AttesterBitfield: []byte{255, 254}, Shard: 1, JustifiedBlockHash: block0Hash[:]},
+			{Slot: currentSlot - 2, AttesterBitfield: []byte{255, 254}, Shard: 2, JustifiedBlockHash: block0Hash[:]},
+			{Slot: currentSlot - 1, AttesterBitfield: []byte{255, 254}, Shard: 3, JustifiedBlockHash: block0Hash[:]},
 		}})
 
 	chainService.incomingBlockChan <- block1

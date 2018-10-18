@@ -52,31 +52,29 @@ type p2pAPI interface {
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type Service struct {
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	p2p                       p2pAPI
-	chainService              chainService
-	attestationService        attestationService
-	db                        beaconDB
-	blockAnnouncementFeed     *event.Feed
-	announceBlockHashBuf      chan p2p.Message
-	blockBuf                  chan p2p.Message
-	blockRequestBySlot        chan p2p.Message
-	attestationBuf            chan p2p.Message
-	enableAttestationValidity bool
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	p2p                   p2pAPI
+	chainService          chainService
+	attestationService    attestationService
+	db                    beaconDB
+	blockAnnouncementFeed *event.Feed
+	announceBlockHashBuf  chan p2p.Message
+	blockBuf              chan p2p.Message
+	blockRequestBySlot    chan p2p.Message
+	attestationBuf        chan p2p.Message
 }
 
 // Config allows the channel's buffer sizes to be changed.
 type Config struct {
-	BlockHashBufferSize       int
-	BlockBufferSize           int
-	BlockRequestBufferSize    int
-	AttestationBufferSize     int
-	ChainService              chainService
-	AttestService             attestationService
-	BeaconDB                  beaconDB
-	P2P                       p2pAPI
-	EnableAttestationValidity bool
+	BlockHashBufferSize    int
+	BlockBufferSize        int
+	BlockRequestBufferSize int
+	AttestationBufferSize  int
+	ChainService           chainService
+	AttestService          attestationService
+	BeaconDB               beaconDB
+	P2P                    p2pAPI
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -93,18 +91,17 @@ func DefaultConfig() Config {
 func NewSyncService(ctx context.Context, cfg Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                       ctx,
-		cancel:                    cancel,
-		p2p:                       cfg.P2P,
-		chainService:              cfg.ChainService,
-		db:                        cfg.BeaconDB,
-		attestationService:        cfg.AttestService,
-		blockAnnouncementFeed:     new(event.Feed),
-		announceBlockHashBuf:      make(chan p2p.Message, cfg.BlockHashBufferSize),
-		blockBuf:                  make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestBySlot:        make(chan p2p.Message, cfg.BlockRequestBufferSize),
-		attestationBuf:            make(chan p2p.Message, cfg.AttestationBufferSize),
-		enableAttestationValidity: cfg.EnableAttestationValidity,
+		ctx:                   ctx,
+		cancel:                cancel,
+		p2p:                   cfg.P2P,
+		chainService:          cfg.ChainService,
+		db:                    cfg.BeaconDB,
+		attestationService:    cfg.AttestService,
+		blockAnnouncementFeed: new(event.Feed),
+		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
+		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
+		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
+		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
 	}
 }
 
@@ -217,7 +214,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		log.Errorf("Failed to get crystallized state: %v", err)
 		return
 	}
-
+	//log.Error(cState.LastStateRecalculationSlot())
 	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)

@@ -10,7 +10,7 @@ import (
 
 func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	state := &pb.CrystallizedState{
-		LastStateRecalculationSlot: 65,
+		LastStateRecalculationSlot: 64,
 		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4}},

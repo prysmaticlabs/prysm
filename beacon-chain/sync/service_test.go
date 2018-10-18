@@ -107,6 +107,9 @@ func TestProcessBlock(t *testing.T) {
 
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
 
 	cfg := Config{
 		BlockHashBufferSize: 0,
@@ -169,6 +172,10 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,

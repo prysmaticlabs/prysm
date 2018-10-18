@@ -174,7 +174,7 @@ func TestProposerShardAndIndex(t *testing.T) {
 	if _, _, err := ProposerShardAndIndex(shardCommittees, 100, 0); err == nil {
 		t.Error("ProposerShardAndIndex should have failed with invalid lcs")
 	}
-	Shard, index, err := ProposerShardAndIndex(shardCommittees, 128, 64)
+	Shard, index, err := ProposerShardAndIndex(shardCommittees, 127, 64)
 	if err != nil {
 		t.Fatalf("ProposerShardAndIndex failed with %v", err)
 	}
