@@ -10,7 +10,6 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,9 +30,9 @@ type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
 }
 
-// POWChainClient defines a struct that combines all relevant PoW mainchain interactions required
+// Client defines a struct that combines all relevant PoW mainchain interactions required
 // by the beacon chain node.
-type POWChainClient interface {
+type Client interface {
 	Reader
 	POWBlockFetcher
 	Logger
@@ -48,15 +47,15 @@ type POWChainClient interface {
 type Web3Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	client              types.POWChainClient
+	client              Client
 	headerChan          chan *gethTypes.Header
 	logChan             chan gethTypes.Log
 	pubKey              string
 	endpoint            string
 	validatorRegistered bool
 	vrcAddress          common.Address
-	reader              types.Reader
-	logger              types.Logger
+	reader              Reader
+	logger              Logger
 	blockNumber         *big.Int    // the latest PoW chain blocknumber.
 	blockHash           common.Hash // the latest PoW chain blockhash.
 }
@@ -70,7 +69,7 @@ type Web3ServiceConfig struct {
 
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client types.POWChainClient, reader types.Reader, logger types.Logger) (*Web3Service, error) {
+func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client Client, reader Reader, logger Logger) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
 	}
@@ -177,6 +176,6 @@ func (w *Web3Service) IsValidatorRegistered() bool {
 }
 
 // Client for interacting with the PoWChain.
-func (w *Web3Service) Client() types.POWChainClient {
+func (w *Web3Service) Client() Client {
 	return w.client
 }
