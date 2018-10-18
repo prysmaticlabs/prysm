@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
 	"strconv"
 	"testing"
 
@@ -56,7 +57,9 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	})
 
 	// Set validator index 9's RANDAO reveal to be A
-	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{{byte(57)}, {byte('A')}}}}
+	validator9Index := make([]byte, 8)
+	binary.BigEndian.PutUint64(validator9Index, 9)
+	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{validator9Index, {byte('A')}}}}
 
 	newCState, err := cState.NewStateRecalculations(aState, block, false, false)
 	if err != nil {

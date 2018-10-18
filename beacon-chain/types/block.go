@@ -2,6 +2,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -202,12 +203,25 @@ func (b *Block) IsValid(
 	}
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	blockRandaoReveal := b.RandaoReveal()
-	if !b.isRandaoValid(cStateProposerRandaoSeed) {
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
 		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
 	}
 
 	return true
+}
+
+// UpdateAncestorHashes updates the skip list of ancestor block hashes.
+// i'th item is 2**i'th ancestor for i = 0, ..., 31.
+func UpdateAncestorHashes(parentAncestorHashes [][32]byte, parentSlotNum uint64, parentHash [32]byte) [][32]byte {
+	newAncestorHashes := parentAncestorHashes
+	for i := range parentAncestorHashes {
+		if (parentSlotNum % (1 << uint64(i))) == 0 {
+			newAncestorHashes[i] = parentHash
+		}
+	}
+	return newAncestorHashes
 }
 
 // isAttestationValid validates an attestation in a block.
