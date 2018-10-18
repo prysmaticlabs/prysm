@@ -125,6 +125,9 @@ func (db *BeaconDB) GetUnfinalizedBlockState(
 
 		var err error
 		aState, err = createActiveState(encActive)
+		if err != nil {
+			return err
+		}
 		cState, err = createCrystallizedState(encCrystallized)
 		return err
 	})
