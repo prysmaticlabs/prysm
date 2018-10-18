@@ -23,5 +23,5 @@ func TestNode_Builds(t *testing.T) {
 		t.Fatalf("Failed to create ValidatorClient: %v", err)
 	}
 
-	testutil.AssertLogsContain(t, hook, "Public Key not detected, generating a new one")
+	testutil.AssertLogsContain(t, hook, "PublicKey not detected, generating a new one")
 }
