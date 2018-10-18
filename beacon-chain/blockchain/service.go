@@ -185,8 +185,11 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 
 			// If no new head was found, we do not update the chain.
 			if !headUpdated {
+				log.Info("Chain head not updated")
 				continue
 			}
+
+			// TODO: Handle chain reorg.
 
 			var newCState *types.CrystallizedState
 			if c.unfinalizedBlocks[h].cycleTransition {

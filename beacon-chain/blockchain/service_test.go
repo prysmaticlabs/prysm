@@ -236,58 +236,6 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }
 
-func TestUpdateHead(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db)
-
-	active := types.NewGenesisActiveState()
-	crystallized, err := types.NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("Could not generate genesis state: %v", err)
-	}
-	ActiveStateRoot, _ := active.Hash()
-	CrystallizedStateRoot, _ := crystallized.Hash()
-
-	genesis := types.NewGenesisBlock(ActiveStateRoot, CrystallizedStateRoot)
-	genesisHash, err := genesis.Hash()
-	if err != nil {
-		t.Fatalf("Could not get genesis block hash: %v", err)
-	}
-
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:                  64,
-		ActiveStateRoot:       ActiveStateRoot[:],
-		CrystallizedStateRoot: CrystallizedStateRoot[:],
-		AncestorHashes:        [][]byte{genesisHash[:]},
-		PowChainRef:           []byte("a"),
-	})
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	exitRoutine := make(chan bool)
-	blockChan := make(chan *types.Block)
-	go func() {
-		chainService.updateHead(blockChan)
-		<-exitRoutine
-	}()
-
-	if err := chainService.beaconDB.SaveBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	chainService.unfinalizedBlocks[h] = &statePair{activeState: active, crystallizedState: crystallized}
-
-	// If blocks pending processing is empty, the updateHead routine does nothing.
-	blockChan <- block
-	chainService.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, "Chain head block and state updated")
-}
-
 func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
@@ -313,7 +261,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		t.Fatalf("Failed to compute block's hash: %v", err)
 	}
 
-	currentSlot := uint64(1)
+	currentSlot := uint64(65)
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes:        [][]byte{block0Hash[:]},
@@ -382,4 +330,95 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 
 	chainService.cancel()
 	exitRoutine <- true
+}
+
+func TestUpdateHead(t *testing.T) {
+	genesisActive := types.NewGenesisActiveState()
+	genesisCrystallized, err := types.NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("Could not generate genesis state: %v", err)
+	}
+	genesisActiveRoot, _ := genesisActive.Hash()
+	genesisCrystallizedRoot, _ := genesisCrystallized.Hash()
+
+	genesis := types.NewGenesisBlock(genesisActiveRoot, genesisCrystallizedRoot)
+	genesisHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("Could not get genesis block hash: %v", err)
+	}
+	// Table driven tests for various fork choice scenarios.
+	tests := []struct {
+		blockSlot uint64
+		aState    *types.ActiveState
+		cState    *types.CrystallizedState
+		logAssert string
+	}{
+		{
+			blockSlot: 64,
+			aState:    genesisActive,
+			cState:    genesisCrystallized,
+			logAssert: "Chain head block and state updated",
+		},
+		{
+			blockSlot: 64,
+			aState:    genesisActive,
+			cState:    types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 10}),
+			logAssert: "Chain head block and state updated",
+		},
+		{
+			blockSlot: 64,
+			aState:    genesisActive,
+			cState:    types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 0, LastJustifiedSlot: 10}),
+			logAssert: "Chain head block and state updated",
+		},
+		{
+			blockSlot: 0,
+			aState:    genesisActive,
+			cState:    genesisCrystallized,
+			logAssert: "Chain head not updated",
+		},
+	}
+	for _, tt := range tests {
+		hook := logTest.NewGlobal()
+		db := btestutil.SetupDB(t)
+		defer btestutil.TeardownDB(t, db)
+		chainService := setupBeaconChain(t, false, db)
+
+		aRoot, _ := tt.aState.Hash()
+		cRoot, _ := tt.cState.Hash()
+		block := types.NewBlock(&pb.BeaconBlock{
+			Slot:                  tt.blockSlot,
+			ActiveStateRoot:       aRoot[:],
+			CrystallizedStateRoot: cRoot[:],
+			AncestorHashes:        [][]byte{genesisHash[:]},
+			PowChainRef:           []byte("a"),
+		})
+		h, err := block.Hash()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		exitRoutine := make(chan bool)
+		blockChan := make(chan *types.Block)
+		go func() {
+			chainService.updateHead(blockChan)
+			<-exitRoutine
+		}()
+
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		chainService.unfinalizedBlocks[h] = &statePair{
+			activeState:       tt.aState,
+			crystallizedState: tt.cState,
+			cycleTransition:   true,
+		}
+
+		// If blocks pending processing is empty, the updateHead routine does nothing.
+		blockChan <- block
+		chainService.cancel()
+		exitRoutine <- true
+
+		testutil.AssertLogsContain(t, hook, tt.logAssert)
+	}
 }
