@@ -73,7 +73,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 	if lastStateRecalc < params.GetConfig().CycleLength {
 		lastStateRecalc = 0
 	} else {
-		lastStateRecalc = lastStateRecalc - params.GetConfig().CycleLength
+		lastStateRecalc = lastStateRecalc - params.GetConfig().CycleLength + 1
 	}
 
 	lowerBound := lastStateRecalc
@@ -94,31 +94,10 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
 	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
-		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
+		log.Errorf("attestation has incorrect bitfield length. Found %v, expected %v",
 			len(attestation.AttesterBitfield), bitutil.BitLength(len(attesterIndices)))
 		return false
 	}
-
-	// Valid attestation can not have non-zero trailing bits.
-	lastBit := len(attesterIndices)
-	remainingBits := lastBit % bitsInByte
-	if remainingBits == 0 {
-		return true
-	}
-
-	for i := 0; i < bitsInByte-remainingBits; i++ {
-		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
-		if err != nil {
-			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
-			return false
-		}
-
-		if isBitSet {
-			log.Error("attestation has non-zero trailing bits")
-			return false
-		}
-	}
-
 	return true
 }
 
@@ -219,6 +198,7 @@ func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArr
 	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
 
 	for i := 0; i < len(shardCommittee); i++ {
+		log.Error(shardCommittee[i].Shard)
 		if shardID == shardCommittee[i].Shard {
 			return shardCommittee[i].Committee, nil
 		}

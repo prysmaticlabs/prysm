@@ -155,7 +155,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			if err != nil {
 				log.Errorf("Failed to get crystallized state: %v", err)
 			}
-
+			log.Error(cState)
 			var stateTransitioned bool
 			for cState.IsCycleTransition(block.SlotNumber()) {
 				log.Infof("Recalculating crystallized state")
@@ -171,7 +171,6 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				}
 				stateTransitioned = true
 			}
-
 			aState, err = aState.CalculateNewActiveState(
 				block,
 				cState,

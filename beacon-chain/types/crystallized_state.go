@@ -141,6 +141,7 @@ func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
+	log.Error(c.data)
 	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
 }
 
@@ -205,9 +206,9 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 
 	// If reward checking is disabled, the new set of validators for the cycle
 	// will remain the same.
-	if !enableRewardChecking {
-		newValidators = c.data.Validators
-	}
+	//if !enableRewardChecking {
+	newValidators = c.data.Validators
+	//}
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
@@ -222,12 +223,12 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
-		if enableCrossLinks {
-			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, newValidators, block.SlotNumber())
-			if err != nil {
-				return nil, err
-			}
+		//if enableCrossLinks {
+		newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, newValidators, block.SlotNumber())
+		if err != nil {
+			return nil, err
 		}
+		//}
 	}
 
 	// Process the pending special records gathered from last cycle.
@@ -313,6 +314,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 	crosslinkRecords := copyCrosslinks(c.data.Crosslinks)
 
 	for _, attestation := range pendingAttestations {
+		log.Error(attestation)
 		indices, err := c.getAttesterIndices(attestation)
 		if err != nil {
 			return nil, err
@@ -320,6 +322,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 
 		totalBalance, voteBalance, err := casper.VotedBalanceInAttestation(validators, indices, attestation)
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 

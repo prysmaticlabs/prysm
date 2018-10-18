@@ -2,7 +2,6 @@ package casper
 
 import (
 	"encoding/binary"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -27,10 +26,10 @@ func TallyVoteBalances(
 
 	blockVoteBalance := cache.VoteTotalDeposit
 	voterIndices := cache.VoterIndices
-	if enableRewardChecking {
+	//if enableRewardChecking {
 		validators = CalculateRewards(slot, voterIndices, validators,
 			blockVoteBalance, timeSinceFinality)
-	}
+	//}
 
 	return blockVoteBalance, validators
 }
@@ -82,7 +81,6 @@ func ApplyCrosslinkRewardsAndPenalties(
 			if err != nil {
 				return err
 			}
-
 			if checkBit {
 				RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 			} else {

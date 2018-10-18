@@ -210,32 +210,30 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if ss.enableAttestationValidity {
-		// Verify attestation coming from proposer then forward block to the subscribers.
-		attestation := types.NewAttestation(response.Attestation)
-		cState, err := ss.db.GetCrystallizedState()
-		if err != nil {
-			log.Errorf("Failed to get crystallized state: %v", err)
-			return
-		}
-
-		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
-		if err != nil {
-			log.Errorf("Failed to get proposer shard ID: %v", err)
-			return
-		}
-
-		// TODO(#258): stubbing public key with empty 32 bytes.
-		if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
-			log.Errorf("Failed to verify proposer attestation: %v", err)
-			return
-		}
-
-		_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-		log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
-		ss.attestationService.IncomingAttestationFeed().Send(attestation)
-		sendAttestationSpan.End()
+	// Verify attestation coming from proposer then forward block to the subscribers.
+	attestation := types.NewAttestation(response.Attestation)
+	cState, err := ss.db.GetCrystallizedState()
+	if err != nil {
+		log.Errorf("Failed to get crystallized state: %v", err)
+		return
 	}
+
+	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
+	if err != nil {
+		log.Errorf("Failed to get proposer shard ID: %v", err)
+		return
+	}
+
+	// TODO(#258): stubbing public key with empty 32 bytes.
+	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
+		log.Errorf("Failed to verify proposer attestation: %v", err)
+		return
+	}
+
+	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+	ss.attestationService.IncomingAttestationFeed().Send(attestation)
+	sendAttestationSpan.End()
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("blockHash", fmt.Sprintf("%#x", blockHash)).Debug("Sending newly received block to subscribers")

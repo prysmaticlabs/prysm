@@ -269,11 +269,9 @@ func (a *ActiveState) CalculateNewActiveState(
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
 	blockVoteCache := a.blockVoteCache
 
-	if enableAttestationValidity {
-		blockVoteCache, err = a.calculateNewVoteCache(block, cState)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update vote cache: %v", err)
-		}
+	blockVoteCache, err = a.calculateNewVoteCache(block, cState)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update vote cache: %v", err)
 	}
 
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
