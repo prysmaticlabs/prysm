@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/database"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/validator/attester"
 	"github.com/prysmaticlabs/prysm/validator/beacon"
@@ -59,10 +60,11 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	var pubKey []byte
+	var err error
 
 	inputKey := ctx.GlobalString(types.PubKeyFlag.Name)
 	if inputKey == "" {
-		var err error
+
 		pubKey, err = GeneratePubKey()
 		if err != nil {
 			return nil, err
@@ -71,6 +73,17 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	} else {
 		pubKey = []byte(inputKey)
+	}
+
+	keystorePath := ctx.GlobalString(cmd.KeystoreDirectoryFlag.Name)
+	password := ctx.GlobalString(cmd.KeystorePasswordFlag.Name)
+	if keystorePath != "" && password != "" {
+		blspubkey, err := keystore.RetrievePubKey(keystorePath, password)
+		if err != nil {
+			return nil, err
+		}
+
+		pubKey = blspubkey.BufferedPublicKey()
 	}
 
 	if err := ValidatorClient.startDB(ctx); err != nil {
