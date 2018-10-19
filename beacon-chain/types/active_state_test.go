@@ -74,7 +74,7 @@ func TestCopyActiveState(t *testing.T) {
 
 	newSpecial := &pb.SpecialRecord{
 		Kind: 323,
-		Data: [][]byte{[]byte{10}},
+		Data: [][]byte{{10}},
 	}
 	aState1.data.PendingSpecials = aState1.appendNewSpecialObject(newSpecial)
 	if len(aState1.PendingSpecials()) == len(aState2.PendingSpecials()) {
