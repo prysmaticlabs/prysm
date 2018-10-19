@@ -4,15 +4,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/pborman/uuid"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 const (
@@ -168,11 +167,19 @@ func writeKeyFile(file string, content []byte) error {
 		return err
 	}
 	if _, err := f.Write(content); err != nil {
-		f.Close()
-		os.Remove(f.Name())
+		newErr := f.Close()
+		if newErr != nil {
+			err = newErr
+		}
+		newErr = os.Remove(f.Name())
+		if newErr != nil {
+			err = newErr
+		}
 		return err
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
 	return os.Rename(f.Name(), file)
 }
 

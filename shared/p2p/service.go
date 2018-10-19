@@ -7,12 +7,11 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/sirupsen/logrus"
-
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
