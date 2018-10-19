@@ -90,15 +90,38 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 func (c *CrystallizedState) CopyState() *CrystallizedState {
 	crosslinks := make([]*pb.CrosslinkRecord, len(c.Crosslinks()))
 	for index, crossLink := range c.Crosslinks() {
-		crosslinks[index] = crossLink
+		crosslinks[index] = &pb.CrosslinkRecord{
+			RecentlyChanged: crossLink.GetRecentlyChanged(),
+			ShardBlockHash:  crossLink.GetShardBlockHash(),
+			Slot:            crossLink.GetSlot(),
+		}
 	}
+
 	validators := make([]*pb.ValidatorRecord, len(c.Validators()))
 	for index, validator := range c.Validators() {
-		validators[index] = validator
+		validators[index] = &pb.ValidatorRecord{
+			Pubkey:            validator.GetPubkey(),
+			WithdrawalShard:   validator.GetWithdrawalShard(),
+			WithdrawalAddress: validator.GetWithdrawalAddress(),
+			RandaoCommitment:  validator.GetRandaoCommitment(),
+			Balance:           validator.GetBalance(),
+			Status:            validator.GetStatus(),
+			ExitSlot:          validator.GetExitSlot(),
+		}
 	}
+
 	shardAndCommitteesForSlots := make([]*pb.ShardAndCommitteeArray, len(c.ShardAndCommitteesForSlots()))
-	for index, ShardAndCommitteesForSlot := range c.ShardAndCommitteesForSlots() {
-		shardAndCommitteesForSlots[index] = ShardAndCommitteesForSlot
+	for index, shardAndCommitteesForSlot := range c.ShardAndCommitteesForSlots() {
+		shardAndCommittees := make([]*pb.ShardAndCommittee, len(shardAndCommitteesForSlot.GetArrayShardAndCommittee()))
+		for index, shardAndCommittee := range shardAndCommitteesForSlot.GetArrayShardAndCommittee() {
+			shardAndCommittees[index] = &pb.ShardAndCommittee{
+				Shard:     shardAndCommittee.GetShard(),
+				Committee: shardAndCommittee.GetCommittee(),
+			}
+		}
+		shardAndCommitteesForSlots[index] = &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardAndCommittees,
+		}
 	}
 
 	newC := CrystallizedState{&pb.CrystallizedState{

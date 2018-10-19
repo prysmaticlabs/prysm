@@ -72,7 +72,16 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 func (a *ActiveState) CopyState() *ActiveState {
 	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.PendingAttestations()))
 	for index, pendingAttestation := range a.PendingAttestations() {
-		pendingAttestations[index] = pendingAttestation
+		pendingAttestations[index] = &pb.AggregatedAttestation{
+			Slot:                pendingAttestation.GetSlot(),
+			Shard:               pendingAttestation.GetShard(),
+			JustifiedSlot:       pendingAttestation.GetJustifiedSlot(),
+			JustifiedBlockHash:  pendingAttestation.GetJustifiedBlockHash(),
+			ShardBlockHash:      pendingAttestation.GetShardBlockHash(),
+			AttesterBitfield:    pendingAttestation.GetAttesterBitfield(),
+			ObliqueParentHashes: pendingAttestation.GetObliqueParentHashes(),
+			AggregateSig:        pendingAttestation.GetAggregateSig(),
+		}
 	}
 	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
 	for i := 0; i < len(a.RecentBlockHashes()); i++ {
@@ -80,7 +89,10 @@ func (a *ActiveState) CopyState() *ActiveState {
 	}
 	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
 	for index, pendingSpecial := range a.PendingSpecials() {
-		pendingSpecials[index] = pendingSpecial
+		pendingSpecials[index] = &pb.SpecialRecord{
+			Kind: pendingSpecial.GetKind(),
+			Data: pendingSpecial.GetData(),
+		}
 	}
 	randaoMix := a.RandaoMix()
 
