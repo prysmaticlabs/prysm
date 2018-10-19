@@ -47,7 +47,6 @@ func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 }
 
 func TestCopyActiveState(t *testing.T) {
-	// PendingSpecials      []*SpecialRecord         `protobuf:"bytes,3,rep,name=pending_specials,json=pendingSpecials,proto3" json:"pending_specials,omitempty"`
 	aState1 := NewGenesisActiveState()
 	aState2 := aState1.CopyState()
 
@@ -59,12 +58,18 @@ func TestCopyActiveState(t *testing.T) {
 	}
 	aState1.data.PendingAttestations = aState1.appendNewAttestations(newAttestations)
 	if len(aState1.data.PendingAttestations) == len(aState2.data.PendingAttestations) {
-		t.Fatal("The PendingAttestations should not equal each other.")
+		t.Fatalf("The PendingAttestations should not equal each other %d, %d",
+			len(aState1.data.PendingAttestations),
+			len(aState2.data.PendingAttestations),
+		)
 	}
 
 	aState1.data.RecentBlockHashes = [][]byte{{'A'}}
 	if len(aState1.RecentBlockHashes()) == len(aState2.RecentBlockHashes()) {
-		t.Fatal("The RecentBlockHashes should not equal each other.")
+		t.Fatalf("The RecentBlockHashes should not equal each other %d, %d",
+			len(aState1.RecentBlockHashes()),
+			len(aState2.RecentBlockHashes()),
+		)
 	}
 
 	newSpecial := &pb.SpecialRecord{
@@ -73,13 +78,19 @@ func TestCopyActiveState(t *testing.T) {
 	}
 	aState1.data.PendingSpecials = aState1.appendNewSpecialObject(newSpecial)
 	if len(aState1.PendingSpecials()) == len(aState2.PendingSpecials()) {
-		t.Fatal("The PendingSpecials should not equal each other.")
+		t.Fatalf("The PendingSpecials should not equal each other %d, %d",
+			len(aState1.PendingSpecials()),
+			len(aState2.PendingSpecials()),
+		)
 	}
 
 	aState1.data.RandaoMix = []byte{22, 21}
 	aState2.data.RandaoMix = []byte{40, 31}
 	if aState1.data.RandaoMix[0] == aState2.data.RandaoMix[0] {
-		t.Fatal("The RandaoMix should not equal each other.")
+		t.Fatalf("The RandaoMix should not equal each other %d, %d",
+			aState1.data.RandaoMix[0],
+			aState2.data.RandaoMix[0],
+		)
 	}
 
 	var blockHash [32]byte
@@ -98,9 +109,11 @@ func TestCopyActiveState(t *testing.T) {
 
 	aState1.blockVoteCache = blockVoteCache1
 	aState2.blockVoteCache = blockVoteCache2
-
 	if aState1.blockVoteCache[blockHash].VoteTotalDeposit == aState2.blockVoteCache[blockHash].VoteTotalDeposit {
-		t.Fatal("The blockVoteCache should not equal each other.")
+		t.Fatalf("The blockVoteCache should not equal each other %d, %d",
+			aState1.blockVoteCache[blockHash].VoteTotalDeposit,
+			aState2.blockVoteCache[blockHash].VoteTotalDeposit,
+		)
 	}
 }
 

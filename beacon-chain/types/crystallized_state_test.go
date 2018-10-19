@@ -42,27 +42,42 @@ func TestCopyCrystallizedState(t *testing.T) {
 
 	cState1.data.LastStateRecalculationSlot = 40
 	if cState1.LastStateRecalculationSlot() == cState2.LastStateRecalculationSlot() {
-		t.Fatalf("The Last State Recalculation Slot should not be equal: %d %d", cState1.LastStateRecalculationSlot(), cState2.LastStateRecalculationSlot())
+		t.Fatalf("The Last State Recalculation Slot should not be equal: %d %d",
+			cState1.LastStateRecalculationSlot(),
+			cState2.LastStateRecalculationSlot(),
+		)
 	}
 
 	cState1.data.JustifiedStreak = 40
 	if cState1.JustifiedStreak() == cState2.JustifiedStreak() {
-		t.Fatalf("The Justified Streak should not be equal: %d %d", cState1.JustifiedStreak(), cState2.JustifiedStreak())
+		t.Fatalf("The Justified Streak should not be equal: %d %d",
+			cState1.JustifiedStreak(),
+			cState2.JustifiedStreak(),
+		)
 	}
 
 	cState1.data.LastJustifiedSlot = 40
 	if cState1.LastJustifiedSlot() == cState2.LastJustifiedSlot() {
-		t.Fatalf("The Last Justified Slot should not be equal: %d %d", cState1.LastJustifiedSlot(), cState2.LastJustifiedSlot())
+		t.Fatalf("The Last Justified Slot should not be equal: %d %d",
+			cState1.LastJustifiedSlot(),
+			cState2.LastJustifiedSlot(),
+		)
 	}
 
 	cState1.data.LastFinalizedSlot = 40
 	if cState1.LastFinalizedSlot() == cState2.LastFinalizedSlot() {
-		t.Fatalf("The Last Finalized Slot should not be equal: %d %d", cState1.LastFinalizedSlot(), cState2.LastFinalizedSlot())
+		t.Fatalf("The Last Finalized Slot should not be equal: %d %d",
+			cState1.LastFinalizedSlot(),
+			cState2.LastFinalizedSlot(),
+		)
 	}
 
 	cState1.data.ValidatorSetChangeSlot = 40
 	if cState1.ValidatorSetChangeSlot() == cState2.ValidatorSetChangeSlot() {
-		t.Fatalf("The Last Validator Set Change Slot should not be equal: %d %d", cState1.ValidatorSetChangeSlot(), cState2.ValidatorSetChangeSlot())
+		t.Fatalf("The Last Validator Set Change Slot should not be equal: %d %d",
+			cState1.ValidatorSetChangeSlot(),
+			cState2.ValidatorSetChangeSlot(),
+		)
 	}
 
 	var crosslinks []*pb.CrosslinkRecord
@@ -75,12 +90,18 @@ func TestCopyCrystallizedState(t *testing.T) {
 	}
 	cState1.data.Crosslinks = crosslinks
 	if cState1.Crosslinks()[0].Slot == cState2.Crosslinks()[0].Slot {
-		t.Fatalf("The Last Finalized Slot should not be equal: %d %d", cState1.Crosslinks()[0].Slot, cState2.Crosslinks()[0].Slot)
+		t.Fatalf("The Last Finalized Slot should not be equal: %d %d",
+			cState1.Crosslinks()[0].Slot,
+			cState2.Crosslinks()[0].Slot,
+		)
 	}
 
 	cState1.data.Validators = append(cState1.Validators(), &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)})
 	if len(cState1.Validators()) == len(cState2.Validators()) {
-		t.Fatalf("The ShardAndCommitteesForSlots should be equal: %d %d", len(cState1.Validators()), len(cState2.Validators()))
+		t.Fatalf("The ShardAndCommitteesForSlots should be equal: %d %d",
+			len(cState1.Validators()),
+			len(cState2.Validators()),
+		)
 	}
 
 	newArray := &pb.ShardAndCommitteeArray{
@@ -91,7 +112,10 @@ func TestCopyCrystallizedState(t *testing.T) {
 	}
 	cState1.data.ShardAndCommitteesForSlots = append(cState1.ShardAndCommitteesForSlots(), newArray)
 	if len(cState1.ShardAndCommitteesForSlots()) == len(cState2.ShardAndCommitteesForSlots()) {
-		t.Fatalf("The ShardAndCommitteesForSlots shouldnt be equal: %d %d", cState1.ShardAndCommitteesForSlots(), cState2.ShardAndCommitteesForSlots())
+		t.Fatalf("The ShardAndCommitteesForSlots shouldnt be equal: %d %d",
+			cState1.ShardAndCommitteesForSlots(),
+			cState2.ShardAndCommitteesForSlots(),
+		)
 	}
 }
 
