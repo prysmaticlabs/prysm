@@ -3,13 +3,18 @@
 // aggregating BLS signatures used by Ethereum 2.0.
 package bls
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 // Signature used in the BLS signature scheme.
 type Signature struct{}
 
 // SecretKey used in the BLS scheme.
-type SecretKey struct{}
+type SecretKey struct {
+	K *big.Int
+}
 
 // PublicKey corresponding to secret key used in the BLS scheme.
 type PublicKey struct{}

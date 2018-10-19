@@ -1,8 +1,6 @@
 package keystore
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,17 +9,33 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pborman/uuid"
 )
 
 const (
-	version = 1
+	keyHeaderKDF = "scrypt"
+
+	// StandardScryptN is the N parameter of Scrypt encryption algorithm, using 256MB
+	// memory and taking approximately 1s CPU time on a modern processor.
+	StandardScryptN = 1 << 18
+
+	// StandardScryptP is the P parameter of Scrypt encryption algorithm, using 256MB
+	// memory and taking approximately 1s CPU time on a modern processor.
+	StandardScryptP = 1
+
+	// LightScryptN is the N parameter of Scrypt encryption algorithm, using 4MB
+	// memory and taking approximately 100ms CPU time on a modern processor.
+	LightScryptN = 1 << 12
+
+	// LightScryptP is the P parameter of Scrypt encryption algorithm, using 4MB
+	// memory and taking approximately 100ms CPU time on a modern processor.
+	LightScryptP = 6
+
+	scryptR     = 8
+	scryptDKLen = 32
 )
 
 type Key struct {
@@ -35,7 +49,7 @@ type Key struct {
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr common.Address, filename string, auth string) (*Key, error)
+	GetKey(filename string, password string) (*Key, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -46,21 +60,12 @@ type plainKeyJSON struct {
 	PublicKey string `json:"address"`
 	SecretKey string `json:"privatekey"`
 	Id        string `json:"id"`
-	Version   int    `json:"version"`
 }
 
-type encryptedKeyJSONV3 struct {
-	Address string     `json:"address"`
-	Crypto  cryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
-	Version int        `json:"version"`
-}
-
-type encryptedKeyJSONV1 struct {
-	Address string     `json:"address"`
-	Crypto  cryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
-	Version string     `json:"version"`
+type encryptedKeyJSON struct {
+	PublicKey string     `json:"publickey"`
+	Crypto    cryptoJSON `json:"crypto"`
+	Id        string     `json:"id"`
 }
 
 type cryptoJSON struct {
@@ -81,7 +86,6 @@ func (k *Key) MarshalJSON() (j []byte, err error) {
 		hex.EncodeToString(k.PublicKey.BufferedPublicKey()),
 		hex.EncodeToString(k.SecretKey.BufferedSecretKey()),
 		k.Id.String(),
-		version,
 	}
 	j, err = json.Marshal(jStruct)
 	return j, err
@@ -126,27 +130,6 @@ func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 	return key, nil
 }
 
-// NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
-// into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
-// retry until the first byte is 0.
-func NewKeyForDirectICAP(rand io.Reader) *Key {
-	randBytes := make([]byte, 64)
-	_, err := rand.Read(randBytes)
-	if err != nil {
-		panic("key generation: could not read from random source: " + err.Error())
-	}
-	reader := bytes.NewReader(randBytes)
-	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), reader)
-	if err != nil {
-		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
-	}
-	key := newKeyFromECDSA(privateKeyECDSA)
-	if !strings.HasPrefix(key.Address.Hex(), "0x00") {
-		return NewKeyForDirectICAP(rand)
-	}
-	return key
-}
-
 func newKey(rand io.Reader) (*Key, error) {
 	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
@@ -158,17 +141,17 @@ func newKey(rand io.Reader) (*Key, error) {
 	return newKeyFromBLS(secretKey)
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
+func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, error) {
 	key, err := newKey(rand)
 	if err != nil {
-		return nil, accounts.Account{}, err
+		return nil, err
 	}
-	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))}}
-	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
-		zeroKey(key.PrivateKey)
-		return nil, a, err
+
+	if err := ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, auth); err != nil {
+		zeroKey(key.SecretKey)
+		return nil, err
 	}
-	return key, a, err
+	return key, err
 }
 
 func writeKeyFile(file string, content []byte) error {
@@ -195,9 +178,9 @@ func writeKeyFile(file string, content []byte) error {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAddr common.Address) string {
+func keyFileName(pubkey *bls.PublicKey) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.BufferedPublicKey()))
 }
 
 func toISO8601(t time.Time) string {
@@ -209,4 +192,12 @@ func toISO8601(t time.Time) string {
 		tz = fmt.Sprintf("%03d00", offset/3600)
 	}
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
+}
+
+// zeroKey zeroes a private key in memory.
+func zeroKey(k *bls.SecretKey) {
+	b := k.K.Bits()
+	for i := range b {
+		b[i] = 0
+	}
 }
