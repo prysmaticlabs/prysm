@@ -3,6 +3,7 @@ package keystore
 import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"io/ioutil"
 	"os"
 )
@@ -20,7 +21,7 @@ func RetrieveJson(directory string, password string) ([]byte, error) {
 	return keyjson, nil
 }
 
-func DecryptKeystore(keyjson []byte, password string) (ecdsa.PublicKey, error) {
+func DecryptKeystore(keyjson []byte, password string) (*bls.SecretKey, error) {
 	key, err := keystore.DecryptKey(keyjson, password)
 	if err != nil {
 		return ecdsa.PublicKey{}, err

@@ -14,6 +14,32 @@ type SecretKey struct{}
 // PublicKey corresponding to secret key used in the BLS scheme.
 type PublicKey struct{}
 
+// PublicKey returns the corresponding public key for the
+// Secret Key
+func (s *SecretKey) PublicKey() (*PublicKey, error) {
+	return &PublicKey{}, nil
+}
+
+func (s *SecretKey) BufferedSecretKey() []byte {
+	return []byte{}
+}
+
+func (p *PublicKey) BufferedPublicKey() []byte {
+	return []byte{}
+}
+
+func (s *SecretKey) UnBufferSecretKey(bufferedKey []byte) {
+
+}
+
+func (p *PublicKey) UnBufferPublicKey(bufferedKey []byte) {
+
+}
+
+func GenerateKey(seed []byte) *SecretKey {
+	return &SecretKey{}
+}
+
 // Sign a message using a secret key - in a beacon/validator client,
 // this key will come from and be unlocked from the account keystore.
 func Sign(sec *SecretKey, msg []byte) (*Signature, error) {
