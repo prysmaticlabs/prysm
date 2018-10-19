@@ -90,7 +90,7 @@ func TestCopyCrystallizedState(t *testing.T) {
 	}
 	cState1.data.Crosslinks = crosslinks
 	if cState1.Crosslinks()[0].Slot == cState2.Crosslinks()[0].Slot {
-		t.Fatalf("The Last Finalized Slot should not be equal: %d %d",
+		t.Fatalf("The Crosslinks should not be equal: %d %d",
 			cState1.Crosslinks()[0].Slot,
 			cState2.Crosslinks()[0].Slot,
 		)
@@ -98,7 +98,7 @@ func TestCopyCrystallizedState(t *testing.T) {
 
 	cState1.data.Validators = append(cState1.Validators(), &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)})
 	if len(cState1.Validators()) == len(cState2.Validators()) {
-		t.Fatalf("The ShardAndCommitteesForSlots should be equal: %d %d",
+		t.Fatalf("The Validators should be equal: %d %d",
 			len(cState1.Validators()),
 			len(cState2.Validators()),
 		)
