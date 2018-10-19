@@ -124,7 +124,7 @@ func (c *CrystallizedState) CopyState() *CrystallizedState {
 		}
 	}
 
-	newC := CrystallizedState{&pb.CrystallizedState{
+	newState := CrystallizedState{&pb.CrystallizedState{
 		LastStateRecalculationSlot: c.LastStateRecalculationSlot(),
 		JustifiedStreak:            c.JustifiedStreak(),
 		LastJustifiedSlot:          c.LastJustifiedSlot(),
@@ -140,7 +140,7 @@ func (c *CrystallizedState) CopyState() *CrystallizedState {
 		ForkSlotNumber:             c.data.ForkSlotNumber,
 	}}
 
-	return &newC
+	return &newState
 }
 
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.

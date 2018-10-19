@@ -295,15 +295,15 @@ func (a *ActiveState) CalculateNewActiveState(
 	enableAttestationValidity bool) (*ActiveState, error) {
 	var err error
 
-	newA := a.CopyState()
+	newState := a.CopyState()
 	// Cleans up old attestations.
-	newA.CleanUpActiveState(cState.LastStateRecalculationSlot())
+	newState.CleanUpActiveState(cState.LastStateRecalculationSlot())
 
 	// Derive the new set of pending attestations.
-	newA.data.PendingAttestations = newA.appendNewAttestations(block.data.Attestations)
+	newState.data.PendingAttestations = newState.appendNewAttestations(block.data.Attestations)
 
 	// Derive the new set of recent block hashes.
-	newA.data.RecentBlockHashes, err = newA.calculateNewBlockHashes(block, parentSlot)
+	newState.data.RecentBlockHashes, err = newState.calculateNewBlockHashes(block, parentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
@@ -313,7 +313,7 @@ func (a *ActiveState) CalculateNewActiveState(
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
 
 	if enableAttestationValidity {
-		newA.blockVoteCache, err = a.calculateNewVoteCache(block, cState)
+		newState.blockVoteCache, err = newState.calculateNewVoteCache(block, cState)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update vote cache: %v", err)
 		}
@@ -328,7 +328,7 @@ func (a *ActiveState) CalculateNewActiveState(
 	}
 
 	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
-	newA.data.RandaoMix = newRandao[:]
+	newState.data.RandaoMix = newRandao[:]
 
 	specialRecordData := make([][]byte, 2)
 	for i := range specialRecordData {
@@ -340,12 +340,12 @@ func (a *ActiveState) CalculateNewActiveState(
 	specialRecordData[0] = proposerIndexBytes
 	specialRecordData[1] = blockRandao[:]
 
-	newA.data.PendingSpecials = a.appendNewSpecialObject(&pb.SpecialRecord{
+	newState.data.PendingSpecials = a.appendNewSpecialObject(&pb.SpecialRecord{
 		Kind: uint32(params.RandaoChange),
 		Data: specialRecordData,
 	})
 
-	return newA, nil
+	return newState, nil
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
