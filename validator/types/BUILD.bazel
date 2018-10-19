@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "collation.go",
         "flags.go",
-        "interfaces.go",
         "shard.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/types",

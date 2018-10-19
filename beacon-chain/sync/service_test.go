@@ -108,6 +108,10 @@ func TestProcessBlock(t *testing.T) {
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
 
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -138,6 +142,7 @@ func TestProcessBlock(t *testing.T) {
 	data := &pb.BeaconBlock{
 		PowChainRef:    []byte{1, 2, 3, 4, 5},
 		AncestorHashes: [][]byte{parentHash[:]},
+		Slot:           1,
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
@@ -169,6 +174,11 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
+
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -200,6 +210,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	data1 := &pb.BeaconBlock{
 		PowChainRef:    []byte{1, 2, 3, 4, 5},
 		AncestorHashes: [][]byte{parentHash[:]},
+		Slot:           1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -216,6 +227,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	data2 := &pb.BeaconBlock{
 		PowChainRef:    []byte{6, 7, 8, 9, 10},
 		AncestorHashes: [][]byte{make([]byte, 32)},
+		Slot:           1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
