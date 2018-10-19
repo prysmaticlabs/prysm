@@ -83,10 +83,12 @@ func (a *ActiveState) CopyState() *ActiveState {
 			AggregateSig:        pendingAttestation.GetAggregateSig(),
 		}
 	}
+
 	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
-	for i := 0; i < len(a.RecentBlockHashes()); i++ {
-		recentBlockHashes[i] = a.RecentBlockHashes()[i][:]
+	for r, hash := range a.RecentBlockHashes() {
+		recentBlockHashes[r] = hash[:]
 	}
+
 	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
 	for index, pendingSpecial := range a.PendingSpecials() {
 		pendingSpecials[index] = &pb.SpecialRecord{
