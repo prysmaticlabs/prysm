@@ -37,9 +37,6 @@ func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
 	return plaintext, err
 }
 
-// TODO: can we do without this when unmarshalling dynamic JSON?
-// why do integers in KDF params end up as float64 and not int after
-// unmarshal?
 func ensureInt(x interface{}) int {
 	res, ok := x.(int)
 	if !ok {

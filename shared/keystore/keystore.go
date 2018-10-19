@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -23,6 +22,7 @@ import (
 )
 
 var (
+	// ErrDecrypt is the standard error message when decryption is a failure.
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
 
@@ -30,6 +30,18 @@ type keyStorePassphrase struct {
 	keysDirPath string
 	scryptN     int
 	scryptP     int
+}
+
+// RetrievePubKey retrieves the public key from the keystore.
+func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
+
+	ks := keyStorePassphrase{
+		keysDirPath: directory,
+		scryptN:     StandardScryptN,
+		scryptP:     StandardScryptP,
+	}
+	key, err := ks.GetKey(ks.keysDirPath, password)
+	return key.PublicKey, err
 }
 
 func (ks keyStorePassphrase) GetKey(filename, password string) (*Key, error) {
@@ -57,9 +69,9 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 	return filepath.Join(ks.keysDirPath, filename)
 }
 
-// StoreKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreKey(dir, password string, scryptN, scryptP int) error {
-	_, err := storeNewKey(keyStorePassphrase{dir, scryptN, scryptP}, crand.Reader, password)
+// StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
+func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
+	err := storeNewRandomKey(keyStorePassphrase{dir, scryptN, scryptP}, crand.Reader, password)
 	return err
 }
 
@@ -105,25 +117,23 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 	encryptedJSON := encryptedKeyJSON{
 		hex.EncodeToString(key.PublicKey.BufferedPublicKey()),
 		cryptoStruct,
-		key.Id.String(),
+		key.ID.String(),
 	}
 	return json.Marshal(encryptedJSON)
 }
 
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
 func DecryptKey(keyjson []byte, password string) (*Key, error) {
-	// Depending on the version try to parse one way or another
-	var (
-		keyBytes, keyId []byte
-		err             error
-	)
+
+	var keyBytes, keyID []byte
+	var err error
 
 	k := new(encryptedKeyJSON)
 	if err := json.Unmarshal(keyjson, k); err != nil {
 		return nil, err
 	}
 
-	keyBytes, keyId, err = decryptKeyJSON(k, password)
+	keyBytes, keyID, err = decryptKeyJSON(k, password)
 	// Handle any decryption errors and return the key
 	if err != nil {
 		return nil, err
@@ -137,14 +147,14 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 	}
 
 	return &Key{
-		Id:        uuid.UUID(keyId),
+		ID:        uuid.UUID(keyID),
 		PublicKey: pubkey,
 		SecretKey: key,
 	}, nil
 }
 
-func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyId []byte, err error) {
-	keyId = uuid.Parse(keyProtected.Id)
+func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyID []byte, err error) {
+	keyID = uuid.Parse(keyProtected.ID)
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
 	if err != nil {
 		return nil, nil, err
@@ -174,7 +184,7 @@ func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, nil, err
 	}
-	return plainText, keyId, err
+	return plainText, keyID, err
 }
 
 func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
@@ -202,17 +212,4 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
-}
-
-func RetrieveJson(directory string, password string) ([]byte, error) {
-	f, err := os.Open(directory)
-	if err != nil {
-		return nil, err
-	}
-
-	keyjson, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-	return keyjson, nil
 }

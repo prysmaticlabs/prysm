@@ -35,13 +35,13 @@ const (
 	scryptDKLen = 32
 )
 
+// Is the object that stores all the user data related to their public/secret keys.
 type Key struct {
-	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
-	// to simplify lookups we also store the address
-	PublicKey *bls.PublicKey
-	// we only store privkey as pubkey/address can be derived from it
-	// privkey in this struct is always in plaintext
-	SecretKey *bls.SecretKey
+	ID uuid.UUID // Version 4 "random" for unique id not derived from key data
+
+	PublicKey *bls.PublicKey // Represents the public key of the user.
+
+	SecretKey *bls.SecretKey // Represents the private key of the user.
 }
 
 type keyStore interface {
@@ -56,13 +56,13 @@ type keyStore interface {
 type plainKeyJSON struct {
 	PublicKey string `json:"address"`
 	SecretKey string `json:"privatekey"`
-	Id        string `json:"id"`
+	ID        string `json:"id"`
 }
 
 type encryptedKeyJSON struct {
 	PublicKey string     `json:"publickey"`
 	Crypto    cryptoJSON `json:"crypto"`
-	Id        string     `json:"id"`
+	ID        string     `json:"id"`
 }
 
 type cryptoJSON struct {
@@ -78,16 +78,18 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
+// MarshalJSON marshalls a key struct into a JSON blob.
 func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.PublicKey.BufferedPublicKey()),
 		hex.EncodeToString(k.SecretKey.BufferedSecretKey()),
-		k.Id.String(),
+		k.ID.String(),
 	}
 	j, err = json.Marshal(jStruct)
 	return j, err
 }
 
+// UnmarshalJSON unmarshals a blob into a key struct.
 func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSON)
 	err = json.Unmarshal(j, &keyJSON)
@@ -96,8 +98,8 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	}
 
 	u := new(uuid.UUID)
-	*u = uuid.Parse(keyJSON.Id)
-	k.Id = *u
+	*u = uuid.Parse(keyJSON.ID)
+	k.ID = *u
 	pubkey, err := hex.DecodeString(keyJSON.PublicKey)
 	if err != nil {
 		return err
@@ -120,7 +122,7 @@ func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 		return nil, err
 	}
 	key := &Key{
-		Id:        id,
+		ID:        id,
 		PublicKey: pubkey,
 		SecretKey: blsKey,
 	}
@@ -138,17 +140,17 @@ func newKey(rand io.Reader) (*Key, error) {
 	return newKeyFromBLS(secretKey)
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, error) {
+func storeNewRandomKey(ks keyStore, rand io.Reader, auth string) error {
 	key, err := newKey(rand)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, auth); err != nil {
 		zeroKey(key.SecretKey)
-		return nil, err
+		return err
 	}
-	return key, err
+	return nil
 }
 
 func writeKeyFile(file string, content []byte) error {
