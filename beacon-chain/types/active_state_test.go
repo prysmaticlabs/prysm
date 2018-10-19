@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -42,6 +43,77 @@ func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 		if !bytes.Equal(h, zero) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
+	}
+}
+
+func TestCopyActiveState(t *testing.T) {
+	aState1 := NewGenesisActiveState()
+	aState2 := aState1.CopyState()
+
+	newAttestations := []*pb.AggregatedAttestation{
+		{
+			Slot:  0,
+			Shard: 1,
+		},
+	}
+	aState1.data.PendingAttestations = aState1.appendNewAttestations(newAttestations)
+	if len(aState1.data.PendingAttestations) == len(aState2.data.PendingAttestations) {
+		t.Fatalf("The PendingAttestations should not equal each other %d, %d",
+			len(aState1.data.PendingAttestations),
+			len(aState2.data.PendingAttestations),
+		)
+	}
+
+	aState1.data.RecentBlockHashes = [][]byte{{'A'}}
+	if len(aState1.RecentBlockHashes()) == len(aState2.RecentBlockHashes()) {
+		t.Fatalf("The RecentBlockHashes should not equal each other %d, %d",
+			len(aState1.RecentBlockHashes()),
+			len(aState2.RecentBlockHashes()),
+		)
+	}
+
+	newSpecial := &pb.SpecialRecord{
+		Kind: 323,
+		Data: [][]byte{{10}},
+	}
+	aState1.data.PendingSpecials = aState1.appendNewSpecialObject(newSpecial)
+	if len(aState1.PendingSpecials()) == len(aState2.PendingSpecials()) {
+		t.Fatalf("The PendingSpecials should not equal each other %d, %d",
+			len(aState1.PendingSpecials()),
+			len(aState2.PendingSpecials()),
+		)
+	}
+
+	aState1.data.RandaoMix = []byte{22, 21}
+	aState2.data.RandaoMix = []byte{40, 31}
+	if aState1.data.RandaoMix[0] == aState2.data.RandaoMix[0] {
+		t.Fatalf("The RandaoMix should not equal each other %d, %d",
+			aState1.data.RandaoMix[0],
+			aState2.data.RandaoMix[0],
+		)
+	}
+
+	var blockHash [32]byte
+	copy(blockHash[:], []byte{'t', 'e', 's', 't', 'i', 'n', 'g'})
+
+	blockVoteCache1 := make(map[[32]byte]*utils.VoteCache)
+	blockVoteCache2 := make(map[[32]byte]*utils.VoteCache)
+	blockVoteCache1[blockHash] = &utils.VoteCache{
+		VoterIndices:     []uint32{22, 7},
+		VoteTotalDeposit: 300,
+	}
+	blockVoteCache2[blockHash] = &utils.VoteCache{
+		VoterIndices:     []uint32{20, 10},
+		VoteTotalDeposit: 340,
+	}
+
+	aState1.blockVoteCache = blockVoteCache1
+	aState2.blockVoteCache = blockVoteCache2
+	if aState1.blockVoteCache[blockHash].VoteTotalDeposit == aState2.blockVoteCache[blockHash].VoteTotalDeposit {
+		t.Fatalf("The blockVoteCache should not equal each other %d, %d",
+			aState1.blockVoteCache[blockHash].VoteTotalDeposit,
+			aState2.blockVoteCache[blockHash].VoteTotalDeposit,
+		)
 	}
 }
 
