@@ -3,8 +3,6 @@ package keystore
 import (
 	"bytes"
 	"crypto/aes"
-	"crypto/cipher"
-	"crypto/ecdsa"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -15,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/randentropy"
@@ -126,7 +123,7 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 		return nil, err
 	}
 
-	keyBytes, keyId, err = decryptKey(k, password)
+	keyBytes, keyId, err = decryptKeyJSON(k, password)
 	// Handle any decryption errors and return the key
 	if err != nil {
 		return nil, err
@@ -146,55 +143,7 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 	}, nil
 }
 
-func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
-	// AES-128 is selected due to size of encryptKey.
-	aesBlock, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	stream := cipher.NewCTR(aesBlock, iv)
-	outText := make([]byte, len(inText))
-	stream.XORKeyStream(outText, inText)
-	return outText, err
-}
-
-func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
-	aesBlock, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	decrypter := cipher.NewCBCDecrypter(aesBlock, iv)
-	paddedPlaintext := make([]byte, len(cipherText))
-	decrypter.CryptBlocks(paddedPlaintext, cipherText)
-	plaintext := pkcs7Unpad(paddedPlaintext)
-	if plaintext == nil {
-		return nil, ErrDecrypt
-	}
-	return plaintext, err
-}
-
-// From https://leanpub.com/gocrypto/read#leanpub-auto-block-cipher-modes
-func pkcs7Unpad(in []byte) []byte {
-	if len(in) == 0 {
-		return nil
-	}
-
-	padding := in[len(in)-1]
-	if int(padding) > len(in) || padding > aes.BlockSize {
-		return nil
-	} else if padding == 0 {
-		return nil
-	}
-
-	for i := len(in) - 1; i > len(in)-int(padding)-1; i-- {
-		if in[i] != padding {
-			return nil
-		}
-	}
-	return in[:len(in)-int(padding)]
-}
-
-func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyId []byte, err error) {
+func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyId []byte, err error) {
 	keyId = uuid.Parse(keyProtected.Id)
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
 	if err != nil {
@@ -255,17 +204,6 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
 }
 
-// TODO: can we do without this when unmarshalling dynamic JSON?
-// why do integers in KDF params end up as float64 and not int after
-// unmarshal?
-func ensureInt(x interface{}) int {
-	res, ok := x.(int)
-	if !ok {
-		res = int(x.(float64))
-	}
-	return res
-}
-
 func RetrieveJson(directory string, password string) ([]byte, error) {
 	f, err := os.Open(directory)
 	if err != nil {
@@ -277,20 +215,4 @@ func RetrieveJson(directory string, password string) ([]byte, error) {
 		return nil, err
 	}
 	return keyjson, nil
-}
-
-func DecryptKeystore(keyjson []byte, password string) (*bls.SecretKey, error) {
-	key, err := keystore.DecryptKey(keyjson, password)
-	if err != nil {
-		return ecdsa.PublicKey{}, err
-	}
-	return key.PrivateKey.PublicKey, nil
-}
-
-func EncryptKeystore(key *keystore.Key, password string) ([]byte, error) {
-	encryptedkey, err := keystore.EncryptKey(key, password, 8, 1)
-	if err != nil {
-		return nil, err
-	}
-	return encryptedkey, nil
 }

@@ -3,12 +3,10 @@ package keystore
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -181,30 +179,4 @@ func writeKeyFile(file string, content []byte) error {
 		return err
 	}
 	return os.Rename(f.Name(), file)
-}
-
-// keyFileName implements the naming convention for keyfiles:
-// UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(pubkey *bls.PublicKey) string {
-	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.BufferedPublicKey()))
-}
-
-func toISO8601(t time.Time) string {
-	var tz string
-	name, offset := t.Zone()
-	if name == "UTC" {
-		tz = "Z"
-	} else {
-		tz = fmt.Sprintf("%03d00", offset/3600)
-	}
-	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
-}
-
-// zeroKey zeroes a private key in memory.
-func zeroKey(k *bls.SecretKey) {
-	b := k.K.Bits()
-	for i := range b {
-		b[i] = 0
-	}
 }
