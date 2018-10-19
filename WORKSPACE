@@ -653,3 +653,15 @@ go_repository(
     commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
     importpath = "github.com/boltdb/bolt",
 )
+
+go_repository(
+    name = "com_github_pborman_uuid",
+    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",
+    importpath = "github.com/pborman/uuid",
+)
+
+go_repository(
+    name = "com_github_google_uuid",
+    commit = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8",
+    importpath = "github.com/google/uuid",
+)
