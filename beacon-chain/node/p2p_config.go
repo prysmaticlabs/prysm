@@ -37,10 +37,12 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	metricAdapter := metric.New()
 
-	// TODO: Define default adapters for logging.
-	adapters := []p2p.Adapter{traceAdapter, metricAdapter}
+	adapters := []p2p.Adapter{traceAdapter}
+	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
+		adapters := append(adapters, metric.New())
+	}
+
 	for k, v := range topicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
 	}
