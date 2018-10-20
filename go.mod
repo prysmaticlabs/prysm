@@ -5,6 +5,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20181002214814-33151c4543a7
 	github.com/boltdb/bolt v1.3.1
 	github.com/btcsuite/btcd v0.0.0-20181013004428-67e573d211ac // indirect
+	github.com/cespare/cp v1.0.0 // indirect
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712 // indirect
@@ -23,9 +24,12 @@ require (
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/ipfs/go-log v1.5.7
+	github.com/jbenet/go-cienv v0.0.0-20150120210510-1bb1476777ec // indirect
+	github.com/jbenet/go-randbuf v0.0.0-20160322125720-674640a50e6a // indirect
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2 // indirect
 	github.com/jbenet/goprocess v0.0.0-20160826012719-b497e2f366b8 // indirect
 	github.com/karalabe/hid v0.0.0-20180420081245-2b4488a37358 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/libp2p/go-addr-util v2.0.6+incompatible // indirect
 	github.com/libp2p/go-buffer-pool v0.1.1 // indirect
 	github.com/libp2p/go-conn-security v0.1.14 // indirect
@@ -72,6 +76,7 @@ require (
 	github.com/multiformats/go-multiaddr-net v1.6.3 // indirect
 	github.com/multiformats/go-multihash v1.0.8 // indirect
 	github.com/multiformats/go-multistream v0.3.9 // indirect
+	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/prometheus/prometheus v1.8.0+incompatible // indirect
@@ -97,5 +102,7 @@ require (
 	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
 	golang.org/x/net v0.0.0-20181017193950-04a2e542c03f
 	google.golang.org/grpc v1.15.0
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
