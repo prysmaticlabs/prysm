@@ -7,6 +7,7 @@ require (
 	github.com/btcsuite/btcd v0.0.0-20181013004428-67e573d211ac // indirect
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
+	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712 // indirect
 	github.com/ethereum/go-ethereum v1.8.17
 	github.com/fd/go-nat v1.0.0 // indirect
 	github.com/fjl/memsize v0.0.0-20180929194037-2a09253e352a
@@ -19,8 +20,9 @@ require (
 	github.com/gxed/GoEndian v0.0.0-20160916112711-0f5c6873267e // indirect
 	github.com/gxed/eventfd v0.0.0-20160916113412-80a92cca79a8 // indirect
 	github.com/gxed/hashland v0.0.0-20180221191214-d9f6b97f8db2 // indirect
+	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/ipfs/go-log v1.5.7 // indirect
+	github.com/ipfs/go-log v1.5.7
 	github.com/jbenet/go-temp-err-catcher v0.0.0-20150120210811-aac704a3f4f2 // indirect
 	github.com/jbenet/goprocess v0.0.0-20160826012719-b497e2f366b8 // indirect
 	github.com/karalabe/hid v0.0.0-20180420081245-2b4488a37358 // indirect
@@ -31,6 +33,7 @@ require (
 	github.com/libp2p/go-floodsub v0.9.36
 	github.com/libp2p/go-flow-metrics v0.2.0 // indirect
 	github.com/libp2p/go-libp2p v6.0.19+incompatible
+	github.com/libp2p/go-libp2p-blankhost v0.3.14
 	github.com/libp2p/go-libp2p-circuit v2.2.8+incompatible // indirect
 	github.com/libp2p/go-libp2p-crypto v2.0.1+incompatible
 	github.com/libp2p/go-libp2p-host v3.0.14+incompatible
@@ -44,7 +47,7 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v2.0.4+incompatible
 	github.com/libp2p/go-libp2p-protocol v1.0.0 // indirect
 	github.com/libp2p/go-libp2p-secio v2.0.16+incompatible // indirect
-	github.com/libp2p/go-libp2p-swarm v3.0.20+incompatible // indirect
+	github.com/libp2p/go-libp2p-swarm v3.0.20+incompatible
 	github.com/libp2p/go-libp2p-transport v3.0.14+incompatible // indirect
 	github.com/libp2p/go-libp2p-transport-upgrader v0.1.15 // indirect
 	github.com/libp2p/go-maddr-filter v1.1.9 // indirect
@@ -55,6 +58,7 @@ require (
 	github.com/libp2p/go-sockaddr v1.0.3 // indirect
 	github.com/libp2p/go-stream-muxer v3.0.1+incompatible // indirect
 	github.com/libp2p/go-tcp-transport v2.0.15+incompatible // indirect
+	github.com/libp2p/go-testutil v1.2.9 // indirect
 	github.com/libp2p/go-ws-transport v2.0.14+incompatible // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
@@ -70,7 +74,7 @@ require (
 	github.com/multiformats/go-multistream v0.3.9 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
-	github.com/prometheus/prometheus v2.4.3+incompatible // indirect
+	github.com/prometheus/prometheus v1.8.0+incompatible // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.1.1
