@@ -3,6 +3,7 @@ module github.com/prysmaticlabs/prysm
 require (
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
 	github.com/alecthomas/gometalinter v2.0.5+incompatible
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/aristanetworks/goarista v0.0.0-20181002214814-33151c4543a7
 	github.com/boltdb/bolt v1.3.1
 	github.com/btcsuite/btcd v0.0.0-20181013004428-67e573d211ac // indirect
@@ -18,6 +19,8 @@ require (
 	github.com/golang/mock v1.1.1
 	github.com/golang/protobuf v1.2.0
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
+	github.com/google/go-cmp v0.2.0 // indirect
+	github.com/google/shlex v0.0.0-20150127133951-6f45313302b9
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/gxed/GoEndian v0.0.0-20160916112711-0f5c6873267e // indirect
 	github.com/gxed/eventfd v0.0.0-20160916113412-80a92cca79a8 // indirect
@@ -77,15 +80,18 @@ require (
 	github.com/multiformats/go-multiaddr-net v1.6.3 // indirect
 	github.com/multiformats/go-multihash v1.0.8 // indirect
 	github.com/multiformats/go-multistream v0.3.9 // indirect
+	github.com/nicksnyder/go-i18n v0.0.0-20170210005948-2c24b78755bd
 	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
+	github.com/pkg/errors v0.8.0 // indirect
 	github.com/prometheus/prometheus v1.8.0+incompatible // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.1.1
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3
+	github.com/stretchr/testify v1.2.2
 	github.com/syndtr/goleveldb v0.0.0-20181012014443-6b91fda63f2e
 	github.com/urfave/cli v1.20.0
 	github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc // indirect
@@ -103,7 +109,10 @@ require (
 	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
 	golang.org/x/net v0.0.0-20181017193950-04a2e542c03f
 	google.golang.org/grpc v1.15.0
+	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20171010053543-63abe20a23e2
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
+	gopkg.in/yaml.v2 v2.2.1
+	gotest.tools v2.1.0+incompatible
 )
