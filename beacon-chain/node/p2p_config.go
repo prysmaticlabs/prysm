@@ -40,7 +40,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 
 	adapters := []p2p.Adapter{traceAdapter}
 	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
-		adapters := append(adapters, metric.New())
+		adapters = append(adapters, metric.New())
 	}
 
 	for k, v := range topicMappings {
