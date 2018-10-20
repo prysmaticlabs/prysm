@@ -13,6 +13,7 @@ matrix:
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
       env:
+        - GO111MODULE=on
         - coverage
       script:
         - ./scripts/coverage.sh
