@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"sync"
 	"syscall"
 
@@ -22,6 +23,7 @@ import (
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -138,21 +140,41 @@ func (b *BeaconNode) Close() {
 
 	log.Info("Stopping beacon node")
 	b.services.StopAll()
-	b.db.Close()
+	if err := b.db.Close(); err != nil {
+		log.Errorf("Failed to close database: %v", err)
+	}
 	close(b.stop)
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
-	path := ctx.GlobalString(cmd.DataDirFlag.Name)
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	var genesisJSON string
 	if ctx.GlobalIsSet(utils.GenesisJSON.Name) {
 		genesisJSON = ctx.GlobalString(utils.GenesisJSON.Name)
 	}
 
-	config := db.Config{Path: path, Name: beaconChainDBName, InMemory: false, GenesisJSON: genesisJSON}
-	db, err := db.NewDB(config)
+	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
 		return err
+	}
+
+	cState, err := db.GetCrystallizedState()
+	if err != nil {
+		return err
+	}
+	// Ensure that state has been initialized.
+	if cState == nil {
+		var genesisValidators []*pb.ValidatorRecord
+		if genesisJSON != "" {
+			log.Infof("Initializing Crystallized State from %s", genesisJSON)
+			genesisValidators, err = utils.InitialValidatorsFromJSON(genesisJSON)
+			if err != nil {
+				return err
+			}
+		}
+		if err := db.InitializeState(genesisValidators); err != nil {
+			return err
+		}
 	}
 
 	b.db = db
@@ -301,7 +323,6 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 
 	defaultConf := simulator.DefaultConfig()
 	cfg := &simulator.Config{
-		Delay:           defaultConf.Delay,
 		BlockRequestBuf: defaultConf.BlockRequestBuf,
 		BeaconDB:        b.db,
 		P2P:             p2pService,

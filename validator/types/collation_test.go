@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/shardutil"
 )
 
 func TestCollation_Transactions(t *testing.T) {
@@ -195,9 +195,9 @@ func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := shared.Serialize(blobs)
+		_, err := shardutil.Serialize(blobs)
 		if err != nil {
-			b.Errorf("shared.Serialize failed: %v", err)
+			b.Errorf("shardutil.Serialize failed: %v", err)
 		}
 	}
 }
@@ -231,9 +231,9 @@ func runDeserializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := shared.Deserialize(blob)
+		_, err := shardutil.Deserialize(blob)
 		if err != nil {
-			b.Errorf("shared.Deserialize failed: %v", err)
+			b.Errorf("shardutil.Deserialize failed: %v", err)
 		}
 	}
 }

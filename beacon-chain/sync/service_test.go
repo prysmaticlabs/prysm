@@ -7,14 +7,15 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"golang.org/x/crypto/blake2b"
 )
 
 func init() {
@@ -46,18 +47,7 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func setupDB(t *testing.T) *db.BeaconDB {
-	dbConfig := db.Config{Path: "", Name: "", InMemory: true}
-	db, err := db.NewDB(dbConfig)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
-	return db
-}
-
-func setupService(t *testing.T) *Service {
-	db := setupDB(t)
-
+func setupService(t *testing.T, db *db.BeaconDB) *Service {
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -71,13 +61,16 @@ func setupService(t *testing.T) *Service {
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
 		ChainService:        &mockChainService{},
 		P2P:                 &mockP2P{},
-		BeaconDB:            setupDB(t),
+		BeaconDB:            db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -88,7 +81,7 @@ func TestProcessBlockHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := blake2b.Sum512([]byte{})
+	announceHash := hashutil.Hash([]byte{})
 	hashAnnounce := &pb.BeaconBlockHashAnnounce{
 		Hash: announceHash[:],
 	}
@@ -112,7 +105,13 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := setupDB(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -130,7 +129,7 @@ func TestProcessBlock(t *testing.T) {
 	}()
 
 	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -141,12 +140,13 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  parentHash[:],
+		PowChainRef:    []byte{1, 2, 3, 4, 5},
+		AncestorHashes: [][]byte{parentHash[:]},
+		Slot:           1,
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
-		ShardId:        0,
+		Shard:          0,
 		ShardBlockHash: []byte{'A'},
 	}
 
@@ -172,7 +172,13 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := setupDB(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := Config{
 		BlockHashBufferSize: 0,
 		BlockBufferSize:     0,
@@ -191,7 +197,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}()
 
 	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		SlotNumber: 0,
+		Slot: 0,
 	})
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -202,8 +208,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		PowChainRef: []byte{1, 2, 3, 4, 5},
-		ParentHash:  parentHash[:],
+		PowChainRef:    []byte{1, 2, 3, 4, 5},
+		AncestorHashes: [][]byte{parentHash[:]},
+		Slot:           1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -218,8 +225,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		PowChainRef: []byte{6, 7, 8, 9, 10},
-		ParentHash:  make([]byte, 32),
+		PowChainRef:    []byte{6, 7, 8, 9, 10},
+		AncestorHashes: [][]byte{make([]byte, 32)},
+		Slot:           1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -245,13 +253,15 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestBlockRequestErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	ss := setupService(t)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	ss := setupService(t, db)
 
 	exitRoutine := make(chan bool)
 
 	go func() {
 		ss.run()
-		exitRoutine <- true
+		<-exitRoutine
 	}()
 
 	malformedRequest := &pb.BeaconBlockHashAnnounce{
@@ -265,7 +275,24 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- invalidmsg
+	ss.cancel()
+	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
+}
+
+func TestBlockRequest(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	ss := setupService(t, db)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
 
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
@@ -278,15 +305,20 @@ func TestBlockRequestErrors(t *testing.T) {
 	}
 
 	ss.blockRequestBySlot <- msg1
-	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
-	hook.Reset()
+	ss.cancel()
+	exitRoutine <- true
 
+	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 }
 
 func TestReceiveAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	as := &mockAttestService{}
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	cfg := Config{
 		BlockHashBufferSize:    0,
 		BlockBufferSize:        0,
@@ -294,12 +326,11 @@ func TestReceiveAttestation(t *testing.T) {
 		ChainService:           ms,
 		AttestService:          as,
 		P2P:                    &mockP2P{},
-		BeaconDB:               setupDB(t),
+		BeaconDB:               db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
-
 	go func() {
 		ss.run()
 		exitRoutine <- true
@@ -322,9 +353,12 @@ func TestReceiveAttestation(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
 }
 
-func TestStartEmptyState(t *testing.T) {
+func TestStartNotSynced(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := setupDB(t)
+
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+
 	cfg := DefaultConfig()
 	cfg.ChainService = &mockChainService{}
 	cfg.P2P = &mockP2P{}
@@ -332,14 +366,10 @@ func TestStartEmptyState(t *testing.T) {
 	ss := NewSyncService(context.Background(), cfg)
 
 	ss.Start()
-	testutil.AssertLogsContain(t, hook, "Empty chain state, but continue sync")
+	ss.Stop()
+
+	testutil.AssertLogsContain(t, hook, "Not caught up with network, but continue sync")
+	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
-
-	db.SaveCrystallizedState(db.GetCrystallizedState())
-
-	ss.Start()
-	testutil.AssertLogsDoNotContain(t, hook, "Empty chain state, but continue sync")
-
-	ss.cancel()
 }

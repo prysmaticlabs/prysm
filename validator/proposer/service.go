@@ -12,8 +12,8 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
-	blake2b "golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "proposer")
@@ -77,7 +77,6 @@ func (p *Proposer) Start() {
 
 	go p.run(p.ctx.Done(), client)
 	go p.processAttestation(p.ctx.Done())
-
 }
 
 // Stop the main loop.
@@ -162,18 +161,17 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				log.Errorf("Could not marshal latest beacon block: %v", err)
 				continue
 			}
-			latestBlockHash := blake2b.Sum512(data)
+			latestBlockHash := hashutil.Hash(data)
 
 			// To prevent any unaccounted attestations from being added.
 			p.lock.Lock()
 
 			bitmask := p.GenerateBitmask(p.pendingAttestation)
-
-			// TODO(#552): Implement real proposals with randao reveals and attestation fields.
+			// TODO(#619): Implement real proposals with randao reveals and attestation fields.
 			req := &pb.ProposeRequest{
 				ParentHash: latestBlockHash[:],
 				// TODO(#511): Fix to be the actual, timebased slot number instead.
-				SlotNumber:         latestBeaconBlock.GetSlotNumber() + 1,
+				SlotNumber:         latestBeaconBlock.GetSlot() + 1,
 				RandaoReveal:       []byte{},
 				AttestationBitmask: bitmask,
 				Timestamp:          ptypes.TimestampNow(),
@@ -184,7 +182,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				continue
 			}
 
-			log.Infof("Block proposed successfully with hash 0x%x", res.BlockHash)
+			log.Infof("Block proposed successfully with hash %#x", res.BlockHash)
 			p.pendingAttestation = nil
 			p.lock.Unlock()
 		}

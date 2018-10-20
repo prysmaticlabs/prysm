@@ -10,30 +10,30 @@ import (
 
 func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	state := &pb.CrystallizedState{
-		LastStateRecalc: 65,
+		LastStateRecalculationSlot: 65,
 		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{ShardId: 1, Committee: []uint32{0, 1, 2, 3, 4}},
-				{ShardId: 2, Committee: []uint32{5, 6, 7, 8, 9}},
+				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4}},
+				{Shard: 2, Committee: []uint32{5, 6, 7, 8, 9}},
 			}},
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{ShardId: 3, Committee: []uint32{0, 1, 2, 3, 4}},
-				{ShardId: 4, Committee: []uint32{5, 6, 7, 8, 9}},
+				{Shard: 3, Committee: []uint32{0, 1, 2, 3, 4}},
+				{Shard: 4, Committee: []uint32{5, 6, 7, 8, 9}},
 			}},
 		}}
-	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 1000); err == nil {
+	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1000); err == nil {
 		t.Error("getShardAndCommitteesForSlot should have failed with invalid slot")
 	}
-	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 1)
+	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
 	if err != nil {
 		t.Errorf("getShardAndCommitteesForSlot failed: %v", err)
 	}
-	if committee.ArrayShardAndCommittee[0].ShardId != 1 {
-		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 1, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	if committee.ArrayShardAndCommittee[0].Shard != 1 {
+		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 1, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
-	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalc, 2)
-	if committee.ArrayShardAndCommittee[0].ShardId != 3 {
-		t.Errorf("getShardAndCommitteesForSlot returns shardID should be 3, got: %v", committee.ArrayShardAndCommittee[0].ShardId)
+	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 2)
+	if committee.ArrayShardAndCommittee[0].Shard != 3 {
+		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 3, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
 }
 
@@ -41,39 +41,56 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
 	size := params.GetConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+	validator := &pb.ValidatorRecord{WithdrawalShard: 0, Status: uint64(params.Active)}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
 
 	// ValidatorsBySlotShard should fail the same.
-	if _, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0); err == nil {
+	if _, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1); err == nil {
 		t.Errorf("ValidatorsBySlotShard should have failed")
 	}
 }
 
 func BenchmarkMaxValidators(b *testing.B) {
 	var validators []*pb.ValidatorRecord
-	validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+	validator := &pb.ValidatorRecord{WithdrawalShard: 0}
 	for i := 0; i < params.GetConfig().ModuloBias; i++ {
 		validators = append(validators, validator)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
+		ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1)
 	}
 }
 
+func TestInitialShardAndCommiteeForSlots(t *testing.T) {
+	// Create 1000 validators in ActiveValidators.
+	var validators []*pb.ValidatorRecord
+	for i := 0; i < 1000; i++ {
+		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+		validators = append(validators, validator)
+	}
+	shardAndCommitteeArray, err := InitialShardAndCommitteesForSlots(validators)
+	if err != nil {
+		t.Fatalf("unable to get initial shard committees %v", err)
+	}
+
+	if uint64(len(shardAndCommitteeArray)) != 2*params.GetConfig().CycleLength {
+		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 2*params.GetConfig().CycleLength)
+	}
+
+}
 func TestShuffleActiveValidators(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
+	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
@@ -86,11 +103,11 @@ func TestSmallSampleValidators(t *testing.T) {
 	// Create a small number of validators validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 20; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1, 0)
+	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
@@ -99,43 +116,46 @@ func TestSmallSampleValidators(t *testing.T) {
 	}
 }
 
-func TestGetCommitteeParamsSmallValidatorSet(t *testing.T) {
+func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
 	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize / 4)
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
-
-	if slotsPerCommittee != 4 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 4, slotsPerCommittee)
-	}
 }
 
-func TestGetCommitteeParamsRegularValidatorSet(t *testing.T) {
+func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
 	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize)
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
-
-	if slotsPerCommittee != 1 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 1, slotsPerCommittee)
-	}
 }
 
-func TestGetCommitteeParamsLargeValidatorSet(t *testing.T) {
+func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
 	numValidators := int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize) * 8
 
-	committesPerSlot, slotsPerCommittee := getCommitteeParams(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 5 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 5, committesPerSlot)
 	}
+}
 
-	if slotsPerCommittee != 1 {
-		t.Fatalf("Expected slotsPerCommittee to equal %d: got %d", 1, slotsPerCommittee)
+func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
+	config := params.GetConfig()
+	oldShardCount := config.ShardCount
+	config.ShardCount = int(config.CycleLength) - 1
+
+	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize)
+
+	committesPerSlot := getCommitteesPerSlot(numValidators)
+	if committesPerSlot != 1 {
+		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
+
+	config.ShardCount = oldShardCount
 }
 
 func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
@@ -186,7 +206,7 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 		t.Logf("slot %d", i)
 		for j := 0; j < len(shardAndCommittees); j++ {
 			shardCommittee := shardAndCommittees[j]
-			t.Logf("shard %d", shardCommittee.ShardId)
+			t.Logf("shard %d", shardCommittee.Shard)
 			t.Logf("committee: %v", shardCommittee.Committee)
 			if len(shardCommittee.Committee) != int(params.GetConfig().MinCommiteeSize) {
 				t.Fatalf("Expected committee size %d: got %d", params.GetConfig().MinCommiteeSize, len(shardCommittee.Committee))

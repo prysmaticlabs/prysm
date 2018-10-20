@@ -36,12 +36,12 @@ message BeaconBlockResponse {
 }
 
 message BeaconBlock {
-  bytes parent_hash = 1;
-  uint64 slot_number = 2;
+  repeated bytes ancestor_hashes = 1;
+  uint64 slot = 2;
   bytes randao_reveal = 3;
   bytes pow_chain_ref = 4;
-  bytes active_state_hash = 5;
-  bytes crystallized_state_hash = 6;
+  bytes active_state_root = 5;
+  bytes crystallized_state_root = 6;
   google.protobuf.Timestamp timestamp = 7;
   repeated AggregatedAttestation attestations = 8;
   repeated SpecialRecord specials = 9;
@@ -60,16 +60,19 @@ message CrystallizedStateResponse {
 }
 
 message CrystallizedState {
-  uint64 last_state_recalc = 1;
+  uint64 last_state_recalculation_slot = 1;
   uint64 justified_streak = 2;
   uint64 last_justified_slot = 3;
   uint64 last_finalized_slot = 4;
-  uint64 current_dynasty = 5;
-  bytes dynasty_seed = 6;
-  uint64 dynasty_start = 7;
-  repeated CrosslinkRecord crosslink_records = 8;
-  repeated ValidatorRecord validators = 9;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 10;
+  uint64 validator_set_change_slot = 5;
+  repeated CrosslinkRecord crosslinks = 6;
+  repeated ValidatorRecord validators = 7;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
+  repeated uint32 deposits_penalized_in_period = 9;
+  bytes validator_set_delta_hash_chain = 10;
+  uint32 pre_fork_version = 11;
+  uint32 post_fork_version = 12;
+  uint64 fork_slot_number =13;
 }
 
 message ShardAndCommitteeArray {
@@ -85,7 +88,7 @@ message ActiveStateRequest {
 }
 
 message ShardAndCommittee {
-  uint64 shard_id = 1;
+  uint64 shard = 1;
   repeated uint32 committee = 2;
 }
 
@@ -97,21 +100,22 @@ message ActiveState {
   repeated AggregatedAttestation pending_attestations = 1;
   repeated bytes recent_block_hashes = 2;
   repeated SpecialRecord pending_specials = 3;
+  bytes randao_mix = 4;
 }
 
 message ValidatorRecord {
-  bytes public_key = 1;
+  bytes pubkey = 1;
   uint64 withdrawal_shard = 2;
   bytes withdrawal_address = 3;
   bytes randao_commitment = 4;
   uint64 balance = 5;
-  uint64 start_dynasty = 6;
-  uint64 end_dynasty = 7;
+  uint64 status = 6;
+  uint64 exit_slot = 7;
 }
 
 message AggregatedAttestation {
   uint64 slot = 1;
-  uint64 shard_id = 2;
+  uint64 shard = 2;
   uint64 justified_slot = 3;
   bytes justified_block_hash = 4;
   bytes shard_block_hash = 5;
@@ -120,9 +124,18 @@ message AggregatedAttestation {
   repeated uint64 aggregate_sig = 8;
 }
 
+message AttestationSignedData {
+  uint64 version = 1;
+  uint64 slot = 2;
+  uint64 shard = 3;
+  repeated bytes parent_hashes = 4;
+  bytes shard_block_hash = 5;
+  uint64 justified_slot = 6;
+}
+
 message CrosslinkRecord {
-  uint64 dynasty = 1;
-  bytes blockhash = 2;
+  bool recently_changed = 1;
+  bytes shard_block_hash = 2;
   uint64 slot = 3;
 }
 

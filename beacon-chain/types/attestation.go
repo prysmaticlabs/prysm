@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"golang.org/x/crypto/blake2b"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // Attestation is the primary source of load on the beacon chain, it's used to
@@ -24,7 +24,7 @@ func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 		return &Attestation{
 			data: &pb.AggregatedAttestation{
 				Slot:                0,
-				ShardId:             0,
+				Shard:               0,
 				JustifiedSlot:       0,
 				JustifiedBlockHash:  []byte{},
 				ShardBlockHash:      []byte{},
@@ -53,10 +53,7 @@ func (a *Attestation) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not marshal attestation proto data: %v", err)
 	}
-	var hash [32]byte
-	h := blake2b.Sum512(data)
-	copy(hash[:], h[:32])
-	return hash, nil
+	return hashutil.Hash(data), nil
 }
 
 // Key generates the blake2b hash of the following attestation fields:
@@ -70,11 +67,7 @@ func (a *Attestation) Key() [32]byte {
 	for _, pHash := range a.ObliqueParentHashes() {
 		key = append(key, pHash[:]...)
 	}
-
-	var hash [32]byte
-	h := blake2b.Sum512(key)
-	copy(hash[:], h[:32])
-	return hash
+	return hashutil.Hash(key)
 }
 
 // SlotNumber of the block, which this attestation is attesting to.
@@ -84,7 +77,7 @@ func (a *Attestation) SlotNumber() uint64 {
 
 // ShardID of the block, which this attestation is attesting to.
 func (a *Attestation) ShardID() uint64 {
-	return a.data.ShardId
+	return a.data.Shard
 }
 
 // ShardBlockHash of the block, which this attestation is attesting to.
@@ -137,10 +130,10 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 		proposerShardID,
 		a.JustifiedSlotNumber())
 
-	log.Infof("Constructing attestation message for incoming block 0x%x", attestationMsg)
+	log.Infof("Constructing attestation message for incoming block %#x", attestationMsg)
 
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
-	log.Infof("Verifying attestation with public key 0x%x", pubKey)
+	log.Infof("Verifying attestation with public key %#x", pubKey)
 
 	log.Info("successfully verified attestation with incoming block")
 	return nil
@@ -157,11 +150,7 @@ func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shar
 	binary.PutUvarint(msg, shardID)
 	msg = append(msg, blockHash...)
 	binary.PutUvarint(msg, justifiedSlot)
-
-	var hashMsg [32]byte
-	h := blake2b.Sum512(msg)
-	copy(hashMsg[:], h[:32])
-	return hashMsg
+	return hashutil.Hash(msg)
 }
 
 // ContainsValidator checks if the validator is included in the attestation.

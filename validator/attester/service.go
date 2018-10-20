@@ -8,10 +8,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "attester")
@@ -23,7 +23,6 @@ type rpcClientService interface {
 
 type beaconClientService interface {
 	AttesterAssignmentFeed() *event.Feed
-	PublicKey() []byte
 }
 
 // Attester holds functionality required to run a block attester
@@ -35,6 +34,7 @@ type Attester struct {
 	rpcClientService rpcClientService
 	assignmentChan   chan *pbp2p.BeaconBlock
 	shardID          uint64
+	publicKey        []byte
 }
 
 // Config options for an attester service.
@@ -43,6 +43,7 @@ type Config struct {
 	ShardID       uint64
 	Assigner      beaconClientService
 	Client        rpcClientService
+	PublicKey     []byte
 }
 
 // NewAttester creates a new attester instance.
@@ -54,6 +55,7 @@ func NewAttester(ctx context.Context, cfg *Config) *Attester {
 		beaconService:    cfg.Assigner,
 		rpcClientService: cfg.Client,
 		shardID:          cfg.ShardID,
+		publicKey:        cfg.PublicKey,
 		assignmentChan:   make(chan *pbp2p.BeaconBlock, cfg.AssignmentBuf),
 	}
 }
@@ -91,10 +93,10 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				log.Errorf("could not marshal latest beacon block: %v", err)
 				continue
 			}
-			latestBlockHash := blake2b.Sum512(data)
+			latestBlockHash := hashutil.Hash(data)
 
 			pubKeyReq := &pb.PublicKey{
-				PublicKey: a.beaconService.PublicKey(),
+				PublicKey: a.publicKey,
 			}
 			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {
@@ -109,12 +111,12 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				log.Errorf("could not get attester index: %v", err)
 				continue
 			}
-			attesterBitfield := shared.SetBitfield(int(attesterIndex.Index))
+			attesterBitfield := bitutil.SetBitfield(int(attesterIndex.Index))
 
 			attestReq := &pb.AttestRequest{
 				Attestation: &pbp2p.AggregatedAttestation{
-					Slot:             latestBeaconBlock.GetSlotNumber(),
-					ShardId:          a.shardID,
+					Slot:             latestBeaconBlock.GetSlot(),
+					Shard:            a.shardID,
 					AttesterBitfield: attesterBitfield,
 					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
 					AggregateSig:     []uint64{},         // TODO(258): Need Signature verification scheme/library
@@ -126,7 +128,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				log.Errorf("could not attest head: %v", err)
 				continue
 			}
-			log.Infof("Attestation proposed successfully with hash 0x%x", res.AttestationHash)
+			log.Infof("Attestation proposed successfully with hash %#x", res.AttestationHash)
 		}
 	}
 }

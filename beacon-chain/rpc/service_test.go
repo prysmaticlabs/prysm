@@ -70,15 +70,15 @@ type mockDB struct {
 	cState  *types.CrystallizedState
 }
 
-func (m *mockDB) GetCanonicalBlock() (*types.Block, error) {
+func (m *mockDB) GetChainHead() (*types.Block, error) {
 	return m.block, nil
 }
 
-func (m *mockDB) GetCrystallizedState() *types.CrystallizedState {
-	return m.cState
+func (m *mockDB) GetCrystallizedState() (*types.CrystallizedState, error) {
+	return m.cState, nil
 }
 
-func (m *mockDB) GetCanonicalBlockForSlot(uint64) (*types.Block, error) {
+func (m *mockDB) GetBlockBySlot(uint64) (*types.Block, error) {
 	return m.genesis, nil
 }
 
@@ -135,7 +135,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockDB := &mockDB{}
 	mockDB.genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
 	var err error
-	mockDB.cState, err = types.NewGenesisCrystallizedState("")
+	mockDB.cState, err = types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 func TestProposeBlock(t *testing.T) {
 	mockChain := &mockChainService{}
 	db := &mockDB{}
-	db.cState, _ = types.NewGenesisCrystallizedState("")
+	db.cState, _ = types.NewGenesisCrystallizedState(nil)
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:            "6372",
 		ChainService:    mockChain,
@@ -193,7 +193,7 @@ func TestAttestHead(t *testing.T) {
 	req := &pb.AttestRequest{
 		Attestation: &pbp2p.AggregatedAttestation{
 			Slot:           999,
-			ShardId:        1,
+			Shard:          1,
 			ShardBlockHash: []byte{'a'},
 		},
 	}
@@ -225,8 +225,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
 
-func TestLatestAttestation(t *testing.T) {
-	hook := logTest.NewGlobal()
+func TestLatestAttestationFaulty(t *testing.T) {
 	attestationService := &mockAttestationService{}
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:               "8777",
@@ -250,10 +249,25 @@ func TestLatestAttestation(t *testing.T) {
 	}(t)
 
 	rpcService.incomingAttestation <- attestation
+	rpcService.cancel()
+	exitRoutine <- true
+}
 
-	mockStream = internal.NewMockBeaconService_LatestAttestationServer(ctrl)
+func TestLatestAttestation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	attestationService := &mockAttestationService{}
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:               "8777",
+		SubscriptionBuf:    0,
+		AttestationService: attestationService,
+	})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exitRoutine := make(chan bool)
+	attestation := &types.Attestation{}
+	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
 	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
-
 	// Tests a good stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
@@ -262,15 +276,16 @@ func TestLatestAttestation(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	rpcService.incomingAttestation <- attestation
-	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 	rpcService.cancel()
 	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 }
 
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to instantiate genesis state: %v", err)
 	}
@@ -292,7 +307,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 func TestValidatorIndex(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to instantiate genesis state: %v", err)
 	}
@@ -314,7 +329,7 @@ func TestValidatorIndex(t *testing.T) {
 func TestValidatorShardID(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState("")
+	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Failed to instantiate genesis state: %v", err)
 	}
@@ -366,7 +381,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	genesisState, err := types.NewGenesisCrystallizedState("")
+	genesisState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

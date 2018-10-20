@@ -1,6 +1,6 @@
-// Package shared defines independent utilities helpful for a sharding-enabled,
+// Package shardutil defines independent utilities helpful for a sharding-enabled,
 // Ethereum blockchain such as blob serialization as more.
-package shared
+package shardutil
 
 import (
 	"fmt"

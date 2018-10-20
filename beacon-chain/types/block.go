@@ -2,6 +2,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -12,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 )
 
 var log = logrus.WithField("prefix", "types")
@@ -27,21 +28,24 @@ type Block struct {
 }
 
 type beaconDB interface {
-	HasBlock(h [32]byte) (bool, error)
+	HasBlock(h [32]byte) bool
 }
 
 // NewBlock explicitly sets the data field of a block.
 // Return block with default fields if data is nil.
 func NewBlock(data *pb.BeaconBlock) *Block {
 	if data == nil {
+		var ancestorHashes = make([][]byte, 0, 32)
+
 		//It is assumed when data==nil, you're asking for a Genesis Block
 		return &Block{
 			data: &pb.BeaconBlock{
-				ParentHash:            []byte{0},
+				AncestorHashes:        ancestorHashes,
 				RandaoReveal:          []byte{0},
 				PowChainRef:           []byte{0},
-				ActiveStateHash:       []byte{0},
-				CrystallizedStateHash: []byte{0},
+				ActiveStateRoot:       []byte{0},
+				CrystallizedStateRoot: []byte{0},
+				Specials:              []*pb.SpecialRecord{},
 			},
 		}
 	}
@@ -50,15 +54,15 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 }
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
-func NewGenesisBlock(activeStateHash [32]byte, crystallizedStateHash [32]byte) *Block {
+func NewGenesisBlock(activeStateRoot [32]byte, crystallizedStateRoot [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
 	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 
-	gb.data.ActiveStateHash = activeStateHash[:]
-	gb.data.CrystallizedStateHash = crystallizedStateHash[:]
+	gb.data.ActiveStateRoot = activeStateRoot[:]
+	gb.data.CrystallizedStateRoot = crystallizedStateRoot[:]
 	return gb
 }
 
@@ -78,22 +82,19 @@ func (b *Block) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
 	}
-	var hash [32]byte
-	h := blake2b.Sum512(data)
-	copy(hash[:], h[:32])
-	return hash, nil
+	return hashutil.Hash(data), nil
 }
 
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ParentHash)
+	copy(h[:], b.data.AncestorHashes[0])
 	return h
 }
 
 // SlotNumber of the beacon block.
 func (b *Block) SlotNumber() uint64 {
-	return b.data.SlotNumber
+	return b.data.Slot
 }
 
 // PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
@@ -108,17 +109,17 @@ func (b *Block) RandaoReveal() [32]byte {
 	return h
 }
 
-// ActiveStateHash returns the active state hash.
-func (b *Block) ActiveStateHash() [32]byte {
+// ActiveStateRoot returns the active state hash.
+func (b *Block) ActiveStateRoot() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.ActiveStateHash)
+	copy(h[:], b.data.ActiveStateRoot)
 	return h
 }
 
-// CrystallizedStateHash returns the crystallized state hash.
-func (b *Block) CrystallizedStateHash() [32]byte {
+// CrystallizedStateRoot returns the crystallized state hash.
+func (b *Block) CrystallizedStateRoot() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.CrystallizedStateHash)
+	copy(h[:], b.data.CrystallizedStateRoot)
 	return h
 }
 
@@ -132,15 +133,20 @@ func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 
+// Specials returns an array of special objects in the block.
+func (b *Block) Specials() []*pb.SpecialRecord {
+	return b.data.Specials
+}
+
 // Timestamp returns the Go type time.Time from the protobuf type contained in the block.
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
-func (b *Block) isSlotValid(genesisTimestamp time.Time) bool {
+func (b *Block) isSlotValid(genesisTime time.Time) bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTimestamp.Add(slotDuration)
+	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
 
@@ -153,7 +159,7 @@ func (b *Block) IsValid(
 	cState *CrystallizedState,
 	parentSlot uint64,
 	enableAttestationValidity bool,
-	genesisTimestamp time.Time) bool {
+	genesisTime time.Time) bool {
 	_, err := b.Hash()
 	if err != nil {
 		log.Errorf("Could not hash incoming block: %v", err)
@@ -161,40 +167,61 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Can not process a genesis block")
+		log.Error("Cannot process a genesis block")
 		return false
 	}
 
-	if !b.isSlotValid(genesisTimestamp) {
+	if !b.isSlotValid(genesisTime) {
 		log.Errorf("Slot of block is too high: %d", b.SlotNumber())
 		return false
 	}
 
+	_, proposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		b.SlotNumber())
+	if err != nil {
+		log.Errorf("Cannot get proposer index %v", err)
+		return false
+	}
+	log.Infof("Proposer index: %v", proposerIndex)
+
 	if enableAttestationValidity {
 		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-		_, proposerIndex, err := casper.ProposerShardAndIndex(
-			cState.ShardAndCommitteesForSlots(),
-			cState.LastStateRecalc(),
-			parentSlot)
-		if err != nil {
-			log.Errorf("Can not get proposer index %v", err)
-			return false
-		}
 		log.Infof("Proposer index: %v", proposerIndex)
-		if !shared.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)) {
+		if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
 			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
 		}
 
 		for index, attestation := range b.Attestations() {
 			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-				log.Debugf("attestation invalid: %v", attestation)
+				log.Errorf("attestation invalid: %v", attestation)
 				return false
 			}
 		}
 	}
+	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
+	blockRandaoReveal := b.RandaoReveal()
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
+		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
+		return false
+	}
 
 	return true
+}
+
+// UpdateAncestorHashes updates the skip list of ancestor block hashes.
+// i'th item is 2**i'th ancestor for i = 0, ..., 31.
+func UpdateAncestorHashes(parentAncestorHashes [][32]byte, parentSlotNum uint64, parentHash [32]byte) [][32]byte {
+	newAncestorHashes := parentAncestorHashes
+	for i := range parentAncestorHashes {
+		if (parentSlotNum % (1 << uint64(i))) == 0 {
+			newAncestorHashes[i] = parentHash
+		}
+	}
+	return newAncestorHashes
 }
 
 // isAttestationValid validates an attestation in a block.
@@ -216,11 +243,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	hash := [32]byte{}
 	copy(hash[:], attestation.JustifiedBlockHash)
-	blockInChain, err := db.HasBlock(hash)
-	if err != nil {
-		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
-		return false
-	}
+	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
 		log.Debugf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
@@ -229,7 +252,12 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	}
 
 	// Get all the block hashes up to cycle length.
-	parentHashes := aState.getSignedParentHashes(b, attestation)
+	parentHashes, err := aState.getSignedParentHashes(b, attestation)
+	if err != nil {
+		log.Errorf("unable to get signed parent hashes: %v", err)
+		return false
+	}
+
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
 		log.Debugf("Unable to get validator committee: %v", attesterIndices)
@@ -247,14 +275,23 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		parentHashes,
 		attestation.ShardBlockHash,
 		attestation.Slot,
-		attestation.ShardId,
+		attestation.Shard,
 		attestation.JustifiedSlot)
 
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
-		attestation.ShardId, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
+		attestation.Shard, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
+}
+
+// isRandaoValid verifies the validity of randao from block by comparing it with proposer's randao
+// from crystallized state.
+func (b *Block) isRandaoValid(cStateRandao []byte) bool {
+	var h [32]byte
+	copy(h[:], cStateRandao)
+	blockRandaoReveal := b.RandaoReveal()
+	return hashutil.Hash(blockRandaoReveal[:]) == h
 }
 
 func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) bool {

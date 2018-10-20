@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -14,7 +14,7 @@ func NewValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 
 	for i := 0; i < 10; i++ {
-		validator := &pb.ValidatorRecord{Balance: 1e18, StartDynasty: 1, EndDynasty: 10}
+		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)}
 		validators = append(validators, validator)
 	}
 	return validators
@@ -22,26 +22,25 @@ func NewValidators() []*pb.ValidatorRecord {
 
 func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	validators := NewValidators()
-	defaultBalance := uint64(1e18)
+	defaultBalance := uint64(32 * 1e9)
 
-	rewQuotient := RewardQuotient(1, validators)
+	rewQuotient := RewardQuotient(validators)
 	participatedDeposit := 4 * defaultBalance
 	totalDeposit := 10 * defaultBalance
 	penaltyQuotient := quadraticPenaltyQuotient()
 	timeSinceFinality := uint64(5)
 
 	data := &pb.CrystallizedState{
-		Validators:        validators,
-		CurrentDynasty:    1,
-		LastJustifiedSlot: 4,
-		LastFinalizedSlot: 3,
+		Validators:             validators,
+		ValidatorSetChangeSlot: 1,
+		LastJustifiedSlot:      4,
+		LastFinalizedSlot:      3,
 	}
 
 	rewardedValidators := CalculateRewards(
 		5,
 		[]uint32{2, 3, 6, 9},
 		data.Validators,
-		data.CurrentDynasty,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -51,7 +50,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
 	}
 
-	expectedBalance = uint64(defaultBalance + (defaultBalance/rewQuotient)*uint64(2*int64(participatedDeposit)-int64(totalDeposit))/uint64(totalDeposit))
+	expectedBalance = uint64(int64(defaultBalance) + int64(defaultBalance/rewQuotient)*int64(2*uint64(participatedDeposit)-uint64(totalDeposit))/int64(totalDeposit))
 
 	if rewardedValidators[6].Balance != expectedBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
@@ -68,7 +67,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		5,
 		[]uint32{1, 2, 7, 8},
 		validators,
-		data.CurrentDynasty,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -94,11 +92,9 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 func TestRewardQuotient(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e18,
-			StartDynasty: 0,
-			EndDynasty:   2},
+		{Balance: 1e9, Status: uint64(params.Active)},
 	}
-	rewQuotient := RewardQuotient(0, validators)
+	rewQuotient := RewardQuotient(validators)
 
 	if rewQuotient != params.GetConfig().BaseRewardQuotient {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
@@ -107,12 +103,10 @@ func TestRewardQuotient(t *testing.T) {
 
 func TestSlotMaxInterestRate(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Balance: 1e18,
-			StartDynasty: 0,
-			EndDynasty:   2},
+		{Balance: 1e9, Status: uint64(params.Active)},
 	}
 
-	interestRate := SlotMaxInterestRate(0, validators)
+	interestRate := SlotMaxInterestRate(validators)
 
 	if interestRate != 1/float64(params.GetConfig().BaseRewardQuotient) {
 		t.Errorf("incorrect interest rate generated %f", interestRate)
@@ -142,7 +136,7 @@ func TestQuadraticPenalty(t *testing.T) {
 func TestRewardCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
 	participatedDeposit := uint64(3e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDeposit)
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
@@ -159,7 +153,7 @@ func TestRewardCrosslink(t *testing.T) {
 
 func TestPenaltyCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * shared.IntegerSquareRoot(totalDeposit)
+	rewardQuotient := params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}

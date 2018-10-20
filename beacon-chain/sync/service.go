@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -26,14 +26,17 @@ type attestationService interface {
 }
 
 type beaconDB interface {
-	GetCrystallizedState() *types.CrystallizedState
+	GetCrystallizedState() (*types.CrystallizedState, error)
 	GetBlock([32]byte) (*types.Block, error)
+	HasBlock([32]byte) bool
 	GetAttestation([32]byte) (*types.Attestation, error)
-	HasAttestation([32]byte) (bool, error)
-	HasStoredState() (bool, error)
-	HasBlock([32]byte) (bool, error)
-	HasCanonicalBlockForSlot(uint64) (bool, error)
-	GetCanonicalBlockForSlot(uint64) (*types.Block, error)
+	GetBlockBySlot(uint64) (*types.Block, error)
+}
+
+type p2pAPI interface {
+	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
+	Send(msg proto.Message, peer p2p.Peer)
+	Broadcast(msg proto.Message)
 }
 
 // Service is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -51,7 +54,7 @@ type beaconDB interface {
 type Service struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	p2p                       shared.P2P
+	p2p                       p2pAPI
 	chainService              chainService
 	attestationService        attestationService
 	db                        beaconDB
@@ -72,7 +75,7 @@ type Config struct {
 	ChainService              chainService
 	AttestService             attestationService
 	BeaconDB                  beaconDB
-	P2P                       shared.P2P
+	P2P                       p2pAPI
 	EnableAttestationValidity bool
 }
 
@@ -105,19 +108,19 @@ func NewSyncService(ctx context.Context, cfg Config) *Service {
 	}
 }
 
+// IsSyncedWithNetwork polls other nodes in the network
+// to determine whether or not the local chain is synced
+// with the rest of the network.
+// TODO(#661): Implement this method.
+func (ss *Service) IsSyncedWithNetwork() bool {
+	return false
+}
+
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
-	stored, err := ss.db.HasStoredState()
-	if err != nil {
-		log.Errorf("error retrieving stored state: %v", err)
-		return
-	}
-
-	if !stored {
-		// TODO(#426): Resume sync after completion of initial sync.
-		// Currently, `Simulator` only supports sync from genesis block, therefore
-		// new nodes with a fresh database must skip InitialSync and immediately run the Sync goroutine.
-		log.Info("Empty chain state, but continue sync")
+	if !ss.IsSyncedWithNetwork() {
+		log.Info("Not caught up with network, but continue sync")
+		// TODO(#661): Exit early if not synced.
 	}
 
 	go ss.run()
@@ -176,17 +179,12 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 
-	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.db.HasBlock(h)
-	containsBlockSpan.End()
-	if err != nil {
-		log.Errorf("Received block hash failed: %v", err)
-	}
-	if blockExists {
+	if ss.db.HasBlock(h) {
+		log.Debugf("Received a hash for a block that has already been processed: %#x", h)
 		return
 	}
 
-	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Debug("Received incoming block hash, requesting full block data from sender")
+	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
@@ -205,45 +203,47 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		log.Errorf("Could not hash received block: %v", err)
 	}
 
-	ctx, containsBlockSpan := trace.StartSpan(ctx, "containsBlock")
-	blockExists, err := ss.db.HasBlock(blockHash)
-	containsBlockSpan.End()
-	if err != nil {
-		log.Errorf("Can not check for block in DB: %v", err)
+	log.Infof("Processing response to block request: %#x", blockHash)
+
+	if ss.db.HasBlock(blockHash) {
+		log.Debug("Received a block that already exists. Exiting...")
 		return
 	}
-	if blockExists {
+
+	cState, err := ss.db.GetCrystallizedState()
+	if err != nil {
+		log.Errorf("Failed to get crystallized state: %v", err)
+		return
+	}
+	if block.SlotNumber() < cState.LastFinalizedSlot() {
+		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
 
 	if ss.enableAttestationValidity {
 		// Verify attestation coming from proposer then forward block to the subscribers.
 		attestation := types.NewAttestation(response.Attestation)
-		cState := ss.db.GetCrystallizedState()
-		parentBlock, err := ss.db.GetBlock(block.ParentHash())
-		if err != nil {
-			log.Errorf("Failed to get parent slot: %v", err)
-			return
-		}
-		parentSlot := parentBlock.SlotNumber()
-		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalc(), parentSlot)
+
+		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 		if err != nil {
 			log.Errorf("Failed to get proposer shard ID: %v", err)
 			return
 		}
+
 		// TODO(#258): stubbing public key with empty 32 bytes.
 		if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
 			log.Errorf("Failed to verify proposer attestation: %v", err)
 			return
 		}
+
 		_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-		log.WithField("attestationHash", fmt.Sprintf("0x%x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+		log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
 		ss.attestationService.IncomingAttestationFeed().Send(attestation)
 		sendAttestationSpan.End()
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	log.WithField("blockHash", fmt.Sprintf("0x%x", blockHash)).Debug("Sending newly received block to subscribers")
+	log.WithField("blockHash", fmt.Sprintf("%#x", blockHash)).Debug("Sending newly received block to subscribers")
 	ss.chainService.IncomingBlockFeed().Send(block)
 	sendBlockSpan.End()
 }
@@ -260,21 +260,10 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 		return
 	}
 
-	ctx, checkForBlockSpan := trace.StartSpan(ctx, "checkForBlockBySlot")
-	blockExists, err := ss.db.HasCanonicalBlockForSlot(request.GetSlotNumber())
-	checkForBlockSpan.End()
-	if err != nil {
-		log.Errorf("Error checking db for block %v", err)
-		return
-	}
-	if !blockExists {
-		return
-	}
-
 	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := ss.db.GetCanonicalBlockForSlot(request.GetSlotNumber())
+	block, err := ss.db.GetBlockBySlot(request.GetSlotNumber())
 	getBlockSpan.End()
-	if err != nil {
+	if err != nil || block == nil {
 		log.Errorf("Error retrieving block from db: %v", err)
 		return
 	}
@@ -289,33 +278,24 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // service if we have not.
 func (ss *Service) receiveAttestation(msg p2p.Message) {
-	ctx, receiveAttestationSpan := trace.StartSpan(msg.Ctx, "receiveAttestation")
-	defer receiveAttestationSpan.End()
-
 	data := msg.Data.(*pb.AggregatedAttestation)
 	a := types.NewAttestation(data)
 	h := a.Key()
 
-	_, containsAttestationSpan := trace.StartSpan(ctx, "containsAttestation")
-	containsAttestationSpan.End()
-	hasAttestation, err := ss.db.HasAttestation(h)
+	attestation, err := ss.db.GetAttestation(h)
 	if err != nil {
-		log.Errorf("Failed check for existence of attestation: %v", err)
+		log.Errorf("Can not check for attestation in DB: %v", err)
+		return
 	}
-	if hasAttestation {
-		attestation, err := ss.db.GetAttestation(h)
-		if err != nil {
-			log.Errorf("Can not check for attestation in DB: %v", err)
-			return
-		}
+	if attestation != nil {
 		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
 		if validatorExists {
-			log.Debugf("Received attestation 0x%v already", h)
+			log.Debugf("Received attestation %#x already", h)
 			return
 		}
 	}
 
-	log.WithField("attestationHash", fmt.Sprintf("0x%x", h)).Debug("Forwarding attestation to subscribed services")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
 	// Request the full block data from peer that sent the block hash.
 	ss.attestationService.IncomingAttestationFeed().Send(a)
 }

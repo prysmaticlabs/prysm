@@ -129,12 +129,12 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 		p.run(doneChan, mockServiceClient)
 		<-exitRoutine
 	}()
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 5}
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash %#x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
@@ -219,14 +219,14 @@ func TestFullProposalOfBlock(t *testing.T) {
 	attestation := &pbp2p.AggregatedAttestation{AttesterBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 5}
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 5}
 
 	doneChan <- struct{}{}
 	doneChan <- struct{}{}
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash 0x%x", []byte("hi")))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash %#x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
@@ -265,7 +265,7 @@ func TestProposerServiceErrors(t *testing.T) {
 
 	p.attestationChan <- &pbp2p.AggregatedAttestation{}
 	p.assignmentChan <- nil
-	p.assignmentChan <- &pbp2p.BeaconBlock{SlotNumber: 9}
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 9}
 
 	doneChan <- struct{}{}
 	doneChan <- struct{}{}

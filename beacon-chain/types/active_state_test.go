@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -21,7 +22,7 @@ func TestGenesisActiveState_HashEquality(t *testing.T) {
 	}
 
 	if h1 != h2 {
-		t.Fatalf("Hash of two genesis crystallized states should be equal: %x", h1)
+		t.Fatalf("Hash of two genesis crystallized states should be equal: %#x", h1)
 	}
 }
 
@@ -45,17 +46,88 @@ func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 	}
 }
 
+func TestCopyActiveState(t *testing.T) {
+	aState1 := NewGenesisActiveState()
+	aState2 := aState1.CopyState()
+
+	newAttestations := []*pb.AggregatedAttestation{
+		{
+			Slot:  0,
+			Shard: 1,
+		},
+	}
+	aState1.data.PendingAttestations = aState1.appendNewAttestations(newAttestations)
+	if len(aState1.data.PendingAttestations) == len(aState2.data.PendingAttestations) {
+		t.Fatalf("The PendingAttestations should not equal each other %d, %d",
+			len(aState1.data.PendingAttestations),
+			len(aState2.data.PendingAttestations),
+		)
+	}
+
+	aState1.data.RecentBlockHashes = [][]byte{{'A'}}
+	if len(aState1.RecentBlockHashes()) == len(aState2.RecentBlockHashes()) {
+		t.Fatalf("The RecentBlockHashes should not equal each other %d, %d",
+			len(aState1.RecentBlockHashes()),
+			len(aState2.RecentBlockHashes()),
+		)
+	}
+
+	newSpecial := &pb.SpecialRecord{
+		Kind: 323,
+		Data: [][]byte{{10}},
+	}
+	aState1.data.PendingSpecials = aState1.appendNewSpecialObject(newSpecial)
+	if len(aState1.PendingSpecials()) == len(aState2.PendingSpecials()) {
+		t.Fatalf("The PendingSpecials should not equal each other %d, %d",
+			len(aState1.PendingSpecials()),
+			len(aState2.PendingSpecials()),
+		)
+	}
+
+	aState1.data.RandaoMix = []byte{22, 21}
+	aState2.data.RandaoMix = []byte{40, 31}
+	if aState1.data.RandaoMix[0] == aState2.data.RandaoMix[0] {
+		t.Fatalf("The RandaoMix should not equal each other %d, %d",
+			aState1.data.RandaoMix[0],
+			aState2.data.RandaoMix[0],
+		)
+	}
+
+	var blockHash [32]byte
+	copy(blockHash[:], []byte{'t', 'e', 's', 't', 'i', 'n', 'g'})
+
+	blockVoteCache1 := make(map[[32]byte]*utils.VoteCache)
+	blockVoteCache2 := make(map[[32]byte]*utils.VoteCache)
+	blockVoteCache1[blockHash] = &utils.VoteCache{
+		VoterIndices:     []uint32{22, 7},
+		VoteTotalDeposit: 300,
+	}
+	blockVoteCache2[blockHash] = &utils.VoteCache{
+		VoterIndices:     []uint32{20, 10},
+		VoteTotalDeposit: 340,
+	}
+
+	aState1.blockVoteCache = blockVoteCache1
+	aState2.blockVoteCache = blockVoteCache2
+	if aState1.blockVoteCache[blockHash].VoteTotalDeposit == aState2.blockVoteCache[blockHash].VoteTotalDeposit {
+		t.Fatalf("The blockVoteCache should not equal each other %d, %d",
+			aState1.blockVoteCache[blockHash].VoteTotalDeposit,
+			aState2.blockVoteCache[blockHash].VoteTotalDeposit,
+		)
+	}
+}
+
 func TestUpdateAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:    0,
-			ShardId: 0,
+			Slot:  0,
+			Shard: 0,
 		},
 		{
-			Slot:    0,
-			ShardId: 1,
+			Slot:  0,
+			Shard: 1,
 		},
 	}
 
@@ -69,24 +141,24 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AggregatedAttestation{
 			{
-				Slot:    0,
-				ShardId: 0,
+				Slot:  0,
+				Shard: 0,
 			},
 			{
-				Slot:    0,
-				ShardId: 1,
+				Slot:  0,
+				Shard: 1,
 			},
 		},
 	}, nil)
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:    10,
-			ShardId: 2,
+			Slot:  10,
+			Shard: 2,
 		},
 		{
-			Slot:    9,
-			ShardId: 3,
+			Slot:  9,
+			Shard: 3,
 		},
 	}
 
@@ -100,8 +172,8 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 
 func TestUpdateRecentBlockHashes(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 10,
-		ParentHash: []byte{'A'},
+		Slot:           10,
+		AncestorHashes: [][]byte{{'A'}},
 	})
 
 	recentBlockHashes := [][]byte{}
@@ -125,10 +197,10 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	for i := 0; i < len(updated); i++ {
 		if i < len(updated)-10 {
 			if !areBytesEqual(updated[i], []byte{0}) {
-				t.Fatalf("update failed: expected %x got %x", []byte{0}, updated[i])
+				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], block.data.ParentHash) {
-			t.Fatalf("update failed: expected %x got %x", block.data.ParentHash[:], updated[i])
+		} else if !areBytesEqual(updated[i], block.data.AncestorHashes[0]) {
+			t.Fatalf("update failed: expected %#x got %#x", block.data.AncestorHashes[:], updated[i])
 		}
 	}
 }
@@ -152,7 +224,8 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	block := &Block{
 		data: &pb.BeaconBlock{
-			SlotNumber: 2,
+			Slot:           2,
+			AncestorHashes: [][]byte{{}},
 		},
 	}
 
@@ -169,7 +242,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 func TestBlockVoteCacheNoAttestations(t *testing.T) {
 	aState := NewGenesisActiveState()
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("failed to initialize crystallized state: %v", err)
 	}
@@ -187,16 +260,17 @@ func TestBlockVoteCacheNoAttestations(t *testing.T) {
 
 func TestBlockVoteCache(t *testing.T) {
 	aState := NewGenesisActiveState()
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("failed to initialize crystallized state: %v", err)
 	}
 	block := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 1,
+		Slot:           1,
+		AncestorHashes: [][]byte{},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
-				ShardId:          0,
+				Shard:            1,
 				AttesterBitfield: []byte{'F', 'F'},
 			},
 		},
@@ -226,10 +300,11 @@ func areBytesEqual(s1, s2 []byte) bool {
 
 func TestCalculateNewActiveState(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
-		SlotNumber: 10,
+		Slot:           10,
+		AncestorHashes: [][]byte{{}},
 	})
 
-	cState, err := NewGenesisCrystallizedState("")
+	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("failed to initialize genesis crystallized state: %v", err)
 	}
@@ -242,12 +317,12 @@ func TestCalculateNewActiveState(t *testing.T) {
 	aState := NewActiveState(&pb.ActiveState{
 		PendingAttestations: []*pb.AggregatedAttestation{
 			{
-				Slot:    0,
-				ShardId: 0,
+				Slot:  0,
+				Shard: 0,
 			},
 			{
-				Slot:    0,
-				ShardId: 1,
+				Slot:  0,
+				Shard: 1,
 			},
 		},
 		RecentBlockHashes: recentBlockHashes,
@@ -277,5 +352,104 @@ func TestCalculateNewActiveState(t *testing.T) {
 
 	if len(aState.RecentBlockHashes()) != 2*int(params.GetConfig().CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
+	}
+}
+
+func createHashFromByte(repeatedByte byte) []byte {
+	hash := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		hash[i] = repeatedByte
+	}
+
+	return hash
+}
+
+func TestGetSignedParentHashes(t *testing.T) {
+	// Test the scenario described in the spec:
+	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
+	cfg := params.GetConfig()
+	oldCycleLength := cfg.CycleLength
+	cycleLength := uint64(4)
+	cfg.CycleLength = cycleLength
+	defer func() {
+		cfg.CycleLength = oldCycleLength
+	}()
+
+	recentBlockHashes := make([][]byte, 11)
+	recentBlockHashes[0] = createHashFromByte('Z')
+	recentBlockHashes[1] = createHashFromByte('A')
+	recentBlockHashes[2] = createHashFromByte('B')
+	recentBlockHashes[3] = createHashFromByte('C')
+	recentBlockHashes[4] = createHashFromByte('D')
+	recentBlockHashes[5] = createHashFromByte('E')
+	recentBlockHashes[6] = createHashFromByte('F')
+	recentBlockHashes[7] = createHashFromByte('G')
+	recentBlockHashes[8] = createHashFromByte('H')
+	recentBlockHashes[9] = createHashFromByte('I')
+	recentBlockHashes[10] = createHashFromByte('J')
+
+	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, nil)
+
+	b := NewBlock(&pb.BeaconBlock{Slot: 11})
+
+	obliqueParentHashes := make([][]byte, 2)
+	obliqueParentHashes[0] = createHashFromByte(0)
+	obliqueParentHashes[1] = createHashFromByte(1)
+	a := &pb.AggregatedAttestation{
+		ObliqueParentHashes: obliqueParentHashes,
+		Slot:                5,
+	}
+
+	hashes, err := aState.getSignedParentHashes(b, a)
+	if err != nil {
+		t.Fatalf("failed to getSignedParentHashes: %v", err)
+	}
+	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
+		t.Fatalf("getSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
+	}
+	if hashes[2][0] != 0 || hashes[3][0] != 1 {
+		t.Fatalf("getSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
+	}
+}
+
+func TestGetSignedParentHashesIndexFail(t *testing.T) {
+	cfg := params.GetConfig()
+	oldCycleLength := cfg.CycleLength
+	cycleLength := uint64(4)
+	cfg.CycleLength = cycleLength
+	defer func() {
+		cfg.CycleLength = oldCycleLength
+	}()
+
+	recentBlockHashes := make([][]byte, 8)
+	recentBlockHashes[0] = createHashFromByte('Z')
+	recentBlockHashes[1] = createHashFromByte('A')
+	recentBlockHashes[2] = createHashFromByte('B')
+	recentBlockHashes[3] = createHashFromByte('C')
+	recentBlockHashes[4] = createHashFromByte('D')
+	recentBlockHashes[5] = createHashFromByte('E')
+	recentBlockHashes[6] = createHashFromByte('F')
+	recentBlockHashes[7] = createHashFromByte('G')
+
+	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, nil)
+
+	b := NewBlock(&pb.BeaconBlock{Slot: 8})
+	a := &pb.AggregatedAttestation{
+		ObliqueParentHashes: [][]byte{},
+		Slot:                2,
+	}
+
+	_, err := aState.getSignedParentHashes(b, a)
+	if err == nil {
+		t.Error("expected getSignedParentHashes to fail")
+	}
+
+	a2 := &pb.AggregatedAttestation{
+		ObliqueParentHashes: [][]byte{},
+		Slot:                8,
+	}
+	_, err = aState.getSignedParentHashes(b, a2)
+	if err == nil {
+		t.Error("expected getSignedParentHashes to fail")
 	}
 }
