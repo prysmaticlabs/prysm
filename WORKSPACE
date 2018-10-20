@@ -118,6 +118,12 @@ go_repository(
 
 # External dependencies
 
+git_repository(
+    name = "bls",
+    remote = "https://github.com/prysmaticlabs/bls-signatures",
+    commit = "be8d1e9df2b7c1242440593075088c90efabefdc",
+)
+
 go_repository(
     name = "com_github_ethereum_go_ethereum",
     importpath = "github.com/ethereum/go-ethereum",

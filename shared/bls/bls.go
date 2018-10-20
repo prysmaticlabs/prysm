@@ -3,6 +3,12 @@
 // aggregating BLS signatures used by Ethereum 2.0.
 package bls
 
+/*
+#cgo LDFLAGS: -lstdc++
+#include "external/bls/src/bls.hpp"
+*/
+
+import "C"
 import "fmt"
 
 // Signature used in the BLS signature scheme.
