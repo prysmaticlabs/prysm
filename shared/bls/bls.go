@@ -5,11 +5,12 @@ package bls
 
 /*
 #cgo LDFLAGS: -lstdc++
-#include "external/bls/src/bls.hpp"
+#include "external/bls/src/cgo_interface.h"
 */
-
-import "C"
-import "fmt"
+import (
+	"C"
+	"fmt"
+)
 
 // Signature used in the BLS signature scheme.
 type Signature struct{}
@@ -23,6 +24,7 @@ type PublicKey struct{}
 // Sign a message using a secret key - in a beacon/validator client,
 // this key will come from and be unlocked from the account keystore.
 func Sign(sec *SecretKey, msg []byte) (*Signature, error) {
+	C.createPrivateKey()
 	return &Signature{}, nil
 }
 

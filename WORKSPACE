@@ -121,7 +121,7 @@ go_repository(
 git_repository(
     name = "bls",
     remote = "https://github.com/prysmaticlabs/bls-signatures",
-    commit = "be8d1e9df2b7c1242440593075088c90efabefdc",
+    commit = "7d0373db956b156e1742b255a75b46ac8ecfa7f4",
 )
 
 go_repository(
