@@ -19,8 +19,8 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/casper:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/params:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/testutil:go_default_library",
         "//beacon-chain/types:go_default_library",

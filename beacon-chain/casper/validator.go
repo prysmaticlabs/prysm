@@ -70,15 +70,12 @@ func QueuedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	if lastStateRecalc < params.GetConfig().CycleLength {
-		lastStateRecalc = 0
-	} else {
-		lastStateRecalc = lastStateRecalc - params.GetConfig().CycleLength
+	var lowerBound uint64
+	if lastStateRecalc >= params.GetConfig().CycleLength {
+		lowerBound = lastStateRecalc - params.GetConfig().CycleLength
 	}
-
-	lowerBound := lastStateRecalc
-	upperBound := lastStateRecalc + params.GetConfig().CycleLength*2
-	if !(slot >= lowerBound && slot < upperBound) {
+	upperBound := lastStateRecalc + params.GetConfig().CycleLength
+	if slot < lowerBound || slot >= upperBound {
 		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
 			slot,
 			lowerBound,
@@ -86,7 +83,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 		)
 	}
 
-	return shardCommittees[slot-lastStateRecalc], nil
+	return shardCommittees[slot-lowerBound], nil
 }
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices

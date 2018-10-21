@@ -203,7 +203,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		log.Errorf("Could not hash received block: %v", err)
 	}
 
-	log.Infof("Processing response to block request: %#x", blockHash)
+	log.Debugf("Processing response to block request: %#x", blockHash)
 
 	if ss.db.HasBlock(blockHash) {
 		log.Debug("Received a block that already exists. Exiting...")
