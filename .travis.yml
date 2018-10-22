@@ -6,15 +6,18 @@ matrix:
     - os: linux
       go: 1.11.x
       env:
-        - GO111MODULE=on
         - lint
+      before_install:                                                                 
+        - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh  
+        - dep ensure
       script:
-        - 
-          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
+        - go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
     - os: linux
       env:
-        - GO111MODULE=on
         - coverage
+      before_install:                                                                 
+        - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh  
+        - dep ensure  
       script:
         - ./scripts/coverage.sh
         - bash <(curl -s https://codecov.io/bash)

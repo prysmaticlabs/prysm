@@ -1,0 +1,16 @@
+{
+  "author": "Stebalien",
+  "bugs": {
+    "url": "github.com/libp2p/go-buffer-pool/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-buffer-pool"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT+BSD",
+  "name": "go-buffer-pool",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.1"
+}
+

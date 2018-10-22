@@ -1,0 +1,83 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-tcp-transport"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-tcp-transport"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSvfeW68LC13nVt3BiwHKFneSa4DCdq3erG8RNtJvq7Ni",
+      "name": "go-reuseport",
+      "version": "0.1.18"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmV6FjemM1K8oXjrvuq3wuVWWoU2TLDPmNnKrxHzY3v6Ai",
+      "name": "go-multiaddr-net",
+      "version": "1.6.3"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQscWDtDBDsWAM58aY6gU2KtxyFFmvvZgdfJExYPLgtXA",
+      "name": "mafmt",
+      "version": "1.2.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmU9oQsh4im7bin6rPMALL2gMH84wPPY4CvasvhjhzRGzJ",
+      "name": "go-libp2p-transport",
+      "version": "3.0.14"
+    },
+    {
+      "hash": "QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae",
+      "name": "go-log",
+      "version": "1.5.7"
+    },
+    {
+      "author": "multiformats",
+      "hash": "QmYmsdtJ3HsodkePE3eU3TsCaP2YvPZJ4LoXnNkDE5Tpt7",
+      "name": "go-multiaddr",
+      "version": "1.3.0"
+    },
+    {
+      "author": "Stebalien",
+      "hash": "QmWHvBCfAZjQuZjKZaY76e9XRCupRpJkAsq9cLskVma4kd",
+      "name": "go-conn-security",
+      "version": "0.1.14"
+    },
+    {
+      "author": "stebalien",
+      "hash": "QmaFUP6pdN12YW9UJUTpfUQW2Nd9YwkMHQrLSpRDHxPQti",
+      "name": "go-reuseport-transport",
+      "version": "0.1.10"
+    },
+    {
+      "author": "steb",
+      "hash": "QmQ34cAfaBhHWwLikNduHc921VG2LBdJujFdUkhfZrZuiX",
+      "name": "go-libp2p-transport-upgrader",
+      "version": "0.1.15"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmaveCPGVaKJU57tBErGCDjzLaqEMZkFygoiv4BhYwWUGc",
+      "name": "go-smux-multiplex",
+      "version": "3.0.16"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB",
+      "name": "go-libp2p-peer",
+      "version": "2.4.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-tcp-transport",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "2.0.15"
+}
+

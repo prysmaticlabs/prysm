@@ -1,0 +1,25 @@
+language: go
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      go: 1.5.4
+    - os: linux
+      dist: trusty
+      go: 1.6.2
+    - os: linux
+      dist: trusty
+      go: 1.7.5
+    - os: linux
+      dist: trusty
+      go: 1.8
+    - os: linux
+      dist: precise
+      go: 1.8
+    - os: osx
+      go: 1.8
+
+script:
+  - go install ./...
+  - go test -v ./...

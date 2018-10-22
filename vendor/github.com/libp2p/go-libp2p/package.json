@@ -1,0 +1,243 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-libp2p"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-libp2p",
+    "goversion": "1.5.2"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmcrrEpx3VMUbrbgVroH3YiYyUS5c4YAykzyPJWKspUYLa",
+      "name": "go-semver",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmekaTKpWkYGcn4ZEC5PwJDRCQHapwugmmG86g2Xpz5GBH",
+      "name": "mdns",
+      "version": "0.2.0"
+    },
+    {
+      "hash": "QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A",
+      "name": "go-ipfs-util",
+      "version": "1.2.8"
+    },
+    {
+      "hash": "QmabLh8TrJ3emfAoQk5AbqbLTbMyj7XqumMFmAFxa9epo8",
+      "name": "go-multistream",
+      "version": "0.3.9"
+    },
+    {
+      "hash": "Qmf7HqcW7LtCi1W8y2bdx2eJpze74jkbKqpByxgXikdbLF",
+      "name": "go-detect-race",
+      "version": "1.0.1"
+    },
+    {
+      "hash": "QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP",
+      "name": "goprocess",
+      "version": "1.0.0"
+    },
+    {
+      "hash": "QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae",
+      "name": "go-log",
+      "version": "1.5.7"
+    },
+    {
+      "hash": "QmV6FjemM1K8oXjrvuq3wuVWWoU2TLDPmNnKrxHzY3v6Ai",
+      "name": "go-multiaddr-net",
+      "version": "1.6.3"
+    },
+    {
+      "hash": "QmYmsdtJ3HsodkePE3eU3TsCaP2YvPZJ4LoXnNkDE5Tpt7",
+      "name": "go-multiaddr",
+      "version": "1.3.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNLzS18jsmwTxXewTm3YnZVLftWCeegNZEBFjMrnvnBrH",
+      "name": "go-libp2p-loggables",
+      "version": "1.1.22"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZUBPE2W68FpZgUSmhVyjVD55P5Bm51wjnU8hTH14jHpk",
+      "name": "go-libp2p-secio",
+      "version": "2.0.15"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmWtCpWB39Rzc2xTB75MKorsxNpo3TyecTEN24CJ3KVohE",
+      "name": "go-libp2p-peerstore",
+      "version": "2.0.4"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQx3dbLZqokcGsMbaj2KYoQQ6PBZZGvqiTn8rRNyk7H51",
+      "name": "go-libp2p-transport",
+      "version": "3.0.13"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRJ7i85QeZoR1LJbbAjmTu2jDnrcNH5NqsXirbv6c9SX7",
+      "name": "go-tcp-transport",
+      "version": "2.0.14"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSW4uNHbvQia8iZDXzbwjiyHQtnyo9aFqfQAMasj3TJ6Y",
+      "name": "go-maddr-filter",
+      "version": "1.1.9"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN",
+      "name": "go-libp2p-protocol",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNfQbgBfARAtrYsBguChX6VJ5nbjeoYy1KdC36aaYWqG8",
+      "name": "go-testutil",
+      "version": "1.2.8"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSTaEYUgDe1r581hxyd2u9582Hgp3KX4wGwYbRqz2u9Qh",
+      "name": "go-libp2p-net",
+      "version": "3.0.13"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNn6gcjBXpg8kccr9zEV7UVBpqAw8FZEiQ6DksvzyTQ5K",
+      "name": "go-libp2p-metrics",
+      "version": "2.1.6"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmf5yHzmWAyHSJRPAmZzfk3Yd7icydBLi7eec5741aov7v",
+      "name": "go-libp2p-host",
+      "version": "3.0.13"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmYyFNDLTSy6rW99K8vHPvFPLa5bB4zoy8gGZENoiaBN6R",
+      "name": "go-libp2p-swarm",
+      "version": "3.0.19"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVicCVLxf62MkDBRXC27UTeqEvhNpBUouXNCqnLf4emJp",
+      "name": "go-libp2p-nat",
+      "version": "0.8.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTqBqbGpNZnuPwW5AxUrooejubQuWnPpaatPozykZpXfi",
+      "name": "go-libp2p-netutil",
+      "version": "0.4.11"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmcZbC2qrMF6DAsHKzk7xgWBDiJHHc15jJ6aDNrv84DG6S",
+      "name": "go-libp2p-blankhost",
+      "version": "0.3.13"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n",
+      "name": "go-libp2p-crypto",
+      "version": "2.0.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVwYCtShoL74Xi8TgEg9jXvHVVtWwZ3Hg1QZqQvQA9xji",
+      "name": "go-smux-yamux",
+      "version": "2.0.6"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRYdszNNq7ykPqavVNKMVyyjX59AcTisHqzussDfhwHkK",
+      "name": "go-smux-multistream",
+      "version": "2.0.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmbNepETomvmXfz1X5pHNFD2QuPqnqi47dTd94QJWSorQ3",
+      "name": "go-libp2p-peer",
+      "version": "2.3.8"
+    },
+    {
+      "author": "vyzo",
+      "hash": "Qma2mxvX5zvPEmjXC4CktjExnRjVp4DFcog4GNubpqSXsD",
+      "name": "go-libp2p-circuit",
+      "version": "2.2.8"
+    },
+    {
+      "author": "lgierth",
+      "hash": "QmfXU2MhWoegxHoeMd3A2ytL2P6CY4FfqGWc23LTNWBwZt",
+      "name": "go-multiaddr-dns",
+      "version": "0.2.4"
+    },
+    {
+      "author": "why",
+      "hash": "QmYfDsxmFGuMSdvFFgw5Ss9pD4YvTFWSFFXYT7LjtwKnY7",
+      "name": "go-libp2p-interface-connmgr",
+      "version": "0.0.19"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmaveCPGVaKJU57tBErGCDjzLaqEMZkFygoiv4BhYwWUGc",
+      "name": "go-smux-multiplex",
+      "version": "3.0.16"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmefRFPqDrW6xzNqfct7gWXSDQQV1PQEK2nhTxhN9YATJF",
+      "name": "go-ws-transport",
+      "version": "2.0.14"
+    },
+    {
+      "author": "stebalien",
+      "hash": "QmQYTdbqdgLDikde7dHKh4svNG925EDYA9ZKZHwqidX277",
+      "name": "go-conn-security-multistream",
+      "version": "0.1.13"
+    },
+    {
+      "author": "Stebalien",
+      "hash": "QmSjwssnWNJvzwD77yWruH2ebqwMNR6PCn49hbDURYH9d8",
+      "name": "go-conn-security",
+      "version": "0.1.13"
+    },
+    {
+      "author": "libp2p",
+      "hash": "QmW7Ump7YyBMr712Ta3iEVh3ZYcfVvJaPryfbCnyE826b4",
+      "name": "go-libp2p-interface-pnet",
+      "version": "3.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw",
+      "name": "go-stream-muxer",
+      "version": "3.0.0"
+    },
+    {
+      "author": "steb",
+      "hash": "QmPM1NCCnMMY3GaPVkG2sTVh8Xys1gCPsk1X8Z1HuUJePs",
+      "name": "go-libp2p-transport-upgrader",
+      "version": "0.1.14"
+    },
+    {
+      "hash": "QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8",
+      "name": "gogo-protobuf",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-libp2p",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "6.0.19"
+}
+

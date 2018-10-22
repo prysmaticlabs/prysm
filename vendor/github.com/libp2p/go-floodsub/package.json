@@ -1,0 +1,77 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-floodsub"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-floodsub"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmYftoT56eEfUBTD3erR6heXuPSUhGRezSmhSU8LeczP8b",
+      "name": "timecache",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmf5yHzmWAyHSJRPAmZzfk3Yd7icydBLi7eec5741aov7v",
+      "name": "go-libp2p-host",
+      "version": "3.0.13"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmcZbC2qrMF6DAsHKzk7xgWBDiJHHc15jJ6aDNrv84DG6S",
+      "name": "go-libp2p-blankhost",
+      "version": "0.3.13"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSTaEYUgDe1r581hxyd2u9582Hgp3KX4wGwYbRqz2u9Qh",
+      "name": "go-libp2p-net",
+      "version": "3.0.13"
+    },
+    {
+      "hash": "QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae",
+      "name": "go-log",
+      "version": "1.5.7"
+    },
+    {
+      "author": "multiformats",
+      "hash": "QmYmsdtJ3HsodkePE3eU3TsCaP2YvPZJ4LoXnNkDE5Tpt7",
+      "name": "go-multiaddr",
+      "version": "1.3.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmbNepETomvmXfz1X5pHNFD2QuPqnqi47dTd94QJWSorQ3",
+      "name": "go-libp2p-peer",
+      "version": "2.3.8"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN",
+      "name": "go-libp2p-protocol",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmYyFNDLTSy6rW99K8vHPvFPLa5bB4zoy8gGZENoiaBN6R",
+      "name": "go-libp2p-swarm",
+      "version": "3.0.19"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8",
+      "name": "gogo-protobuf",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.9.0",
+  "language": "go",
+  "license": "",
+  "name": "go-libp2p-floodsub",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.9.36"
+}
+
