@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -230,8 +232,17 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
-	slotsStart := c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
-	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
+	var lowerBound uint64
+	if c.LastStateRecalculationSlot() >= params.GetConfig().CycleLength {
+		lowerBound = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
+	}
+	upperBound := c.LastStateRecalculationSlot() + params.GetConfig().CycleLength
+
+	if attestation.GetSlot() < lowerBound || attestation.GetSlot() >= upperBound {
+		return nil, fmt.Errorf("attestation slot %d out of bound: %d <= slot < %d", attestation.GetSlot(), lowerBound, upperBound)
+	}
+
+	slotIndex := attestation.Slot - lowerBound
 	return casper.CommitteeInShardAndSlot(slotIndex, attestation.GetShard(), c.data.GetShardAndCommitteesForSlots())
 }
 
