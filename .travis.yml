@@ -8,7 +8,7 @@ matrix:
       env:
         - lint
       before_install:                                                                 
-        - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh  
+        - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh 
         - dep ensure
       script:
         - go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
