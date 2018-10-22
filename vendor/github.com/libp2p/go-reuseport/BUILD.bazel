@@ -1,0 +1,52 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "addr.go",
+        "available_unix.go",
+        "impl_unix.go",
+        "impl_windows.go",
+        "interface.go",
+        "opts_posix.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-reuseport",
+    importpath = "github.com/libp2p/go-reuseport",
+    visibility = ["//visibility:public"],
+    deps = select({
+        "@io_bazel_rules_go//go/platform:darwin": [
+            "//vendor/github.com/libp2p/go-reuseport/singlepoll:go_default_library",
+            "//vendor/github.com/libp2p/go-sockaddr/net:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:dragonfly": [
+            "//vendor/github.com/libp2p/go-reuseport/singlepoll:go_default_library",
+            "//vendor/github.com/libp2p/go-sockaddr/net:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:freebsd": [
+            "//vendor/github.com/libp2p/go-reuseport/singlepoll:go_default_library",
+            "//vendor/github.com/libp2p/go-sockaddr/net:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//vendor/github.com/libp2p/go-reuseport/singlepoll:go_default_library",
+            "//vendor/github.com/libp2p/go-sockaddr/net:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:netbsd": [
+            "//vendor/github.com/libp2p/go-reuseport/singlepoll:go_default_library",
+            "//vendor/github.com/libp2p/go-sockaddr/net:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:openbsd": [
+            "//vendor/github.com/libp2p/go-reuseport/singlepoll:go_default_library",
+            "//vendor/github.com/libp2p/go-sockaddr/net:go_default_library",
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:solaris": [
+            "//vendor/golang.org/x/sys/unix:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

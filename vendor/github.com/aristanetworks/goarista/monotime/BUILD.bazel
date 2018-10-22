@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "issue15006.s",
+        "nanotime.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/aristanetworks/goarista/monotime",
+    importpath = "github.com/aristanetworks/goarista/monotime",
+    visibility = ["//visibility:public"],
+)

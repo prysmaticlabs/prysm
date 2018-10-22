@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "conn.go",
+        "listener.go",
+        "threshold.go",
+        "upgrader.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-transport-upgrader",
+    importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/jbenet/go-temp-err-catcher:go_default_library",
+        "//vendor/github.com/libp2p/go-conn-security:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-interface-pnet:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-net:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-transport:go_default_library",
+        "//vendor/github.com/libp2p/go-maddr-filter:go_default_library",
+        "//vendor/github.com/libp2p/go-stream-muxer:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr-net:go_default_library",
+    ],
+)

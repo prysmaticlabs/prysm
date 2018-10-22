@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "al.go",
+        "protocol.go",
+        "rw.go",
+        "transport.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-secio",
+    importpath = "github.com/libp2p/go-libp2p-secio",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gogo/protobuf/proto:go_default_library",
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/libp2p/go-buffer-pool:go_default_library",
+        "//vendor/github.com/libp2p/go-conn-security:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-crypto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-secio/pb:go_default_library",
+        "//vendor/github.com/libp2p/go-msgio:go_default_library",
+        "//vendor/github.com/minio/sha256-simd:go_default_library",
+        "//vendor/github.com/multiformats/go-multihash:go_default_library",
+        "//vendor/golang.org/x/crypto/blowfish:go_default_library",
+    ],
+)

@@ -1,0 +1,37 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "database.go",
+        "metrics.go",
+        "net.go",
+        "node.go",
+        "nodeevent_string.go",
+        "ntp.go",
+        "table.go",
+        "ticket.go",
+        "topic.go",
+        "udp.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/p2p/discv5",
+    importpath = "github.com/ethereum/go-ethereum/p2p/discv5",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/mclock:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto/sha3:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/metrics:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/nat:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/netutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library",
+        "//vendor/github.com/syndtr/goleveldb/leveldb:go_default_library",
+        "//vendor/github.com/syndtr/goleveldb/leveldb/errors:go_default_library",
+        "//vendor/github.com/syndtr/goleveldb/leveldb/iterator:go_default_library",
+        "//vendor/github.com/syndtr/goleveldb/leveldb/opt:go_default_library",
+        "//vendor/github.com/syndtr/goleveldb/leveldb/storage:go_default_library",
+        "//vendor/github.com/syndtr/goleveldb/leveldb/util:go_default_library",
+    ],
+)

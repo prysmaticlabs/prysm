@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "soap.go",
+        "types.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/huin/goupnp/soap",
+    importpath = "github.com/huin/goupnp/soap",
+    visibility = ["//visibility:public"],
+)

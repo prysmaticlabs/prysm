@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "addr_book.go",
+        "keybook.go",
+        "metadata.go",
+        "peerstore.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-peerstore/pstoremem",
+    importpath = "github.com/libp2p/go-libp2p-peerstore/pstoremem",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-crypto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore/addr:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+    ],
+)

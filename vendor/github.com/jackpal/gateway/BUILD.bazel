@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "gateway_common.go",
+        "gateway_darwin.go",
+        "gateway_freebsd.go",
+        "gateway_linux.go",
+        "gateway_solaris.go",
+        "gateway_unimplemented.go",
+        "gateway_windows.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/jackpal/gateway",
+    importpath = "github.com/jackpal/gateway",
+    visibility = ["//visibility:public"],
+)

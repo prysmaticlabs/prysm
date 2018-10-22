@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "format.go",
+        "handler.go",
+        "handler_glog.go",
+        "handler_go13.go",
+        "handler_go14.go",
+        "logger.go",
+        "root.go",
+        "syslog.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/log",
+    importpath = "github.com/ethereum/go-ethereum/log",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/go-stack/stack:go_default_library"],
+)

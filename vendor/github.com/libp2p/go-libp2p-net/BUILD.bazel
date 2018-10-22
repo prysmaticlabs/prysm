@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "interface.go",
+        "notifiee.go",
+        "stream_util.go",
+        "timeouts.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-net",
+    importpath = "github.com/libp2p/go-libp2p-net",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/jbenet/goprocess:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-crypto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-protocol:go_default_library",
+        "//vendor/github.com/libp2p/go-stream-muxer:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+    ],
+)

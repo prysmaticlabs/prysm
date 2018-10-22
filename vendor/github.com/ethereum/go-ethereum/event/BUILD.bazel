@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "event.go",
+        "feed.go",
+        "subscription.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/event",
+    importpath = "github.com/ethereum/go-ethereum/event",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/ethereum/go-ethereum/common/mclock:go_default_library"],
+)

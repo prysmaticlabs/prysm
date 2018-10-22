@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bw_stats.go",
+        "interface.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-metrics",
+    importpath = "github.com/libp2p/go-libp2p-metrics",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-flow-metrics:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-protocol:go_default_library",
+    ],
+)

@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "blake2b.go",
+        "compressAvx2_amd64.go",
+        "compressAvx2_amd64.s",
+        "compressAvx_amd64.go",
+        "compressAvx_amd64.s",
+        "compressSse_amd64.go",
+        "compressSse_amd64.s",
+        "compress_amd64.go",
+        "compress_generic.go",
+        "compress_noasm.go",
+        "cpuid.go",
+        "cpuid_386.s",
+        "cpuid_amd64.s",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/minio/blake2b-simd",
+    importpath = "github.com/minio/blake2b-simd",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,36 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bn256.go",
+        "constants.go",
+        "curve.go",
+        "gfp.go",
+        "gfp12.go",
+        "gfp2.go",
+        "gfp6.go",
+        "gfp_amd64.s",
+        "gfp_arm64.s",
+        "gfp_decl.go",
+        "gfp_generic.go",
+        "lattice.go",
+        "mul_amd64.h",
+        "mul_arm64.h",
+        "mul_bmi2_amd64.h",
+        "optate.go",
+        "twist.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/crypto/bn256/cloudflare",
+    importpath = "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare",
+    visibility = ["//visibility:public"],
+    deps = select({
+        "@io_bazel_rules_go//go/platform:amd64": [
+            "//vendor/golang.org/x/sys/cpu:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:arm64": [
+            "//vendor/golang.org/x/sys/cpu:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

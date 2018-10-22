@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "database.go",
+        "dump.go",
+        "iterator.go",
+        "journal.go",
+        "managed_state.go",
+        "state_object.go",
+        "statedb.go",
+        "sync.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/core/state",
+    importpath = "github.com/ethereum/go-ethereum/core/state",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/ethdb:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/trie:go_default_library",
+        "//vendor/github.com/hashicorp/golang-lru:go_default_library",
+    ],
+)

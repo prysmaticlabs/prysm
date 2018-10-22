@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "api.go",
+        "flags.go",
+        "loudpanic.go",
+        "loudpanic_fallback.go",
+        "trace.go",
+        "trace_fallback.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/internal/debug",
+    importpath = "github.com/ethereum/go-ethereum/internal/debug",
+    visibility = ["//vendor/github.com/ethereum/go-ethereum:__subpackages__"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/metrics:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/metrics/exp:go_default_library",
+        "//vendor/github.com/fjl/memsize/memsizeui:go_default_library",
+        "//vendor/github.com/mattn/go-colorable:go_default_library",
+        "//vendor/github.com/mattn/go-isatty:go_default_library",
+        "//vendor/gopkg.in/urfave/cli.v1:go_default_library",
+    ],
+)

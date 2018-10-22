@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "codec.go",
+        "doc.go",
+        "interface.go",
+        "multiaddr.go",
+        "protocols.go",
+        "transcoders.go",
+        "util.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/multiformats/go-multiaddr",
+    importpath = "github.com/multiformats/go-multiaddr",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/multiformats/go-multihash:go_default_library"],
+)

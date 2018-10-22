@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["yamux.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/whyrusleeping/go-smux-yamux",
+    importpath = "github.com/whyrusleeping/go-smux-yamux",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-stream-muxer:go_default_library",
+        "//vendor/github.com/whyrusleeping/yamux:go_default_library",
+    ],
+)

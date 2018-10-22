@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["exp.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/metrics/exp",
+    importpath = "github.com/ethereum/go-ethereum/metrics/exp",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/ethereum/go-ethereum/metrics:go_default_library"],
+)

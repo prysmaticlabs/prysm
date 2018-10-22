@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "dao.go",
+        "forks.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/consensus/misc",
+    importpath = "github.com/ethereum/go-ethereum/consensus/misc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/state:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/params:go_default_library",
+    ],
+)

@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["eventfd.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/gxed/eventfd",
+    importpath = "github.com/gxed/eventfd",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/gxed/GoEndian:go_default_library"],
+)

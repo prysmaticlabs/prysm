@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "context.go",
+        "derive.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/jbenet/goprocess/context",
+    importpath = "github.com/jbenet/goprocess/context",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/jbenet/goprocess:go_default_library"],
+)

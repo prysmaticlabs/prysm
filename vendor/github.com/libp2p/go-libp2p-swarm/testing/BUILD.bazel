@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["testing.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-swarm/testing",
+    importpath = "github.com/libp2p/go-libp2p-swarm/testing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-conn-security-multistream:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-metrics:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-net:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore/pstoremem:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-secio:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-swarm:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-transport-upgrader:go_default_library",
+        "//vendor/github.com/libp2p/go-tcp-transport:go_default_library",
+        "//vendor/github.com/libp2p/go-testutil:go_default_library",
+        "//vendor/github.com/whyrusleeping/go-smux-multistream:go_default_library",
+        "//vendor/github.com/whyrusleeping/go-smux-yamux:go_default_library",
+    ],
+)

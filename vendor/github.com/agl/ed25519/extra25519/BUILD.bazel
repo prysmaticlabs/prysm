@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["extra25519.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/agl/ed25519/extra25519",
+    importpath = "github.com/agl/ed25519/extra25519",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/agl/ed25519/edwards25519:go_default_library"],
+)

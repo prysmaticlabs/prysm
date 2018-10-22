@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["formatter.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/x-cray/logrus-prefixed-formatter",
+    importpath = "github.com/x-cray/logrus-prefixed-formatter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/mgutz/ansi:go_default_library",
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
+        "//vendor/golang.org/x/crypto/ssh/terminal:go_default_library",
+    ],
+)

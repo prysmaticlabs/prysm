@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["multistream.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/whyrusleeping/go-smux-multistream",
+    importpath = "github.com/whyrusleeping/go-smux-multistream",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-stream-muxer:go_default_library",
+        "//vendor/github.com/multiformats/go-multistream:go_default_library",
+    ],
+)

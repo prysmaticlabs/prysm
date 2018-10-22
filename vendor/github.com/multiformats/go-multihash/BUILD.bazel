@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "io.go",
+        "multihash.go",
+        "sum.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/multiformats/go-multihash",
+    importpath = "github.com/multiformats/go-multihash",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gxed/hashland/keccakpg:go_default_library",
+        "//vendor/github.com/minio/blake2b-simd:go_default_library",
+        "//vendor/github.com/minio/sha256-simd:go_default_library",
+        "//vendor/github.com/mr-tron/base58/base58:go_default_library",
+        "//vendor/github.com/spaolacci/murmur3:go_default_library",
+        "//vendor/golang.org/x/crypto/blake2s:go_default_library",
+        "//vendor/golang.org/x/crypto/sha3:go_default_library",
+    ],
+)

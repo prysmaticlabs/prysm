@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "gen.go",
+        "internetgateway1.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/huin/goupnp/dcps/internetgateway1",
+    importpath = "github.com/huin/goupnp/dcps/internetgateway1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/huin/goupnp:go_default_library",
+        "//vendor/github.com/huin/goupnp/soap:go_default_library",
+    ],
+)

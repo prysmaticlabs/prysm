@@ -1,0 +1,54 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "crypto.go",
+        "signature_cgo.go",
+        "signature_nocgo.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/crypto",
+    importpath = "github.com/ethereum/go-ethereum/crypto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/math:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto/sha3:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library",
+    ] + select({
+        "@io_bazel_rules_go//go/platform:android": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:darwin": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:dragonfly": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:freebsd": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:nacl": [
+            "//vendor/github.com/btcsuite/btcd/btcec:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:netbsd": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:openbsd": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:plan9": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:solaris": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:windows": [
+            "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

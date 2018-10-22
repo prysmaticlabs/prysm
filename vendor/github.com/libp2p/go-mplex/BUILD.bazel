@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "multiplex.go",
+        "stream.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-mplex",
+    importpath = "github.com/libp2p/go-mplex",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/libp2p/go-buffer-pool:go_default_library",
+    ],
+)

@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "mclock.go",
+        "simclock.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/common/mclock",
+    importpath = "github.com/ethereum/go-ethereum/common/mclock",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/aristanetworks/goarista/monotime:go_default_library"],
+)

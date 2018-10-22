@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "dial.go",
+        "listen.go",
+        "multidialer.go",
+        "reuseport.go",
+        "singledialer.go",
+        "transport.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-reuseport-transport",
+    importpath = "github.com/libp2p/go-reuseport-transport",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/libp2p/go-reuseport:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr-net:go_default_library",
+    ],
+)

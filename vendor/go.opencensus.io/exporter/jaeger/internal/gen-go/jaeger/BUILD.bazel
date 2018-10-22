@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "GoUnusedProtection__.go",
+        "agent.go",
+        "jaeger.go",
+        "jaeger-consts.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/go.opencensus.io/exporter/jaeger/internal/gen-go/jaeger",
+    importpath = "go.opencensus.io/exporter/jaeger/internal/gen-go/jaeger",
+    visibility = ["//vendor/go.opencensus.io/exporter/jaeger:__subpackages__"],
+    deps = ["//vendor/git.apache.org/thrift.git/lib/go/thrift:go_default_library"],
+)

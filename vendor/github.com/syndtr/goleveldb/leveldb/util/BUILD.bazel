@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "buffer.go",
+        "buffer_pool.go",
+        "crc32.go",
+        "hash.go",
+        "range.go",
+        "util.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/syndtr/goleveldb/leveldb/util",
+    importpath = "github.com/syndtr/goleveldb/leveldb/util",
+    visibility = ["//visibility:public"],
+)

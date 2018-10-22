@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "node.go",
+        "ntp.go",
+        "table.go",
+        "udp.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/p2p/discover",
+    importpath = "github.com/ethereum/go-ethereum/p2p/discover",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/math:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto/secp256k1:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/enode:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/nat:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/netutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library",
+    ],
+)

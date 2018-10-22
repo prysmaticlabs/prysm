@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "context.go",
+        "entry.go",
+        "log.go",
+        "loggable.go",
+        "metadata.go",
+        "oldlog.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ipfs/go-log",
+    importpath = "github.com/ipfs/go-log",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log/tracer:go_default_library",
+        "//vendor/github.com/ipfs/go-log/writer:go_default_library",
+        "//vendor/github.com/mattn/go-colorable:go_default_library",
+        "//vendor/github.com/opentracing/opentracing-go:go_default_library",
+        "//vendor/github.com/opentracing/opentracing-go/ext:go_default_library",
+        "//vendor/github.com/whyrusleeping/go-logging:go_default_library",
+    ],
+)

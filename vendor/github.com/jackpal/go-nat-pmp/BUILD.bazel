@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "natpmp.go",
+        "network.go",
+        "recorder.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/jackpal/go-nat-pmp",
+    importpath = "github.com/jackpal/go-nat-pmp",
+    visibility = ["//visibility:public"],
+)

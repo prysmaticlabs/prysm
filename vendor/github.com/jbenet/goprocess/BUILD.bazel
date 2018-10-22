@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "goprocess.go",
+        "impl-mutex.go",
+        "link.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/jbenet/goprocess",
+    importpath = "github.com/jbenet/goprocess",
+    visibility = ["//visibility:public"],
+)

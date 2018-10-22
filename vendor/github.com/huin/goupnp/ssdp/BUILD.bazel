@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "registry.go",
+        "ssdp.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/huin/goupnp/ssdp",
+    importpath = "github.com/huin/goupnp/ssdp",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/huin/goupnp/httpu:go_default_library"],
+)

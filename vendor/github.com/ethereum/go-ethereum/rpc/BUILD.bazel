@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client.go",
+        "doc.go",
+        "endpoints.go",
+        "errors.go",
+        "http.go",
+        "inproc.go",
+        "ipc.go",
+        "ipc_unix.go",
+        "ipc_windows.go",
+        "json.go",
+        "server.go",
+        "subscription.go",
+        "types.go",
+        "utils.go",
+        "websocket.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/rpc",
+    importpath = "github.com/ethereum/go-ethereum/rpc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/deckarep/golang-set:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/hexutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/netutil:go_default_library",
+        "//vendor/github.com/rs/cors:go_default_library",
+        "//vendor/golang.org/x/net/websocket:go_default_library",
+    ] + select({
+        "@io_bazel_rules_go//go/platform:windows": [
+            "//vendor/gopkg.in/natefinch/npipe.v2:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

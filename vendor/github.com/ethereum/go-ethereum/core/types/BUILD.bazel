@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "block.go",
+        "bloom9.go",
+        "derive_sha.go",
+        "gen_header_json.go",
+        "gen_log_json.go",
+        "gen_receipt_json.go",
+        "gen_tx_json.go",
+        "log.go",
+        "receipt.go",
+        "transaction.go",
+        "transaction_signing.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/core/types",
+    importpath = "github.com/ethereum/go-ethereum/core/types",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/hexutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto/sha3:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/params:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/trie:go_default_library",
+    ],
+)

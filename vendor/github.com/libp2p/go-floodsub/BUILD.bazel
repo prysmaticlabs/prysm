@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "comm.go",
+        "floodsub.go",
+        "gossipsub.go",
+        "mcache.go",
+        "notify.go",
+        "pubsub.go",
+        "randomsub.go",
+        "subscription.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-floodsub",
+    importpath = "github.com/libp2p/go-floodsub",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gogo/protobuf/io:go_default_library",
+        "//vendor/github.com/gogo/protobuf/proto:go_default_library",
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/libp2p/go-floodsub/pb:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-host:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-net:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-protocol:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/whyrusleeping/timecache:go_default_library",
+    ],
+)

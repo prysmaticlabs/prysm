@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "addrs.go",
+        "dial_sync.go",
+        "limiter.go",
+        "swarm.go",
+        "swarm_addr.go",
+        "swarm_conn.go",
+        "swarm_dial.go",
+        "swarm_listen.go",
+        "swarm_stream.go",
+        "swarm_transport.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-swarm",
+    importpath = "github.com/libp2p/go-libp2p-swarm",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/jbenet/goprocess:go_default_library",
+        "//vendor/github.com/jbenet/goprocess/context:go_default_library",
+        "//vendor/github.com/libp2p/go-addr-util:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-crypto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-loggables:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-metrics:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-net:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-protocol:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-transport:go_default_library",
+        "//vendor/github.com/libp2p/go-maddr-filter:go_default_library",
+        "//vendor/github.com/libp2p/go-stream-muxer:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/whyrusleeping/multiaddr-filter:go_default_library",
+    ],
+)

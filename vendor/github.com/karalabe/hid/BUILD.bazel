@@ -1,0 +1,42 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "hid.go",
+        "hid_disabled.go",
+        "hid_enabled.go",
+        "wchar.go",
+    ],
+    cgo = True,
+    clinkopts = select({
+        "@io_bazel_rules_go//go/platform:darwin": [
+            "-framework CoreFoundation -framework IOKit",
+        ],
+        "@io_bazel_rules_go//go/platform:linux": [
+            "-lrt",
+        ],
+        "@io_bazel_rules_go//go/platform:windows": [
+            "-lsetupapi",
+        ],
+        "//conditions:default": [],
+    }),
+    copts = select({
+        "@io_bazel_rules_go//go/platform:darwin": [
+            "-DOS_DARWIN",
+            "-Ivendor/github.com/karalabe/hid/hidapi/hidapi",
+        ],
+        "@io_bazel_rules_go//go/platform:linux": [
+            "-Ivendor/github.com/karalabe/hid/hidapi/hidapi",
+            "-Ivendor/github.com/karalabe/hid/libusb/libusb -DDEFAULT_VISIBILITY= -DOS_LINUX -D_GNU_SOURCE -DPOLL_NFDS_TYPE=int",
+        ],
+        "@io_bazel_rules_go//go/platform:windows": [
+            "-DOS_WINDOWS",
+            "-Ivendor/github.com/karalabe/hid/hidapi/hidapi",
+        ],
+        "//conditions:default": [],
+    }),
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/karalabe/hid",
+    importpath = "github.com/karalabe/hid",
+    visibility = ["//visibility:public"],
+)

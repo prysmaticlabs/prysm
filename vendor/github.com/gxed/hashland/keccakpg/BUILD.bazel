@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["keccak.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/gxed/hashland/keccakpg",
+    importpath = "github.com/gxed/hashland/keccakpg",
+    visibility = ["//visibility:public"],
+)

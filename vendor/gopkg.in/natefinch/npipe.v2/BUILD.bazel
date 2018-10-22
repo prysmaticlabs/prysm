@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "npipe_windows.go",
+        "znpipe_windows_386.go",
+        "znpipe_windows_amd64.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/gopkg.in/natefinch/npipe.v2",
+    importpath = "gopkg.in/natefinch/npipe.v2",
+    visibility = ["//visibility:public"],
+)

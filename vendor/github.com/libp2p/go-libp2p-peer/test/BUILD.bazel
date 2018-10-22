@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["utils.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-peer/test",
+    importpath = "github.com/libp2p/go-libp2p-peer/test",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-libp2p-crypto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/multiformats/go-multihash:go_default_library",
+    ],
+)

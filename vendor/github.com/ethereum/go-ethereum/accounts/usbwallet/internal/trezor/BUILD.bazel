@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "messages.pb.go",
+        "trezor.go",
+        "types.pb.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/accounts/usbwallet/internal/trezor",
+    importpath = "github.com/ethereum/go-ethereum/accounts/usbwallet/internal/trezor",
+    visibility = ["//vendor/github.com/ethereum/go-ethereum/accounts/usbwallet:__subpackages__"],
+    deps = [
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+    ],
+)

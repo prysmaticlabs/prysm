@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "iterator.go",
+        "set.go",
+        "threadsafe.go",
+        "threadunsafe.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/deckarep/golang-set",
+    importpath = "github.com/deckarep/golang-set",
+    visibility = ["//visibility:public"],
+)

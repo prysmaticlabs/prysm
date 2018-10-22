@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["endian.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/gxed/GoEndian",
+    importpath = "github.com/gxed/GoEndian",
+    visibility = ["//visibility:public"],
+)

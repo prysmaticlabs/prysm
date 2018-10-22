@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "hashes.go",
+        "keccakf.go",
+        "keccakf_amd64.go",
+        "keccakf_amd64.s",
+        "register.go",
+        "sha3.go",
+        "shake.go",
+        "xor.go",
+        "xor_generic.go",
+        "xor_unaligned.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/crypto/sha3",
+    importpath = "github.com/ethereum/go-ethereum/crypto/sha3",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "flock.go",
+        "flock_plan9.go",
+        "flock_solaris.go",
+        "flock_unix.go",
+        "flock_windows.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/prometheus/prometheus/util/flock",
+    importpath = "github.com/prometheus/prometheus/util/flock",
+    visibility = ["//visibility:public"],
+)

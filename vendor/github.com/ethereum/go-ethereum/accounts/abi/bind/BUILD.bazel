@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "auth.go",
+        "backend.go",
+        "base.go",
+        "bind.go",
+        "template.go",
+        "topics.go",
+        "util.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/accounts/abi/bind",
+    importpath = "github.com/ethereum/go-ethereum/accounts/abi/bind",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/abi:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/keystore:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/event:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+    ],
+)

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "decode.go",
+        "doc.go",
+        "encode.go",
+        "raw.go",
+        "typecache.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/rlp",
+    importpath = "github.com/ethereum/go-ethereum/rlp",
+    visibility = ["//visibility:public"],
+)

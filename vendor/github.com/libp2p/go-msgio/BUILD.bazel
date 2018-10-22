@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "chan.go",
+        "limit.go",
+        "msgio.go",
+        "num.go",
+        "varint.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-msgio",
+    importpath = "github.com/libp2p/go-msgio",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/libp2p/go-buffer-pool:go_default_library"],
+)

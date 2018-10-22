@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "dns.go",
+        "resolve.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/multiformats/go-multiaddr-dns",
+    importpath = "github.com/multiformats/go-multiaddr-dns",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/multiformats/go-multiaddr:go_default_library"],
+)

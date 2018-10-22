@@ -1,0 +1,99 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "account_cache.go",
+        "file_cache.go",
+        "key.go",
+        "keystore.go",
+        "keystore_passphrase.go",
+        "keystore_plain.go",
+        "keystore_wallet.go",
+        "presale.go",
+        "watch.go",
+        "watch_fallback.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/accounts/keystore",
+    importpath = "github.com/ethereum/go-ethereum/accounts/keystore",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/deckarep/golang-set:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/math:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/event:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/pborman/uuid:go_default_library",
+        "//vendor/golang.org/x/crypto/pbkdf2:go_default_library",
+        "//vendor/golang.org/x/crypto/scrypt:go_default_library",
+    ] + select({
+        "@io_bazel_rules_go//go/platform:darwin_386": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:darwin_amd64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:darwin_arm": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:darwin_arm64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:freebsd_386": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:freebsd_amd64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:freebsd_arm": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_386": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_amd64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_arm": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_mips": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_mips64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_mips64le": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_mipsle": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_ppc64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_ppc64le": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_s390x": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:netbsd_386": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:netbsd_amd64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:netbsd_arm": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "@io_bazel_rules_go//go/platform:solaris_amd64": [
+            "//vendor/github.com/rjeczalik/notify:go_default_library",
+        ],
+        "//conditions:default": [],
+    }),
+)

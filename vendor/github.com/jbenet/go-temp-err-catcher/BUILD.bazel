@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "temp_err_catcher.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/jbenet/go-temp-err-catcher",
+    importpath = "github.com/jbenet/go-temp-err-catcher",
+    visibility = ["//visibility:public"],
+)

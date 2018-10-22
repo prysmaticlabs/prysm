@@ -9,6 +9,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/event:go_default_library",
-        "@com_github_golang_mock//gomock:go_default_library",
+        "//vendor/github.com/golang/mock/gomock:go_default_library",
     ],
 )

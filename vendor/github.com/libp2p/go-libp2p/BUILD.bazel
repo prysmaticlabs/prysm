@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "defaults.go",
+        "error_util.go",
+        "libp2p.go",
+        "options.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p",
+    importpath = "github.com/libp2p/go-libp2p",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-libp2p-circuit:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-crypto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-host:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-interface-connmgr:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-interface-pnet:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-metrics:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore/pstoremem:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-secio:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p/config:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p/p2p/host/basic:go_default_library",
+        "//vendor/github.com/libp2p/go-maddr-filter:go_default_library",
+        "//vendor/github.com/libp2p/go-tcp-transport:go_default_library",
+        "//vendor/github.com/libp2p/go-ws-transport:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/whyrusleeping/go-smux-multiplex:go_default_library",
+        "//vendor/github.com/whyrusleeping/go-smux-yamux:go_default_library",
+    ],
+)

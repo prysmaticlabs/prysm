@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["filter.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-maddr-filter",
+    importpath = "github.com/libp2p/go-maddr-filter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr-net:go_default_library",
+    ],
+)

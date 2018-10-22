@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "backend.go",
+        "format.go",
+        "level.go",
+        "log.go",
+        "logger.go",
+        "memory.go",
+        "multi.go",
+        "syslog.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/whyrusleeping/go-logging",
+    importpath = "github.com/whyrusleeping/go-logging",
+    visibility = ["//visibility:public"],
+)

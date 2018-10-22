@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["simulated.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/accounts/abi/bind/backends",
+    importpath = "github.com/ethereum/go-ethereum/accounts/abi/bind/backends",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/abi/bind:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/math:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/consensus/ethash:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/bloombits:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/rawdb:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/state:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/vm:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/eth/filters:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/ethdb:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/event:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/params:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rpc:go_default_library",
+    ],
+)

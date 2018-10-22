@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bitutil.go",
+        "compress.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/common/bitutil",
+    importpath = "github.com/ethereum/go-ethereum/common/bitutil",
+    visibility = ["//visibility:public"],
+)

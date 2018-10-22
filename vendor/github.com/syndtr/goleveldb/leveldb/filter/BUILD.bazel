@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bloom.go",
+        "filter.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/syndtr/goleveldb/leveldb/filter",
+    importpath = "github.com/syndtr/goleveldb/leveldb/filter",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/syndtr/goleveldb/leveldb/util:go_default_library"],
+)

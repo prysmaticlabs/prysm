@@ -5,7 +5,7 @@ go_library(
     srcs = ["marshal.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/shardutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_ethereum_go_ethereum//rlp:go_default_library"],
+    deps = ["//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library"],
 )
 
 go_test(

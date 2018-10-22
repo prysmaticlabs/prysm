@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "hamming.go",
+        "popcnt_amd64.go",
+        "popcnt_amd64.s",
+        "popcount.go",
+        "popcount_slices.go",
+        "popcount_slices_amd64.go",
+        "popcount_slices_amd64.s",
+        "slices_of_hamming.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/steakknife/hamming",
+    importpath = "github.com/steakknife/hamming",
+    visibility = ["//visibility:public"],
+)

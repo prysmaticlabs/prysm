@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "reuseport.go",
+        "tcp.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-tcp-transport",
+    importpath = "github.com/libp2p/go-tcp-transport",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-transport:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-transport-upgrader:go_default_library",
+        "//vendor/github.com/libp2p/go-reuseport:go_default_library",
+        "//vendor/github.com/libp2p/go-reuseport-transport:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr-net:go_default_library",
+        "//vendor/github.com/whyrusleeping/mafmt:go_default_library",
+    ],
+)

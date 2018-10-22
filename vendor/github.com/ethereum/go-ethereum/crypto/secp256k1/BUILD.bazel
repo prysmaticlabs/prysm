@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "curve.go",
+        "ext.h",
+        "panic_cb.go",
+        "secp256.go",
+    ],
+    cgo = True,
+    copts = [
+        "-Ivendor/github.com/ethereum/go-ethereum/crypto/secp256k1/libsecp256k1",
+        "-Ivendor/github.com/ethereum/go-ethereum/crypto/secp256k1/libsecp256k1/src",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/crypto/secp256k1",
+    importpath = "github.com/ethereum/go-ethereum/crypto/secp256k1",
+    visibility = ["//visibility:public"],
+)

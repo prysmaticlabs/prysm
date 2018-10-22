@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "big.go",
+        "integer.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/common/math",
+    importpath = "github.com/ethereum/go-ethereum/common/math",
+    visibility = ["//visibility:public"],
+)

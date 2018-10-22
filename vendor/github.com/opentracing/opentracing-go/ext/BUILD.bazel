@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["tags.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/opentracing/opentracing-go/ext",
+    importpath = "github.com/opentracing/opentracing-go/ext",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/opentracing/opentracing-go:go_default_library"],
+)

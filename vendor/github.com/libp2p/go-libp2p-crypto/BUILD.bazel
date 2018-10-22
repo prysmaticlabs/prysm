@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "ed25519.go",
+        "key.go",
+        "rsa.go",
+        "secp256k1.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-crypto",
+    importpath = "github.com/libp2p/go-libp2p-crypto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/agl/ed25519:go_default_library",
+        "//vendor/github.com/agl/ed25519/extra25519:go_default_library",
+        "//vendor/github.com/btcsuite/btcd/btcec:go_default_library",
+        "//vendor/github.com/gogo/protobuf/proto:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-crypto/pb:go_default_library",
+        "//vendor/github.com/minio/sha256-simd:go_default_library",
+    ],
+)

@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["notifier.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/whyrusleeping/go-notifier",
+    importpath = "github.com/whyrusleeping/go-notifier",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/jbenet/goprocess:go_default_library",
+        "//vendor/github.com/jbenet/goprocess/ratelimit:go_default_library",
+    ],
+)

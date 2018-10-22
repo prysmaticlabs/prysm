@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "mmap.go",
+        "mmap_unix.go",
+        "mmap_windows.go",
+        "msync_netbsd.go",
+        "msync_unix.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/edsrzf/mmap-go",
+    importpath = "github.com/edsrzf/mmap-go",
+    visibility = ["//visibility:public"],
+)

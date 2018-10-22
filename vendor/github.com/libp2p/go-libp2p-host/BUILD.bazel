@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "host.go",
+        "match.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-host",
+    importpath = "github.com/libp2p/go-libp2p-host",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/coreos/go-semver/semver:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-interface-connmgr:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-net:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peerstore:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-protocol:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/multiformats/go-multistream:go_default_library",
+    ],
+)

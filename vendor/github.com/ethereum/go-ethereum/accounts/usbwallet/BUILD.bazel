@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "hub.go",
+        "ledger.go",
+        "trezor.go",
+        "wallet.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/accounts/usbwallet",
+    importpath = "github.com/ethereum/go-ethereum/accounts/usbwallet",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/usbwallet/internal/trezor:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/hexutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/event:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rlp:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/karalabe/hid:go_default_library",
+    ],
+)

@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["ssms.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-conn-security-multistream",
+    importpath = "github.com/libp2p/go-conn-security-multistream",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/libp2p/go-conn-security:go_default_library",
+        "//vendor/github.com/libp2p/go-libp2p-peer:go_default_library",
+        "//vendor/github.com/multiformats/go-multistream:go_default_library",
+    ],
+)

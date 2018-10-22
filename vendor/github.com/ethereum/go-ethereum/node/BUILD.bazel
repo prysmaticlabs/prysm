@@ -1,0 +1,35 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "api.go",
+        "config.go",
+        "defaults.go",
+        "doc.go",
+        "errors.go",
+        "node.go",
+        "service.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/node",
+    importpath = "github.com/ethereum/go-ethereum/node",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/accounts:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/keystore:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/usbwallet:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/hexutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/ethdb:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/event:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/internal/debug:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/log:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/metrics:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/enode:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/p2p/nat:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/rpc:go_default_library",
+        "//vendor/github.com/prometheus/prometheus/util/flock:go_default_library",
+    ],
+)

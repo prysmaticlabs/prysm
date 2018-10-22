@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "nat.go",
+        "natpmp.go",
+        "upnp.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/fd/go-nat",
+    importpath = "github.com/fd/go-nat",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/huin/goupnp:go_default_library",
+        "//vendor/github.com/huin/goupnp/dcps/internetgateway1:go_default_library",
+        "//vendor/github.com/huin/goupnp/dcps/internetgateway2:go_default_library",
+        "//vendor/github.com/jackpal/gateway:go_default_library",
+        "//vendor/github.com/jackpal/go-nat-pmp:go_default_library",
+    ],
+)

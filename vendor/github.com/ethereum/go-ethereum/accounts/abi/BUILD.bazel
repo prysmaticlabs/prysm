@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "abi.go",
+        "argument.go",
+        "doc.go",
+        "error.go",
+        "event.go",
+        "method.go",
+        "numbers.go",
+        "pack.go",
+        "reflect.go",
+        "type.go",
+        "unpack.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/accounts/abi",
+    importpath = "github.com/ethereum/go-ethereum/accounts/abi",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common/math:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
+    ],
+)

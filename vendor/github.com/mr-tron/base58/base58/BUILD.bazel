@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "alphabet.go",
+        "base58.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/mr-tron/base58/base58",
+    importpath = "github.com/mr-tron/base58/base58",
+    visibility = ["//visibility:public"],
+)

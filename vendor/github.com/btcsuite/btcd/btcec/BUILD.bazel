@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "btcec.go",
+        "ciphering.go",
+        "doc.go",
+        "field.go",
+        "precompute.go",
+        "privkey.go",
+        "pubkey.go",
+        "secp256k1.go",
+        "signature.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/btcsuite/btcd/btcec",
+    importpath = "github.com/btcsuite/btcd/btcec",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["scpd.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/huin/goupnp/scpd",
+    importpath = "github.com/huin/goupnp/scpd",
+    visibility = ["//visibility:public"],
+)

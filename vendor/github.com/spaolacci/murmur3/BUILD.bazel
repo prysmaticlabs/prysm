@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "murmur.go",
+        "murmur128.go",
+        "murmur32.go",
+        "murmur64.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/spaolacci/murmur3",
+    importpath = "github.com/spaolacci/murmur3",
+    visibility = ["//visibility:public"],
+)

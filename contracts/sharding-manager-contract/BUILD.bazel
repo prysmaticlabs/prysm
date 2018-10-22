@@ -7,11 +7,11 @@ go_library(
     visibility = ["//client:__subpackages__"],
     deps = [
         "//shared/event:go_default_library",
-        "@com_github_ethereum_go_ethereum//:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/abi:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/abi/bind:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
     ],
 )
 
@@ -21,11 +21,11 @@ go_test(
     embed = [":go_default_library"],
     tags = ["manual"],
     deps = [
-        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_ethereum_go_ethereum//core:go_default_library",
-        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/abi/bind:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/accounts/abi/bind/backends:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/common:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/core/types:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto:go_default_library",
     ],
 )

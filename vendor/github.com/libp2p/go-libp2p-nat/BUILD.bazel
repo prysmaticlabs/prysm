@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "mapping.go",
+        "nat.go",
+        "notifier.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-libp2p-nat",
+    importpath = "github.com/libp2p/go-libp2p-nat",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/fd/go-nat:go_default_library",
+        "//vendor/github.com/ipfs/go-log:go_default_library",
+        "//vendor/github.com/jbenet/goprocess:go_default_library",
+        "//vendor/github.com/jbenet/goprocess/periodic:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr:go_default_library",
+        "//vendor/github.com/multiformats/go-multiaddr-net:go_default_library",
+        "//vendor/github.com/whyrusleeping/go-notifier:go_default_library",
+    ],
+)

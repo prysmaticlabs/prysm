@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "template.go",
+        "ui.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/fjl/memsize/memsizeui",
+    importpath = "github.com/fjl/memsize/memsizeui",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/fjl/memsize:go_default_library"],
+)

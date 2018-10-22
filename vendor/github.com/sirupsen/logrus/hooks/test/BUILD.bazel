@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["test.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/sirupsen/logrus/hooks/test",
+    importpath = "github.com/sirupsen/logrus/hooks/test",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/sirupsen/logrus:go_default_library"],
+)

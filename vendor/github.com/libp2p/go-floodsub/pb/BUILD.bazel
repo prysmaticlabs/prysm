@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["rpc.pb.go"],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-floodsub/pb",
+    importpath = "github.com/libp2p/go-floodsub/pb",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/gogo/protobuf/proto:go_default_library"],
+)

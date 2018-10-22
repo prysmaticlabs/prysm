@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "big.go",
+        "bytes.go",
+        "debug.go",
+        "format.go",
+        "path.go",
+        "size.go",
+        "test_utils.go",
+        "types.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/ethereum/go-ethereum/common",
+    importpath = "github.com/ethereum/go-ethereum/common",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/ethereum/go-ethereum/common/hexutil:go_default_library",
+        "//vendor/github.com/ethereum/go-ethereum/crypto/sha3:go_default_library",
+    ],
+)

@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "meter.go",
+        "registry.go",
+        "sweeper.go",
+    ],
+    importmap = "github.com/prysmaticlabs/prysm/vendor/github.com/libp2p/go-flow-metrics",
+    importpath = "github.com/libp2p/go-flow-metrics",
+    visibility = ["//visibility:public"],
+)
