@@ -2,13 +2,23 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["bls.go"],
+    srcs = [
+        "bls.go",
+        "mcl.go",
+    ],
+    cdeps = ["@herumi_mcl//:mcl-lib"],
+    cgo = True,
+    clinkopts = ["-lstdc++"],
+    copts = ["-DMCLBN_FP_UNIT_SIZE=6"],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["bls_test.go"],
+    srcs = [
+        "bls_test.go",
+        "mcl_test.go",
+    ],
     embed = [":go_default_library"],
 )
