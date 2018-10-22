@@ -70,7 +70,6 @@ func TestEmitFailsNonProtobuf(t *testing.T) {
 // 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
 // 	}
 // }
-
 // TODO(#691): Refactor using gogo/protobuf to pass travis.
 // func TestEmit(t *testing.T) {
 // 	s, _ := NewServer()
