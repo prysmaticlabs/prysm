@@ -21,8 +21,8 @@ func CalculateRewards(
 	timeSinceFinality uint64) []*pb.ValidatorRecord {
 	totalDeposit := TotalActiveValidatorDeposit(validators)
 	activeValidators := ActiveValidatorIndices(validators)
-	rewardQuotient := uint64(RewardQuotient(validators))
-	penaltyQuotient := uint64(quadraticPenaltyQuotient())
+	rewardQuotient := RewardQuotient(validators)
+	penaltyQuotient := quadraticPenaltyQuotient()
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
 	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
@@ -86,7 +86,7 @@ func SlotMaxInterestRate(validators []*pb.ValidatorRecord) float64 {
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := params.GetConfig().SqrtExpDropTime / params.GetConfig().SlotDuration
+	dropTimeFactor := params.GetConfig().SqrtExpDropTime
 	return dropTimeFactor * dropTimeFactor
 }
 
@@ -95,7 +95,7 @@ func quadraticPenaltyQuotient() uint64 {
 func QuadraticPenalty(numberOfSlots uint64) uint64 {
 	slotFactor := (numberOfSlots * numberOfSlots) / 2
 	penaltyQuotient := quadraticPenaltyQuotient()
-	return slotFactor / uint64(penaltyQuotient)
+	return slotFactor / penaltyQuotient
 }
 
 // RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.

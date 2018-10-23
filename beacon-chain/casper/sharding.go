@@ -8,8 +8,8 @@ import (
 )
 
 // ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
-func ShuffleValidatorsToCommittees(seed common.Hash, activeValidators []*pb.ValidatorRecord, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
-	indices := ActiveValidatorIndices(activeValidators)
+func ShuffleValidatorsToCommittees(seed common.Hash, validators []*pb.ValidatorRecord, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
+	indices := ActiveValidatorIndices(validators)
 
 	// split the shuffled list for slot.
 	shuffledValidators, err := utils.ShuffleIndices(seed, indices)
@@ -29,8 +29,12 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 		return nil, err
 	}
 
-	// Starting with 2 cycles (128 slots) with the same committees.
-	return append(committees, committees...), nil
+	// Initialize with 3 cycles of the same committees.
+	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.GetConfig().CycleLength)
+	initialCommittees = append(initialCommittees, committees...)
+	initialCommittees = append(initialCommittees, committees...)
+	initialCommittees = append(initialCommittees, committees...)
+	return initialCommittees, nil
 }
 
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each

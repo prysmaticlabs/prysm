@@ -116,7 +116,7 @@ func TestSlotMaxInterestRate(t *testing.T) {
 
 func TestQuadraticPenaltyQuotient(t *testing.T) {
 	penaltyQuotient := quadraticPenaltyQuotient()
-	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 13), 2)) {
+	if penaltyQuotient != uint64(math.Pow(2, 32)) {
 		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
 }
