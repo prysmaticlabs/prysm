@@ -76,13 +76,6 @@ func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
 	return params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
 }
 
-// SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
-// rate is targeted for a compunded annual rate of 3.88%.
-func SlotMaxInterestRate(validators []*pb.ValidatorRecord) float64 {
-	rewardQuotient := float64(RewardQuotient(validators))
-	return 1 / rewardQuotient
-}
-
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {

@@ -16,14 +16,14 @@ const bitsInByte = 8
 // InitialValidators creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidators() []*pb.ValidatorRecord {
-
+	config := params.GetConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
-	validators := make([]*pb.ValidatorRecord, params.GetConfig().BootstrappedValidatorsCount)
-	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
+	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
+	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           uint64(params.GetConfig().DepositSize) * uint64(params.GetConfig().Gwei),
+			Balance:           config.DepositSize * config.Gwei,
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoReveal[:],
@@ -36,8 +36,8 @@ func InitialValidators() []*pb.ValidatorRecord {
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	indices := make([]uint32, 0, len(validators))
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.Active) {
+	for i, v := range validators {
+		if v.Status == uint64(params.Active) {
 			indices = append(indices, uint32(i))
 		}
 
@@ -192,7 +192,7 @@ func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(validators)
-	depositInEth := totalDeposit / uint64(params.GetConfig().Gwei)
+	depositInEth := totalDeposit / params.GetConfig().Gwei
 
 	return depositInEth
 }
@@ -236,7 +236,7 @@ func AddPendingValidator(
 		WithdrawalShard:   withdrawalShard,
 		WithdrawalAddress: withdrawalAddr,
 		RandaoCommitment:  randaoCommitment,
-		Balance:           uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
+		Balance:           params.GetConfig().DepositSize * params.GetConfig().Gwei,
 		Status:            uint64(params.PendingActivation),
 		ExitSlot:          0,
 	}
@@ -269,7 +269,7 @@ func ExitValidator(
 
 // ChangeValidators updates the validator set during state transition.
 func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
-	maxAllowableChange := uint64(2 * params.GetConfig().DepositSize * params.GetConfig().Gwei)
+	maxAllowableChange := 2 * params.GetConfig().DepositSize * params.GetConfig().Gwei
 
 	totalBalance := TotalActiveValidatorDeposit(validators)
 
@@ -282,7 +282,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.PendingActivation) {
 			validators[i].Status = uint64(params.Active)
-			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
+			totalChanged += params.GetConfig().DepositSize * params.GetConfig().Gwei
 
 			// TODO(#614): Add validator set change.
 		}
@@ -346,7 +346,7 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 	for index, validator := range validatorSet {
 		MinDepositInGWei := params.GetConfig().MinDeposit * params.GetConfig().Gwei
 		isValidatorActive := validator.Status == uint64(params.Active)
-		if (int(validator.Balance) < MinDepositInGWei) && isValidatorActive {
+		if validator.Balance < MinDepositInGWei && isValidatorActive {
 			validatorSet[index] = ExitValidator(validator, currentSlot, false)
 		}
 	}

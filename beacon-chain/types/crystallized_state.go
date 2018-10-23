@@ -40,7 +40,7 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 
 	// Bootstrap cross link records.
 	var crosslinks []*pb.CrosslinkRecord
-	for i := 0; i < shardCount; i++ {
+	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
 			RecentlyChanged: false,
 			ShardBlockHash:  make([]byte, 0, 32),
