@@ -3,8 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "bls.go",
-        "mcl.go",
+        "core_functions.go",
+        "keys.go",
     ],
     cdeps = [
         "@herumi_mcl//:mcl-lib",
@@ -18,9 +18,6 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "bls_test.go",
-        "mcl_test.go",
-    ],
+    srcs = ["core_functions_test.go"],
     embed = [":go_default_library"],
 )

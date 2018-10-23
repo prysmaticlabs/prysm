@@ -1,6 +1,6 @@
 package bls
 
-// @file mcl.go - full credit goes to @herumi for this Go port of the
+// @file core.go - full credit goes to @herumi for this Go port of the
 // C functions defined in the MCL, C/C++ crypto library
 //
 // @author MITSUNARI Shigeo(@herumi)
