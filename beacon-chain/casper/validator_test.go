@@ -3,7 +3,6 @@ package casper
 import (
 	"bytes"
 	"math/big"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -51,56 +50,12 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidators(t *testing.T) {
 	validators := InitialValidators()
 	for _, validator := range validators {
-		if validator.GetBalance() != uint64(params.GetConfig().DepositSize) {
+		if validator.GetBalance() != uint64(params.GetConfig().DepositSize)*uint64(params.GetConfig().Gwei) {
 			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
 		}
 		if validator.GetStatus() != uint64(params.Active) {
 			t.Errorf("validator status is not active: %d", validator.GetStatus())
 		}
-	}
-}
-func TestValidatorIndices(t *testing.T) {
-	data := &pb.CrystallizedState{
-		Validators: []*pb.ValidatorRecord{
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
-		},
-		ValidatorSetChangeSlot: 1,
-	}
-
-	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators), []uint32{0, 1, 2, 3, 4}) {
-		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", ActiveValidatorIndices(data.Validators))
-	}
-	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators), []uint32{5}) {
-		t.Errorf("queued validator indices should be [5], got: %v", QueuedValidatorIndices(data.Validators))
-	}
-	if len(ExitedValidatorIndices(data.Validators)) != 0 {
-		t.Errorf("exited validator indices to be empty, got: %v", ExitedValidatorIndices(data.Validators))
-	}
-
-	data = &pb.CrystallizedState{
-		Validators: []*pb.ValidatorRecord{
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.Active)},            // active.
-			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
-			{Pubkey: []byte{}, Status: uint64(params.PendingActivation)}, // queued.
-			{Pubkey: []byte{}, Status: uint64(params.PendingExit)},       // exited.
-			{Pubkey: []byte{}, Status: uint64(params.PendingExit)},       // exited.
-		},
-	}
-
-	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators), []uint32{0, 1}) {
-		t.Errorf("active validator indices should be [0, 1], got: %v", ActiveValidatorIndices(data.Validators))
-	}
-	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators), []uint32{2, 3}) {
-		t.Errorf("queued validator indices should be [2, 3], got: %v", QueuedValidatorIndices(data.Validators))
-	}
-	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators), []uint32{4, 5}) {
-		t.Errorf("exited validator indices should be [4, 5], got: %v", ExitedValidatorIndices(data.Validators))
 	}
 }
 
@@ -294,47 +249,6 @@ func TestTotalActiveValidatorDeposit(t *testing.T) {
 	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
 	if totalDepositETH != 10 {
 		t.Fatalf("incorrect total deposit in ETH calculated %d", totalDepositETH)
-	}
-}
-
-func TestCommitteeInShardAndSlot(t *testing.T) {
-
-	testCommittee := []uint32{20, 21, 22, 23, 24, 25, 26}
-
-	shardCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
-			{Shard: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
-			{Shard: 3, Committee: []uint32{14, 15, 16, 17, 18, 19}},
-		}},
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{Shard: 3, Committee: testCommittee},
-			{Shard: 4, Committee: []uint32{27, 28, 29, 30, 31, 32, 33}},
-			{Shard: 5, Committee: []uint32{34, 35, 36, 37, 38, 39}},
-		}},
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{Shard: 3, Committee: []uint32{40, 41, 42, 43, 44, 45, 46}},
-			{Shard: 7, Committee: []uint32{47, 48, 49, 50, 51, 52, 53}},
-			{Shard: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
-		}},
-	}
-	_, err := CommitteeInShardAndSlot(2, 5, shardCommittees)
-	if err == nil {
-		t.Fatalf("function did not return error even though committee for shard does not exist")
-	}
-
-	committee, err := CommitteeInShardAndSlot(1, 3, shardCommittees)
-	if err != nil {
-		t.Fatalf("unable to get committees for shard: %v", err)
-	}
-
-	if len(committee) != len(testCommittee) {
-		t.Fatalf("the committees are not of the same sizes %d : %d", len(committee), len(testCommittee))
-	}
-	for i, indice := range committee {
-		if indice != testCommittee[i] {
-			t.Errorf("retrieved indice is not the same as the one put in the committee %d , %d", indice, testCommittee[i])
-		}
 	}
 }
 
