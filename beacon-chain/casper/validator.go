@@ -35,55 +35,41 @@ func InitialValidators() []*pb.ValidatorRecord {
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, len(validators))
+	indices := make([]uint32, 0, len(validators))
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.Active) {
 			indices = append(indices, uint32(i))
 		}
-	}
-	return indices[len(validators):]
-}
 
-// ExitedValidatorIndices filters out exited validators based on validator status
-// and returns their indices in a list.
-func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, len(validators))
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingExit) {
-			indices = append(indices, uint32(i))
-		}
 	}
-	return indices[len(validators):]
-}
-
-// QueuedValidatorIndices filters out queued validators based on validator status
-// and returns their indices in a list.
-func QueuedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, len(validators))
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingActivation) {
-			indices = append(indices, uint32(i))
-		}
-	}
-	return indices[len(validators):]
+	return indices
 }
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+	cycleLength := params.GetConfig().CycleLength
+
 	var lowerBound uint64
-	if lastStateRecalc >= params.GetConfig().CycleLength {
-		lowerBound = lastStateRecalc - params.GetConfig().CycleLength
+	if lastStateRecalc >= cycleLength {
+		lowerBound = lastStateRecalc - cycleLength
 	}
-	upperBound := lastStateRecalc + params.GetConfig().CycleLength
+	upperBound := lastStateRecalc + 2*cycleLength
 	if slot < lowerBound || slot >= upperBound {
-		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
+		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
 			slot,
 			lowerBound,
 			upperBound,
 		)
 	}
 
-	return shardCommittees[slot-lowerBound], nil
+	// If in the previous or current cycle, simply calculate offset
+	if slot < lastStateRecalc+2*cycleLength {
+		return shardCommittees[slot-lowerBound], nil
+	}
+
+	// Otherwise, use the 3rd cycle
+	index := lowerBound + 2*cycleLength + slot%cycleLength
+	return shardCommittees[index], nil
 }
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
@@ -195,9 +181,9 @@ func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shard
 // TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
 func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
-	activeValidators := ActiveValidatorIndices(validators)
+	indices := ActiveValidatorIndices(validators)
 
-	for _, index := range activeValidators {
+	for _, index := range indices {
 		totalDeposit += validators[index].GetBalance()
 	}
 	return totalDeposit
@@ -209,19 +195,6 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	depositInEth := totalDeposit / uint64(params.GetConfig().Gwei)
 
 	return depositInEth
-}
-
-// CommitteeInShardAndSlot returns the shard committee for a a particular slot index and shard.
-func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArray []*pb.ShardAndCommitteeArray) ([]uint32, error) {
-	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
-
-	for i := 0; i < len(shardCommittee); i++ {
-		if shardID == shardCommittee[i].Shard {
-			return shardCommittee[i].Committee, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
 }
 
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
