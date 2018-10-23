@@ -6,10 +6,12 @@ go_library(
         "bls.go",
         "mcl.go",
     ],
-    cdeps = ["@herumi_mcl//:mcl-lib"],
+    cdeps = [
+        "@herumi_mcl//:mcl-lib",
+    ],
     cgo = True,
-    clinkopts = ["-lstdc++ -lgmp -lcrypto"],
-    copts = ["-DMCLBN_FP_UNIT_SIZE=6"],
+    clinkopts = ["-lstdc++ -lgmp"],
+    copts = ["-DMCLBN_FP_UNIT_SIZE=6 -DMCL_DONT_USE_OPENSSL"],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls",
     visibility = ["//visibility:public"],
 )

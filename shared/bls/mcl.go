@@ -7,8 +7,8 @@ package bls
 // @license modified new BSD license
 // http://opensource.org/licenses/BSD-3-Clause
 
-// #cgo LDFLAGS: -lstdc++ -lgmp -lcrypto
-// #cgo CFLAGS:-DMCLBN_FP_UNIT_SIZE=6
+// #cgo LDFLAGS: -lstdc++ -lgmp
+// #cgo CFLAGS:-DMCLBN_FP_UNIT_SIZE=6 -DMCL_DONT_USE_OPENSSL
 // #include "external/herumi_mcl/include/mcl/bn.h"
 import "C"
 import "fmt"
