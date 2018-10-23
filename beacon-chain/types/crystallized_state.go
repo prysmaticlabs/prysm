@@ -40,7 +40,7 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 
 	// Bootstrap cross link records.
 	var crosslinks []*pb.CrosslinkRecord
-	for i := 0; i < shardCount; i++ {
+	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
 			RecentlyChanged: false,
 			ShardBlockHash:  make([]byte, 0, 32),
@@ -232,18 +232,22 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
-	var lowerBound uint64
-	if c.LastStateRecalculationSlot() >= params.GetConfig().CycleLength {
-		lowerBound = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
-	}
-	upperBound := c.LastStateRecalculationSlot() + params.GetConfig().CycleLength
-
-	if attestation.GetSlot() < lowerBound || attestation.GetSlot() >= upperBound {
-		return nil, fmt.Errorf("attestation slot %d out of bound: %d <= slot < %d", attestation.GetSlot(), lowerBound, upperBound)
+	shardCommittees, err := casper.GetShardAndCommitteesForSlot(
+		c.ShardAndCommitteesForSlots(),
+		c.LastStateRecalculationSlot(),
+		attestation.GetSlot())
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch ShardAndCommittees for slot %d: %v", attestation.Slot, err)
 	}
 
-	slotIndex := attestation.Slot - lowerBound
-	return casper.CommitteeInShardAndSlot(slotIndex, attestation.GetShard(), c.data.GetShardAndCommitteesForSlots())
+	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
+	for i := 0; i < len(shardCommitteesArray); i++ {
+		if attestation.Shard == shardCommitteesArray[i].Shard {
+			return shardCommitteesArray[i].Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.Shard)
 }
 
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
