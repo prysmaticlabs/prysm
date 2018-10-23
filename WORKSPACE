@@ -118,6 +118,12 @@ go_repository(
 
 # External dependencies
 
+git_repository(
+    name = "herumi_mcl",
+    remote = "https://github.com/prysmaticlabs/mcl",
+    commit = "7ef503cfcd5dd0e2f07df41efbdd1449dcf9ecbf",
+)
+
 go_repository(
     name = "com_github_ethereum_go_ethereum",
     importpath = "github.com/ethereum/go-ethereum",
