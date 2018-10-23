@@ -50,7 +50,7 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidators(t *testing.T) {
 	validators := InitialValidators()
 	for _, validator := range validators {
-		if validator.GetBalance() != uint64(params.GetConfig().DepositSize) {
+		if validator.GetBalance() != uint64(params.GetConfig().DepositSize)*uint64(params.GetConfig().Gwei) {
 			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
 		}
 		if validator.GetStatus() != uint64(params.Active) {

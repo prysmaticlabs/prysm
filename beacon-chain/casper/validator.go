@@ -23,7 +23,7 @@ func InitialValidators() []*pb.ValidatorRecord {
 	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           uint64(params.GetConfig().DepositSize),
+			Balance:           uint64(params.GetConfig().DepositSize) * uint64(params.GetConfig().Gwei),
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoReveal[:],
