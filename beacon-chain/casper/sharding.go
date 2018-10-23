@@ -41,21 +41,21 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. See getCommitteesPerSlot for more details.
 func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) []*pb.ShardAndCommitteeArray {
-	committeesPerSlot := getCommitteesPerSlot(len(shuffledValidators))
+	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidators)))
 
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
 	// split the validator indices by slot.
-	validatorsBySlot := utils.SplitIndices(shuffledValidators, int(params.GetConfig().CycleLength))
+	validatorsBySlot := utils.SplitIndices(shuffledValidators, params.GetConfig().CycleLength)
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
-		shardStart := int(crosslinkStartShard) + i*committeesPerSlot
+		shardStart := crosslinkStartShard + uint64(i)*committeesPerSlot
 
 		for j, validatorsForShard := range validatorsByShard {
-			shardID := (shardStart + j) % params.GetConfig().ShardCount
+			shardID := (shardStart + uint64(j)) % params.GetConfig().ShardCount
 			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
-				Shard:     uint64(shardID),
+				Shard:     shardID,
 				Committee: validatorsForShard,
 			})
 		}
@@ -73,9 +73,9 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // Otherwise, the value for committeesPerSlot is the smaller of
 // numActiveValidators / CycleLength /  (MinCommitteeSize*2) + 1 or
 // ShardCount / CycleLength.
-func getCommitteesPerSlot(numActiveValidators int) int {
-	cycleLength := int(params.GetConfig().CycleLength)
-	boundOnValidators := numActiveValidators/cycleLength/int(params.GetConfig().MinCommiteeSize*2) + 1
+func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
+	cycleLength := params.GetConfig().CycleLength
+	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommiteeSize*2) + 1
 	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
 
 	// Ensure that comitteesPerSlot is at least 1.
