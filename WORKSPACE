@@ -121,7 +121,7 @@ go_repository(
 git_repository(
     name = "herumi_mcl",
     remote = "https://github.com/prysmaticlabs/mcl",
-    commit = "4efa443e8ababd6d32c7293115fc39bc87c55d61",
+    commit = "7ef503cfcd5dd0e2f07df41efbdd1449dcf9ecbf",
 )
 
 go_repository(
