@@ -35,7 +35,7 @@ const (
 	scryptDKLen = 32
 )
 
-// Is the object that stores all the user data related to their public/secret keys.
+// Key is the object that stores all the user data related to their public/secret keys.
 type Key struct {
 	ID uuid.UUID // Version 4 "random" for unique id not derived from key data
 

@@ -3,18 +3,18 @@ package keystore
 import (
 	"bytes"
 	"crypto/aes"
-	crand "crypto/rand"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/randentropy"
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"golang.org/x/crypto/pbkdf2"
@@ -71,7 +71,7 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 
 // StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
-	err := storeNewRandomKey(keyStorePassphrase{dir, scryptN, scryptP}, crand.Reader, password)
+	err := storeNewRandomKey(keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, password)
 	return err
 }
 
@@ -79,7 +79,11 @@ func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error) {
 	authArray := []byte(password)
-	salt := randentropy.GetEntropyCSPRNG(32)
+	salt := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+		panic("reading from crypto/rand failed: " + err.Error())
+	}
+
 	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
 	if err != nil {
 		return nil, err
@@ -88,7 +92,11 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 	encryptKey := derivedKey[:16]
 	keyBytes := math.PaddedBigBytes(key.SecretKey.K, 32)
 
-	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
+	iv := make([]byte, aes.BlockSize) // 16
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		panic("reading from crypto/rand failed: " + err.Error())
+	}
+
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err
