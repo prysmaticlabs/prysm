@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -28,7 +28,7 @@ func TestGenesisActiveState_HashEquality(t *testing.T) {
 
 func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 	as := NewGenesisActiveState()
-	want, got := len(as.data.RecentBlockHashes), 2*int(params.GetConfig().CycleLength)
+	want, got := len(as.data.RecentBlockHashes), 2*int(params.GetBeaconConfig().CycleLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
@@ -177,7 +177,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	})
 
 	recentBlockHashes := [][]byte{}
-	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+	for i := 0; i < 2*int(params.GetBeaconConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{0})
 	}
 
@@ -190,8 +190,8 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 		t.Fatalf("failed to update recent blockhashes: %v", err)
 	}
 
-	if len(updated) != 2*int(params.GetConfig().CycleLength) {
-		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.GetConfig().CycleLength, len(updated))
+	if len(updated) != 2*int(params.GetBeaconConfig().CycleLength) {
+		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.GetBeaconConfig().CycleLength, len(updated))
 	}
 
 	for i := 0; i < len(updated); i++ {
@@ -215,7 +215,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	s := NewGenesisActiveState()
 	copy(s.data.RecentBlockHashes, interestingData)
-	original := make([][]byte, 2*params.GetConfig().CycleLength)
+	original := make([][]byte, 2*params.GetBeaconConfig().CycleLength)
 	copy(original, s.data.RecentBlockHashes)
 
 	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
@@ -310,7 +310,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 	}
 
 	recentBlockHashes := [][]byte{}
-	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+	for i := 0; i < 2*int(params.GetBeaconConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{0})
 	}
 
@@ -337,7 +337,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
 	}
 
-	if len(aState.RecentBlockHashes()) != 2*int(params.GetConfig().CycleLength) {
+	if len(aState.RecentBlockHashes()) != 2*int(params.GetBeaconConfig().CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 
@@ -350,7 +350,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
 	}
 
-	if len(aState.RecentBlockHashes()) != 2*int(params.GetConfig().CycleLength) {
+	if len(aState.RecentBlockHashes()) != 2*int(params.GetBeaconConfig().CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 }
@@ -367,7 +367,7 @@ func createHashFromByte(repeatedByte byte) []byte {
 func TestGetSignedParentHashes(t *testing.T) {
 	// Test the scenario described in the spec:
 	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
-	cfg := params.GetConfig()
+	cfg := params.GetBeaconConfig()
 	oldCycleLength := cfg.CycleLength
 	cycleLength := uint64(4)
 	cfg.CycleLength = cycleLength
@@ -413,7 +413,7 @@ func TestGetSignedParentHashes(t *testing.T) {
 }
 
 func TestGetSignedParentHashesIndexFail(t *testing.T) {
-	cfg := params.GetConfig()
+	cfg := params.GetBeaconConfig()
 	oldCycleLength := cfg.CycleLength
 	cycleLength := uint64(4)
 	cfg.CycleLength = cycleLength

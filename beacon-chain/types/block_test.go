@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -30,7 +30,7 @@ func TestGenesisBlock(t *testing.T) {
 
 	// We ensure that initializing a proto timestamp from
 	// genesis time will lead to no error.
-	if _, err := ptypes.TimestampProto(params.GetConfig().GenesisTime); err != nil {
+	if _, err := ptypes.TimestampProto(params.GetBeaconConfig().GenesisTime); err != nil {
 		t.Errorf("could not create proto timestamp, expected no error: %v", err)
 	}
 
@@ -81,12 +81,13 @@ func TestGenesisBlock(t *testing.T) {
 
 func TestBlockValidity(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState(nil)
+
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
 
-	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
-	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+	recentBlockHashes := make([][]byte, 2*params.GetBeaconConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetBeaconConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 	aState := NewActiveState(&pb.ActiveState{
@@ -110,71 +111,20 @@ func TestBlockValidity(t *testing.T) {
 		},
 	})
 
-	parentSlot := uint64(0)
+	parentSlot := uint64(1)
 	db := &mockDB{}
 
 	if !b.isAttestationValid(0, db, aState, cState, parentSlot) {
 		t.Fatalf("failed attestation validation")
 	}
 
-	genesisTime := params.GetConfig().GenesisTime
+	genesisTime := params.GetBeaconConfig().GenesisTime
 	if !b.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
-}
-
-func TestBlockValidityNoParentProposer(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate crystallized state: %v", err)
+	if !b.IsValid(db, aState, cState, parentSlot, true, genesisTime) {
+		t.Fatalf("failed block validation")
 	}
-
-	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
-	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
-	}
-
-	aState := NewActiveState(&pb.ActiveState{
-		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*utils.VoteCache))
-	parentSlot := uint64(1)
-	db := &mockDB{}
-
-	// Test case with invalid RANDAO reveal.
-	badRandaoBlock := NewBlock(&pb.BeaconBlock{
-		Slot:         2,
-		RandaoReveal: []byte{'B'},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				JustifiedSlot:    0,
-				AttesterBitfield: []byte{64, 0},
-			},
-		},
-	})
-	genesisTime := params.GetConfig().GenesisTime
-	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
-		t.Fatalf("should have failed doesParentProposerExist")
-	}
-}
-
-func TestBlockValidityInvalidRandao(t *testing.T) {
-	cState, err := NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate crystallized state: %v", err)
-	}
-
-	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
-	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
-	}
-
-	aState := NewActiveState(&pb.ActiveState{
-		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*utils.VoteCache))
-	parentSlot := uint64(0)
-	db := &mockDB{}
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := NewBlock(&pb.BeaconBlock{
@@ -189,7 +139,6 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 			},
 		},
 	})
-	genesisTime := params.GetConfig().GenesisTime
 	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("should have failed with invalid RANDAO")
 	}
@@ -200,7 +149,7 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 		t.Errorf("attestation slot number can't be higher than parent block's slot number")
 	}
 
-	if isAttestationSlotNumberValid(1, params.GetConfig().CycleLength+1) {
+	if isAttestationSlotNumberValid(1, params.GetBeaconConfig().CycleLength+1) {
 		t.Errorf("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
 	}
 

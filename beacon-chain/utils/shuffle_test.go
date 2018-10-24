@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestFaultyShuffleIndices(t *testing.T) {
 	var list []uint32
 
-	for i := uint64(0); i < params.GetConfig().ModuloBias+1; i++ {
+	for i := 0; i < params.GetBeaconConfig().ModuloBias+1; i++ {
 		list = append(list, uint32(i))
 	}
 
@@ -53,14 +53,14 @@ func TestSplitIndices(t *testing.T) {
 	for i := 0; i < validators; i++ {
 		l = append(l, uint32(i))
 	}
-	split := SplitIndices(l, params.GetConfig().CycleLength)
-	if len(split) != int(params.GetConfig().CycleLength) {
-		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.GetConfig().CycleLength, len(split))
+	split := SplitIndices(l, int(params.GetBeaconConfig().CycleLength))
+	if len(split) != int(params.GetBeaconConfig().CycleLength) {
+		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.GetBeaconConfig().CycleLength, len(split))
 	}
 
 	for _, s := range split {
-		if len(s) != validators/int(params.GetConfig().CycleLength) {
-			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.GetConfig().CycleLength), len(s))
+		if len(s) != validators/int(params.GetBeaconConfig().CycleLength) {
+			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.GetBeaconConfig().CycleLength), len(s))
 		}
 	}
 }

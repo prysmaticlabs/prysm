@@ -3,7 +3,7 @@ package db
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -184,7 +184,7 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get crystallized state: %v", err)
 	}
-	cycleLength := params.GetConfig().CycleLength
+	cycleLength := params.GetBeaconConfig().CycleLength
 
 	b1 := types.NewBlock(&pb.BeaconBlock{Slot: 1})
 	if err := db.SaveBlock(b1); err != nil {

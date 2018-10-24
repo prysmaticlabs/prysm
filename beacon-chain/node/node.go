@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
@@ -59,8 +59,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use demo config values if demo config flag is set.
 	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
-		params.SetEnv("demo")
+		oc := params.SetDemoBeaconConfig()
 	}
+
+	
 
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err

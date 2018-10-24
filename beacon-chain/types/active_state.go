@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -28,7 +28,7 @@ type ActiveState struct {
 func NewGenesisActiveState() *ActiveState {
 	// Bootstrap recent block hashes to all 0s for first 2 cycles.
 	var recentBlockHashes [][]byte
-	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+	for i := 0; i < 2*int(params.GetBeaconConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
 	}
 
@@ -201,7 +201,7 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 	distance := block.SlotNumber() - parentSlot
 	existing := a.data.RecentBlockHashes
 	update := existing[distance:]
-	for len(update) < 2*int(params.GetConfig().CycleLength) {
+	for len(update) < 2*int(params.GetBeaconConfig().CycleLength) {
 		update = append(update, block.data.AncestorHashes[0])
 	}
 
@@ -276,7 +276,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 // from the last state recalc and then generates the new active state. This is run after
 // a crystallized state transition.
 func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
-	slot := lastStateRecalc - params.GetConfig().CycleLength
+	slot := lastStateRecalc - params.GetBeaconConfig().CycleLength
 	newPendingAttestations := a.cleanUpAttestations(slot)
 
 	// Construct new active state after clean up pending attestations.
@@ -354,14 +354,14 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 	obliqueParentHashes := attestation.ObliqueParentHashes
 	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
 
-	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
-	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetBeaconConfig().CycleLength) + 1
+	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetBeaconConfig().CycleLength)
 
 	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
 		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}
 
-	hashes := make([][32]byte, 0, params.GetConfig().CycleLength)
+	hashes := make([][32]byte, 0, params.GetBeaconConfig().CycleLength)
 	for i := startIdx; i < endIdx; i++ {
 		hashes = append(hashes, recentBlockHashes[i])
 	}

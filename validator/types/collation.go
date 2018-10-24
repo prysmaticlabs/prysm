@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/shardutil"
-	"github.com/prysmaticlabs/prysm/validator/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"

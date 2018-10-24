@@ -1,7 +1,7 @@
 package casper
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/sirupsen/logrus"
@@ -21,11 +21,11 @@ func CalculateRewards(
 	timeSinceFinality uint64) []*pb.ValidatorRecord {
 	totalDeposit := TotalActiveValidatorDeposit(validators)
 	activeValidators := ActiveValidatorIndices(validators)
-	rewardQuotient := RewardQuotient(validators)
-	penaltyQuotient := quadraticPenaltyQuotient()
+	rewardQuotient := uint64(RewardQuotient(validators))
+	penaltyQuotient := uint64(quadraticPenaltyQuotient())
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
-	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
+	if timeSinceFinality <= 3*params.GetBeaconConfig().CycleLength {
 		for _, validatorIndex := range activeValidators {
 			var voted bool
 
@@ -73,13 +73,20 @@ func CalculateRewards(
 // reward validators for voting on blocks, or penalise them for being offline.
 func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
-	return params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
+	return params.GetBeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
+}
+
+// SlotMaxInterestRate returns the interest rate for a validator in a slot, the interest
+// rate is targeted for a compunded annual rate of 3.88%.
+func SlotMaxInterestRate(validators []*pb.ValidatorRecord) float64 {
+	rewardQuotient := float64(RewardQuotient(validators))
+	return 1 / rewardQuotient
 }
 
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := params.GetConfig().SqrtExpDropTime
+	dropTimeFactor := params.GetBeaconConfig().SqrtExpDropTime / params.GetBeaconConfig().SlotDuration
 	return dropTimeFactor * dropTimeFactor
 }
 
@@ -88,7 +95,7 @@ func quadraticPenaltyQuotient() uint64 {
 func QuadraticPenalty(numberOfSlots uint64) uint64 {
 	slotFactor := (numberOfSlots * numberOfSlots) / 2
 	penaltyQuotient := quadraticPenaltyQuotient()
-	return slotFactor / penaltyQuotient
+	return slotFactor / uint64(penaltyQuotient)
 }
 
 // RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.

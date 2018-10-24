@@ -11,6 +11,9 @@ var (
 		Name:  "demo-config",
 		Usage: " Run the beacon node using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
 	}
+
+
+	
 	// SimulatorFlag determines if a node will run only as a simulator service.
 	SimulatorFlag = cli.BoolFlag{
 		Name:  "simulator",

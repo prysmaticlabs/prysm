@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -96,7 +96,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.GetConfig().SlotDuration) * time.Second,
+		slotAlignmentDuration: time.Duration(params.GetBeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
@@ -170,7 +170,7 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
 	// This error is safe to ignore as we are initializing a proto timestamp
 	// from a constant value (genesis time is constant in the protocol
-	// and defined in the params.GetConfig().package).
+	// and defined in the params.GetBeaconConfig().package).
 	// Get the genesis timestamp from persistent storage.
 	genesis, err := s.beaconDB.GetBlockBySlot(0)
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -57,7 +57,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 func NewGenesisBlock(activeStateRoot [32]byte, crystallizedStateRoot [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.GetBeaconConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 
@@ -145,7 +145,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid(genesisTime time.Time) bool {
-	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
+	slotDuration := time.Duration(b.SlotNumber()*params.GetBeaconConfig().SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
@@ -176,56 +176,36 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	if enableAttestationValidity {
-		if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
-			return false
-		}
-	}
-
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
 	if err != nil {
-		log.Errorf("Cannot get proposer index: %v", err)
+		log.Errorf("Cannot get proposer index %v", err)
 		return false
 	}
+	log.Infof("Proposer index: %v", proposerIndex)
 
-	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
-	blockRandaoReveal := b.RandaoReveal()
-	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
-	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
-		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
-		return false
-	}
-
-	return true
-}
-
-func (b *Block) areAttestationsValid(db beaconDB, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
-	for index, attestation := range b.Attestations() {
-		if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-			log.Errorf("attestation invalid: %v", attestation)
+	if enableAttestationValidity {
+		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
+		log.Infof("Proposer index: %v", proposerIndex)
+		if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
+			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 			return false
 		}
+
+		for index, attestation := range b.Attestations() {
+			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
+				log.Errorf("attestation invalid: %v", attestation)
+				return false
+			}
+		}
 	}
-
-	return true
-}
-
-func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot uint64) bool {
-	_, parentProposerIndex, err := casper.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalculationSlot(),
-		parentSlot)
-	if err != nil {
-		log.Errorf("Cannot get proposer index: %v", err)
-		return false
-	}
-
-	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
-		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
+	blockRandaoReveal := b.RandaoReveal()
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetBeaconConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
+		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
 	}
 
@@ -322,10 +302,10 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 		return false
 	}
 
-	if parentSlot >= params.GetConfig().CycleLength-1 && attestationSlot < parentSlot-params.GetConfig().CycleLength+1 {
+	if parentSlot >= params.GetBeaconConfig().CycleLength-1 && attestationSlot < parentSlot-params.GetBeaconConfig().CycleLength+1 {
 		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestationSlot,
-			parentSlot-params.GetConfig().CycleLength+1)
+			parentSlot-params.GetBeaconConfig().CycleLength+1)
 		return false
 	}
 

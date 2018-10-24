@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -130,12 +130,12 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 		proposerShardID,
 		a.JustifiedSlotNumber())
 
-	log.Debugf("Constructing attestation message for incoming block %#x", attestationMsg)
+	log.Infof("Constructing attestation message for incoming block %#x", attestationMsg)
 
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
-	log.Debugf("Verifying attestation with public key %#x", pubKey)
+	log.Infof("Verifying attestation with public key %#x", pubKey)
 
-	log.Debugf("Successfully verified attestation with incoming block")
+	log.Info("successfully verified attestation with incoming block")
 	return nil
 }
 
@@ -143,7 +143,7 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 // into a message to use for verifying with aggregated public key and signature.
 func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shardID uint64, justifiedSlot uint64) [32]byte {
 	msg := make([]byte, binary.MaxVarintLen64)
-	binary.PutUvarint(msg, slot%params.GetConfig().CycleLength)
+	binary.PutUvarint(msg, slot%params.GetBeaconConfig().CycleLength)
 	for _, parentHash := range parentHashes {
 		msg = append(msg, parentHash[:]...)
 	}
