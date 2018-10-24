@@ -3,7 +3,6 @@
 // aggregating BLS signatures used by Ethereum 2.0.
 package bls
 
-
 import "fmt"
 
 // Signature used in the BLS signature scheme.
