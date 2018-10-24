@@ -208,7 +208,6 @@ func TestRunningChainService(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
-	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
 	testutil.AssertLogsContain(t, hook, "Processed block")
 }
 

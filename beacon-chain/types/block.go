@@ -175,6 +175,10 @@ func (b *Block) IsValid(
 		return false
 	}
 
+	if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
+		return false
+	}
+
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
@@ -184,12 +188,18 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
-		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
+	blockRandaoReveal := b.RandaoReveal()
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
+		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
 	}
 
+	return true
+}
+
+func (b *Block) areAttestationsValid(db beaconDB, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
 			log.Errorf("attestation invalid: %v", attestation)
@@ -197,11 +207,22 @@ func (b *Block) IsValid(
 		}
 	}
 
-	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
-	blockRandaoReveal := b.RandaoReveal()
-	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
-	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
-		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
+	return true
+}
+
+func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot uint64) bool {
+	_, parentProposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		parentSlot)
+	if err != nil {
+		log.Errorf("Cannot get proposer index: %v", err)
+		return false
+	}
+
+	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
+	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
+		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false
 	}
 
