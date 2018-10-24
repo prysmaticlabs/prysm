@@ -32,6 +32,93 @@ func TestGenesisCrystallizedState(t *testing.T) {
 	}
 }
 
+func TestCopyCrystallizedState(t *testing.T) {
+	cState1, err1 := NewGenesisCrystallizedState(nil)
+	cState2 := cState1.CopyState()
+
+	if err1 != nil {
+		t.Fatalf("Failed to initialize crystallized state: %v", err1)
+	}
+
+	cState1.data.LastStateRecalculationSlot = 40
+	if cState1.LastStateRecalculationSlot() == cState2.LastStateRecalculationSlot() {
+		t.Fatalf("The Last State Recalculation Slot should not be equal: %d %d",
+			cState1.LastStateRecalculationSlot(),
+			cState2.LastStateRecalculationSlot(),
+		)
+	}
+
+	cState1.data.JustifiedStreak = 40
+	if cState1.JustifiedStreak() == cState2.JustifiedStreak() {
+		t.Fatalf("The Justified Streak should not be equal: %d %d",
+			cState1.JustifiedStreak(),
+			cState2.JustifiedStreak(),
+		)
+	}
+
+	cState1.data.LastJustifiedSlot = 40
+	if cState1.LastJustifiedSlot() == cState2.LastJustifiedSlot() {
+		t.Fatalf("The Last Justified Slot should not be equal: %d %d",
+			cState1.LastJustifiedSlot(),
+			cState2.LastJustifiedSlot(),
+		)
+	}
+
+	cState1.data.LastFinalizedSlot = 40
+	if cState1.LastFinalizedSlot() == cState2.LastFinalizedSlot() {
+		t.Fatalf("The Last Finalized Slot should not be equal: %d %d",
+			cState1.LastFinalizedSlot(),
+			cState2.LastFinalizedSlot(),
+		)
+	}
+
+	cState1.data.ValidatorSetChangeSlot = 40
+	if cState1.ValidatorSetChangeSlot() == cState2.ValidatorSetChangeSlot() {
+		t.Fatalf("The Last Validator Set Change Slot should not be equal: %d %d",
+			cState1.ValidatorSetChangeSlot(),
+			cState2.ValidatorSetChangeSlot(),
+		)
+	}
+
+	var crosslinks []*pb.CrosslinkRecord
+	for i := uint64(0); i < shardCount; i++ {
+		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
+			RecentlyChanged: false,
+			ShardBlockHash:  make([]byte, 2, 34),
+			Slot:            2,
+		})
+	}
+	cState1.data.Crosslinks = crosslinks
+	if cState1.Crosslinks()[0].Slot == cState2.Crosslinks()[0].Slot {
+		t.Fatalf("The Crosslinks should not be equal: %d %d",
+			cState1.Crosslinks()[0].Slot,
+			cState2.Crosslinks()[0].Slot,
+		)
+	}
+
+	cState1.data.Validators = append(cState1.Validators(), &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)})
+	if len(cState1.Validators()) == len(cState2.Validators()) {
+		t.Fatalf("The Validators should be equal: %d %d",
+			len(cState1.Validators()),
+			len(cState2.Validators()),
+		)
+	}
+
+	newArray := &pb.ShardAndCommitteeArray{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4}},
+			{Shard: 2, Committee: []uint32{5, 6, 7, 8, 9}},
+		},
+	}
+	cState1.data.ShardAndCommitteesForSlots = append(cState1.ShardAndCommitteesForSlots(), newArray)
+	if len(cState1.ShardAndCommitteesForSlots()) == len(cState2.ShardAndCommitteesForSlots()) {
+		t.Fatalf("The ShardAndCommitteesForSlots shouldnt be equal: %d %d",
+			cState1.ShardAndCommitteesForSlots(),
+			cState2.ShardAndCommitteesForSlots(),
+		)
+	}
+}
+
 func TestInitialDeriveCrystallizedState(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -39,7 +126,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	var attesterBitfield []byte
-	for len(attesterBitfield)*8 < params.GetConfig().BootstrappedValidatorsCount {
+	for uint64(len(attesterBitfield))*8 < params.GetConfig().BootstrappedValidatorsCount {
 		attesterBitfield = append(attesterBitfield, byte(0))
 	}
 
@@ -178,7 +265,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 func TestProcessCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
-	for i := 0; i < params.GetConfig().ShardCount; i++ {
+	for i := uint64(0); i < params.GetConfig().ShardCount; i++ {
 		clRecord := &pb.CrosslinkRecord{RecentlyChanged: false, ShardBlockHash: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
@@ -288,7 +375,7 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 	size := params.GetConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
-	for i := 0; i < size; i++ {
+	for i := uint64(0); i < size; i++ {
 		validators[i] = validator
 	}
 	cState.data.Validators = validators

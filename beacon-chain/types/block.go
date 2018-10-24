@@ -175,25 +175,17 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	_, parentBlockProposerIndex, err := casper.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalculationSlot(),
-		parentSlot)
-	if err != nil {
-		log.Errorf("Cannot get parent proposer index %v", err)
-		return false
-	}
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
 	if err != nil {
-		log.Errorf("Cannot get proposer index %v", err)
+		log.Errorf("Cannot get proposer index: %v", err)
 		return false
 	}
 
 	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentBlockProposerIndex)); !isBitSet {
+	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
 		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false
 	}
