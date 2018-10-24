@@ -8,8 +8,15 @@ import (
 	"unsafe"
 )
 
-// SecretKey --
+// SecretKey used by BLS and the underlying C library 
+// created by herumi.
 type SecretKey struct {
+	v Fr
+}
+
+// PublicKey used by BLS and the underlying C library 
+// created by herumi.
+type PublicKey struct {
 	v Fr
 }
 
