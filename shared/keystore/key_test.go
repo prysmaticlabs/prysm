@@ -8,9 +8,30 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
+func TestMarshalAndUnmarshal(t *testing.T) {
+	testID := uuid.NewRandom()
+	key := &Key{
+		ID: testID,
+	}
+	marshalledObject, err := key.MarshalJSON()
+	if err != nil {
+		t.Fatalf("unable to marshall key %v", err)
+	}
+	newKey := &Key{}
+
+	err = newKey.UnmarshalJSON(marshalledObject)
+	if err != nil {
+		t.Fatalf("unable to unmarshall object %v", err)
+	}
+
+	if !bytes.Equal([]byte(newKey.ID), []byte(testID)) {
+		t.Fatalf("retrieved id not the same as pre serialized id: %v ", newKey.ID)
+	}
+}
 func TestNewKeyFromBLS(t *testing.T) {
 	blskey := &bls.SecretKey{
 		K: big.NewInt(20),
