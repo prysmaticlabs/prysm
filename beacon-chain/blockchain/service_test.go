@@ -156,13 +156,11 @@ func TestRunningChainService(t *testing.T) {
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	chainService.enablePOWChain = false
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	db.SaveUnfinalizedBlockState(active, crystallized)
 
 	activeStateRoot, _ := active.Hash()
 	crystallizedStateRoot, _ := crystallized.Hash()
@@ -244,13 +242,11 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	db := btestutil.SetupDB(t)
 	defer btestutil.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	chainService.enablePOWChain = false
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	db.SaveUnfinalizedBlockState(active, crystallized)
 
 	activeStateRoot, _ := active.Hash()
 	crystallizedStateRoot, _ := crystallized.Hash()
@@ -275,9 +271,10 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		ActiveStateRoot:       activeStateRoot[:],
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:             attestationSlot,
-			AttesterBitfield: []byte{16, 0},
-			Shard:            getShardForSlot(t, crystallized, attestationSlot),
+			Slot:               attestationSlot,
+			AttesterBitfield:   []byte{128, 0},
+			Shard:              getShardForSlot(t, crystallized, attestationSlot),
+			JustifiedBlockHash: block0Hash[:],
 		}},
 	})
 
@@ -308,14 +305,16 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		Slot:           currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
 			{
-				Slot:             currentSlot - 2,
-				AttesterBitfield: []byte{8, 0},
-				Shard:            getShardForSlot(t, crystallized, currentSlot-2),
+				Slot:               currentSlot - 1,
+				AttesterBitfield:   []byte{64, 0},
+				Shard:              getShardForSlot(t, crystallized, currentSlot-1),
+				JustifiedBlockHash: block0Hash[:],
 			},
 			{
-				Slot:             currentSlot - 1,
-				AttesterBitfield: []byte{8, 0},
-				Shard:            getShardForSlot(t, crystallized, currentSlot-1),
+				Slot:               currentSlot - 2,
+				AttesterBitfield:   []byte{128, 0},
+				Shard:              getShardForSlot(t, crystallized, currentSlot-2),
+				JustifiedBlockHash: block0Hash[:],
 			},
 		}})
 	block2Hash, err := block2.Hash()
@@ -331,19 +330,22 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		Slot:           currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
 			{
-				Slot:             currentSlot - 3,
-				AttesterBitfield: []byte{4, 0},
-				Shard:            getShardForSlot(t, crystallized, currentSlot-3),
+				Slot:               currentSlot - 1,
+				AttesterBitfield:   []byte{32, 0},
+				Shard:              getShardForSlot(t, crystallized, currentSlot-1),
+				JustifiedBlockHash: block0Hash[:],
 			},
 			{
-				Slot:             currentSlot - 2,
-				AttesterBitfield: []byte{4, 0},
-				Shard:            getShardForSlot(t, crystallized, currentSlot-2),
+				Slot:               currentSlot - 2,
+				AttesterBitfield:   []byte{64, 0},
+				Shard:              getShardForSlot(t, crystallized, currentSlot-2),
+				JustifiedBlockHash: block0Hash[:],
 			},
 			{
-				Slot:             currentSlot - 1,
-				AttesterBitfield: []byte{4, 0},
-				Shard:            getShardForSlot(t, crystallized, currentSlot-1),
+				Slot:               currentSlot - 3,
+				AttesterBitfield:   []byte{128, 0},
+				Shard:              getShardForSlot(t, crystallized, currentSlot-3),
+				JustifiedBlockHash: block0Hash[:],
 			},
 		}})
 

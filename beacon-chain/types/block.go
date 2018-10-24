@@ -264,7 +264,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
-		log.Errorf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
+		log.Errorf("the attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
 			attestation.JustifiedBlockHash)
 		return false
 	}
@@ -278,12 +278,13 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
-		log.Errorf("Unable to get validator committee %v", err)
+		log.Errorf("unable to get validator committee %v", err)
 		return false
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
 	if !casper.AreAttesterBitfieldsValid(attestation, attesterIndices) {
+		log.Errorf("unable to match attester bitfield with shard and committee bitfield")
 		return false
 	}
 

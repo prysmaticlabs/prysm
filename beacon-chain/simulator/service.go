@@ -169,7 +169,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				AncestorHashes:        [][]byte{parentHash},
 				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
 				Attestations: []*pb.AggregatedAttestation{
-					{Slot: slot - 1, AttesterBitfield: []byte{byte(128)}, JustifiedBlockHash: parentHash, Shard: shardID},
+					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}, JustifiedBlockHash: parentHash, Shard: shardID},
 				},
 			})
 			shardID++

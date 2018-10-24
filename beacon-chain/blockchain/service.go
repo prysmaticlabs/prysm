@@ -280,7 +280,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				parent.SlotNumber(),
 			)
 			if err != nil {
-				log.Fatal(err)
 				log.Errorf("Compute active state failed: %v", err)
 				continue
 			}

@@ -85,7 +85,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	// Valid attestation can not have non-zero trailing bits.
 	lastBit := len(attesterIndices)
 	remainingBits := lastBit % bitsInByte
-	if remainingBits == 0 {
+	if lastBit < int(params.GetConfig().MinCommiteeSize) || remainingBits == 0 {
 		return true
 	}
 
