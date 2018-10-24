@@ -3,6 +3,7 @@ package keystore
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -133,20 +134,20 @@ func newKey(rand io.Reader) (*Key, error) {
 	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
 	if err != nil {
-		panic("key generation: could not read from random source: " + err.Error())
+		return nil, fmt.Errorf("key generation: could not read from random source: %v", err)
 	}
 	secretKey := bls.GenerateKey(randBytes)
 
 	return newKeyFromBLS(secretKey)
 }
 
-func storeNewRandomKey(ks keyStore, rand io.Reader, auth string) error {
+func storeNewRandomKey(ks keyStore, rand io.Reader, password string) error {
 	key, err := newKey(rand)
 	if err != nil {
 		return err
 	}
 
-	if err := ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, auth); err != nil {
+	if err := ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, password); err != nil {
 		zeroKey(key.SecretKey)
 		return err
 	}
