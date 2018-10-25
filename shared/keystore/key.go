@@ -130,7 +130,8 @@ func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 	return key, nil
 }
 
-func newKey(rand io.Reader) (*Key, error) {
+// NewKey generates a new random key.
+func NewKey(rand io.Reader) (*Key, error) {
 	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
 	if err != nil {
@@ -142,7 +143,7 @@ func newKey(rand io.Reader) (*Key, error) {
 }
 
 func storeNewRandomKey(ks keyStore, rand io.Reader, password string) error {
-	key, err := newKey(rand)
+	key, err := NewKey(rand)
 	if err != nil {
 		return err
 	}

@@ -60,20 +60,6 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	var pubKey []byte
-	var err error
-
-	inputKey := ctx.GlobalString(types.PubKeyFlag.Name)
-	if inputKey == "" {
-
-		pubKey, err = GeneratePubKey()
-		if err != nil {
-			return nil, err
-		}
-		log.Warnf("PublicKey not detected, generating a new one: %v", pubKey)
-
-	} else {
-		pubKey = []byte(inputKey)
-	}
 
 	keystorePath := ctx.GlobalString(cmd.KeystoreDirectoryFlag.Name)
 	password := ctx.GlobalString(cmd.KeystorePasswordFlag.Name)

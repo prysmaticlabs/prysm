@@ -50,7 +50,7 @@ func TestNewKeyFromBLS(t *testing.T) {
 
 	reader := rand.Reader
 
-	_, err = newKey(reader)
+	_, err = NewKey(reader)
 	if err != nil {
 		t.Fatalf("random key unable to be generated: %v", err)
 	}
