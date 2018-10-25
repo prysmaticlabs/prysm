@@ -112,7 +112,7 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 
 	iv := make([]byte, aes.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic("reading from crypto/rand failed: " + err.Error())
+		return nil, errors.New("reading from crypto/rand failed: " + err.Error())
 	}
 
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
@@ -181,6 +181,10 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 
 func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyID []byte, err error) {
 	keyID = uuid.Parse(keyProtected.ID)
+	if keyProtected.Crypto.Cipher != "aes-128-ctr" {
+		return nil, nil, fmt.Errorf("Cipher not supported: %v", keyProtected.Crypto.Cipher)
+	}
+
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
 	if err != nil {
 		return nil, nil, err
@@ -206,11 +210,11 @@ func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byt
 		return nil, nil, ErrDecrypt
 	}
 
-	plainText, err := aesCBCDecrypt(crypto.Keccak256(derivedKey[:16])[:16], cipherText, iv)
+	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
 	if err != nil {
 		return nil, nil, err
 	}
-	return plainText, keyID, err
+	return plainText, keyID, nil
 }
 
 func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {

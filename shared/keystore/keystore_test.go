@@ -10,7 +10,7 @@ import (
 
 func TestEncryptDecryptKey(t *testing.T) {
 	newID := uuid.NewRandom()
-	keyValue := big.NewInt(10)
+	keyValue := big.NewInt(1e16)
 	password := "test"
 
 	key := &Key{
@@ -20,12 +20,12 @@ func TestEncryptDecryptKey(t *testing.T) {
 		},
 	}
 
-	encryptedStore, err := EncryptKey(key, password, StandardScryptN, StandardScryptP)
+	keyjson, err := EncryptKey(key, password, LightScryptN, LightScryptP)
 	if err != nil {
 		t.Fatalf("unable to encrypt key %v", err)
 	}
 
-	newkey, err := DecryptKey(encryptedStore, password)
+	newkey, err := DecryptKey(keyjson, password)
 	if err != nil {
 		t.Fatalf("unable to decrypt keystore %v", err)
 	}
