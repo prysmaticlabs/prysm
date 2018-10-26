@@ -161,16 +161,19 @@ func (a *ActiveState) appendNewSpecialObject(record *pb.SpecialRecord) []*pb.Spe
 	return append(existing, record)
 }
 
-// cleanUpAttestations removes attestations older than last state recalc slot.
-func (a *ActiveState) cleanUpAttestations(lastStateRecalc uint64) []*pb.AggregatedAttestation {
+// updateAttestations removes attestations older than last state recalc slot.
+func (a *ActiveState) updateAttestations(lastStateRecalc uint64, newAttestations []*pb.AggregatedAttestation) {
 	existing := a.data.PendingAttestations
-	var update []*pb.AggregatedAttestation
-	for i := 0; i < len(existing); i++ {
-		if existing[i].GetSlot() >= lastStateRecalc {
-			update = append(update, existing[i])
+	update := make([]*pb.AggregatedAttestation, 0, len(existing)+len(newAttestations))
+	for _, a := range existing {
+		if a.GetSlot() >= lastStateRecalc {
+			update = append(update, a)
 		}
 	}
-	return update
+
+	update = append(update, newAttestations...)
+
+	a.data.PendingAttestations = update
 }
 
 // calculateNewBlockHashes builds a new slice of recent block hashes with the
@@ -272,20 +275,6 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	return update, nil
 }
 
-// CleanUpActiveState removes the old attestations going from a cycle length behind
-// from the last state recalc and then generates the new active state. This is run after
-// a crystallized state transition.
-func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
-	slot := lastStateRecalc - params.GetConfig().CycleLength
-	newPendingAttestations := a.cleanUpAttestations(slot)
-
-	// Construct new active state after clean up pending attestations.
-	return NewActiveState(&pb.ActiveState{
-		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes:   a.data.RecentBlockHashes,
-	}, a.blockVoteCache)
-}
-
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(
@@ -295,11 +284,8 @@ func (a *ActiveState) CalculateNewActiveState(
 	var err error
 
 	newState := a.CopyState()
-	// Cleans up old attestations.
-	newState.CleanUpActiveState(cState.LastStateRecalculationSlot())
 
-	// Derive the new set of pending attestations.
-	newState.data.PendingAttestations = newState.appendNewAttestations(block.data.Attestations)
+	newState.updateAttestations(cState.LastStateRecalculationSlot(), block.Attestations())
 
 	// Derive the new set of recent block hashes.
 	newState.data.RecentBlockHashes, err = newState.calculateNewBlockHashes(block, parentSlot)
