@@ -14,11 +14,10 @@ import (
 // of an in-memory beacon chain for client test runs
 // and other e2e use cases.
 type SimulatedBackend struct {
-	chainService   *blockchain.ChainService
-	db             *simulatedDB
-	cState         *types.CrystallizedState
-	aState         *types.ActiveState
-	testParameters string
+	chainService *blockchain.ChainService
+	db           *simulatedDB
+	cState       *types.CrystallizedState
+	aState       *types.ActiveState
 }
 
 type simulatedDB struct{}
@@ -27,6 +26,7 @@ type simulatedDB struct{}
 // utilizing a mockDB which will act according to test run parameters specified
 // in the common ETH 2.0 client test YAML format.
 func NewSimulatedBackend() (*SimulatedBackend, error) {
+	// NOTE: Include a mock beaconDB.
 	cs, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		IncomingBlockBuf:          0,
 		EnablePOWChain:            false,
@@ -42,8 +42,9 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}, nil
 }
 
-// Commit a new block to the chain directly
-// and sets it as the head of the simulated backend.
-func (s *SimulatedBackend) Commit() {
-	return
+// RunChainTests uses a parsed set of chaintests from a YAML file
+// according to the ETH 2.0 client chain test specification and runs them
+// against the simulated backend.
+func (sb *SimulatedBackend) RunChainTests(testCases []*ChainTestCases) error {
+	return nil
 }
