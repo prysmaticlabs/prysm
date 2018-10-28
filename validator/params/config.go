@@ -19,7 +19,7 @@ func DefaultConfig() *Config {
 // DemoConfig for running the system under shorter defaults.
 func DemoConfig() *Config {
 	return &Config{
-		SlotDuration: 8.0,
+		SlotDuration: 2.0,
 		CycleLength:  5,
 	}
 }
