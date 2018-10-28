@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["simulated_backend.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/types:go_default_library",
+    ],
+)
