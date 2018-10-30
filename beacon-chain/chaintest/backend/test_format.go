@@ -4,37 +4,37 @@ package backend
 type ChainTest struct {
 	Title     string
 	Summary   string
-	TestSuite string
-	TestCases []*ChainTestCases
+	TestSuite string            `yaml:"test_suite"`
+	TestCases []*ChainTestCases `yaml:"test_cases"`
 }
 
 // ChainTestCases --
 type ChainTestCases struct {
-	Config *ChainTestConfig
-	Slots  []*ChainTestSlot
-	Result *ChainTestResult
+	Config  *ChainTestConfig  `yaml:"config"`
+	Slots   []*ChainTestSlot  `yaml:"slots,flow"`
+	Results *ChainTestResults `yaml:"results"`
 }
 
 // ChainTestConfig --
 type ChainTestConfig struct {
-	ValidatorCount   int
-	CycleLength      int
-	ShardCount       int
-	MinCommitteeSize int
+	ValidatorCount   int `yaml:"validator_count"`
+	CycleLength      int `yaml:"cycle_length"`
+	ShardCount       int `yaml:"shard_count"`
+	MinCommitteeSize int `yaml:"min_committee_size"`
 }
 
 // ChainTestSlot --
 type ChainTestSlot struct {
-	SlotNumber   int
-	NewBlock     *TestBlock
-	Attestations []*TestAttestation
+	SlotNumber   int                `yaml:"slot_number"`
+	NewBlock     *TestBlock         `yaml:"new_block"`
+	Attestations []*TestAttestation `yaml:",flow"`
 }
 
-// ChainTestResult --
-type ChainTestResult struct {
+// ChainTestResults --
+type ChainTestResults struct {
 	Head               string
-	LastJustifiedBlock string
-	LastFinalizedBlock string
+	LastJustifiedBlock string `yaml:"last_justified_block"`
+	LastFinalizedBlock string `yaml:"last_finalized_block"`
 }
 
 // TestBlock --
