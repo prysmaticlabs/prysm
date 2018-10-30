@@ -46,6 +46,7 @@ func (db *BeaconDB) GetAttestation(hash [32]byte) (*types.Attestation, error) {
 // HasAttestation checks if the attestation exists.
 func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 	exists := false
+	// #nosec G104
 	db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
