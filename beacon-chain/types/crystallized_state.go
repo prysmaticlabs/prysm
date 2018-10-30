@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -38,7 +40,7 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 
 	// Bootstrap cross link records.
 	var crosslinks []*pb.CrosslinkRecord
-	for i := 0; i < shardCount; i++ {
+	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
 			RecentlyChanged: false,
 			ShardBlockHash:  make([]byte, 0, 32),
@@ -230,9 +232,22 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
-	slotsStart := c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
-	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
-	return casper.CommitteeInShardAndSlot(slotIndex, attestation.GetShard(), c.data.GetShardAndCommitteesForSlots())
+	shardCommittees, err := casper.GetShardAndCommitteesForSlot(
+		c.ShardAndCommitteesForSlots(),
+		c.LastStateRecalculationSlot(),
+		attestation.GetSlot())
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch ShardAndCommittees for slot %d: %v", attestation.Slot, err)
+	}
+
+	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
+	for i := 0; i < len(shardCommitteesArray); i++ {
+		if attestation.Shard == shardCommitteesArray[i].Shard {
+			return shardCommitteesArray[i].Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.Shard)
 }
 
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state

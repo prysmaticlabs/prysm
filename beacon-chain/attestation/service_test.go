@@ -7,8 +7,13 @@ import (
 	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+}
 
 func TestIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
