@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -12,12 +13,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
 	floodsub "github.com/libp2p/go-floodsub"
-	floodsubPb "github.com/libp2p/go-floodsub/pb"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -48,44 +47,9 @@ func TestBroadcast(t *testing.T) {
 	// TODO(543): test that topic was published
 }
 
-func TestEmitFailsNonProtobuf(t *testing.T) {
-	s, _ := NewServer()
-	hook := logTest.NewGlobal()
-	s.emit(Message{}, &event.Feed{}, nil /*msg*/, reflect.TypeOf(""))
-	want := "Received message is not a protobuf message: string"
-	if hook.LastEntry().Message != want {
-		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
-	}
-}
-
-func TestEmitFailsUnmarshal(t *testing.T) {
-	s, _ := NewServer()
-	hook := logTest.NewGlobal()
-	msg := &floodsub.Message{
-		&floodsubPb.Message{
-			Data: []byte("bogus"),
-		},
-	}
-
-	s.emit(Message{}, &event.Feed{}, msg, reflect.TypeOf(testpb.TestMessage{}))
-	want := "Failed to decode data:"
-	if !strings.Contains(hook.LastEntry().Message, want) {
-		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
-	}
-}
-
 func TestEmit(t *testing.T) {
 	s, _ := NewServer()
 	p := &testpb.TestMessage{Foo: "bar"}
-	d, err := proto.Marshal(p)
-	if err != nil {
-		t.Fatalf("failed to marshal pb: %v", err)
-	}
-	msg := &floodsub.Message{
-		&floodsubPb.Message{
-			Data: d,
-		},
-	}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -94,7 +58,7 @@ func TestEmit(t *testing.T) {
 	feed.EXPECT().Send(gomock.AssignableToTypeOf(Message{})).Times(1).Do(func(m Message) {
 		got = m
 	})
-	s.emit(Message{}, feed, msg, messageType(&testpb.TestMessage{}))
+	s.emit(Message{Ctx: context.Background(), Data: p}, feed)
 	if !proto.Equal(p, got.Data) {
 		t.Error("feed was not called with the correct data")
 	}
@@ -193,6 +157,53 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.P
 	case <-done:
 	case <-ctx.Done():
 		t.Error("Context timed out before a message was received!")
+	}
+}
+
+func TestRegisterTopic_HandleInvalidProtobufs(t *testing.T) {
+	topic := shardpb.Topic_COLLATION_BODY_REQUEST
+	hook := logTest.NewGlobal()
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	gsub, err := floodsub.NewFloodSub(ctx, h)
+	if err != nil {
+		t.Errorf("Failed to create floodsub: %v", err)
+	}
+
+	s := Server{
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]Feed),
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
+	}
+
+	s.RegisterTopic(topic.String(), &shardpb.CollationBodyRequest{})
+	ch := make(chan Message)
+	sub := s.Subscribe(&shardpb.CollationBodyRequest{}, ch)
+	defer sub.Unsubscribe()
+
+	if err = gsub.Publish(topic.String(), []byte("invalid protobuf message")); err != nil {
+		t.Errorf("Failed to publish message: %v", err)
+	}
+	pbMsg := &shardpb.CollationBodyRequest{ShardId: 5}
+	b, err := proto.Marshal(pbMsg)
+	if err != nil {
+		t.Errorf("Failed to marshal service %v", err)
+	}
+	if err = gsub.Publish(topic.String(), b); err != nil {
+		t.Errorf("Failed to publish message: %v", err)
+	}
+
+	select {
+	case <-ctx.Done():
+		t.Error("Context timed out before a message was received!")
+	case <-ch:
+		logContains(t, hook, "Failed to decode data", logrus.ErrorLevel)
 	}
 }
 
@@ -313,4 +324,15 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) er
 	time.Sleep(time.Millisecond * 10)
 
 	return gsub.Publish(topic, b)
+}
+
+func logContains(t *testing.T, hook *logTest.Hook, message string, level logrus.Level) {
+	var logs string
+	for _, entry := range hook.AllEntries() {
+		logs = fmt.Sprintf("%s\nlevel=%s msg=\"%s\"", logs, entry.Level, entry.Message)
+		if entry.Level == level && strings.Contains(entry.Message, message) {
+			return
+		}
+	}
+	t.Errorf("Expected log to contain level=%s and msg=\"%s\" inside log entries: %s", level, message, logs)
 }

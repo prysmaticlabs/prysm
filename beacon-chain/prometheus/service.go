@@ -33,7 +33,7 @@ func (s *Service) Start() {
 	log.WithField("endpoint", s.server.Addr).Info("Starting service")
 	go func() {
 		err := s.server.ListenAndServe()
-		if err != nil {
+		if err != nil && err != http.ErrServerClosed {
 			log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
 		}
 	}()

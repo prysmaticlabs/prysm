@@ -112,18 +112,22 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				log.WithError(s.ctx.Err()).Debug("Context error")
 				return
 			}
-
 			if err != nil {
 				log.Errorf("Failed to get next message: %v", err)
 				return
 			}
 
-			var h Handler = func(pMsg Message) {
-				s.emit(pMsg, feed, msg, msgType)
+			d := message
+			if err := proto.Unmarshal(msg.Data, d); err != nil {
+				log.WithError(err).Error("Failed to decode data")
+				continue
 			}
 
-			pMsg := Message{Ctx: s.ctx}
+			var h Handler = func(pMsg Message) {
+				s.emit(pMsg, feed)
+			}
 
+			pMsg := Message{Ctx: s.ctx, Data: d}
 			for _, adapter := range adapters {
 				h = adapter(h)
 			}
@@ -133,25 +137,12 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}()
 }
 
-func (s *Server) emit(pMsg Message, feed Feed, msg *floodsub.Message, msgType reflect.Type) {
-	d, ok := reflect.New(msgType).Interface().(proto.Message)
-	if !ok {
-		log.Errorf("Received message is not a protobuf message: %s", msgType)
-		return
-	}
-
-	if err := proto.Unmarshal(msg.Data, d); err != nil {
-		log.Errorf("Failed to decode data: %v", err)
-		return
-	}
-
-	pMsg.Data = d
-
-	i := feed.Send(pMsg)
+func (s *Server) emit(msg Message, feed Feed) {
+	i := feed.Send(msg)
 	log.WithFields(logrus.Fields{
 		"numSubs": i,
-		"msgType": fmt.Sprintf("%T", d),
-		"msgName": proto.MessageName(d),
+		"msgType": fmt.Sprintf("%T", msg.Data),
+		"msgName": proto.MessageName(msg.Data),
 	}).Debug("Emit p2p message to feed subscribers")
 }
 
