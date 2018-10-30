@@ -49,6 +49,7 @@ func (db *BeaconDB) GetBlock(hash [32]byte) (*types.Block, error) {
 // HasBlock accepts a block hash and returns true if the block does not exist.
 func (db *BeaconDB) HasBlock(hash [32]byte) bool {
 	hasBlock := false
+	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(blockBucket)
 
