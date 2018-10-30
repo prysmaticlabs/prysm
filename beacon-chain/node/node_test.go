@@ -39,6 +39,8 @@ func TestNodeValidator_Builds(t *testing.T) {
 	if e, ok := err.(*exec.ExitError); !ok || e.Success() {
 		t.Fatalf("Process ran with err %v, want exit status 1", err)
 	}
+	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+	os.RemoveAll(tmp)
 }
 
 // Test that beacon chain node can close.
