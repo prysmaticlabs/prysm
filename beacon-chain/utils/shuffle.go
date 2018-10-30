@@ -15,7 +15,7 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 	// Since we are consuming 3 bytes of entropy at a time in the loop,
 	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
 	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
-	if len(validatorList) > params.GetConfig().ModuloBias {
+	if uint64(len(validatorList)) > params.GetConfig().ModuloBias {
 		return nil, errors.New("exceeded upper bound for validator shuffle")
 	}
 
@@ -37,11 +37,12 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 }
 
 // SplitIndices splits a list into n pieces.
-func SplitIndices(l []uint32, n int) [][]uint32 {
+func SplitIndices(l []uint32, n uint64) [][]uint32 {
 	var divided [][]uint32
-	for i := 0; i < n; i++ {
-		start := len(l) * i / n
-		end := len(l) * (i + 1) / n
+	var lSize = uint64(len(l))
+	for i := uint64(0); i < n; i++ {
+		start := lSize * i / n
+		end := lSize * (i + 1) / n
 		divided = append(divided, l[start:end])
 	}
 	return divided
