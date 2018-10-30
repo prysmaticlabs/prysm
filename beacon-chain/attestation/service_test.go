@@ -4,31 +4,22 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func setupService(t *testing.T) *Service {
-	ctx := context.Background()
-
-	config := db.Config{Path: "", Name: "", InMemory: true}
-	db, err := db.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
-
-	cfg := &Config{
-		BeaconDB: db,
-	}
-
-	return NewAttestationService(ctx, cfg)
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func TestIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
-	service := setupService(t)
+	beaconDB := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, beaconDB)
+	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exitRoutine := make(chan bool)
 	go func() {

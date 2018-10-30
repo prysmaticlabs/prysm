@@ -18,11 +18,11 @@ type ValidatorSetDeltaFlags int
 
 // Config contains configs for node to participate in beacon chain.
 type Config struct {
-	ShardCount                    int       // ShardCount is the fixed number of shards in Ethereum 2.0.
-	DepositSize                   int       // DepositSize is how much a validator has deposited in Gwei.
-	BootstrappedValidatorsCount   int       // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
-	ModuloBias                    int       // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
-	Gwei                          int       // Gwei is the denomination of Gwei in Ether.
+	ShardCount                    uint64    // ShardCount is the fixed number of shards in Ethereum 2.0.
+	DepositSize                   uint64    // DepositSize is how much a validator has deposited in Gwei.
+	BootstrappedValidatorsCount   uint64    // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
+	ModuloBias                    uint64    // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
+	Gwei                          uint64    // Gwei is the denomination of Gwei in Ether.
 	CycleLength                   uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                  uint64    // SlotDuration is how many seconds are in a single slot.
 	MinValidatorSetChangeInterval uint64    // MinValidatorSetChangeInterval is the slots needed before validator set changes.
@@ -33,6 +33,8 @@ type Config struct {
 	LogOutMessage                 string    // This is the message a validator will send in order to log out.
 	WithdrawalPeriod              uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
+	MinDeposit                    uint64    // MinDeposit is the minimal amount of Ether a validator needs to participate.
+	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
 }
 
 var defaultConfig = &Config{
@@ -42,7 +44,8 @@ var defaultConfig = &Config{
 	ShardCount:                    1024,
 	Gwei:                          1e9,
 	DepositSize:                   32,
-	SlotDuration:                  uint64(8),
+	MinDeposit:                    16,
+	SlotDuration:                  uint64(16),
 	MinCommiteeSize:               uint64(128),
 	BootstrappedValidatorsCount:   1000,
 	MinValidatorSetChangeInterval: uint64(256),
@@ -59,13 +62,15 @@ var demoConfig = &Config{
 	ShardCount:                    5,
 	Gwei:                          1e9,
 	DepositSize:                   32,
-	SlotDuration:                  uint64(8),
+	MinDeposit:                    16,
+	SlotDuration:                  uint64(2),
 	MinCommiteeSize:               uint64(3),
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(128),
 	MaxValidatorChurnQuotient:     uint64(32),
+	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
 
 const (

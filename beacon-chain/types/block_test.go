@@ -18,8 +18,8 @@ func init() {
 
 type mockDB struct{}
 
-func (f *mockDB) HasBlock(h [32]byte) (bool, error) {
-	return true, nil
+func (f *mockDB) HasBlock(h [32]byte) bool {
+	return true
 }
 
 func TestGenesisBlock(t *testing.T) {
@@ -81,7 +81,6 @@ func TestGenesisBlock(t *testing.T) {
 
 func TestBlockValidity(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState(nil)
-
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
@@ -111,7 +110,7 @@ func TestBlockValidity(t *testing.T) {
 		},
 	})
 
-	parentSlot := uint64(1)
+	parentSlot := uint64(0)
 	db := &mockDB{}
 
 	if !b.isAttestationValid(0, db, aState, cState, parentSlot) {
@@ -122,9 +121,60 @@ func TestBlockValidity(t *testing.T) {
 	if !b.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
-	if !b.IsValid(db, aState, cState, parentSlot, true, genesisTime) {
-		t.Fatalf("failed block validation")
+}
+
+func TestBlockValidityNoParentProposer(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
+
+	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
+	}
+
+	aState := NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: recentBlockHashes,
+	}, make(map[[32]byte]*utils.VoteCache))
+	parentSlot := uint64(1)
+	db := &mockDB{}
+
+	// Test case with invalid RANDAO reveal.
+	badRandaoBlock := NewBlock(&pb.BeaconBlock{
+		Slot:         2,
+		RandaoReveal: []byte{'B'},
+		Attestations: []*pb.AggregatedAttestation{
+			{
+				Slot:             0,
+				Shard:            1,
+				JustifiedSlot:    0,
+				AttesterBitfield: []byte{64, 0},
+			},
+		},
+	})
+	genesisTime := params.GetConfig().GenesisTime
+	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+		t.Fatalf("should have failed doesParentProposerExist")
+	}
+}
+
+func TestBlockValidityInvalidRandao(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("failed to generate crystallized state: %v", err)
+	}
+
+	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
+	}
+
+	aState := NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: recentBlockHashes,
+	}, make(map[[32]byte]*utils.VoteCache))
+	parentSlot := uint64(0)
+	db := &mockDB{}
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := NewBlock(&pb.BeaconBlock{
@@ -139,6 +189,7 @@ func TestBlockValidity(t *testing.T) {
 			},
 		},
 	})
+	genesisTime := params.GetConfig().GenesisTime
 	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("should have failed with invalid RANDAO")
 	}
@@ -159,5 +210,32 @@ func TestIsAttestationSlotNumberValid(t *testing.T) {
 
 	if !isAttestationSlotNumberValid(2, 10) {
 		t.Errorf("attestation slot number could be less than or equal to parent block's slot number")
+	}
+}
+
+func TestUpdateAncestorHashes(t *testing.T) {
+	parentHashes := make([][32]byte, 32)
+	for i := 0; i < 32; i++ {
+		parentHashes[i] = hashutil.Hash([]byte{byte(i)})
+	}
+
+	tests := []struct {
+		a uint64
+		b [32]byte
+		c int
+	}{
+		{a: 1, b: [32]byte{'a'}, c: 0},
+		{a: 2, b: [32]byte{'b'}, c: 1},
+		{a: 4, b: [32]byte{'c'}, c: 2},
+		{a: 8, b: [32]byte{'d'}, c: 3},
+		{a: 16, b: [32]byte{'e'}, c: 4},
+		{a: 1 << 29, b: [32]byte{'f'}, c: 29},
+		{a: 1 << 30, b: [32]byte{'g'}, c: 30},
+		{a: 1 << 31, b: [32]byte{'h'}, c: 31},
+	}
+	for _, tt := range tests {
+		if UpdateAncestorHashes(parentHashes, tt.a, tt.b)[tt.c] != tt.b {
+			t.Errorf("Failed to update ancestor hash at index %d. Wanted: %v, got: %v", tt.c, tt.b, UpdateAncestorHashes(parentHashes, tt.a, tt.b)[tt.c])
+		}
 	}
 }

@@ -16,14 +16,14 @@ const bitsInByte = 8
 // InitialValidators creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidators() []*pb.ValidatorRecord {
-
+	config := params.GetConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
-	validators := make([]*pb.ValidatorRecord, params.GetConfig().BootstrappedValidatorsCount)
-	for i := 0; i < params.GetConfig().BootstrappedValidatorsCount; i++ {
+	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
+	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           uint64(params.GetConfig().DepositSize),
+			Balance:           config.DepositSize * config.Gwei,
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoReveal[:],
@@ -35,58 +35,41 @@ func InitialValidators() []*pb.ValidatorRecord {
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, len(validators))
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.Active) {
+	indices := make([]uint32, 0, len(validators))
+	for i, v := range validators {
+		if v.Status == uint64(params.Active) {
 			indices = append(indices, uint32(i))
 		}
-	}
-	return indices[len(validators):]
-}
 
-// ExitedValidatorIndices filters out exited validators based on validator status
-// and returns their indices in a list.
-func ExitedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, len(validators))
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingExit) {
-			indices = append(indices, uint32(i))
-		}
 	}
-	return indices[len(validators):]
-}
-
-// QueuedValidatorIndices filters out queued validators based on validator status
-// and returns their indices in a list.
-func QueuedValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
-	var indices = make([]uint32, len(validators))
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingActivation) {
-			indices = append(indices, uint32(i))
-		}
-	}
-	return indices[len(validators):]
+	return indices
 }
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	if lastStateRecalc < params.GetConfig().CycleLength {
-		lastStateRecalc = 0
-	} else {
-		lastStateRecalc = lastStateRecalc - params.GetConfig().CycleLength
-	}
+	cycleLength := params.GetConfig().CycleLength
 
-	lowerBound := lastStateRecalc
-	upperBound := lastStateRecalc + params.GetConfig().CycleLength*2
-	if !(slot >= lowerBound && slot < upperBound) {
-		return nil, fmt.Errorf("cannot return attester set of given slot, input slot %v has to be in between %v and %v",
+	var lowerBound uint64
+	if lastStateRecalc >= cycleLength {
+		lowerBound = lastStateRecalc - cycleLength
+	}
+	upperBound := lastStateRecalc + 2*cycleLength
+	if slot < lowerBound || slot >= upperBound {
+		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
 			slot,
 			lowerBound,
 			upperBound,
 		)
 	}
 
-	return shardCommittees[slot-lastStateRecalc], nil
+	// If in the previous or current cycle, simply calculate offset
+	if slot < lastStateRecalc+2*cycleLength {
+		return shardCommittees[slot-lowerBound], nil
+	}
+
+	// Otherwise, use the 3rd cycle
+	index := lowerBound + 2*cycleLength + slot%cycleLength
+	return shardCommittees[index], nil
 }
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
@@ -198,9 +181,9 @@ func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shard
 // TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
 func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
-	activeValidators := ActiveValidatorIndices(validators)
+	indices := ActiveValidatorIndices(validators)
 
-	for _, index := range activeValidators {
+	for _, index := range indices {
 		totalDeposit += validators[index].GetBalance()
 	}
 	return totalDeposit
@@ -209,22 +192,9 @@ func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(validators)
-	depositInEth := totalDeposit / uint64(params.GetConfig().Gwei)
+	depositInEth := totalDeposit / params.GetConfig().Gwei
 
 	return depositInEth
-}
-
-// CommitteeInShardAndSlot returns the shard committee for a a particular slot index and shard.
-func CommitteeInShardAndSlot(slotIndex uint64, shardID uint64, shardCommitteeArray []*pb.ShardAndCommitteeArray) ([]uint32, error) {
-	shardCommittee := shardCommitteeArray[slotIndex].ArrayShardAndCommittee
-
-	for i := 0; i < len(shardCommittee); i++ {
-		if shardID == shardCommittee[i].Shard {
-			return shardCommittee[i].Committee, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unable to find committee based on slot index: %v, and Shard: %v", slotIndex, shardID)
 }
 
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
@@ -266,7 +236,7 @@ func AddPendingValidator(
 		WithdrawalShard:   withdrawalShard,
 		WithdrawalAddress: withdrawalAddr,
 		RandaoCommitment:  randaoCommitment,
-		Balance:           uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei),
+		Balance:           params.GetConfig().DepositSize * params.GetConfig().Gwei,
 		Status:            uint64(params.PendingActivation),
 		ExitSlot:          0,
 	}
@@ -281,9 +251,25 @@ func AddPendingValidator(
 	return validators
 }
 
+// ExitValidator exits validator from the active list. It returns
+// updated validator record with an appropriate status of each validator.
+func ExitValidator(
+	validator *pb.ValidatorRecord,
+	currentSlot uint64,
+	panalize bool) *pb.ValidatorRecord {
+	// TODO(#614): Add validator set change
+	validator.ExitSlot = currentSlot
+	if panalize {
+		validator.Status = uint64(params.Penalized)
+	} else {
+		validator.Status = uint64(params.PendingExit)
+	}
+	return validator
+}
+
 // ChangeValidators updates the validator set during state transition.
 func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
-	maxAllowableChange := uint64(2 * params.GetConfig().DepositSize * params.GetConfig().Gwei)
+	maxAllowableChange := 2 * params.GetConfig().DepositSize * params.GetConfig().Gwei
 
 	totalBalance := TotalActiveValidatorDeposit(validators)
 
@@ -296,13 +282,15 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.PendingActivation) {
 			validators[i].Status = uint64(params.Active)
-			totalChanged += uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)
+			totalChanged += params.GetConfig().DepositSize * params.GetConfig().Gwei
+
 			// TODO(#614): Add validator set change.
 		}
 		if validators[i].Status == uint64(params.PendingExit) {
 			validators[i].Status = uint64(params.PendingWithdraw)
 			validators[i].ExitSlot = currentSlot
 			totalChanged += validators[i].Balance
+
 			// TODO(#614): Add validator set change.
 		}
 		if totalChanged > maxAllowableChange {
@@ -332,16 +320,6 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	return validators
 }
 
-// minEmptyValidator returns the lowest validator index which the status is withdrawn.
-func minEmptyValidator(validators []*pb.ValidatorRecord) int {
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.Withdrawn) {
-			return i
-		}
-	}
-	return -1
-}
-
 // CopyValidators creates a fresh new validator set by copying all the validator information
 // from the old validator set. This is used in calculating the new state of the crystallized
 // state, where the changes to the validator balances are applied to the new validator set.
@@ -360,4 +338,27 @@ func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 		}
 	}
 	return newValidatorSet
+}
+
+// CheckValidatorMinDeposit checks if a validator deposit has fallen below min online deposit size,
+// it exits the validator if it's below.
+func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot uint64) []*pb.ValidatorRecord {
+	for index, validator := range validatorSet {
+		MinDepositInGWei := params.GetConfig().MinDeposit * params.GetConfig().Gwei
+		isValidatorActive := validator.Status == uint64(params.Active)
+		if validator.Balance < MinDepositInGWei && isValidatorActive {
+			validatorSet[index] = ExitValidator(validator, currentSlot, false)
+		}
+	}
+	return validatorSet
+}
+
+// minEmptyValidator returns the lowest validator index which the status is withdrawn.
+func minEmptyValidator(validators []*pb.ValidatorRecord) int {
+	for i := 0; i < len(validators); i++ {
+		if validators[i].Status == uint64(params.Withdrawn) {
+			return i
+		}
+	}
+	return -1
 }

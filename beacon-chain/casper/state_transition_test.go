@@ -2,6 +2,7 @@ package casper
 
 import (
 	"bytes"
+	"encoding/binary"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -220,4 +221,50 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())
 	}
 
+}
+
+func TestProcessSpecialRecords(t *testing.T) {
+	validator4Index := make([]byte, 8)
+	binary.BigEndian.PutUint64(validator4Index, 4)
+	validator5Index := make([]byte, 8)
+	binary.BigEndian.PutUint64(validator5Index, 5)
+	validator6Index := make([]byte, 8)
+	binary.BigEndian.PutUint64(validator6Index, 6)
+	validator7Index := make([]byte, 8)
+	binary.BigEndian.PutUint64(validator7Index, 7)
+
+	specialRecords := []*pb.SpecialRecord{
+		{Kind: uint32(params.Logout), Data: [][]byte{validator4Index}},                    // Validator 4
+		{Kind: uint32(params.Logout), Data: [][]byte{validator5Index}},                    // Validator 5
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{validator6Index, {byte('A')}}}, // Validator 6
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{validator7Index, {byte('B')}}}, // Validator 7
+	}
+
+	validators := make([]*pb.ValidatorRecord, 10)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{Status: uint64(params.Active)}
+	}
+
+	newValidators, err := ProcessSpecialRecords(99, validators, specialRecords)
+	if err != nil {
+		t.Fatalf("Failed to call process special records %v", err)
+	}
+	if newValidators[4].Status != uint64(params.PendingExit) {
+		t.Error("Validator 4 status is not PendingExit")
+	}
+	if newValidators[4].ExitSlot != 99 {
+		t.Error("Validator 4 exit slot is not 99")
+	}
+	if newValidators[5].Status != uint64(params.PendingExit) {
+		t.Error("Validator 5 status is not PendingExit")
+	}
+	if newValidators[5].ExitSlot != 99 {
+		t.Error("Validator 5 exit slot is not 99")
+	}
+	if !(bytes.Equal(newValidators[6].RandaoCommitment, []byte{'A'})) {
+		t.Error("Failed to set validator 7's randao reveal")
+	}
+	if !(bytes.Equal(newValidators[7].RandaoCommitment, []byte{'B'})) {
+		t.Error("Failed to set validator 8's randao reveal")
+	}
 }

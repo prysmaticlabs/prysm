@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
 	floodsub "github.com/libp2p/go-floodsub"
@@ -63,6 +63,49 @@ func TestEmit(t *testing.T) {
 		t.Error("feed was not called with the correct data")
 	}
 }
+
+// TODO(#691): Refactor using gogo/protobuf to pass travis.
+// func TestEmitFailsUnmarshal(t *testing.T) {
+// 	s, _ := NewServer()
+// 	hook := logTest.NewGlobal()
+// 	msg := &floodsub.Message{
+// 		&floodsubPb.Message{
+// 			Data: []byte("bogus"),
+// 		},
+// 	}
+
+// 	s.emit(Message{}, &event.Feed{}, msg, reflect.TypeOf(testpb.TestMessage{}))
+// 	want := "Failed to decode data:"
+// 	if !strings.Contains(hook.LastEntry().Message, want) {
+// 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+// 	}
+// }
+// TODO(#691): Refactor using gogo/protobuf to pass travis.
+// func TestEmit(t *testing.T) {
+// 	s, _ := NewServer()
+// 	p := &testpb.TestMessage{Foo: "bar"}
+// 	d, err := proto.Marshal(p)
+// 	if err != nil {
+// 		t.Fatalf("failed to marshal pb: %v", err)
+// 	}
+// 	msg := &floodsub.Message{
+// 		&floodsubPb.Message{
+// 			Data: d,
+// 		},
+// 	}
+
+// 	ctrl := gomock.NewController(t)
+// 	defer ctrl.Finish()
+// 	feed := p2pmock.NewMockFeed(ctrl)
+// 	var got Message
+// 	feed.EXPECT().Send(gomock.AssignableToTypeOf(Message{})).Times(1).Do(func(m Message) {
+// 		got = m
+// 	})
+// 	s.emit(Message{}, feed, msg, messageType(&testpb.TestMessage{}))
+// 	if !proto.Equal(p, got.Data) {
+// 		t.Error("feed was not called with the correct data")
+// 	}
+// }
 
 func TestSubscribeToTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)

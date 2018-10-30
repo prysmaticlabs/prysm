@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -26,12 +27,16 @@ type p2pAPI interface {
 	Broadcast(msg proto.Message)
 }
 
+type powChainService interface {
+	LatestBlockHash() common.Hash
+}
+
 // Simulator struct.
 type Simulator struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	p2p              p2pAPI
-	web3Service      types.POWChainService
+	web3Service      powChainService
 	beaconDB         beaconDB
 	enablePOWChain   bool
 	blockRequestChan chan p2p.Message
@@ -41,16 +46,16 @@ type Simulator struct {
 type Config struct {
 	BlockRequestBuf int
 	P2P             p2pAPI
-	Web3Service     types.POWChainService
+	Web3Service     powChainService
 	BeaconDB        beaconDB
 	EnablePOWChain  bool
 }
 
 type beaconDB interface {
-	GetActiveState() *types.ActiveState
-	GetCrystallizedState() *types.CrystallizedState
-	GetCanonicalBlock() (*types.Block, error)
+	GetChainHead() (*types.Block, error)
 	GetGenesisTime() (time.Time, error)
+	GetActiveState() (*types.ActiveState, error)
+	GetCrystallizedState() (*types.CrystallizedState, error)
 }
 
 // DefaultConfig options for the simulator.
@@ -102,7 +107,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
 
-	lastBlock, err := sim.beaconDB.GetCanonicalBlock()
+	lastBlock, err := sim.beaconDB.GetChainHead()
 	if err != nil {
 		log.Errorf("Could not fetch latest block: %v", err)
 		return
@@ -112,7 +117,6 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 	if err != nil {
 		log.Errorf("Could not get hash of the latest block: %v", err)
 	}
-
 	broadcastedBlocks := map[[32]byte]*types.Block{}
 
 	for {
@@ -121,14 +125,26 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case slot := <-slotInterval:
-			aStateHash, err := sim.beaconDB.GetActiveState().Hash()
+			aState, err := sim.beaconDB.GetActiveState()
 			if err != nil {
-				log.Errorf("Could not fetch active state hash: %v", err)
+				log.Errorf("Failed to get active state: %v", err)
 				continue
 			}
-			cStateHash, err := sim.beaconDB.GetCrystallizedState().Hash()
+			cState, err := sim.beaconDB.GetCrystallizedState()
 			if err != nil {
-				log.Errorf("Failed to fetch crystallized state hash: %v", err)
+				log.Errorf("Failed to get crystallized state: %v", err)
+				continue
+			}
+
+			aStateHash, err := aState.Hash()
+			if err != nil {
+				log.Errorf("Failed to hash active state: %v", err)
+				continue
+			}
+
+			cStateHash, err := cState.Hash()
+			if err != nil {
+				log.Errorf("Failed to hash crystallized state: %v", err)
 				continue
 			}
 
@@ -148,6 +164,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				ActiveStateRoot:       aStateHash[:],
 				CrystallizedStateRoot: cStateHash[:],
 				AncestorHashes:        [][]byte{parentHash},
+				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
 				Attestations: []*pb.AggregatedAttestation{
 					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}},
 				},
@@ -168,7 +185,6 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			}).Debug("Broadcast block hash")
 
 			broadcastedBlocks[hash] = block
-
 			lastHash = hash
 		case msg := <-requestChan:
 			data := msg.Data.(*pb.BeaconBlockRequest)

@@ -2,6 +2,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -27,7 +28,7 @@ type Block struct {
 }
 
 type beaconDB interface {
-	HasBlock(h [32]byte) (bool, error)
+	HasBlock(h [32]byte) bool
 }
 
 // NewBlock explicitly sets the data field of a block.
@@ -175,39 +176,72 @@ func (b *Block) IsValid(
 		return false
 	}
 
+	if enableAttestationValidity {
+		if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
+			return false
+		}
+	}
+
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
 	if err != nil {
-		log.Errorf("Cannot get proposer index %v", err)
+		log.Errorf("Cannot get proposer index: %v", err)
 		return false
 	}
-	log.Infof("Proposer index: %v", proposerIndex)
 
-	if enableAttestationValidity {
-		// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
-		log.Infof("Proposer index: %v", proposerIndex)
-		if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(proposerIndex)); !isBitSet {
-			log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
-			return false
-		}
-
-		for index, attestation := range b.Attestations() {
-			if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-				log.Errorf("attestation invalid: %v", attestation)
-				return false
-			}
-		}
-	}
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	blockRandaoReveal := b.RandaoReveal()
-	if !b.isRandaoValid(cStateProposerRandaoSeed) {
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
 		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
 	}
 
 	return true
+}
+
+func (b *Block) areAttestationsValid(db beaconDB, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
+	for index, attestation := range b.Attestations() {
+		if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
+			log.Errorf("attestation invalid: %v", attestation)
+			return false
+		}
+	}
+
+	return true
+}
+
+func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot uint64) bool {
+	_, parentProposerIndex, err := casper.ProposerShardAndIndex(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		parentSlot)
+	if err != nil {
+		log.Errorf("Cannot get proposer index: %v", err)
+		return false
+	}
+
+	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
+	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
+		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+		return false
+	}
+
+	return true
+}
+
+// UpdateAncestorHashes updates the skip list of ancestor block hashes.
+// i'th item is 2**i'th ancestor for i = 0, ..., 31.
+func UpdateAncestorHashes(parentAncestorHashes [][32]byte, parentSlotNum uint64, parentHash [32]byte) [][32]byte {
+	newAncestorHashes := parentAncestorHashes
+	for i := range parentAncestorHashes {
+		if (parentSlotNum % (1 << uint64(i))) == 0 {
+			newAncestorHashes[i] = parentHash
+		}
+	}
+	return newAncestorHashes
 }
 
 // isAttestationValid validates an attestation in a block.
@@ -229,11 +263,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	hash := [32]byte{}
 	copy(hash[:], attestation.JustifiedBlockHash)
-	blockInChain, err := db.HasBlock(hash)
-	if err != nil {
-		log.Errorf("unable to determine if attestation justified block is in the DB: %s", err)
-		return false
-	}
+	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
 		log.Debugf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",

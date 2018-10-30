@@ -42,7 +42,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 	size := params.GetConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{WithdrawalShard: 0, Status: uint64(params.Active)}
-	for i := 0; i < size; i++ {
+	for i := uint64(0); i < size; i++ {
 		validators[i] = validator
 	}
 
@@ -55,7 +55,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 func BenchmarkMaxValidators(b *testing.B) {
 	var validators []*pb.ValidatorRecord
 	validator := &pb.ValidatorRecord{WithdrawalShard: 0}
-	for i := 0; i < params.GetConfig().ModuloBias; i++ {
+	for i := uint64(0); i < params.GetConfig().ModuloBias; i++ {
 		validators = append(validators, validator)
 	}
 
@@ -77,7 +77,7 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 		t.Fatalf("unable to get initial shard committees %v", err)
 	}
 
-	if uint64(len(shardAndCommitteeArray)) != 2*params.GetConfig().CycleLength {
+	if uint64(len(shardAndCommitteeArray)) != 3*params.GetConfig().CycleLength {
 		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 2*params.GetConfig().CycleLength)
 	}
 
@@ -117,7 +117,7 @@ func TestSmallSampleValidators(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
-	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize / 4)
+	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize / 4
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -126,7 +126,7 @@ func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
-	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize)
+	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -135,7 +135,7 @@ func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
-	numValidators := int(params.GetConfig().CycleLength*params.GetConfig().MinCommiteeSize) * 8
+	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize * 8
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 5 {
@@ -146,9 +146,9 @@ func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
 func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 	config := params.GetConfig()
 	oldShardCount := config.ShardCount
-	config.ShardCount = int(config.CycleLength) - 1
+	config.ShardCount = config.CycleLength - 1
 
-	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize)
+	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommiteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
