@@ -1,8 +1,8 @@
-# Prysmatic Labs Ethereum 2.0 Implementation
+# Prysmatic Labs Ethereum Serenity Implementation
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg)](https://buildkite.com/prysmatic-labs/prysm)
 
-This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
+This is the main repository for the beacon chain and sharding implementation for Ethereum Serenity [Prysmatic Labs](https://prysmaticlabs.com).
 
 Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Discord or Gitter below:
 

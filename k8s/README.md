@@ -1,4 +1,4 @@
-# Kubernetes Configuration for Ethereum 2.0
+# Kubernetes Configuration for Ethereum Serenity
 
 ## Requirements
 
