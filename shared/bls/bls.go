@@ -34,6 +34,7 @@ func (p *PublicKey) BufferedPublicKey() []byte {
 }
 
 func (s *SecretKey) UnBufferSecretKey(bufferedKey []byte) {
+	s.K = big.NewInt(0).SetBytes(bufferedKey)
 
 }
 
