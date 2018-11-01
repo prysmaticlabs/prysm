@@ -167,7 +167,7 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Cannot process a genesis block")
+		log.Error("Could not process a genesis block")
 		return false
 	}
 
@@ -187,7 +187,7 @@ func (b *Block) IsValid(
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
 	if err != nil {
-		log.Errorf("Cannot get proposer index: %v", err)
+		log.Errorf("Could not get proposer index: %v", err)
 		return false
 	}
 
@@ -205,7 +205,7 @@ func (b *Block) IsValid(
 func (b *Block) areAttestationsValid(db beaconDB, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-			log.Errorf("attestation invalid: %v", attestation)
+			log.Errorf("Attestation invalid: %v", attestation)
 			return false
 		}
 	}
@@ -219,13 +219,13 @@ func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot ui
 		cState.LastStateRecalculationSlot(),
 		parentSlot)
 	if err != nil {
-		log.Errorf("Cannot get proposer index: %v", err)
+		log.Errorf("Could not get proposer index: %v", err)
 		return false
 	}
 
 	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
 	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
-		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+		log.Errorf("Could not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false
 	}
 
@@ -274,7 +274,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	// Get all the block hashes up to cycle length.
 	parentHashes, err := aState.getSignedParentHashes(b, attestation)
 	if err != nil {
-		log.Errorf("unable to get signed parent hashes: %v", err)
+		log.Errorf("Unable to get signed parent hashes: %v", err)
 		return false
 	}
 

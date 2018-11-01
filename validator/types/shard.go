@@ -75,7 +75,7 @@ func (s *Shard) HeaderByHash(hash *common.Hash) (*CollationHeader, error) {
 func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, error) {
 	header, err := s.HeaderByHash(headerHash)
 	if err != nil {
-		return nil, fmt.Errorf("cannot fetch header by hash: %v", err)
+		return nil, fmt.Errorf("could not fetch header by hash: %v", err)
 	}
 
 	if header == nil {
@@ -84,12 +84,12 @@ func (s *Shard) CollationByHeaderHash(headerHash *common.Hash) (*Collation, erro
 
 	body, err := s.BodyByChunkRoot(header.ChunkRoot())
 	if err != nil {
-		return nil, fmt.Errorf("cannot fetch body by chunk root: %v", err)
+		return nil, fmt.Errorf("could not fetch body by chunk root: %v", err)
 	}
 
 	txs, err := DeserializeBlobToTx(body)
 	if err != nil {
-		return nil, fmt.Errorf("cannot deserialize body: %v", err)
+		return nil, fmt.Errorf("could not deserialize body: %v", err)
 	}
 	return NewCollation(header, body, *txs), nil
 }
@@ -186,7 +186,7 @@ func (s *Shard) SaveHeader(header *CollationHeader) error {
 
 	encoded, err := header.EncodeRLP()
 	if err != nil {
-		return fmt.Errorf("cannot encode header: %v", err)
+		return fmt.Errorf("could not encode header: %v", err)
 	}
 
 	// uses the hash of the header as the key.
@@ -240,7 +240,7 @@ func (s *Shard) SetCanonical(header *CollationHeader) error {
 	key := canonicalCollationLookupKey(dbHeader.ShardID(), dbHeader.Period())
 	encoded, err := dbHeader.EncodeRLP()
 	if err != nil {
-		return fmt.Errorf("cannot encode header: %v", err)
+		return fmt.Errorf("could not encode header: %v", err)
 	}
 	// sets the key to be the canonical collation lookup key and val as RLP encoded
 	// collation header.
