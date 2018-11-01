@@ -122,7 +122,7 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 	// since the genesis block.
 	genesisTimestamp, err := ptypes.Timestamp(res.GetGenesisTimestamp())
 	if err != nil {
-		return fmt.Errorf("cannot compute genesis timestamp: %v", err)
+		return fmt.Errorf("could not compute genesis timestamp: %v", err)
 	}
 
 	s.genesisTimestamp = genesisTimestamp
