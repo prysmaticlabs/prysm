@@ -265,7 +265,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		Slot: 0,
 	})
 	if saveErr := chainService.beaconDB.SaveBlock(block0); saveErr != nil {
-		t.Fatalf("Cannot save block: %v", saveErr)
+		t.Fatalf("Could not save block: %v", saveErr)
 	}
 	block0Hash, err := block0.Hash()
 	if err != nil {
