@@ -5,14 +5,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestInitializeState(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	if err := db.InitializeState(nil); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
@@ -72,8 +73,8 @@ func TestInitializeState(t *testing.T) {
 }
 
 func TestGetUnfinalizedBlockState(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	aState := types.NewActiveState(&pb.ActiveState{}, map[[32]byte]*utils.VoteCache{})
 	cState := types.NewCrystallizedState(&pb.CrystallizedState{})
 	if err := db.SaveUnfinalizedBlockState(aState, cState); err != nil {

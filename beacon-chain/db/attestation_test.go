@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestSaveAndRetrieveAttestation(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	a := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:  0,
@@ -41,8 +42,8 @@ func TestSaveAndRetrieveAttestation(t *testing.T) {
 }
 
 func TestGetNilAttestation(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	nilHash := [32]byte{}
 	a, err := db.GetAttestation(nilHash)
@@ -55,8 +56,8 @@ func TestGetNilAttestation(t *testing.T) {
 }
 
 func TestGetHasAttestation(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	a := types.NewAttestation(&pb.AggregatedAttestation{
 		Slot:  0,
