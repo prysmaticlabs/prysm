@@ -71,7 +71,7 @@ func TestStart(t *testing.T) {
 	web3Service.Start()
 
 	msg := hook.LastEntry().Message
-	want := "Cannot connect to PoW chain RPC client"
+	want := "Could not connect to PoW chain RPC client"
 	if strings.Contains(want, msg) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}

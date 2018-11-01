@@ -1,6 +1,6 @@
-# Ethereum 2.0 Protocol Buffers
+# Ethereum Serenity Protocol Buffers
 
-This package defines common protobuf messages and services used by Ethereum 2.0 clients. Following the structure of:
+This package defines common protobuf messages and services used by Ethereum Serenity clients. Following the structure of:
 
 ```
 proto/
