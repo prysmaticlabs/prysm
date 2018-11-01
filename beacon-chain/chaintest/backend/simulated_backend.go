@@ -9,6 +9,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // SimulatedBackend allowing for a programmatic advancement
@@ -52,5 +55,26 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// Utilize the config parameters in the test case to setup
 	// the DB accordingly. Config parameters include:
 	// ValidatorCount, ShardCount, CycleLength, MinCommitteeSize.
+	//
+	// First we create the validators based on the test config.
+	config := params.GetConfig()
+	randaoPreCommit := [32]byte{}
+	randaoReveal := hashutil.Hash(randaoPreCommit[:])
+	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
+	for i := 0; i < testCase.Config.ValidatorCount; i++ {
+		validators[i] = &pb.ValidatorRecord{
+			Status:            uint64(params.Active),
+			Balance:           config.DepositSize * config.Gwei,
+			WithdrawalAddress: []byte{},
+			Pubkey:            []byte{},
+			RandaoCommitment:  randaoReveal[:],
+		}
+	}
+	// NOTE: We have to update the config here accordingly.
+	// NOTE: Next step is to update and save the blocks specified
+	// in the case case into the DB.
+	//
+	// Then, we call the updateHead routine and confirm the
+	// chain's head is the expected result from the test case.
 	return nil
 }
