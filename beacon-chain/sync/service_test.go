@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -61,8 +61,8 @@ func setupService(t *testing.T, db *db.BeaconDB) *Service {
 func TestProcessBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{
@@ -105,8 +105,8 @@ func TestProcessBlockHash(t *testing.T) {
 func TestProcessBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	if err := db.InitializeState(nil); err != nil {
 		t.Fatal(err)
@@ -172,8 +172,8 @@ func TestProcessBlock(t *testing.T) {
 func TestProcessMultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	if err := db.InitializeState(nil); err != nil {
 		t.Fatal(err)
@@ -253,8 +253,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 func TestBlockRequestErrors(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	ss := setupService(t, db)
 
 	exitRoutine := make(chan bool)
@@ -283,8 +283,8 @@ func TestBlockRequestErrors(t *testing.T) {
 func TestBlockRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	ss := setupService(t, db)
 
 	exitRoutine := make(chan bool)
@@ -316,8 +316,8 @@ func TestReceiveAttestation(t *testing.T) {
 	ms := &mockChainService{}
 	as := &mockAttestService{}
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	cfg := Config{
 		BlockHashBufferSize:    0,
@@ -356,8 +356,8 @@ func TestReceiveAttestation(t *testing.T) {
 func TestStartNotSynced(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	cfg := DefaultConfig()
 	cfg.ChainService = &mockChainService{}

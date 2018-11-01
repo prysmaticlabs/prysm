@@ -15,12 +15,10 @@ import (
 // and other e2e use cases.
 type SimulatedBackend struct {
 	chainService *blockchain.ChainService
-	db           *simulatedDB
+	db           *beaconDB
 	cState       *types.CrystallizedState
 	aState       *types.ActiveState
 }
-
-type simulatedDB struct{}
 
 // NewSimulatedBackend creates an instance by initializing a chain service
 // utilizing a mockDB which will act according to test run parameters specified

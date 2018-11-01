@@ -14,7 +14,7 @@ test_cases:
       # "slot_number" has a minimum of 1
       - slot_number: 1
         new_block:
-          id: "A"
+          id: A
           # "*" is used for the genesis block
           parent: "*"
         attestations:
@@ -23,42 +23,42 @@ test_cases:
             validators: "0-5"
       - slot_number: 2
         new_block:
-          id: "B"
-          parent: "A"
+          id: B
+          parent: A
         attestations:
-          - block: "B"
+          - block: B
             validators: "0, 1, 2, 3, 4, 5"
       - slot_number: 3
         new_block:
-          id: "C"
-          parent: "A"
+          id: C
+          parent: A
         attestations:
           # attestation "committee_slot" defaults to the slot during which the attestation occurs
-          - block: "C"
+          - block: C
             validators: "2-7"
           # default "committee_slot" can be directly overridden
-          - block: "C"
+          - block: C
             committee_slot: 2
             validators: "[6, 7]"
       - slot_number: 4
         new_block:
-          id: "D"
-          parent: "C"
+          id: D
+          parent: C
         attestations:
-          - block: "D"
+          - block: D
             validators: "1-4"
       # slots can be skipped entirely (5 in this case)
       - slot_number: 6
         new_block:
-          id: "E"
-          parent: "D"
+          id: E
+          parent: D
         attestations:
-          - block: "E"
+          - block: E
             validators: "0-4"
-          - block: "B"
+          - block: B
             validators: "5, 6, 7"
 
     results:
-      head: "E"
+      head: E
       last_justified_block: "*"
       last_finalized_block: "*"

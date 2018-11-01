@@ -20,8 +20,8 @@ go_test(
     deps = [
         "//beacon-chain/casper:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/internal:go_default_library",
         "//beacon-chain/powchain:go_default_library",
-        "//beacon-chain/testutil:go_default_library",
         "//beacon-chain/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
