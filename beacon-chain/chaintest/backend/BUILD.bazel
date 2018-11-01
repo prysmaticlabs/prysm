@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "setup.go",
         "simulated_backend.go",
         "test_format.go",
     ],
@@ -10,6 +11,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/types:go_default_library",
     ],
 )

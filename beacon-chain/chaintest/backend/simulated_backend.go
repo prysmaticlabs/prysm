@@ -5,9 +5,10 @@ package backend
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 // SimulatedBackend allowing for a programmatic advancement
@@ -15,17 +16,19 @@ import (
 // and other e2e use cases.
 type SimulatedBackend struct {
 	chainService *blockchain.ChainService
-	db           *beaconDB
-	cState       *types.CrystallizedState
-	aState       *types.ActiveState
+	db           *db.BeaconDB
 }
 
 // NewSimulatedBackend creates an instance by initializing a chain service
 // utilizing a mockDB which will act according to test run parameters specified
 // in the common ETH 2.0 client test YAML format.
 func NewSimulatedBackend() (*SimulatedBackend, error) {
-	// NOTE: Include a mock beaconDB.
+	db, err := setupDB()
+	if err != nil {
+		return nil, fmt.Errorf("could not setup simulated backend db: %v", err)
+	}
 	cs, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
+		BeaconDB:                  db,
 		IncomingBlockBuf:          0,
 		EnablePOWChain:            false,
 		EnableCrossLinks:          false,
@@ -37,12 +40,14 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}
 	return &SimulatedBackend{
 		chainService: cs,
+		db:           db,
 	}, nil
 }
 
-// RunChainTests uses a parsed set of chaintests from a YAML file
+// RunChainTest uses a parsed set of chaintests from a YAML file
 // according to the ETH 2.0 client chain test specification and runs them
 // against the simulated backend.
-func (sb *SimulatedBackend) RunChainTests(testCases []*ChainTestCases) error {
+func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
+	defer teardownDB(sb.db)
 	return nil
 }

@@ -4,12 +4,12 @@ package backend
 type ChainTest struct {
 	Title     string
 	Summary   string
-	TestSuite string            `yaml:"test_suite"`
-	TestCases []*ChainTestCases `yaml:"test_cases"`
+	TestSuite string           `yaml:"test_suite"`
+	TestCases []*ChainTestCase `yaml:"test_cases"`
 }
 
-// ChainTestCases --
-type ChainTestCases struct {
+// ChainTestCase --
+type ChainTestCase struct {
 	Config  *ChainTestConfig  `yaml:"config"`
 	Slots   []*ChainTestSlot  `yaml:"slots,flow"`
 	Results *ChainTestResults `yaml:"results"`
