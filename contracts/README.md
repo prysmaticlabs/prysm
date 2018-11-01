@@ -1,6 +1,6 @@
 # Prysmatic Labs Contract Page
 
-This page serves as a main reference for Prysmatic Labs' smart contracts implementation for ethereum 2.0.
+This page serves as a main reference for Prysmatic Labs' smart contracts implementation for Ethereum Serenity.
 
 ## Table of Contents
 
