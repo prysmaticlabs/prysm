@@ -3,15 +3,14 @@ package db
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestNilDB(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	b := types.NewBlock(nil)
 	h, _ := b.Hash()
@@ -31,8 +30,8 @@ func TestNilDB(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	b1 := types.NewBlock(nil)
 	h1, _ := b1.Hash()
@@ -73,8 +72,8 @@ func TestSave(t *testing.T) {
 }
 
 func TestGetBlockBySlotEmptyChain(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	b, err := db.GetBlockBySlot(0)
 	if err != nil {
@@ -86,8 +85,8 @@ func TestGetBlockBySlotEmptyChain(t *testing.T) {
 }
 
 func TestUpdateChainHeadNoBlock(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	err := db.InitializeState(nil)
 	if err != nil {
@@ -105,8 +104,8 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 }
 
 func TestUpdateChainHead(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	err := db.InitializeState(nil)
 	if err != nil {
@@ -169,8 +168,8 @@ func TestUpdateChainHead(t *testing.T) {
 }
 
 func TestChainProgress(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	err := db.InitializeState(nil)
 	if err != nil {
@@ -234,8 +233,8 @@ func TestChainProgress(t *testing.T) {
 }
 
 func TestGetGenesisTime(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
+	db := setupDB(t)
+	defer teardownDB(t, db)
 
 	time, err := db.GetGenesisTime()
 	if err == nil {

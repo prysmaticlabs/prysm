@@ -25,11 +25,11 @@ go_test(
     srcs = [
         "attestation_test.go",
         "block_test.go",
+        "db_test.go",
         "state_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/internal:go_default_library",
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/types:go_default_library",
         "//beacon-chain/utils:go_default_library",

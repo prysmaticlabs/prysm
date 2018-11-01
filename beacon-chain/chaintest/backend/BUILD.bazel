@@ -12,6 +12,5 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/types:go_default_library",
     ],
 )

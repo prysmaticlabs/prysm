@@ -49,5 +49,8 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 // against the simulated backend.
 func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	defer teardownDB(sb.db)
+	// Utilize the config parameters in the test case to setup
+	// the DB accordingly. Config parameters include:
+	// ValidatorCount, ShardCount, CycleLength, MinCommitteeSize.
 	return nil
 }
