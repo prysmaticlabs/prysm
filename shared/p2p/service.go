@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 
-	floodsub "github.com/libp2p/go-floodsub"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 )
@@ -28,7 +28,7 @@ type Server struct {
 	mutex        *sync.Mutex
 	feeds        map[reflect.Type]Feed
 	host         host.Host
-	gsub         *floodsub.PubSub
+	gsub         *pubsub.PubSub
 	topicMapping map[reflect.Type]string
 }
 
@@ -42,7 +42,7 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	gsub, err := floodsub.NewGossipSub(ctx, host)
+	gsub, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -133,7 +133,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}()
 }
 
-func (s *Server) emit(pMsg Message, feed Feed, msg *floodsub.Message, msgType reflect.Type) {
+func (s *Server) emit(pMsg Message, feed Feed, msg *pubsub.Message, msgType reflect.Type) {
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
 		log.Errorf("Received message is not a protobuf message: %s", msgType)
