@@ -17,15 +17,15 @@ type ChainTestCase struct {
 
 // ChainTestConfig --
 type ChainTestConfig struct {
-	ValidatorCount   int `yaml:"validator_count"`
-	CycleLength      int `yaml:"cycle_length"`
-	ShardCount       int `yaml:"shard_count"`
-	MinCommitteeSize int `yaml:"min_committee_size"`
+	ValidatorCount   uint64 `yaml:"validator_count"`
+	CycleLength      uint64 `yaml:"cycle_length"`
+	ShardCount       uint64 `yaml:"shard_count"`
+	MinCommitteeSize uint64 `yaml:"min_committee_size"`
 }
 
 // ChainTestSlot --
 type ChainTestSlot struct {
-	SlotNumber   int                `yaml:"slot_number"`
+	SlotNumber   uint64             `yaml:"slot_number"`
 	NewBlock     *TestBlock         `yaml:"new_block"`
 	Attestations []*TestAttestation `yaml:",flow"`
 }
@@ -47,5 +47,5 @@ type TestBlock struct {
 type TestAttestation struct {
 	Block         string
 	Validators    string
-	CommitteeSlot int
+	CommitteeSlot uint64
 }

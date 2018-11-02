@@ -53,24 +53,29 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	defer teardownDB(sb.db)
 	// Utilize the config parameters in the test case to setup
-	// the DB accordingly. Config parameters include:
-	// ValidatorCount, ShardCount, CycleLength, MinCommitteeSize.
-	//
-	// First we create the validators based on the test config.
-	config := params.GetConfig()
+	// the DB and set global config parameters accordingly.
+	// Config parameters include: ValidatorCount, ShardCount,
+	// CycleLength, MinCommitteeSize, and more based on the YAML
+	// test language specification.
+	currentConfig := params.GetConfig()
+	currentConfig.ShardCount = testCase.Config.ShardCount
+	currentConfig.CycleLength = testCase.Config.CycleLength
+	currentConfig.MinCommitteeSize = testCase.Config.MinCommitteeSize
+	params.SetCustomConfig(currentConfig)
+
+	// Then, we create the validators based on the custom test config.
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := 0; i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           config.DepositSize * config.Gwei,
+			Balance:           currentConfig.DepositSize * currentConfig.Gwei,
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoReveal[:],
 		}
 	}
-	// NOTE: We have to update the config here accordingly.
 	// NOTE: Next step is to update and save the blocks specified
 	// in the case case into the DB.
 	//
