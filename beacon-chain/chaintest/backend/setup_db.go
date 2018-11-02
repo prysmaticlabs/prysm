@@ -5,6 +5,8 @@ import (
 	"os"
 	"path"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
@@ -19,10 +21,12 @@ func setupDB() (*db.BeaconDB, error) {
 }
 
 // teardownDB cleans up a simulated backend BeaconDB instance.
-func teardownDB(db *db.BeaconDB) error {
+func teardownDB(db *db.BeaconDB) {
 	if err := db.Close(); err != nil {
-		return fmt.Errorf("failed to close database: %v", err)
+		log.Fatalf("failed to close database: %v", err)
 	}
 	path := path.Join(os.TempDir(), "/simulateddb")
-	return os.RemoveAll(path)
+	if err := os.RemoveAll(path); err != nil {
+		log.Fatalf("could not remove tmp dir: %v", err)
+	}
 }

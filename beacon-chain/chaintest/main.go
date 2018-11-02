@@ -35,7 +35,9 @@ func main() {
 	log.Infof("Test Suite: %v", chainTests.TestSuite)
 	startTime := time.Now()
 	for _, tt := range chainTests.TestCases {
-		sb.RunChainTest(tt)
+		if err := sb.RunChainTest(tt); err != nil {
+			log.Fatalf("Could not run chain test: %v", err)
+		}
 	}
 	endTime := time.Now()
 	log.Infof("Test Runs Finished In: %v Seconds", endTime.Sub(startTime).Seconds())
