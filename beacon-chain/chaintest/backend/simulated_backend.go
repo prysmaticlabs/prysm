@@ -76,7 +76,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 			RandaoCommitment:  randaoReveal[:],
 		}
 	}
-	// NOTE: Next step is to update and save the blocks specified
+	// TODO(#718): Next step is to update and save the blocks specified
 	// in the case case into the DB.
 	//
 	// Then, we call the updateHead routine and confirm the

@@ -39,13 +39,13 @@ type ChainTestResults struct {
 
 // TestBlock --
 type TestBlock struct {
-	ID     string
-	Parent string
+	ID     string `yaml:"ID"`
+	Parent string `yaml:"parent"`
 }
 
 // TestAttestation --
 type TestAttestation struct {
-	Block         string
-	Validators    string
-	CommitteeSlot uint64
+	Block         string `yaml:"block"`
+	Validators    string `yaml:"validators"`
+	CommitteeSlot uint64 `yaml:"committee_slot"`
 }
