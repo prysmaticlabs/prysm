@@ -67,7 +67,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
-	for i := 0; i < testCase.Config.ValidatorCount; i++ {
+	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
 			Balance:           currentConfig.DepositSize * currentConfig.Gwei,
