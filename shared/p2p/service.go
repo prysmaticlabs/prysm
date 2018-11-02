@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
