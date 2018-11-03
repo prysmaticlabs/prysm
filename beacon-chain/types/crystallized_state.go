@@ -48,12 +48,6 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 		})
 	}
 
-	// Calculate total deposit from boot strapped validators.
-	var totalDeposit uint64
-	for _, v := range genesisValidators {
-		totalDeposit += v.Balance
-	}
-
 	return &CrystallizedState{
 		data: &pb.CrystallizedState{
 			LastStateRecalculationSlot: 0,
@@ -61,10 +55,11 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
-			ForkSlotNumber: 0,
+			ForkSlotNumber:             0,
 			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+			ValidatorSetDeltaHashChain: make([]byte, 0, 32),
 			PreForkVersion:             params.GetConfig().InitialForkVersion,
 			PostForkVersion:            params.GetConfig().InitialForkVersion,
 		},
