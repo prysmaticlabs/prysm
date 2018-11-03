@@ -162,11 +162,9 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 		},
 	}
 
-	updatedAttestations := aState.appendNewAttestations(newAttestations)
-	aState.data.PendingAttestations = updatedAttestations
-	updatedAttestations = aState.cleanUpAttestations(8)
-	if len(updatedAttestations) != 2 {
-		t.Fatalf("Updated attestations should be length 2: %d", len(updatedAttestations))
+	aState.updateAttestations(8, newAttestations)
+	if len(aState.PendingAttestations()) != 2 {
+		t.Fatalf("Updated attestations should be length 2: %d", len(aState.PendingAttestations()))
 	}
 }
 
