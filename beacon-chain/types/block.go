@@ -289,6 +289,11 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		return false
 	}
 
+	forkVersion := cState.PostForkVersion()
+	if attestation.Slot < cState.ForkSlotNumber() {
+		forkVersion = cState.PreForkVersion()
+	}
+
 	// TODO(#258): Generate validators aggregated pub key.
 
 	attestationMsg := AttestationMsg(
