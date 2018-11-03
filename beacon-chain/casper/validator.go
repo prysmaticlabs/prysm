@@ -227,7 +227,8 @@ func AddPendingValidator(
 	pubKey []byte,
 	withdrawalShard uint64,
 	withdrawalAddr []byte,
-	randaoCommitment []byte) []*pb.ValidatorRecord {
+	randaoCommitment []byte,
+	status uint64) []*pb.ValidatorRecord {
 
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
@@ -237,7 +238,7 @@ func AddPendingValidator(
 		WithdrawalAddress: withdrawalAddr,
 		RandaoCommitment:  randaoCommitment,
 		Balance:           params.GetConfig().DepositSize * params.GetConfig().Gwei,
-		Status:            uint64(params.PendingActivation),
+		Status:            status,
 		ExitSlot:          0,
 	}
 

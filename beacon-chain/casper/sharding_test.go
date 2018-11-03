@@ -77,7 +77,7 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 		t.Fatalf("unable to get initial shard committees %v", err)
 	}
 
-	if uint64(len(shardAndCommitteeArray)) != 3*params.GetConfig().CycleLength {
+	if uint64(len(shardAndCommitteeArray)) != 2*params.GetConfig().CycleLength {
 		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 2*params.GetConfig().CycleLength)
 	}
 
