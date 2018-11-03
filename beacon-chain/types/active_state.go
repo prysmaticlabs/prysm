@@ -310,7 +310,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		cState.LastStateRecalculationSlot(),
 		parentSlot)
 	if err != nil {
-		return nil, fmt.Errorf("Can not get proposer index %v", err)
+		return nil, fmt.Errorf("could not get proposer index %v", err)
 	}
 
 	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
