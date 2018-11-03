@@ -215,6 +215,23 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 	}
 }
 
+func (c *ChainService) executeStateTransition(
+	cState *types.CrystallizedState,
+	aState *types.ActiveState,
+	block *types.Block) (*types.CrystallizedState, error) {
+
+	var err error
+	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
+	for cState.IsCycleTransition(block.SlotNumber()) {
+		cState, err = cState.NewStateRecalculations(aState, block, c.enableCrossLinks, c.enableRewardChecking)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cState, nil
+}
+
 func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
@@ -271,16 +288,11 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			// If the block is valid, we compute its associated state tuple (active, crystallized)
 			// and apply a block scoring function.
 			var didCycleTransition bool
-			for cState.IsCycleTransition(block.SlotNumber()) {
-				log.Infof("executing state transition for slot %d", block.SlotNumber())
-				cState, err = cState.NewStateRecalculations(
-					aState,
-					block,
-					c.enableCrossLinks,
-					c.enableRewardChecking,
-				)
+			if cState.IsCycleTransition(block.SlotNumber()) {
+				cState, err = c.executeStateTransition(cState, aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
+					continue
 				}
 				didCycleTransition = true
 			}
