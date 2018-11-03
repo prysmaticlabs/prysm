@@ -18,7 +18,7 @@ type ValidatorSetDeltaFlags int
 
 // Config contains configs for node to participate in beacon chain.
 type Config struct {
-	ShardCount                    uint64    // ShardCount is the fixed number of shards in Ethereum 2.0.
+	ShardCount                    uint64    // ShardCount is the fixed number of shards in Ethereum Serenity.
 	DepositSize                   uint64    // DepositSize is how much a validator has deposited in Gwei.
 	BootstrappedValidatorsCount   uint64    // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
 	ModuloBias                    uint64    // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.

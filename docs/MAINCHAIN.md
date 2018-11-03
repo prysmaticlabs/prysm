@@ -1,6 +1,6 @@
-# Connecting Ethereum 2.0 to a Mainchain, Go-Ethereum Node
+# Connecting Ethereum Serenity to a Mainchain, Go-Ethereum Node
 
-In order to test out validator registration and synchronize the Ethereum 2.0 beacon chain with a proof-of-work, mainchain node, you'll need to initialize your own private Ethereum blockchain as follows:
+In order to test out validator registration and synchronize the Ethereum Serenity beacon chain with a proof-of-work, mainchain node, you'll need to initialize your own private Ethereum blockchain as follows:
 
 ## Running a Local Geth Node
 
