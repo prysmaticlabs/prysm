@@ -284,7 +284,7 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 
 	attestation, err := ss.db.GetAttestation(h)
 	if err != nil {
-		log.Errorf("Can not check for attestation in DB: %v", err)
+		log.Errorf("Could not check for attestation in DB: %v", err)
 		return
 	}
 	if attestation != nil {

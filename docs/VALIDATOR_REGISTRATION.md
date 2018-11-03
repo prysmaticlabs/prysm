@@ -36,7 +36,7 @@ as long as pub key matches the one you used to launch beacon chain node. (ex: aa
 
 ### Step 4: Wait for Deposit Tx Block to be Mined
 
-After the deposit transaction gets mined, beacon chain node will report account holder has been registered. Congrats! Now, you are contributing to the security of Ethereum 2.0 : )
+After the deposit transaction gets mined, beacon chain node will report account holder has been registered. Congrats! Now, you are contributing to the security of Ethereum Serenity
 ```
 INFO[0000] Starting beacon node
 INFO[0000] Starting web3 PoW chain service at ws://127.0.0.1:8546
