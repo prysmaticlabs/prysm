@@ -3,18 +3,22 @@ package p2p
 import (
 	"context"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
-	floodsub "github.com/libp2p/go-floodsub"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubPb "github.com/libp2p/go-libp2p-pubsub/pb"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -54,57 +58,56 @@ func TestEmitFailsNonProtobuf(t *testing.T) {
 	}
 }
 
-// TODO(#691): Refactor using gogo/protobuf to pass travis.
-// func TestEmitFailsUnmarshal(t *testing.T) {
-// 	s, _ := NewServer()
-// 	hook := logTest.NewGlobal()
-// 	msg := &floodsub.Message{
-// 		&floodsubPb.Message{
-// 			Data: []byte("bogus"),
-// 		},
-// 	}
+func TestEmitFailsUnmarshal(t *testing.T) {
+	s, _ := NewServer()
+	hook := logTest.NewGlobal()
+	msg := &pubsub.Message{
+		&pubsubPb.Message{
+			Data: []byte("bogus"),
+		},
+	}
 
-// 	s.emit(Message{}, &event.Feed{}, msg, reflect.TypeOf(testpb.TestMessage{}))
-// 	want := "Failed to decode data:"
-// 	if !strings.Contains(hook.LastEntry().Message, want) {
-// 		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
-// 	}
-// }
-// TODO(#691): Refactor using gogo/protobuf to pass travis.
-// func TestEmit(t *testing.T) {
-// 	s, _ := NewServer()
-// 	p := &testpb.TestMessage{Foo: "bar"}
-// 	d, err := proto.Marshal(p)
-// 	if err != nil {
-// 		t.Fatalf("failed to marshal pb: %v", err)
-// 	}
-// 	msg := &floodsub.Message{
-// 		&floodsubPb.Message{
-// 			Data: d,
-// 		},
-// 	}
+	s.emit(Message{}, &event.Feed{}, msg, reflect.TypeOf(testpb.TestMessage{}))
+	want := "Failed to decode data:"
+	if !strings.Contains(hook.LastEntry().Message, want) {
+		t.Errorf("Expected log to contain %s. Got = %s", want, hook.LastEntry().Message)
+	}
+}
 
-// 	ctrl := gomock.NewController(t)
-// 	defer ctrl.Finish()
-// 	feed := p2pmock.NewMockFeed(ctrl)
-// 	var got Message
-// 	feed.EXPECT().Send(gomock.AssignableToTypeOf(Message{})).Times(1).Do(func(m Message) {
-// 		got = m
-// 	})
-// 	s.emit(Message{}, feed, msg, messageType(&testpb.TestMessage{}))
-// 	if !proto.Equal(p, got.Data) {
-// 		t.Error("feed was not called with the correct data")
-// 	}
-// }
+func TestEmit(t *testing.T) {
+	s, _ := NewServer()
+	p := &testpb.TestMessage{Foo: "bar"}
+	d, err := proto.Marshal(p)
+	if err != nil {
+		t.Fatalf("failed to marshal pb: %v", err)
+	}
+	msg := &pubsub.Message{
+		&pubsubPb.Message{
+			Data: d,
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	feed := p2pmock.NewMockFeed(ctrl)
+	var got Message
+	feed.EXPECT().Send(gomock.AssignableToTypeOf(Message{})).Times(1).Do(func(m Message) {
+		got = m
+	})
+	s.emit(Message{}, feed, msg, messageType(&testpb.TestMessage{}))
+	if !proto.Equal(p, got.Data) {
+		t.Error("feed was not called with the correct data")
+	}
+}
 
 func TestSubscribeToTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := floodsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
-		t.Errorf("Failed to create floodsub: %v", err)
+		t.Errorf("Failed to create pubsub: %v", err)
 	}
 
 	s := Server{
@@ -129,9 +132,9 @@ func TestSubscribe(t *testing.T) {
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := floodsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
-		t.Errorf("Failed to create floodsub: %v", err)
+		t.Errorf("Failed to create pubsub: %v", err)
 	}
 
 	s := Server{
@@ -150,7 +153,7 @@ func TestSubscribe(t *testing.T) {
 	testSubscribe(ctx, t, s, gsub, ch)
 }
 
-func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *floodsub.PubSub, ch chan Message) {
+func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *pubsub.PubSub, ch chan Message) {
 	topic := shardpb.Topic_COLLATION_BODY_REQUEST
 
 	s.RegisterTopic(topic.String(), &shardpb.CollationBodyRequest{})
@@ -296,7 +299,7 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) er
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := floodsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
 		return err
 	}
