@@ -195,6 +195,21 @@ func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 	return c.data.DepositsPenalizedInPeriod
 }
 
+// ForkSlotNumber returns the slot of last fork.
+func (c *CrystallizedState) ForkSlotNumber() uint64 {
+	return c.data.ForkSlotNumber
+}
+
+// PreForkVersion returns the last pre fork version.
+func (c *CrystallizedState) PreForkVersion() uint32 {
+	return c.data.PreForkVersion
+}
+
+// ForkSlotNumber returns the last post fork version.
+func (c *CrystallizedState) PostForkVersion() uint32 {
+	return c.data.PostForkVersion
+}
+
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
