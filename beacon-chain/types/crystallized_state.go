@@ -61,9 +61,12 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
+			ForkSlotNumber: 0,
 			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+			PreForkVersion:             params.GetConfig().InitialForkVersion,
+			PostForkVersion:            params.GetConfig().InitialForkVersion,
 		},
 	}, nil
 }
