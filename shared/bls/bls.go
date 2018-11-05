@@ -26,7 +26,7 @@ func (s *SecretKey) PublicKey() (*PublicKey, error) {
 }
 
 func (s *SecretKey) BufferedSecretKey() []byte {
-	return []byte{}
+	return s.K.Bytes()
 }
 
 func (p *PublicKey) BufferedPublicKey() []byte {

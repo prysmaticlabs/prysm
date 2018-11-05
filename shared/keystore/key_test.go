@@ -14,14 +14,23 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
+	blsKey := &bls.SecretKey{
+		K: big.NewInt(10),
+	}
 	key := &Key{
-		ID: testID,
+		ID:        testID,
+		SecretKey: blsKey,
 	}
 	marshalledObject, err := key.MarshalJSON()
 	if err != nil {
 		t.Fatalf("unable to marshall key %v", err)
 	}
-	newKey := &Key{}
+	newKey := &Key{
+		ID: []byte{},
+		SecretKey: &bls.SecretKey{
+			K: big.NewInt(0),
+		},
+	}
 
 	err = newKey.UnmarshalJSON(marshalledObject)
 	if err != nil {
