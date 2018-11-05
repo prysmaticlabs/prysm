@@ -326,7 +326,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		RecentBlockHashes: recentBlockHashes,
 	}, nil)
 
-	aState, err = aState.CalculateNewActiveState(block, cState, 0, false)
+	aState, err = aState.CalculateNewActiveState(block, cState, 0)
 	if err != nil {
 		t.Fatalf("failed to calculate new active state: %v", err)
 	}
@@ -339,7 +339,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 
-	aState, err = aState.CalculateNewActiveState(block, cState, 0, true)
+	aState, err = aState.CalculateNewActiveState(block, cState, 0)
 	if err != nil {
 		t.Fatalf("failed to calculate new active state: %v", err)
 	}
@@ -444,7 +444,7 @@ func TestGetSignedParentHashesIndexFail(t *testing.T) {
 
 	a2 := &pb.AggregatedAttestation{
 		ObliqueParentHashes: [][]byte{},
-		Slot:                8,
+		Slot:                9,
 	}
 	_, err = aState.getSignedParentHashes(b, a2)
 	if err == nil {
