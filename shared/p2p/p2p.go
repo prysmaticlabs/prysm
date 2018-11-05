@@ -1,4 +1,4 @@
-// Package p2p handles peer-to-peer networking for Ethereum 2.0 clients.
+// Package p2p handles peer-to-peer networking for Ethereum Serenity clients.
 //
 // There are three types of p2p communications.
 //

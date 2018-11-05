@@ -1,6 +1,6 @@
 // Package bls implements a go-wrapper around a C BLS library leveraging
 // the BLS12-381 curve. This package exposes a public API for verifying and
-// aggregating BLS signatures used by Ethereum 2.0.
+// aggregating BLS signatures used by Ethereum Serenity.
 package bls
 
 import "fmt"

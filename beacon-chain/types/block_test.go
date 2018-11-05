@@ -81,7 +81,6 @@ func TestGenesisBlock(t *testing.T) {
 
 func TestBlockValidity(t *testing.T) {
 	cState, err := NewGenesisCrystallizedState(nil)
-
 	if err != nil {
 		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
@@ -111,7 +110,7 @@ func TestBlockValidity(t *testing.T) {
 		},
 	})
 
-	parentSlot := uint64(1)
+	parentSlot := uint64(0)
 	db := &mockDB{}
 
 	if !b.isAttestationValid(0, db, aState, cState, parentSlot) {
@@ -122,9 +121,60 @@ func TestBlockValidity(t *testing.T) {
 	if !b.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
-	if !b.IsValid(db, aState, cState, parentSlot, true, genesisTime) {
-		t.Fatalf("failed block validation")
+}
+
+func TestBlockValidityNoParentProposer(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("failed to generate crystallized state: %v", err)
 	}
+
+	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
+	}
+
+	aState := NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: recentBlockHashes,
+	}, make(map[[32]byte]*utils.VoteCache))
+	parentSlot := uint64(1)
+	db := &mockDB{}
+
+	// Test case with invalid RANDAO reveal.
+	badRandaoBlock := NewBlock(&pb.BeaconBlock{
+		Slot:         2,
+		RandaoReveal: []byte{'B'},
+		Attestations: []*pb.AggregatedAttestation{
+			{
+				Slot:             0,
+				Shard:            1,
+				JustifiedSlot:    0,
+				AttesterBitfield: []byte{64, 0},
+			},
+		},
+	})
+	genesisTime := params.GetConfig().GenesisTime
+	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+		t.Fatalf("should have failed doesParentProposerExist")
+	}
+}
+
+func TestBlockValidityInvalidRandao(t *testing.T) {
+	cState, err := NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("failed to generate crystallized state: %v", err)
+	}
+
+	recentBlockHashes := make([][]byte, 2*params.GetConfig().CycleLength)
+	for i := 0; i < 2*int(params.GetConfig().CycleLength); i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
+	}
+
+	aState := NewActiveState(&pb.ActiveState{
+		RecentBlockHashes: recentBlockHashes,
+	}, make(map[[32]byte]*utils.VoteCache))
+	parentSlot := uint64(0)
+	db := &mockDB{}
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := NewBlock(&pb.BeaconBlock{
@@ -139,6 +189,7 @@ func TestBlockValidity(t *testing.T) {
 			},
 		},
 	})
+	genesisTime := params.GetConfig().GenesisTime
 	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
 		t.Fatalf("should have failed with invalid RANDAO")
 	}

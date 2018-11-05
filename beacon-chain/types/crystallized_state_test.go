@@ -81,7 +81,7 @@ func TestCopyCrystallizedState(t *testing.T) {
 	}
 
 	var crosslinks []*pb.CrosslinkRecord
-	for i := 0; i < shardCount; i++ {
+	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
 			RecentlyChanged: false,
 			ShardBlockHash:  make([]byte, 2, 34),
@@ -126,7 +126,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	var attesterBitfield []byte
-	for len(attesterBitfield)*8 < params.GetConfig().BootstrappedValidatorsCount {
+	for uint64(len(attesterBitfield))*8 < params.GetConfig().BootstrappedValidatorsCount {
 		attesterBitfield = append(attesterBitfield, byte(0))
 	}
 
@@ -265,7 +265,7 @@ func TestNextDeriveCrystallizedSlot(t *testing.T) {
 func TestProcessCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
-	for i := 0; i < params.GetConfig().ShardCount; i++ {
+	for i := uint64(0); i < params.GetConfig().ShardCount; i++ {
 		clRecord := &pb.CrosslinkRecord{RecentlyChanged: false, ShardBlockHash: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
@@ -375,7 +375,7 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 	size := params.GetConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
-	for i := 0; i < size; i++ {
+	for i := uint64(0); i < size; i++ {
 		validators[i] = validator
 	}
 	cState.data.Validators = validators
