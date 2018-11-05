@@ -175,10 +175,6 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}, JustifiedBlockHash: parentHash, Shard: shardID},
 				},
 			})
-			shardID++
-			if shardID == uint64(params.GetConfig().ShardCount) {
-				shardID = 0
-			}
 
 			hash, err := block.Hash()
 			if err != nil {
