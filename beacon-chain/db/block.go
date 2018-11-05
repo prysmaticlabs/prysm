@@ -49,6 +49,7 @@ func (db *BeaconDB) GetBlock(hash [32]byte) (*types.Block, error) {
 // HasBlock accepts a block hash and returns true if the block does not exist.
 func (db *BeaconDB) HasBlock(hash [32]byte) bool {
 	hasBlock := false
+	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(blockBucket)
 
@@ -197,15 +198,15 @@ func (db *BeaconDB) GetBlockBySlot(slot uint64) (*types.Block, error) {
 func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
 	genesis, err := db.GetBlockBySlot(0)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("Could not get genesis block: %v", err)
+		return time.Time{}, fmt.Errorf("could not get genesis block: %v", err)
 	}
 	if genesis == nil {
-		return time.Time{}, fmt.Errorf("Genesis block not found: %v", err)
+		return time.Time{}, fmt.Errorf("genesis block not found: %v", err)
 	}
 
 	genesisTime, err := genesis.Timestamp()
 	if err != nil {
-		return time.Time{}, fmt.Errorf("Could not get genesis timestamp: %v", err)
+		return time.Time{}, fmt.Errorf("could not get genesis timestamp: %v", err)
 	}
 
 	return genesisTime, nil
