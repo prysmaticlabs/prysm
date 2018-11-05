@@ -16,8 +16,7 @@ func TallyVoteBalances(
 	slot uint64,
 	blockVoteCache map[[32]byte]*utils.VoteCache,
 	validators []*pb.ValidatorRecord,
-	timeSinceFinality uint64,
-	enableRewardChecking bool) (uint64, []*pb.ValidatorRecord) {
+	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
 
 	cache, ok := blockVoteCache[blockHash]
 
@@ -27,10 +26,8 @@ func TallyVoteBalances(
 
 	blockVoteBalance := cache.VoteTotalDeposit
 	voterIndices := cache.VoterIndices
-	if enableRewardChecking {
-		validators = CalculateRewards(slot, voterIndices, validators,
-			blockVoteBalance, timeSinceFinality)
-	}
+	validators = CalculateRewards(slot, voterIndices, validators,
+		blockVoteBalance, timeSinceFinality)
 
 	return blockVoteBalance, validators
 }
@@ -82,7 +79,6 @@ func ApplyCrosslinkRewardsAndPenalties(
 			if err != nil {
 				return err
 			}
-
 			if checkBit {
 				RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 			} else {
