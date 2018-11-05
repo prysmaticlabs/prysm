@@ -379,6 +379,10 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(ctx.GlobalString(cmd.MonitoringEndpointFlag.Name))
-
+	hook, err := prometheus.NewLogrusCollector()
+	if err != nil {
+		return err
+	}
+	logrus.AddHook(hook)
 	return b.services.RegisterService(service)
 }
