@@ -233,12 +233,6 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
-		log.Errorf("Failed to verify proposer attestation: %v", err)
-		return
-	}
-
 	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
 	ss.attestationService.IncomingAttestationFeed().Send(attestation)

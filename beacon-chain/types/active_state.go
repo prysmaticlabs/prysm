@@ -336,7 +336,7 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 	obliqueParentHashes := attestation.ObliqueParentHashes
 	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
 
-	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength)
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
 	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
 	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
 		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)

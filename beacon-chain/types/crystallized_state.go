@@ -203,6 +203,11 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
 }
 
+// GetShardsAndCommitteesForSlot returns the shard committees of a given slot.
+func (c *CrystallizedState) GetShardsAndCommitteesForSlot(slotNumber uint64) (*pb.ShardAndCommitteeArray, error) {
+	return casper.GetShardAndCommitteesForSlot(c.ShardAndCommitteesForSlots(), c.LastStateRecalculationSlot(), slotNumber)
+}
+
 // isValidatorSetChange checks if a validator set change transition can be processed. At that point,
 // validator shuffle will occur.
 func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {

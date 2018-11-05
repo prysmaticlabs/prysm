@@ -154,9 +154,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				powChainRef = []byte{byte(slot)}
 			}
 
-			slotsStart := cState.LastStateRecalculationSlot() - params.GetConfig().CycleLength
-			slotIndex := (slot - 1 - slotsStart) % params.GetConfig().CycleLength
-			shardID := cState.ShardAndCommitteesForSlots()[slotIndex].ArrayShardAndCommittee[0].Shard
+			committees, err := cState.GetShardsAndCommitteesForSlot(slot)
+			if err != nil {
+				log.Errorf("Failed to get shard committee: %v", err)
+				continue
+			}
+			shardID := committees.ArrayShardAndCommittee[0].Shard
 
 			parentHash := make([]byte, 32)
 			copy(parentHash, lastHash[:])
