@@ -1,149 +1,532 @@
 package bls
 
-import "testing"
-import "fmt"
+import (
+	"strconv"
+	"testing"
+)
 
-func testBadPointOfG2(t *testing.T) {
-	var Q G2
-	// this value is not in G2 so should return an error
-	err := Q.SetString("1 18d3d8c085a5a5e7553c3a4eb628e88b8465bf4de2612e35a0a4eb018fb0c82e9698896031e62fd7633ffd824a859474 1dc6edfcf33e29575d4791faed8e7203832217423bf7f7fbf1f6b36625b12e7132c15fbc15562ce93362a322fb83dd0d 65836963b1f7b6959030ddfa15ab38ce056097e91dedffd996c1808624fa7e2644a77be606290aa555cda8481cfb3cb 1b77b708d3d4f65aeedf54b58393463a42f0dc5856baadb5ce608036baeca398c5d9e6b169473a8838098fd72fd28b50", 16)
-	if err == nil {
-		t.Error(err)
-	}
-}
+var unitN = 0
+var curve = BLS12381
 
-func testGT(t *testing.T) {
-	var x GT
-	x.Clear()
-	if !x.IsZero() {
-		t.Errorf("not zero")
-	}
-	x.SetInt64(1)
-	if !x.IsOne() {
-		t.Errorf("not one")
-	}
-}
+// Tests (for Benchmarks see below)
 
-func testHash(t *testing.T) {
-	var x Fr
-	if !x.SetHashOf([]byte("abc")) {
-		t.Error("SetHashOf")
-	}
-	fmt.Printf("x=%s\n", x.GetString(16))
-}
-
-func testNegAdd(t *testing.T) {
-	var x Fr
-	var P1, P2, P3 G1
-	var Q1, Q2, Q3 G2
-	err := P1.HashAndMapTo([]byte("this"))
-	if err != nil {
-		t.Error(err)
-	}
-	err = Q1.HashAndMapTo([]byte("this"))
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Printf("P1=%s\n", P1.GetString(16))
-	fmt.Printf("Q1=%s\n", Q1.GetString(16))
-	G1Neg(&P2, &P1)
-	G2Neg(&Q2, &Q1)
-	fmt.Printf("P2=%s\n", P2.GetString(16))
-	fmt.Printf("Q2=%s\n", Q2.GetString(16))
-
-	x.SetInt64(-1)
-	G1Mul(&P3, &P1, &x)
-	G2Mul(&Q3, &Q1, &x)
-	if !P2.IsEqual(&P3) {
-		t.Errorf("P2 != P3 %s\n", P3.GetString(16))
-	}
-	if !Q2.IsEqual(&Q3) {
-		t.Errorf("Q2 != Q3 %s\n", Q3.GetString(16))
-	}
-
-	G1Add(&P2, &P2, &P1)
-	G2Add(&Q2, &Q2, &Q1)
-	if !P2.IsZero() {
-		t.Errorf("P2 is not zero %s\n", P2.GetString(16))
-	}
-	if !Q2.IsZero() {
-		t.Errorf("Q2 is not zero %s\n", Q2.GetString(16))
-	}
-}
-
-func testPairing(t *testing.T) {
-	var a, b, ab Fr
-	err := a.SetString("123", 10)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = b.SetString("456", 10)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	FrMul(&ab, &a, &b)
-	var P, aP G1
-	var Q, bQ G2
-	err = P.HashAndMapTo([]byte("this"))
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	fmt.Printf("P=%s\n", P.GetString(16))
-	G1Mul(&aP, &P, &a)
-	fmt.Printf("aP=%s\n", aP.GetString(16))
-	err = Q.HashAndMapTo([]byte("that"))
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	fmt.Printf("Q=%s\n", Q.GetString(16))
-	G2Mul(&bQ, &Q, &b)
-	fmt.Printf("bQ=%s\n", bQ.GetString(16))
-	var e1, e2 GT
-	Pairing(&e1, &P, &Q)
-	fmt.Printf("e1=%s\n", e1.GetString(16))
-	Pairing(&e2, &aP, &bQ)
-	fmt.Printf("e2=%s\n", e1.GetString(16))
-	GTPow(&e1, &e1, &ab)
-	fmt.Printf("e1=%s\n", e1.GetString(16))
-	if !e1.IsEqual(&e2) {
-		t.Errorf("not equal pairing\n%s\n%s", e1.GetString(16), e2.GetString(16))
+func testPre(t *testing.T) {
+	t.Log("init")
+	{
+		var id ID
+		err := id.SetLittleEndian([]byte{6, 5, 4, 3, 2, 1})
+		if err != nil {
+			t.Error(err)
+		}
+		t.Log("id :", id.GetHexString())
+		var id2 ID
+		err = id2.SetHexString(id.GetHexString())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !id.IsEqual(&id2) {
+			t.Errorf("not same id\n%s\n%s", id.GetHexString(), id2.GetHexString())
+		}
+		err = id2.SetDecString(id.GetDecString())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !id.IsEqual(&id2) {
+			t.Errorf("not same id\n%s\n%s", id.GetDecString(), id2.GetDecString())
+		}
 	}
 	{
-		s := P.GetString(IoSerializeHexStr)
-		var P1 G1
-		P1.SetString(s, IoSerializeHexStr)
-		if !P1.IsEqual(&P) {
-			t.Error("not equal to P")
-			return
+		var sec SecretKey
+		err := sec.SetLittleEndian([]byte{1, 2, 3, 4, 5, 6})
+		if err != nil {
+			t.Error(err)
 		}
-		s = Q.GetString(IoSerializeHexStr)
-		var Q1 G2
-		Q1.SetString(s, IoSerializeHexStr)
-		if !Q1.IsEqual(&Q) {
-			t.Error("not equal to Q")
-			return
+		t.Log("sec=", sec.GetHexString())
+	}
+
+	t.Log("create secret key")
+	m := "this is a bls sample for go"
+	var sec SecretKey
+	sec.SetByCSPRNG()
+	t.Log("sec:", sec.GetHexString())
+	t.Log("create public key")
+	pub := sec.GetPublicKey()
+	t.Log("pub:", pub.GetHexString())
+	sign := sec.Sign(m)
+	t.Log("sign:", sign.GetHexString())
+	if !sign.Verify(pub, m) {
+		t.Error("Signature does not verify")
+	}
+
+	// How to make array of SecretKey
+	{
+		sec := make([]SecretKey, 3)
+		for i := 0; i < len(sec); i++ {
+			sec[i].SetByCSPRNG()
+			t.Log("sec=", sec[i].GetHexString())
 		}
 	}
 }
 
-func testMcl(t *testing.T, c int) {
-	err := Init(c)
+func testStringConversion(t *testing.T) {
+	t.Log("testRecoverSecretKey")
+	var sec SecretKey
+	var s string
+	if unitN == 6 {
+		s = "16798108731015832284940804142231733909759579603404752749028378864165570215949"
+	} else {
+		s = "40804142231733909759579603404752749028378864165570215949"
+	}
+	err := sec.SetDecString(s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	testHash(t)
-	testNegAdd(t)
-	testPairing(t)
-	testGT(t)
-	testBadPointOfG2(t)
+	if s != sec.GetDecString() {
+		t.Error("not equal")
+	}
+	s = sec.GetHexString()
+	var sec2 SecretKey
+	err = sec2.SetHexString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sec.IsEqual(&sec2) {
+		t.Error("not equal")
+	}
 }
 
-func TestMclMain(t *testing.T) {
-	t.Logf("GetMaxOpUnitSize() = %d\n", GetMaxOpUnitSize())
-	t.Log("BLS12_381")
-	testMcl(t, BLS12381)
+func testRecoverSecretKey(t *testing.T) {
+	t.Log("testRecoverSecretKey")
+	k := 3000
+	var sec SecretKey
+	sec.SetByCSPRNG()
+	t.Logf("sec=%s\n", sec.GetHexString())
+
+	// make master secret key
+	msk := sec.GetMasterSecretKey(k)
+
+	n := k
+	secVec := make([]SecretKey, n)
+	idVec := make([]ID, n)
+	for i := 0; i < n; i++ {
+		err := idVec[i].SetLittleEndian([]byte{byte(i & 255), byte(i >> 8), 2, 3, 4, 5})
+		if err != nil {
+			t.Error(err)
+		}
+		err = secVec[i].Set(msk, &idVec[i])
+		if err != nil {
+			t.Error(err)
+		}
+		//		t.Logf("idVec[%d]=%s\n", i, idVec[i].GetHexString())
+	}
+	// recover sec2 from secVec and idVec
+	var sec2 SecretKey
+	err := sec2.Recover(secVec, idVec)
+	if err != nil {
+		t.Error(err)
+	}
+	if !sec.IsEqual(&sec2) {
+		t.Errorf("Mismatch in recovered secret key:\n  %s\n  %s.", sec.GetHexString(), sec2.GetHexString())
+	}
 }
+
+func testEachSign(t *testing.T, m string, msk []SecretKey, mpk []PublicKey) ([]ID, []SecretKey, []PublicKey, []Sign) {
+	idTbl := []byte{3, 5, 193, 22, 15}
+	n := len(idTbl)
+
+	secVec := make([]SecretKey, n)
+	pubVec := make([]PublicKey, n)
+	signVec := make([]Sign, n)
+	idVec := make([]ID, n)
+
+	for i := 0; i < n; i++ {
+		err := idVec[i].SetLittleEndian([]byte{idTbl[i], 0, 0, 0, 0, 0})
+		if err != nil {
+			t.Error(err)
+		}
+		t.Logf("idVec[%d]=%s\n", i, idVec[i].GetHexString())
+
+		err = secVec[i].Set(msk, &idVec[i])
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = pubVec[i].Set(mpk, &idVec[i])
+		if err != nil {
+			t.Error(err)
+		}
+		t.Logf("pubVec[%d]=%s\n", i, pubVec[i].GetHexString())
+
+		if !pubVec[i].IsEqual(secVec[i].GetPublicKey()) {
+			t.Errorf("Pubkey derivation does not match\n%s\n%s", pubVec[i].GetHexString(), secVec[i].GetPublicKey().GetHexString())
+		}
+
+		signVec[i] = *secVec[i].Sign(m)
+		if !signVec[i].Verify(&pubVec[i], m) {
+			t.Error("Pubkey derivation does not match")
+		}
+	}
+	return idVec, secVec, pubVec, signVec
+}
+func testSign(t *testing.T) {
+	m := "testSign"
+	t.Log(m)
+
+	var sec0 SecretKey
+	sec0.SetByCSPRNG()
+	pub0 := sec0.GetPublicKey()
+	s0 := sec0.Sign(m)
+	if !s0.Verify(pub0, m) {
+		t.Error("Signature does not verify")
+	}
+
+	k := 3
+	msk := sec0.GetMasterSecretKey(k)
+	mpk := GetMasterPublicKey(msk)
+	idVec, secVec, pubVec, signVec := testEachSign(t, m, msk, mpk)
+
+	var sec1 SecretKey
+	err := sec1.Recover(secVec, idVec)
+	if err != nil {
+		t.Error(err)
+	}
+	if !sec0.IsEqual(&sec1) {
+		t.Error("Mismatch in recovered seckey.")
+	}
+	var pub1 PublicKey
+	err = pub1.Recover(pubVec, idVec)
+	if err != nil {
+		t.Error(err)
+	}
+	if !pub0.IsEqual(&pub1) {
+		t.Error("Mismatch in recovered pubkey.")
+	}
+	var s1 Sign
+	err = s1.Recover(signVec, idVec)
+	if err != nil {
+		t.Error(err)
+	}
+	if !s0.IsEqual(&s1) {
+		t.Error("Mismatch in recovered signature.")
+	}
+}
+
+func testAdd(t *testing.T) {
+	t.Log("testAdd")
+	var sec1 SecretKey
+	var sec2 SecretKey
+	sec1.SetByCSPRNG()
+	sec2.SetByCSPRNG()
+
+	pub1 := sec1.GetPublicKey()
+	pub2 := sec2.GetPublicKey()
+
+	m := "test test"
+	sign1 := sec1.Sign(m)
+	sign2 := sec2.Sign(m)
+
+	t.Log("sign1    :", sign1.GetHexString())
+	sign1.Add(sign2)
+	t.Log("sign1 add:", sign1.GetHexString())
+	pub1.Add(pub2)
+	if !sign1.Verify(pub1, m) {
+		t.Fail()
+	}
+}
+
+func testPop(t *testing.T) {
+	t.Log("testPop")
+	var sec SecretKey
+	sec.SetByCSPRNG()
+	pop := sec.GetPop()
+	if !pop.VerifyPop(sec.GetPublicKey()) {
+		t.Errorf("Valid Pop does not verify")
+	}
+	sec.SetByCSPRNG()
+	if pop.VerifyPop(sec.GetPublicKey()) {
+		t.Errorf("Invalid Pop verifies")
+	}
+}
+
+func testData(t *testing.T) {
+	t.Log("testData")
+	var sec1, sec2 SecretKey
+	sec1.SetByCSPRNG()
+	b := sec1.GetLittleEndian()
+	err := sec2.SetLittleEndian(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sec1.IsEqual(&sec2) {
+		t.Error("SecretKey not same")
+	}
+	pub1 := sec1.GetPublicKey()
+	b = pub1.Serialize()
+	var pub2 PublicKey
+	err = pub2.Deserialize(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !pub1.IsEqual(&pub2) {
+		t.Error("PublicKey not same")
+	}
+	m := "doremi"
+	sign1 := sec1.Sign(m)
+	b = sign1.Serialize()
+	var sign2 Sign
+	err = sign2.Deserialize(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sign1.IsEqual(&sign2) {
+		t.Error("Sign not same")
+	}
+}
+
+func testSerializeToHexStr(t *testing.T) {
+	t.Log("testSerializeToHexStr")
+	var sec1, sec2 SecretKey
+	sec1.SetByCSPRNG()
+	s := sec1.SerializeToHexStr()
+	err := sec2.DeserializeHexStr(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sec1.IsEqual(&sec2) {
+		t.Error("SecretKey not same")
+	}
+	pub1 := sec1.GetPublicKey()
+	s = pub1.SerializeToHexStr()
+	var pub2 PublicKey
+	err = pub2.DeserializeHexStr(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !pub1.IsEqual(&pub2) {
+		t.Error("PublicKey not same")
+	}
+	m := "doremi"
+	sign1 := sec1.Sign(m)
+	s = sign1.SerializeToHexStr()
+	var sign2 Sign
+	err = sign2.DeserializeHexStr(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sign1.IsEqual(&sign2) {
+		t.Error("Sign not same")
+	}
+}
+
+func testOrder(t *testing.T, c int) {
+	var curve string
+	var field string
+	if c == BLS12381 {
+		curve = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
+		field = "4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787"
+	} else {
+		t.Fatal("bad c", c)
+	}
+	s := GetCurveOrder()
+	if s != curve {
+		t.Errorf("bad curve order\n%s\n%s\n", s, curve)
+	}
+	s = GetFieldOrder()
+	if s != field {
+		t.Errorf("bad field order\n%s\n%s\n", s, field)
+	}
+}
+
+func testDHKeyExchange(t *testing.T) {
+	var sec1, sec2 SecretKey
+	sec1.SetByCSPRNG()
+	sec2.SetByCSPRNG()
+	pub1 := sec1.GetPublicKey()
+	pub2 := sec2.GetPublicKey()
+	out1 := DHKeyExchange(&sec1, pub2)
+	out2 := DHKeyExchange(&sec2, pub1)
+	if !out1.IsEqual(&out2) {
+		t.Errorf("DH key is not equal")
+	}
+}
+
+func TestBLS(t *testing.T) {
+	err := Init(curve)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unitN = GetOpUnitSize()
+	t.Logf("unitN=%d\n", unitN)
+	testPre(t)
+	testRecoverSecretKey(t)
+	testAdd(t)
+	testSign(t)
+	testPop(t)
+	testData(t)
+	testStringConversion(t)
+	testOrder(t, curve)
+	testDHKeyExchange(t)
+	testSerializeToHexStr(t)
+}
+
+func BenchmarkPubkeyFromSeckey(b *testing.B) {
+	b.StopTimer()
+	err := Init(curve)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var sec SecretKey
+	for n := 0; n < b.N; n++ {
+		sec.SetByCSPRNG()
+		b.StartTimer()
+		sec.GetPublicKey()
+		b.StopTimer()
+	}
+}
+
+func BenchmarkSigning(b *testing.B) {
+	b.StopTimer()
+	err := Init(curve)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var sec SecretKey
+	for n := 0; n < b.N; n++ {
+		sec.SetByCSPRNG()
+		b.StartTimer()
+		sec.Sign(strconv.Itoa(n))
+		b.StopTimer()
+	}
+}
+
+func BenchmarkValidation(b *testing.B) {
+	b.StopTimer()
+	err := Init(curve)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var sec SecretKey
+	for n := 0; n < b.N; n++ {
+		sec.SetByCSPRNG()
+		pub := sec.GetPublicKey()
+		m := strconv.Itoa(n)
+		sig := sec.Sign(m)
+		b.StartTimer()
+		sig.Verify(pub, m)
+		b.StopTimer()
+	}
+}
+
+func benchmarkDeriveSeckeyShare(k int, b *testing.B) {
+	b.StopTimer()
+	err := Init(curve)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var sec SecretKey
+	sec.SetByCSPRNG()
+	msk := sec.GetMasterSecretKey(k)
+	var id ID
+	for n := 0; n < b.N; n++ {
+		err = id.SetLittleEndian([]byte{1, 2, 3, 4, 5, byte(n)})
+		if err != nil {
+			b.Error(err)
+		}
+		b.StartTimer()
+		err := sec.Set(msk, &id)
+		b.StopTimer()
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+//func BenchmarkDeriveSeckeyShare100(b *testing.B)  { benchmarkDeriveSeckeyShare(100, b) }
+//func BenchmarkDeriveSeckeyShare200(b *testing.B)  { benchmarkDeriveSeckeyShare(200, b) }
+func BenchmarkDeriveSeckeyShare500(b *testing.B) { benchmarkDeriveSeckeyShare(500, b) }
+
+//func BenchmarkDeriveSeckeyShare1000(b *testing.B) { benchmarkDeriveSeckeyShare(1000, b) }
+
+func benchmarkRecoverSeckey(k int, b *testing.B) {
+	b.StopTimer()
+	err := Init(curve)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var sec SecretKey
+	sec.SetByCSPRNG()
+	msk := sec.GetMasterSecretKey(k)
+
+	// derive n shares
+	n := k
+	secVec := make([]SecretKey, n)
+	idVec := make([]ID, n)
+	for i := 0; i < n; i++ {
+		err := idVec[i].SetLittleEndian([]byte{1, 2, 3, 4, 5, byte(i)})
+		if err != nil {
+			b.Error(err)
+		}
+		err = secVec[i].Set(msk, &idVec[i])
+		if err != nil {
+			b.Error(err)
+		}
+	}
+
+	// recover from secVec and idVec
+	var sec2 SecretKey
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		err := sec2.Recover(secVec, idVec)
+		if err != nil {
+			b.Errorf("%s\n", err)
+		}
+	}
+}
+
+func BenchmarkRecoverSeckey100(b *testing.B)  { benchmarkRecoverSeckey(100, b) }
+func BenchmarkRecoverSeckey200(b *testing.B)  { benchmarkRecoverSeckey(200, b) }
+func BenchmarkRecoverSeckey500(b *testing.B)  { benchmarkRecoverSeckey(500, b) }
+func BenchmarkRecoverSeckey1000(b *testing.B) { benchmarkRecoverSeckey(1000, b) }
+
+func benchmarkRecoverSignature(k int, b *testing.B) {
+	b.StopTimer()
+	err := Init(curve)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var sec SecretKey
+	sec.SetByCSPRNG()
+	msk := sec.GetMasterSecretKey(k)
+
+	// derive n shares
+	n := k
+	idVec := make([]ID, n)
+	secVec := make([]SecretKey, n)
+	signVec := make([]Sign, n)
+	for i := 0; i < n; i++ {
+		err := idVec[i].SetLittleEndian([]byte{1, 2, 3, 4, 5, byte(i)})
+		if err != nil {
+			b.Error(err)
+		}
+		err = secVec[i].Set(msk, &idVec[i])
+		if err != nil {
+			b.Error(err)
+		}
+		signVec[i] = *secVec[i].Sign("test message")
+	}
+
+	// recover signature
+	var sig Sign
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		err := sig.Recover(signVec, idVec)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkRecoverSignature100(b *testing.B)  { benchmarkRecoverSignature(100, b) }
+func BenchmarkRecoverSignature200(b *testing.B)  { benchmarkRecoverSignature(200, b) }
+func BenchmarkRecoverSignature500(b *testing.B)  { benchmarkRecoverSignature(500, b) }
+func BenchmarkRecoverSignature1000(b *testing.B) { benchmarkRecoverSignature(1000, b) }
