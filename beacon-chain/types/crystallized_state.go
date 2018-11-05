@@ -205,7 +205,7 @@ func (c *CrystallizedState) PreForkVersion() uint32 {
 	return c.data.PreForkVersion
 }
 
-// ForkSlotNumber returns the last post fork version.
+// PostForkVersion returns the last post fork version.
 func (c *CrystallizedState) PostForkVersion() uint32 {
 	return c.data.PostForkVersion
 }

@@ -35,7 +35,7 @@ type Config struct {
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 	MinDeposit                    uint64    // MinDeposit is the minimal amount of Ether a validator needs to participate.
 	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
-	InitialForkVersion 	          uint32    // InitialForkVersion is used to track fork version between station transitions.
+	InitialForkVersion            uint32    // InitialForkVersion is used to track fork version between station transitions.
 }
 
 var defaultConfig = &Config{
@@ -54,7 +54,7 @@ var defaultConfig = &Config{
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(524288),
 	MaxValidatorChurnQuotient:     uint64(32),
-	InitialForkVersion: 0,
+	InitialForkVersion:            0,
 }
 
 var demoConfig = &Config{
@@ -72,7 +72,7 @@ var demoConfig = &Config{
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(128),
 	MaxValidatorChurnQuotient:     uint64(32),
-	InitialForkVersion: 0,
+	InitialForkVersion:            0,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
 

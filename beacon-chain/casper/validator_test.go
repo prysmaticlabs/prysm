@@ -312,7 +312,7 @@ func TestAddValidators(t *testing.T) {
 	}
 
 	// Create a new validator.
-	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'},uint64(params.PendingActivation))
+	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 10.
 	if validators[10].Status != uint64(params.PendingActivation) {

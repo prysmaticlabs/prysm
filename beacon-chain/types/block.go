@@ -301,7 +301,8 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		attestation.ShardBlockHash,
 		attestation.Slot,
 		attestation.Shard,
-		attestation.JustifiedSlot)
+		attestation.JustifiedSlot,
+		forkVersion)
 
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
 		attestation.Shard, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
