@@ -2,13 +2,13 @@ pragma solidity 0.4.23;
 
 contract ValidatorRegistration {
     event ValidatorRegistered(
-        bytes indexed pubKey,
+        bytes32 indexed hashedPubkey,
         uint256 withdrawalShardID,
         address indexed withdrawalAddressbytes32,
         bytes32 indexed randaoCommitment
     );
 
-    mapping (bytes => bool) public usedPubkey;
+    mapping (bytes32 => bool) public usedHashedPubkey;
 
     uint public constant VALIDATOR_DEPOSIT = 32 ether;
 
@@ -22,9 +22,10 @@ contract ValidatorRegistration {
         uint _withdrawalShardID,
         address _withdrawalAddressbytes32,
         bytes32 _randaoCommitment
-        )
-        public payable
-        {
+    )
+        public
+        payable
+    {
         require(
             msg.value == VALIDATOR_DEPOSIT,
             "Incorrect validator deposit"
@@ -33,13 +34,15 @@ contract ValidatorRegistration {
             _pubkey.length == 48,
             "Public key is not 48 bytes"
         );
+
+        bytes32 hashedPubkey = keccak256(abi.encodePacked(_pubkey));
         require(
-            !usedPubkey[_pubkey],
+            !usedHashedPubkey[hashedPubkey],
             "Public key already used"
         );
 
-        usedPubkey[_pubkey] = true;
+        usedHashedPubkey[hashedPubkey] = true;
 
-        emit ValidatorRegistered(_pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment);
+        emit ValidatorRegistered(hashedPubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment);
     }
 }
