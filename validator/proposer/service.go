@@ -1,5 +1,5 @@
 // Package proposer defines all relevant functionality for a Proposer actor
-// within Ethereum 2.0.
+// within Ethereum Serenity.
 package proposer
 
 import (
@@ -31,7 +31,7 @@ type rpcAttestationService interface {
 }
 
 // Proposer holds functionality required to run a block proposer
-// in Ethereum 2.0. Must satisfy the Service interface defined in
+// in Ethereum Serenity. Must satisfy the Service interface defined in
 // sharding/service.go.
 type Proposer struct {
 	ctx                context.Context
