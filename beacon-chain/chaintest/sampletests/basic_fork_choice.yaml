@@ -27,7 +27,7 @@ test_cases:
           parent: A
         attestations:
           - block: B
-            validators: "0, 1, 2, 3, 4, 5"
+            validators: "0-5"
       - slot_number: 3
         new_block:
           id: C
@@ -39,7 +39,7 @@ test_cases:
           # default "committee_slot" can be directly overridden
           - block: C
             committee_slot: 2
-            validators: "[6, 7]"
+            validators: "6, 7"
       - slot_number: 4
         new_block:
           id: D
