@@ -36,13 +36,13 @@ func TestTallyVoteBalances(t *testing.T) {
 
 	blockVoteCache[blockHash] = voteCache
 
-	zeroBalance, _ := TallyVoteBalances([32]byte{}, 10, blockVoteCache, validators, 2, true)
+	zeroBalance, _ := TallyVoteBalances([32]byte{}, 10, blockVoteCache, validators, 2)
 
 	if zeroBalance != 0 {
 		t.Fatalf("votes have been calculated despite blockhash not existing in cache")
 	}
 
-	voteBalance, newValidators := TallyVoteBalances(blockHash, 10, blockVoteCache, validators, 2, true)
+	voteBalance, newValidators := TallyVoteBalances(blockHash, 10, blockVoteCache, validators, 2)
 	if voteBalance != 300 {
 		t.Fatalf("vote balances is not the amount expected %d", voteBalance)
 	}

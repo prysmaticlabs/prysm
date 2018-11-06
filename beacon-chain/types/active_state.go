@@ -280,8 +280,7 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 func (a *ActiveState) CalculateNewActiveState(
 	block *Block,
 	cState *CrystallizedState,
-	parentSlot uint64,
-	enableAttestationValidity bool) (*ActiveState, error) {
+	parentSlot uint64) (*ActiveState, error) {
 	var err error
 
 	newState := a.CopyState()
@@ -297,12 +296,9 @@ func (a *ActiveState) CalculateNewActiveState(
 	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalculationSlot())
 
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-
-	if enableAttestationValidity {
-		newState.blockVoteCache, err = newState.calculateNewVoteCache(block, cState)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update vote cache: %v", err)
-		}
+	newState.blockVoteCache, err = newState.calculateNewVoteCache(block, cState)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update vote cache: %v", err)
 	}
 
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
@@ -342,7 +338,6 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 
 	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
 	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
-
 	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
 		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}
