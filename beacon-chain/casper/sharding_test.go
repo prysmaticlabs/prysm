@@ -10,7 +10,7 @@ import (
 
 func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	state := &pb.CrystallizedState{
-		LastStateRecalculationSlot: 65,
+		LastStateRecalculationSlot: 64,
 		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4}},
@@ -24,14 +24,14 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1000); err == nil {
 		t.Error("getShardAndCommitteesForSlot should have failed with invalid slot")
 	}
-	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
+	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 0)
 	if err != nil {
 		t.Errorf("getShardAndCommitteesForSlot failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].Shard != 1 {
 		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 1, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
-	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 2)
+	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
 	if committee.ArrayShardAndCommittee[0].Shard != 3 {
 		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 3, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
