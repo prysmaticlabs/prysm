@@ -37,6 +37,26 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 	return initialCommittees, nil
 }
 
+// InitialShardPersistentCommittees initialises the persistent committees for shards by shuffling the validators
+//// and assigning them to specific shards. These committees are consistent for ShardPersistentCommitteeChangeInterval durations.
+func InitialShardPersistentCommittees(validators []*pb.ValidatorRecord) ([][]uint32, error) {
+	seed := make([]byte, 0, 32)
+
+	validatorIndices := make([]uint32, len(validators))
+	// Construct a list of validator indices for shuffle.
+	for i:=0; i<len(validators); i++ {
+		validatorIndices[i] = uint32(i)
+	}
+
+	shuffledValidators, err := utils.ShuffleIndices(common.BytesToHash(seed), validatorIndices)
+	if err != nil {
+		return nil, err
+	}
+
+	// Split persistent committees across all shards.
+	return utils.SplitIndices(shuffledValidators, params.GetConfig().ShardCount), nil
+}
+
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. See getCommitteesPerSlot for more details.

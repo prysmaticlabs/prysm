@@ -72,7 +72,9 @@ message CrystallizedState {
   bytes validator_set_delta_hash_chain = 10;
   uint32 pre_fork_version = 11;
   uint32 post_fork_version = 12;
-  uint64 fork_slot_number =13;
+  uint64 fork_slot_number = 13;
+  repeated ShardCommittees persistent_committees = 14;
+  repeated ShardReassignmentRecord persistent_committee_reassignments = 15;
 }
 
 message ShardAndCommitteeArray {
@@ -146,4 +148,14 @@ message AttestationHashes {
 message SpecialRecord {
     uint32 kind = 1;
     repeated bytes data = 2;
+}
+
+message ShardCommittees {
+    repeated uint32 validator_indices = 1;
+}
+
+message ShardReassignmentRecord {
+    uint64 validator_index = 1;
+    uint32 shard = 2;
+    uint64 slot = 3;
 }

@@ -45,6 +45,19 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices
 }
 
+// RecentRemovedActiveValidatorIndices returns a list of validator indices that were
+// removed from active validator list during state recalculation.
+func RecentRemovedActiveValidatorIndices(validatorsBeforeRecal []*pb.ValidatorRecord, validatorsAfterRecal []*pb.ValidatorRecord) []uint32 {
+	var recentRemoved []uint32
+	for i, validator := range validatorsBeforeRecal {
+		if validator.Status != validatorsAfterRecal[i].Status &&
+			validatorsAfterRecal[i].Status == uint64(params.PendingExit) {
+			recentRemoved = append(recentRemoved, uint32(i))
+		}
+	}
+	return recentRemoved
+}
+
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
 	cycleLength := params.GetConfig().CycleLength

@@ -38,6 +38,18 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 		return nil, err
 	}
 
+	// Bootstrap persistent committees across all the shards.
+	persistentCommitteesIndices, err := casper.InitialShardPersistentCommittees(genesisValidators)
+	if err != nil {
+		return nil, err
+	}
+	var persistentCommittees []*pb.ShardCommittees
+	for _, committeesIndices := range persistentCommitteesIndices {
+		persistentCommittees = append(persistentCommittees, &pb.ShardCommittees{
+			ValidatorIndices: committeesIndices,
+		})
+	}
+
 	// Bootstrap cross link records.
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < shardCount; i++ {
@@ -64,6 +76,7 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+			PersistentCommittees:       persistentCommittees,
 		},
 	}, nil
 }
