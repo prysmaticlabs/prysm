@@ -41,6 +41,27 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 		t.Fatalf("retrieved id not the same as pre serialized id: %v ", newKey.ID)
 	}
 }
+
+func TestStoreRandomKey(t *testing.T) {
+	tmpdir := os.TempDir()
+	filedir := tmpdir + "/keystore"
+	ks := &keyStorePassphrase{
+		keysDirPath: filedir,
+		scryptN:     LightScryptN,
+		scryptP:     LightScryptP,
+	}
+
+	reader := rand.Reader
+
+	if err := storeNewRandomKey(ks, reader, "password"); err != nil {
+		t.Fatalf("storage of random key unsuccessful %v", err)
+	}
+
+	if err := os.RemoveAll(filedir); err != nil {
+		t.Errorf("unable to remove temporary files %v", err)
+	}
+
+}
 func TestNewKeyFromBLS(t *testing.T) {
 	blskey := &bls.SecretKey{
 		K: big.NewInt(20),
@@ -69,7 +90,6 @@ func TestNewKeyFromBLS(t *testing.T) {
 func TestWriteFile(t *testing.T) {
 	tmpdir := os.TempDir()
 	filedir := tmpdir + "/keystore"
-	//t.Errorf("%s ------ %s", tmpdir, filedir)
 
 	testKeystore := []byte{'t', 'e', 's', 't'}
 
@@ -87,5 +107,7 @@ func TestWriteFile(t *testing.T) {
 		t.Fatalf("retrieved keystore is not the same %v", keystore)
 	}
 
-	os.Remove(filedir)
+	if err := os.RemoveAll(filedir); err != nil {
+		t.Errorf("unable to remove temporary files %v", err)
+	}
 }

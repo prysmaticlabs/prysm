@@ -43,7 +43,9 @@ func (p *PublicKey) UnBufferPublicKey(bufferedKey []byte) {
 }
 
 func GenerateKey(seed []byte) *SecretKey {
-	return &SecretKey{}
+	return &SecretKey{
+		K: big.NewInt(0).SetBytes(seed),
+	}
 }
 
 // Sign a message using a secret key - in a beacon/validator client,
