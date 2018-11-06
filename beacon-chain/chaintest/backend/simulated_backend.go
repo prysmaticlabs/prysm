@@ -31,12 +31,9 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		return nil, fmt.Errorf("could not setup simulated backend db: %v", err)
 	}
 	cs, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
-		BeaconDB:                  db,
-		IncomingBlockBuf:          0,
-		EnablePOWChain:            false,
-		EnableCrossLinks:          false,
-		EnableRewardChecking:      false,
-		EnableAttestationValidity: false,
+		BeaconDB:         db,
+		IncomingBlockBuf: 0,
+		EnablePOWChain:   false,
 	})
 	if err != nil {
 		return nil, err
