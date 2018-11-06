@@ -158,7 +158,6 @@ func (b *Block) IsValid(
 	aState *ActiveState,
 	cState *CrystallizedState,
 	parentSlot uint64,
-	enableAttestationValidity bool,
 	genesisTime time.Time) bool {
 	_, err := b.Hash()
 	if err != nil {
@@ -167,7 +166,7 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Cannot process a genesis block")
+		log.Error("Could not process a genesis block")
 		return false
 	}
 
@@ -176,10 +175,8 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	if enableAttestationValidity {
-		if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
-			return false
-		}
+	if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
+		return false
 	}
 
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
@@ -187,7 +184,7 @@ func (b *Block) IsValid(
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
 	if err != nil {
-		log.Errorf("Cannot get proposer index: %v", err)
+		log.Errorf("Could not get proposer index: %v", err)
 		return false
 	}
 
@@ -205,7 +202,7 @@ func (b *Block) IsValid(
 func (b *Block) areAttestationsValid(db beaconDB, aState *ActiveState, cState *CrystallizedState, parentSlot uint64) bool {
 	for index, attestation := range b.Attestations() {
 		if !b.isAttestationValid(index, db, aState, cState, parentSlot) {
-			log.Errorf("attestation invalid: %v", attestation)
+			log.Errorf("Attestation invalid: %v", attestation)
 			return false
 		}
 	}
@@ -219,13 +216,13 @@ func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot ui
 		cState.LastStateRecalculationSlot(),
 		parentSlot)
 	if err != nil {
-		log.Errorf("Cannot get proposer index: %v", err)
+		log.Errorf("Could not get proposer index: %v", err)
 		return false
 	}
 
 	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
 	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
-		log.Errorf("Can not locate proposer in the first attestation of AttestionRecord %v", err)
+		log.Errorf("Could not locate proposer in the first attestation of AttestionRecord %v", err)
 		return false
 	}
 
@@ -251,11 +248,12 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	// Validate attestation's slot number has is within range of incoming block number.
 	attestation := b.Attestations()[attestationIndex]
 	if !isAttestationSlotNumberValid(attestation.Slot, parentSlot) {
+		log.Errorf("invalid attestation slot %d", attestation.Slot)
 		return false
 	}
 
 	if attestation.JustifiedSlot > cState.LastJustifiedSlot() {
-		log.Debugf("attestation's justified slot has to be earlier or equal to crystallized state's last justified slot. Found: %d. Want <=: %d",
+		log.Errorf("attestation's justified slot has to be earlier or equal to crystallized state's last justified slot. Found: %d. Want <=: %d",
 			attestation.JustifiedSlot,
 			cState.LastJustifiedSlot())
 		return false
@@ -266,7 +264,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
-		log.Debugf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
+		log.Errorf("the attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
 			attestation.JustifiedBlockHash)
 		return false
 	}
@@ -274,18 +272,19 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	// Get all the block hashes up to cycle length.
 	parentHashes, err := aState.getSignedParentHashes(b, attestation)
 	if err != nil {
-		log.Errorf("unable to get signed parent hashes: %v", err)
+		log.Errorf("Unable to get signed parent hashes: %v", err)
 		return false
 	}
 
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
-		log.Debugf("Unable to get validator committee: %v", attesterIndices)
+		log.Errorf("unable to get validator committee %v", err)
 		return false
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
 	if !casper.AreAttesterBitfieldsValid(attestation, attesterIndices) {
+		log.Errorf("unable to match attester bitfield with shard and committee bitfield")
 		return false
 	}
 

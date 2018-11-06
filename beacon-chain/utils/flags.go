@@ -59,24 +59,4 @@ var (
 		Name:  "enable-powchain",
 		Usage: "Enable a real, web3 proof-of-work chain endpoint in the beacon node",
 	}
-	// EnableCrossLinks tells the beacon node to enable the verification of shard cross-links
-	// during block processing. Disabled by default.
-	EnableCrossLinks = cli.BoolFlag{
-		Name:  "enable-cross-links",
-		Usage: "Enable cross-link verification in the beacon chain",
-	}
-	// EnableRewardChecking tells the beacon node to apply Casper FFG rewards/penalties to validators
-	// at each cycle transition. This can mutate the validator set as bad validators can get kicked off.
-	// Disabled by default.
-	EnableRewardChecking = cli.BoolFlag{
-		Name:  "enable-reward-checking",
-		Usage: "Enable Casper FFG reward/penalty applications at each cycle transition",
-	}
-	// EnableAttestationValidity in the beacon node. This enables a few more verification
-	// conditions during block processing and the creation of a block vote cache
-	// for attestations. Disabled by default.
-	EnableAttestationValidity = cli.BoolFlag{
-		Name:  "enable-attestations-validity",
-		Usage: "Enable the verification of attestation validity in a beacon node",
-	}
 )

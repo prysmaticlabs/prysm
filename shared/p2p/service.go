@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 
-	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -28,7 +28,7 @@ type Server struct {
 	mutex        *sync.Mutex
 	feeds        map[reflect.Type]Feed
 	host         host.Host
-	gsub         *floodsub.PubSub
+	gsub         *pubsub.PubSub
 	topicMapping map[reflect.Type]string
 }
 
@@ -42,7 +42,7 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	gsub, err := floodsub.NewGossipSub(ctx, host)
+	gsub, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
 		cancel()
 		return nil, err

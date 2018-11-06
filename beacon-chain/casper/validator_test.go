@@ -103,7 +103,10 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 		AttesterBitfield: []byte{'E'},
 	}
 
-	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
+	var indices []uint32
+	for i := uint32(0); i < uint32(params.GetConfig().MinCommiteeSize)+1; i++ {
+		indices = append(indices, i)
+	}
 
 	isValid := AreAttesterBitfieldsValid(attestation, indices)
 	if isValid {
