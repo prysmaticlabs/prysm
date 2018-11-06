@@ -16,10 +16,10 @@ import (
 )
 
 // ValidatorRegistrationABI is the input ABI used to generate the binding from.
-const ValidatorRegistrationABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"usedPubkey\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"VALIDATOR_DEPOSIT\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_pubkey\",\"type\":\"bytes32\"},{\"name\":\"_withdrawalShardID\",\"type\":\"uint256\"},{\"name\":\"_withdrawalAddressbytes32\",\"type\":\"address\"},{\"name\":\"_randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"pubKey\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"withdrawalShardID\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"withdrawalAddressbytes32\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"ValidatorRegistered\",\"type\":\"event\"}]"
+const ValidatorRegistrationABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"VALIDATOR_DEPOSIT\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"usedHashedPubkey\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_pubkey\",\"type\":\"bytes\"},{\"name\":\"_withdrawalShardID\",\"type\":\"uint256\"},{\"name\":\"_withdrawalAddressbytes32\",\"type\":\"address\"},{\"name\":\"_randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"hashedPubkey\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"withdrawalShardID\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"withdrawalAddressbytes32\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"ValidatorRegistered\",\"type\":\"event\"}]"
 
 // ValidatorRegistrationBin is the compiled bytecode used for deploying new contracts.
-const ValidatorRegistrationBin = `0x608060405234801561001057600080fd5b5061028b806100206000396000f3006080604052600436106100565763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301110845811461005b578063441d92cc14610087578063881d2135146100ae575b600080fd5b34801561006757600080fd5b506100736004356100da565b604080519115158252519081900360200190f35b34801561009357600080fd5b5061009c6100ef565b60408051918252519081900360200190f35b6100d860043560243573ffffffffffffffffffffffffffffffffffffffff604435166064356100fc565b005b60006020819052908152604090205460ff1681565b6801bc16d674ec80000081565b346801bc16d674ec8000001461017357604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601b60248201527f496e636f72726563742076616c696461746f72206465706f7369740000000000604482015290519081900360640190fd5b60008481526020819052604090205460ff16156101f157604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f5075626c6963206b657920616c72656164792075736564000000000000000000604482015290519081900360640190fd5b60008481526020818152604091829020805460ff1916600117905581518581529151839273ffffffffffffffffffffffffffffffffffffffff86169288927f7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af512749281900390910190a4505050505600a165627a7a72305820d03bf76dbc13e295ebf71105cad010b9ad8cdab11893b90df7e8e789cb3f52150029`
+const ValidatorRegistrationBin = `0x608060405234801561001057600080fd5b50610406806100206000396000f3006080604052600436106100565763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663441d92cc811461005b5780638618d77814610082578063878df5ac146100ae575b600080fd5b34801561006757600080fd5b5061007061011e565b60408051918252519081900360200190f35b34801561008e57600080fd5b5061009a60043561012b565b604080519115158252519081900360200190f35b6040805160206004803580820135601f810184900484028501840190955284845261011c9436949293602493928401919081908401838280828437509497505084359550505050602082013573ffffffffffffffffffffffffffffffffffffffff1691604001359050610140565b005b6801bc16d674ec80000081565b60006020819052908152604090205460ff1681565b6000346801bc16d674ec800000146101b957604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601b60248201527f496e636f72726563742076616c696461746f72206465706f7369740000000000604482015290519081900360640190fd5b845160301461022957604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f5075626c6963206b6579206973206e6f74203438206279746573000000000000604482015290519081900360640190fd5b846040516020018082805190602001908083835b6020831061025c5780518252601f19909201916020918201910161023d565b6001836020036101000a0380198251168184511680821785525050505050509050019150506040516020818303038152906040526040518082805190602001908083835b602083106102bf5780518252601f1990920191602091820191016102a0565b51815160209384036101000a60001901801990921691161790526040805192909401829003909120600081815291829052929020549194505060ff1615915061036b905057604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f5075626c6963206b657920616c72656164792075736564000000000000000000604482015290519081900360640190fd5b60008181526020818152604091829020805460ff1916600117905581518681529151849273ffffffffffffffffffffffffffffffffffffffff87169285927f7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af512749281900390910190a450505050505600a165627a7a72305820f94ed1bea88aec62badbde73ec4adcd500e067fa0245052ea42e662c529b94870029`
 
 // DeployValidatorRegistration deploys a new Ethereum contract, binding an instance of ValidatorRegistration to it.
 func DeployValidatorRegistration(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ValidatorRegistration, error) {
@@ -202,50 +202,50 @@ func (_ValidatorRegistration *ValidatorRegistrationCallerSession) VALIDATORDEPOS
 	return _ValidatorRegistration.Contract.VALIDATORDEPOSIT(&_ValidatorRegistration.CallOpts)
 }
 
-// UsedPubkey is a free data retrieval call binding the contract method 0x01110845.
+// UsedHashedPubkey is a free data retrieval call binding the contract method 0x8618d778.
 //
-// Solidity: function usedPubkey( bytes32) constant returns(bool)
-func (_ValidatorRegistration *ValidatorRegistrationCaller) UsedPubkey(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
+// Solidity: function usedHashedPubkey( bytes32) constant returns(bool)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) UsedHashedPubkey(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
 	var (
 		ret0 = new(bool)
 	)
 	out := ret0
-	err := _ValidatorRegistration.contract.Call(opts, out, "usedPubkey", arg0)
+	err := _ValidatorRegistration.contract.Call(opts, out, "usedHashedPubkey", arg0)
 	return *ret0, err
 }
 
-// UsedPubkey is a free data retrieval call binding the contract method 0x01110845.
+// UsedHashedPubkey is a free data retrieval call binding the contract method 0x8618d778.
 //
-// Solidity: function usedPubkey( bytes32) constant returns(bool)
-func (_ValidatorRegistration *ValidatorRegistrationSession) UsedPubkey(arg0 [32]byte) (bool, error) {
-	return _ValidatorRegistration.Contract.UsedPubkey(&_ValidatorRegistration.CallOpts, arg0)
+// Solidity: function usedHashedPubkey( bytes32) constant returns(bool)
+func (_ValidatorRegistration *ValidatorRegistrationSession) UsedHashedPubkey(arg0 [32]byte) (bool, error) {
+	return _ValidatorRegistration.Contract.UsedHashedPubkey(&_ValidatorRegistration.CallOpts, arg0)
 }
 
-// UsedPubkey is a free data retrieval call binding the contract method 0x01110845.
+// UsedHashedPubkey is a free data retrieval call binding the contract method 0x8618d778.
 //
-// Solidity: function usedPubkey( bytes32) constant returns(bool)
-func (_ValidatorRegistration *ValidatorRegistrationCallerSession) UsedPubkey(arg0 [32]byte) (bool, error) {
-	return _ValidatorRegistration.Contract.UsedPubkey(&_ValidatorRegistration.CallOpts, arg0)
+// Solidity: function usedHashedPubkey( bytes32) constant returns(bool)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) UsedHashedPubkey(arg0 [32]byte) (bool, error) {
+	return _ValidatorRegistration.Contract.UsedHashedPubkey(&_ValidatorRegistration.CallOpts, arg0)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0x881d2135.
+// Deposit is a paid mutator transaction binding the contract method 0x878df5ac.
 //
-// Solidity: function deposit(_pubkey bytes32, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationTransactor) Deposit(opts *bind.TransactOpts, _pubkey [32]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
+// Solidity: function deposit(_pubkey bytes, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
+func (_ValidatorRegistration *ValidatorRegistrationTransactor) Deposit(opts *bind.TransactOpts, _pubkey []byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
 	return _ValidatorRegistration.contract.Transact(opts, "deposit", _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0x881d2135.
+// Deposit is a paid mutator transaction binding the contract method 0x878df5ac.
 //
-// Solidity: function deposit(_pubkey bytes32, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationSession) Deposit(_pubkey [32]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
+// Solidity: function deposit(_pubkey bytes, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
+func (_ValidatorRegistration *ValidatorRegistrationSession) Deposit(_pubkey []byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
 	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0x881d2135.
+// Deposit is a paid mutator transaction binding the contract method 0x878df5ac.
 //
-// Solidity: function deposit(_pubkey bytes32, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationTransactorSession) Deposit(_pubkey [32]byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
+// Solidity: function deposit(_pubkey bytes, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
+func (_ValidatorRegistration *ValidatorRegistrationTransactorSession) Deposit(_pubkey []byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
 	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
 }
 
@@ -318,7 +318,7 @@ func (it *ValidatorRegistrationValidatorRegisteredIterator) Close() error {
 
 // ValidatorRegistrationValidatorRegistered represents a ValidatorRegistered event raised by the ValidatorRegistration contract.
 type ValidatorRegistrationValidatorRegistered struct {
-	PubKey                   [32]byte
+	HashedPubkey             [32]byte
 	WithdrawalShardID        *big.Int
 	WithdrawalAddressbytes32 common.Address
 	RandaoCommitment         [32]byte
@@ -327,12 +327,12 @@ type ValidatorRegistrationValidatorRegistered struct {
 
 // FilterValidatorRegistered is a free log retrieval operation binding the contract event 0x7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af51274.
 //
-// Solidity: event ValidatorRegistered(pubKey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
-func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegistered(opts *bind.FilterOpts, pubKey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (*ValidatorRegistrationValidatorRegisteredIterator, error) {
+// Solidity: event ValidatorRegistered(hashedPubkey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegistered(opts *bind.FilterOpts, hashedPubkey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (*ValidatorRegistrationValidatorRegisteredIterator, error) {
 
-	var pubKeyRule []interface{}
-	for _, pubKeyItem := range pubKey {
-		pubKeyRule = append(pubKeyRule, pubKeyItem)
+	var hashedPubkeyRule []interface{}
+	for _, hashedPubkeyItem := range hashedPubkey {
+		hashedPubkeyRule = append(hashedPubkeyRule, hashedPubkeyItem)
 	}
 
 	var withdrawalAddressbytes32Rule []interface{}
@@ -344,7 +344,7 @@ func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegi
 		randaoCommitmentRule = append(randaoCommitmentRule, randaoCommitmentItem)
 	}
 
-	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "ValidatorRegistered", pubKeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
+	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "ValidatorRegistered", hashedPubkeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
 	if err != nil {
 		return nil, err
 	}
@@ -353,12 +353,12 @@ func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegi
 
 // WatchValidatorRegistered is a free log subscription operation binding the contract event 0x7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af51274.
 //
-// Solidity: event ValidatorRegistered(pubKey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
-func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegistered(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationValidatorRegistered, pubKey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (event.Subscription, error) {
+// Solidity: event ValidatorRegistered(hashedPubkey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegistered(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationValidatorRegistered, hashedPubkey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (event.Subscription, error) {
 
-	var pubKeyRule []interface{}
-	for _, pubKeyItem := range pubKey {
-		pubKeyRule = append(pubKeyRule, pubKeyItem)
+	var hashedPubkeyRule []interface{}
+	for _, hashedPubkeyItem := range hashedPubkey {
+		hashedPubkeyRule = append(hashedPubkeyRule, hashedPubkeyItem)
 	}
 
 	var withdrawalAddressbytes32Rule []interface{}
@@ -370,7 +370,7 @@ func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegis
 		randaoCommitmentRule = append(randaoCommitmentRule, randaoCommitmentItem)
 	}
 
-	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "ValidatorRegistered", pubKeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
+	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "ValidatorRegistered", hashedPubkeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
 	if err != nil {
 		return nil, err
 	}
