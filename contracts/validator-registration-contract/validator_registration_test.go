@@ -158,8 +158,12 @@ func TestRegister(t *testing.T) {
 		t.Errorf("Validator registration failed: %v", err)
 	}
 	log, err := testAccount.contract.FilterValidatorRegistered(&bind.FilterOpts{}, [][32]byte{}, []common.Address{}, [][32]byte{})
+	defer log.Close()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if log.Error() != nil {
+		t.Fatal(log.Error())
 	}
 	log.Next()
 	if log.Event.WithdrawalShardID.Cmp(shardID) != 0 {
