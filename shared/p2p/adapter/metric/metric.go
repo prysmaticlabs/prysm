@@ -3,7 +3,6 @@ package metric
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"
 	"time"
@@ -12,8 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
-
-var log = logrus.WithField("prefix", "prometheus")
 
 var (
 	messagesCompleted = prometheus.NewCounterVec(
