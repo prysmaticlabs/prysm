@@ -40,23 +40,17 @@ type ChainService struct {
 	canonicalCrystallizedStateFeed *event.Feed
 	genesisTime                    time.Time
 	unfinalizedBlocks              map[[32]byte]*statePair
-	enableCrossLinks               bool
-	enableRewardChecking           bool
-	enableAttestationValidity      bool
 	enablePOWChain                 bool
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf            int
-	IncomingBlockBuf          int
-	Web3Service               *powchain.Web3Service
-	BeaconDB                  beaconDB
-	DevMode                   bool
-	EnableCrossLinks          bool
-	EnableRewardChecking      bool
-	EnableAttestationValidity bool
-	EnablePOWChain            bool
+	BeaconBlockBuf   int
+	IncomingBlockBuf int
+	Web3Service      *powchain.Web3Service
+	BeaconDB         beaconDB
+	DevMode          bool
+	EnablePOWChain   bool
 }
 
 // Struct used to represent an unfinalized block's state pair
@@ -83,9 +77,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		unfinalizedBlocks:              make(map[[32]byte]*statePair),
 		enablePOWChain:                 cfg.EnablePOWChain,
-		enableCrossLinks:               cfg.EnableCrossLinks,
-		enableRewardChecking:           cfg.EnableRewardChecking,
-		enableAttestationValidity:      cfg.EnableAttestationValidity,
 	}, nil
 }
 
@@ -171,6 +162,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				log.Errorf("Could not get current crystallized state: %v", err)
 				continue
 			}
+
 			blockcState := c.unfinalizedBlocks[h].crystallizedState
 
 			var headUpdated bool
@@ -226,6 +218,23 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 	}
 }
 
+func (c *ChainService) executeStateTransition(
+	cState *types.CrystallizedState,
+	aState *types.ActiveState,
+	block *types.Block) (*types.CrystallizedState, error) {
+
+	var err error
+	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
+	for cState.IsCycleTransition(block.SlotNumber()) {
+		cState, err = cState.NewStateRecalculations(aState, block)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cState, nil
+}
+
 func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
@@ -272,7 +281,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				aState,
 				cState,
 				parent.SlotNumber(),
-				c.enableAttestationValidity,
 				c.genesisTime,
 			); !valid {
 				log.Debug("Block failed validity conditions")
@@ -282,16 +290,11 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			// If the block is valid, we compute its associated state tuple (active, crystallized)
 			// and apply a block scoring function.
 			var didCycleTransition bool
-			for cState.IsCycleTransition(block.SlotNumber()) {
-				log.Infof("executing state transition for slot %d", block.SlotNumber())
-				cState, err = cState.NewStateRecalculations(
-					aState,
-					block,
-					c.enableCrossLinks,
-					c.enableRewardChecking,
-				)
+			if cState.IsCycleTransition(block.SlotNumber()) {
+				cState, err = c.executeStateTransition(cState, aState, block)
 				if err != nil {
 					log.Errorf("Initialize new cycle transition failed: %v", err)
+					continue
 				}
 				didCycleTransition = true
 			}
@@ -300,10 +303,10 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				block,
 				cState,
 				parent.SlotNumber(),
-				c.enableAttestationValidity,
 			)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
+				continue
 			}
 
 			if err := c.beaconDB.SaveBlock(block); err != nil {

@@ -107,6 +107,9 @@ func TestProcessBlock(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	if err := db.InitializeState(nil); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
 
 	if err := db.InitializeState(nil); err != nil {
 		t.Fatal(err)

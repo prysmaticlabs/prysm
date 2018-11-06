@@ -158,7 +158,6 @@ func (b *Block) IsValid(
 	aState *ActiveState,
 	cState *CrystallizedState,
 	parentSlot uint64,
-	enableAttestationValidity bool,
 	genesisTime time.Time) bool {
 	_, err := b.Hash()
 	if err != nil {
@@ -176,10 +175,8 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	if enableAttestationValidity {
-		if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
-			return false
-		}
+	if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
+		return false
 	}
 
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
@@ -251,11 +248,12 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	// Validate attestation's slot number has is within range of incoming block number.
 	attestation := b.Attestations()[attestationIndex]
 	if !isAttestationSlotNumberValid(attestation.Slot, parentSlot) {
+		log.Errorf("invalid attestation slot %d", attestation.Slot)
 		return false
 	}
 
 	if attestation.JustifiedSlot > cState.LastJustifiedSlot() {
-		log.Debugf("attestation's justified slot has to be earlier or equal to crystallized state's last justified slot. Found: %d. Want <=: %d",
+		log.Errorf("attestation's justified slot has to be earlier or equal to crystallized state's last justified slot. Found: %d. Want <=: %d",
 			attestation.JustifiedSlot,
 			cState.LastJustifiedSlot())
 		return false
@@ -266,7 +264,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	blockInChain := db.HasBlock(hash)
 
 	if !blockInChain {
-		log.Debugf("The attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
+		log.Errorf("the attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
 			attestation.JustifiedBlockHash)
 		return false
 	}
@@ -280,12 +278,13 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 
 	attesterIndices, err := cState.getAttesterIndices(attestation)
 	if err != nil {
-		log.Debugf("Unable to get validator committee: %v", attesterIndices)
+		log.Errorf("unable to get validator committee %v", err)
 		return false
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
 	if !casper.AreAttesterBitfieldsValid(attestation, attesterIndices) {
+		log.Errorf("unable to match attester bitfield with shard and committee bitfield")
 		return false
 	}
 
