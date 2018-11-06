@@ -119,7 +119,7 @@ func (s *Service) Start() {
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
-			log.Errorf("could not load TLS keys: %s", err)
+			log.Errorf("Could not load TLS keys: %s", err)
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {

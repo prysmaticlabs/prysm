@@ -1,6 +1,6 @@
 # Prysmatic Labs Validator Client Implementation
 
-This is the main project folder for a validator client implementation of Ethereum 2.0 in Golang by [Prysmatic Labs](https://prysmaticlabs.com). A validator client attaches to a running beacon node in order to perform proposer/attester responsibilities and manage the lifecycle of a particular shard upon being assigned to one.
+This is the main project folder for a validator client implementation of Ethereum Serenity in Golang by [Prysmatic Labs](https://prysmaticlabs.com). A validator client attaches to a running beacon node in order to perform proposer/attester responsibilities and manage the lifecycle of a particular shard upon being assigned to one.
 
 Before you begin, check out our main [README](https://github.com/prysmaticlabs/prysm/blob/master/README.md) and join our active chat room on Discord or Gitter below:
 

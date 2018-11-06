@@ -1,5 +1,5 @@
 // Package node defines a validator client which connects to a
-// full beacon node as part of the Ethereum 2.0 specification.
+// full beacon node as part of the Ethereum Serenity specification.
 package node
 
 import (
@@ -33,7 +33,7 @@ const shardChainDBName = "shardchaindata"
 
 // ValidatorClient defines an instance of a sharding validator that manages
 // the entire lifecycle of services attached to it participating in
-// Ethereum 2.0.
+// Ethereum Serenity.
 type ValidatorClient struct {
 	ctx      *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
@@ -50,7 +50,7 @@ func GeneratePubKey() ([]byte, error) {
 	return pubkey, err
 }
 
-// NewValidatorClient creates a new, Ethereum 2.0 validator client.
+// NewValidatorClient creates a new, Ethereum Serenity validator client.
 func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{

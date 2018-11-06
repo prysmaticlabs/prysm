@@ -1,5 +1,5 @@
 // Package attester defines all relevant functionality for a Attester actor
-// within Ethereum 2.0.
+// within Ethereum Serenity.
 package attester
 
 import (
@@ -26,7 +26,7 @@ type beaconClientService interface {
 }
 
 // Attester holds functionality required to run a block attester
-// in Ethereum 2.0.
+// in Ethereum Serenity.
 type Attester struct {
 	ctx              context.Context
 	cancel           context.CancelFunc

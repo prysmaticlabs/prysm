@@ -85,7 +85,7 @@ func TestShard_HeaderByHash(t *testing.T) {
 	errorShard := NewShard(big.NewInt(1), mockDB)
 
 	if err := shard.SaveHeader(header); err != nil {
-		t.Fatalf("cannot save collation header: %v", err)
+		t.Fatalf("could not save collation header: %v", err)
 	}
 	hash := header.Hash()
 
@@ -150,7 +150,7 @@ func TestShard_CollationByHeaderHash(t *testing.T) {
 
 	// properly saves the collation.
 	if err := shard.SaveCollation(collation); err != nil {
-		t.Fatalf("cannot save collation: %v", err)
+		t.Fatalf("could not save collation: %v", err)
 	}
 
 	dbCollation, err := shard.CollationByHeaderHash(&hash)
@@ -215,7 +215,7 @@ func TestShard_CanonicalHeaderHash(t *testing.T) {
 
 	// should not be able to set as canonical before saving the header and body first.
 	if err := shard.SetCanonical(header); err == nil {
-		t.Errorf("cannot set as canonical before saving header and body first")
+		t.Errorf("could not set as canonical before saving header and body first")
 	}
 
 	if err := shard.SaveCollation(collation); err != nil {
@@ -317,7 +317,7 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 	shard := NewShard(shardID, shardDB)
 
 	if err := shard.SaveBody(body); err != nil {
-		t.Fatalf("cannot save body: %v", err)
+		t.Fatalf("could not save body: %v", err)
 	}
 
 	chunks := Chunks(body)                   // wrapper allowing us to merklizing the chunks.
@@ -325,7 +325,7 @@ func TestShard_BodyByChunkRoot(t *testing.T) {
 
 	dbBody, err := shard.BodyByChunkRoot(&chunkRoot)
 	if err != nil {
-		t.Errorf("cannot fetch body by chunk root: %v", err)
+		t.Errorf("could not fetch body by chunk root: %v", err)
 	}
 
 	// it should throw error if fetching non-existent chunk root.
@@ -369,11 +369,11 @@ func TestShard_CheckAvailability(t *testing.T) {
 
 	// should throw error if checking availability before header is even saved.
 	if _, err := shard.CheckAvailability(header); err == nil {
-		t.Errorf("error should be thrown: cannot check availability before saving header first")
+		t.Errorf("error should be thrown: could not check availability before saving header first")
 	}
 
 	if err := shard.SaveBody(collation.body); err != nil {
-		t.Fatalf("cannot save body: %v", err)
+		t.Fatalf("could not save body: %v", err)
 	}
 
 	available, err := shard.CheckAvailability(header)
@@ -439,7 +439,7 @@ func TestShard_SaveCollation(t *testing.T) {
 	collation.CalculateChunkRoot()
 
 	if err := shard.SaveCollation(collation); err == nil {
-		t.Errorf("cannot save collation in shard with wrong shardID")
+		t.Errorf("could not save collation in shard with wrong shardID")
 	}
 }
 
