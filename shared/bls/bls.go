@@ -25,23 +25,30 @@ func (s *SecretKey) PublicKey() (*PublicKey, error) {
 	return &PublicKey{}, nil
 }
 
+// BufferedSecretKey returns the secret key in a byte format.
 func (s *SecretKey) BufferedSecretKey() []byte {
 	return s.K.Bytes()
 }
 
+// BufferedPublicKey returns the public key in a byte format.
 func (p *PublicKey) BufferedPublicKey() []byte {
 	return []byte{}
 }
 
+// UnBufferSecretKey takes the byte representation of a secret key
+// and sets it to a big int of the underlying secret key object.
 func (s *SecretKey) UnBufferSecretKey(bufferedKey []byte) {
 	s.K = big.NewInt(0).SetBytes(bufferedKey)
 
 }
 
+// UnBufferPublicKey takes the byte representation of a public key
+// and sets it to a big int of the underlying public key object.
 func (p *PublicKey) UnBufferPublicKey(bufferedKey []byte) {
 
 }
 
+// GenerateKey generates a new secret key using a seed.
 func GenerateKey(seed []byte) *SecretKey {
 	return &SecretKey{
 		K: big.NewInt(0).SetBytes(seed),
