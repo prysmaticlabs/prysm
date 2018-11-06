@@ -176,6 +176,7 @@ func (b *Block) IsValid(
 	}
 
 	if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
+		log.Error("Invalid attestation")
 		return false
 	}
 

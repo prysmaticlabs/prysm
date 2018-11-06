@@ -105,7 +105,7 @@ func TestBlockValidity(t *testing.T) {
 				Slot:             0,
 				Shard:            1,
 				JustifiedSlot:    0,
-				AttesterBitfield: []byte{64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 	})
