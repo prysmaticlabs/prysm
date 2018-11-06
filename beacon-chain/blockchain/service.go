@@ -29,23 +29,17 @@ type ChainService struct {
 	canonicalCrystallizedStateFeed *event.Feed
 	genesisTime                    time.Time
 	unfinalizedBlocks              map[[32]byte]*statePair
-	enableCrossLinks               bool
-	enableRewardChecking           bool
-	enableAttestationValidity      bool
 	enablePOWChain                 bool
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf            int
-	IncomingBlockBuf          int
-	Web3Service               *powchain.Web3Service
-	BeaconDB                  *db.BeaconDB
-	DevMode                   bool
-	EnableCrossLinks          bool
-	EnableRewardChecking      bool
-	EnableAttestationValidity bool
-	EnablePOWChain            bool
+	BeaconBlockBuf   int
+	IncomingBlockBuf int
+	Web3Service      *powchain.Web3Service
+	BeaconDB         *db.BeaconDB
+	DevMode          bool
+	EnablePOWChain   bool
 }
 
 // Struct used to represent an unfinalized block's state pair
@@ -72,9 +66,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalCrystallizedStateFeed: new(event.Feed),
 		unfinalizedBlocks:              make(map[[32]byte]*statePair),
 		enablePOWChain:                 cfg.EnablePOWChain,
-		enableCrossLinks:               cfg.EnableCrossLinks,
-		enableRewardChecking:           cfg.EnableRewardChecking,
-		enableAttestationValidity:      cfg.EnableAttestationValidity,
 	}, nil
 }
 
@@ -160,6 +151,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				log.Errorf("Could not get current crystallized state: %v", err)
 				continue
 			}
+
 			blockcState := c.unfinalizedBlocks[h].crystallizedState
 
 			var headUpdated bool
@@ -223,7 +215,7 @@ func (c *ChainService) executeStateTransition(
 	var err error
 	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
 	for cState.IsCycleTransition(block.SlotNumber()) {
-		cState, err = cState.NewStateRecalculations(aState, block, c.enableCrossLinks, c.enableRewardChecking)
+		cState, err = cState.NewStateRecalculations(aState, block)
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +270,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				aState,
 				cState,
 				parent.SlotNumber(),
-				c.enableAttestationValidity,
 				c.genesisTime,
 			); !valid {
 				log.Debug("Block failed validity conditions")
@@ -301,10 +292,10 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				block,
 				cState,
 				parent.SlotNumber(),
-				c.enableAttestationValidity,
 			)
 			if err != nil {
 				log.Errorf("Compute active state failed: %v", err)
+				continue
 			}
 
 			if err := c.beaconDB.SaveBlock(block); err != nil {

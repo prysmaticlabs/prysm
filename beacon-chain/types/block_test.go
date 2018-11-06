@@ -118,7 +118,7 @@ func TestBlockValidity(t *testing.T) {
 	}
 
 	genesisTime := params.GetConfig().GenesisTime
-	if !b.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+	if !b.IsValid(db, aState, cState, parentSlot, genesisTime) {
 		t.Fatalf("failed block validation")
 	}
 }
@@ -154,7 +154,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 		},
 	})
 	genesisTime := params.GetConfig().GenesisTime
-	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, genesisTime) {
 		t.Fatalf("should have failed doesParentProposerExist")
 	}
 }
@@ -189,8 +189,9 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 			},
 		},
 	})
+
 	genesisTime := params.GetConfig().GenesisTime
-	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, false, genesisTime) {
+	if badRandaoBlock.IsValid(db, aState, cState, parentSlot, genesisTime) {
 		t.Fatalf("should have failed with invalid RANDAO")
 	}
 }

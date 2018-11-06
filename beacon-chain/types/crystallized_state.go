@@ -216,6 +216,11 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
 }
 
+// GetShardsAndCommitteesForSlot returns the shard committees of a given slot.
+func (c *CrystallizedState) GetShardsAndCommitteesForSlot(slotNumber uint64) (*pb.ShardAndCommitteeArray, error) {
+	return casper.GetShardAndCommitteesForSlot(c.ShardAndCommitteesForSlots(), c.LastStateRecalculationSlot(), slotNumber)
+}
+
 // isValidatorSetChange checks if a validator set change transition can be processed. At that point,
 // validator shuffle will occur.
 func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
@@ -266,7 +271,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new committees if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
 	var err error
 
@@ -285,12 +290,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	}
 
-	// If reward checking is disabled, the new set of validators for the cycle
-	// will remain the same.
-	if !enableRewardChecking {
-		newState.data.Validators = c.Validators()
-	}
-
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
 		var blockVoteBalance uint64
@@ -299,16 +298,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		blockHash := recentBlockHashes[i]
 
 		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot,
-			blockVoteCache, newState.Validators(), timeSinceFinality, enableRewardChecking)
+			blockVoteCache, newState.data.Validators, timeSinceFinality)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
-		if enableCrossLinks {
-			newState.data.Crosslinks, err = newState.processCrosslinks(aState.PendingAttestations(), slot, newState.Validators(), block.SlotNumber())
-			if err != nil {
-				return nil, err
-			}
+		newState.data.Crosslinks, err = newState.processCrosslinks(aState.PendingAttestations(), slot, newState.Validators(), block.SlotNumber())
+		if err != nil {
+			return nil, err
 		}
 	}
 
