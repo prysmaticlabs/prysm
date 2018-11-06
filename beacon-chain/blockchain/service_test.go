@@ -144,6 +144,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	}
 
 	chainService.incomingBlockChan <- block
+	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
 
