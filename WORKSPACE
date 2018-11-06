@@ -649,6 +649,7 @@ go_repository(
     commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",
     importpath = "github.com/pborman/uuid",
 )
+
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
     commit = "058210c5a0d042677367d923eb8a6dc072a15f7f",

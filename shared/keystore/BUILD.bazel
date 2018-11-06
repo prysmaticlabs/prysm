@@ -21,7 +21,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["key_test.go"],
+    srcs = [
+        "key_test.go",
+        "keystore_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/bls:go_default_library",
