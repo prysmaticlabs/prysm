@@ -23,6 +23,7 @@ go_test(
     name = "go_default_test",
     srcs = ["yaml_test.go"],
     embed = [":go_default_library"],
+    data = glob(["sampletests/**"]),
     deps = [
         "//beacon-chain/chaintest/backend:go_default_library",
         "@com_github_go_yaml_yaml//:go_default_library",
