@@ -350,7 +350,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	recentAddedValidators := casper.RecentAddedValidators(newState.data.Validators)
 	for _, index := range recentAddedValidators {
 		newState.data.PersistentCommitteeReassignments = casper.AddValidatorReassignmentRecord(
-			aState.RandaoMix()[:],
+			aState.data.RandaoMix[:],
 			index,
 			block.SlotNumber(),
 			newState.data.PersistentCommitteeReassignments,
@@ -360,7 +360,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	// Re-shuffle proposers for shards.
 	newState.data.PersistentCommitteeReassignments = casper.ReassignProposerForShards(
 		casper.ActiveValidatorIndices(c.data.Validators),
-		aState.RandaoMix()[:],
+		aState.data.RandaoMix[:],
 		block.SlotNumber(),
 		newState.data.PersistentCommitteeReassignments,
 	)
