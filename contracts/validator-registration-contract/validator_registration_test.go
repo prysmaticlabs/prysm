@@ -24,7 +24,7 @@ type testAccount struct {
 	addr              common.Address
 	withdrawalAddress common.Address
 	randaoCommitment  [32]byte
-	pubKey            [32]byte
+	pubKey            []byte
 	contract          *ValidatorRegistration
 	backend           *backends.SimulatedBackend
 	txOpts            *bind.TransactOpts
@@ -40,7 +40,7 @@ func setup() (*testAccount, error) {
 
 	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
 	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
-	var pubKey [32]byte
+	var pubKey = make([]byte, 48)
 	copy(pubKey[:], []byte(publicKeyBytes))
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
@@ -61,6 +61,24 @@ func TestSetupAndContractRegistration(t *testing.T) {
 	_, err := setup()
 	if err != nil {
 		log.Fatalf("Can not deploy validator registration contract: %v", err)
+	}
+}
+
+// negative test case, public key that is not 48 bytes.
+func TestRegisterWithLessThan48BytesPubkey(t *testing.T) {
+	testAccount, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pubKey = make([]byte, 32)
+	copy(pubKey, testAccount.pubKey[:])
+	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
+	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
+
+	testAccount.txOpts.Value = amount32Eth
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
+	if err == nil {
+		t.Error("Validator registration should have failed with a 32 bytes pubkey")
 	}
 }
 
@@ -131,14 +149,21 @@ func TestRegister(t *testing.T) {
 	shardID := big.NewInt(99)
 	testAccount.txOpts.Value = amount32Eth
 
+	var hashedPub [32]byte
+	copy(hashedPub[:], crypto.Keccak256(testAccount.pubKey))
+
 	_, err = testAccount.contract.Deposit(testAccount.txOpts, testAccount.pubKey, shardID, *withdrawAddr, *randaoCommitment)
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
 	log, err := testAccount.contract.FilterValidatorRegistered(&bind.FilterOpts{}, [][32]byte{}, []common.Address{}, [][32]byte{})
+	defer log.Close()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if log.Error() != nil {
+		t.Fatal(log.Error())
 	}
 	log.Next()
 	if log.Event.WithdrawalShardID.Cmp(shardID) != 0 {
@@ -147,8 +172,8 @@ func TestRegister(t *testing.T) {
 	if log.Event.RandaoCommitment != *randaoCommitment {
 		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", *randaoCommitment, log.Event.RandaoCommitment)
 	}
-	if log.Event.PubKey != testAccount.pubKey {
-		t.Errorf("validatorRegistered event public key miss matched. Want: %v, Got: %v", testAccount.pubKey, log.Event.PubKey)
+	if log.Event.HashedPubkey != hashedPub {
+		t.Errorf("validatorRegistered event public key miss matched. Want: %v, Got: %v", common.BytesToHash(testAccount.pubKey), log.Event.HashedPubkey)
 	}
 	if log.Event.WithdrawalAddressbytes32 != *withdrawAddr {
 		t.Errorf("validatorRegistered event withdrawal address miss matched. Want: %v, Got: %v", *withdrawAddr, log.Event.WithdrawalAddressbytes32)
