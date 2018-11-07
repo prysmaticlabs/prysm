@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -102,8 +102,8 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 }
 
 func TestStartStop(t *testing.T) {
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
 
 	chainService.IncomingBlockFeed()
@@ -123,8 +123,8 @@ func TestStartStop(t *testing.T) {
 
 func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
 	block := types.NewBlock(&pb.BeaconBlock{
@@ -154,8 +154,8 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
@@ -212,8 +212,8 @@ func TestRunningChainService(t *testing.T) {
 
 func TestDoesPOWBlockExist(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
 	block := types.NewBlock(&pb.BeaconBlock{
@@ -240,8 +240,8 @@ func getShardForSlot(t *testing.T, cState *types.CrystallizedState, slot uint64)
 }
 
 func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
 	active := types.NewGenesisActiveState()
 	crystallized, err := types.NewGenesisCrystallizedState(nil)
@@ -417,8 +417,8 @@ func TestUpdateHead(t *testing.T) {
 	}
 	for _, tt := range tests {
 		hook := logTest.NewGlobal()
-		db := btestutil.SetupDB(t)
-		defer btestutil.TeardownDB(t, db)
+		db := internal.SetupDB(t)
+		defer internal.TeardownDB(t, db)
 		chainService := setupBeaconChain(t, false, db)
 
 		aRoot, _ := tt.aState.Hash()

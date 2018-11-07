@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -66,8 +66,8 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	sim, _ := setupSimulator(t, db)
 
 	sim.Start()
@@ -84,8 +84,8 @@ func TestLifecycle(t *testing.T) {
 func TestBroadcastBlockHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	sim, p2pService := setupSimulator(t, db)
 
 	slotChan := make(chan uint64)
