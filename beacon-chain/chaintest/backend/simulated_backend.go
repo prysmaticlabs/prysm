@@ -1,5 +1,5 @@
 // Package backend contains utilities for simulating an entire
-// ETH 2.0 beacon chain in-memory for e2e tests and benchmarking
+// ETH 2.0 beacon chain for e2e tests and benchmarking
 // purposes.
 package backend
 

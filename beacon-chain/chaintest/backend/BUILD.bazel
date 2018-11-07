@@ -8,7 +8,7 @@ go_library(
         "test_format.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = ["//beacon-chain/chaintest:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",
