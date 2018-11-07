@@ -84,6 +84,38 @@ func RemoveValidatorFromPersistentCommittee(index uint32, committees []*pb.Shard
 	return committees
 }
 
+// ReassignProposerForShards reassigns a subset of proposer to different shards during
+// state recalculation.
+func ReassignProposerForShards(
+	activeValidators []uint32,
+	randaoMix []byte,
+	slot uint64,
+	reassignmentRecords []*pb.ShardReassignmentRecord) []*pb.ShardReassignmentRecord {
+
+	validatorsToReshuffle := len(activeValidators) / int(params.GetConfig().ShardPersistentCommitteeChangeInterval)
+	for i := 0; i < validatorsToReshuffle; i++ {
+		indexInBytes := make([]byte, 8)
+		binary.BigEndian.PutUint32(indexInBytes, uint32(i)*2)
+		hash := hashutil.Hash(append(randaoMix, indexInBytes...))
+		assignedIndex := binary.BigEndian.Uint32(hash[:]) % uint32(len(activeValidators))
+
+		shardInBytes := make([]byte, 8)
+		binary.BigEndian.PutUint32(shardInBytes, uint32(i)*2+1)
+		hash = hashutil.Hash(append(randaoMix, shardInBytes...))
+		assignedShard := binary.BigEndian.Uint32(hash[:]) % uint32(params.GetConfig().ShardCount)
+
+		reassignmentRecord := &pb.ShardReassignmentRecord{
+			ValidatorIndex: activeValidators[assignedIndex],
+			Shard:          assignedShard,
+			Slot:           slot + params.GetConfig().ShardPersistentCommitteeChangeInterval,
+		}
+
+		reassignmentRecords = append(reassignmentRecords, reassignmentRecord)
+	}
+
+	return reassignmentRecords
+}
+
 // AddValidatorReassignmentRecord adds the shard reassignment record of the pending active validator.
 func AddValidatorReassignmentRecord(
 	randaoMix []byte,
@@ -114,20 +146,6 @@ func RemoveValidatorsReassignmentRecord(index uint32, reassignmentRecords []*pb.
 		}
 	}
 	return reassignmentRecords
-}
-
-// RemoveValidatorFromPersistentCommittees remove validator index that just exited from
-// active validator list.
-func RemoveValidatorFromPersistentCommittees(index uint32, committees [][]uint32) [][]uint32 {
-	for _, committee := range committees {
-		for i, validatorIndex := range committee {
-			if index == validatorIndex {
-				committee[i] = committee[len(committee)-1]
-				committee = committee[:len(committee)-1]
-			}
-		}
-	}
-	return committees
 }
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.

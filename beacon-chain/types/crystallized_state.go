@@ -356,6 +356,15 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			newState.data.PersistentCommitteeReassignments,
 		)
 	}
+
+	// Re-shuffle proposers for shards.
+	newState.data.PersistentCommitteeReassignments = casper.ReassignProposerForShards(
+		casper.ActiveValidatorIndices(c.data.Validators),
+		aState.RandaoMix()[:],
+		block.SlotNumber(),
+		newState.data.PersistentCommitteeReassignments,
+	)
+
 	return newState, nil
 }
 
