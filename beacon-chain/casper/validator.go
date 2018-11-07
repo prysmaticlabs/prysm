@@ -2,6 +2,7 @@ package casper
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -45,17 +46,88 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices
 }
 
-// RecentRemovedActiveValidatorIndices returns a list of validator indices that were
+// RecentRemovedValidators returns a list of validator indices that were
 // removed from active validator list during state recalculation.
-func RecentRemovedActiveValidatorIndices(validatorsBeforeRecal []*pb.ValidatorRecord, validatorsAfterRecal []*pb.ValidatorRecord) []uint32 {
+func RecentRemovedValidators(validators []*pb.ValidatorRecord) []uint32 {
 	var recentRemoved []uint32
-	for i, validator := range validatorsBeforeRecal {
-		if validator.Status != validatorsAfterRecal[i].Status &&
-			validatorsAfterRecal[i].Status == uint64(params.PendingExit) {
+	for i, validator := range validators {
+		if validator.Status == uint64(params.PendingExit) {
 			recentRemoved = append(recentRemoved, uint32(i))
 		}
 	}
 	return recentRemoved
+}
+
+// RecentAddedValidators returns a list of validator indices that were
+// added to active validator list during state recalculation.
+func RecentAddedValidators(validators []*pb.ValidatorRecord) []uint32 {
+	var recentAdded []uint32
+	for i, validator := range validators {
+		if validator.Status == uint64(params.PendingActivation) {
+			recentAdded = append(recentAdded, uint32(i))
+		}
+	}
+	return recentAdded
+}
+
+// RemoveValidatorFromPersistentCommittee removes one validator index that from persistent committee list.
+func RemoveValidatorFromPersistentCommittee(index uint32, committees []*pb.ShardValidatorIndices) []*pb.ShardValidatorIndices {
+	for _, committee := range committees {
+		for i, validatorIndex := range committee.ValidatorIndices {
+			if index == validatorIndex {
+				committee.ValidatorIndices[i] = committee.ValidatorIndices[len(committee.ValidatorIndices)-1]
+				committee.ValidatorIndices = committee.ValidatorIndices[:len(committee.ValidatorIndices)-1]
+				break
+			}
+		}
+	}
+	return committees
+}
+
+// AddValidatorReassignmentRecord adds the shard reassignment record of the pending active validator.
+func AddValidatorReassignmentRecord(
+	randaoMix []byte,
+	index uint32,
+	slot uint64,
+	reassignmentRecords []*pb.ShardReassignmentRecord) []*pb.ShardReassignmentRecord {
+	indexInBytes := make([]byte, 8)
+	binary.BigEndian.PutUint32(indexInBytes, index)
+	assignmentHash := hashutil.Hash(append(randaoMix, indexInBytes...))
+	assignedShard := binary.BigEndian.Uint32(assignmentHash[:]) % uint32(params.GetConfig().ShardCount)
+
+	reassignmentRecord := &pb.ShardReassignmentRecord{
+		ValidatorIndex: index,
+		Shard:          assignedShard,
+		Slot:           slot + params.GetConfig().ShardPersistentCommitteeChangeInterval,
+	}
+
+	return append(reassignmentRecords, reassignmentRecord)
+}
+
+// RemoveValidatorsReassignmentRecord removes the shard reassignment record of the pending exited validator.
+func RemoveValidatorsReassignmentRecord(index uint32, reassignmentRecords []*pb.ShardReassignmentRecord) []*pb.ShardReassignmentRecord {
+	for i, reassignmentRecord := range reassignmentRecords {
+		if index == reassignmentRecord.ValidatorIndex {
+			reassignmentRecords[i] = reassignmentRecords[len(reassignmentRecords)-1]
+			reassignmentRecords = reassignmentRecords[:len(reassignmentRecords)-1]
+			break
+		}
+	}
+	return reassignmentRecords
+}
+
+// RemoveValidatorFromPersistentCommittees remove validator index that just exited from
+// active validator list.
+func RemoveValidatorFromPersistentCommittees(index uint32, committees [][]uint32) [][]uint32 {
+	for _, committee := range committees {
+		for i, validatorIndex := range committee {
+			if index == validatorIndex {
+				committee[i] = committee[len(committee)-1]
+				committee = committee[:len(committee)-1]
+			}
+		}
+	}
+	return committees
 }
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.

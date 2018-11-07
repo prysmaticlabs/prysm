@@ -43,9 +43,9 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 	if err != nil {
 		return nil, err
 	}
-	var persistentCommittees []*pb.ShardCommittees
+	var persistentCommittees []*pb.ShardValidatorIndices
 	for _, committeesIndices := range persistentCommitteesIndices {
-		persistentCommittees = append(persistentCommittees, &pb.ShardCommittees{
+		persistentCommittees = append(persistentCommittees, &pb.ShardValidatorIndices{
 			ValidatorIndices: committeesIndices,
 		})
 	}
@@ -339,6 +339,23 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 	}
 
+	// Handle pending exited validators for persistent shard committees.
+	recentRemovedValidators := casper.RecentRemovedValidators(newState.data.Validators)
+	for _, index := range recentRemovedValidators {
+		newState.data.PersistentCommittees = casper.RemoveValidatorFromPersistentCommittee(index, newState.data.PersistentCommittees)
+		newState.data.PersistentCommitteeReassignments = casper.RemoveValidatorsReassignmentRecord(index, newState.data.PersistentCommitteeReassignments)
+	}
+
+	// Handle pending active validators for persistent shard committees.
+	recentAddedValidators := casper.RecentAddedValidators(newState.data.Validators)
+	for _, index := range recentAddedValidators {
+		newState.data.PersistentCommitteeReassignments = casper.AddValidatorReassignmentRecord(
+			aState.RandaoMix()[:],
+			index,
+			block.SlotNumber(),
+			newState.data.PersistentCommitteeReassignments,
+		)
+	}
 	return newState, nil
 }
 

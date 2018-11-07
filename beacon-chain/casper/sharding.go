@@ -44,7 +44,7 @@ func InitialShardPersistentCommittees(validators []*pb.ValidatorRecord) ([][]uin
 
 	validatorIndices := make([]uint32, len(validators))
 	// Construct a list of validator indices for shuffle.
-	for i:=0; i<len(validators); i++ {
+	for i := 0; i < len(validators); i++ {
 		validatorIndices[i] = uint32(i)
 	}
 
