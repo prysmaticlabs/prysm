@@ -58,13 +58,15 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
+	syncChan := make(chan time.Time)
 	defer func() {
 		close(exitRoutine)
 		close(delayChan)
+		close(syncChan)
 	}()
 
 	go func() {
-		ss.run(delayChan)
+		ss.run(delayChan, syncChan)
 		exitRoutine <- true
 	}()
 
@@ -111,14 +113,16 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
+	syncChan := make(chan time.Time)
 
 	defer func() {
 		close(exitRoutine)
 		close(delayChan)
+		close(syncChan)
 	}()
 
 	go func() {
-		ss.run(delayChan)
+		ss.run(delayChan, syncChan)
 		exitRoutine <- true
 	}()
 
@@ -220,14 +224,16 @@ func TestDelayChan(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
+	syncChan := make(chan time.Time)
 
 	defer func() {
 		close(exitRoutine)
 		close(delayChan)
+		close(syncChan)
 	}()
 
 	go func() {
-		ss.run(delayChan)
+		ss.run(delayChan, syncChan)
 		exitRoutine <- true
 	}()
 

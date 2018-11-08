@@ -207,7 +207,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 
 			block := broadcastedBlocksBySlot[data.GetSlotNumber()]
 			if block == nil {
-				log.Errorf("Requested block not found: %d", block.SlotNumber())
+				log.Errorf("Requested block not found: %d", data.GetSlotNumber())
 				continue
 			}
 

@@ -31,6 +31,7 @@ var log = logrus.WithField("prefix", "initial-sync")
 //
 type Config struct {
 	SyncPollingInterval         time.Duration
+	SyncReqInterval             time.Duration
 	BlockBufferSize             int
 	BlockAnnounceBufferSize     int
 	CrystallizedStateBufferSize int
@@ -45,7 +46,8 @@ type Config struct {
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
 func DefaultConfig() Config {
 	return Config{
-		SyncPollingInterval:         time.Duration(int64(params.GetConfig().SlotDuration)) * time.Second,
+		SyncPollingInterval:         time.Duration(int64(params.GetConfig().SlotDuration)) * time.Second * 4,
+		SyncReqInterval:             time.Second,
 		BlockBufferSize:             100,
 		BlockAnnounceBufferSize:     100,
 		CrystallizedStateBufferSize: 100,
@@ -82,6 +84,7 @@ type InitialSync struct {
 	crystallizedStateBuf         chan p2p.Message
 	currentSlot                  uint64
 	syncPollingInterval          time.Duration
+	syncReqInterval              time.Duration
 	initialCrystallizedStateRoot [32]byte
 }
 
@@ -107,6 +110,7 @@ func NewInitialSyncService(ctx context.Context,
 		crystallizedStateBuf: crystallizedStateBuf,
 		blockAnnounceBuf:     blockAnnounceBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
+		syncReqInterval:      cfg.SyncReqInterval,
 	}
 }
 
@@ -120,8 +124,10 @@ func (s *InitialSync) Start() {
 
 	go func() {
 		ticker := time.NewTicker(s.syncPollingInterval)
-		s.run(ticker.C)
+		syncTicker := time.NewTicker(s.syncReqInterval)
+		s.run(ticker.C, syncTicker.C)
 		ticker.Stop()
+		syncTicker.Stop()
 	}()
 }
 
@@ -135,7 +141,7 @@ func (s *InitialSync) Stop() error {
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run(delaychan <-chan time.Time) {
+func (s *InitialSync) run(delaychan <-chan time.Time, syncReqChan <-chan time.Time) {
 	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
 	crystallizedStateSub := s.p2p.Subscribe(&pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
@@ -154,6 +160,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
+		case <-syncReqChan:
+			s.requestNextBlockBySlot(s.currentSlot + 1)
 		case <-delaychan:
 			if s.currentSlot == 0 {
 				continue
@@ -257,6 +265,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
+	s.currentSlot = block.SlotNumber()
 	return nil
 }
 
@@ -274,6 +283,10 @@ func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
 	block := types.NewBlock(data.Block)
+	h, err := block.Hash()
+	if err != nil {
+		return err
+	}
 
 	if s.currentSlot == uint64(0) {
 		return errors.New("invalid slot number for syncing")
@@ -284,6 +297,7 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
 		}
+		log.Infof("Saved block with hash %#x for initial sync", h)
 		s.currentSlot = block.SlotNumber()
 	}
 	return nil
