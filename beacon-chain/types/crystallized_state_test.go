@@ -285,7 +285,7 @@ func TestProcessCrosslinks(t *testing.T) {
 			Slot:             0,
 			Shard:            1,
 			ShardBlockHash:   []byte{'a'},
-			AttesterBitfield: []byte{10},
+			AttesterBitfield: []byte{224},
 		},
 	}
 
@@ -304,13 +304,13 @@ func TestProcessCrosslinks(t *testing.T) {
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := cState.processCrosslinks(pAttestations, 50, cState.Validators(), 100)
+	newCrosslinks, err := cState.processCrosslinks(pAttestations, cState.Validators(), 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
 
-	if newCrosslinks[1].Slot != 50 {
-		t.Errorf("Slot did not change for new cross link. Wanted: 50. Got: %d", newCrosslinks[0].Slot)
+	if newCrosslinks[1].Slot != params.GetConfig().CycleLength {
+		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.GetConfig().CycleLength, newCrosslinks[0].Slot)
 	}
 	if !bytes.Equal(newCrosslinks[1].ShardBlockHash, []byte{'a'}) {
 		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].ShardBlockHash)
@@ -429,8 +429,8 @@ func TestPenalizedETH(t *testing.T) {
 		{a: 4, b: 1200},
 	}
 	for _, tt := range tests {
-		if cState.penalizedETH(tt.a) != tt.b {
-			t.Errorf("PenalizedETH(%d) = %v, want = %d", tt.a, cState.penalizedETH(tt.a), tt.b)
+		if cState.penalizedETH(uint32(tt.a)) != tt.b {
+			t.Errorf("PenalizedETH(%d) = %v, want = %d", tt.a, cState.penalizedETH(uint32(tt.a)), tt.b)
 		}
 	}
 }
