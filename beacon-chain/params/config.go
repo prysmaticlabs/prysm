@@ -47,7 +47,7 @@ var defaultConfig = &Config{
 	DepositSize:                   32,
 	MinDeposit:                    16,
 	SlotDuration:                  uint64(16),
-	MinCommitteeSize:               uint64(128),
+	MinCommitteeSize:              uint64(128),
 	BootstrappedValidatorsCount:   16384,
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
