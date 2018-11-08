@@ -2,12 +2,12 @@ package casper
 
 import (
 	"bytes"
-	"encoding/binary"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	b "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 func TestTallyVoteBalances(t *testing.T) {
@@ -224,20 +224,12 @@ func TestCrosslinks(t *testing.T) {
 }
 
 func TestProcessSpecialRecords(t *testing.T) {
-	validator4Index := make([]byte, 8)
-	binary.BigEndian.PutUint64(validator4Index, 4)
-	validator5Index := make([]byte, 8)
-	binary.BigEndian.PutUint64(validator5Index, 5)
-	validator6Index := make([]byte, 8)
-	binary.BigEndian.PutUint64(validator6Index, 6)
-	validator7Index := make([]byte, 8)
-	binary.BigEndian.PutUint64(validator7Index, 7)
 
 	specialRecords := []*pb.SpecialRecord{
-		{Kind: uint32(params.Logout), Data: [][]byte{validator4Index}},                    // Validator 4
-		{Kind: uint32(params.Logout), Data: [][]byte{validator5Index}},                    // Validator 5
-		{Kind: uint32(params.RandaoChange), Data: [][]byte{validator6Index, {byte('A')}}}, // Validator 6
-		{Kind: uint32(params.RandaoChange), Data: [][]byte{validator7Index, {byte('B')}}}, // Validator 7
+		{Kind: uint32(params.Logout), Data: [][]byte{b.Bytes8(4)}},                    // Validator 4
+		{Kind: uint32(params.Logout), Data: [][]byte{b.Bytes8(5)}},                    // Validator 5
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{b.Bytes8(6), {byte('A')}}}, // Validator 6
+		{Kind: uint32(params.RandaoChange), Data: [][]byte{b.Bytes8(7), {byte('B')}}}, // Validator 7
 	}
 
 	validators := make([]*pb.ValidatorRecord, 10)
