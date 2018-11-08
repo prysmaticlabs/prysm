@@ -4,10 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func NewValidators() []*pb.ValidatorRecord {

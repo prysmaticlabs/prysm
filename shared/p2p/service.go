@@ -7,9 +7,6 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/sirupsen/logrus"
-
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	libp2p "github.com/libp2p/go-libp2p"
@@ -17,6 +14,8 @@ import (
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 )
 
 // Sender represents a struct that is able to relay information via p2p.

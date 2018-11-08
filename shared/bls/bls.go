@@ -3,16 +3,57 @@
 // aggregating BLS signatures used by Ethereum Serenity.
 package bls
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 // Signature used in the BLS signature scheme.
 type Signature struct{}
 
 // SecretKey used in the BLS scheme.
-type SecretKey struct{}
+type SecretKey struct {
+	K *big.Int
+}
 
 // PublicKey corresponding to secret key used in the BLS scheme.
 type PublicKey struct{}
+
+// PublicKey returns the corresponding public key for the
+// Secret Key
+func (s *SecretKey) PublicKey() (*PublicKey, error) {
+	return &PublicKey{}, nil
+}
+
+// BufferedSecretKey returns the secret key in a byte format.
+func (s *SecretKey) BufferedSecretKey() []byte {
+	return s.K.Bytes()
+}
+
+// BufferedPublicKey returns the public key in a byte format.
+func (p *PublicKey) BufferedPublicKey() []byte {
+	return []byte{}
+}
+
+// UnBufferSecretKey takes the byte representation of a secret key
+// and sets it to a big int of the underlying secret key object.
+func (s *SecretKey) UnBufferSecretKey(bufferedKey []byte) {
+	s.K = big.NewInt(0).SetBytes(bufferedKey)
+
+}
+
+// UnBufferPublicKey takes the byte representation of a public key
+// and sets it to a big int of the underlying public key object.
+func (p *PublicKey) UnBufferPublicKey(bufferedKey []byte) {
+
+}
+
+// GenerateKey generates a new secret key using a seed.
+func GenerateKey(seed []byte) *SecretKey {
+	return &SecretKey{
+		K: big.NewInt(0).SetBytes(seed),
+	}
+}
 
 // Sign a message using a secret key - in a beacon/validator client,
 // this key will come from and be unlocked from the account keystore.
