@@ -139,6 +139,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_go_yaml_yaml",
+    importpath = "github.com/go-yaml/yaml",
+    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+)
+
+go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
     commit = "bb2702d423886830dee131692131d35648c382e2",
@@ -642,6 +648,12 @@ go_repository(
     name = "com_github_boltdb_bolt",
     commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
     importpath = "github.com/boltdb/bolt",
+)
+
+go_repository(
+    name = "com_github_pborman_uuid",
+    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",
+    importpath = "github.com/pborman/uuid",
 )
 
 go_repository(

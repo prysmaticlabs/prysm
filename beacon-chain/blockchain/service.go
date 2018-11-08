@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -16,12 +15,24 @@ import (
 
 var log = logrus.WithField("prefix", "blockchain")
 
+type beaconDB interface {
+	GetBlock(h [32]byte) (*types.Block, error)
+	GetChainHead() (*types.Block, error)
+	GetActiveState() (*types.ActiveState, error)
+	GetCrystallizedState() (*types.CrystallizedState, error)
+	GetGenesisTime() (time.Time, error)
+	HasBlock(h [32]byte) bool
+	SaveBlock(block *types.Block) error
+	SaveUnfinalizedBlockState(aState *types.ActiveState, cState *types.CrystallizedState) error
+	UpdateChainHead(head *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error
+}
+
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
 	ctx                            context.Context
 	cancel                         context.CancelFunc
-	beaconDB                       *db.BeaconDB
+	beaconDB                       beaconDB
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
@@ -38,7 +49,7 @@ type Config struct {
 	BeaconBlockBuf   int
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
-	BeaconDB         *db.BeaconDB
+	BeaconDB         beaconDB
 	DevMode          bool
 	EnablePOWChain   bool
 }
@@ -288,6 +299,10 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	); !valid {
 		return errors.New("Block failed validity conditions")
 	}
+
+	// First, include new attestations to the active state
+	// so that they're accounted for during cycle transitions.
+	aState = aState.UpdateAttestations(block.Attestations())
 
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
 	// and apply a block scoring function.

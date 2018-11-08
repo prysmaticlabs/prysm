@@ -40,6 +40,7 @@ go_test(
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bitutil:go_default_library",
+        "//shared/bytes:go_default_library",
         "//shared/mathutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],

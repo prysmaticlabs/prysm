@@ -205,9 +205,9 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64
 	var voteBalance uint64
-	for _, attesterIndex := range indices {
+	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, index)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -227,7 +227,8 @@ func AddPendingValidator(
 	pubKey []byte,
 	withdrawalShard uint64,
 	withdrawalAddr []byte,
-	randaoCommitment []byte) []*pb.ValidatorRecord {
+	randaoCommitment []byte,
+	status uint64) []*pb.ValidatorRecord {
 
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
@@ -237,7 +238,7 @@ func AddPendingValidator(
 		WithdrawalAddress: withdrawalAddr,
 		RandaoCommitment:  randaoCommitment,
 		Balance:           params.GetConfig().DepositSize * params.GetConfig().Gwei,
-		Status:            uint64(params.PendingActivation),
+		Status:            status,
 		ExitSlot:          0,
 	}
 

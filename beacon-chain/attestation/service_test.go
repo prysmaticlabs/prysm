@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	btestutil "github.com/prysmaticlabs/prysm/beacon-chain/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -17,8 +17,8 @@ func init() {
 
 func TestIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, beaconDB)
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exitRoutine := make(chan bool)
