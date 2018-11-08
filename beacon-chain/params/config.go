@@ -64,7 +64,7 @@ var demoConfig = &Config{
 	DepositSize:                   32,
 	MinDeposit:                    16,
 	SlotDuration:                  uint64(2),
-	MinCommiteeSize:               uint64(3),
+	MinCommitteeSize:              uint64(3),
 	MinValidatorSetChangeInterval: uint64(15),
 	BaseRewardQuotient:            uint64(32768),
 	SqrtExpDropTime:               uint64(65536),

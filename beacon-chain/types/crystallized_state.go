@@ -325,7 +325,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 
 		newState.resetCrosslinks()
-
 	}
 
 	printCommittee(newState.data.ShardAndCommitteesForSlots)
@@ -364,23 +363,6 @@ func (c *CrystallizedState) newValidatorSetRecalculations(seed [32]byte) ([]*pb.
 	}
 
 	return append(c.data.ShardAndCommitteesForSlots[params.GetConfig().CycleLength:], newShardCommitteeArray...), nil
-}
-
-func copyCrosslinks(existing []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
-	new := make([]*pb.CrosslinkRecord, len(existing))
-	for i := 0; i < len(existing); i++ {
-		oldCL := existing[i]
-		newBlockhash := make([]byte, len(oldCL.ShardBlockHash))
-		copy(newBlockhash, oldCL.ShardBlockHash)
-		newCL := &pb.CrosslinkRecord{
-			RecentlyChanged: oldCL.RecentlyChanged,
-			ShardBlockHash:  newBlockhash,
-			Slot:            oldCL.Slot,
-		}
-		new[i] = newCL
-	}
-
-	return new
 }
 
 // processCrosslinks checks if the proposed shard block has recevied
