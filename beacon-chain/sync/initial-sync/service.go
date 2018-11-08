@@ -32,6 +32,7 @@ var log = logrus.WithField("prefix", "initial-sync")
 type Config struct {
 	SyncPollingInterval         time.Duration
 	BlockBufferSize             int
+	BlockAnnounceBufferSize     int
 	CrystallizedStateBufferSize int
 	BeaconDB                    beaconDB
 	P2P                         p2pAPI
@@ -46,6 +47,7 @@ func DefaultConfig() Config {
 	return Config{
 		SyncPollingInterval:         time.Duration(int64(params.GetConfig().SlotDuration)) * time.Second,
 		BlockBufferSize:             100,
+		BlockAnnounceBufferSize:     100,
 		CrystallizedStateBufferSize: 100,
 	}
 }
@@ -75,6 +77,7 @@ type InitialSync struct {
 	p2p                          p2pAPI
 	syncService                  syncService
 	db                           beaconDB
+	blockAnnounceBuf             chan p2p.Message
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
 	currentSlot                  uint64
@@ -91,6 +94,7 @@ func NewInitialSyncService(ctx context.Context,
 
 	blockBuf := make(chan p2p.Message, cfg.BlockBufferSize)
 	crystallizedStateBuf := make(chan p2p.Message, cfg.CrystallizedStateBufferSize)
+	blockAnnounceBuf := make(chan p2p.Message, cfg.BlockAnnounceBufferSize)
 
 	return &InitialSync{
 		ctx:                  ctx,
@@ -101,6 +105,7 @@ func NewInitialSyncService(ctx context.Context,
 		currentSlot:          0,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
+		blockAnnounceBuf:     blockAnnounceBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
 	}
 }
@@ -132,9 +137,11 @@ func (s *InitialSync) Stop() error {
 // It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run(delaychan <-chan time.Time) {
 	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
+	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
 	crystallizedStateSub := s.p2p.Subscribe(&pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
 	defer func() {
 		blockSub.Unsubscribe()
+		blockAnnounceSub.Unsubscribe()
 		crystallizedStateSub.Unsubscribe()
 		close(s.blockBuf)
 		close(s.crystallizedStateBuf)
@@ -157,6 +164,18 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
+		case msg := <-s.blockAnnounceBuf:
+			data := msg.Data.(*pb.BeaconBlockAnnounce)
+
+			if data.GetSlotNumber() > highestObservedSlot {
+				highestObservedSlot = data.GetSlotNumber()
+			}
+			if data.GetSlotNumber() != (s.currentSlot + 1) {
+				continue
+			}
+
+			s.requestNextBlockByHash(data.GetHash())
+			log.Debugf("Successfully requested the next block with slot: %d", data.GetSlotNumber())
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
 
@@ -185,7 +204,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			if err := s.validateAndSaveNextBlock(data); err != nil {
 				log.Errorf("Unable to save block: %v", err)
 			}
-			s.requestNextBlock()
+			s.requestNextBlockBySlot(s.currentSlot + 1)
 		case msg := <-s.crystallizedStateBuf:
 			data := msg.Data.(*pb.CrystallizedStateResponse)
 
@@ -204,7 +223,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 
 			s.currentSlot = crystallizedState.LastFinalizedSlot()
-			s.requestNextBlock()
+			s.requestNextBlockBySlot(s.currentSlot + 1)
 			crystallizedStateSub.Unsubscribe()
 		}
 	}
@@ -241,9 +260,14 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	return nil
 }
 
-// requestNextBlock broadcasts a request for a block with the next slotnumber.
-func (s *InitialSync) requestNextBlock() {
-	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: (s.currentSlot + 1)})
+// requestNextBlockByHash broadcasts a request for a block with the hash.
+func (s *InitialSync) requestNextBlockByHash(hash []byte) {
+	s.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: hash})
+}
+
+// requestNextBlock broadcasts a request for a block with the entered slotnumber.
+func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
+	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotnumber})
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher

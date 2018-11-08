@@ -39,11 +39,13 @@ type Simulator struct {
 	beaconDB         beaconDB
 	enablePOWChain   bool
 	blockRequestChan chan p2p.Message
+	blockBySlotChan  chan p2p.Message
 }
 
 // Config options for the simulator service.
 type Config struct {
 	BlockRequestBuf int
+	BlockSlotBuf    int
 	P2P             p2pAPI
 	Web3Service     powChainService
 	BeaconDB        beaconDB
@@ -61,6 +63,7 @@ type beaconDB interface {
 func DefaultConfig() *Config {
 	return &Config{
 		BlockRequestBuf: 100,
+		BlockSlotBuf:    100,
 	}
 }
 
@@ -75,6 +78,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		beaconDB:         cfg.BeaconDB,
 		enablePOWChain:   cfg.EnablePOWChain,
 		blockRequestChan: make(chan p2p.Message, cfg.BlockRequestBuf),
+		blockBySlotChan:  make(chan p2p.Message, cfg.BlockSlotBuf),
 	}
 }
 
@@ -89,8 +93,9 @@ func (sim *Simulator) Start() {
 
 	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetConfig().SlotDuration)
 	go func() {
-		sim.run(slotTicker.C(), sim.blockRequestChan)
+		sim.run(slotTicker.C(), sim.blockRequestChan, sim.blockBySlotChan)
 		close(sim.blockRequestChan)
+		close(sim.blockBySlotChan)
 		slotTicker.Done()
 	}()
 }
@@ -102,9 +107,12 @@ func (sim *Simulator) Stop() error {
 	return nil
 }
 
-func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Message) {
+func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Message,
+	slotRequestChan <-chan p2p.Message) {
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
+	blockBySlotSub := sim.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, sim.blockBySlotChan)
 	defer blockReqSub.Unsubscribe()
+	defer blockBySlotSub.Unsubscribe()
 
 	lastBlock, err := sim.beaconDB.GetChainHead()
 	if err != nil {
@@ -116,7 +124,8 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 	if err != nil {
 		log.Errorf("Could not get hash of the latest block: %v", err)
 	}
-	broadcastedBlocks := map[[32]byte]*types.Block{}
+	broadcastedBlocksByHash := map[[32]byte]*types.Block{}
+	broadcastedBlocksBySlot := map[uint64]*types.Block{}
 
 	for {
 		select {
@@ -188,16 +197,38 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			log.WithFields(logrus.Fields{
 				"hash": fmt.Sprintf("%#x", hash),
 				"slot": slot,
-			}).Debug("Broadcast block hash")
+			}).Debug("Broadcast block hash and slot")
 
-			broadcastedBlocks[hash] = block
+			broadcastedBlocksByHash[hash] = block
+			broadcastedBlocksBySlot[slot] = block
 			lastHash = hash
+		case msg := <-slotRequestChan:
+			data := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
+
+			block := broadcastedBlocksBySlot[data.GetSlotNumber()]
+			if block == nil {
+				log.Errorf("Requested block not found: %d", block.SlotNumber())
+				continue
+			}
+
+			log.WithFields(logrus.Fields{
+				"slot": fmt.Sprintf("%d", data.GetSlotNumber()),
+			}).Debug("Responding to full block request")
+
+			// Sends the full block body to the requester.
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
+				Slot:             block.SlotNumber(),
+				AttesterBitfield: []byte{byte(255)},
+			}}
+			sim.p2p.Send(res, msg.Peer)
+
+			delete(broadcastedBlocksBySlot, data.GetSlotNumber())
 		case msg := <-requestChan:
 			data := msg.Data.(*pb.BeaconBlockRequest)
 			var hash [32]byte
 			copy(hash[:], data.Hash)
 
-			block := broadcastedBlocks[hash]
+			block := broadcastedBlocksByHash[hash]
 			if block == nil {
 				log.Errorf("Requested block not found: %#x", hash)
 				continue
@@ -214,7 +245,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			}}
 			sim.p2p.Send(res, msg.Peer)
 
-			delete(broadcastedBlocks, hash)
+			delete(broadcastedBlocksByHash, hash)
 		}
 	}
 }

@@ -90,10 +90,11 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 	slotChan := make(chan uint64)
 	requestChan := make(chan p2p.Message)
+	slotReqChan := make(chan p2p.Message)
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.run(slotChan, requestChan)
+		sim.run(slotChan, requestChan, slotReqChan)
 		<-exitRoutine
 	}()
 
