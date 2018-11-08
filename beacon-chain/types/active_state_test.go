@@ -56,7 +56,7 @@ func TestCopyActiveState(t *testing.T) {
 			Shard: 1,
 		},
 	}
-	aState1.data.PendingAttestations = aState1.appendNewAttestations(newAttestations)
+	aState1.data.PendingAttestations = append(aState1.data.PendingAttestations, newAttestations...)
 	if len(aState1.data.PendingAttestations) == len(aState2.data.PendingAttestations) {
 		t.Fatalf("The PendingAttestations should not equal each other %d, %d",
 			len(aState1.data.PendingAttestations),
@@ -131,9 +131,10 @@ func TestUpdateAttestations(t *testing.T) {
 		},
 	}
 
-	updatedAttestations := aState.appendNewAttestations(newAttestations)
-	if len(updatedAttestations) != 2 {
-		t.Fatalf("Updated attestations should be length 2: %d", len(updatedAttestations))
+	aState = aState.UpdateAttestations(newAttestations)
+	attestations := aState.data.PendingAttestations
+	if len(attestations) != 2 {
+		t.Fatalf("Updated attestations should be length 2: %d", len(attestations))
 	}
 }
 
@@ -162,7 +163,8 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 		},
 	}
 
-	aState.updateAttestations(8, newAttestations)
+	aState = aState.UpdateAttestations(newAttestations)
+	aState.clearAttestations(8)
 	if len(aState.PendingAttestations()) != 2 {
 		t.Fatalf("Updated attestations should be length 2: %d", len(aState.PendingAttestations()))
 	}

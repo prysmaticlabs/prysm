@@ -183,7 +183,7 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 
 }
 
-func TestProcessBalancesInCrosslinks(t *testing.T) {
+func TestCrosslinks(t *testing.T) {
 	totalBalance := uint64(5e9)
 	voteBalance := uint64(4e9)
 
@@ -207,7 +207,7 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Fatal("crosslink updated when it was not supposed to")
@@ -215,7 +215,7 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 
 	crossLinks[1].RecentlyChanged = false
 
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())

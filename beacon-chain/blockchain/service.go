@@ -289,6 +289,8 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return errors.New("Block failed validity conditions")
 	}
 
+	aState = aState.UpdateAttestations(block.Attestations())
+
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
 	// and apply a block scoring function.
 	var didCycleTransition bool
