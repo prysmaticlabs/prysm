@@ -1,12 +1,9 @@
 package bls
 
-import (
-	"strconv"
-	"testing"
-)
+import "testing"
+import "strconv"
 
 var unitN = 0
-var curve = BLS12381
 
 // Tests (for Benchmarks see below)
 
@@ -321,7 +318,16 @@ func testSerializeToHexStr(t *testing.T) {
 func testOrder(t *testing.T, c int) {
 	var curve string
 	var field string
-	if c == BLS12381 {
+	if c == CurveFp254BNb {
+		curve = "16798108731015832284940804142231733909759579603404752749028378864165570215949"
+		field = "16798108731015832284940804142231733909889187121439069848933715426072753864723"
+	} else if c == CurveFp382_1 {
+		curve = "5540996953667913971058039301942914304734176495422447785042938606876043190415948413757785063597439175372845535461389"
+		field = "5540996953667913971058039301942914304734176495422447785045292539108217242186829586959562222833658991069414454984723"
+	} else if c == CurveFp382_2 {
+		curve = "5541245505022739011583672869577435255026888277144126952448297309161979278754528049907713682488818304329661351460877"
+		field = "5541245505022739011583672869577435255026888277144126952450651294188487038640194767986566260919128250811286032482323"
+	} else if c == BLS12_381 {
 		curve = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
 		field = "4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787"
 	} else {
@@ -350,8 +356,8 @@ func testDHKeyExchange(t *testing.T) {
 	}
 }
 
-func TestBLS(t *testing.T) {
-	err := Init(curve)
+func test(t *testing.T, c int) {
+	err := Init(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,10 +370,28 @@ func TestBLS(t *testing.T) {
 	testPop(t)
 	testData(t)
 	testStringConversion(t)
-	testOrder(t, curve)
+	testOrder(t, c)
 	testDHKeyExchange(t)
 	testSerializeToHexStr(t)
 }
+
+func TestBLS(t *testing.T) {
+	t.Logf("GetMaxOpUnitSize() = %d\n", GetMaxOpUnitSize())
+	t.Log("CurveFp254BNb")
+	test(t, CurveFp254BNb)
+	if GetMaxOpUnitSize() == 6 {
+		t.Log("CurveFp382_1")
+		test(t, CurveFp382_1)
+		t.Log("BLS12_381")
+		test(t, BLS12_381)
+	}
+}
+
+// Benchmarks
+
+var curve = BLS12_381
+
+//var curve = CurveFp254BNb
 
 func BenchmarkPubkeyFromSeckey(b *testing.B) {
 	b.StopTimer()
