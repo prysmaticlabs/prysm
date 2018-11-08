@@ -128,7 +128,8 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 		a.ShardBlockHash(),
 		a.SlotNumber(),
 		proposerShardID,
-		a.JustifiedSlotNumber())
+		a.JustifiedSlotNumber(),
+		params.GetConfig().InitialForkVersion)
 
 	log.Debugf("Constructing attestation message for incoming block %#x", attestationMsg)
 
@@ -141,8 +142,9 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 
 // AttestationMsg hashes parentHashes + shardID + slotNumber + shardBlockHash + justifiedSlot
 // into a message to use for verifying with aggregated public key and signature.
-func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shardID uint64, justifiedSlot uint64) [32]byte {
+func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shardID uint64, justifiedSlot uint64, forkVersion uint32) [32]byte {
 	msg := make([]byte, binary.MaxVarintLen64)
+	binary.BigEndian.PutUint32(msg, forkVersion)
 	binary.PutUvarint(msg, slot%params.GetConfig().CycleLength)
 	for _, parentHash := range parentHashes {
 		msg = append(msg, parentHash[:]...)
