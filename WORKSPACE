@@ -2,14 +2,14 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.15.4/rules_go-0.15.4.tar.gz",
-    sha256 = "7519e9e1c716ae3c05bd2d984a42c3b02e690c5df728dc0a84b23f90c355c5a1",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.2/rules_go-0.16.2.tar.gz",
+    sha256 = "f87fa87475ea107b3c69196f39c82b7bbf58fe27c62a338684c20ca17d1d8613",
 )
 
 http_archive(
     name = "bazel_gazelle",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.14.0/bazel-gazelle-0.14.0.tar.gz"],
-    sha256 = "c0a5739d12c6d05b6c1ad56f2200cb0b57c5a70e03ebd2f7b87ce88cabf09c7b",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.15.0/bazel-gazelle-0.15.0.tar.gz"],
+    sha256 = "6e875ab4b6bf64a38c352887760f21203ab054676d9c1b274963907e0768740d",
 )
 
 http_archive(
@@ -31,7 +31,7 @@ docker_repositories()
 git_repository(
     name = "build_bazel_rules_nodejs",
     remote = "https://github.com/bazelbuild/rules_nodejs.git",
-    tag = "0.15.0",
+    tag = "0.15.3",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -673,4 +673,78 @@ go_repository(
     name = "com_github_google_uuid",
     commit = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8",
     importpath = "github.com/google/uuid",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_kad_dht",
+    commit = "b579e0352c7cc727d16d3df1bea6681fc27d8108",
+    importpath = "github.com/libp2p/go-libp2p-kad-dht",
+    build_file_proto_mode = "disable_global",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_datastore",
+    commit = "0938ba7cc6ae5722c3f66d429ca1052cc46d2420",
+    importpath = "github.com/ipfs/go-datastore",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_base32",
+    commit = "c30ac30633ccdabefe87eb12465113f06f1bab75",
+    importpath = "github.com/whyrusleeping/base32",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_cid",
+    commit = "033594dcd6201e8e8628659c8d584bb800d1734c",
+    importpath = "github.com/ipfs/go-cid",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_record",
+    commit = "237ab9e10af172232eedad9e63ea8983c50859b1",
+    importpath = "github.com/libp2p/go-libp2p-record",
+    build_file_proto_mode = "disable_global",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_routing",
+    commit = "76077861eb4ae107b4366acc1a1152b8e15d4300",
+    importpath = "github.com/libp2p/go-libp2p-routing",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_kbucket",
+    commit = "b181991db757142b92d913a2f93ea3ee92288aad",
+    importpath = "github.com/libp2p/go-libp2p-kbucket",
+)
+
+go_repository(
+    name = "com_github_jbenet_go_context",
+    commit = "d14ea06fba99483203c19d92cfcd13ebe73135f4",
+    importpath = "github.com/jbenet/go-context",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_todocounter",
+    commit = "1e832b829506383050e6eebd12e05ea41a451532",
+    importpath = "github.com/ipfs/go-todocounter",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_go_keyspace",
+    commit = "5b898ac5add1da7178a4a98e69cb7b9205c085ee",
+    importpath = "github.com/whyrusleeping/go-keyspace",
+)
+
+go_repository(
+    name = "com_github_multiformats_go_multibase",
+    commit = "bb91b53e5695e699a86654d77d03db7bc7506d12",
+    importpath = "github.com/multiformats/go-multibase",
+)
+
+go_repository(
+    name = "com_github_hashicorp_golang_lru",
+    commit = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
+    importpath = "github.com/hashicorp/golang-lru",
 )
