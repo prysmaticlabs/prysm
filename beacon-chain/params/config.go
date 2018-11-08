@@ -35,11 +35,12 @@ type Config struct {
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 	MinDeposit                    uint64    // MinDeposit is the minimal amount of Ether a validator needs to participate.
 	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
+	InitialForkVersion            uint32    // InitialForkVersion is used to track fork version between station transitions.
 }
 
 var defaultConfig = &Config{
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
-	ModuloBias:                    16777216,
+	ModuloBias:                    16777216 - 1,
 	CycleLength:                   uint64(64),
 	ShardCount:                    1024,
 	Gwei:                          1e9,
@@ -47,17 +48,18 @@ var defaultConfig = &Config{
 	MinDeposit:                    16,
 	SlotDuration:                  uint64(16),
 	MinCommitteeSize:              uint64(128),
-	BootstrappedValidatorsCount:   1000,
+	BootstrappedValidatorsCount:   16384,
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(524288),
 	MaxValidatorChurnQuotient:     uint64(32),
+	InitialForkVersion:            0,
 }
 
 var demoConfig = &Config{
 	GenesisTime:                   time.Now(),
-	ModuloBias:                    16777216,
+	ModuloBias:                    16777216 - 1,
 	CycleLength:                   uint64(5),
 	ShardCount:                    5,
 	Gwei:                          1e9,
@@ -70,6 +72,7 @@ var demoConfig = &Config{
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(128),
 	MaxValidatorChurnQuotient:     uint64(32),
+	InitialForkVersion:            0,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
 

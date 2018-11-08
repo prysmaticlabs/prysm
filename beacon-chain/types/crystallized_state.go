@@ -48,12 +48,6 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 		})
 	}
 
-	// Calculate total deposit from boot strapped validators.
-	var totalDeposit uint64
-	for _, v := range genesisValidators {
-		totalDeposit += v.Balance
-	}
-
 	return &CrystallizedState{
 		data: &pb.CrystallizedState{
 			LastStateRecalculationSlot: 0,
@@ -61,9 +55,13 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
+			ForkSlotNumber:             0,
 			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+			ValidatorSetDeltaHashChain: make([]byte, 0, 32),
+			PreForkVersion:             params.GetConfig().InitialForkVersion,
+			PostForkVersion:            params.GetConfig().InitialForkVersion,
 		},
 	}, nil
 }
@@ -195,6 +193,21 @@ func (c *CrystallizedState) Validators() []*pb.ValidatorRecord {
 // DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period.
 func (c *CrystallizedState) DepositsPenalizedInPeriod() []uint32 {
 	return c.data.DepositsPenalizedInPeriod
+}
+
+// ForkSlotNumber returns the slot of last fork.
+func (c *CrystallizedState) ForkSlotNumber() uint64 {
+	return c.data.ForkSlotNumber
+}
+
+// PreForkVersion returns the last pre fork version.
+func (c *CrystallizedState) PreForkVersion() uint32 {
+	return c.data.PreForkVersion
+}
+
+// PostForkVersion returns the last post fork version.
+func (c *CrystallizedState) PostForkVersion() uint32 {
+	return c.data.PostForkVersion
 }
 
 // IsCycleTransition checks if a new cycle has been reached. At that point,

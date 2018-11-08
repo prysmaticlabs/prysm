@@ -111,6 +111,7 @@ message ValidatorRecord {
   uint64 balance = 5;
   uint64 status = 6;
   uint64 exit_slot = 7;
+  uint64 randao_last_change = 8;
 }
 
 message AggregatedAttestation {
@@ -125,7 +126,7 @@ message AggregatedAttestation {
 }
 
 message AttestationSignedData {
-  uint64 version = 1;
+  uint64 fork_version = 1;
   uint64 slot = 2;
   uint64 shard = 3;
   repeated bytes parent_hashes = 4;
