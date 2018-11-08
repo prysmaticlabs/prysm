@@ -31,7 +31,7 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 }
 
 func (mp *mockP2P) Broadcast(msg proto.Message) {
-	mp.broadcastHash = msg.(*pb.BeaconBlockHashAnnounce).GetHash()
+	mp.broadcastHash = msg.(*pb.BeaconBlockAnnounce).GetHash()
 }
 
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {}

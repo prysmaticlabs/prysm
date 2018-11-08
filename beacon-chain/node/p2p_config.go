@@ -10,7 +10,7 @@ import (
 )
 
 var topicMappings = map[pb.Topic]proto.Message{
-	pb.Topic_BEACON_BLOCK_HASH_ANNOUNCE:          &pb.BeaconBlockHashAnnounce{},
+	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &pb.BeaconBlockAnnounce{},
 	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
 	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
 	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},

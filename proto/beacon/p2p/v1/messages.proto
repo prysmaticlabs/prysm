@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 
 enum Topic {
   UNKNOWN = 0;
-  BEACON_BLOCK_HASH_ANNOUNCE = 1;
+  BEACON_BLOCK_ANNOUNCE = 1;
   BEACON_BLOCK_REQUEST = 2;
   BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER = 3;
   BEACON_BLOCK_RESPONSE = 4;
@@ -18,12 +18,9 @@ enum Topic {
   ACTIVE_STATE_RESPONSE = 10;
 }
 
-message BeaconBlockHashAnnounce {
+message BeaconBlockAnnounce {
   bytes hash = 1;
-}
-
-message BeaconBlockSlotAnnounce {
-  uint64 slot_number = 1;
+  uint64 slot_number = 2;
 }
 
 message BeaconBlockRequest {

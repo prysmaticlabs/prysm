@@ -82,7 +82,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}()
 
 	announceHash := hashutil.Hash([]byte{})
-	hashAnnounce := &pb.BeaconBlockHashAnnounce{
+	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
 	}
 
@@ -267,7 +267,7 @@ func TestBlockRequestErrors(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	malformedRequest := &pb.BeaconBlockHashAnnounce{
+	malformedRequest := &pb.BeaconBlockAnnounce{
 		Hash: []byte{'t', 'e', 's', 't'},
 	}
 
@@ -371,7 +371,7 @@ func TestStartNotSynced(t *testing.T) {
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsContain(t, hook, "Not caught up with network, but continue sync")
+	testutil.AssertLogsContain(t, hook, "Not caught up with network, starting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()

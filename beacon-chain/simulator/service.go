@@ -180,8 +180,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				log.Errorf("Could not hash simulated block: %v", err)
 				continue
 			}
-			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
-				Hash: hash[:],
+			sim.p2p.Broadcast(&pb.BeaconBlockAnnounce{
+				Hash:       hash[:],
+				SlotNumber: slot,
 			})
 
 			log.WithFields(logrus.Fields{

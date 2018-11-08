@@ -139,7 +139,7 @@ func (ss *Service) BlockAnnouncementFeed() *event.Feed {
 
 // run handles incoming block sync.
 func (ss *Service) run() {
-	announceBlockHashSub := ss.p2p.Subscribe(&pb.BeaconBlockHashAnnounce{}, ss.announceBlockHashBuf)
+	announceBlockHashSub := ss.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, ss.announceBlockHashBuf)
 	blockSub := ss.p2p.Subscribe(&pb.BeaconBlockResponse{}, ss.blockBuf)
 	blockRequestSub := ss.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
 	attestationSub := ss.p2p.Subscribe(&pb.AggregatedAttestation{}, ss.attestationBuf)
@@ -173,7 +173,7 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlockHash")
 	defer receiveBlockSpan.End()
 
-	data := msg.Data.(*pb.BeaconBlockHashAnnounce)
+	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	var h [32]byte
 	copy(h[:], data.Hash[:32])
 
