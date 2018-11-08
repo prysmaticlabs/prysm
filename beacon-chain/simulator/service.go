@@ -166,6 +166,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 
 			shardCommittees := committees.ArrayShardAndCommittee
 			attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
+
+			// Create attestations for all committees of the previous block.
+			// Ensure that all attesters have voted by calling FillBitfield.
 			for i, shardCommittee := range shardCommittees {
 				shardID := shardCommittee.Shard
 				numAttesters := len(shardCommittee.Committee)
