@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -26,12 +26,16 @@ type p2pAPI interface {
 	Broadcast(msg proto.Message)
 }
 
+type powChainService interface {
+	LatestBlockHash() common.Hash
+}
+
 // Simulator struct.
 type Simulator struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	p2p              p2pAPI
-	web3Service      types.POWChainService
+	web3Service      powChainService
 	beaconDB         beaconDB
 	enablePOWChain   bool
 	blockRequestChan chan p2p.Message
@@ -41,7 +45,7 @@ type Simulator struct {
 type Config struct {
 	BlockRequestBuf int
 	P2P             p2pAPI
-	Web3Service     types.POWChainService
+	Web3Service     powChainService
 	BeaconDB        beaconDB
 	EnablePOWChain  bool
 }
@@ -130,7 +134,6 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				log.Errorf("Failed to get crystallized state: %v", err)
 				continue
 			}
-
 			aStateHash, err := aState.Hash()
 			if err != nil {
 				log.Errorf("Failed to hash active state: %v", err)
@@ -150,6 +153,13 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				powChainRef = []byte{byte(slot)}
 			}
 
+			committees, err := cState.GetShardsAndCommitteesForSlot(slot)
+			if err != nil {
+				log.Errorf("Failed to get shard committee: %v", err)
+				continue
+			}
+			shardID := committees.ArrayShardAndCommittee[0].Shard
+
 			parentHash := make([]byte, 32)
 			copy(parentHash, lastHash[:])
 			block := types.NewBlock(&pb.BeaconBlock{
@@ -159,8 +169,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				ActiveStateRoot:       aStateHash[:],
 				CrystallizedStateRoot: cStateHash[:],
 				AncestorHashes:        [][]byte{parentHash},
+				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
 				Attestations: []*pb.AggregatedAttestation{
-					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}},
+					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}, JustifiedBlockHash: parentHash, Shard: shardID},
 				},
 			})
 

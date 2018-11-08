@@ -1,8 +1,8 @@
-# Prysmatic Labs Ethereum 2.0 Implementation
+# Prysmatic Labs Ethereum Serenity Implementation
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg)](https://buildkite.com/prysmatic-labs/prysm)
 
-This is the main repository for the beacon chain and sharding implementation for Ethereum 2.0 [Prysmatic Labs](https://prysmaticlabs.com).
+This is the main repository for the beacon chain and sharding implementation for Ethereum Serenity [Prysmatic Labs](https://prysmaticlabs.com).
 
 Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Discord or Gitter below:
 
@@ -21,6 +21,7 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
     - [Running The Beacon Chain](#running-the-beacon-chain)
     - [Running an ETH2.0 Validator Client](#running-an-eth2.0-validator-client)
     - [Running Via Docker](#running-via-docker)
+    - [Running Under Windows](#running-under-windows)
 -   [Testing](#testing)
 -   [Contributing](#contributing)
 -   [License](#license)
@@ -173,6 +174,27 @@ This will connect you to your running beacon node and listen for shard/slot assi
 
 If you want to run the system with a real Web3 endpoint to listen for incoming Ethereum 1.0 block hashes, follow the instructions on setting up a geth node [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/MAINCHAIN.md).
 
+## Running Under Windows
+
+The best way to run under Windows is to clone the repository and then run the node with go run from the Windows command line. Go 1.10 fails due to documented permission errors so be sure you are running Go 1.11 or later. Go through the source code and resolve any dependencies. Create two empty files for use as data directories by the beacon chain and validator respectively. The contents of these files should be deleted each time you run the software. After cloning the Prsym repository, run the node as follows:
+
+```
+go run ./beacon-chain main.go \
+   --genesis-json /path/to/genesis.json \
+   --datadir /path/to/your/datadir \
+   --rpc-port 4000 \
+   --simulator \
+   --demo-config
+```
+
+After the beacon chain is up and running, run the validator client as a separate process as follows:
+
+```
+go run ./validator/main.go \
+  --beacon-rpc-provider http://localhost:4000 \
+  --datadir /path/to/uniquevalidatordatadir \
+  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+```
 
 # Testing
 

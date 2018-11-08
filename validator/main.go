@@ -21,7 +21,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	shardingNode, err := node.NewShardInstance(ctx)
+	shardingNode, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,8 +57,8 @@ VERSION:
 `
 
 	app := cli.NewApp()
-	app.Name = "sharding"
-	app.Usage = `launches a sharding client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
+	app.Name = "validator"
+	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
 	app.Action = startNode
 	app.Flags = []cli.Flag{
@@ -69,6 +69,8 @@ VERSION:
 		cmd.EnableTracingFlag,
 		cmd.TracingEndpointFlag,
 		cmd.TraceSampleFractionFlag,
+		cmd.KeystorePasswordFlag,
+		cmd.KeystoreDirectoryFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,

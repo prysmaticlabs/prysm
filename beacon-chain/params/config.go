@@ -18,22 +18,23 @@ type ValidatorSetDeltaFlags int
 
 // Config contains configs for node to participate in beacon chain.
 type Config struct {
-	ShardCount                    int       // ShardCount is the fixed number of shards in Ethereum 2.0.
-	DepositSize                   int       // DepositSize is how much a validator has deposited in Gwei.
-	BootstrappedValidatorsCount   int       // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
-	ModuloBias                    int       // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
-	Gwei                          int       // Gwei is the denomination of Gwei in Ether.
+	ShardCount                    uint64    // ShardCount is the fixed number of shards in Ethereum Serenity.
+	DepositSize                   uint64    // DepositSize is how much a validator has deposited in Gwei.
+	BootstrappedValidatorsCount   uint64    // BootstrappedValidatorsCount is the number of validators we seed the first crystallized state.
+	ModuloBias                    uint64    // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
+	Gwei                          uint64    // Gwei is the denomination of Gwei in Ether.
 	CycleLength                   uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                  uint64    // SlotDuration is how many seconds are in a single slot.
 	MinValidatorSetChangeInterval uint64    // MinValidatorSetChangeInterval is the slots needed before validator set changes.
-	MinCommiteeSize               uint64    // MinCommiteeSize is the minimal number of validator needs to be in a committee.
+	MinCommitteeSize              uint64    // MinCommitteeSize is the minimal number of validator needs to be in a committee.
 	BaseRewardQuotient            uint64    // BaseRewardQuotient is used to calculate validator per-slot interest rate.
 	SqrtExpDropTime               uint64    // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
 	GenesisTime                   time.Time // GenesisTime used by the protocol.
 	LogOutMessage                 string    // This is the message a validator will send in order to log out.
 	WithdrawalPeriod              uint64    // WithdrawalPeriod is the number of slots between a validator exit and validator balance being withdrawable.
 	MaxValidatorChurnQuotient     uint64    // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
-	MinDeposit                    int       // MinDeposit is the minimal amount of Ether a validator needs to participate.
+	MinDeposit                    uint64    // MinDeposit is the minimal amount of Ether a validator needs to participate.
+	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
 }
 
 var defaultConfig = &Config{
@@ -44,8 +45,8 @@ var defaultConfig = &Config{
 	Gwei:                          1e9,
 	DepositSize:                   32,
 	MinDeposit:                    16,
-	SlotDuration:                  uint64(8),
-	MinCommiteeSize:               uint64(128),
+	SlotDuration:                  uint64(16),
+	MinCommitteeSize:              uint64(128),
 	BootstrappedValidatorsCount:   1000,
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
@@ -62,14 +63,17 @@ var demoConfig = &Config{
 	Gwei:                          1e9,
 	DepositSize:                   32,
 	MinDeposit:                    16,
-	SlotDuration:                  uint64(8),
-	MinCommiteeSize:               uint64(3),
+	SlotDuration:                  uint64(2),
+	MinCommitteeSize:              uint64(3),
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
 	SqrtExpDropTime:               uint64(65536),
 	WithdrawalPeriod:              uint64(128),
 	MaxValidatorChurnQuotient:     uint64(32),
+	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
+
+var customConfig = &Config{}
 
 const (
 	// PendingActivation means a validator is queued and waiting to be active.
@@ -110,9 +114,18 @@ func GetConfig() *Config {
 		return defaultConfig
 	case "demo":
 		return demoConfig
+	case "custom":
+		return customConfig
 	default:
 		return defaultConfig
 	}
+}
+
+// SetCustomConfig is useful for simulated backend configurations
+// in chain tests.
+func SetCustomConfig(c *Config) {
+	SetEnv("custom")
+	customConfig = c
 }
 
 // SetEnv sets which config to use.

@@ -1,14 +1,14 @@
-# Ethereum 2.0 Prysm Demo
+# Ethereum Serenity Prysm Demo
 
 ## Overview & Research Background
 
-At Prysmatic Labs, we started working on Ethereum 2.0 all the way back since Vitalik first had a Sharding FAQ as the only reference for the system at the start of 2018. A lot has happened, with the specification evolving from a series of ETHResearch blog posts into a minimal viable blueprint for how to design a scalable, secure Ethereum blockchain using Casper Proof of Stake and Sharding at its core.
+At Prysmatic Labs, we started working on Ethereum Serenity all the way back since Vitalik first had a Sharding FAQ as the only reference for the system at the start of 2018. A lot has happened, with the specification evolving from a series of ETHResearch blog posts into a minimal viable blueprint for how to design a scalable, secure Ethereum blockchain using Casper Proof of Stake and Sharding at its core.
 
 Now, the plan is to deploy ETH2.0 as a sidechain of Ethereum known as a beacon chain, where validators can stake their Ether and participate in consensus to vote on occurrences on shards known as cross-links.
 
 ## Version 0.0.0: Beacon Chain+Validator Demo
 
-We call our Ethereum 2.0 Shasper project Prysm, which will serve as the scaffold for a production-oriented release fully written in Go. We have been working hard to ensure we have a robust implementation of the Ethereum 2.0 specification as created by the Ethereum Research Team along with industry standard approaches to building large scale applications.
+We call our Ethereum Serenity project Prysm, which will serve as the scaffold for a production-oriented release fully written in Go. We have been working hard to ensure we have a robust implementation of the Ethereum Serenity specification as created by the Ethereum Research Team along with industry standard approaches to building large scale applications.
 
 We are proud to announce our very first release of Prysm, v0.0.0, which will serve as the building block for all future releases as we get to production. We want to show the community we have a project we have put a lot of work into through careful thought and design decisions that we hope will set a standard for future ETH2.0 developments.
 
@@ -47,10 +47,10 @@ Curious to see the system working and running a validator client locally? We hav
 
 [Running Instructions](https://github.com/prysmaticlabs/prysm/blob/master/README.md#instructions)
 
-You’ll be able to spin up a beacon node, connect a validator client, and start getting assigned to shards where you will then create beacon blocks or vote on beacon blocks through structures called “attestations”. If you are not quite as familiar with the Ethereum 2.0 Roadmap and Spec, check out the following links:
+You’ll be able to spin up a beacon node, connect a validator client, and start getting assigned to shards where you will then create beacon blocks or vote on beacon blocks through structures called “attestations”. If you are not quite as familiar with the Ethereum Serenity Roadmap and Spec, check out the following links:
 
-- [Ethereum 2.0 Devs Handbook](https://notes.ethereum.org/s/BkSZAJNwX#)
-- [Ethereum 2.0 Casper+Sharding Specification](https://github.com/ethereum/eth2.0-specs/blob/master/specs/casper_sharding_v2.1.md)
+- [Ethereum Serenity Devs Handbook](https://notes.ethereum.org/s/BkSZAJNwX#)
+- [Ethereum Serenity Casper+Sharding Specification](https://github.com/ethereum/eth2.0-specs/blob/master/specs/casper_sharding_v2.1.md)
 
-Even though canonical blocks are created in the demo due to your activity as a validator, you’ll quickly see not much can be done with these blocks until real, state execution comes into play. However, this beacon chain is a critical piece of consensus and coordination for all actors participating in Ethereum 2.0 and will as the foundation for a full-fledged, sharding system. 
+Even though canonical blocks are created in the demo due to your activity as a validator, you’ll quickly see not much can be done with these blocks until real, state execution comes into play. However, this beacon chain is a critical piece of consensus and coordination for all actors participating in Ethereum Serenity and will as the foundation for a full-fledged, sharding system. 
 

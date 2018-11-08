@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
@@ -38,7 +40,7 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 
 	// Bootstrap cross link records.
 	var crosslinks []*pb.CrosslinkRecord
-	for i := 0; i < shardCount; i++ {
+	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
 			RecentlyChanged: false,
 			ShardBlockHash:  make([]byte, 0, 32),
@@ -84,6 +86,63 @@ func (c *CrystallizedState) Hash() ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	return hashutil.Hash(data), nil
+}
+
+// CopyState returns a deep copy of the current state.
+func (c *CrystallizedState) CopyState() *CrystallizedState {
+	crosslinks := make([]*pb.CrosslinkRecord, len(c.Crosslinks()))
+	for index, crossLink := range c.Crosslinks() {
+		crosslinks[index] = &pb.CrosslinkRecord{
+			RecentlyChanged: crossLink.GetRecentlyChanged(),
+			ShardBlockHash:  crossLink.GetShardBlockHash(),
+			Slot:            crossLink.GetSlot(),
+		}
+	}
+
+	validators := make([]*pb.ValidatorRecord, len(c.Validators()))
+	for index, validator := range c.Validators() {
+		validators[index] = &pb.ValidatorRecord{
+			Pubkey:            validator.GetPubkey(),
+			WithdrawalShard:   validator.GetWithdrawalShard(),
+			WithdrawalAddress: validator.GetWithdrawalAddress(),
+			RandaoCommitment:  validator.GetRandaoCommitment(),
+			Balance:           validator.GetBalance(),
+			Status:            validator.GetStatus(),
+			ExitSlot:          validator.GetExitSlot(),
+		}
+	}
+
+	shardAndCommitteesForSlots := make([]*pb.ShardAndCommitteeArray, len(c.ShardAndCommitteesForSlots()))
+	for index, shardAndCommitteesForSlot := range c.ShardAndCommitteesForSlots() {
+		shardAndCommittees := make([]*pb.ShardAndCommittee, len(shardAndCommitteesForSlot.GetArrayShardAndCommittee()))
+		for index, shardAndCommittee := range shardAndCommitteesForSlot.GetArrayShardAndCommittee() {
+			shardAndCommittees[index] = &pb.ShardAndCommittee{
+				Shard:     shardAndCommittee.GetShard(),
+				Committee: shardAndCommittee.GetCommittee(),
+			}
+		}
+		shardAndCommitteesForSlots[index] = &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardAndCommittees,
+		}
+	}
+
+	newState := CrystallizedState{&pb.CrystallizedState{
+		LastStateRecalculationSlot: c.LastStateRecalculationSlot(),
+		JustifiedStreak:            c.JustifiedStreak(),
+		LastJustifiedSlot:          c.LastJustifiedSlot(),
+		LastFinalizedSlot:          c.LastFinalizedSlot(),
+		ValidatorSetChangeSlot:     c.ValidatorSetChangeSlot(),
+		Crosslinks:                 crosslinks,
+		Validators:                 validators,
+		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+		DepositsPenalizedInPeriod:  c.DepositsPenalizedInPeriod(),
+		ValidatorSetDeltaHashChain: c.data.ValidatorSetDeltaHashChain,
+		PreForkVersion:             c.data.PreForkVersion,
+		PostForkVersion:            c.data.PostForkVersion,
+		ForkSlotNumber:             c.data.ForkSlotNumber,
+	}}
+
+	return &newState
 }
 
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.
@@ -144,6 +203,11 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
 }
 
+// GetShardsAndCommitteesForSlot returns the shard committees of a given slot.
+func (c *CrystallizedState) GetShardsAndCommitteesForSlot(slotNumber uint64) (*pb.ShardAndCommitteeArray, error) {
+	return casper.GetShardAndCommitteesForSlot(c.ShardAndCommitteesForSlots(), c.LastStateRecalculationSlot(), slotNumber)
+}
+
 // isValidatorSetChange checks if a validator set change transition can be processed. At that point,
 // validator shuffle will occur.
 func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
@@ -173,40 +237,44 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 
 // getAttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
-	slotsStart := c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
-	slotIndex := (attestation.Slot - slotsStart) % params.GetConfig().CycleLength
-	return casper.CommitteeInShardAndSlot(slotIndex, attestation.GetShard(), c.data.GetShardAndCommitteesForSlots())
+	shardCommittees, err := casper.GetShardAndCommitteesForSlot(
+		c.ShardAndCommitteesForSlots(),
+		c.LastStateRecalculationSlot(),
+		attestation.GetSlot())
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch ShardAndCommittees for slot %d: %v", attestation.Slot, err)
+	}
+
+	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
+	for i := 0; i < len(shardCommitteesArray); i++ {
+		if attestation.Shard == shardCommitteesArray[i].Shard {
+			return shardCommitteesArray[i].Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.Shard)
 }
 
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new committees if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, enableCrossLinks bool, enableRewardChecking bool) (*CrystallizedState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
-	var newCrosslinks []*pb.CrosslinkRecord
 	var err error
 
+	newState := c.CopyState()
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
-	lastStateRecalculationSlot := c.LastStateRecalculationSlot()
-	validatorSetChangeSlot := c.ValidatorSetChangeSlot()
 	blockVoteCache := aState.GetBlockVoteCache()
-	shardAndCommitteesForSlots := c.ShardAndCommitteesForSlots()
-	timeSinceFinality := block.SlotNumber() - c.LastFinalizedSlot()
+	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
-	newValidators := casper.CopyValidators(c.Validators())
+	newState.data.Validators = casper.CopyValidators(newState.Validators())
 
-	if lastStateRecalculationSlot < params.GetConfig().CycleLength {
+	if c.LastStateRecalculationSlot() < params.GetConfig().CycleLength {
 		lastStateRecalculationSlotCycleBack = 0
 	} else {
-		lastStateRecalculationSlotCycleBack = lastStateRecalculationSlot - params.GetConfig().CycleLength
-	}
-
-	// If reward checking is disabled, the new set of validators for the cycle
-	// will remain the same.
-	if !enableRewardChecking {
-		newValidators = c.data.Validators
+		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	}
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
@@ -216,57 +284,49 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newValidators = casper.TallyVoteBalances(blockHash, slot,
-			blockVoteCache, newValidators, timeSinceFinality, enableRewardChecking)
+		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot,
+			blockVoteCache, newState.data.Validators, timeSinceFinality)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 
-		if enableCrossLinks {
-			newCrosslinks, err = c.processCrosslinks(aState.PendingAttestations(), slot, newValidators, block.SlotNumber())
-			if err != nil {
-				return nil, err
-			}
+		newState.data.Crosslinks, err = newState.processCrosslinks(aState.PendingAttestations(), slot, newState.Validators(), block.SlotNumber())
+		if err != nil {
+			return nil, err
 		}
 	}
 
+	newState.data.LastJustifiedSlot = justifiedSlot
+	newState.data.LastFinalizedSlot = finalizedSlot
+	newState.data.JustifiedStreak = justifiedStreak
+	newState.data.LastStateRecalculationSlot = newState.LastStateRecalculationSlot() + params.GetConfig().CycleLength
+
 	// Process the pending special records gathered from last cycle.
-	newValidators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newValidators, aState.PendingSpecials())
+	newState.data.Validators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newState.Validators(), aState.PendingSpecials())
 	if err != nil {
 		return nil, err
 	}
 
 	// Exit the validators when their balance fall below min online deposit size.
-	newValidators = casper.CheckValidatorMinDeposit(newValidators, block.SlotNumber())
+	newState.data.Validators = casper.CheckValidatorMinDeposit(newState.Validators(), block.SlotNumber())
 
-	c.data.LastFinalizedSlot = finalizedSlot
+	newState.data.LastFinalizedSlot = finalizedSlot
+
 	// Entering new validator set change transition.
 	if c.isValidatorSetChange(block.SlotNumber()) {
 		log.Info("Entering validator set change transition")
-		validatorSetChangeSlot = lastStateRecalculationSlot
-		shardAndCommitteesForSlots, err = c.newValidatorSetRecalculations(block.ParentHash())
+		newState.data.ValidatorSetChangeSlot = newState.LastStateRecalculationSlot()
+		newState.data.ShardAndCommitteesForSlots, err = newState.newValidatorSetRecalculations(block.ParentHash())
 		if err != nil {
 			return nil, err
 		}
 
 		period := block.SlotNumber() / params.GetConfig().WithdrawalPeriod
-		totalPenalties := c.penalizedETH(period)
-		casper.ChangeValidators(block.SlotNumber(), totalPenalties, newValidators)
+		totalPenalties := newState.penalizedETH(period)
+		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 	}
 
-	// Construct new crystallized state after cycle and validator set changed.
-	newCrystallizedState := NewCrystallizedState(&pb.CrystallizedState{
-		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
-		Validators:                 newValidators,
-		LastStateRecalculationSlot: lastStateRecalculationSlot + params.GetConfig().CycleLength,
-		LastJustifiedSlot:          justifiedSlot,
-		JustifiedStreak:            justifiedStreak,
-		LastFinalizedSlot:          finalizedSlot,
-		Crosslinks:                 newCrosslinks,
-		ValidatorSetChangeSlot:     validatorSetChangeSlot,
-	})
-
-	return newCrystallizedState, nil
+	return newState, nil
 }
 
 // newValidatorSetRecalculations recomputes the validator set.

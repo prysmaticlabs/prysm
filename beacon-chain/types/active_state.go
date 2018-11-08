@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -67,6 +68,48 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
+// CopyState returns a deep copy of the current active state.
+func (a *ActiveState) CopyState() *ActiveState {
+	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.PendingAttestations()))
+	for index, pendingAttestation := range a.PendingAttestations() {
+		pendingAttestations[index] = &pb.AggregatedAttestation{
+			Slot:                pendingAttestation.GetSlot(),
+			Shard:               pendingAttestation.GetShard(),
+			JustifiedSlot:       pendingAttestation.GetJustifiedSlot(),
+			JustifiedBlockHash:  pendingAttestation.GetJustifiedBlockHash(),
+			ShardBlockHash:      pendingAttestation.GetShardBlockHash(),
+			AttesterBitfield:    pendingAttestation.GetAttesterBitfield(),
+			ObliqueParentHashes: pendingAttestation.GetObliqueParentHashes(),
+			AggregateSig:        pendingAttestation.GetAggregateSig(),
+		}
+	}
+
+	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
+	for r, hash := range a.RecentBlockHashes() {
+		recentBlockHashes[r] = hash[:]
+	}
+
+	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
+	for index, pendingSpecial := range a.PendingSpecials() {
+		pendingSpecials[index] = &pb.SpecialRecord{
+			Kind: pendingSpecial.GetKind(),
+			Data: pendingSpecial.GetData(),
+		}
+	}
+	randaoMix := a.RandaoMix()
+
+	newC := ActiveState{
+		data: &pb.ActiveState{
+			PendingAttestations: pendingAttestations,
+			RecentBlockHashes:   recentBlockHashes,
+			PendingSpecials:     pendingSpecials,
+			RandaoMix:           randaoMix[:],
+		},
+	}
+
+	return &newC
+}
+
 // PendingAttestations returns attestations that have not yet been processed.
 func (a *ActiveState) PendingAttestations() []*pb.AggregatedAttestation {
 	return a.data.PendingAttestations
@@ -118,16 +161,19 @@ func (a *ActiveState) appendNewSpecialObject(record *pb.SpecialRecord) []*pb.Spe
 	return append(existing, record)
 }
 
-// cleanUpAttestations removes attestations older than last state recalc slot.
-func (a *ActiveState) cleanUpAttestations(lastStateRecalc uint64) []*pb.AggregatedAttestation {
+// updateAttestations removes attestations older than last state recalc slot.
+func (a *ActiveState) updateAttestations(lastStateRecalc uint64, newAttestations []*pb.AggregatedAttestation) {
 	existing := a.data.PendingAttestations
-	var update []*pb.AggregatedAttestation
-	for i := 0; i < len(existing); i++ {
-		if existing[i].GetSlot() >= lastStateRecalc {
-			update = append(update, existing[i])
+	update := make([]*pb.AggregatedAttestation, 0, len(existing)+len(newAttestations))
+	for _, a := range existing {
+		if a.GetSlot() >= lastStateRecalc {
+			update = append(update, a)
 		}
 	}
-	return update
+
+	update = append(update, newAttestations...)
+
+	a.data.PendingAttestations = update
 }
 
 // calculateNewBlockHashes builds a new slice of recent block hashes with the
@@ -229,36 +275,20 @@ func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedSt
 	return update, nil
 }
 
-// CleanUpActiveState removes the old attestations going from a cycle length behind
-// from the last state recalc and then generates the new active state. This is run after
-// a crystallized state transition.
-func (a *ActiveState) CleanUpActiveState(lastStateRecalc uint64) *ActiveState {
-	slot := lastStateRecalc - params.GetConfig().CycleLength
-	newPendingAttestations := a.cleanUpAttestations(slot)
-
-	// Construct new active state after clean up pending attestations.
-	return NewActiveState(&pb.ActiveState{
-		PendingAttestations: newPendingAttestations,
-		RecentBlockHashes:   a.data.RecentBlockHashes,
-	}, a.blockVoteCache)
-}
-
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(
 	block *Block,
 	cState *CrystallizedState,
-	parentSlot uint64,
-	enableAttestationValidity bool) (*ActiveState, error) {
+	parentSlot uint64) (*ActiveState, error) {
+	var err error
 
-	// Cleans up old attestations.
-	a.CleanUpActiveState(cState.LastStateRecalculationSlot())
+	newState := a.CopyState()
 
-	// Derive the new set of pending attestations.
-	newPendingAttestations := a.appendNewAttestations(block.data.Attestations)
+	newState.updateAttestations(cState.LastStateRecalculationSlot(), block.Attestations())
 
 	// Derive the new set of recent block hashes.
-	newRecentBlockHashes, err := a.calculateNewBlockHashes(block, parentSlot)
+	newState.data.RecentBlockHashes, err = newState.calculateNewBlockHashes(block, parentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
@@ -266,13 +296,9 @@ func (a *ActiveState) CalculateNewActiveState(
 	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalculationSlot())
 
 	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-	blockVoteCache := a.blockVoteCache
-
-	if enableAttestationValidity {
-		blockVoteCache, err = a.calculateNewVoteCache(block, cState)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update vote cache: %v", err)
-		}
+	newState.blockVoteCache, err = newState.calculateNewVoteCache(block, cState)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update vote cache: %v", err)
 	}
 
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
@@ -280,30 +306,28 @@ func (a *ActiveState) CalculateNewActiveState(
 		cState.LastStateRecalculationSlot(),
 		parentSlot)
 	if err != nil {
-		return nil, fmt.Errorf("Can not get proposer index %v", err)
+		return nil, fmt.Errorf("could not get proposer index %v", err)
 	}
 
 	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
+	newState.data.RandaoMix = newRandao[:]
 
 	specialRecordData := make([][]byte, 2)
 	for i := range specialRecordData {
 		specialRecordData[i] = make([]byte, 32)
 	}
 	blockRandao := block.RandaoReveal()
-	specialRecordData[0] = []byte{byte(proposerIndex)}
+	proposerIndexBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(proposerIndexBytes, proposerIndex)
+	specialRecordData[0] = proposerIndexBytes
 	specialRecordData[1] = blockRandao[:]
 
-	newPendingSpecials := a.appendNewSpecialObject(&pb.SpecialRecord{
+	newState.data.PendingSpecials = a.appendNewSpecialObject(&pb.SpecialRecord{
 		Kind: uint32(params.RandaoChange),
 		Data: specialRecordData,
 	})
 
-	return NewActiveState(&pb.ActiveState{
-		PendingAttestations: newPendingAttestations,
-		PendingSpecials:     newPendingSpecials,
-		RecentBlockHashes:   newRecentBlockHashes,
-		RandaoMix:           newRandao[:],
-	}, blockVoteCache), nil
+	return newState, nil
 }
 
 // getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
@@ -314,7 +338,6 @@ func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.Aggreg
 
 	startIdx := int(attestation.Slot) - earliestSlot - int(params.GetConfig().CycleLength) + 1
 	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.GetConfig().CycleLength)
-
 	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
 		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}

@@ -14,11 +14,14 @@ import (
 
 // Test that the beacon chain validator node build fails without PoW service.
 func TestNodeValidator_Builds(t *testing.T) {
+	tmp := fmt.Sprintf("%s/datadirtest1", os.TempDir())
+	os.RemoveAll(tmp)
+
 	if os.Getenv("TEST_NODE_PANIC") == "1" {
 		app := cli.NewApp()
 		set := flag.NewFlagSet("test", 0)
 		set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
-		tmp := fmt.Sprintf("%s/datadir", os.TempDir())
+		tmp := fmt.Sprintf("%s/datadirtest1", os.TempDir())
 		set.String("datadir", tmp, "node data directory")
 		set.Bool("enable-powchain", true, "enable powchain")
 
@@ -39,15 +42,19 @@ func TestNodeValidator_Builds(t *testing.T) {
 	if e, ok := err.(*exec.ExitError); !ok || e.Success() {
 		t.Fatalf("Process ran with err %v, want exit status 1", err)
 	}
+	os.RemoveAll(tmp)
 }
 
 // Test that beacon chain node can close.
 func TestNodeClose(t *testing.T) {
 	hook := logTest.NewGlobal()
+
+	tmp := fmt.Sprintf("%s/datadirtest2", os.TempDir())
+	os.RemoveAll(tmp)
+
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
-	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
 	set.Bool("enable-powchain", false, "no powchain service")
 	set.Bool("demo-config", true, "demo configuration")

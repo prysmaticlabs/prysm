@@ -4,10 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func NewValidators() []*pb.ValidatorRecord {
@@ -101,22 +100,9 @@ func TestRewardQuotient(t *testing.T) {
 	}
 }
 
-func TestSlotMaxInterestRate(t *testing.T) {
-	validators := []*pb.ValidatorRecord{
-		{Balance: 1e9, Status: uint64(params.Active)},
-	}
-
-	interestRate := SlotMaxInterestRate(validators)
-
-	if interestRate != 1/float64(params.GetConfig().BaseRewardQuotient) {
-		t.Errorf("incorrect interest rate generated %f", interestRate)
-	}
-
-}
-
 func TestQuadraticPenaltyQuotient(t *testing.T) {
 	penaltyQuotient := quadraticPenaltyQuotient()
-	if penaltyQuotient != uint64(math.Pow(math.Pow(2, 13), 2)) {
+	if penaltyQuotient != uint64(math.Pow(2, 32)) {
 		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
 }

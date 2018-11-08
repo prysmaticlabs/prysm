@@ -102,7 +102,7 @@ With respect to knowing enough about sharding, we will cover the requirements fo
 
 After reading the Sharding FAQ, it is important to understand the minimal implementation notes and the research that went into writing it up.
 
-**Shasper Concepts and Notes**
+**Serenity Concepts and Notes**
 
 -   [Sharding Concepts Mental Map](https://www.mindomo.com/zh/mindmap/sharding-d7cf8b6dee714d01a77388cb5d9d2a01)
 -   [Taiwan Sharding Workshop Notes](https://hackmd.io/s/HJ_BbgCFz#%E2%9F%A0-General-Introduction)
@@ -111,7 +111,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 -   [General Theory of Sharding](https://ethresear.ch/t/a-general-theory-of-what-quadratically-sharded-validation-is/1730/10)
 -   [Sharding Design Compendium](https://ethresear.ch/t/sharding-designs-compendium/1888/25)
 
-**Shasper Research Posts in Order**
+**Serenity Research Posts in Order**
 
 -   [Sharding v2.1 Spec](https://notes.ethereum.org/SCIg8AH5SA-O4C1G1LYZHQ)
 -   [Casper/Sharding/Beacon Chain FAQs](https://notes.ethereum.org/9MMuzWeFTTSg-3Tz_YeiBA?view)
@@ -128,7 +128,7 @@ After reading the Sharding FAQ, it is important to understand the minimal implem
 -   [Safe Notary Pool Size](https://ethresear.ch/t/safe-notary-pool-size/1728/3)
 -   [Cross Links Between Main and Shard Chains](https://ethresear.ch/t/cross-links-between-main-chain-and-shards/1860/2)
 
-**Shasper Talk from Conferences & Meet Ups in Order**
+**Serenity Talk from Conferences & Meet Ups in Order**
 -   [Sharding Presentation by Vitalik from IC3-ETH Bootcamp](https://vod.video.cornell.edu/media/Sharding+-+Vitalik+Buterin/1_1xezsfb4/97851101)
 -   [Latest Research and Sharding by Justin Drake from Tech Crunch](https://www.youtube.com/watch?v=J6xO7DH20Js)
 -   [Beacon Casper Chain by Vitalik and Justin Drake](https://www.youtube.com/watch?v=GAywmwGToUI)
