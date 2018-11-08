@@ -84,9 +84,9 @@ func RemoveValidatorFromPersistentCommittee(index uint32, committees []*pb.Shard
 	return committees
 }
 
-// ReassignProposerForShards reassigns a subset of proposer to different shards during
+// ReshufflePersistentCommitteeAssignments reassigns a subset of proposer to different shards during
 // state recalculation.
-func ReassignProposerForShards(
+func ReshufflePersistentCommitteeAssignments(
 	activeValidators []uint32,
 	randaoMix []byte,
 	slot uint64,
@@ -114,6 +114,27 @@ func ReassignProposerForShards(
 	}
 
 	return reassignmentRecords
+}
+
+// ApplyPersistentCommittees updates persistent committees by processing reassignment
+// records.
+func ApplyPersistentCommittees(
+	reassignmentRecords []*pb.ShardReassignmentRecord,
+	persistentCommittees []*pb.ShardValidatorIndices,
+	slot uint64) ([]*pb.ShardReassignmentRecord, []*pb.ShardValidatorIndices) {
+	for len(reassignmentRecords) > 0 && reassignmentRecords[0].Slot <= slot {
+		record := reassignmentRecords[0]
+		reassignmentRecords = reassignmentRecords[1:]
+		for _, committee := range persistentCommittees {
+			for i, index := range committee.ValidatorIndices {
+				if record.ValidatorIndex == index {
+					committee.ValidatorIndices = append(committee.ValidatorIndices[:i], committee.ValidatorIndices[i+1:]...)
+				}
+			}
+		}
+		persistentCommittees[record.Shard].ValidatorIndices = append(persistentCommittees[record.Shard].ValidatorIndices, record.ValidatorIndex)
+	}
+	return reassignmentRecords, persistentCommittees
 }
 
 // AddValidatorReassignmentRecord adds the shard reassignment record of the pending active validator.

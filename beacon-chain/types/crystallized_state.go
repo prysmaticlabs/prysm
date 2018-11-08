@@ -339,14 +339,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 	}
 
-	// Handle pending exited validators for persistent shard committees.
+	// Handle pending-exited validators for persistent shard committees.
 	recentRemovedValidators := casper.RecentRemovedValidators(newState.data.Validators)
 	for _, index := range recentRemovedValidators {
 		newState.data.PersistentCommittees = casper.RemoveValidatorFromPersistentCommittee(index, newState.data.PersistentCommittees)
 		newState.data.PersistentCommitteeReassignments = casper.RemoveValidatorsReassignmentRecord(index, newState.data.PersistentCommitteeReassignments)
 	}
 
-	// Handle pending active validators for persistent shard committees.
+	// Handle pending-active validators for persistent shard committees.
 	recentAddedValidators := casper.RecentAddedValidators(newState.data.Validators)
 	for _, index := range recentAddedValidators {
 		newState.data.PersistentCommitteeReassignments = casper.AddValidatorReassignmentRecord(
@@ -358,11 +358,16 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	}
 
 	// Re-shuffle proposers for shards.
-	newState.data.PersistentCommitteeReassignments = casper.ReassignProposerForShards(
+	newState.data.PersistentCommitteeReassignments = casper.ReshufflePersistentCommitteeAssignments(
 		casper.ActiveValidatorIndices(c.data.Validators),
 		aState.data.RandaoMix[:],
 		block.SlotNumber(),
 		newState.data.PersistentCommitteeReassignments,
+	)
+	newState.data.PersistentCommitteeReassignments, newState.data.PersistentCommittees = casper.ApplyPersistentCommittees(
+		newState.data.PersistentCommitteeReassignments,
+		newState.data.PersistentCommittees,
+		block.SlotNumber(),
 	)
 
 	return newState, nil
