@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -317,8 +317,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		specialRecordData[i] = make([]byte, 32)
 	}
 	blockRandao := block.RandaoReveal()
-	proposerIndexBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(proposerIndexBytes, proposerIndex)
+	proposerIndexBytes := b.Bytes8(proposerIndex)
 	specialRecordData[0] = proposerIndexBytes
 	specialRecordData[1] = blockRandao[:]
 
