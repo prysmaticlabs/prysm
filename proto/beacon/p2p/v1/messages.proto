@@ -22,6 +22,10 @@ message BeaconBlockHashAnnounce {
   bytes hash = 1;
 }
 
+message BeaconBlockSlotAnnounce {
+  uint64 slot_number = 1;
+}
+
 message BeaconBlockRequest {
   bytes hash = 1;
 }

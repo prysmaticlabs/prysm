@@ -116,7 +116,7 @@ func (ss *Service) IsSyncedWithNetwork() bool {
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
 	if !ss.IsSyncedWithNetwork() {
-		log.Info("Not caught up with network")
+		log.Info("Not caught up with network, starting initial sync")
 		return
 		// TODO(#661): Exit early if not synced.
 	}
