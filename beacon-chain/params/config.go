@@ -26,7 +26,7 @@ type Config struct {
 	CycleLength                   uint64    // CycleLength is one beacon chain cycle length in slots.
 	SlotDuration                  uint64    // SlotDuration is how many seconds are in a single slot.
 	MinValidatorSetChangeInterval uint64    // MinValidatorSetChangeInterval is the slots needed before validator set changes.
-	MinCommiteeSize               uint64    // MinCommiteeSize is the minimal number of validator needs to be in a committee.
+	MinCommitteeSize              uint64    // MinCommitteeSize is the minimal number of validator needs to be in a committee.
 	BaseRewardQuotient            uint64    // BaseRewardQuotient is used to calculate validator per-slot interest rate.
 	SqrtExpDropTime               uint64    // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
 	GenesisTime                   time.Time // GenesisTime used by the protocol.
@@ -47,7 +47,7 @@ var defaultConfig = &Config{
 	DepositSize:                   32,
 	MinDeposit:                    16,
 	SlotDuration:                  uint64(16),
-	MinCommiteeSize:               uint64(128),
+	MinCommitteeSize:               uint64(128),
 	BootstrappedValidatorsCount:   16384,
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
@@ -66,7 +66,7 @@ var demoConfig = &Config{
 	DepositSize:                   32,
 	MinDeposit:                    16,
 	SlotDuration:                  uint64(2),
-	MinCommiteeSize:               uint64(3),
+	MinCommitteeSize:              uint64(3),
 	MinValidatorSetChangeInterval: uint64(256),
 	BaseRewardQuotient:            uint64(32768),
 	SqrtExpDropTime:               uint64(65536),
@@ -75,6 +75,8 @@ var demoConfig = &Config{
 	InitialForkVersion:            0,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
+
+var customConfig = &Config{}
 
 const (
 	// PendingActivation means a validator is queued and waiting to be active.
@@ -115,9 +117,18 @@ func GetConfig() *Config {
 		return defaultConfig
 	case "demo":
 		return demoConfig
+	case "custom":
+		return customConfig
 	default:
 		return defaultConfig
 	}
+}
+
+// SetCustomConfig is useful for simulated backend configurations
+// in chain tests.
+func SetCustomConfig(c *Config) {
+	SetEnv("custom")
+	customConfig = c
 }
 
 // SetEnv sets which config to use.

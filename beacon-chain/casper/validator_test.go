@@ -104,7 +104,7 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	}
 
 	var indices []uint32
-	for i := uint32(0); i < uint32(params.GetConfig().MinCommiteeSize)+1; i++ {
+	for i := uint32(0); i < uint32(params.GetConfig().MinCommitteeSize)+1; i++ {
 		indices = append(indices, i)
 	}
 

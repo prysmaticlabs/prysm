@@ -74,7 +74,7 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
 	cycleLength := params.GetConfig().CycleLength
-	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommiteeSize*2) + 1
+	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommitteeSize*2) + 1
 	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
 
 	// Ensure that comitteesPerSlot is at least 1.
