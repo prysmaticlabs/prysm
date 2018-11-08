@@ -139,6 +139,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_go_yaml_yaml",
+    importpath = "github.com/go-yaml/yaml",
+    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+)
+
+go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
     commit = "bb2702d423886830dee131692131d35648c382e2",
@@ -645,6 +651,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_pborman_uuid",
+    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",
+    importpath = "github.com/pborman/uuid",
+)
+
+go_repository(
     name = "com_github_libp2p_go_buffer_pool",
     commit = "058210c5a0d042677367d923eb8a6dc072a15f7f",
     importpath = "github.com/libp2p/go-buffer-pool",
@@ -673,4 +685,78 @@ go_repository(
     name = "com_github_google_uuid",
     commit = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8",
     importpath = "github.com/google/uuid",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_kad_dht",
+    commit = "b579e0352c7cc727d16d3df1bea6681fc27d8108",
+    importpath = "github.com/libp2p/go-libp2p-kad-dht",
+    build_file_proto_mode = "disable_global",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_datastore",
+    commit = "0938ba7cc6ae5722c3f66d429ca1052cc46d2420",
+    importpath = "github.com/ipfs/go-datastore",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_base32",
+    commit = "c30ac30633ccdabefe87eb12465113f06f1bab75",
+    importpath = "github.com/whyrusleeping/base32",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_cid",
+    commit = "033594dcd6201e8e8628659c8d584bb800d1734c",
+    importpath = "github.com/ipfs/go-cid",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_record",
+    commit = "237ab9e10af172232eedad9e63ea8983c50859b1",
+    importpath = "github.com/libp2p/go-libp2p-record",
+    build_file_proto_mode = "disable_global",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_routing",
+    commit = "76077861eb4ae107b4366acc1a1152b8e15d4300",
+    importpath = "github.com/libp2p/go-libp2p-routing",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_kbucket",
+    commit = "b181991db757142b92d913a2f93ea3ee92288aad",
+    importpath = "github.com/libp2p/go-libp2p-kbucket",
+)
+
+go_repository(
+    name = "com_github_jbenet_go_context",
+    commit = "d14ea06fba99483203c19d92cfcd13ebe73135f4",
+    importpath = "github.com/jbenet/go-context",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_todocounter",
+    commit = "1e832b829506383050e6eebd12e05ea41a451532",
+    importpath = "github.com/ipfs/go-todocounter",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_go_keyspace",
+    commit = "5b898ac5add1da7178a4a98e69cb7b9205c085ee",
+    importpath = "github.com/whyrusleeping/go-keyspace",
+)
+
+go_repository(
+    name = "com_github_multiformats_go_multibase",
+    commit = "bb91b53e5695e699a86654d77d03db7bc7506d12",
+    importpath = "github.com/multiformats/go-multibase",
+)
+
+go_repository(
+    name = "com_github_hashicorp_golang_lru",
+    commit = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
+    importpath = "github.com/hashicorp/golang-lru",
 )

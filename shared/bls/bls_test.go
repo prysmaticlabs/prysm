@@ -12,6 +12,13 @@ func TestSign(t *testing.T) {
 	}
 }
 
+func TestPublicKey(t *testing.T) {
+	sk := &SecretKey{}
+	if _, err := sk.PublicKey(); err != nil {
+		t.Errorf("Expected nil error, received %v", err)
+	}
+}
+
 func TestVerifySig(t *testing.T) {
 	pk := &PublicKey{}
 	msg := []byte{}

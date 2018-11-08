@@ -7,12 +7,15 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/sirupsen/logrus"
-
+	ds "github.com/ipfs/go-datastore"
+	dsync "github.com/ipfs/go-datastore/sync"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/sirupsen/logrus"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -36,13 +39,18 @@ type Server struct {
 func NewServer() (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
-	host, err := libp2p.New(ctx, opts...)
+	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
 
-	gsub, err := pubsub.NewGossipSub(ctx, host)
+	dht := kaddht.NewDHT(ctx, h, dsync.MutexWrap(ds.NewMapDatastore()))
+	// Wrap host with a routed host so that peers can be looked up in the
+	// distributed hash table by their peer ID.
+	h = rhost.Wrap(h, dht)
+
+	gsub, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -52,7 +60,7 @@ func NewServer() (*Server, error) {
 		ctx:          ctx,
 		cancel:       cancel,
 		feeds:        make(map[reflect.Type]Feed),
-		host:         host,
+		host:         h,
 		gsub:         gsub,
 		mutex:        &sync.Mutex{},
 		topicMapping: make(map[reflect.Type]string),
