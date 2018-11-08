@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"encoding/binary"
 	"strconv"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	b "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 func TestGenesisCrystallizedState(t *testing.T) {
@@ -144,8 +144,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	})
 
 	// Set validator index 9's RANDAO reveal to be A
-	validator9Index := make([]byte, 8)
-	binary.BigEndian.PutUint64(validator9Index, 9)
+	validator9Index := b.Bytes8(9)
 	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{validator9Index, {byte('A')}}}}
 
 	newCState, err := cState.NewStateRecalculations(aState, block)

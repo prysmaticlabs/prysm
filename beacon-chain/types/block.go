@@ -176,6 +176,7 @@ func (b *Block) IsValid(
 	}
 
 	if !b.doesParentProposerExist(cState, parentSlot) || !b.areAttestationsValid(db, aState, cState, parentSlot) {
+		log.Error("Invalid attestation")
 		return false
 	}
 
@@ -288,6 +289,11 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		return false
 	}
 
+	forkVersion := cState.PostForkVersion()
+	if attestation.Slot < cState.ForkSlotNumber() {
+		forkVersion = cState.PreForkVersion()
+	}
+
 	// TODO(#258): Generate validators aggregated pub key.
 
 	attestationMsg := AttestationMsg(
@@ -295,7 +301,8 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		attestation.ShardBlockHash,
 		attestation.Slot,
 		attestation.Shard,
-		attestation.JustifiedSlot)
+		attestation.JustifiedSlot,
+		forkVersion)
 
 	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
 		attestation.Shard, attestation.Slot, attestation.ShardBlockHash, attestationMsg)

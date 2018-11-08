@@ -104,7 +104,7 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	}
 
 	var indices []uint32
-	for i := uint32(0); i < uint32(params.GetConfig().MinCommiteeSize)+1; i++ {
+	for i := uint32(0); i < uint32(params.GetConfig().MinCommitteeSize)+1; i++ {
 		indices = append(indices, i)
 	}
 
@@ -315,7 +315,7 @@ func TestAddValidators(t *testing.T) {
 	}
 
 	// Create a new validator.
-	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'})
+	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 10.
 	if validators[10].Status != uint64(params.PendingActivation) {
@@ -330,7 +330,7 @@ func TestAddValidators(t *testing.T) {
 
 	// Set validator 6 to withdrawn
 	existingValidators[5].Status = uint64(params.Withdrawn)
-	validators = AddPendingValidator(existingValidators, []byte{'D'}, 100, []byte{'E'}, []byte{'F'})
+	validators = AddPendingValidator(existingValidators, []byte{'D'}, 100, []byte{'E'}, []byte{'F'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 5.
 	if validators[5].Status != uint64(params.PendingActivation) {

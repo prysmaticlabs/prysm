@@ -3,10 +3,10 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -15,12 +15,24 @@ import (
 
 var log = logrus.WithField("prefix", "blockchain")
 
+type beaconDB interface {
+	GetBlock(h [32]byte) (*types.Block, error)
+	GetChainHead() (*types.Block, error)
+	GetActiveState() (*types.ActiveState, error)
+	GetCrystallizedState() (*types.CrystallizedState, error)
+	GetGenesisTime() (time.Time, error)
+	HasBlock(h [32]byte) bool
+	SaveBlock(block *types.Block) error
+	SaveUnfinalizedBlockState(aState *types.ActiveState, cState *types.CrystallizedState) error
+	UpdateChainHead(head *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error
+}
+
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
 	ctx                            context.Context
 	cancel                         context.CancelFunc
-	beaconDB                       *db.BeaconDB
+	beaconDB                       beaconDB
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
@@ -37,7 +49,7 @@ type Config struct {
 	BeaconBlockBuf   int
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
-	BeaconDB         *db.BeaconDB
+	BeaconDB         beaconDB
 	DevMode          bool
 	EnablePOWChain   bool
 }
@@ -134,6 +146,10 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 		case <-c.ctx.Done():
 			return
 		case block := <-processedBlock:
+			if block == nil {
+				continue
+			}
+
 			h, err := block.Hash()
 			if err != nil {
 				log.Errorf("Could not hash incoming block: %v", err)
@@ -235,88 +251,89 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 
 		// Listen for a newly received incoming block from the sync service.
 		case block := <-c.incomingBlockChan:
-			blockHash, err := block.Hash()
-			if err != nil {
-				log.Errorf("Failed to get hash of block: %v", err)
+			if err := c.processBlock(block); err != nil {
+				log.Error(err)
+				processedBlock <- nil
 				continue
-			}
-
-			if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-				log.Errorf("Proof-of-Work chain reference in block does not exist")
-				continue
-			}
-
-			parent, err := c.beaconDB.GetBlock(block.ParentHash())
-			if err != nil {
-				log.Errorf("Could not get parent block: %v", err)
-				continue
-			}
-			if parent == nil {
-				log.Errorf("Block points to nil parent: %#x", block.ParentHash())
-				continue
-			}
-
-			aState, err := c.beaconDB.GetActiveState()
-			if err != nil {
-				log.Errorf("Failed to get active state: %v", err)
-			}
-			cState, err := c.beaconDB.GetCrystallizedState()
-			if err != nil {
-				log.Errorf("Failed to get crystallized state: %v", err)
-			}
-
-			if valid := block.IsValid(
-				c.beaconDB,
-				aState,
-				cState,
-				parent.SlotNumber(),
-				c.genesisTime,
-			); !valid {
-				log.Debug("Block failed validity conditions")
-				continue
-			}
-
-			// If the block is valid, we compute its associated state tuple (active, crystallized)
-			// and apply a block scoring function.
-			var didCycleTransition bool
-			if cState.IsCycleTransition(block.SlotNumber()) {
-				cState, err = c.executeStateTransition(cState, aState, block)
-				if err != nil {
-					log.Errorf("Initialize new cycle transition failed: %v", err)
-					continue
-				}
-				didCycleTransition = true
-			}
-
-			aState, err = aState.CalculateNewActiveState(
-				block,
-				cState,
-				parent.SlotNumber(),
-			)
-			if err != nil {
-				log.Errorf("Compute active state failed: %v", err)
-				continue
-			}
-
-			if err := c.beaconDB.SaveBlock(block); err != nil {
-				log.Errorf("Failed to save block: %v", err)
-				continue
-			}
-			if err := c.beaconDB.SaveUnfinalizedBlockState(aState, cState); err != nil {
-				log.Errorf("Error persisting unfinalized block's state: %v", err)
-				continue
-			}
-
-			log.Infof("Processed block: %#x", blockHash)
-
-			c.unfinalizedBlocks[blockHash] = &statePair{
-				crystallizedState: cState,
-				activeState:       aState,
-				cycleTransition:   didCycleTransition,
 			}
 
 			// Push the block to trigger the fork choice rule.
 			processedBlock <- block
 		}
 	}
+}
+
+func (c *ChainService) processBlock(block *types.Block) error {
+	blockHash, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("Failed to get hash of block: %v", err)
+	}
+
+	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
+		return errors.New("Proof-of-Work chain reference in block does not exist")
+	}
+
+	parent, err := c.beaconDB.GetBlock(block.ParentHash())
+	if err != nil {
+		return fmt.Errorf("Could not get parent block: %v", err)
+	}
+	if parent == nil {
+		return fmt.Errorf("Block points to nil parent: %#x", block.ParentHash())
+	}
+
+	aState, err := c.beaconDB.GetActiveState()
+	if err != nil {
+		return fmt.Errorf("Failed to get active state: %v", err)
+	}
+	cState, err := c.beaconDB.GetCrystallizedState()
+	if err != nil {
+		return fmt.Errorf("Failed to get crystallized state: %v", err)
+	}
+
+	if valid := block.IsValid(
+		c.beaconDB,
+		aState,
+		cState,
+		parent.SlotNumber(),
+		c.genesisTime,
+	); !valid {
+		return errors.New("Block failed validity conditions")
+	}
+
+	// If the block is valid, we compute its associated state tuple (active, crystallized)
+	// and apply a block scoring function.
+	var didCycleTransition bool
+	if cState.IsCycleTransition(block.SlotNumber()) {
+		cState, err = c.executeStateTransition(cState, aState, block)
+		if err != nil {
+			return fmt.Errorf("Initialize new cycle transition failed: %v", err)
+		}
+		didCycleTransition = true
+	}
+
+	aState, err = aState.CalculateNewActiveState(
+		block,
+		cState,
+		parent.SlotNumber(),
+	)
+	if err != nil {
+		return fmt.Errorf("Compute active state failed: %v", err)
+	}
+
+	if err := c.beaconDB.SaveBlock(block); err != nil {
+		return fmt.Errorf("Failed to save block: %v", err)
+	}
+	if err := c.beaconDB.SaveUnfinalizedBlockState(aState, cState); err != nil {
+		return fmt.Errorf("Error persisting unfinalized block's state: %v", err)
+	}
+
+	log.Infof("Processed block: %#x", blockHash)
+
+	c.unfinalizedBlocks[blockHash] = &statePair{
+		crystallizedState: cState,
+		activeState:       aState,
+		cycleTransition:   didCycleTransition,
+	}
+
+	return nil
 }

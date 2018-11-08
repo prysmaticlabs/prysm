@@ -1,7 +1,7 @@
 package db
 
 import (
-	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 // The Schema will define how to store and retrieve data from the db.
@@ -27,7 +27,5 @@ var (
 
 // encodeSlotNumber encodes a slot number as big endian uint64.
 func encodeSlotNumber(number uint64) []byte {
-	enc := make([]byte, 8)
-	binary.BigEndian.PutUint64(enc, number)
-	return enc
+	return bytes.Bytes8(number)
 }

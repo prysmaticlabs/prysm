@@ -2,12 +2,11 @@ package node
 
 import (
 	"github.com/golang/protobuf/proto"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
 	"github.com/urfave/cli"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 var topicMappings = map[pb.Topic]proto.Message{
