@@ -13,7 +13,8 @@ import (
 // For example, instead of defining get, put, remove
 // This defines methods such as getBlock, saveBlocksAndAttestations, etc.
 type BeaconDB struct {
-	db *bolt.DB
+	db           *bolt.DB
+	DatabasePath string
 }
 
 // Close closes the underlying leveldb database.
@@ -50,7 +51,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 
-	db := &BeaconDB{db: boltDB}
+	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket, chainInfoBucket)
