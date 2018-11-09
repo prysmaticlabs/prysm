@@ -6,7 +6,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	//"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -182,7 +182,8 @@ func createActiveState(enc []byte) (*types.ActiveState, error) {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
 
-	state := types.NewActiveState(protoState, map[[32]byte]*utils.VoteCache{})
+	// TODO(jie): Read block vote cache from DB here
+	state := types.NewActiveState(protoState)
 
 	return state, nil
 }

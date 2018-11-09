@@ -14,7 +14,8 @@ import (
 func TallyVoteBalances(
 	blockHash [32]byte,
 	slot uint64,
-	blockVoteCache map[[32]byte]*utils.VoteCache,
+	//blockVoteCache map[[32]byte]*utils.VoteCache,
+	blockVoteCache utils.BlockVoteCache,
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
 

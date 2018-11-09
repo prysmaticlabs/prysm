@@ -324,6 +324,8 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return fmt.Errorf("Compute active state failed: %v", err)
 	}
 
+	// TODO(jie): Save block vote cache to DB here
+
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("Failed to save block: %v", err)
 	}

@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
@@ -279,7 +280,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
-	blockVoteCache := aState.GetBlockVoteCache()
+	//blockVoteCache := aState.GetBlockVoteCache()
 	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
 	newState.data.Validators = casper.CopyValidators(newState.Validators())
@@ -297,8 +298,10 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
+		//blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot,
+		//	blockVoteCache, newState.data.Validators, timeSinceFinality)
 		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot,
-			blockVoteCache, newState.data.Validators, timeSinceFinality)
+			utils.BlockVoteCache{}, newState.data.Validators, timeSinceFinality)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())

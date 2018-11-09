@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -74,7 +73,7 @@ func TestInitializeState(t *testing.T) {
 func TestGetUnfinalizedBlockState(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
-	aState := types.NewActiveState(&pb.ActiveState{}, map[[32]byte]*utils.VoteCache{})
+	aState := types.NewActiveState(&pb.ActiveState{})
 	cState := types.NewCrystallizedState(&pb.CrystallizedState{})
 	if err := db.SaveUnfinalizedBlockState(aState, cState); err != nil {
 		t.Fatalf("Could not save unfinalized block state: %v", err)
