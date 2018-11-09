@@ -58,7 +58,7 @@ func main() {
 		log.Fatalf("Failed to bootstrap DHT. %v", err)
 	}
 
-	fmt.Printf("Running bootstrap node: /ip4/0.0.0.0/tcp/%d/p2p/%s\n", *port, host.ID().Pretty())
+	fmt.Printf("Running bootnode: /ip4/0.0.0.0/tcp/%d/p2p/%s\n", *port, host.ID().Pretty())
 
 	select {}
 }
