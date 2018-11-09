@@ -1,3 +1,12 @@
+/**
+ * Bootnode
+ *
+ * A simple peer Kademlia distributed hash table (DHT) service for peer
+ * discovery. The purpose of this service is to provide a starting point for
+ * newly connected services to find other peers outside of their network.
+ *
+ * Usage: Run bootnode --help for flag options.
+ */
 package main
 
 import (
