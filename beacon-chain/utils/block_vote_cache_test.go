@@ -17,7 +17,7 @@ func TestBlockVoteMarshalUnmarshall(t *testing.T) {
 
 	v2 := new(BlockVote)
 	if err = v2.Unmarshal(blob); err != nil {
-		t.Fatalf("fail to deserialize block vote: %", err)
+		t.Fatalf("fail to deserialize block vote: %v", err)
 	}
 
 	if !reflect.DeepEqual(v1, v2) {
