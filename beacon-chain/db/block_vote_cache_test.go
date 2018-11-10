@@ -28,5 +28,7 @@ func TestBlockVoteCacheReadWrite(t *testing.T) {
 		t.Errorf("failed to read block vote cache from DB")
 	}
 
-	reflect.DeepEqual(blockVoteCache, blockVoteCache2)
+	if !reflect.DeepEqual(blockVoteCache, blockVoteCache2) {
+		t.Errorf("block vote cache read write don't match")
+	}
 }

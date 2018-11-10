@@ -305,7 +305,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return errors.New("Block failed validity conditions")
 	}
 
-	if err = c.updateBlockVoteCache(block, aState, cState); err != nil {
+	if err = c.calculateNewBlockVotes(block, aState, cState); err != nil {
 		return fmt.Errorf("Failed to update block vote cache: %v", err)
 	}
 
@@ -351,7 +351,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	return nil
 }
 
-func (c *ChainService) updateBlockVoteCache(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
+func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
 	for i := 0; i < len(block.Attestations()); i++ {
 		attestation := block.Attestations()[i]
 
