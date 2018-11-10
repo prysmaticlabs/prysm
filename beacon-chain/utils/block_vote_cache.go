@@ -41,7 +41,7 @@ func (v *BlockVote) Unmarshal(blob []byte) error {
 }
 
 // Copy copies a vote cache from itself to a new one.
-func (v *BlockVote) Copy() *BlockVote {
+func (v *BlockVote) copy() *BlockVote {
 	voterIndices := make([]uint32, len(v.VoterIndices))
 	copy(voterIndices, v.VoterIndices)
 
@@ -70,7 +70,7 @@ func BlockVoteCacheDeepCopy(old BlockVoteCache) BlockVoteCache {
 		newK := [32]byte{}
 		copy(newK[:], k[:])
 
-		new[newK] = v.Copy()
+		new[newK] = v.copy()
 	}
 
 	return new

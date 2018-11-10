@@ -352,9 +352,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 }
 
 func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
-	for i := 0; i < len(block.Attestations()); i++ {
-		attestation := block.Attestations()[i]
-
+	for _, attestation := range block.Attestations() {
 		parentHashes, err := aState.GetSignedParentHashes(block, attestation)
 		if err != nil {
 			return err
@@ -365,13 +363,13 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.
 			return err
 		}
 
-		// Read block vote cache from DB
+		// Read block vote cache from DB.
 		var blockVoteCache utils.BlockVoteCache
 		if blockVoteCache, err = c.beaconDB.ReadBlockVoteCache(parentHashes); err != nil {
 			return err
 		}
 
-		// Update block vote cache
+		// Update block vote cache.
 		for _, h := range parentHashes {
 			// Skip calculating for this hash if the hash is part of oblique parent hashes.
 			var skip bool
