@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 

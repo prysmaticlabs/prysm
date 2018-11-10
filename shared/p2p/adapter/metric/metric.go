@@ -3,7 +3,6 @@ package metric
 
 import (
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -15,14 +14,14 @@ import (
 var (
 	messagesCompleted = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "p2p_message_sended_total",
+			Name: "p2p_message_sent_total",
 			Help: "Count of messages sended.",
 		},
 		[]string{"message"},
 	)
 	sendLatency = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "p2p_message_sended_latency_seconds",
+			Name:    "p2p_message_sent_latency_seconds",
 			Help:    "Latency of messages sent.",
 			Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 25, 50, 100},
 		},
@@ -30,7 +29,7 @@ var (
 	)
 	messageSize = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "p2p_message_size_bytes",
+			Name:    "p2p_message_received_bytes",
 			Help:    "Size of received messages.",
 			Buckets: prometheus.ExponentialBuckets(32, 32, 6),
 		},
@@ -55,7 +54,6 @@ func New() p2p.Adapter {
 
 			messageSize.WithLabelValues(messageName).Observe(float64(proto.Size(msg.Data)))
 			next(msg)
-			time.Sleep(time.Duration(rand.Int63() % int64(time.Second)))
 			sendLatency.WithLabelValues(messageName).Observe(time.Since(start).Seconds())
 			messagesCompleted.WithLabelValues(messageName).Inc()
 		}

@@ -65,10 +65,10 @@ var (
 		Name:  "disable-monitoring",
 		Usage: "Disable monitoring service.",
 	}
-	// MonitoringEndpointFlag defines the http address and port used to serve prometheus metrics.
-	MonitoringEndpointFlag = cli.StringFlag{
-		Name:  "monitoring-endpoint",
-		Usage: "address and port used to listening and respond metrics for prometheus.",
-		Value: ":8080",
+	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
+	MonitoringPortFlag = cli.Int64Flag{
+		Name:  "monitoring-flag",
+		Usage: "Port used to listening and respond metrics for prometheus.",
+		Value: 8080,
 	}
 )
