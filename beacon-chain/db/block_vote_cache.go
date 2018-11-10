@@ -13,7 +13,6 @@ func (db *BeaconDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteC
 		for _, h := range blockHashes {
 			blob := blockVoteCacheInfo.Get(h[:])
 			if blob == nil {
-				blockVoteCache[h] = utils.NewBlockVote()
 				continue
 			}
 			vote := new(utils.BlockVote)

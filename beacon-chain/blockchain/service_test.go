@@ -458,3 +458,49 @@ func TestUpdateHead(t *testing.T) {
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
 	}
 }
+
+func TestUpdateBlockVoteCache(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
+
+	aState := types.NewGenesisActiveState()
+	cState, err := types.NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("failed to initialize crystallized state: %v", err)
+	}
+	block := types.NewBlock(&pb.BeaconBlock{
+		Slot:           1,
+		AncestorHashes: [][]byte{},
+		Attestations: []*pb.AggregatedAttestation{
+			{
+				Slot:             0,
+				Shard:            1,
+				AttesterBitfield: []byte{'F', 'F'},
+			},
+		},
+	})
+
+	err = chainService.updateBlockVoteCache(block, aState, cState)
+	if err != nil {
+		t.Fatalf("failed to update the block vote cache: %v", err)
+	}
+}
+
+func TestUpdateBlockVoteCacheNoAttestations(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
+
+	aState := types.NewGenesisActiveState()
+	cState, err := types.NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("failed to initialize crystallized state: %v", err)
+	}
+	block := types.NewBlock(nil)
+
+	err = chainService.updateBlockVoteCache(block, aState, cState)
+	if err != nil {
+		t.Fatalf("failed to update the block vote cache: %v", err)
+	}
+}

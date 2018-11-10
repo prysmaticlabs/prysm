@@ -52,16 +52,21 @@ func NewBlockVoteCache() BlockVoteCache {
 	return make(BlockVoteCache)
 }
 
+func (blockVoteCache BlockVoteCache) IsVoteCacheExist(blockHash [32]byte) bool {
+	_, ok := blockVoteCache[blockHash]
+	return ok
+}
+
 // BlockVoteCacheDeepCopy copies the every BlockVote inside the old cache
 // and create a new cache
-func BlockVoteCacheDeepCopy(old BlockVoteCache) BlockVoteCache {
-	new := BlockVoteCache{}
-	for k, v := range old {
-		newK := [32]byte{}
-		copy(newK[:], k[:])
-
-		new[newK] = v.Copy()
-	}
-
-	return new
-}
+//func BlockVoteCacheDeepCopy(old BlockVoteCache) BlockVoteCache {
+//	new := BlockVoteCache{}
+//	for k, v := range old {
+//		newK := [32]byte{}
+//		copy(newK[:], k[:])
+//
+//		new[newK] = v.Copy()
+//	}
+//
+//	return new
+//}

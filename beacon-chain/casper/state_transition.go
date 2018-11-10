@@ -14,19 +14,18 @@ import (
 func TallyVoteBalances(
 	blockHash [32]byte,
 	slot uint64,
-	//blockVoteCache map[[32]byte]*utils.VoteCache,
 	blockVoteCache utils.BlockVoteCache,
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
 
-	cache, ok := blockVoteCache[blockHash]
 
+	blockVote, ok := blockVoteCache[blockHash]
 	if !ok {
 		return 0, validators
 	}
 
-	blockVoteBalance := cache.VoteTotalDeposit
-	voterIndices := cache.VoterIndices
+	blockVoteBalance := blockVote.VoteTotalDeposit
+	voterIndices := blockVote.VoterIndices
 	validators = CalculateRewards(slot, voterIndices, validators,
 		blockVoteBalance, timeSinceFinality)
 

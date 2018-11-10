@@ -186,7 +186,7 @@ func (db *BeaconDB) GetBlockBySlot(slot uint64) (*types.Block, error) {
 			return fmt.Errorf("block not found: %x", blockhash)
 		}
 
-	var err error
+		var err error
 		block, err = createBlock(enc)
 		return err
 	})
