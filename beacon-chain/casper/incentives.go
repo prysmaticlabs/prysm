@@ -1,7 +1,7 @@
 package casper
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/sirupsen/logrus"
@@ -25,7 +25,7 @@ func CalculateRewards(
 	penaltyQuotient := quadraticPenaltyQuotient()
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
-	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
+	if timeSinceFinality <= 3*params.GetBeaconConfig().CycleLength {
 		for _, validatorIndex := range activeValidators {
 			var voted bool
 
@@ -73,13 +73,13 @@ func CalculateRewards(
 // reward validators for voting on blocks, or penalise them for being offline.
 func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
-	return params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
+	return params.GetBeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
 }
 
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := params.GetConfig().SqrtExpDropTime
+	dropTimeFactor := params.GetBeaconConfig().SqrtExpDropTime
 	return dropTimeFactor * dropTimeFactor
 }
 

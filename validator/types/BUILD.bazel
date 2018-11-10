@@ -12,7 +12,7 @@ go_library(
     deps = [
         "//shared/hashutil:go_default_library",
         "//shared/shardutil:go_default_library",
-        "//validator/params:go_default_library",
+        "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethdb:go_default_library",

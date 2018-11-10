@@ -9,7 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -54,7 +54,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// Config parameters include: ValidatorCount, ShardCount,
 	// CycleLength, MinCommitteeSize, and more based on the YAML
 	// test language specification.
-	currentConfig := params.GetConfig()
+	currentConfig := params.GetBeaconConfig()
 	currentConfig.ShardCount = testCase.Config.ShardCount
 	currentConfig.CycleLength = testCase.Config.CycleLength
 	currentConfig.MinCommitteeSize = testCase.Config.MinCommitteeSize

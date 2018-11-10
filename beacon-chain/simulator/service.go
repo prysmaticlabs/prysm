@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -88,7 +88,7 @@ func (sim *Simulator) Start() {
 		return
 	}
 
-	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetConfig().SlotDuration)
+	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetBeaconConfig().SlotDuration)
 	go func() {
 		sim.run(slotTicker.C(), sim.blockRequestChan)
 		close(sim.blockRequestChan)
@@ -187,7 +187,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				ActiveStateRoot:       aStateHash[:],
 				CrystallizedStateRoot: cStateHash[:],
 				AncestorHashes:        [][]byte{parentHash},
-				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
+				RandaoReveal:          params.GetBeaconConfig().SimulatedBlockRandao[:],
 				Attestations:          attestations,
 			})
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -15,7 +15,7 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 	// Since we are consuming 3 bytes of entropy at a time in the loop,
 	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
 	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
-	if uint64(len(validatorList)) >= params.GetConfig().ModuloBias {
+	if uint64(len(validatorList)) >= params.GetBeaconConfig().ModuloBias {
 		return nil, errors.New("exceeded upper bound for validator shuffle")
 	}
 
