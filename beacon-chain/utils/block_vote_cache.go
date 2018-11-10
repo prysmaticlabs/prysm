@@ -12,6 +12,7 @@ type BlockVote struct {
 	VoteTotalDeposit uint64
 }
 
+// BlockVoteCache is a map from hash to BlockVote object.
 type BlockVoteCache map[[32]byte]*BlockVote
 
 // NewBlockVote generates a fresh new BlockVote.
@@ -19,6 +20,7 @@ func NewBlockVote() *BlockVote {
 	return &BlockVote{VoterIndices: []uint32{}, VoteTotalDeposit: 0}
 }
 
+// Marshal serializes a BlockVote.
 func (v *BlockVote) Marshal() ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(&buf)
@@ -28,6 +30,7 @@ func (v *BlockVote) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Unmarshal deserializes a BlockVote.
 func (v *BlockVote) Unmarshal(blob []byte) error {
 	buf := bytes.NewBuffer(blob)
 	decoder := gob.NewDecoder(buf)
@@ -48,10 +51,12 @@ func (v *BlockVote) Copy() *BlockVote {
 	}
 }
 
+// NewBlockVoteCache creates a new BlockVoteCache.
 func NewBlockVoteCache() BlockVoteCache {
 	return make(BlockVoteCache)
 }
 
+// IsVoteCacheExist looks up a BlockVote with a hash.
 func (blockVoteCache BlockVoteCache) IsVoteCacheExist(blockHash [32]byte) bool {
 	_, ok := blockVoteCache[blockHash]
 	return ok

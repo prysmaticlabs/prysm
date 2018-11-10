@@ -1,9 +1,10 @@
 package db
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 )
 
 func TestBlockVoteCacheReadWrite(t *testing.T) {

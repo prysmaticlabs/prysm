@@ -2,10 +2,12 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 )
 
+// ReadBlockVoteCache read block vote cache from DB
 func (db *BeaconDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error) {
 	blockVoteCache := utils.NewBlockVoteCache()
 	err := db.view(func(tx *bolt.Tx) error {
@@ -26,6 +28,7 @@ func (db *BeaconDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteC
 	return blockVoteCache, err
 }
 
+// WriteBlockVoteCache write block vote cache object into DB
 func (db *BeaconDB) WriteBlockVoteCache(blockVoteCache utils.BlockVoteCache) error {
 	err := db.update(func(tx *bolt.Tx) error {
 		blockVoteCacheInfo := tx.Bucket(blockVoteCacheBucket)
