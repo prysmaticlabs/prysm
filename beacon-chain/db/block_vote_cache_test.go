@@ -21,15 +21,15 @@ func TestBlockVoteCacheReadWrite(t *testing.T) {
 
 	var err error
 	if err = db.WriteBlockVoteCache(blockVoteCache); err != nil {
-		t.Errorf("failed to write block vote cache to DB")
+		t.Fatalf("failed to write block vote cache to DB: %v", err)
 	}
 
 	blockVoteCache2, err := db.ReadBlockVoteCache([][32]byte{blockHash1, blockHash2})
 	if err != nil {
-		t.Errorf("failed to read block vote cache from DB")
+		t.Fatalf("failed to read block vote cache from DB: %v", err)
 	}
 
 	if !reflect.DeepEqual(blockVoteCache, blockVoteCache2) {
-		t.Errorf("block vote cache read write don't match")
+		t.Error("block vote cache read write don't match")
 	}
 }

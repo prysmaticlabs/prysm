@@ -501,6 +501,6 @@ func TestUpdateBlockVoteCacheNoAttestations(t *testing.T) {
 
 	err = chainService.calculateNewBlockVotes(block, aState, cState)
 	if err != nil {
-		t.Fatalf("failed to update the block vote cache: %v", err)
+		t.Errorf("failed to update the block vote cache: %v", err)
 	}
 }

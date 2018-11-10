@@ -358,7 +358,7 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.
 			return err
 		}
 
-		attesterIndices, err := cState.GetAttesterIndices(attestation)
+		attesterIndices, err := cState.AttesterIndices(attestation)
 		if err != nil {
 			return err
 		}

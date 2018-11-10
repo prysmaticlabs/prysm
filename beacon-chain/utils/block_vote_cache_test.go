@@ -12,15 +12,15 @@ func TestBlockVoteMarshalUnmarshall(t *testing.T) {
 
 	blob, err := v1.Marshal()
 	if err != nil {
-		t.Error("Fail to serialize BlockVote")
+		t.Fatalf("fail to serialize block vote: %v", err)
 	}
 
 	v2 := new(BlockVote)
 	if err = v2.Unmarshal(blob); err != nil {
-		t.Error("Fail to deserialize BlockVote")
+		t.Fatalf("fail to deserialize block vote: %", err)
 	}
 
 	if !reflect.DeepEqual(v1, v2) {
-		t.Error("BlockVote serialization and deserialization don't match")
+		t.Error("block vote cache serialization and deserialization don't match")
 	}
 }

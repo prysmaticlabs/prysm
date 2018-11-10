@@ -278,7 +278,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		return false
 	}
 
-	attesterIndices, err := cState.GetAttesterIndices(attestation)
+	attesterIndices, err := cState.AttesterIndices(attestation)
 	if err != nil {
 		log.Errorf("Unable to get validator committee: %v", err)
 		return false

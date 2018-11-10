@@ -248,8 +248,8 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 	return true
 }
 
-// GetAttesterIndices fetches the attesters for a given attestation record.
-func (c *CrystallizedState) GetAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
+// AttesterIndices fetches the attesters for a given attestation record.
+func (c *CrystallizedState) AttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
 	shardCommittees, err := casper.GetShardAndCommitteesForSlot(
 		c.ShardAndCommitteesForSlots(),
 		c.LastStateRecalculationSlot(),
@@ -392,7 +392,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 	slot := c.LastStateRecalculationSlot() + params.GetConfig().CycleLength
 
 	for _, attestation := range pendingAttestations {
-		indices, err := c.GetAttesterIndices(attestation)
+		indices, err := c.AttesterIndices(attestation)
 		if err != nil {
 			return nil, err
 		}
