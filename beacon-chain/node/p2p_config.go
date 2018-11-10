@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/urfave/cli"
 )
 
@@ -23,7 +24,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
-	s, err := p2p.NewServer()
+	s, err := p2p.NewServer(ctx.GlobalString(utils.BootstrapNode.Name))
 	if err != nil {
 		return nil, err
 	}

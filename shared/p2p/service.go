@@ -26,17 +26,18 @@ type Sender interface {
 
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
-	mutex        *sync.Mutex
-	feeds        map[reflect.Type]Feed
-	host         host.Host
-	gsub         *pubsub.PubSub
-	topicMapping map[reflect.Type]string
+	ctx           context.Context
+	cancel        context.CancelFunc
+	mutex         *sync.Mutex
+	feeds         map[reflect.Type]Feed
+	host          host.Host
+	gsub          *pubsub.PubSub
+	topicMapping  map[reflect.Type]string
+	bootstrapNode string
 }
 
 // NewServer creates a new p2p server instance.
-func NewServer() (*Server, error) {
+func NewServer(bootstrapNode string) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
 	h, err := libp2p.New(ctx, opts...)
@@ -57,22 +58,28 @@ func NewServer() (*Server, error) {
 	}
 
 	return &Server{
-		ctx:          ctx,
-		cancel:       cancel,
-		feeds:        make(map[reflect.Type]Feed),
-		host:         h,
-		gsub:         gsub,
-		mutex:        &sync.Mutex{},
-		topicMapping: make(map[reflect.Type]string),
+		ctx:           ctx,
+		cancel:        cancel,
+		feeds:         make(map[reflect.Type]Feed),
+		host:          h,
+		gsub:          gsub,
+		mutex:         &sync.Mutex{},
+		topicMapping:  make(map[reflect.Type]string),
+		bootstrapNode: bootstrapNode,
 	}, nil
 }
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
 	log.Info("Starting service")
-	if err := startDiscovery(s.ctx, s.host); err != nil {
-		log.Errorf("Could not start p2p discovery! %v", err)
-		return
+
+	if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
+		log.Errorf("Could not start peer discovery via DHT: %v", err)
+		log.Info("Trying peer discovery via mDNS")
+		if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+			log.Errorf("Could not start peer discovery via mDNS: %v", err)
+			return
+		}
 	}
 }
 
