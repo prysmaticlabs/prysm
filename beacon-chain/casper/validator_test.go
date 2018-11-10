@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 )
@@ -50,7 +50,7 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidators(t *testing.T) {
 	validators := InitialValidators()
 	for _, validator := range validators {
-		if validator.GetBalance() != params.GetConfig().DepositSize*params.GetConfig().Gwei {
+		if validator.GetBalance() != params.GetBeaconConfig().DepositSize*params.GetBeaconConfig().Gwei {
 			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
 		}
 		if validator.GetStatus() != uint64(params.Active) {
@@ -104,7 +104,7 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	}
 
 	var indices []uint32
-	for i := uint32(0); i < uint32(params.GetConfig().MinCommitteeSize)+1; i++ {
+	for i := uint32(0); i < uint32(params.GetBeaconConfig().MinCommitteeSize)+1; i++ {
 		indices = append(indices, i)
 	}
 
@@ -324,7 +324,7 @@ func TestAddValidators(t *testing.T) {
 	if validators[10].WithdrawalShard != 99 {
 		t.Errorf("Newly added validator's withdrawal shard should be 99. Got: %d", validators[10].WithdrawalShard)
 	}
-	if validators[10].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+	if validators[10].Balance != uint64(params.GetBeaconConfig().DepositSize*params.GetBeaconConfig().Gwei) {
 		t.Errorf("Incorrect deposit size")
 	}
 
@@ -339,53 +339,53 @@ func TestAddValidators(t *testing.T) {
 	if validators[5].WithdrawalShard != 100 {
 		t.Errorf("Newly added validator's withdrawal shard should be 100. Got: %d", validators[10].WithdrawalShard)
 	}
-	if validators[5].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+	if validators[5].Balance != uint64(params.GetBeaconConfig().DepositSize*params.GetBeaconConfig().Gwei) {
 		t.Errorf("Incorrect deposit size")
 	}
 }
 
 func TestChangeValidators(t *testing.T) {
 	existingValidators := []*pb.ValidatorRecord{
-		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
-		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
-		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
-		{Pubkey: []byte{4}, Status: uint64(params.PendingExit), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
-		{Pubkey: []byte{5}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
-		{Pubkey: []byte{6}, Status: uint64(params.PendingExit), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei), ExitSlot: params.GetConfig().WithdrawalPeriod},
-		{Pubkey: []byte{7}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{8}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{9}, Status: uint64(params.Penalized), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{10}, Status: uint64(params.Penalized), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{11}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{12}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{13}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
-		{Pubkey: []byte{14}, Status: uint64(params.Active), Balance: uint64(params.GetConfig().DepositSize * params.GetConfig().Gwei)},
+		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei), ExitSlot: params.GetBeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei), ExitSlot: params.GetBeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei), ExitSlot: params.GetBeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{4}, Status: uint64(params.PendingExit), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei), ExitSlot: params.GetBeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{5}, Status: uint64(params.PendingActivation), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei), ExitSlot: params.GetBeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{6}, Status: uint64(params.PendingExit), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei), ExitSlot: params.GetBeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{7}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{8}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{9}, Status: uint64(params.Penalized), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{10}, Status: uint64(params.Penalized), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{11}, Status: uint64(params.Active), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{12}, Status: uint64(params.Active), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{13}, Status: uint64(params.Active), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
+		{Pubkey: []byte{14}, Status: uint64(params.Active), Balance: uint64(params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei)},
 	}
 
-	validators := ChangeValidators(params.GetConfig().WithdrawalPeriod+1, 50*10e9, existingValidators)
+	validators := ChangeValidators(params.GetBeaconConfig().WithdrawalPeriod+1, 50*10e9, existingValidators)
 
 	if validators[0].Status != uint64(params.Active) {
 		t.Errorf("Wanted status Active. Got: %d", validators[0].Status)
 	}
-	if validators[0].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+	if validators[0].Balance != uint64(params.GetBeaconConfig().DepositSize*params.GetBeaconConfig().Gwei) {
 		t.Error("Failed to set validator balance")
 	}
 	if validators[1].Status != uint64(params.PendingWithdraw) {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[1].Status)
 	}
-	if validators[1].ExitSlot != params.GetConfig().WithdrawalPeriod+1 {
+	if validators[1].ExitSlot != params.GetBeaconConfig().WithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator exit slot")
 	}
 	if validators[2].Status != uint64(params.Active) {
 		t.Errorf("Wanted status Active. Got: %d", validators[2].Status)
 	}
-	if validators[2].Balance != uint64(params.GetConfig().DepositSize*params.GetConfig().Gwei) {
+	if validators[2].Balance != uint64(params.GetBeaconConfig().DepositSize*params.GetBeaconConfig().Gwei) {
 		t.Error("Failed to set validator balance")
 	}
 	if validators[3].Status != uint64(params.PendingWithdraw) {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[3].Status)
 	}
-	if validators[3].ExitSlot != params.GetConfig().WithdrawalPeriod+1 {
+	if validators[3].ExitSlot != params.GetBeaconConfig().WithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator exit slot")
 	}
 	// Reach max validation rotation case, this validator couldn't be rotated.
@@ -401,7 +401,7 @@ func TestChangeValidators(t *testing.T) {
 }
 
 func TestValidatorMinDeposit(t *testing.T) {
-	minDeposit := params.GetConfig().MinDeposit * params.GetConfig().Gwei
+	minDeposit := params.GetBeaconConfig().MinDeposit * params.GetBeaconConfig().Gwei
 	currentSlot := uint64(99)
 	validators := []*pb.ValidatorRecord{
 		{Status: uint64(params.Active), Balance: uint64(minDeposit) + 1},

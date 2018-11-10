@@ -4,7 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
-    visibility = ["//validator:__subpackages__"],
+    visibility = ["//visibility:public"],
+    
 )
 
 go_test(

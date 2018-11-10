@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
@@ -95,7 +95,7 @@ func TestRewardQuotient(t *testing.T) {
 	}
 	rewQuotient := RewardQuotient(validators)
 
-	if rewQuotient != params.GetConfig().BaseRewardQuotient {
+	if rewQuotient != params.GetBeaconConfig().BaseRewardQuotient {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
 	}
 }
@@ -122,7 +122,7 @@ func TestQuadraticPenalty(t *testing.T) {
 func TestRewardCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
 	participatedDeposit := uint64(3e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDeposit)
+	rewardQuotient := params.GetBeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}
@@ -139,7 +139,7 @@ func TestRewardCrosslink(t *testing.T) {
 
 func TestPenaltyCrosslink(t *testing.T) {
 	totalDeposit := uint64(6e18)
-	rewardQuotient := params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDeposit)
+	rewardQuotient := params.GetBeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDeposit)
 	validator := &pb.ValidatorRecord{
 		Balance: 1e18,
 	}

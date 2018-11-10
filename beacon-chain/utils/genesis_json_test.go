@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -26,7 +26,7 @@ func TestInitGenesisJson(t *testing.T) {
 	fnamePath := pwd + fname
 	os.Remove(fnamePath)
 
-	params.SetEnv("demo")
+	params.SetDemoBeaconConfig()
 	cStateJSON := &pb.CrystallizedState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,
