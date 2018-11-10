@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestBlockVoteCacheReadWrite (t *testing.T) {
+func TestBlockVoteCacheReadWrite(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

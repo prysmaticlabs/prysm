@@ -18,7 +18,6 @@ func TallyVoteBalances(
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
 
-
 	blockVote, ok := blockVoteCache[blockHash]
 	if !ok {
 		return 0, validators

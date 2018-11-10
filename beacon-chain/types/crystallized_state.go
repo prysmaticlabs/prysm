@@ -288,7 +288,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	}
 
-	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0: params.GetConfig().CycleLength])
+	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.GetConfig().CycleLength])
 	if err != nil {
 		return nil, err
 	}

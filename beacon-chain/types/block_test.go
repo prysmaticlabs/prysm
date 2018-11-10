@@ -16,7 +16,7 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-type mockDB struct{
+type mockDB struct {
 	blockVoteCache utils.BlockVoteCache
 }
 
