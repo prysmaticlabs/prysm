@@ -760,3 +760,9 @@ go_repository(
     commit = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
     importpath = "github.com/hashicorp/golang-lru",
 )
+
+go_repository(
+    name = "com_github_ipfs_go_ipfs_addr",
+    commit = "489e2d62e87b8986d703b3b28d62a7fcc3978222",
+    importpath = "github.com/ipfs/go-ipfs-addr",
+)
