@@ -188,6 +188,10 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				if s.initialCrystallizedStateRoot != [32]byte{} {
 					continue
 				}
+				if data.GetBlock().GetSlot() != 1 {
+					s.requestNextBlockBySlot(1)
+					continue
+				}
 				if err := s.setBlockForInitialSync(data); err != nil {
 					log.Errorf("Could not set block for initial sync: %v", err)
 				}
@@ -226,7 +230,6 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
-			s.currentSlot = crystallizedState.LastFinalizedSlot()
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			crystallizedStateSub.Unsubscribe()
 		}
