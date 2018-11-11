@@ -14,10 +14,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -31,7 +31,6 @@ var log = logrus.WithField("prefix", "initial-sync")
 //
 type Config struct {
 	SyncPollingInterval         time.Duration
-	SyncReqInterval             time.Duration
 	BlockBufferSize             int
 	BlockAnnounceBufferSize     int
 	CrystallizedStateBufferSize int
@@ -47,7 +46,6 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		SyncPollingInterval:         time.Duration(int64(params.GetConfig().SlotDuration)) * time.Second * 4,
-		SyncReqInterval:             time.Second,
 		BlockBufferSize:             100,
 		BlockAnnounceBufferSize:     100,
 		CrystallizedStateBufferSize: 100,
@@ -84,8 +82,8 @@ type InitialSync struct {
 	crystallizedStateBuf         chan p2p.Message
 	currentSlot                  uint64
 	syncPollingInterval          time.Duration
-	syncReqInterval              time.Duration
 	initialCrystallizedStateRoot [32]byte
+	inMemoryBlocks               map[uint64]*pb.BeaconBlockResponse
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -110,7 +108,7 @@ func NewInitialSyncService(ctx context.Context,
 		crystallizedStateBuf: crystallizedStateBuf,
 		blockAnnounceBuf:     blockAnnounceBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
-		syncReqInterval:      cfg.SyncReqInterval,
+		inMemoryBlocks:       map[uint64]*pb.BeaconBlockResponse{},
 	}
 }
 
@@ -124,10 +122,8 @@ func (s *InitialSync) Start() {
 
 	go func() {
 		ticker := time.NewTicker(s.syncPollingInterval)
-		syncTicker := time.NewTicker(s.syncReqInterval)
-		s.run(ticker.C, syncTicker.C)
+		s.run(ticker.C)
 		ticker.Stop()
-		syncTicker.Stop()
 	}()
 }
 
@@ -141,7 +137,8 @@ func (s *InitialSync) Stop() error {
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run(delaychan <-chan time.Time, syncReqChan <-chan time.Time) {
+func (s *InitialSync) run(delaychan <-chan time.Time) {
+
 	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
 	crystallizedStateSub := s.p2p.Subscribe(&pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
@@ -160,8 +157,6 @@ func (s *InitialSync) run(delaychan <-chan time.Time, syncReqChan <-chan time.Ti
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
-		case <-syncReqChan:
-			s.requestNextBlockBySlot(s.currentSlot + 1)
 		case <-delaychan:
 			if s.currentSlot == 0 {
 				continue
@@ -172,6 +167,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time, syncReqChan <-chan time.Ti
 				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
+			s.requestBatchedBlocks(highestObservedSlot)
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
@@ -206,6 +202,9 @@ func (s *InitialSync) run(delaychan <-chan time.Time, syncReqChan <-chan time.Ti
 			}
 
 			if data.Block.GetSlot() != (s.currentSlot + 1) {
+				if _, ok := s.inMemoryBlocks[data.Block.GetSlot()]; !ok {
+					s.inMemoryBlocks[data.Block.GetSlot()] = data
+				}
 				continue
 			}
 
@@ -276,7 +275,19 @@ func (s *InitialSync) requestNextBlockByHash(hash []byte) {
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
 func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
+	if _, ok := s.inMemoryBlocks[slotnumber]; ok {
+		s.blockBuf <- p2p.Message{
+			Data: s.inMemoryBlocks[slotnumber],
+		}
+		return
+	}
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotnumber})
+}
+
+func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
+	for i := s.currentSlot + 1; i <= endSlot; i++ {
+		s.requestNextBlockBySlot(i)
+	}
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
@@ -299,6 +310,10 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 		}
 		log.Infof("Saved block with hash %#x for initial sync", h)
 		s.currentSlot = block.SlotNumber()
+
+		if _, ok := s.inMemoryBlocks[block.SlotNumber()]; ok {
+			delete(s.inMemoryBlocks, block.SlotNumber())
+		}
 	}
 	return nil
 }
