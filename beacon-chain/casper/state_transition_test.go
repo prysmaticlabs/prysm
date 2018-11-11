@@ -15,7 +15,7 @@ func TestTallyVoteBalances(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	var blockHash [32]byte
 
-	blockVoteCache := make(map[[32]byte]*utils.VoteCache)
+	blockVoteCache := utils.NewBlockVoteCache()
 	initialBalance := uint64(1e9)
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{
@@ -28,13 +28,13 @@ func TestTallyVoteBalances(t *testing.T) {
 	validators[20].Status = uint64(params.Active)
 	validators[10].Status = uint64(params.Active)
 
-	voteCache := &utils.VoteCache{
+	blockVote := &utils.BlockVote{
 		VoterIndices:     []uint32{20, 10},
 		VoteTotalDeposit: 300,
 	}
 	copy(blockHash[:], []byte{'t', 'e', 's', 't', 'i', 'n', 'g'})
 
-	blockVoteCache[blockHash] = voteCache
+	blockVoteCache[blockHash] = blockVote
 
 	zeroBalance, _ := TallyVoteBalances([32]byte{}, 10, blockVoteCache, validators, 2)
 

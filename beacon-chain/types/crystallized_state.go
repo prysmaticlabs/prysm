@@ -248,8 +248,8 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 	return true
 }
 
-// getAttesterIndices fetches the attesters for a given attestation record.
-func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
+// AttesterIndices fetches the attesters for a given attestation record.
+func (c *CrystallizedState) AttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
 	shardCommittees, err := casper.GetShardAndCommitteesForSlot(
 		c.ShardAndCommitteesForSlots(),
 		c.LastStateRecalculationSlot(),
@@ -271,7 +271,7 @@ func (c *CrystallizedState) getAttesterIndices(attestation *pb.AggregatedAttesta
 // NewStateRecalculations computes the new crystallized state, given the previous crystallized state
 // and the current active state. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new committees if necessary during this transition.
-func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block) (*CrystallizedState, error) {
+func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *Block, db beaconDB) (*CrystallizedState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
 	var err error
 
@@ -279,7 +279,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	justifiedStreak := c.JustifiedStreak()
 	justifiedSlot := c.LastJustifiedSlot()
 	finalizedSlot := c.LastFinalizedSlot()
-	blockVoteCache := aState.GetBlockVoteCache()
 	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
 	newState.data.Validators = casper.CopyValidators(newState.Validators())
@@ -290,6 +289,12 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
 	}
 
+	// TODO(711): Need to implement clean-up mechanism for block vote cache.
+	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.GetConfig().CycleLength])
+	if err != nil {
+		return nil, err
+	}
+
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
 	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
 		var blockVoteBalance uint64
@@ -297,8 +302,8 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot,
-			blockVoteCache, newState.data.Validators, timeSinceFinality)
+		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot, blockVoteCache,
+			newState.data.Validators, timeSinceFinality)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
@@ -387,7 +392,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 	slot := c.LastStateRecalculationSlot() + params.GetConfig().CycleLength
 
 	for _, attestation := range pendingAttestations {
-		indices, err := c.getAttesterIndices(attestation)
+		indices, err := c.AttesterIndices(attestation)
 		if err != nil {
 			return nil, err
 		}
