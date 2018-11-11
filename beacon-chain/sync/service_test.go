@@ -111,10 +111,6 @@ func TestProcessBlock(t *testing.T) {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	if err := db.InitializeState(nil); err != nil {
-		t.Fatal(err)
-	}
-
 	cfg := Config{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,

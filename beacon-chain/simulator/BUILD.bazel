@@ -9,6 +9,7 @@ go_library(
         "//beacon-chain/params:go_default_library",
         "//beacon-chain/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bitutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/slotticker:go_default_library",

@@ -262,9 +262,9 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 		validators = append(validators, &pb.ValidatorRecord{Balance: defaultBalance, Status: uint64(params.Active)})
 	}
 
-	// Calculateing balances with zero votes by attesters.
+	// Calculating balances with zero votes by attesters.
 	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{0, 0, 0, 0},
+		AttesterBitfield: []byte{0},
 	}
 
 	indices := []uint32{4, 8, 10, 14, 30}
@@ -287,7 +287,7 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	// Calculating balances with 3 votes by attesters.
 
 	newAttestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{8, 128, 0, 2},
+		AttesterBitfield: []byte{224}, // 128 + 64 + 32
 	}
 
 	expectedTotalBalance = uint64(len(indices)) * defaultBalance
@@ -315,7 +315,7 @@ func TestAddValidators(t *testing.T) {
 	}
 
 	// Create a new validator.
-	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'})
+	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 10.
 	if validators[10].Status != uint64(params.PendingActivation) {
@@ -330,7 +330,7 @@ func TestAddValidators(t *testing.T) {
 
 	// Set validator 6 to withdrawn
 	existingValidators[5].Status = uint64(params.Withdrawn)
-	validators = AddPendingValidator(existingValidators, []byte{'D'}, 100, []byte{'E'}, []byte{'F'})
+	validators = AddPendingValidator(existingValidators, []byte{'D'}, 100, []byte{'E'}, []byte{'F'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 5.
 	if validators[5].Status != uint64(params.PendingActivation) {

@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -147,11 +147,12 @@ func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*utils.VoteCache {
 	return a.blockVoteCache
 }
 
-// appendNewAttestations appends new attestations from block in to active state.
-// this is called during block processing.
-func (a *ActiveState) appendNewAttestations(add []*pb.AggregatedAttestation) []*pb.AggregatedAttestation {
-	existing := a.data.PendingAttestations
-	return append(existing, add...)
+// UpdateAttestations returns a new state with the provided attestations.
+func (a *ActiveState) UpdateAttestations(attestations []*pb.AggregatedAttestation) *ActiveState {
+	newState := a.CopyState()
+
+	newState.data.PendingAttestations = append(newState.data.PendingAttestations, attestations...)
+	return newState
 }
 
 // appendNewSpecialObject appends new special record object from block in to active state.
@@ -161,17 +162,15 @@ func (a *ActiveState) appendNewSpecialObject(record *pb.SpecialRecord) []*pb.Spe
 	return append(existing, record)
 }
 
-// updateAttestations removes attestations older than last state recalc slot.
-func (a *ActiveState) updateAttestations(lastStateRecalc uint64, newAttestations []*pb.AggregatedAttestation) {
+// clearAttestations removes attestations older than last state recalc slot.
+func (a *ActiveState) clearAttestations(lastStateRecalc uint64) {
 	existing := a.data.PendingAttestations
-	update := make([]*pb.AggregatedAttestation, 0, len(existing)+len(newAttestations))
+	update := make([]*pb.AggregatedAttestation, 0, len(existing))
 	for _, a := range existing {
 		if a.GetSlot() >= lastStateRecalc {
 			update = append(update, a)
 		}
 	}
-
-	update = append(update, newAttestations...)
 
 	a.data.PendingAttestations = update
 }
@@ -285,7 +284,7 @@ func (a *ActiveState) CalculateNewActiveState(
 
 	newState := a.CopyState()
 
-	newState.updateAttestations(cState.LastStateRecalculationSlot(), block.Attestations())
+	newState.clearAttestations(cState.LastStateRecalculationSlot())
 
 	// Derive the new set of recent block hashes.
 	newState.data.RecentBlockHashes, err = newState.calculateNewBlockHashes(block, parentSlot)
@@ -317,8 +316,7 @@ func (a *ActiveState) CalculateNewActiveState(
 		specialRecordData[i] = make([]byte, 32)
 	}
 	blockRandao := block.RandaoReveal()
-	proposerIndexBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(proposerIndexBytes, proposerIndex)
+	proposerIndexBytes := b.Bytes8(proposerIndex)
 	specialRecordData[0] = proposerIndexBytes
 	specialRecordData[1] = blockRandao[:]
 
