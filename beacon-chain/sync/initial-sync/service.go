@@ -174,11 +174,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			if data.GetSlotNumber() > s.highestObservedSlot {
 				s.highestObservedSlot = data.GetSlotNumber()
 			}
-			if data.GetSlotNumber() != (s.currentSlot + 1) {
-				continue
-			}
 
-			s.requestNextBlockByHash(data.GetHash())
+			s.requestBatchedBlocks(s.highestObservedSlot)
 			log.Debugf("Successfully requested the next block with slot: %d", data.GetSlotNumber())
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
@@ -275,7 +272,7 @@ func (s *InitialSync) requestNextBlockByHash(hash []byte) {
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
 func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
-	log.Debugf("Requesting block %d with highest slot %d", slotnumber, s.highestObservedSlot)
+	log.Debugf("Requesting block %d ", slotnumber)
 	if _, ok := s.inMemoryBlocks[slotnumber]; ok {
 		s.blockBuf <- p2p.Message{
 			Data: s.inMemoryBlocks[slotnumber],
@@ -306,12 +303,12 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 	}
 
 	if (s.currentSlot + 1) == block.SlotNumber() {
-		log.Infof("Saved block %d", block.SlotNumber())
 
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
 		}
-		log.Infof("Saved block with hash %#x for initial sync", h)
+
+		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.SlotNumber())
 		s.currentSlot = block.SlotNumber()
 
 		if _, ok := s.inMemoryBlocks[block.SlotNumber()]; ok {
