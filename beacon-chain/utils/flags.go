@@ -59,9 +59,4 @@ var (
 		Name:  "enable-powchain",
 		Usage: "Enable a real, web3 proof-of-work chain endpoint in the beacon node",
 	}
-	// BootstrapNode tells the beacon node which bootstrap node to connect to
-	BootstrapNode = cli.StringFlag{
-		Name:  "bootstrap-node",
-		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
-	}
 )

@@ -16,7 +16,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/node",
     visibility = ["//validator:__subpackages__"],
     deps = [
-        "//beacon-chain/utils:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",

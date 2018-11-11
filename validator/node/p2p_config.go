@@ -2,7 +2,6 @@ package node
 
 import (
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -17,7 +16,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
-	s, err := p2p.NewServer(ctx.GlobalString(utils.BootstrapNode.Name))
+	s, err := p2p.NewServer(ctx.GlobalString(cmd.BootstrapNode.Name))
 	if err != nil {
 		return nil, err
 	}
