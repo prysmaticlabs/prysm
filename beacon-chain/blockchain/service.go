@@ -2,6 +2,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
@@ -22,9 +25,11 @@ type beaconDB interface {
 	GetCrystallizedState() (*types.CrystallizedState, error)
 	GetGenesisTime() (time.Time, error)
 	HasBlock(h [32]byte) bool
+	ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error)
 	SaveBlock(block *types.Block) error
 	SaveUnfinalizedBlockState(aState *types.ActiveState, cState *types.CrystallizedState) error
 	UpdateChainHead(head *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error
+	WriteBlockVoteCache(blockVoteCache utils.BlockVoteCache) error
 }
 
 // ChainService represents a service that handles the internal
@@ -231,7 +236,7 @@ func (c *ChainService) executeStateTransition(
 	var err error
 	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
 	for cState.IsCycleTransition(block.SlotNumber()) {
-		cState, err = cState.NewStateRecalculations(aState, block)
+		cState, err = cState.NewStateRecalculations(aState, block, c.beaconDB)
 		if err != nil {
 			return nil, err
 		}
@@ -300,6 +305,10 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return errors.New("Block failed validity conditions")
 	}
 
+	if err = c.calculateNewBlockVotes(block, aState, cState); err != nil {
+		return fmt.Errorf("Failed to update block vote cache: %v", err)
+	}
+
 	// First, include new attestations to the active state
 	// so that they're accounted for during cycle transitions.
 	aState = aState.UpdateAttestations(block.Attestations())
@@ -337,6 +346,77 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		crystallizedState: cState,
 		activeState:       aState,
 		cycleTransition:   didCycleTransition,
+	}
+
+	return nil
+}
+
+func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
+	for _, attestation := range block.Attestations() {
+		parentHashes, err := aState.GetSignedParentHashes(block, attestation)
+		if err != nil {
+			return err
+		}
+
+		attesterIndices, err := cState.AttesterIndices(attestation)
+		if err != nil {
+			return err
+		}
+
+		// Read block vote cache from DB.
+		var blockVoteCache utils.BlockVoteCache
+		if blockVoteCache, err = c.beaconDB.ReadBlockVoteCache(parentHashes); err != nil {
+			return err
+		}
+
+		// Update block vote cache.
+		for _, h := range parentHashes {
+			// Skip calculating for this hash if the hash is part of oblique parent hashes.
+			var skip bool
+			for _, oblique := range attestation.ObliqueParentHashes {
+				if bytes.Equal(h[:], oblique) {
+					skip = true
+					break
+				}
+			}
+			if skip {
+				continue
+			}
+
+			// Initialize vote cache of a given block hash if it doesn't exist already.
+			if !blockVoteCache.IsVoteCacheExist(h) {
+				blockVoteCache[h] = utils.NewBlockVote()
+			}
+
+			// Loop through attester indices, if the attester has voted but was not accounted for
+			// in the cache, then we add attester's index and balance to the block cache.
+			for i, attesterIndex := range attesterIndices {
+				var attesterExists bool
+				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, i)
+				if err != nil {
+					log.Errorf("Bitfield check for cache adding failed at index: %d with: %v", i, err)
+				}
+
+				if !isBitSet {
+					continue
+				}
+				for _, indexInCache := range blockVoteCache[h].VoterIndices {
+					if attesterIndex == indexInCache {
+						attesterExists = true
+						break
+					}
+				}
+				if !attesterExists {
+					blockVoteCache[h].VoterIndices = append(blockVoteCache[h].VoterIndices, attesterIndex)
+					blockVoteCache[h].VoteTotalDeposit += cState.Validators()[attesterIndex].Balance
+				}
+			}
+		}
+
+		// Write updated block vote cache back to DB
+		if err = c.beaconDB.WriteBlockVoteCache(blockVoteCache); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -16,10 +16,20 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-type mockDB struct{}
+type mockDB struct {
+	blockVoteCache utils.BlockVoteCache
+}
 
 func (f *mockDB) HasBlock(h [32]byte) bool {
 	return true
+}
+
+func (f *mockDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error) {
+	return f.blockVoteCache, nil
+}
+
+func (f *mockDB) loadMockBlockVoteCache(blockVoteCache utils.BlockVoteCache) {
+	f.blockVoteCache = blockVoteCache
 }
 
 func TestGenesisBlock(t *testing.T) {
@@ -91,7 +101,7 @@ func TestBlockValidity(t *testing.T) {
 	}
 	aState := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*utils.VoteCache))
+	})
 
 	randaoPreCommit := [32]byte{'A'}
 	hashedRandaoPreCommit := hashutil.Hash(randaoPreCommit[:])
@@ -136,7 +146,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 
 	aState := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*utils.VoteCache))
+	})
 	parentSlot := uint64(1)
 	db := &mockDB{}
 
@@ -172,7 +182,7 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 
 	aState := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHashes,
-	}, make(map[[32]byte]*utils.VoteCache))
+	})
 	parentSlot := uint64(0)
 	db := &mockDB{}
 
