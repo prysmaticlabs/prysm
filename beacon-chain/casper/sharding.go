@@ -29,9 +29,8 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 		return nil, err
 	}
 
-	// Initialize with 3 cycles of the same committees.
-	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.GetConfig().CycleLength)
-	initialCommittees = append(initialCommittees, committees...)
+	// Initialize with 2 cycles of the same committees.
+	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 2*params.GetConfig().CycleLength)
 	initialCommittees = append(initialCommittees, committees...)
 	initialCommittees = append(initialCommittees, committees...)
 	return initialCommittees, nil
@@ -75,7 +74,7 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
 	cycleLength := params.GetConfig().CycleLength
-	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommiteeSize*2) + 1
+	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommitteeSize*2) + 1
 	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
 
 	// Ensure that comitteesPerSlot is at least 1.

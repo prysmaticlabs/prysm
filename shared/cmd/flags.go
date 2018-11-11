@@ -47,7 +47,7 @@ var (
 		Name:  "enable-tracing",
 		Usage: "Enable request tracing.",
 	}
-	// TracingEndpointFlag flag defines the http enpoint for serving traces to Jaeger.
+	// TracingEndpointFlag flag defines the http endpoint for serving traces to Jaeger.
 	TracingEndpointFlag = cli.StringFlag{
 		Name:  "tracing-endpoint",
 		Usage: "Tracing endpoint defines where beacon chain traces are exposed to Jaeger.",
@@ -70,5 +70,15 @@ var (
 		Name:  "monitoring-flag",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
+	// KeystoreDirectoryFlag defines a flag to indicate where the keystore of the user
+	// is located.
+	KeystoreDirectoryFlag = DirectoryFlag{
+		Name:  "keystore-dir",
+		Usage: "Keystore directory indicates which directory the keystore is located.",
+	}
+	// KeystorePasswordFlag defines the password that will unlock the keystore file.
+	KeystorePasswordFlag = cli.StringFlag{
+		Name:  "keystore-password",
+		Usage: "Keystore password is used to unlock the keystore so that the users decrypted keys can be used.",
 	}
 )
