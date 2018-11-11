@@ -15,10 +15,11 @@ import (
 
 // The fields below define the suffix of keys in the db.
 var (
-	attestationBucket = []byte("attestation-bucket")
-	blockBucket       = []byte("block-bucket")
-	mainChainBucket   = []byte("main-chain-bucket")
-	chainInfoBucket   = []byte("chain-info")
+	attestationBucket    = []byte("attestation-bucket")
+	blockBucket          = []byte("block-bucket")
+	mainChainBucket      = []byte("main-chain-bucket")
+	chainInfoBucket      = []byte("chain-info")
+	blockVoteCacheBucket = []byte("block-vote-cache")
 
 	mainChainHeightKey = []byte("chain-height")
 	aStateLookupKey    = []byte("active-state")

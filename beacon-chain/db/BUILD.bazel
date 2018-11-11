@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "attestation.go",
         "block.go",
+        "block_vote_cache.go",
         "db.go",
         "schema.go",
         "state.go",
@@ -26,6 +27,7 @@ go_test(
     srcs = [
         "attestation_test.go",
         "block_test.go",
+        "block_vote_cache_test.go",
         "db_test.go",
         "state_test.go",
     ],
