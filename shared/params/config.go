@@ -111,7 +111,7 @@ const (
 	Exit
 )
 
-// GetConfig retrieves beacon node config.
+// GetBeaconConfig retrieves beacon node config.
 func GetBeaconConfig() *Config {
 	var oc *OverrideConfig
   	if oc != nil && oc.param != ""{
