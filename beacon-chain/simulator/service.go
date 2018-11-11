@@ -238,7 +238,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			}}
 			sim.p2p.Send(res, msg.Peer)
 
-			delete(broadcastedBlocksBySlot, data.GetSlotNumber())
+			//delete(broadcastedBlocksBySlot, data.GetSlotNumber())
 		case msg := <-requestChan:
 			data := msg.Data.(*pb.BeaconBlockRequest)
 			var hash [32]byte
@@ -261,7 +261,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			}}
 			sim.p2p.Send(res, msg.Peer)
 
-			delete(broadcastedBlocksByHash, hash)
+			//delete(broadcastedBlocksByHash, hash)
 		}
 	}
 }

@@ -81,6 +81,7 @@ type InitialSync struct {
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
 	currentSlot                  uint64
+	highestObservedSlot          uint64
 	syncPollingInterval          time.Duration
 	initialCrystallizedStateRoot [32]byte
 	inMemoryBlocks               map[uint64]*pb.BeaconBlockResponse
@@ -104,6 +105,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:          cfg.SyncService,
 		db:                   cfg.BeaconDB,
 		currentSlot:          0,
+		highestObservedSlot:  0,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
 		blockAnnounceBuf:     blockAnnounceBuf,
@@ -150,8 +152,6 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		close(s.crystallizedStateBuf)
 	}()
 
-	highestObservedSlot := uint64(0)
-
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -161,18 +161,18 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			if s.currentSlot == 0 {
 				continue
 			}
-			if highestObservedSlot == s.currentSlot {
+			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncService.Start()
 				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
-			s.requestBatchedBlocks(highestObservedSlot)
+			s.requestBatchedBlocks(s.highestObservedSlot)
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
-			if data.GetSlotNumber() > highestObservedSlot {
-				highestObservedSlot = data.GetSlotNumber()
+			if data.GetSlotNumber() > s.highestObservedSlot {
+				s.highestObservedSlot = data.GetSlotNumber()
 			}
 			if data.GetSlotNumber() != (s.currentSlot + 1) {
 				continue
@@ -183,8 +183,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
 
-			if data.Block.GetSlot() > highestObservedSlot {
-				highestObservedSlot = data.Block.GetSlot()
+			if data.Block.GetSlot() > s.highestObservedSlot {
+				s.highestObservedSlot = data.Block.GetSlot()
 			}
 
 			if s.currentSlot == 0 {
@@ -275,6 +275,7 @@ func (s *InitialSync) requestNextBlockByHash(hash []byte) {
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
 func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
+	log.Debugf("Requesting block %d with highest slot %d", slotnumber, s.highestObservedSlot)
 	if _, ok := s.inMemoryBlocks[slotnumber]; ok {
 		s.blockBuf <- p2p.Message{
 			Data: s.inMemoryBlocks[slotnumber],
@@ -285,6 +286,7 @@ func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
 }
 
 func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
+	log.Debug("Requesting batched blocks")
 	for i := s.currentSlot + 1; i <= endSlot; i++ {
 		s.requestNextBlockBySlot(i)
 	}
@@ -304,6 +306,7 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 	}
 
 	if (s.currentSlot + 1) == block.SlotNumber() {
+		log.Infof("Saved block %d", block.SlotNumber())
 
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
