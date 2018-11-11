@@ -4,10 +4,14 @@ import (
 	"context"
 	"time"
 
+	ds "github.com/ipfs/go-datastore"
+	dsync "github.com/ipfs/go-datastore/sync"
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	host "github.com/libp2p/go-libp2p-host"
+	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
+	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,10 +46,11 @@ func startDHTDiscovery(ctx context.Context, host host.Host, bootstrapAddr string
 		return err
 	}
 
-	if err := host.Connect(ctx, *peerinfo); err != nil {
-		return err
-	}
-	return nil
+	// Wrap the host with a routed host.
+	dht := kaddht.NewDHT(ctx, host, dsync.MutexWrap(ds.NewMapDatastore()))
+	host = rhost.Wrap(host, dht)
+	err = host.Connect(ctx, *peerinfo)
+	return err
 }
 
 // Discovery implements mDNS notifee interface.

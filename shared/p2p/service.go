@@ -73,13 +73,15 @@ func NewServer(bootstrapNode string) (*Server, error) {
 func (s *Server) Start() {
 	log.Info("Starting service")
 
-	if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
-		log.Warnf("Could not start peer discovery via DHT: %v", err)
-		log.Info("Trying peer discovery via mDNS")
-		if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
-			log.Errorf("Could not start peer discovery via mDNS: %v", err)
-			return
+	if s.bootstrapNode != "" {
+		if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
+			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
+	}
+
+	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+		log.Errorf("Could not start peer discovery via mDNS: %v", err)
+		return
 	}
 }
 
