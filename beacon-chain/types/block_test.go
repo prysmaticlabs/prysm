@@ -32,6 +32,21 @@ func (f *mockDB) loadMockBlockVoteCache(blockVoteCache utils.BlockVoteCache) {
 	f.blockVoteCache = blockVoteCache
 }
 
+func (f *mockDB) GetBlock(h [32]byte) (Block, error) {
+	var ancestorHashes = make([][]byte, 0, 32)
+	genBlock := Block{
+		data: &pb.BeaconBlock{
+			AncestorHashes:        ancestorHashes,
+			RandaoReveal:          []byte{0},
+			PowChainRef:           []byte{0},
+			ActiveStateRoot:       []byte{0},
+			CrystallizedStateRoot: []byte{0},
+			Specials:              []*pb.SpecialRecord{},
+		},
+	}
+	return genBlock, nil
+}
+
 func TestGenesisBlock(t *testing.T) {
 	aStateHash := [32]byte{0}
 	cStateHash := [32]byte{1}

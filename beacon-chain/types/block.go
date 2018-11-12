@@ -29,6 +29,7 @@ type Block struct {
 
 type beaconDB interface {
 	HasBlock(h [32]byte) bool
+	GetBlock(h [32]byte) (Block, error)
 	ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error)
 }
 
@@ -268,6 +269,19 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	if !blockInChain {
 		log.Errorf("the attestion's justifed block hash has to be in the current chain, but was not found.  Justified block hash: %v",
 			attestation.JustifiedBlockHash)
+		return false
+	}
+
+	// Retrieve block from db using justified_block_hash and verify its slot number is the same as attestation justified slot number
+	rBlock, err := db.GetBlock(hash)
+	if err != nil {
+		log.Errorf("failed to get block: %v", err)
+	}
+	if attestation.JustifiedSlot != rBlock.SlotNumber() {
+		log.Errorf("the attestation's slot number is not the same as the slot number of the block retrieved by the justified slot hash. Attestation slot number: %v",
+			attestation.JustifiedSlot)
+		log.Errorf("Retrieved block slot number: %v",
+			rBlock.SlotNumber())
 		return false
 	}
 
