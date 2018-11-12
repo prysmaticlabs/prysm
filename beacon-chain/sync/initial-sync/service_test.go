@@ -342,7 +342,6 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
-	//ticker := time.NewTicker(1 * time.Millisecond)
 
 	defer func() {
 		close(exitRoutine)
@@ -383,6 +382,8 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	//sending initial block
 	ss.blockBuf <- getBlockResponseMsg(1)
 
+	// waiting for the current slot to come up to the
+	// expected one.
 	for {
 		if ss.currentSlot == 9 {
 			break
@@ -394,9 +395,67 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	if len(ss.inMemoryBlocks) != 0 {
-		t.Fatalf("blocks were unabled to saved and removed from memory correctly %d", len(ss.inMemoryBlocks))
+	hook.Reset()
+}
+
+func TestRequestBatchedBlocks(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := Config{
+		P2P:             &mockP2P{},
+		SyncService:     &mockSyncService{},
+		BeaconDB:        &mockDB{},
+		BlockBufferSize: 100,
 	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	defer func() {
+		close(exitRoutine)
+		close(delayChan)
+	}()
+
+	go func() {
+		ss.run(delayChan)
+		exitRoutine <- true
+	}()
+
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
+
+	getBlockResponse := func(Slot uint64) *pb.BeaconBlockResponse {
+
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: &pb.BeaconBlock{
+				PowChainRef:           []byte{1, 2, 3},
+				AncestorHashes:        [][]byte{genericHash},
+				Slot:                  Slot,
+				CrystallizedStateRoot: nil,
+			},
+		}
+
+		return blockResponse
+	}
+
+	for i := ss.currentSlot + 1; i <= 10; i++ {
+		ss.inMemoryBlocks[i] = getBlockResponse(i)
+	}
+
+	ss.requestBatchedBlocks(10)
+
+	// waiting for the current slot to come up to the
+	// expected one.
+	for {
+		if ss.currentSlot == 10 {
+			break
+		}
+	}
+
+	delayChan <- time.Time{}
+
+	ss.cancel()
+	<-exitRoutine
 
 	hook.Reset()
 }
