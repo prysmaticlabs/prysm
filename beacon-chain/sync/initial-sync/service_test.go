@@ -395,6 +395,8 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+
 	hook.Reset()
 }
 
@@ -456,6 +458,8 @@ func TestRequestBatchedBlocks(t *testing.T) {
 
 	ss.cancel()
 	<-exitRoutine
+
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
 
 	hook.Reset()
 }
