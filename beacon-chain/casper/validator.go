@@ -64,13 +64,11 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 
 	// If in the previous or current cycle, simply calculate offset
 	if slot < lastStateRecalc+2*cycleLength {
-		log.Errorf("First loop %d", slot-lowerBound)
 		return shardCommittees[slot-lowerBound], nil
 	}
 
 	// Otherwise, use the 3rd cycle
 	index := lowerBound + 2*cycleLength + slot%cycleLength
-	log.Errorf("Second loop %d", index)
 	return shardCommittees[index], nil
 }
 
