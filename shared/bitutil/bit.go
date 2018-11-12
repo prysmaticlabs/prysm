@@ -50,3 +50,32 @@ func SetBitfield(index int) []byte {
 
 	return bitfield
 }
+
+// FillBitfield returns a bitfield of length `count`, all set to true.
+func FillBitfield(count int) []byte {
+	numChunks := count/8 + 1
+	bitfield := make([]byte, numChunks)
+	for i := 0; i < numChunks; i++ {
+		if i+1 == numChunks {
+			bitfield[i] = fillNBits(uint64(count % 8))
+		} else {
+			bitfield[i] = byte(8)
+		}
+	}
+
+	return bitfield
+}
+
+func fillNBits(numBits uint64) byte {
+	result := byte(0)
+	for i := uint64(0); i < numBits; i++ {
+		result = fillBit(result, i)
+	}
+
+	return result
+}
+
+func fillBit(target byte, index uint64) byte {
+	bitShift := 7 - index
+	return target ^ (1 << bitShift)
+}

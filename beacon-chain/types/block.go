@@ -29,6 +29,7 @@ type Block struct {
 
 type beaconDB interface {
 	HasBlock(h [32]byte) bool
+	ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error)
 }
 
 // NewBlock explicitly sets the data field of a block.
@@ -223,7 +224,7 @@ func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot ui
 
 	// verify proposer from last slot is in the first attestation object in AggregatedAttestation.
 	if isBitSet, err := bitutil.CheckBit(b.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
-		log.Errorf("Could not locate proposer in the first attestation of AttestionRecord %v", err)
+		log.Errorf("Could not locate proposer in the first attestation of AttestionRecord: %v", err)
 		return false
 	}
 
@@ -271,21 +272,21 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	}
 
 	// Get all the block hashes up to cycle length.
-	parentHashes, err := aState.getSignedParentHashes(b, attestation)
+	parentHashes, err := aState.GetSignedParentHashes(b, attestation)
 	if err != nil {
 		log.Errorf("Unable to get signed parent hashes: %v", err)
 		return false
 	}
 
-	attesterIndices, err := cState.getAttesterIndices(attestation)
+	attesterIndices, err := cState.AttesterIndices(attestation)
 	if err != nil {
-		log.Errorf("unable to get validator committee %v", err)
+		log.Errorf("Unable to get validator committee: %v", err)
 		return false
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
 	if !casper.AreAttesterBitfieldsValid(attestation, attesterIndices) {
-		log.Errorf("unable to match attester bitfield with shard and committee bitfield")
+		log.Error("Unable to match attester bitfield with shard and committee bitfield")
 		return false
 	}
 

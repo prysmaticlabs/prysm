@@ -14,18 +14,17 @@ import (
 func TallyVoteBalances(
 	blockHash [32]byte,
 	slot uint64,
-	blockVoteCache map[[32]byte]*utils.VoteCache,
+	blockVoteCache utils.BlockVoteCache,
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
 
-	cache, ok := blockVoteCache[blockHash]
-
+	blockVote, ok := blockVoteCache[blockHash]
 	if !ok {
 		return 0, validators
 	}
 
-	blockVoteBalance := cache.VoteTotalDeposit
-	voterIndices := cache.VoterIndices
+	blockVoteBalance := blockVote.VoteTotalDeposit
+	voterIndices := blockVote.VoterIndices
 	validators = CalculateRewards(slot, voterIndices, validators,
 		blockVoteBalance, timeSinceFinality)
 
@@ -89,14 +88,13 @@ func ApplyCrosslinkRewardsAndPenalties(
 	return nil
 }
 
-// ProcessBalancesInCrosslink checks the vote balances and if there is a supermajority it sets the crosslink
+// ProcessCrosslink checks the vote balances and if there is a supermajority it sets the crosslink
 // for that shard.
-func ProcessBalancesInCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
+func ProcessCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
 	attestation *pb.AggregatedAttestation, crosslinkRecords []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 
 	// if 2/3 of committee voted on this crosslink, update the crosslink
 	// with latest dynasty number, shard block hash, and slot number.
-
 	voteMajority := 3*voteBalance >= 2*totalBalance
 	if voteMajority && !crosslinkRecords[attestation.Shard].RecentlyChanged {
 		crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
@@ -153,15 +154,32 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				powChainRef = []byte{byte(slot)}
 			}
 
-			committees, err := cState.GetShardsAndCommitteesForSlot(slot)
+			parentSlot := slot - 1
+			committees, err := cState.GetShardsAndCommitteesForSlot(parentSlot)
 			if err != nil {
 				log.Errorf("Failed to get shard committee: %v", err)
 				continue
 			}
-			shardID := committees.ArrayShardAndCommittee[0].Shard
 
 			parentHash := make([]byte, 32)
 			copy(parentHash, lastHash[:])
+
+			shardCommittees := committees.ArrayShardAndCommittee
+			attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
+
+			// Create attestations for all committees of the previous block.
+			// Ensure that all attesters have voted by calling FillBitfield.
+			for i, shardCommittee := range shardCommittees {
+				shardID := shardCommittee.Shard
+				numAttesters := len(shardCommittee.Committee)
+				attestations[i] = &pb.AggregatedAttestation{
+					Slot:               parentSlot,
+					AttesterBitfield:   bitutil.FillBitfield(numAttesters),
+					JustifiedBlockHash: parentHash,
+					Shard:              shardID,
+				}
+			}
+
 			block := types.NewBlock(&pb.BeaconBlock{
 				Slot:                  slot,
 				Timestamp:             ptypes.TimestampNow(),
@@ -170,9 +188,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				CrystallizedStateRoot: cStateHash[:],
 				AncestorHashes:        [][]byte{parentHash},
 				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
-				Attestations: []*pb.AggregatedAttestation{
-					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}, JustifiedBlockHash: parentHash, Shard: shardID},
-				},
+				Attestations:          attestations,
 			})
 
 			hash, err := block.Hash()

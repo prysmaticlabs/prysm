@@ -15,7 +15,7 @@ func TestTallyVoteBalances(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	var blockHash [32]byte
 
-	blockVoteCache := make(map[[32]byte]*utils.VoteCache)
+	blockVoteCache := utils.NewBlockVoteCache()
 	initialBalance := uint64(1e9)
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{
@@ -28,13 +28,13 @@ func TestTallyVoteBalances(t *testing.T) {
 	validators[20].Status = uint64(params.Active)
 	validators[10].Status = uint64(params.Active)
 
-	voteCache := &utils.VoteCache{
+	blockVote := &utils.BlockVote{
 		VoterIndices:     []uint32{20, 10},
 		VoteTotalDeposit: 300,
 	}
 	copy(blockHash[:], []byte{'t', 'e', 's', 't', 'i', 'n', 'g'})
 
-	blockVoteCache[blockHash] = voteCache
+	blockVoteCache[blockHash] = blockVote
 
 	zeroBalance, _ := TallyVoteBalances([32]byte{}, 10, blockVoteCache, validators, 2)
 
@@ -183,7 +183,7 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 
 }
 
-func TestProcessBalancesInCrosslinks(t *testing.T) {
+func TestCrosslinks(t *testing.T) {
 	totalBalance := uint64(5e9)
 	voteBalance := uint64(4e9)
 
@@ -207,7 +207,7 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Fatal("crosslink updated when it was not supposed to")
@@ -215,7 +215,7 @@ func TestProcessBalancesInCrosslinks(t *testing.T) {
 
 	crossLinks[1].RecentlyChanged = false
 
-	crossLinks = ProcessBalancesInCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())
