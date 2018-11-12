@@ -51,7 +51,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 
 	var lowerBound uint64
 	if lastStateRecalc >= cycleLength {
-		lowerBound = lastStateRecalc - cycleLength
+		lowerBound = lastStateRecalc - cycleLength + 1
 	}
 	upperBound := lastStateRecalc + 2*cycleLength
 	if slot < lowerBound || slot >= upperBound {
