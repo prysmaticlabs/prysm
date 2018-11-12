@@ -167,6 +167,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
+
+			// requests multiple blocks so as to save and sync quickly.
 			s.requestBatchedBlocks(s.highestObservedSlot)
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
@@ -189,6 +191,11 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 					continue
 				}
 				if data.GetBlock().GetSlot() != 1 {
+
+					// saves block in memory if it isn't the intial block.
+					if _, ok := s.inMemoryBlocks[data.Block.GetSlot()]; !ok {
+						s.inMemoryBlocks[data.Block.GetSlot()] = data
+					}
 					s.requestNextBlockBySlot(1)
 					continue
 				}
@@ -201,7 +208,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 
 				continue
 			}
-
+			// if it isn't the block in the next slot it saves it in memory.
 			if data.Block.GetSlot() != (s.currentSlot + 1) {
 				if _, ok := s.inMemoryBlocks[data.Block.GetSlot()]; !ok {
 					s.inMemoryBlocks[data.Block.GetSlot()] = data
@@ -230,6 +237,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
+			// sets the current slot to the last finalized slot of the
+			// crystallized state to begin our sync from.
 			s.currentSlot = crystallizedState.LastFinalizedSlot()
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
@@ -267,12 +276,8 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
 	s.currentSlot = block.SlotNumber()
+	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
-}
-
-// requestNextBlockByHash broadcasts a request for a block with the hash.
-func (s *InitialSync) requestNextBlockByHash(hash []byte) {
-	s.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: hash})
 }
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
@@ -287,6 +292,8 @@ func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotnumber})
 }
 
+// requestBatchedBlocks sends out multiple requests for blocks till a
+// specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 	log.Debug("Requesting batched blocks")
 	for i := s.currentSlot + 1; i <= endSlot; i++ {
@@ -316,6 +323,7 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.SlotNumber())
 		s.currentSlot = block.SlotNumber()
 
+		// delete block from memory
 		if _, ok := s.inMemoryBlocks[block.SlotNumber()]; ok {
 			delete(s.inMemoryBlocks, block.SlotNumber())
 		}

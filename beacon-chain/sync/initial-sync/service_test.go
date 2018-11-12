@@ -329,3 +329,74 @@ func TestIsNotSyncedWithNetwork(t *testing.T) {
 
 	hook.Reset()
 }
+
+func TestRequestBlocksBySlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+	cfg := Config{
+		P2P:             &mockP2P{},
+		SyncService:     &mockSyncService{},
+		BeaconDB:        &mockDB{},
+		BlockBufferSize: 100,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+	//ticker := time.NewTicker(1 * time.Millisecond)
+
+	defer func() {
+		close(exitRoutine)
+		close(delayChan)
+	}()
+
+	go func() {
+		ss.run(delayChan)
+		exitRoutine <- true
+	}()
+
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
+
+	getBlockResponseMsg := func(Slot uint64) p2p.Message {
+		block := &pb.BeaconBlock{
+			PowChainRef:           []byte{1, 2, 3},
+			AncestorHashes:        [][]byte{genericHash},
+			Slot:                  Slot,
+			CrystallizedStateRoot: nil,
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: block,
+		}
+
+		return p2p.Message{
+			Peer: p2p.Peer{},
+			Data: blockResponse,
+		}
+	}
+
+	// sending all blocks except for the initial block
+	for i := uint64(2); i < 10; i++ {
+		ss.blockBuf <- getBlockResponseMsg(i)
+	}
+
+	//sending initial block
+	ss.blockBuf <- getBlockResponseMsg(1)
+
+	for {
+		if ss.currentSlot == 9 {
+			break
+		}
+	}
+
+	delayChan <- time.Time{}
+
+	ss.cancel()
+	<-exitRoutine
+
+	if len(ss.inMemoryBlocks) != 0 {
+		t.Fatalf("blocks were unabled to saved and removed from memory correctly %d", len(ss.inMemoryBlocks))
+	}
+
+	hook.Reset()
+}
