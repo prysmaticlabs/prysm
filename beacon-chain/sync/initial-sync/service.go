@@ -192,7 +192,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				}
 				if data.GetBlock().GetSlot() != 1 {
 
-					// saves block in memory if it isn't the intial block.
+					// saves block in memory if it isn't the initial block.
 					if _, ok := s.inMemoryBlocks[data.Block.GetSlot()]; !ok {
 						s.inMemoryBlocks[data.Block.GetSlot()] = data
 					}
