@@ -119,14 +119,14 @@ func TestBroadcastBlockHash(t *testing.T) {
 	// trigger another block
 	slotChan <- 2
 
-	testutil.AssertLogsContain(t, hook, "Broadcast block hash")
+	testutil.AssertLogsContain(t, hook, "Broadcast block hash and slot")
 	testutil.AssertLogsContain(t, hook, "Requested block not found")
 	testutil.AssertLogsContain(t, hook, "Responding to full block request")
 
 	// reset logs
 	hook.Reset()
 
-	// ensure that another request for the same block can't be made
+	// ensure that another request for the same block can be made
 	requestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: blockHash,
@@ -136,8 +136,56 @@ func TestBroadcastBlockHash(t *testing.T) {
 	sim.cancel()
 	exitRoutine <- true
 
+	testutil.AssertLogsDoNotContain(t, hook, "Requested block not found")
+	testutil.AssertLogsContain(t, hook, "Responding to full block request")
+
+	hook.Reset()
+}
+
+func TestBlockRequestBySlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	sim, _ := setupSimulator(t, db)
+
+	slotChan := make(chan uint64)
+	requestChan := make(chan p2p.Message)
+	slotReqChan := make(chan p2p.Message)
+	exitRoutine := make(chan bool)
+
+	go func() {
+		sim.run(slotChan, requestChan, slotReqChan)
+		<-exitRoutine
+	}()
+
+	// trigger a new block
+	slotChan <- 1
+
+	// test an invalid block request
+	slotReqChan <- p2p.Message{
+		Data: &pb.BeaconBlockRequestBySlotNumber{
+			SlotNumber: 2,
+		},
+	}
+
+	testutil.AssertLogsContain(t, hook, "Broadcast block hash and slot")
 	testutil.AssertLogsContain(t, hook, "Requested block not found")
-	testutil.AssertLogsDoNotContain(t, hook, "Responding to full block request")
+
+	// reset logs
+	hook.Reset()
+
+	// test a valid block request
+	slotReqChan <- p2p.Message{
+		Data: &pb.BeaconBlockRequestBySlotNumber{
+			SlotNumber: 1,
+		},
+	}
+
+	sim.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Responding to full block request")
 
 	hook.Reset()
 }
