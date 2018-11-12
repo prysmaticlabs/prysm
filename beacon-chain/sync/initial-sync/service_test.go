@@ -74,7 +74,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	block := &pb.BeaconBlock{
 		PowChainRef:           []byte{1, 2, 3},
 		AncestorHashes:        [][]byte{genericHash},
-		Slot:                  uint64(20),
+		Slot:                  uint64(1),
 		CrystallizedStateRoot: genericHash,
 	}
 
@@ -165,7 +165,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		}
 	}
 
-	msg1 := getBlockResponseMsg(0)
+	msg1 := getBlockResponseMsg(1)
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
@@ -176,7 +176,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.crystallizedStateBuf <- msg2
 
 	if ss.currentSlot == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %#x", ss.currentSlot)
+		t.Fatalf("Crystallized state updated incorrectly: %d", ss.currentSlot)
 	}
 
 	msg2.Data = stateResponse
@@ -185,7 +185,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	if crystallizedStateRoot != ss.initialCrystallizedStateRoot {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("Crystallized state hash not updated: %#x", br.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated to: %#x instead it is %#x", br.Block.CrystallizedStateRoot,
+			ss.initialCrystallizedStateRoot)
 	}
 
 	msg1 = getBlockResponseMsg(30)
@@ -250,7 +251,7 @@ func TestDelayChan(t *testing.T) {
 	block := &pb.BeaconBlock{
 		PowChainRef:           []byte{1, 2, 3},
 		AncestorHashes:        [][]byte{genericHash},
-		Slot:                  uint64(20),
+		Slot:                  uint64(1),
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 	}
 

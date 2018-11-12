@@ -230,6 +230,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
+			s.currentSlot = crystallizedState.LastFinalizedSlot()
+
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			crystallizedStateSub.Unsubscribe()
 		}
