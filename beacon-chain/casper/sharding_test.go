@@ -24,14 +24,14 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1000); err == nil {
 		t.Error("getShardAndCommitteesForSlot should have failed with invalid slot")
 	}
-	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
+	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 0)
 	if err != nil {
 		t.Errorf("getShardAndCommitteesForSlot failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].Shard != 1 {
 		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 1, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
-	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 2)
+	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
 	if committee.ArrayShardAndCommittee[0].Shard != 3 {
 		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 3, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
@@ -77,8 +77,8 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 		t.Fatalf("unable to get initial shard committees %v", err)
 	}
 
-	if uint64(len(shardAndCommitteeArray)) != 2*params.GetConfig().CycleLength {
-		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 2*params.GetConfig().CycleLength)
+	if uint64(len(shardAndCommitteeArray)) != 3*params.GetConfig().CycleLength {
+		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 3*params.GetConfig().CycleLength)
 	}
 
 }
