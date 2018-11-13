@@ -290,7 +290,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	}
 
 	// TODO(711): Need to implement clean-up mechanism for block vote cache.
-	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.GetConfig().CycleLength])
+	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.GetBeaconConfig().CycleLength])
 	if err != nil {
 		return nil, err
 	}
