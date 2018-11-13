@@ -4,14 +4,10 @@ import (
 	"context"
 	"time"
 
-	ds "github.com/ipfs/go-datastore"
-	dsync "github.com/ipfs/go-datastore/sync"
 	iaddr "github.com/ipfs/go-ipfs-addr"
-	host "github.com/libp2p/go-libp2p-host"
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p-host"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
-	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,9 +42,6 @@ func startDHTDiscovery(ctx context.Context, host host.Host, bootstrapAddr string
 		return err
 	}
 
-	// Wrap the host with a routed host.
-	dht := kaddht.NewDHT(ctx, host, dsync.MutexWrap(ds.NewMapDatastore()))
-	host = rhost.Wrap(host, dht)
 	err = host.Connect(ctx, *peerinfo)
 	return err
 }
