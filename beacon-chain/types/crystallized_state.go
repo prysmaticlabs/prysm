@@ -287,12 +287,15 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		lastStateRecalculationSlotCycleBack = 0
 	} else {
 		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetBeaconConfig().CycleLength
+<<<<<<< HEAD
 	}
 
 	// TODO(711): Need to implement clean-up mechanism for block vote cache.
 	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.GetBeaconConfig().CycleLength])
 	if err != nil {
 		return nil, err
+=======
+>>>>>>> 4d65323aa82f126ef67b878f3d0e39dfd5b2b86e
 	}
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
