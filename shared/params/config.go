@@ -111,13 +111,37 @@ const (
 	Exit
 )
 
+type OverrideConfig struct {
+    Param string
+}
+
+
+var emptyOverrideConfig = &OverrideConfig{}
+var demoOverrideConfig = &OverrideConfig{Param: "demo"}
+var customOverrideConfig = &OverrideConfig{Param: "custom"}
+
+func SetCustomConfig(c *Config) {
+	SetOverrideConfig(customOverrideConfig)
+	customConfig = c
+}
+
+func SetDemoBeaconConfig() {
+    SetOverrideConfig(demoOverrideConfig)
+
+}
+
+func SetOverrideConfig( oc *OverrideConfig) {
+    emptyOverrideConfig =  oc
+}
+
+
+func  GetOverrideConfig() (*OverrideConfig) {
+    return emptyOverrideConfig
+}
+
 // GetBeaconConfig retrieves beacon node config.
 func GetBeaconConfig() *Config {
-	var oc *OverrideConfig
-  	if oc != nil && oc.param != ""{
-	env = oc.param
-  	} 
-
+	env = GetOverrideConfig().Param
 	switch env {
 	case "default":
 		return defaultBeaconConfig
@@ -130,40 +154,8 @@ func GetBeaconConfig() *Config {
 	}
 }
 
-type OverrideConfig struct {
-	param string
-}
-
-
-func SetDemoBeaconConfig() {
-	v := &OverrideConfig{}
-	v.param = "demo"
-}
-
-func SetCustomConfig(c *Config) {
-	v := &OverrideConfig{}
-	v.param = "custom"
-	customConfig = c
-}
-
-// SetCustomConfig is useful for simulated backend configurations
-// // in chain tests.
-// func SetCustomConfig(c *Config) {
-// 	SetEnv("custom")
-// 	customConfig = c
-// }
-
-// // SetEnv sets which config to use.
-// func SetEnv(e string) {
-// 	env = e
-// }
-
-////end beaconConfig
-
-
-///startt validator config
-// DefaultConfig returns pointer to a Config value with same defaults.
-func DefaultConfig() *Config {
+// DefaultValidatorConfig returns pointer to a Config value with same defaults.
+func DefaultValidatorConfig() *Config {
 	return &Config{
 		CollationSizeLimit: DefaultCollationSizeLimit(),
 		SlotDuration:       8.0,
@@ -171,8 +163,8 @@ func DefaultConfig() *Config {
 	}
 }
 
-// DemoConfig for running the system under shorter defaults.
-func DemoConfig() *Config {
+// DemoValidatorConfig for running the system under shorter defaults.
+func DemoValidatorConfig() *Config {
 	return &Config{
 		SlotDuration: 2.0,
 		CycleLength:  5,
@@ -185,12 +177,6 @@ func DefaultCollationSizeLimit() int64 {
 	return int64(math.Pow(float64(2), float64(20)))
 }
 
-// // Config contains configs for node to participate in the sharded universe.
-// type Config struct {
-// 	CollationSizeLimit int64  // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
-// 	SlotDuration       uint64 // SlotDuration in seconds.
-// 	CycleLength        uint64
-// }
 
 
 

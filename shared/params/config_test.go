@@ -57,9 +57,17 @@ func TestValidatorSetDeltaFlags(t *testing.T) {
 }
 
 
-//validator params test
-func TestAttesterCommitteeSize(t *testing.T) {
-	c := DefaultConfig()
+func TestGetBeaconConfig(t *testing.T) {
+	SetDemoBeaconConfig()
+	if c := GetBeaconConfig(); c.ShardCount != 5 {
+		t.Errorf("Shardcount in demoBeaconConfig incorrect. Wanted %d, got %d", 5, c.ShardCount)
+	}
+}
+
+
+
+func TestCollationSize(t *testing.T) {
+	c := DefaultValidatorConfig()
 	if c.CollationSizeLimit != int64(math.Pow(float64(2), float64(20))) {
 		t.Errorf("Shard count incorrect. Wanted %d, got %d", int64(math.Pow(float64(2), float64(20))), c.CollationSizeLimit)
 	}
