@@ -63,8 +63,8 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 
 // CopyState returns a deep copy of the current active state.
 func (a *ActiveState) CopyState() *ActiveState {
-	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.PendingAttestations()))
-	for index, pendingAttestation := range a.PendingAttestations() {
+	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.data.PendingAttestations))
+	for index, pendingAttestation := range a.data.PendingAttestations {
 		pendingAttestations[index] = &pb.AggregatedAttestation{
 			Slot:                pendingAttestation.GetSlot(),
 			Shard:               pendingAttestation.GetShard(),
@@ -77,13 +77,13 @@ func (a *ActiveState) CopyState() *ActiveState {
 		}
 	}
 
-	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
+	recentBlockHashes := make([][]byte, len(a.data.RecentBlockHashes))
 	for r, hash := range a.data.RecentBlockHashes {
 		recentBlockHashes[r] = hash
 	}
 
-	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
-	for index, pendingSpecial := range a.PendingSpecials() {
+	pendingSpecials := make([]*pb.SpecialRecord, len(a.data.PendingSpecials))
+	for index, pendingSpecial := range a.data.PendingSpecials {
 		pendingSpecials[index] = &pb.SpecialRecord{
 			Kind: pendingSpecial.GetKind(),
 			Data: pendingSpecial.GetData(),
