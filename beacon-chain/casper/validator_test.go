@@ -136,8 +136,8 @@ func TestProposerShardAndIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProposerShardAndIndex failed with %v", err)
 	}
-	if shard != 0 {
-		t.Errorf("Invalid shard ID. Wanted 0, got %d", shard)
+	if shard != 2 {
+		t.Errorf("Invalid shard ID. Wanted 2, got %d", shard)
 	}
 	if index != 0 {
 		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
