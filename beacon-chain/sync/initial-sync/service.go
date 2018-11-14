@@ -60,6 +60,7 @@ type p2pAPI interface {
 
 type beaconDB interface {
 	SaveBlock(*types.Block) error
+	SaveCrystallizedState(*types.CrystallizedState) error
 }
 
 // SyncService is the interface for the Sync service.
@@ -227,8 +228,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
-			crystallizedState := types.NewCrystallizedState(data.CrystallizedState)
-			hash, err := crystallizedState.Hash()
+			cState := types.NewCrystallizedState(data.CrystallizedState)
+			hash, err := cState.Hash()
 			if err != nil {
 				log.Errorf("Unable to hash crytsallized state: %v", err)
 			}
@@ -237,9 +238,20 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				continue
 			}
 
+			if err := s.db.SaveCrystallizedState(cState); err != nil {
+				log.Errorf("Unable to set crystallized state for initial sync %v", err)
+			}
+
+			log.Debug("Successfully saved crystallized state to the db")
+
+			if s.currentSlot >= cState.LastFinalizedSlot() {
+				continue
+			}
+
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = crystallizedState.LastFinalizedSlot()
+			s.currentSlot = cState.LastFinalizedSlot()
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", cState.LastFinalizedSlot())
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			crystallizedStateSub.Unsubscribe()

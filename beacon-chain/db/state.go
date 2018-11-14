@@ -102,6 +102,22 @@ func (db *BeaconDB) GetCrystallizedState() (*types.CrystallizedState, error) {
 	return cState, err
 }
 
+// SaveCrystallizedState updates the crystallized state for initial sync.
+func (db *BeaconDB) SaveCrystallizedState(cState *types.CrystallizedState) error {
+
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		cStateEnc, err := cState.Marshal()
+		if err != nil {
+			return err
+		}
+		if err := chainInfo.Put(cStateLookupKey, cStateEnc); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // GetUnfinalizedBlockState fetches an unfinalized block's
 // active and crystallized state pair.
 func (db *BeaconDB) GetUnfinalizedBlockState(

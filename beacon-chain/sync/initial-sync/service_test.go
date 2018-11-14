@@ -45,6 +45,10 @@ func (m *mockDB) SaveBlock(*types.Block) error {
 	return nil
 }
 
+func (m *mockDB) SaveCrystallizedState(*types.CrystallizedState) error {
+	return nil
+}
+
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
