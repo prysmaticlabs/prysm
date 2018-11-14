@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -360,7 +361,8 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	getBlockResponseMsg := func(Slot uint64) p2p.Message {
+	getBlockResponseMsg := func(Slot uint64) (p2p.Message, [32]byte) {
+
 		block := &pb.BeaconBlock{
 			PowChainRef:           []byte{1, 2, 3},
 			AncestorHashes:        [][]byte{genericHash},
@@ -372,27 +374,35 @@ func TestRequestBlocksBySlot(t *testing.T) {
 			Block: block,
 		}
 
+		hash, err := types.NewBlock(block).Hash()
+		if err != nil {
+			t.Fatalf("unable to hash block %v", err)
+		}
+
 		return p2p.Message{
 			Peer: p2p.Peer{},
 			Data: blockResponse,
-		}
+		}, hash
 	}
 
 	// sending all blocks except for the initial block
 	for i := uint64(2); i < 10; i++ {
-		ss.blockBuf <- getBlockResponseMsg(i)
+		response, _ := getBlockResponseMsg(i)
+		ss.blockBuf <- response
 	}
 
+	initialResponse, _ := getBlockResponseMsg(1)
+
 	//sending initial block
-	ss.blockBuf <- getBlockResponseMsg(1)
+	ss.blockBuf <- initialResponse
+
+	_, hash := getBlockResponseMsg(9)
+
+	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 9)
 
 	// waiting for the current slot to come up to the
 	// expected one.
-	for {
-		if ss.currentSlot == 9 {
-			break
-		}
-	}
+	testutil.WaitForLog(t, hook, expString)
 
 	delayChan <- time.Time{}
 
@@ -430,33 +440,41 @@ func TestRequestBatchedBlocks(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	getBlockResponse := func(Slot uint64) *pb.BeaconBlockResponse {
+	getBlockResponse := func(Slot uint64) (*pb.BeaconBlockResponse, [32]byte) {
 
-		blockResponse := &pb.BeaconBlockResponse{
-			Block: &pb.BeaconBlock{
-				PowChainRef:           []byte{1, 2, 3},
-				AncestorHashes:        [][]byte{genericHash},
-				Slot:                  Slot,
-				CrystallizedStateRoot: nil,
-			},
+		block := &pb.BeaconBlock{
+			PowChainRef:           []byte{1, 2, 3},
+			AncestorHashes:        [][]byte{genericHash},
+			Slot:                  Slot,
+			CrystallizedStateRoot: nil,
 		}
 
-		return blockResponse
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: block,
+		}
+
+		hash, err := types.NewBlock(block).Hash()
+		if err != nil {
+			t.Fatalf("unable to hash block %v", err)
+		}
+
+		return blockResponse, hash
 	}
 
 	for i := ss.currentSlot + 1; i <= 10; i++ {
-		ss.inMemoryBlocks[i] = getBlockResponse(i)
+		response, _ := getBlockResponse(i)
+		ss.inMemoryBlocks[i] = response
 	}
 
 	ss.requestBatchedBlocks(10)
 
+	_, hash := getBlockResponse(10)
+	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 10)
+
 	// waiting for the current slot to come up to the
 	// expected one.
-	for {
-		if ss.currentSlot == 10 {
-			break
-		}
-	}
+
+	testutil.WaitForLog(t, hook, expString)
 
 	delayChan <- time.Time{}
 
