@@ -78,8 +78,8 @@ func (a *ActiveState) CopyState() *ActiveState {
 	}
 
 	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
-	for r, hash := range a.RecentBlockHashes() {
-		recentBlockHashes[r] = hash[:]
+	for r, hash := range a.data.RecentBlockHashes {
+		recentBlockHashes[r] = hash
 	}
 
 	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
@@ -91,7 +91,7 @@ func (a *ActiveState) CopyState() *ActiveState {
 	}
 	randaoMix := a.RandaoMix()
 
-	newC := ActiveState{
+	newA := ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: pendingAttestations,
 			RecentBlockHashes:   recentBlockHashes,
@@ -100,7 +100,7 @@ func (a *ActiveState) CopyState() *ActiveState {
 		},
 	}
 
-	return &newC
+	return &newA
 }
 
 // PendingAttestations returns attestations that have not yet been processed.

@@ -413,7 +413,7 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.
 			}
 		}
 
-		// Write updated block vote cache back to DB
+		// Write updated block vote cache back to DB.
 		if err = c.beaconDB.WriteBlockVoteCache(blockVoteCache); err != nil {
 			return err
 		}
