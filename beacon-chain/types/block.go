@@ -279,6 +279,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		return false
 	}
 	if attestation.JustifiedSlot != rBlock.SlotNumber() {
+		log.Errorf("The attestation's slot number is not the same as the slot number of the block retrieved by the justified slot hash. Attestation slot number: %v",
 		log.Errorf("the attestation's slot number is not the same as the slot number of the block retrieved by the justified slot hash. Attestation slot number: %d",
 			attestation.JustifiedSlot)
 		log.Errorf("Retrieved block slot number: %d",rBlock.SlotNumber())
