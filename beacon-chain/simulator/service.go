@@ -2,6 +2,7 @@
 package simulator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -41,12 +42,14 @@ type Simulator struct {
 	enablePOWChain   bool
 	blockRequestChan chan p2p.Message
 	blockBySlotChan  chan p2p.Message
+	cStateReqChan    chan p2p.Message
 }
 
 // Config options for the simulator service.
 type Config struct {
 	BlockRequestBuf int
 	BlockSlotBuf    int
+	CStateReqBuf    int
 	P2P             p2pAPI
 	Web3Service     powChainService
 	BeaconDB        beaconDB
@@ -65,6 +68,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		BlockRequestBuf: 100,
 		BlockSlotBuf:    100,
+		CStateReqBuf:    100,
 	}
 }
 
@@ -80,6 +84,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		enablePOWChain:   cfg.EnablePOWChain,
 		blockRequestChan: make(chan p2p.Message, cfg.BlockRequestBuf),
 		blockBySlotChan:  make(chan p2p.Message, cfg.BlockSlotBuf),
+		cStateReqChan:    make(chan p2p.Message, cfg.CStateReqBuf),
 	}
 }
 
@@ -94,7 +99,7 @@ func (sim *Simulator) Start() {
 
 	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetConfig().SlotDuration)
 	go func() {
-		sim.run(slotTicker.C(), sim.blockRequestChan, sim.blockBySlotChan)
+		sim.run(slotTicker.C())
 		close(sim.blockRequestChan)
 		close(sim.blockBySlotChan)
 		slotTicker.Done()
@@ -108,12 +113,13 @@ func (sim *Simulator) Stop() error {
 	return nil
 }
 
-func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Message,
-	slotRequestChan <-chan p2p.Message) {
+func (sim *Simulator) run(slotInterval <-chan uint64) {
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	blockBySlotSub := sim.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, sim.blockBySlotChan)
+	cStateReqSub := sim.p2p.Subscribe(&pb.CrystallizedStateRequest{}, sim.cStateReqChan)
 	defer blockReqSub.Unsubscribe()
 	defer blockBySlotSub.Unsubscribe()
+	defer cStateReqSub.Unsubscribe()
 
 	lastBlock, err := sim.beaconDB.GetChainHead()
 	if err != nil {
@@ -134,71 +140,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
 		case slot := <-slotInterval:
-			aState, err := sim.beaconDB.GetActiveState()
+
+			block, err := sim.generateBlock(slot, lastHash)
 			if err != nil {
-				log.Errorf("Failed to get active state: %v", err)
+				log.Error(err)
 				continue
 			}
-			cState, err := sim.beaconDB.GetCrystallizedState()
-			if err != nil {
-				log.Errorf("Failed to get crystallized state: %v", err)
-				continue
-			}
-			aStateHash, err := aState.Hash()
-			if err != nil {
-				log.Errorf("Failed to hash active state: %v", err)
-				continue
-			}
-
-			cStateHash, err := cState.Hash()
-			if err != nil {
-				log.Errorf("Failed to hash crystallized state: %v", err)
-				continue
-			}
-
-			var powChainRef []byte
-			if sim.enablePOWChain {
-				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
-			} else {
-				powChainRef = []byte{byte(slot)}
-			}
-
-			parentSlot := slot - 1
-			committees, err := cState.GetShardsAndCommitteesForSlot(parentSlot)
-			if err != nil {
-				log.Errorf("Failed to get shard committee: %v", err)
-				continue
-			}
-
-			parentHash := make([]byte, 32)
-			copy(parentHash, lastHash[:])
-
-			shardCommittees := committees.ArrayShardAndCommittee
-			attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
-
-			// Create attestations for all committees of the previous block.
-			// Ensure that all attesters have voted by calling FillBitfield.
-			for i, shardCommittee := range shardCommittees {
-				shardID := shardCommittee.Shard
-				numAttesters := len(shardCommittee.Committee)
-				attestations[i] = &pb.AggregatedAttestation{
-					Slot:               parentSlot,
-					AttesterBitfield:   bitutil.FillBitfield(numAttesters),
-					JustifiedBlockHash: parentHash,
-					Shard:              shardID,
-				}
-			}
-
-			block := types.NewBlock(&pb.BeaconBlock{
-				Slot:                  slot,
-				Timestamp:             ptypes.TimestampNow(),
-				PowChainRef:           powChainRef,
-				ActiveStateRoot:       aStateHash[:],
-				CrystallizedStateRoot: cStateHash[:],
-				AncestorHashes:        [][]byte{parentHash},
-				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
-				Attestations:          attestations,
-			})
 
 			hash, err := block.Hash()
 			if err != nil {
@@ -218,7 +165,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			broadcastedBlocksByHash[hash] = block
 			broadcastedBlocksBySlot[slot] = block
 			lastHash = hash
-		case msg := <-slotRequestChan:
+		case msg := <-sim.blockBySlotChan:
 			data := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 
 			block := broadcastedBlocksBySlot[data.GetSlotNumber()]
@@ -238,7 +185,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			}}
 			sim.p2p.Send(res, msg.Peer)
 
-		case msg := <-requestChan:
+		case msg := <-sim.blockRequestChan:
 			data := msg.Data.(*pb.BeaconBlockRequest)
 			var hash [32]byte
 			copy(hash[:], data.Hash)
@@ -259,7 +206,106 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				AttesterBitfield: []byte{byte(255)},
 			}}
 			sim.p2p.Send(res, msg.Peer)
+		case msg := <-sim.cStateReqChan:
+			data := msg.Data.(*pb.CrystallizedStateRequest)
 
+			cState, err := sim.beaconDB.GetCrystallizedState()
+			if err != nil {
+				log.Errorf("Could not retrieve crystallized state: %v", err)
+				continue
+			}
+
+			hash, err := cState.Hash()
+			if err != nil {
+				log.Errorf("Could not hash crystallized state: %v", err)
+				continue
+			}
+
+			if !bytes.Equal(data.GetHash(), hash[:]) {
+				log.WithFields(logrus.Fields{
+					"hash": fmt.Sprintf("%#x", data.GetHash()),
+				}).Debug("Requested Crystallized state is of a different hash")
+				continue
+			}
+
+			log.WithFields(logrus.Fields{
+				"hash": fmt.Sprintf("%#x", hash),
+			}).Debug("Responding to full crystallized state request")
+
+			// Sends the full crystallized state to the requester.
+			res := &pb.CrystallizedStateResponse{
+				CrystallizedState: cState.Proto(),
+			}
+			sim.p2p.Send(res, msg.Peer)
 		}
 	}
+}
+
+func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Block, error) {
+
+	aState, err := sim.beaconDB.GetActiveState()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get active state: %v", err)
+	}
+
+	cState, err := sim.beaconDB.GetCrystallizedState()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get crystallized state: %v", err)
+	}
+
+	aStateHash, err := aState.Hash()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to hash active state: %v", err)
+	}
+
+	cStateHash, err := cState.Hash()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to hash crystallized state: %v", err)
+
+	}
+
+	var powChainRef []byte
+	if sim.enablePOWChain {
+		powChainRef = sim.web3Service.LatestBlockHash().Bytes()
+	} else {
+		powChainRef = []byte{byte(slot)}
+	}
+
+	parentSlot := slot - 1
+	committees, err := cState.GetShardsAndCommitteesForSlot(parentSlot)
+	if err != nil {
+		log.Errorf("Failed to get shard committee: %v", err)
+
+	}
+
+	parentHash := make([]byte, 32)
+	copy(parentHash, lastHash[:])
+
+	shardCommittees := committees.ArrayShardAndCommittee
+	attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
+
+	// Create attestations for all committees of the previous block.
+	// Ensure that all attesters have voted by calling FillBitfield.
+	for i, shardCommittee := range shardCommittees {
+		shardID := shardCommittee.Shard
+		numAttesters := len(shardCommittee.Committee)
+		attestations[i] = &pb.AggregatedAttestation{
+			Slot:               parentSlot,
+			AttesterBitfield:   bitutil.FillBitfield(numAttesters),
+			JustifiedBlockHash: parentHash,
+			Shard:              shardID,
+		}
+	}
+
+	block := types.NewBlock(&pb.BeaconBlock{
+		Slot:                  slot,
+		Timestamp:             ptypes.TimestampNow(),
+		PowChainRef:           powChainRef,
+		ActiveStateRoot:       aStateHash[:],
+		CrystallizedStateRoot: cStateHash[:],
+		AncestorHashes:        [][]byte{parentHash},
+		RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
+		Attestations:          attestations,
+	})
+	return block, nil
 }

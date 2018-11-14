@@ -53,11 +53,12 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 	}
 
 	cfg := &Config{
-		BlockRequestBuf: 0,
+		BlockRequestBuf: 10,
 		P2P:             p2pService,
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
+		CStateReqBuf:    10,
 	}
 
 	return NewSimulator(ctx, cfg), p2pService
@@ -89,12 +90,10 @@ func TestBroadcastBlockHash(t *testing.T) {
 	sim, p2pService := setupSimulator(t, db)
 
 	slotChan := make(chan uint64)
-	requestChan := make(chan p2p.Message)
-	slotReqChan := make(chan p2p.Message)
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.run(slotChan, requestChan, slotReqChan)
+		sim.run(slotChan)
 		<-exitRoutine
 	}()
 
@@ -102,7 +101,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	slotChan <- 1
 
 	// test an invalid block request
-	requestChan <- p2p.Message{
+	sim.blockRequestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: make([]byte, 32),
 		},
@@ -110,7 +109,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 	// test a valid block request
 	blockHash := p2pService.broadcastHash
-	requestChan <- p2p.Message{
+	sim.blockRequestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: blockHash,
 		},
@@ -127,7 +126,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	hook.Reset()
 
 	// ensure that another request for the same block can be made
-	requestChan <- p2p.Message{
+	sim.blockRequestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: blockHash,
 		},
@@ -150,12 +149,10 @@ func TestBlockRequestBySlot(t *testing.T) {
 	sim, _ := setupSimulator(t, db)
 
 	slotChan := make(chan uint64)
-	requestChan := make(chan p2p.Message)
-	slotReqChan := make(chan p2p.Message)
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.run(slotChan, requestChan, slotReqChan)
+		sim.run(slotChan)
 		<-exitRoutine
 	}()
 
@@ -163,7 +160,7 @@ func TestBlockRequestBySlot(t *testing.T) {
 	slotChan <- 1
 
 	// test an invalid block request
-	slotReqChan <- p2p.Message{
+	sim.blockBySlotChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequestBySlotNumber{
 			SlotNumber: 2,
 		},
@@ -176,7 +173,7 @@ func TestBlockRequestBySlot(t *testing.T) {
 	hook.Reset()
 
 	// test a valid block request
-	slotReqChan <- p2p.Message{
+	sim.blockBySlotChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequestBySlotNumber{
 			SlotNumber: 1,
 		},
@@ -188,4 +185,61 @@ func TestBlockRequestBySlot(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Responding to full block request")
 
 	hook.Reset()
+}
+
+func TestCrystallizedStateRequest(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	sim, _ := setupSimulator(t, db)
+
+	slotChan := make(chan uint64)
+	exitRoutine := make(chan bool)
+
+	go func() {
+		sim.run(slotChan)
+		<-exitRoutine
+	}()
+
+	cState, err := sim.beaconDB.GetCrystallizedState()
+	if err != nil {
+		t.Fatalf("could not retrieve crystallized state %v", err)
+	}
+
+	hash, err := cState.Hash()
+	if err != nil {
+		t.Fatalf("could not hash crystallized state %v", err)
+	}
+
+	cStateRequest := &pb.CrystallizedStateRequest{
+		Hash: []byte{'t', 'e', 's', 't'},
+	}
+
+	message := p2p.Message{
+		Data: cStateRequest,
+	}
+
+	sim.cStateReqChan <- message
+
+	testutil.WaitForLog(t, hook, "Requested Crystallized state is of a different hash")
+	testutil.AssertLogsDoNotContain(t, hook, "Responding to full crystallized state request")
+
+	hook.Reset()
+
+	newCStateReq := &pb.CrystallizedStateRequest{
+		Hash: hash[:],
+	}
+
+	newMessage := p2p.Message{
+		Data: newCStateReq,
+	}
+
+	sim.cStateReqChan <- newMessage
+
+	testutil.WaitForLog(t, hook, "Responding to full crystallized state request")
+	testutil.AssertLogsDoNotContain(t, hook, "Requested Crystallized state is of a different hash")
+
+	sim.cancel()
+	exitRoutine <- true
 }
