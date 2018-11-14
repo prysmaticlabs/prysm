@@ -3,23 +3,23 @@ package metric
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
 var (
-	messagesCompleted = prometheus.NewCounterVec(
+	messagesCompleted = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "p2p_message_sent_total",
-			Help: "Count of messages sended.",
+			Help: "Count of messages sent.",
 		},
 		[]string{"message"},
 	)
-	sendLatency = prometheus.NewHistogramVec(
+	sendLatency = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "p2p_message_sent_latency_seconds",
 			Help:    "Latency of messages sent.",
@@ -27,7 +27,7 @@ var (
 		},
 		[]string{"message"},
 	)
-	messageSize = prometheus.NewHistogramVec(
+	messageSize = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "p2p_message_received_bytes",
 			Help:    "Size of received messages.",
@@ -35,18 +35,10 @@ var (
 		},
 		[]string{"message"},
 	)
-
-	p2pInit sync.Once
 )
 
 // New create and initialize a metric adapter for the p2p service.
 func New() p2p.Adapter {
-	p2pInit.Do(func() {
-		prometheus.MustRegister(messagesCompleted)
-		prometheus.MustRegister(sendLatency)
-		prometheus.MustRegister(messageSize)
-	})
-
 	return func(next p2p.Handler) p2p.Handler {
 		return func(msg p2p.Message) {
 			start := time.Now()

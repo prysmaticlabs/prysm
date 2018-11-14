@@ -13,9 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	port = ":8989"
-)
+const addr = "127.0.0.1:8989"
 
 type logger interface {
 	Info(args ...interface{})
@@ -24,20 +22,11 @@ type logger interface {
 }
 
 func TestLogrusCollector(t *testing.T) {
-	service := prometheus.NewPrometheusService(port)
-	hook, err := prometheus.NewLogrusCollector()
-	if err != nil {
-		t.Error(err)
-		t.Fail()
-	}
-	// try to create another collector
-	_, err = prometheus.NewLogrusCollector()
-	if err == nil {
-		t.Error("call NewLogrusCollector more than one time should return an error")
-		t.Fail()
-	}
+	service := prometheus.NewPrometheusService(addr)
+	hook := prometheus.NewLogrusCollector()
 	log.AddHook(hook)
 	go service.Start()
+	defer service.Stop()
 
 	tests := []struct {
 		name   string
@@ -77,7 +66,7 @@ func TestLogrusCollector(t *testing.T) {
 }
 
 func getMetrics(t *testing.T) []string {
-	resp, err := http.Get(fmt.Sprintf("http://localhost%s/metrics", port))
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", addr))
 	if err != nil {
 		t.Error(err)
 	}

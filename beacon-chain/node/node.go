@@ -374,10 +374,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
 	)
-	hook, err := prometheus.NewLogrusCollector()
-	if err != nil {
-		return err
-	}
+	hook := prometheus.NewLogrusCollector()
 	logrus.AddHook(hook)
 	return b.services.RegisterService(service)
 }

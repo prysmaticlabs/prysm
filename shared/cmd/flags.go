@@ -70,6 +70,7 @@ var (
 		Name:  "monitoring-flag",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
+	}
 	// KeystoreDirectoryFlag defines a flag to indicate where the keystore of the user
 	// is located.
 	KeystoreDirectoryFlag = DirectoryFlag{

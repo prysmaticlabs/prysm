@@ -9,6 +9,7 @@ go_library(
         "//shared/p2p:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
     ],
 )
 
@@ -16,5 +17,9 @@ go_test(
     name = "go_default_test",
     srcs = ["metric_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/p2p:go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/p2p:go_default_library",
+        "//shared/prometheus:go_default_library",
+    ],
 )

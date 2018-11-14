@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sirupsen/logrus"
 )
 
@@ -10,26 +11,23 @@ type LogrusCollector struct {
 	counterVec *prometheus.CounterVec
 }
 
-var supportedLevels = []logrus.Level{logrus.InfoLevel, logrus.WarnLevel, logrus.ErrorLevel}
+var (
+	supportedLevels = []logrus.Level{logrus.InfoLevel, logrus.WarnLevel, logrus.ErrorLevel}
+	counterVec      = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "log_entries_total",
+		Help: "Total number of log messages.",
+	}, []string{"level", "prefix"})
+)
 
 const prefixKey = "prefix"
 const defaultprefix = "global"
 
 // NewLogrusCollector register internal metrics and return an logrus hook to collect log counters
 // This function can be called only once, if more than one call is made an error will be returned.
-func NewLogrusCollector() (*LogrusCollector, error) {
-	counterVec := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "log_entries_total",
-		Help: "Total number of log messages.",
-	}, []string{"level", "prefix"})
-
-	err := prometheus.Register(counterVec)
-	if err != nil {
-		return nil, err
-	}
+func NewLogrusCollector() *LogrusCollector {
 	return &LogrusCollector{
 		counterVec: counterVec,
-	}, nil
+	}
 }
 
 // Fire is called on every log call.
