@@ -111,7 +111,6 @@ const (
 	Exit
 )
 
-<<<<<<< HEAD:shared/params/config.go
 type OverrideConfig struct {
     Param string
 }
@@ -143,15 +142,6 @@ func  GetOverrideConfig() (*OverrideConfig) {
 // GetBeaconConfig retrieves beacon node config.
 func GetBeaconConfig() *Config {
 	env = GetOverrideConfig().Param
-=======
-// GetBeaconConfig retrieves beacon node config.
-func GetBeaconConfig() *Config {
-	var oc *OverrideConfig
-  	if oc != nil && oc.param != ""{
-	env = oc.param
-  	} 
-
->>>>>>> 4d65323aa82f126ef67b878f3d0e39dfd5b2b86e:shared/params/config.go
 	switch env {
 	case "default":
 		return defaultBeaconConfig
