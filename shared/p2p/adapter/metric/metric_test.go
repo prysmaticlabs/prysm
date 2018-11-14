@@ -35,10 +35,10 @@ func TestMessageMetrics(t *testing.T) {
 	h(p2p.Message{Ctx: context.Background(), Data: data})
 
 	metrics := getMetrics(t)
-	testMetricExists(t, metrics, `p2p_message_sent_total{message="*ethereum_beacon_p2p_v1.AggregatedAttestation"} 2`)
-	testMetricExists(t, metrics, `p2p_message_sent_latency_seconds_bucket{message="*ethereum_beacon_p2p_v1.AggregatedAttestation",le="0.005"} 1`)
-	testMetricExists(t, metrics, `p2p_message_sent_latency_seconds_bucket{message="*ethereum_beacon_p2p_v1.AggregatedAttestation",le="0.01"} 1`)
-	testMetricExists(t, metrics, `p2p_message_received_bytes_bucket{message="*ethereum_beacon_p2p_v1.AggregatedAttestation",le="32"} 2`)
+	testMetricExists(t, metrics, `p2p_message_sent_total{message="*v1.AggregatedAttestation"} 2`)
+	testMetricExists(t, metrics, `p2p_message_sent_latency_seconds_bucket{message="*v1.AggregatedAttestation",le="0.005"} 1`)
+	testMetricExists(t, metrics, `p2p_message_sent_latency_seconds_bucket{message="*v1.AggregatedAttestation",le="0.01"} 1`)
+	testMetricExists(t, metrics, `p2p_message_received_bytes_bucket{message="*v1.AggregatedAttestation",le="32"} 2`)
 }
 
 func getMetrics(t *testing.T) []string {

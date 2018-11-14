@@ -7,7 +7,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/prometheus",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
