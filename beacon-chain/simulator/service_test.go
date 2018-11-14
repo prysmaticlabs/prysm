@@ -53,7 +53,7 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 	}
 
 	cfg := &Config{
-		BlockRequestBuf: 10,
+		BlockRequestBuf: 0,
 		P2P:             p2pService,
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
