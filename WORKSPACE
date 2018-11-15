@@ -159,7 +159,7 @@ go_repository(
 go_repository(
     name = "com_github_fjl_memsize",
     importpath = "github.com/fjl/memsize",
-    commit = "ca190fb6ffbc076ff49197b7168a760f30182d2e",
+    commit = "2a09253e352a56f419bd88effab0483f52da4c7d",
 )
 
 go_repository(
