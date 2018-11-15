@@ -141,7 +141,7 @@ go_repository(
 go_repository(
     name = "com_github_go_yaml_yaml",
     importpath = "github.com/go-yaml/yaml",
-    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
 )
 
 go_repository(
@@ -177,7 +177,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    commit = "d1252f9bfe49590ff7a6381e9f0d4e882b631e28",
+    commit = "3120e9f9526fe05f2d3905961a5e0701b85579d9",
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
@@ -219,7 +219,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "16eb677aaa62fd2e5e6d73d66388f8ac38bd6388",
+    commit = "f83937ed3384bb289ba39ee0c4f428f26013390a",
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
