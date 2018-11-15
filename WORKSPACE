@@ -112,7 +112,7 @@ git_repository(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "503ea999614e3b9d10f0060b8182b6fc7ea664f8",
+    commit = "8a44ef6e8be577e050008c7886f24fc705d709fb",
     importpath = "github.com/golang/mock",
 )
 
@@ -159,7 +159,7 @@ go_repository(
 go_repository(
     name = "com_github_fjl_memsize",
     importpath = "github.com/fjl/memsize",
-    commit = "ca190fb6ffbc076ff49197b7168a760f30182d2e",
+    commit = "2a09253e352a56f419bd88effab0483f52da4c7d",
 )
 
 go_repository(
@@ -189,7 +189,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "5dc2060baaf8db344f31dafd852340b93811d03f",
+    commit = "de9a213953d6ec0e053b56e9d79800565c3fc9ca",
     importpath = "github.com/ipfs/go-log",
 )
 
@@ -466,7 +466,7 @@ go_repository(
 
 go_repository(
     name = "com_github_huin_goupnp",
-    commit = "1395d1447324cbea88d249fbfcfd70ea878fdfca",
+    commit = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8",
     importpath = "github.com/huin/goupnp",
 )
 
@@ -568,7 +568,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    commit = "5ed622c449da6d44c3c8329331ff47a9e5844f71",
+    commit = "483fb8d7c32fcb4b5636cd293a92e3935932e2f4",
     importpath = "github.com/gorilla/websocket",
 )
 
@@ -628,7 +628,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_lint",
-    commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
+    commit = "c67002cb31c3a748b7688c27f20d8358b4193582",
     importpath = "github.com/golang/lint",
 )
 
@@ -677,7 +677,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_util",
-    commit = "10d786c5ed859afd22223df76a89bf57b24b2ee1",
+    commit = "05b6094b6fa9c1e49b4b941061fdc147db1a21b7",
     importpath = "github.com/ipfs/go-ipfs-util",
 )
 
@@ -696,7 +696,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "0938ba7cc6ae5722c3f66d429ca1052cc46d2420",
+    commit = "277eeb2fded2592392256b6e0f80111208ed8aca",
     importpath = "github.com/ipfs/go-datastore",
 )
 
