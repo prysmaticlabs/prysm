@@ -141,7 +141,7 @@ go_repository(
 go_repository(
     name = "com_github_go_yaml_yaml",
     importpath = "github.com/go-yaml/yaml",
-    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
 )
 
 go_repository(
