@@ -8,7 +8,7 @@ import (
 
 // Feeds can be use to subscribe to any type of message.
 func ExampleServer_Feed() {
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		panic(err)
 	}

@@ -37,7 +37,7 @@ func init() {
 }
 
 func TestBroadcast(t *testing.T) {
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Could not start a new server: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestBroadcast(t *testing.T) {
 }
 
 func TestEmitFailsNonProtobuf(t *testing.T) {
-	s, _ := NewServer()
+	s, _ := NewServer("")
 	hook := logTest.NewGlobal()
 	s.emit(Message{}, &event.Feed{}, nil /*msg*/, reflect.TypeOf(""))
 	want := "Received message is not a protobuf message: string"
@@ -59,7 +59,7 @@ func TestEmitFailsNonProtobuf(t *testing.T) {
 }
 
 func TestEmitFailsUnmarshal(t *testing.T) {
-	s, _ := NewServer()
+	s, _ := NewServer("")
 	hook := logTest.NewGlobal()
 	msg := &pubsub.Message{
 		&pubsubPb.Message{
@@ -75,7 +75,7 @@ func TestEmitFailsUnmarshal(t *testing.T) {
 }
 
 func TestEmit(t *testing.T) {
-	s, _ := NewServer()
+	s, _ := NewServer("")
 	p := &testpb.TestMessage{Foo: "bar"}
 	d, err := proto.Marshal(p)
 	if err != nil {
@@ -199,7 +199,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *pubsub.Pub
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 func TestRegisterTopic_WithAdapters(t *testing.T) {
 	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
