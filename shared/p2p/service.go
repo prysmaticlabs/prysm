@@ -182,9 +182,21 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg proto.Message) {
 	topic := s.topicMapping[messageType(msg)]
-	log.WithFields(logrus.Fields{
-		"topic": topic,
-	}).Debugf("Broadcasting msg %+v", msg)
+
+	// Shorten message if it is too long to avoid
+	// polluting the logs.
+	if len(msg.String()) > 100 {
+		newMessage := msg.String()[:100]
+
+		log.WithFields(logrus.Fields{
+			"topic": topic,
+		}).Debugf("Broadcasting msg %+v --Message too long to be displayed", newMessage)
+
+	} else {
+		log.WithFields(logrus.Fields{
+			"topic": topic,
+		}).Debugf("Broadcasting msg %+v", msg)
+	}
 
 	if topic == "" {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)

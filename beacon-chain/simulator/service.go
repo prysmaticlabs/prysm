@@ -61,6 +61,7 @@ type beaconDB interface {
 	GetGenesisTime() (time.Time, error)
 	GetActiveState() (*types.ActiveState, error)
 	GetCrystallizedState() (*types.CrystallizedState, error)
+	SaveCrystallizedState(*types.CrystallizedState) error
 }
 
 // DefaultConfig options for the simulator.
@@ -162,6 +163,10 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				"slot": slot,
 			}).Debug("Broadcast block hash and slot")
 
+			if err := sim.UpdateLastStateRecalc(); err != nil {
+				log.Errorf("Unable to update last state recalc %v", err)
+			}
+
 			broadcastedBlocksByHash[hash] = block
 			broadcastedBlocksBySlot[slot] = block
 			lastHash = hash
@@ -170,7 +175,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			block := broadcastedBlocksBySlot[data.GetSlotNumber()]
 			if block == nil {
-				log.Errorf("Requested block not found: %d", data.GetSlotNumber())
+				log.WithFields(logrus.Fields{
+					"slot": fmt.Sprintf("%d", data.GetSlotNumber()),
+				}).Debug("Requested block not found:")
 				continue
 			}
 
@@ -192,7 +199,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			block := broadcastedBlocksByHash[hash]
 			if block == nil {
-				log.Errorf("Requested block not found: %#x", hash)
+				log.WithFields(logrus.Fields{
+					"hash": fmt.Sprintf("%#x", hash),
+				}).Debug("Requested block not found:")
 				continue
 			}
 
@@ -308,4 +317,14 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 		Attestations:          attestations,
 	})
 	return block, nil
+}
+
+func (sim *Simulator) UpdateLastStateRecalc() error {
+	cState, err := sim.beaconDB.GetCrystallizedState()
+	if err != nil {
+		return err
+	}
+	cState.Proto().LastStateRecalculationSlot++
+
+	return sim.beaconDB.SaveCrystallizedState(cState)
 }

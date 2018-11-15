@@ -111,10 +111,7 @@ func (db *BeaconDB) SaveCrystallizedState(cState *types.CrystallizedState) error
 		if err != nil {
 			return err
 		}
-		if err := chainInfo.Put(cStateLookupKey, cStateEnc); err != nil {
-			return err
-		}
-		return nil
+		return chainInfo.Put(cStateLookupKey, cStateEnc)
 	})
 }
 
