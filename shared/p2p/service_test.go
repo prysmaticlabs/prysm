@@ -36,7 +36,7 @@ func init() {
 }
 
 func TestBroadcast(t *testing.T) {
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Could not start a new server: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestBroadcast(t *testing.T) {
 }
 
 func TestEmit(t *testing.T) {
-	s, _ := NewServer()
+	s, _ := NewServer("")
 	p := &testpb.TestMessage{Foo: "bar"}
 
 	ctrl := gomock.NewController(t)
@@ -211,7 +211,7 @@ func TestRegisterTopic_HandleInvalidProtobufs(t *testing.T) {
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 func TestRegisterTopic_WithAdapters(t *testing.T) {
 	// TODO(488): Unskip this test
 	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
 	}
