@@ -23,7 +23,7 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
-	s, err := p2p.NewServer()
+	s, err := p2p.NewServer(ctx.GlobalString(cmd.BootstrapNode.Name))
 	if err != nil {
 		return nil, err
 	}

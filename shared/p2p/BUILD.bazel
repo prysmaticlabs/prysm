@@ -19,6 +19,7 @@ go_library(
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_ipfs_go_datastore//:go_default_library",
         "@com_github_ipfs_go_datastore//sync:go_default_library",
+        "@com_github_ipfs_go_ipfs_addr//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/discovery:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/host/routed:go_default_library",
