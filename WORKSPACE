@@ -177,7 +177,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    commit = "d1252f9bfe49590ff7a6381e9f0d4e882b631e28",
+    commit = "3120e9f9526fe05f2d3905961a5e0701b85579d9",
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
