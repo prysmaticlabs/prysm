@@ -544,7 +544,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "28a68d0c24adce1da43f8df6a57340909ecd7fdd",
+    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
