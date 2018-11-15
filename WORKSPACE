@@ -207,7 +207,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
-    commit = "e758e0ca4ae1107e480c43a22bf91272a5432105",
+    commit = "5ab1f4ea0a8ad6f9cd7264bc9a3b6d908d07e21a",
     importpath = "github.com/libp2p/go-libp2p-host",
 )
 
