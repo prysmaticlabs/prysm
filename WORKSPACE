@@ -237,7 +237,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_conn_security_multistream",
-    commit = "578125a681eee24cac960d84827db34541e3f707",
+    commit = "cda5d4f4ed431a63fdba6d48abab2acb9d2c7a9d",
     importpath = "github.com/libp2p/go-conn-security-multistream",
 )
 
