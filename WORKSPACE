@@ -31,7 +31,7 @@ docker_repositories()
 git_repository(
     name = "build_bazel_rules_nodejs",
     remote = "https://github.com/bazelbuild/rules_nodejs.git",
-    tag = "0.15.3",
+    tag = "0.16.0",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -183,7 +183,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "96804982667ed1672985566d0d0c2a7ed6f10e1f",
+    commit = "ec8630b6b7436b5d7f6c1c2366d3d7214d1b29e2",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -297,7 +297,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "fdfc19097e7ac6b57035062056f5b7b4638b8898",
+    commit = "67e573d211ace594f1366b4ce9d39726c4b19bd0",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -721,7 +721,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_routing",
-    commit = "76077861eb4ae107b4366acc1a1152b8e15d4300",
+    commit = "cb72d923dcde7c3af89d09032443515bd0fe7075",
     importpath = "github.com/libp2p/go-libp2p-routing",
 )
 
