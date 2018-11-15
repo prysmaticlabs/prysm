@@ -60,6 +60,17 @@ var (
 		Usage: "Indicate what fraction of p2p messages are sampled for tracing.",
 		Value: 0.20,
 	}
+	// DisableMonitoringFlag defines a flag to disable the metrics collection.
+	DisableMonitoringFlag = cli.BoolFlag{
+		Name:  "disable-monitoring",
+		Usage: "Disable monitoring service.",
+	}
+	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
+	MonitoringPortFlag = cli.Int64Flag{
+		Name:  "monitoring-flag",
+		Usage: "Port used to listening and respond metrics for prometheus.",
+		Value: 8080,
+	}
 	// KeystoreDirectoryFlag defines a flag to indicate where the keystore of the user
 	// is located.
 	KeystoreDirectoryFlag = DirectoryFlag{
@@ -70,5 +81,10 @@ var (
 	KeystorePasswordFlag = cli.StringFlag{
 		Name:  "keystore-password",
 		Usage: "Keystore password is used to unlock the keystore so that the users decrypted keys can be used.",
+	}
+	// BootstrapNode tells the beacon node which bootstrap node to connect to
+	BootstrapNode = cli.StringFlag{
+		Name:  "bootstrap-node",
+		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
 	}
 )

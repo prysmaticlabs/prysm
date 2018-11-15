@@ -275,13 +275,13 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	// Retrieve block from db using justified_block_hash and verify its slot number is the same as attestation justified slot number
 	rBlock, err := db.GetBlock(hash)
 	if err != nil {
-		log.Errorf("failed to get block: %v", err)
+		log.Errorf("failed to get block: %d", err)
+		return false
 	}
 	if attestation.JustifiedSlot != rBlock.SlotNumber() {
-		log.Errorf("the attestation's slot number is not the same as the slot number of the block retrieved by the justified slot hash. Attestation slot number: %v",
+		log.Errorf("the attestation's slot number is not the same as the slot number of the block retrieved by the justified slot hash. Attestation slot number: %d",
 			attestation.JustifiedSlot)
-		log.Errorf("Retrieved block slot number: %v",
-			rBlock.SlotNumber())
+		log.Errorf("Retrieved block slot number: %d",rBlock.SlotNumber())
 		return false
 	}
 
