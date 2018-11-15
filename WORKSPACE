@@ -436,7 +436,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_conn_security",
-    commit = "b7192598fc6d96e4aa1d6a565387cd17ab667987",
+    commit = "42db08f68cdfd8a1ec46eefde49160c2a9559b72",
     importpath = "github.com/libp2p/go-conn-security",
 )
 
