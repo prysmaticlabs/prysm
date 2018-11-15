@@ -112,7 +112,7 @@ git_repository(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "503ea999614e3b9d10f0060b8182b6fc7ea664f8",
+    commit = "8a44ef6e8be577e050008c7886f24fc705d709fb",
     importpath = "github.com/golang/mock",
 )
 
