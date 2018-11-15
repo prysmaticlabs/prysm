@@ -237,7 +237,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_conn_security_multistream",
-    commit = "578125a681eee24cac960d84827db34541e3f707",
+    commit = "cda5d4f4ed431a63fdba6d48abab2acb9d2c7a9d",
     importpath = "github.com/libp2p/go-conn-security-multistream",
 )
 
@@ -436,7 +436,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_conn_security",
-    commit = "b7192598fc6d96e4aa1d6a565387cd17ab667987",
+    commit = "42db08f68cdfd8a1ec46eefde49160c2a9559b72",
     importpath = "github.com/libp2p/go-conn-security",
 )
 
@@ -544,7 +544,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "28a68d0c24adce1da43f8df6a57340909ecd7fdd",
+    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -598,7 +598,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "073f507db72de824e981aa0f15f158175a8d6be1",
+    commit = "23a786e24e247b25b8708c8538d9e16cbfa4e4c9",
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
