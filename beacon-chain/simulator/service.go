@@ -163,7 +163,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				"slot": slot,
 			}).Debug("Broadcast block hash and slot")
 
-			if err := sim.UpdateLastStateRecalc(); err != nil {
+			if err := sim.updateLastStateRecalc(); err != nil {
 				log.Errorf("Unable to update last state recalc %v", err)
 			}
 
@@ -250,6 +250,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 	}
 }
 
+// generateBlock generates fake blocks for the simulator.
 func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Block, error) {
 
 	aState, err := sim.beaconDB.GetActiveState()
@@ -319,6 +320,9 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	return block, nil
 }
 
+// updateLastStateRecalc adds 1 to the last state recalculation
+// slot so that the simulator can continue running and not
+// fail validity conditions.
 func (sim *Simulator) updateLastStateRecalc() error {
 	cState, err := sim.beaconDB.GetCrystallizedState()
 	if err != nil {
