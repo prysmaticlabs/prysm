@@ -5,6 +5,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
 	"github.com/urfave/cli"
 )
@@ -36,8 +37,11 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		return nil, err
 	}
 
-	// TODO(437): Define default adapters for logging, monitoring, etc.
 	adapters := []p2p.Adapter{traceAdapter}
+	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
+		adapters = append(adapters, metric.New())
+	}
+
 	for k, v := range topicMappings {
 		s.RegisterTopic(k.String(), v, adapters...)
 	}
