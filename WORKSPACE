@@ -466,7 +466,7 @@ go_repository(
 
 go_repository(
     name = "com_github_huin_goupnp",
-    commit = "1395d1447324cbea88d249fbfcfd70ea878fdfca",
+    commit = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8",
     importpath = "github.com/huin/goupnp",
 )
 
