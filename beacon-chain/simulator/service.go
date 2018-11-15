@@ -319,7 +319,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	return block, nil
 }
 
-func (sim *Simulator) UpdateLastStateRecalc() error {
+func (sim *Simulator) updateLastStateRecalc() error {
 	cState, err := sim.beaconDB.GetCrystallizedState()
 	if err != nil {
 		return err
