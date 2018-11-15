@@ -243,7 +243,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_metrics",
-    commit = "20c0e3fed14ddf84ac8192038accfd393610ed82",
+    commit = "2d5733beaa2a9fdd05ef696d7a734aa61549fb2a",
     importpath = "github.com/libp2p/go-libp2p-metrics",
 )
 
