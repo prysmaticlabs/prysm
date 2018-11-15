@@ -189,7 +189,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "5dc2060baaf8db344f31dafd852340b93811d03f",
+    commit = "de9a213953d6ec0e053b56e9d79800565c3fc9ca",
     importpath = "github.com/ipfs/go-log",
 )
 
