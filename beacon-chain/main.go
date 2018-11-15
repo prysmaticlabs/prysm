@@ -70,6 +70,7 @@ VERSION:
 		utils.KeyFlag,
 		utils.GenesisJSON,
 		utils.EnablePOWChain,
+		cmd.BootstrapNode,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,

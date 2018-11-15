@@ -82,4 +82,9 @@ var (
 		Name:  "keystore-password",
 		Usage: "Keystore password is used to unlock the keystore so that the users decrypted keys can be used.",
 	}
+	// BootstrapNode tells the beacon node which bootstrap node to connect to
+	BootstrapNode = cli.StringFlag{
+		Name:  "bootstrap-node",
+		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
+	}
 )
