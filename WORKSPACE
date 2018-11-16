@@ -170,7 +170,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peer",
-    commit = "dd9b45c0649b38aebe65f98cb460676b4214a42c",
+    commit = "d3df4bca884d7a9c2d350c8120240db3c2b0f2ee",
     importpath = "github.com/libp2p/go-libp2p-peer",
 )
 
