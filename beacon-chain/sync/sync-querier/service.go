@@ -85,7 +85,7 @@ func (s *SyncQuerier) run() {
 	for {
 		select {
 		case <-s.ctx.Done():
-			log.Debug("Exiting goroutine")
+			log.Info("Exiting goroutine")
 			return
 		case msg := <-s.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)

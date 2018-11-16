@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	//pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -24,7 +24,7 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
-func TestStartStop(t *testing.T) {
+func TestServiceLifeCycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := Config{
 		P2P:                &mockP2P{},
@@ -39,22 +39,13 @@ func TestStartStop(t *testing.T) {
 	}()
 
 	go func() {
-		sq.Start()
-		<-exitRoutine
-		sq.Stop()
+		sq.run()
+		exitRoutine <- true
 	}()
 
-	msg := p2p.Message{
-		Data: &pb.ChainHeadResponse{
-			Hash: []byte{},
-			Slot: 0,
-		},
-	}
+	sq.Stop()
+	<-exitRoutine
 
-	sq.responseBuf <- msg
-	exitRoutine <- true
-
-	testutil.WaitForLog(t, hook, "Exiting goroutine")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
