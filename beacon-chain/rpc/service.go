@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,14 +24,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "rpc")
-
-type beaconDB interface {
-	// These methods can be called on-demand by a validator
-	// to fetch canonical head and state.
-	GetChainHead() (*types.Block, error)
-	GetBlockBySlot(uint64) (*types.Block, error)
-	GetCrystallizedState() (*types.CrystallizedState, error)
-}
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -53,7 +46,7 @@ type powChainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	beaconDB              beaconDB
+	beaconDB              *db.BeaconDB
 	chainService          chainService
 	powChainService       powChainService
 	attestationService    attestationService
@@ -75,7 +68,7 @@ type Config struct {
 	CertFlag           string
 	KeyFlag            string
 	SubscriptionBuf    int
-	BeaconDB           beaconDB
+	BeaconDB           *db.BeaconDB
 	ChainService       chainService
 	POWChainService    powChainService
 	AttestationService attestationService
@@ -116,6 +109,8 @@ func (s *Service) Start() {
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
 
+	// TODO: Utilize a certificate for secure connections
+	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -123,7 +118,7 @@ func (s *Service) Start() {
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection")
+		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 		s.grpcServer = grpc.NewServer()
 	}
 
@@ -167,11 +162,10 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // initially. This method also returns the genesis timestamp
 // of the beacon node which will allow a validator client to setup a
 // a ticker to keep track of the current beacon slot.
-func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
-	// This error is safe to ignore as we are initializing a proto timestamp
-	// from a constant value (genesis time is constant in the protocol
-	// and defined in the params.GetConfig().package).
-	// Get the genesis timestamp from persistent storage.
+func (s *Service) CurrentAssignmentsAndGenesisTime(
+	ctx context.Context,
+	req *pb.ValidatorAssignmentRequest,
+) (*pb.CurrentAssignmentsResponse, error) {
 	genesis, err := s.beaconDB.GetBlockBySlot(0)
 	if err != nil {
 		return nil, fmt.Errorf("could not get genesis block: %v", err)
@@ -270,9 +264,7 @@ func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.At
 // LatestAttestation streams the latest processed attestations to the rpc clients.
 func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
 	sub := s.attestationService.IncomingAttestationFeed().Subscribe(s.incomingAttestation)
-
 	defer sub.Unsubscribe()
-
 	for {
 		select {
 		case attestation := <-s.incomingAttestation:
@@ -312,7 +304,10 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 // ValidatorSlotAndResponsibility fetches a validator's assigned slot number
 // and whether it should act as a proposer/attester.
-func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponsibilityResponse, error) {
+func (s *Service) ValidatorSlotAndResponsibility(
+	ctx context.Context,
+	req *pb.PublicKey,
+) (*pb.SlotResponsibilityResponse, error) {
 	cState, err := s.beaconDB.GetCrystallizedState()
 	if err != nil {
 		return nil, fmt.Errorf("could not get crystallized state: %v", err)
