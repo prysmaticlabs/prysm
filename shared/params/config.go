@@ -1,7 +1,7 @@
-// Package params defines important constants that are essential to the beacon chain.
 package params
 
 import (
+	"math"
 	"time"
 )
 
@@ -36,9 +36,10 @@ type Config struct {
 	MinDeposit                    uint64    // MinDeposit is the minimal amount of Ether a validator needs to participate.
 	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
 	InitialForkVersion            uint32    // InitialForkVersion is used to track fork version between station transitions.
+	CollationSizeLimit            int64     // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
 }
 
-var defaultConfig = &Config{
+var defaultBeaconConfig = &Config{
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	ModuloBias:                    16777216 - 1,
 	CycleLength:                   uint64(64),
@@ -57,7 +58,7 @@ var defaultConfig = &Config{
 	InitialForkVersion:            0,
 }
 
-var demoConfig = &Config{
+var demoBeaconConfig = &Config{
 	GenesisTime:                   time.Now(),
 	ModuloBias:                    16777216 - 1,
 	CycleLength:                   uint64(5),
@@ -110,28 +111,65 @@ const (
 	Exit
 )
 
-// GetConfig retrieves beacon node config.
-func GetConfig() *Config {
-	switch env {
-	case "default":
-		return defaultConfig
-	case "demo":
-		return demoConfig
-	case "custom":
-		return customConfig
-	default:
-		return defaultConfig
-	}
+type OverrideConfig struct {
+	Param string
 }
 
-// SetCustomConfig is useful for simulated backend configurations
-// in chain tests.
+var emptyOverrideConfig = &OverrideConfig{}
+var demoOverrideConfig = &OverrideConfig{Param: "demo"}
+var customOverrideConfig = &OverrideConfig{Param: "custom"}
+
 func SetCustomConfig(c *Config) {
-	SetEnv("custom")
+	SetOverrideConfig(customOverrideConfig)
 	customConfig = c
 }
 
-// SetEnv sets which config to use.
-func SetEnv(e string) {
-	env = e
+func SetDemoBeaconConfig() {
+	SetOverrideConfig(demoOverrideConfig)
+}
+
+func SetOverrideConfig(oc *OverrideConfig) {
+	emptyOverrideConfig = oc
+}
+
+func GetOverrideConfig() *OverrideConfig {
+	return emptyOverrideConfig
+}
+
+// GetBeaconConfig retrieves beacon node config.
+func GetBeaconConfig() *Config {
+	env = GetOverrideConfig().Param
+	switch env {
+	case "default":
+		return defaultBeaconConfig
+	case "demo":
+		return demoBeaconConfig
+	case "custom":
+		return customConfig
+	default:
+		return defaultBeaconConfig
+	}
+}
+
+// DefaultValidatorConfig returns pointer to a Config value with same defaults.
+func DefaultValidatorConfig() *Config {
+	return &Config{
+		CollationSizeLimit: DefaultCollationSizeLimit(),
+		SlotDuration:       8.0,
+		CycleLength:        64,
+	}
+}
+
+// DemoValidatorConfig for running the system under shorter defaults.
+func DemoValidatorConfig() *Config {
+	return &Config{
+		SlotDuration: 2.0,
+		CycleLength:  5,
+	}
+}
+
+// DefaultCollationSizeLimit is the integer value representing the maximum
+// number of bytes allowed in a given collation.
+func DefaultCollationSizeLimit() int64 {
+	return int64(math.Pow(float64(2), float64(20)))
 }

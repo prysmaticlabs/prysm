@@ -3,7 +3,7 @@ package casper
 import (
 	"encoding/binary"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -37,7 +37,7 @@ func FinalizeAndJustifySlots(
 	slot uint64, justifiedSlot uint64, finalizedSlot uint64,
 	justifiedStreak uint64, blockVoteBalance uint64, totalDeposits uint64) (uint64, uint64, uint64) {
 
-	cycleLength := params.GetConfig().CycleLength
+	cycleLength := params.GetBeaconConfig().CycleLength
 
 	if 3*blockVoteBalance >= 2*totalDeposits {
 		if slot > justifiedSlot {
