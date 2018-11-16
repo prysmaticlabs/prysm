@@ -26,17 +26,18 @@ type Sender interface {
 
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
-	mutex        *sync.Mutex
-	feeds        map[reflect.Type]Feed
-	host         host.Host
-	gsub         *pubsub.PubSub
-	topicMapping map[reflect.Type]string
+	ctx           context.Context
+	cancel        context.CancelFunc
+	mutex         *sync.Mutex
+	feeds         map[reflect.Type]Feed
+	host          host.Host
+	gsub          *pubsub.PubSub
+	topicMapping  map[reflect.Type]string
+	bootstrapNode string
 }
 
 // NewServer creates a new p2p server instance.
-func NewServer() (*Server, error) {
+func NewServer(bootstrapNode string) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
 	h, err := libp2p.New(ctx, opts...)
@@ -57,21 +58,29 @@ func NewServer() (*Server, error) {
 	}
 
 	return &Server{
-		ctx:          ctx,
-		cancel:       cancel,
-		feeds:        make(map[reflect.Type]Feed),
-		host:         h,
-		gsub:         gsub,
-		mutex:        &sync.Mutex{},
-		topicMapping: make(map[reflect.Type]string),
+		ctx:           ctx,
+		cancel:        cancel,
+		feeds:         make(map[reflect.Type]Feed),
+		host:          h,
+		gsub:          gsub,
+		mutex:         &sync.Mutex{},
+		topicMapping:  make(map[reflect.Type]string),
+		bootstrapNode: bootstrapNode,
 	}, nil
 }
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
 	log.Info("Starting service")
-	if err := startDiscovery(s.ctx, s.host); err != nil {
-		log.Errorf("Could not start p2p discovery! %v", err)
+
+	if s.bootstrapNode != "" {
+		if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
+			log.Errorf("Could not start peer discovery via DHT: %v", err)
+		}
+	}
+
+	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+		log.Errorf("Could not start peer discovery via mDNS: %v", err)
 		return
 	}
 }
@@ -120,18 +129,22 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				log.WithError(s.ctx.Err()).Debug("Context error")
 				return
 			}
-
 			if err != nil {
 				log.Errorf("Failed to get next message: %v", err)
 				return
 			}
 
-			var h Handler = func(pMsg Message) {
-				s.emit(pMsg, feed, msg, msgType)
+			d := message
+			if err := proto.Unmarshal(msg.Data, d); err != nil {
+				log.WithError(err).Error("Failed to decode data")
+				continue
 			}
 
-			pMsg := Message{Ctx: s.ctx}
+			var h Handler = func(pMsg Message) {
+				s.emit(pMsg, feed)
+			}
 
+			pMsg := Message{Ctx: s.ctx, Data: d}
 			for _, adapter := range adapters {
 				h = adapter(h)
 			}
@@ -141,25 +154,12 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}()
 }
 
-func (s *Server) emit(pMsg Message, feed Feed, msg *pubsub.Message, msgType reflect.Type) {
-	d, ok := reflect.New(msgType).Interface().(proto.Message)
-	if !ok {
-		log.Errorf("Received message is not a protobuf message: %s", msgType)
-		return
-	}
-
-	if err := proto.Unmarshal(msg.Data, d); err != nil {
-		log.Errorf("Failed to decode data: %v", err)
-		return
-	}
-
-	pMsg.Data = d
-
-	i := feed.Send(pMsg)
+func (s *Server) emit(msg Message, feed Feed) {
+	i := feed.Send(msg)
 	log.WithFields(logrus.Fields{
 		"numSubs": i,
-		"msgType": fmt.Sprintf("%T", d),
-		"msgName": proto.MessageName(d),
+		"msgType": fmt.Sprintf("%T", msg.Data),
+		"msgName": proto.MessageName(msg.Data),
 	}).Debug("Emit p2p message to feed subscribers")
 }
 

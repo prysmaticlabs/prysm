@@ -9,7 +9,7 @@ import (
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	s, err := NewServer()
+	s, err := NewServer("")
 	if err != nil {
 		t.Fatalf("Could not start a new server: %v", err)
 	}

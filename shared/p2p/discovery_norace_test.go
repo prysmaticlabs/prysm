@@ -31,13 +31,13 @@ func TestStartDiscovery_HandlePeerFound(t *testing.T) {
 	defer cancel()
 
 	a := bhost.New(swarmt.GenSwarm(t, ctx))
-	err := startDiscovery(ctx, a)
+	err := startmDNSDiscovery(ctx, a)
 	if err != nil {
 		t.Errorf("Error when starting discovery: %v", err)
 	}
 
 	b := bhost.New(swarmt.GenSwarm(t, ctx))
-	err = startDiscovery(ctx, b)
+	err = startmDNSDiscovery(ctx, b)
 	if err != nil {
 		t.Errorf("Error when starting discovery: %v", err)
 	}

@@ -31,7 +31,7 @@ func adapterWithParams(i int) p2p.Adapter {
 func ExampleServer_RegisterTopic() {
 	adapters := []p2p.Adapter{reqLogger, adapterWithParams(5)}
 
-	s, _ := p2p.NewServer()
+	s, _ := p2p.NewServer("")
 
 	var topic string
 	var message proto.Message

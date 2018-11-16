@@ -64,6 +64,7 @@ VERSION:
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
 		types.PubKeyFlag,
+		types.BeaconRPCProviderFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
@@ -71,6 +72,7 @@ VERSION:
 		cmd.TraceSampleFractionFlag,
 		cmd.KeystorePasswordFlag,
 		cmd.KeystoreDirectoryFlag,
+		cmd.BootstrapNode,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,

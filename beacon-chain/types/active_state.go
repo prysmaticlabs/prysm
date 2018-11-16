@@ -1,16 +1,13 @@
 package types
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -19,9 +16,6 @@ import (
 // it changes every block.
 type ActiveState struct {
 	data *pb.ActiveState
-	// blockVoteCache is not part of protocol state, it is
-	// used as a helper cache for cycle init calculations.
-	blockVoteCache map[[32]byte]*utils.VoteCache
 }
 
 // NewGenesisActiveState initializes the active state for slot 0.
@@ -39,13 +33,12 @@ func NewGenesisActiveState() *ActiveState {
 			RecentBlockHashes:   recentBlockHashes,
 			RandaoMix:           make([]byte, 0, 32),
 		},
-		blockVoteCache: make(map[[32]byte]*utils.VoteCache),
 	}
 }
 
 // NewActiveState creates a new active state with a explicitly set data field.
-func NewActiveState(data *pb.ActiveState, blockVoteCache map[[32]byte]*utils.VoteCache) *ActiveState {
-	return &ActiveState{data: data, blockVoteCache: blockVoteCache}
+func NewActiveState(data *pb.ActiveState) *ActiveState {
+	return &ActiveState{data: data}
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
@@ -70,8 +63,8 @@ func (a *ActiveState) Hash() ([32]byte, error) {
 
 // CopyState returns a deep copy of the current active state.
 func (a *ActiveState) CopyState() *ActiveState {
-	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.PendingAttestations()))
-	for index, pendingAttestation := range a.PendingAttestations() {
+	pendingAttestations := make([]*pb.AggregatedAttestation, len(a.data.PendingAttestations))
+	for index, pendingAttestation := range a.data.PendingAttestations {
 		pendingAttestations[index] = &pb.AggregatedAttestation{
 			Slot:                pendingAttestation.GetSlot(),
 			Shard:               pendingAttestation.GetShard(),
@@ -84,13 +77,13 @@ func (a *ActiveState) CopyState() *ActiveState {
 		}
 	}
 
-	recentBlockHashes := make([][]byte, len(a.RecentBlockHashes()))
-	for r, hash := range a.RecentBlockHashes() {
-		recentBlockHashes[r] = hash[:]
+	recentBlockHashes := make([][]byte, len(a.data.RecentBlockHashes))
+	for r, hash := range a.data.RecentBlockHashes {
+		recentBlockHashes[r] = hash
 	}
 
-	pendingSpecials := make([]*pb.SpecialRecord, len(a.PendingSpecials()))
-	for index, pendingSpecial := range a.PendingSpecials() {
+	pendingSpecials := make([]*pb.SpecialRecord, len(a.data.PendingSpecials))
+	for index, pendingSpecial := range a.data.PendingSpecials {
 		pendingSpecials[index] = &pb.SpecialRecord{
 			Kind: pendingSpecial.GetKind(),
 			Data: pendingSpecial.GetData(),
@@ -98,7 +91,7 @@ func (a *ActiveState) CopyState() *ActiveState {
 	}
 	randaoMix := a.RandaoMix()
 
-	newC := ActiveState{
+	newA := ActiveState{
 		data: &pb.ActiveState{
 			PendingAttestations: pendingAttestations,
 			RecentBlockHashes:   recentBlockHashes,
@@ -107,7 +100,7 @@ func (a *ActiveState) CopyState() *ActiveState {
 		},
 	}
 
-	return &newC
+	return &newA
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
@@ -134,17 +127,6 @@ func (a *ActiveState) RandaoMix() [32]byte {
 	var h [32]byte
 	copy(h[:], a.data.RandaoMix)
 	return h
-}
-
-// IsVoteCacheEmpty returns false if vote cache of an input block hash doesn't exist.
-func (a *ActiveState) isVoteCacheEmpty(blockHash [32]byte) bool {
-	_, ok := a.blockVoteCache[blockHash]
-	return ok
-}
-
-// GetBlockVoteCache returns the entire set of block vote cache.
-func (a *ActiveState) GetBlockVoteCache() map[[32]byte]*utils.VoteCache {
-	return a.blockVoteCache
 }
 
 // UpdateAttestations returns a new state with the provided attestations.
@@ -210,70 +192,6 @@ func (a *ActiveState) calculateNewBlockHashes(block *Block, parentSlot uint64) (
 	return update, nil
 }
 
-// calculateBlockVoteCache calculates and updates active state's block vote cache.
-func (a *ActiveState) calculateNewVoteCache(block *Block, cState *CrystallizedState) (map[[32]byte]*utils.VoteCache, error) {
-	update := utils.VoteCacheDeepCopy(a.GetBlockVoteCache())
-
-	for i := 0; i < len(block.Attestations()); i++ {
-		attestation := block.Attestations()[i]
-
-		parentHashes, err := a.getSignedParentHashes(block, attestation)
-		if err != nil {
-			return nil, err
-		}
-
-		attesterIndices, err := cState.getAttesterIndices(attestation)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, h := range parentHashes {
-			// Skip calculating for this hash if the hash is part of oblique parent hashes.
-			var skip bool
-			for _, oblique := range attestation.ObliqueParentHashes {
-				if bytes.Equal(h[:], oblique) {
-					skip = true
-					break
-				}
-			}
-			if skip {
-				continue
-			}
-
-			// Initialize vote cache of a given block hash if it doesn't exist already.
-			if !a.isVoteCacheEmpty(h) {
-				update[h] = utils.NewVoteCache()
-			}
-
-			// Loop through attester indices, if the attester has voted but was not accounted for
-			// in the cache, then we add attester's index and balance to the block cache.
-			for i, attesterIndex := range attesterIndices {
-				var attesterExists bool
-				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, i)
-				if err != nil {
-					log.Errorf("Bitfield check for cache adding failed at index: %d with: %v", i, err)
-				}
-
-				if !isBitSet {
-					continue
-				}
-				for _, indexInCache := range update[h].VoterIndices {
-					if attesterIndex == indexInCache {
-						attesterExists = true
-						break
-					}
-				}
-				if !attesterExists {
-					update[h].VoterIndices = append(update[h].VoterIndices, attesterIndex)
-					update[h].VoteTotalDeposit += cState.Validators()[attesterIndex].Balance
-				}
-			}
-		}
-	}
-
-	return update, nil
-}
-
 // CalculateNewActiveState returns the active state for `block` based on its own state.
 // This method should not modify its own state.
 func (a *ActiveState) CalculateNewActiveState(
@@ -293,12 +211,6 @@ func (a *ActiveState) CalculateNewActiveState(
 	}
 
 	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalculationSlot())
-
-	// With a valid beacon block, we can compute its attestations and store its votes/deposits in cache.
-	newState.blockVoteCache, err = newState.calculateNewVoteCache(block, cState)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update vote cache: %v", err)
-	}
 
 	_, proposerIndex, err := casper.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
@@ -328,8 +240,8 @@ func (a *ActiveState) CalculateNewActiveState(
 	return newState, nil
 }
 
-// getSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (a *ActiveState) getSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
+// GetSignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
+func (a *ActiveState) GetSignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
 	recentBlockHashes := a.RecentBlockHashes()
 	obliqueParentHashes := attestation.ObliqueParentHashes
 	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)

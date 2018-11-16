@@ -29,6 +29,7 @@ type Block struct {
 
 type beaconDB interface {
 	HasBlock(h [32]byte) bool
+	ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error)
 }
 
 // NewBlock explicitly sets the data field of a block.
@@ -274,13 +275,13 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	}
 
 	// Get all the block hashes up to cycle length.
-	parentHashes, err := aState.getSignedParentHashes(b, attestation)
+	parentHashes, err := aState.GetSignedParentHashes(b, attestation)
 	if err != nil {
 		log.Errorf("Unable to get signed parent hashes: %v", err)
 		return false
 	}
 
-	attesterIndices, err := cState.getAttesterIndices(attestation)
+	attesterIndices, err := cState.AttesterIndices(attestation)
 	if err != nil {
 		log.Errorf("Unable to get validator committee: %v", err)
 		return false

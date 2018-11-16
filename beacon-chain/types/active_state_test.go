@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -92,29 +91,6 @@ func TestCopyActiveState(t *testing.T) {
 			aState2.data.RandaoMix[0],
 		)
 	}
-
-	var blockHash [32]byte
-	copy(blockHash[:], []byte{'t', 'e', 's', 't', 'i', 'n', 'g'})
-
-	blockVoteCache1 := make(map[[32]byte]*utils.VoteCache)
-	blockVoteCache2 := make(map[[32]byte]*utils.VoteCache)
-	blockVoteCache1[blockHash] = &utils.VoteCache{
-		VoterIndices:     []uint32{22, 7},
-		VoteTotalDeposit: 300,
-	}
-	blockVoteCache2[blockHash] = &utils.VoteCache{
-		VoterIndices:     []uint32{20, 10},
-		VoteTotalDeposit: 340,
-	}
-
-	aState1.blockVoteCache = blockVoteCache1
-	aState2.blockVoteCache = blockVoteCache2
-	if aState1.blockVoteCache[blockHash].VoteTotalDeposit == aState2.blockVoteCache[blockHash].VoteTotalDeposit {
-		t.Fatalf("The blockVoteCache should not equal each other %d, %d",
-			aState1.blockVoteCache[blockHash].VoteTotalDeposit,
-			aState2.blockVoteCache[blockHash].VoteTotalDeposit,
-		)
-	}
 }
 
 func TestUpdateAttestations(t *testing.T) {
@@ -150,7 +126,7 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 				Shard: 1,
 			},
 		},
-	}, nil)
+	})
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
@@ -183,7 +159,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 
 	aState := NewActiveState(&pb.ActiveState{
 		RecentBlockHashes: recentBlockHashes,
-	}, nil)
+	})
 
 	updated, err := aState.calculateNewBlockHashes(block, 0)
 	if err != nil {
@@ -240,52 +216,6 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 	}
 }
 
-func TestBlockVoteCacheNoAttestations(t *testing.T) {
-	aState := NewGenesisActiveState()
-	cState, err := NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("failed to initialize crystallized state: %v", err)
-	}
-	block := NewBlock(nil)
-
-	newVoteCache, err := aState.calculateNewVoteCache(block, cState)
-	if err != nil {
-		t.Fatalf("failed to update the block vote cache: %v", err)
-	}
-
-	if len(newVoteCache) != 0 {
-		t.Fatalf("expected no new votes in cache: found %d", len(newVoteCache))
-	}
-}
-
-func TestBlockVoteCache(t *testing.T) {
-	aState := NewGenesisActiveState()
-	cState, err := NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("failed to initialize crystallized state: %v", err)
-	}
-	block := NewBlock(&pb.BeaconBlock{
-		Slot:           1,
-		AncestorHashes: [][]byte{},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				AttesterBitfield: []byte{'F', 'F'},
-			},
-		},
-	})
-
-	newVoteCache, err := aState.calculateNewVoteCache(block, cState)
-	if err != nil {
-		t.Fatalf("failed to update the block vote cache: %v", err)
-	}
-
-	if len(newVoteCache) != 1 {
-		t.Fatalf("expected one new votes in cache: found %d", len(newVoteCache))
-	}
-}
-
 func areBytesEqual(s1, s2 []byte) bool {
 	if len(s1) != len(s2) {
 		return false
@@ -326,7 +256,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 			},
 		},
 		RecentBlockHashes: recentBlockHashes,
-	}, nil)
+	})
 
 	aState, err = aState.CalculateNewActiveState(block, cState, 0)
 	if err != nil {
@@ -366,7 +296,7 @@ func createHashFromByte(repeatedByte byte) []byte {
 
 func TestGetSignedParentHashes(t *testing.T) {
 	// Test the scenario described in the spec:
-	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
+	// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#per-block-processing
 	cfg := params.GetConfig()
 	oldCycleLength := cfg.CycleLength
 	cycleLength := uint64(4)
@@ -388,7 +318,7 @@ func TestGetSignedParentHashes(t *testing.T) {
 	recentBlockHashes[9] = createHashFromByte('I')
 	recentBlockHashes[10] = createHashFromByte('J')
 
-	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, nil)
+	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
 
 	b := NewBlock(&pb.BeaconBlock{Slot: 11})
 
@@ -400,15 +330,15 @@ func TestGetSignedParentHashes(t *testing.T) {
 		Slot:                5,
 	}
 
-	hashes, err := aState.getSignedParentHashes(b, a)
+	hashes, err := aState.GetSignedParentHashes(b, a)
 	if err != nil {
-		t.Fatalf("failed to getSignedParentHashes: %v", err)
+		t.Fatalf("failed to GetSignedParentHashes: %v", err)
 	}
 	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
-		t.Fatalf("getSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
+		t.Fatalf("GetSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
 	}
 	if hashes[2][0] != 0 || hashes[3][0] != 1 {
-		t.Fatalf("getSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
+		t.Fatalf("GetSignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
 	}
 }
 
@@ -431,7 +361,7 @@ func TestGetSignedParentHashesIndexFail(t *testing.T) {
 	recentBlockHashes[6] = createHashFromByte('F')
 	recentBlockHashes[7] = createHashFromByte('G')
 
-	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes}, nil)
+	aState := NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
 
 	b := NewBlock(&pb.BeaconBlock{Slot: 8})
 	a := &pb.AggregatedAttestation{
@@ -439,17 +369,17 @@ func TestGetSignedParentHashesIndexFail(t *testing.T) {
 		Slot:                2,
 	}
 
-	_, err := aState.getSignedParentHashes(b, a)
+	_, err := aState.GetSignedParentHashes(b, a)
 	if err == nil {
-		t.Error("expected getSignedParentHashes to fail")
+		t.Error("expected GetSignedParentHashes to fail")
 	}
 
 	a2 := &pb.AggregatedAttestation{
 		ObliqueParentHashes: [][]byte{},
 		Slot:                9,
 	}
-	_, err = aState.getSignedParentHashes(b, a2)
+	_, err = aState.GetSignedParentHashes(b, a2)
 	if err == nil {
-		t.Error("expected getSignedParentHashes to fail")
+		t.Error("expected GetSignedParentHashes to fail")
 	}
 }

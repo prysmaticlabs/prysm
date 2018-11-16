@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -96,6 +97,12 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	if err := beacon.registerRPCService(ctx); err != nil {
 		return nil, err
+	}
+
+	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
+		if err := beacon.registerPrometheusService(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return beacon, nil
@@ -361,4 +368,13 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	})
 
 	return b.services.RegisterService(rpcService)
+}
+
+func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
+	service := prometheus.NewPrometheusService(
+		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+	)
+	hook := prometheus.NewLogrusCollector()
+	logrus.AddHook(hook)
+	return b.services.RegisterService(service)
 }

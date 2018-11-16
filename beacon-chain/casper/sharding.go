@@ -29,8 +29,9 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 		return nil, err
 	}
 
-	// Initialize with 2 cycles of the same committees.
-	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 2*params.GetConfig().CycleLength)
+	// Initialize with 3 cycles of the same committees.
+	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.GetConfig().CycleLength)
+	initialCommittees = append(initialCommittees, committees...)
 	initialCommittees = append(initialCommittees, committees...)
 	initialCommittees = append(initialCommittees, committees...)
 	return initialCommittees, nil
