@@ -109,7 +109,7 @@ func (s *Service) Start() {
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
 
-	// TODO: Utilize a certificate for secure connections
+	// TODO(#791): Utilize a certificate for secure connections
 	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
