@@ -79,7 +79,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerService(); err != nil {
+	if err := beacon.registerAttestationService(); err != nil {
 		return nil, err
 	}
 
@@ -219,7 +219,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerService() error {
+func (b *BeaconNode) registerAttestationService() error {
 	attestationService := attestation.NewAttestationService(context.TODO(), &attestation.Config{
 		BeaconDB: b.db,
 	})
@@ -242,7 +242,10 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 		Endpoint: b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
 		Pubkey:   b.ctx.GlobalString(utils.PubKeyFlag.Name),
 		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
-	}, powClient, powClient, powClient)
+		Client:   powClient,
+		Reader:   powClient,
+		Logger:   powClient,
+	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
 	}

@@ -167,7 +167,7 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Could not process a genesis block")
+		log.Error("Cannot process a genesis block: received block with slot 0")
 		return false
 	}
 
@@ -192,6 +192,9 @@ func (b *Block) IsValid(
 
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	blockRandaoReveal := b.RandaoReveal()
+
+	// If this is a block created by the simulator service (while in development mode), we
+	// skip the RANDAO validation condition.
 	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
 	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
 		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
