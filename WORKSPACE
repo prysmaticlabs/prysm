@@ -322,7 +322,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    commit = "8f95e95b9fedc69b1367362a14f1ad3b5bd5bd46",
+    commit = "eef79c8345f3960fba6c64b0d9f0b4edb71eeb89",
     importpath = "github.com/libp2p/go-libp2p-secio",
 )
 
