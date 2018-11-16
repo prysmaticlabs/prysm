@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -15,24 +16,12 @@ import (
 
 var log = logrus.WithField("prefix", "blockchain")
 
-type beaconDB interface {
-	GetBlock(h [32]byte) (*types.Block, error)
-	GetChainHead() (*types.Block, error)
-	GetActiveState() (*types.ActiveState, error)
-	GetCrystallizedState() (*types.CrystallizedState, error)
-	GetGenesisTime() (time.Time, error)
-	HasBlock(h [32]byte) bool
-	SaveBlock(block *types.Block) error
-	SaveUnfinalizedBlockState(aState *types.ActiveState, cState *types.CrystallizedState) error
-	UpdateChainHead(head *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error
-}
-
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
 	ctx                            context.Context
 	cancel                         context.CancelFunc
-	beaconDB                       beaconDB
+	beaconDB                       *db.BeaconDB
 	web3Service                    *powchain.Web3Service
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
@@ -49,7 +38,7 @@ type Config struct {
 	BeaconBlockBuf   int
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
-	BeaconDB         beaconDB
+	BeaconDB         *db.BeaconDB
 	DevMode          bool
 	EnablePOWChain   bool
 }
@@ -249,7 +238,9 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 
-		// Listen for a newly received incoming block from the sync service.
+		// Listen for a newly received incoming block from the feed. Blocks
+		// can be received either from the sync service, the RPC service,
+		// or via p2p.
 		case block := <-c.incomingBlockChan:
 			if err := c.processBlock(block); err != nil {
 				log.Error(err)
@@ -305,7 +296,6 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	aState = aState.UpdateAttestations(block.Attestations())
 
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
-	// and apply a block scoring function.
 	var didCycleTransition bool
 	if cState.IsCycleTransition(block.SlotNumber()) {
 		cState, err = c.executeStateTransition(cState, aState, block)
@@ -333,6 +323,8 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 	log.Infof("Processed block: %#x", blockHash)
 
+	// We keep a map of unfinalized blocks in memory along with their state
+	// pair to apply the fork choice rule.
 	c.unfinalizedBlocks[blockHash] = &statePair{
 		crystallizedState: cState,
 		activeState:       aState,

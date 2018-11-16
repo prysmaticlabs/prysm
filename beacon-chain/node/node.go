@@ -78,7 +78,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerService(); err != nil {
+	if err := beacon.registerAttestationService(); err != nil {
 		return nil, err
 	}
 
@@ -212,7 +212,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerService() error {
+func (b *BeaconNode) registerAttestationService() error {
 	attestationService := attestation.NewAttestationService(context.TODO(), &attestation.Config{
 		BeaconDB: b.db,
 	})
