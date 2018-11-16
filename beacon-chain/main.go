@@ -76,6 +76,8 @@ VERSION:
 		cmd.EnableTracingFlag,
 		cmd.TracingEndpointFlag,
 		cmd.TraceSampleFractionFlag,
+		cmd.MonitoringPortFlag,
+		cmd.DisableMonitoringFlag,
 		cmd.KeystorePasswordFlag,
 		cmd.KeystoreDirectoryFlag,
 		debug.PProfFlag,
