@@ -358,7 +358,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    commit = "b82aac8589e138824736b2a9d466981dbce6b0d4",
+    commit = "fe236c4745a2536facac62dc99ec34c56d833d95",
     importpath = "github.com/libp2p/go-libp2p-nat",
 )
 
