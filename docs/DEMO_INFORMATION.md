@@ -50,7 +50,7 @@ Curious to see the system working and running a validator client locally? We hav
 You’ll be able to spin up a beacon node, connect a validator client, and start getting assigned to shards where you will then create beacon blocks or vote on beacon blocks through structures called “attestations”. If you are not quite as familiar with the Ethereum Serenity Roadmap and Spec, check out the following links:
 
 - [Ethereum Serenity Devs Handbook](https://notes.ethereum.org/s/BkSZAJNwX#)
-- [Ethereum Serenity Casper+Sharding Specification](https://github.com/ethereum/eth2.0-specs/blob/master/specs/casper_sharding_v2.1.md)
+- [Ethereum Serenity Casper+Sharding Specification](https://github.com/ethereum/eth2.0-specs/tree/master/specs)
 
 Even though canonical blocks are created in the demo due to your activity as a validator, you’ll quickly see not much can be done with these blocks until real, state execution comes into play. However, this beacon chain is a critical piece of consensus and coordination for all actors participating in Ethereum Serenity and will as the foundation for a full-fledged, sharding system. 
 
