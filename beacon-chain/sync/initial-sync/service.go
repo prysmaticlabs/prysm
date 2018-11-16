@@ -63,6 +63,7 @@ type beaconDB interface {
 // InitialSync calls `Start` when initial sync completes.
 type syncService interface {
 	Start()
+	ResumeSync()
 	IsSyncedWithNetwork() bool
 }
 
@@ -148,6 +149,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case <-delaychan:
 			if highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
+				s.syncService.ResumeSync()
 				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}

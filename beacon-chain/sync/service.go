@@ -105,7 +105,7 @@ func NewSyncService(ctx context.Context, cfg Config) *Service {
 	}
 }
 
-// IsSyncedWithNetwork polls other nodes in the network
+// IsSyncedWithNetwork queries other nodes in the network
 // to determine whether or not the local chain is synced
 // with the rest of the network.
 // TODO(#661): Implement this method.
@@ -120,6 +120,11 @@ func (ss *Service) Start() {
 		// TODO(#661): Exit early if not synced.
 	}
 
+	go ss.run()
+}
+
+// ResumeSync resumes normal sync after initial sync is complete.
+func (ss *Service) ResumeSync() {
 	go ss.run()
 }
 

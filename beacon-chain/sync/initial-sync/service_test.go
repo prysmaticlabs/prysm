@@ -39,6 +39,10 @@ func (ms *mockSyncService) IsSyncedWithNetwork() bool {
 	return ms.isSynced
 }
 
+func (ms *mockSyncService) ResumeSync() {
+
+}
+
 type mockDB struct{}
 
 func (m *mockDB) SaveBlock(*types.Block) error {

@@ -6,11 +6,10 @@ import (
 	"path"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-
 	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
+	log "github.com/sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func main() {
