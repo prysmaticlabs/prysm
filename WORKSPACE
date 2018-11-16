@@ -201,7 +201,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "839f88f8de4d0f8300facdcdf7aa2124d020b2b6",
+    commit = "9e6ea7ee4ce0a5e969bf4bfea6b43b4d823726e8",
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -322,7 +322,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    commit = "8f95e95b9fedc69b1367362a14f1ad3b5bd5bd46",
+    commit = "eef79c8345f3960fba6c64b0d9f0b4edb71eeb89",
     importpath = "github.com/libp2p/go-libp2p-secio",
 )
 
@@ -713,7 +713,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    commit = "067e546891ad5f1cf311070cb338670423e327d8",
+    commit = "c9c04d42074b6673bb9f5a37de8f679ee8c262a4",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
