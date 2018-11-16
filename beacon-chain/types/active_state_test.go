@@ -296,7 +296,7 @@ func createHashFromByte(repeatedByte byte) []byte {
 
 func TestGetSignedParentHashes(t *testing.T) {
 	// Test the scenario described in the spec:
-	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
+	// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#per-block-processing
 	cfg := params.GetConfig()
 	oldCycleLength := cfg.CycleLength
 	cycleLength := uint64(4)

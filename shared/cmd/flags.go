@@ -60,6 +60,17 @@ var (
 		Usage: "Indicate what fraction of p2p messages are sampled for tracing.",
 		Value: 0.20,
 	}
+	// DisableMonitoringFlag defines a flag to disable the metrics collection.
+	DisableMonitoringFlag = cli.BoolFlag{
+		Name:  "disable-monitoring",
+		Usage: "Disable monitoring service.",
+	}
+	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
+	MonitoringPortFlag = cli.Int64Flag{
+		Name:  "monitoring-flag",
+		Usage: "Port used to listening and respond metrics for prometheus.",
+		Value: 8080,
+	}
 	// KeystoreDirectoryFlag defines a flag to indicate where the keystore of the user
 	// is located.
 	KeystoreDirectoryFlag = DirectoryFlag{
