@@ -89,7 +89,7 @@ func (s *SyncQuerier) run() {
 			return
 		case msg := <-s.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
-			log.Debugf("Latest Chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+			log.Infof("Latest Chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
 
 			responseSub.Unsubscribe()
 		}
