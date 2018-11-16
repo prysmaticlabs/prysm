@@ -47,6 +47,14 @@ message BeaconBlock {
   repeated SpecialRecord specials = 9;
 }
 
+message ChainHeadRequest {
+  
+}
+
+message ChainHeadResponse {
+  BeaconBlock block =1;
+}
+
 message CrystallizedStateHashAnnounce {
   bytes hash = 1;
 }
