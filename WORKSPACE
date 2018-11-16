@@ -713,7 +713,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    commit = "067e546891ad5f1cf311070cb338670423e327d8",
+    commit = "c9c04d42074b6673bb9f5a37de8f679ee8c262a4",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
