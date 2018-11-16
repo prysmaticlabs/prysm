@@ -71,10 +71,24 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 	var err error
 	if faultyPoWClient {
 		client := &faultyClient{}
-		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+			Endpoint: endpoint,
+			Pubkey:   "",
+			VrcAddr:  common.Address{},
+			Reader:   client,
+			Client:   client,
+			Logger:   client,
+		})
 	} else {
 		client := &mockClient{}
-		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+			Endpoint: endpoint,
+			Pubkey:   "",
+			VrcAddr:  common.Address{},
+			Reader:   client,
+			Client:   client,
+			Logger:   client,
+		})
 	}
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)

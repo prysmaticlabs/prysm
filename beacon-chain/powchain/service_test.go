@@ -42,19 +42,44 @@ func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 func TestNewWeb3Service(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
-	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err == nil {
+	var err error
+	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	}); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
 	endpoint = "ftp://127.0.0.1"
-	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err == nil {
+	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	}); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
 	endpoint = "ws://127.0.0.1"
-	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err != nil {
+	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
 	endpoint = "ipc://geth.ipc"
-	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err != nil {
+	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
 }
@@ -63,7 +88,13 @@ func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -82,7 +113,13 @@ func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -107,7 +144,13 @@ func TestStop(t *testing.T) {
 func TestBadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &badReader{}, &goodLogger{})
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &badReader{},
+		Logger:   &goodLogger{},
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -124,7 +167,13 @@ func TestBadReader(t *testing.T) {
 
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -156,7 +205,13 @@ func TestLatestMainchainInfo(t *testing.T) {
 func TestBadLogger(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -175,7 +230,13 @@ func TestBadLogger(t *testing.T) {
 func TestGoodLogger(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint: endpoint,
+		Pubkey:   "",
+		VrcAddr:  common.Address{},
+		Reader:   &goodReader{},
+		Logger:   &goodLogger{},
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
@@ -226,7 +287,13 @@ func TestHeaderAfterValidation(t *testing.T) {
 		func(pubKey string) {
 			hook := logTest.NewGlobal()
 			endpoint := "ws://127.0.0.1"
-			web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+			web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+				Endpoint: endpoint,
+				Pubkey:   "",
+				VrcAddr:  common.Address{},
+				Reader:   &goodReader{},
+				Logger:   &goodLogger{},
+			})
 			if err != nil {
 				t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 			}
