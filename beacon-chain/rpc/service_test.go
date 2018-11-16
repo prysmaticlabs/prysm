@@ -118,6 +118,10 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	mockChain := &mockChainService{}
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
 	aState := types.NewGenesisActiveState()
 	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -125,7 +129,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	}
 
 	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -147,7 +151,11 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	}
 	genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
-		t.Errorf("Received different genesis timestamp, wanted: %v, received: %v", genesis.Proto().GetTimestamp(), res.GenesisTimestamp)
+		t.Errorf(
+			"Received different genesis timestamp, wanted: %v, received: %v",
+			genesis.Proto().GetTimestamp(),
+			res.GenesisTimestamp,
+		)
 	}
 }
 
@@ -157,6 +165,10 @@ func TestProposeBlock(t *testing.T) {
 	mockChain := &mockChainService{}
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
 	aState := types.NewGenesisActiveState()
 	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -164,7 +176,7 @@ func TestProposeBlock(t *testing.T) {
 	}
 
 	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -289,6 +301,10 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	mockChain := &mockChainService{}
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
 	aState := types.NewGenesisActiveState()
 	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -296,7 +312,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	}
 
 	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -318,6 +334,10 @@ func TestValidatorIndex(t *testing.T) {
 	mockChain := &mockChainService{}
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
 	aState := types.NewGenesisActiveState()
 	cState, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -325,7 +345,7 @@ func TestValidatorIndex(t *testing.T) {
 	}
 
 	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -347,6 +367,10 @@ func TestValidatorShardID(t *testing.T) {
 	mockChain := &mockChainService{}
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
 	astate := types.NewGenesisActiveState()
 	cstate, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -354,7 +378,7 @@ func TestValidatorShardID(t *testing.T) {
 	}
 
 	if err := db.UpdateChainHead(genesis, astate, cstate); err != nil {
-		t.Fatalf("could not save genesis block: %v", err)
+		t.Fatalf("could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -374,9 +398,13 @@ func TestValidatorAssignments(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	mockChain := &mockChainService{}
+	mockChain := newMockChainService()
 
 	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
 	astate := types.NewGenesisActiveState()
 	cstate, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
@@ -384,7 +412,7 @@ func TestValidatorAssignments(t *testing.T) {
 	}
 
 	if err := db.UpdateChainHead(genesis, astate, cstate); err != nil {
-		t.Fatalf("could not save genesis block: %v", err)
+		t.Fatalf("could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
