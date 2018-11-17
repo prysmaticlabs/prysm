@@ -448,7 +448,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    commit = "3e6e47bc11bc7f93f9e2f1c7bd6481ba4802808b",
+    commit = "1c9c9bf4c93ee029810272d3e5b8a126aee5bf1f",
     importpath = "github.com/miekg/dns",
 )
 
