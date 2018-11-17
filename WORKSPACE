@@ -201,7 +201,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "839f88f8de4d0f8300facdcdf7aa2124d020b2b6",
+    commit = "9e6ea7ee4ce0a5e969bf4bfea6b43b4d823726e8",
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -322,7 +322,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    commit = "8f95e95b9fedc69b1367362a14f1ad3b5bd5bd46",
+    commit = "eef79c8345f3960fba6c64b0d9f0b4edb71eeb89",
     importpath = "github.com/libp2p/go-libp2p-secio",
 )
 
@@ -394,13 +394,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
-    commit = "8dde02b5e75342c09725bc601cf28e9e98f920c7",
+    commit = "ed09470e54472cd7524f765b832d98d6a495c3da",
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
 )
 
 go_repository(
     name = "com_github_libp2p_go_testutil",
-    commit = "f967bbd5fcb7fb6337504e5d78c53c865e80733c",
+    commit = "39e561a7a13ac9fa9253ea87bb98caba72f392d1",
     importpath = "github.com/libp2p/go-testutil",
 )
 
@@ -412,13 +412,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    commit = "7f7ca1e79c453741adb1cc10d8892b186952e9e1",
+    commit = "9e2c18e714b119399bf9ba45cd26805321bf22b5",
     importpath = "github.com/libp2p/go-maddr-filter",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport",
-    commit = "e6d021be15cb2bfc73fb24d3b16848bc2825bbf6",
+    commit = "7400b517a07e9f4fceb2674a23ca7b420ee1dd7c",
     importpath = "github.com/libp2p/go-libp2p-transport",
 )
 
@@ -550,7 +550,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    commit = "58ea7103ffb4b5eb248c4421e60fdb30e9a56dad",
+    commit = "a7633860456a881830bde6a33d0722a4c457a61c",
     importpath = "github.com/libp2p/go-reuseport-transport",
 )
 
@@ -706,7 +706,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_mplex",
-    commit = "0ef5fed5ba589e7e8776c274510cfe0d806bac9c",
+    commit = "f6e0e0f222d6bcd9638a5ca0ccce45fa8ce7a274",
     importpath = "github.com/libp2p/go-mplex",
 )
 
