@@ -22,22 +22,40 @@ func main() {
 	log.SetFormatter(customFormatter)
 
 	var chainTests []*backend.ChainTest
+	const chainTestsFolderName = "chain-tests"
 
-	files, err := ioutil.ReadDir(*yamlDir)
+	var shuffleTests []*backend.ShuffleTest
+	const shuffleTestsFolderName = "shuffle-tests"
+
+	dirs, err := ioutil.ReadDir(*yamlDir)
 	if err != nil {
 		log.Fatalf("Could not read yaml tests directory: %v", err)
 	}
-
-	for _, file := range files {
-		data, err := ioutil.ReadFile(path.Join(*yamlDir, file.Name()))
+	for _, dir := range dirs {
+		files, err := ioutil.ReadDir(path.Join(*yamlDir, dir.Name()))
 		if err != nil {
-			log.Fatalf("Could not read yaml file: %v", err)
+			log.Fatalf("Could not read yaml tests directory: %v", err)
 		}
-		decoded := &backend.ChainTest{}
-		if err := yaml.Unmarshal(data, decoded); err != nil {
-			log.Fatalf("Could not unmarshal YAML file into test struct: %v", err)
+		for _, file := range files {
+			data, err := ioutil.ReadFile(path.Join(*yamlDir, dir.Name(), file.Name()))
+			if err != nil {
+				log.Fatalf("Could not read yaml file: %v", err)
+			}
+			switch dir.Name() {
+			case chainTestsFolderName:
+				decoded := &backend.ChainTest{}
+				if err := yaml.Unmarshal(data, decoded); err != nil {
+					log.Fatalf("Could not unmarshal YAML file into test struct: %v", err)
+				}
+				chainTests = append(chainTests, decoded)
+			case shuffleTestsFolderName:
+				decoded := &backend.ShuffleTest{}
+				if err := yaml.Unmarshal(data, decoded); err != nil {
+					log.Fatalf("Could not unmarshal YAML file into test struct: %v", err)
+				}
+				shuffleTests = append(shuffleTests, decoded)
+			}
 		}
-		chainTests = append(chainTests, decoded)
 	}
 
 	sb, err := backend.NewSimulatedBackend()
@@ -54,6 +72,17 @@ func main() {
 		log.Infof("Test Suite: %v", tt.TestSuite)
 		for _, testCase := range tt.TestCases {
 			if err := sb.RunChainTest(testCase); err != nil {
+				log.Fatalf("Could not run chain test: %v", err)
+			}
+		}
+	}
+
+	for _, tt := range shuffleTests {
+		log.Infof("Title: %v", tt.Title)
+		log.Infof("Summary: %v", tt.Summary)
+		log.Infof("Test Suite: %v", tt.TestSuite)
+		for _, testCase := range tt.TestCases {
+			if err := sb.RunShuffleTest(testCase); err != nil {
 				log.Fatalf("Could not run chain test: %v", err)
 			}
 		}

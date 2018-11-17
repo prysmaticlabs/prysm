@@ -80,3 +80,41 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// chain's head is the expected result from the test case.
 	return nil
 }
+
+// TODO(implement this for real)
+// RunChainTest uses a parsed set of chaintests from a YAML file
+// according to the ETH 2.0 client chain test specification and runs them
+// against the simulated backend.
+func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
+	defer teardownDB(sb.db)
+	// Utilize the config parameters in the test case to setup
+	// the DB and set global config parameters accordingly.
+	// Config parameters include: ValidatorCount, ShardCount,
+	// CycleLength, MinCommitteeSize, and more based on the YAML
+	// test language specification.
+	currentConfig := params.GetConfig()
+	currentConfig.ShardCount = testCase.Config.ShardCount
+	currentConfig.CycleLength = testCase.Config.CycleLength
+	currentConfig.MinCommitteeSize = testCase.Config.MinCommitteeSize
+	params.SetCustomConfig(currentConfig)
+
+	// Then, we create the validators based on the custom test config.
+	randaoPreCommit := [32]byte{}
+	randaoReveal := hashutil.Hash(randaoPreCommit[:])
+	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
+	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
+		validators[i] = &pb.ValidatorRecord{
+			Status:            uint64(params.Active),
+			Balance:           currentConfig.DepositSize * currentConfig.Gwei,
+			WithdrawalAddress: []byte{},
+			Pubkey:            []byte{},
+			RandaoCommitment:  randaoReveal[:],
+		}
+	}
+	// TODO(#718): Next step is to update and save the blocks specified
+	// in the case case into the DB.
+	//
+	// Then, we call the updateHead routine and confirm the
+	// chain's head is the expected result from the test case.
+	return nil
+}
