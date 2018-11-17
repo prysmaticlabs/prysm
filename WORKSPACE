@@ -364,7 +364,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "78f39e8892d4f8c5c9f18679cc06d0b40ecab8cf",
+    commit = "8ad4cb43a93f543bd1449006f12dd8aab1149a42",
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
