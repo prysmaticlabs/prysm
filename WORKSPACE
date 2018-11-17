@@ -328,7 +328,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "4a25127ad66b71ae4c91f1f42205b2ce679dd926",
+    commit = "d8a1795b81e6c037cfdc3a31bf81d1b925104751",
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
