@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-
 //beacon-chain params test
 func TestValidatorStatusCode(t *testing.T) {
 	tests := []struct {
@@ -56,15 +55,12 @@ func TestValidatorSetDeltaFlags(t *testing.T) {
 	}
 }
 
-
 func TestGetBeaconConfig(t *testing.T) {
 	SetDemoBeaconConfig()
 	if c := GetBeaconConfig(); c.ShardCount != 5 {
 		t.Errorf("Shardcount in demoBeaconConfig incorrect. Wanted %d, got %d", 5, c.ShardCount)
 	}
 }
-
-
 
 func TestCollationSize(t *testing.T) {
 	c := DefaultValidatorConfig()

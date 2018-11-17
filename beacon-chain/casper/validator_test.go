@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestHasVoted(t *testing.T) {

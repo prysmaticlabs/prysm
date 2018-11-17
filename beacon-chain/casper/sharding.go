@@ -2,11 +2,9 @@ package casper
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	
-	
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
