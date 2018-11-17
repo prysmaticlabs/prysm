@@ -382,7 +382,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
+    commit = "3fb116b820352b7f0c281308a4d6250c22d94e27",
     importpath = "github.com/mattn/go-isatty",
 )
 
