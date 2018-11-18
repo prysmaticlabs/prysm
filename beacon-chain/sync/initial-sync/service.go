@@ -106,8 +106,8 @@ func NewInitialSyncService(ctx context.Context,
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
 	if s.syncService.IsSyncedWithNetwork() {
-		// TODO(#661): Bail out of the sync service if the chain is only partially synced.
-		log.Info("Chain state detected, exiting initial sync")
+		// TODO(#661): Bail out of the sync service if the chain is synced.
+		log.Info("Finished syncing with the network, exiting initial sync")
 		return
 	}
 
