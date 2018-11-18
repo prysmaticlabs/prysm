@@ -4,7 +4,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/sync-querier"
 	"os"
 	"os/signal"
 	"path"
@@ -23,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/sync-querier"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"

@@ -2,9 +2,9 @@ package syncquerier
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
