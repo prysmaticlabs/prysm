@@ -161,7 +161,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Proof-of-Work chain reference in block does not exist")
+	testutil.AssertLogsContain(t, hook, "proof-of-Work chain reference in block does not exist")
 }
 
 func TestRunningChainService(t *testing.T) {
