@@ -72,7 +72,7 @@ func main() {
 		log.Infof("Test Suite: %v", tt.TestSuite)
 		for _, testCase := range tt.TestCases {
 			if err := sb.RunChainTest(testCase); err != nil {
-				log.Fatalf("Could not run chain test: %v", err)
+				log.Fatalf("Chain test failed: %v", err)
 			}
 		}
 	}
@@ -83,7 +83,7 @@ func main() {
 		log.Infof("Test Suite: %v", tt.TestSuite)
 		for _, testCase := range tt.TestCases {
 			if err := sb.RunShuffleTest(testCase); err != nil {
-				log.Fatalf("Could not run chain test: %v", err)
+				log.Fatalf("Shuffle test failed: %v", err)
 			}
 		}
 	}
