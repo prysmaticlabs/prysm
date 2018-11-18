@@ -24,7 +24,10 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
-	s, err := p2p.NewServer(ctx.GlobalString(cmd.BootstrapNode.Name))
+	s, err := p2p.NewServer(&p2p.ServerConfig{
+		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
+		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+	})
 	if err != nil {
 		return nil, err
 	}

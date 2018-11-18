@@ -34,12 +34,21 @@ type Server struct {
 	gsub          *pubsub.PubSub
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
+	relayNodeAddr string
+}
+
+type ServerConfig struct {
+	BootstrapNodeAddr string
+	RelayNodeAddr     string
 }
 
 // NewServer creates a new p2p server instance.
-func NewServer(bootstrapNode string) (*Server, error) {
+func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
+	if cfg.RelayNodeAddr != "" {
+		opts = append(opts, libp2p.AddrsFactory(addRelayAddrs(cfg.RelayNodeAddr, true /*relayOnly*/)))
+	}
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		cancel()
@@ -65,7 +74,8 @@ func NewServer(bootstrapNode string) (*Server, error) {
 		gsub:          gsub,
 		mutex:         &sync.Mutex{},
 		topicMapping:  make(map[reflect.Type]string),
-		bootstrapNode: bootstrapNode,
+		bootstrapNode: cfg.BootstrapNodeAddr,
+		relayNodeAddr: cfg.RelayNodeAddr,
 	}, nil
 }
 

@@ -87,4 +87,11 @@ var (
 		Name:  "bootstrap-node",
 		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
 	}
+
+	// RelayNode tells the beacon node which relay node to connect to.
+	RelayNode = cli.StringFlag{
+		Name: "relay-node",
+		Usage: "The address of relay node. The beacon node will connect to the " +
+			"relay node and advertise their address via the relay node to other peers",
+	}
 )
