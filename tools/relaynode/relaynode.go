@@ -39,7 +39,10 @@ func main() {
 	log.Start(ctx, "main")
 	defer log.Finish(ctx)
 
-	srcMAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
+	srcMAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
+	if err != nil {
+		log.Fatalf("Unable to construct multiaddr %v", err)
+	}
 
 	opts := []libp2p.Option{
 		libp2p.EnableRelay(circuit.OptHop),
