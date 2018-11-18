@@ -4,6 +4,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/sync-querier"
 	"os"
 	"os/signal"
 	"path"
@@ -83,15 +84,19 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerSimulatorService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerQueryService(); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
 	}
 
 	if err := beacon.registerInitialSyncService(); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerSimulatorService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -334,6 +339,22 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
+}
+
+func (b *BeaconNode) registerQueryService() error {
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
+	defaultConfig := syncquerier.DefaultConfig()
+	cfg := &syncquerier.Config{
+		P2P:                p2pService,
+		BeaconDB:           b.db,
+		ResponseBufferSize: defaultConfig.ResponseBufferSize,
+	}
+	querierservice := syncquerier.NewSyncQuerierService(context.TODO(), cfg)
+	return b.services.RegisterService(querierservice)
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {

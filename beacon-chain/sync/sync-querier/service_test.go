@@ -25,9 +25,9 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
-func TestServiceLifeCycle(t *testing.T) {
+func TestStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := Config{
+	cfg := &Config{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
 	}
@@ -40,7 +40,7 @@ func TestServiceLifeCycle(t *testing.T) {
 	}()
 
 	go func() {
-		sq.run()
+		sq.Start()
 		exitRoutine <- true
 	}()
 
@@ -54,7 +54,7 @@ func TestServiceLifeCycle(t *testing.T) {
 
 func TestChainReqResponse(t *testing.T) {
 	hook := logTest.NewGlobal()
-	cfg := Config{
+	cfg := &Config{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
 	}

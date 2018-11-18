@@ -2,6 +2,7 @@ package syncquerier
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 
 	"github.com/golang/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,6 +18,7 @@ var log = logrus.WithField("prefix", "syncQuerier")
 type Config struct {
 	ResponseBufferSize int
 	P2P                p2pAPI
+	BeaconDB           beaconDB
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -33,21 +35,27 @@ type p2pAPI interface {
 	Broadcast(msg proto.Message)
 }
 
+type beaconDB interface {
+	SaveBlock(*types.Block) error
+	GetChainHead() (*types.Block, error)
+}
+
 // SyncQuerier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type SyncQuerier struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	p2p             p2pAPI
+	db              beaconDB
 	curentHeadSlot  uint64
-	currentHeadHash uint64
+	currentHeadHash []byte
 	responseBuf     chan p2p.Message
 }
 
 // NewSyncQuerierService constructs a new Sync Querier Service.
 // This method is normally called by the main node.
 func NewSyncQuerierService(ctx context.Context,
-	cfg Config,
+	cfg *Config,
 ) *SyncQuerier {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -57,13 +65,14 @@ func NewSyncQuerierService(ctx context.Context,
 		ctx:         ctx,
 		cancel:      cancel,
 		p2p:         cfg.P2P,
+		db:          cfg.BeaconDB,
 		responseBuf: responseBuf,
 	}
 }
 
 // Start begins the goroutine.
 func (s *SyncQuerier) Start() {
-	go s.run()
+	s.run()
 }
 
 // Stop kills the sync querier goroutine.
@@ -90,8 +99,10 @@ func (s *SyncQuerier) run() {
 		case msg := <-s.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
 			log.Infof("Latest Chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
-
+			s.curentHeadSlot = response.Slot
+			s.currentHeadHash = response.Hash
 			responseSub.Unsubscribe()
+			s.cancel()
 		}
 	}
 }
@@ -99,4 +110,17 @@ func (s *SyncQuerier) run() {
 func (s *SyncQuerier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
 	s.p2p.Broadcast(request)
+}
+
+func (s *SyncQuerier) IsSynced() (bool, error) {
+	block, err := s.db.GetChainHead()
+	if err != nil {
+		return false, err
+	}
+
+	if block.SlotNumber() >= s.curentHeadSlot {
+		return true, nil
+	}
+
+	return false, nil
 }

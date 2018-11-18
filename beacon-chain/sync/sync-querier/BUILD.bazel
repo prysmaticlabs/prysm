@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/sync-querier",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
         "//shared/p2p:go_default_library",
@@ -18,4 +19,12 @@ go_test(
     name = "go_default_test",
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/event:go_default_library",
+        "//shared/p2p:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+    ],
 )
