@@ -247,6 +247,8 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 	}
 }
 
+// SendChainHead sends the latest head of the local chain
+// to the peer who requested it.
 func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
 
 	block, err := sim.beaconDB.GetChainHead()

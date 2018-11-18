@@ -107,11 +107,15 @@ func (s *SyncQuerier) run() {
 	}
 }
 
+// RequestLatestHead broadcasts out a request for all
+// the latest chain heads from the node's peers.
 func (s *SyncQuerier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
 	s.p2p.Broadcast(request)
 }
 
+// IsSynced checks if the node is cuurently synced with the
+// rest of the network.
 func (s *SyncQuerier) IsSynced() (bool, error) {
 	block, err := s.db.GetChainHead()
 	if err != nil {
