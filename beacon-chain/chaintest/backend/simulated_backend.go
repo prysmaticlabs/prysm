@@ -9,9 +9,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SimulatedBackend allowing for a programmatic advancement
@@ -54,11 +54,11 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// Config parameters include: ValidatorCount, ShardCount,
 	// CycleLength, MinCommitteeSize, and more based on the YAML
 	// test language specification.
-	currentConfig := params.GetConfig()
-	currentConfig.ShardCount = testCase.Config.ShardCount
-	currentConfig.CycleLength = testCase.Config.CycleLength
-	currentConfig.MinCommitteeSize = testCase.Config.MinCommitteeSize
-	params.SetCustomConfig(currentConfig)
+	c := params.BeaconConfig()
+	c.ShardCount = testCase.Config.ShardCount
+	c.CycleLength = testCase.Config.CycleLength
+	c.MinCommitteeSize = testCase.Config.MinCommitteeSize
+	params.OverrideBeaconConfig(c)
 
 	// Then, we create the validators based on the custom test config.
 	randaoPreCommit := [32]byte{}
@@ -67,7 +67,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
-			Balance:           currentConfig.DepositSize * currentConfig.Gwei,
+			Balance:           c.DepositSize * c.Gwei,
 			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoReveal[:],

@@ -13,11 +13,11 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -89,7 +89,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.GetConfig().SlotDuration) * time.Second,
+		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
