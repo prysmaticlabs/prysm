@@ -43,6 +43,14 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
+type mockQueryService struct {
+	isSynced bool
+}
+
+func (ms *mockQueryService) IsSynced() (bool, error) {
+	return ms.isSynced, nil
+}
+
 type mockDB struct{}
 
 func (m *mockDB) SaveBlock(*types.Block) error {
@@ -295,14 +303,16 @@ func TestIsSyncedWithNetwork(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockSync := &mockSyncService{}
 	cfg := Config{
-		P2P:                 &mockP2P{},
-		SyncService:         mockSync,
-		BeaconDB:            &mockDB{},
+		P2P:         &mockP2P{},
+		SyncService: mockSync,
+		BeaconDB:    &mockDB{},
+		QueryService: &mockQueryService{
+			isSynced: true,
+		},
 		SyncPollingInterval: 1,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
-	mockSync.isSynced = true
 	ss.Start()
 	ss.Stop()
 
@@ -316,14 +326,16 @@ func TestIsNotSyncedWithNetwork(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockSync := &mockSyncService{}
 	cfg := Config{
-		P2P:                 &mockP2P{},
-		SyncService:         mockSync,
-		BeaconDB:            &mockDB{},
+		P2P:         &mockP2P{},
+		SyncService: mockSync,
+		BeaconDB:    &mockDB{},
+		QueryService: &mockQueryService{
+			isSynced: false,
+		},
 		SyncPollingInterval: 1,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
-	mockSync.isSynced = false
 	ss.Start()
 	ss.Stop()
 
