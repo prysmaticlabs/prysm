@@ -170,6 +170,8 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 
+	log.Info("checking db")
+
 	cState, err := db.GetCrystallizedState()
 	if err != nil {
 		return err
