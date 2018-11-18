@@ -1,8 +1,6 @@
 package p2p
 
 import (
-
-	//	ps "github.com/libp2p/go-libp2p-peerstore"
 	"github.com/libp2p/go-libp2p/config"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -23,7 +21,7 @@ func addRelayAddrs(relay string, relayOnly bool) config.AddrsFactory {
 			}
 			relayAddr, err := ma.NewMultiaddr(relay + "/p2p-circuit" + a.String())
 			if err != nil {
-				panic(err) // TODO: handle
+				panic(err) // This might happen if `relay` is malformed multiaddr.
 			}
 
 			relayAddrs = append(relayAddrs, relayAddr)
