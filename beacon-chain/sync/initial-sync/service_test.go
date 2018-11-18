@@ -7,11 +7,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -73,9 +72,9 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: genericHash,
 	}
 
@@ -150,9 +149,9 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
+			PowChainRef:           []byte{1, 2, 3},
+			AncestorHashes:        [][]byte{genericHash},
+			Slot:                  Slot,
 			CrystallizedStateRoot: crystallizedStateRoot[:],
 		}
 
@@ -249,9 +248,9 @@ func TestDelayChan(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(20),
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  uint64(20),
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 	}
 
