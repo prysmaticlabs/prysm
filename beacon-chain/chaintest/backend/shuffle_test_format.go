@@ -6,6 +6,7 @@ type ShuffleTest struct {
 	Summary   string             `yaml:"summary"`
 	TestSuite string             `yaml:"test_suite"`
 	Fork      string             `yaml:"fork"`
+	Version   string             `yaml:"version"`
 	TestCases []*ShuffleTestCase `yaml:"test_cases"`
 }
 
