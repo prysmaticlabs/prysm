@@ -367,6 +367,7 @@ func TestStartNotSynced(t *testing.T) {
 	ss.Start()
 	ss.Stop()
 
+	testutil.AssertLogsContain(t, hook, "Not caught up with network, but continue sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
