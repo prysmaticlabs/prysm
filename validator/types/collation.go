@@ -8,8 +8,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/shardutil"
-	"github.com/prysmaticlabs/prysm/validator/params"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"

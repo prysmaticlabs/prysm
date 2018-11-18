@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGetShardAndCommitteesForSlots(t *testing.T) {
@@ -39,7 +39,7 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 
 func TestExceedingMaxValidatorsFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
-	size := params.GetConfig().ModuloBias + 1
+	size := params.BeaconConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{WithdrawalShard: 0, Status: uint64(params.Active)}
 	for i := uint64(0); i < size; i++ {
@@ -55,7 +55,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 func BenchmarkMaxValidators(b *testing.B) {
 	var validators []*pb.ValidatorRecord
 	validator := &pb.ValidatorRecord{WithdrawalShard: 0}
-	for i := uint64(0); i < params.GetConfig().ModuloBias; i++ {
+	for i := uint64(0); i < params.BeaconConfig().ModuloBias; i++ {
 		validators = append(validators, validator)
 	}
 
@@ -77,8 +77,8 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 		t.Fatalf("unable to get initial shard committees %v", err)
 	}
 
-	if uint64(len(shardAndCommitteeArray)) != 3*params.GetConfig().CycleLength {
-		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 3*params.GetConfig().CycleLength)
+	if uint64(len(shardAndCommitteeArray)) != 3*params.BeaconConfig().CycleLength {
+		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 3*params.BeaconConfig().CycleLength)
 	}
 
 }
@@ -94,8 +94,8 @@ func TestShuffleActiveValidators(t *testing.T) {
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
-	if len(indices) != int(params.GetConfig().CycleLength) {
-		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", params.GetConfig().CycleLength, len(indices))
+	if len(indices) != int(params.BeaconConfig().CycleLength) {
+		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", params.BeaconConfig().CycleLength, len(indices))
 	}
 }
 
@@ -111,13 +111,13 @@ func TestSmallSampleValidators(t *testing.T) {
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
-	if len(indices) != int(params.GetConfig().CycleLength) {
-		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", params.GetConfig().CycleLength, len(indices))
+	if len(indices) != int(params.BeaconConfig().CycleLength) {
+		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", params.BeaconConfig().CycleLength, len(indices))
 	}
 }
 
 func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
-	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommitteeSize / 4
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize / 4
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -126,7 +126,7 @@ func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
-	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommitteeSize
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -135,7 +135,7 @@ func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
-	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommitteeSize * 8
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize * 8
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 5 {
@@ -144,11 +144,11 @@ func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
-	config := params.GetConfig()
+	config := params.BeaconConfig()
 	oldShardCount := config.ShardCount
 	config.ShardCount = config.CycleLength - 1
 
-	numValidators := params.GetConfig().CycleLength * params.GetConfig().MinCommitteeSize
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -160,47 +160,47 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 
 func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.GetConfig().CycleLength * params.GetConfig().MinCommitteeSize)
+	numValidators := int(params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize)
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(shardAndCommitteeArray) != int(params.GetConfig().CycleLength) {
-		t.Fatalf("Expected length %d: got %d", params.GetConfig().CycleLength, len(shardAndCommitteeArray))
+	if len(shardAndCommitteeArray) != int(params.BeaconConfig().CycleLength) {
+		t.Fatalf("Expected length %d: got %d", params.BeaconConfig().CycleLength, len(shardAndCommitteeArray))
 	}
 
 	for i := 0; i < len(shardAndCommitteeArray); i++ {
 		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
 		if len(shardAndCommittees) != 1 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.GetConfig().MinCommitteeSize, 1)
+			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().MinCommitteeSize, 1)
 		}
 
 		committeeSize := len(shardAndCommittees[0].Committee)
-		if committeeSize != int(params.GetConfig().MinCommitteeSize) {
-			t.Fatalf("Expected committee size %d: got %d", params.GetConfig().MinCommitteeSize, committeeSize)
+		if committeeSize != int(params.BeaconConfig().MinCommitteeSize) {
+			t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().MinCommitteeSize, committeeSize)
 		}
 	}
 }
 
 func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.GetConfig().CycleLength*params.GetConfig().MinCommitteeSize) * 2
+	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().MinCommitteeSize) * 2
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(shardAndCommitteeArray) != int(params.GetConfig().CycleLength) {
-		t.Fatalf("Expected length %d: got %d", params.GetConfig().CycleLength, len(shardAndCommitteeArray))
+	if len(shardAndCommitteeArray) != int(params.BeaconConfig().CycleLength) {
+		t.Fatalf("Expected length %d: got %d", params.BeaconConfig().CycleLength, len(shardAndCommitteeArray))
 	}
 
 	for i := 0; i < len(shardAndCommitteeArray); i++ {
 		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
 		if len(shardAndCommittees) != 2 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.GetConfig().MinCommitteeSize, 2)
+			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().MinCommitteeSize, 2)
 		}
 
 		t.Logf("slot %d", i)
@@ -208,8 +208,8 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 			shardCommittee := shardAndCommittees[j]
 			t.Logf("shard %d", shardCommittee.Shard)
 			t.Logf("committee: %v", shardCommittee.Committee)
-			if len(shardCommittee.Committee) != int(params.GetConfig().MinCommitteeSize) {
-				t.Fatalf("Expected committee size %d: got %d", params.GetConfig().MinCommitteeSize, len(shardCommittee.Committee))
+			if len(shardCommittee.Committee) != int(params.BeaconConfig().MinCommitteeSize) {
+				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().MinCommitteeSize, len(shardCommittee.Committee))
 			}
 		}
 
@@ -218,27 +218,27 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 
 func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.GetConfig().CycleLength*params.GetConfig().MinCommitteeSize) / 2
+	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().MinCommitteeSize) / 2
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	shardAndCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(shardAndCommitteeArray) != int(params.GetConfig().CycleLength) {
-		t.Fatalf("Expected length %d: got %d", params.GetConfig().CycleLength, len(shardAndCommitteeArray))
+	if len(shardAndCommitteeArray) != int(params.BeaconConfig().CycleLength) {
+		t.Fatalf("Expected length %d: got %d", params.BeaconConfig().CycleLength, len(shardAndCommitteeArray))
 	}
 
 	for i := 0; i < len(shardAndCommitteeArray); i++ {
 		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
 		if len(shardAndCommittees) != 1 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.GetConfig().MinCommitteeSize, 1)
+			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().MinCommitteeSize, 1)
 		}
 
 		for j := 0; j < len(shardAndCommittees); j++ {
 			shardCommittee := shardAndCommittees[j]
-			if len(shardCommittee.Committee) != int(params.GetConfig().MinCommitteeSize/2) {
-				t.Fatalf("Expected committee size %d: got %d", params.GetConfig().MinCommitteeSize/2, len(shardCommittee.Committee))
+			if len(shardCommittee.Committee) != int(params.BeaconConfig().MinCommitteeSize/2) {
+				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().MinCommitteeSize/2, len(shardCommittee.Committee))
 			}
 		}
 	}
