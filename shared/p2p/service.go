@@ -37,6 +37,7 @@ type Server struct {
 	relayNodeAddr string
 }
 
+// ServerConfig for peer to peer networking.
 type ServerConfig struct {
 	BootstrapNodeAddr string
 	RelayNodeAddr     string
