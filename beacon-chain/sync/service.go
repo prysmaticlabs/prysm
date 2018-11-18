@@ -33,6 +33,10 @@ type beaconDB interface {
 	GetBlockBySlot(uint64) (*types.Block, error)
 }
 
+type queryService interface {
+	IsSynced() (bool, error)
+}
+
 type p2pAPI interface {
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 	Send(msg proto.Message, peer p2p.Peer)
@@ -57,6 +61,7 @@ type Service struct {
 	p2p                   p2pAPI
 	chainService          chainService
 	attestationService    attestationService
+	queryService          queryService
 	db                    beaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockHashBuf  chan p2p.Message
@@ -75,6 +80,7 @@ type Config struct {
 	AttestService          attestationService
 	BeaconDB               beaconDB
 	P2P                    p2pAPI
+	QueryService           queryService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -97,6 +103,7 @@ func NewSyncService(ctx context.Context, cfg Config) *Service {
 		chainService:          cfg.ChainService,
 		db:                    cfg.BeaconDB,
 		attestationService:    cfg.AttestService,
+		queryService:          cfg.QueryService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockHashBuf:  make(chan p2p.Message, cfg.BlockHashBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),

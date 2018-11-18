@@ -35,6 +35,7 @@ type Config struct {
 	BeaconDB                    beaconDB
 	P2P                         p2pAPI
 	SyncService                 syncService
+	QueryService                queryService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -67,6 +68,10 @@ type syncService interface {
 	IsSyncedWithNetwork() bool
 }
 
+type queryService interface {
+	IsSynced() (bool, error)
+}
+
 // InitialSync defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type InitialSync struct {
@@ -74,6 +79,7 @@ type InitialSync struct {
 	cancel                       context.CancelFunc
 	p2p                          p2pAPI
 	syncService                  syncService
+	queryService                 queryService
 	db                           beaconDB
 	blockBuf                     chan p2p.Message
 	crystallizedStateBuf         chan p2p.Message
@@ -101,12 +107,18 @@ func NewInitialSyncService(ctx context.Context,
 		blockBuf:             blockBuf,
 		crystallizedStateBuf: crystallizedStateBuf,
 		syncPollingInterval:  cfg.SyncPollingInterval,
+		queryService:         cfg.QueryService,
 	}
 }
 
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
-	if s.syncService.IsSyncedWithNetwork() {
+	synced, err := s.queryService.IsSynced()
+	if err != nil {
+		log.Error(err)
+	}
+
+	if synced {
 		// TODO(#661): Bail out of the sync service if the chain is only partially synced.
 		log.Info("Chain state detected, exiting initial sync")
 		return

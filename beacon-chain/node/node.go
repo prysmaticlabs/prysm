@@ -273,10 +273,16 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
+	var queryService *syncquerier.SyncQuerier
+	if err := b.services.FetchService(&queryService); err != nil {
+		return err
+	}
+
 	cfg := rbcsync.DefaultConfig()
 	cfg.ChainService = chainService
 	cfg.AttestService = attestationService
 	cfg.P2P = p2pService
+	cfg.QueryService = queryService
 	cfg.BeaconDB = b.db
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
@@ -299,9 +305,15 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
+	var queryService *syncquerier.SyncQuerier
+	if err := b.services.FetchService(&queryService); err != nil {
+		return err
+	}
+
 	cfg := initialsync.DefaultConfig()
 	cfg.P2P = p2pService
 	cfg.SyncService = syncService
+	cfg.QueryService = queryService
 	cfg.BeaconDB = b.db
 	initialSyncService := initialsync.NewInitialSyncService(context.Background(), cfg)
 	return b.services.RegisterService(initialSyncService)
