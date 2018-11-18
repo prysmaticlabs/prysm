@@ -357,9 +357,11 @@ func (c *CrystallizedState) resetCrosslinks() {
 }
 
 func printCommittee(shardAndCommittees []*pb.ShardAndCommitteeArray) {
+	log.Debug("Dumping shard committees")
 	for slot, shardCommittees := range shardAndCommittees {
 		for _, shardCommittee := range shardCommittees.ArrayShardAndCommittee {
-			log.Debugf("%d %d %v", slot, shardCommittee.Shard, shardCommittee.Committee)
+			log.Debugf("Committee slot: %d, committee shard: %d committee validator indices: %v",
+				slot, shardCommittee.Shard, shardCommittee.Committee)
 		}
 	}
 }
