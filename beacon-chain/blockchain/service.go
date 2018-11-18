@@ -260,28 +260,28 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 func (c *ChainService) processBlock(block *types.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
-		return fmt.Errorf("Failed to get hash of block: %v", err)
+		return fmt.Errorf("failed to get hash of block: %v", err)
 	}
 
 	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-		return errors.New("Proof-of-Work chain reference in block does not exist")
+		return errors.New("proof-of-Work chain reference in block does not exist")
 	}
 
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
 	if err != nil {
-		return fmt.Errorf("Could not get parent block: %v", err)
+		return fmt.Errorf("could not get parent block: %v", err)
 	}
 	if parent == nil {
-		return fmt.Errorf("Block points to nil parent: %#x", block.ParentHash())
+		return fmt.Errorf("block points to nil parent: %#x", block.ParentHash())
 	}
 
 	aState, err := c.beaconDB.GetActiveState()
 	if err != nil {
-		return fmt.Errorf("Failed to get active state: %v", err)
+		return fmt.Errorf("failed to get active state: %v", err)
 	}
 	cState, err := c.beaconDB.GetCrystallizedState()
 	if err != nil {
-		return fmt.Errorf("Failed to get crystallized state: %v", err)
+		return fmt.Errorf("failed to get crystallized state: %v", err)
 	}
 
 	if valid := block.IsValid(
@@ -291,11 +291,11 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		parent.SlotNumber(),
 		c.genesisTime,
 	); !valid {
-		return errors.New("Block failed validity conditions")
+		return errors.New("block failed validity conditions")
 	}
 
 	if err = c.calculateNewBlockVotes(block, aState, cState); err != nil {
-		return fmt.Errorf("Failed to update block vote cache: %v", err)
+		return fmt.Errorf("failed to update block vote cache: %v", err)
 	}
 
 	// First, include new attestations to the active state
@@ -307,7 +307,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	if cState.IsCycleTransition(block.SlotNumber()) {
 		cState, err = c.executeStateTransition(cState, aState, block)
 		if err != nil {
-			return fmt.Errorf("Initialize new cycle transition failed: %v", err)
+			return fmt.Errorf("initialize new cycle transition failed: %v", err)
 		}
 		didCycleTransition = true
 	}
@@ -318,14 +318,14 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		parent.SlotNumber(),
 	)
 	if err != nil {
-		return fmt.Errorf("Compute active state failed: %v", err)
+		return fmt.Errorf("compute active state failed: %v", err)
 	}
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return fmt.Errorf("Failed to save block: %v", err)
+		return fmt.Errorf("failed to save block: %v", err)
 	}
 	if err := c.beaconDB.SaveUnfinalizedBlockState(aState, cState); err != nil {
-		return fmt.Errorf("Error persisting unfinalized block's state: %v", err)
+		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
 	}
 
 	log.Infof("Processed block: %#x", blockHash)

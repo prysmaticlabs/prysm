@@ -116,12 +116,12 @@ func (s *smcTestHelper) deregisterAttesters(params ...int) error {
 		s.testAccounts[i].txOpts.Value = big.NewInt(0)
 		_, err := s.smc.DeregisterAttester(s.testAccounts[i].txOpts)
 		if err != nil {
-			return fmt.Errorf("Failed to deregister attester: %v", err)
+			return fmt.Errorf("failed to deregister attester: %v", err)
 		}
 		s.backend.Commit()
 		attester, _ := s.smc.AttesterRegistry(&bind.CallOpts{}, s.testAccounts[i].addr)
 		if attester.DeregisteredPeriod.Cmp(big.NewInt(0)) == 0 {
-			return fmt.Errorf("Degistered period can not be 0 right after deregistration")
+			return fmt.Errorf("degistered period can not be 0 right after deregistration")
 		}
 	}
 	// Filter SMC logs by attesterDeregistered.
@@ -156,10 +156,10 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 
 	p, err := s.smc.LastSubmittedCollation(&bind.CallOpts{}, shard)
 	if err != nil {
-		return fmt.Errorf("Can't get last submitted collation's period number: %v", err)
+		return fmt.Errorf("can't get last submitted collation's period number: %v", err)
 	}
 	if p.Cmp(period) != 0 {
-		return fmt.Errorf("Incorrect last period, when header was added. Got: %v", p)
+		return fmt.Errorf("incorrect last period, when header was added. Got: %v", p)
 	}
 
 	cr, err := s.smc.CollationRecords(&bind.CallOpts{}, shard, period)
@@ -167,7 +167,7 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 		return err
 	}
 	if cr.ChunkRoot != [32]byte{chunkRoot} {
-		return fmt.Errorf("Chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
+		return fmt.Errorf("chunkroot mismatched. Want: %v, Got: %v", chunkRoot, cr)
 	}
 
 	// Filter SMC logs by headerAdded.
@@ -191,16 +191,16 @@ func (s *smcTestHelper) addHeader(a *testAccount, shard *big.Int, period *big.In
 func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.Int, index *big.Int, chunkRoot uint8) error {
 	_, err := s.smc.SubmitVote(a.txOpts, shard, period, index, [32]byte{chunkRoot})
 	if err != nil {
-		return fmt.Errorf("Attester submit vote failed: %v", err)
+		return fmt.Errorf("attester submit vote failed: %v", err)
 	}
 	s.backend.Commit()
 
 	v, err := s.smc.HasVoted(&bind.CallOpts{}, shard, index)
 	if err != nil {
-		return fmt.Errorf("Check attester's vote failed: %v", err)
+		return fmt.Errorf("check attester's vote failed: %v", err)
 	}
 	if !v {
-		return fmt.Errorf("Attester's indexd bit did not cast to 1 in index %v", index)
+		return fmt.Errorf("attester's indexd bit did not cast to 1 in index %v", index)
 	}
 	// Filter SMC logs by submitVote.
 	shardIndex := []*big.Int{shard}
@@ -224,10 +224,10 @@ func (s *smcTestHelper) submitVote(a *testAccount, shard *big.Int, period *big.I
 func checkAttesterPoolLength(smc *SMC, n *big.Int) error {
 	numAttesters, err := smc.AttesterPoolLength(&bind.CallOpts{})
 	if err != nil {
-		return fmt.Errorf("Failed to get attester pool length: %v", err)
+		return fmt.Errorf("failed to get attester pool length: %v", err)
 	}
 	if numAttesters.Cmp(n) != 0 {
-		return fmt.Errorf("Incorrect count from attester pool. Want: %v, Got: %v", n, numAttesters)
+		return fmt.Errorf("incorrect count from attester pool. Want: %v, Got: %v", n, numAttesters)
 	}
 	return nil
 }
