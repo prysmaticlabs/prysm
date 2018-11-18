@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-var env = "default"
-
 // ValidatorStatusCode defines which stage a validator is in.
 type ValidatorStatusCode int
 
