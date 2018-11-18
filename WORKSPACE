@@ -31,7 +31,7 @@ docker_repositories()
 git_repository(
     name = "build_bazel_rules_nodejs",
     remote = "https://github.com/bazelbuild/rules_nodejs.git",
-    tag = "0.16.0",
+    tag = "0.16.1",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -128,43 +128,42 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    # Last updated September 09, 2018
     commit = "f4b3f83362a4cf2928e57914af040aea76c8a7d6",
 )
 
 go_repository(
     name = "com_github_urfave_cli",
+    commit = "b67dcf995b6a7b7f14fad5fcb7cc5441b05e814b",
     importpath = "github.com/urfave/cli",
-    commit = "8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff",
 )
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    importpath = "github.com/go-yaml/yaml",
     commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
+    importpath = "github.com/go-yaml/yaml",
 )
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    importpath = "github.com/x-cray/logrus-prefixed-formatter",
     commit = "bb2702d423886830dee131692131d35648c382e2",
+    importpath = "github.com/x-cray/logrus-prefixed-formatter",
 )
 
 go_repository(
     name = "com_github_mgutz_ansi",
-    importpath = "github.com/mgutz/ansi",
     commit = "9520e82c474b0a04dd04f8a40959027271bab992",
+    importpath = "github.com/mgutz/ansi",
 )
 
 go_repository(
     name = "com_github_fjl_memsize",
-    importpath = "github.com/fjl/memsize",
     commit = "2a09253e352a56f419bd88effab0483f52da4c7d",
+    importpath = "github.com/fjl/memsize",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "9356373d00ab1aef3e20c8202b682f93799acf78",
+    commit = "4341acb1b16d14020571f9cb99b4987e7c11a4df",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -195,7 +194,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "8be2a682ab9f254311de1375145a2f78a809b07d",
+    commit = "a91e75d03bf4dba801af7b159c8b2aa7b5f47ea8",
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -255,13 +254,13 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_mafmt",
-    commit = "3b86bcbec8cbb09d205c1492e898ce3d0e81c4d5",
+    commit = "c75a64cef2f64e7d538e6d43a8c58449ba2ab735",
     importpath = "github.com/whyrusleeping/mafmt",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "cba4f9fea8613343eb7ecc4ddadd8e7298a00c39",
+    commit = "f0af4033635f1241179700537dacdc04f2803df8",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -303,13 +302,13 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "ad98a36ba0da87206e3378c556abbfeaeaa98668",
+    commit = "51976451ce1942acbb55707a983ed232fa027110",
     importpath = "github.com/minio/sha256-simd",
 )
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "4df4dc6e86a912614d09719d10cad427b087cbfb",
+    commit = "c8897612421d88a51012eaa53bf7267686173ae5",
     importpath = "github.com/mr-tron/base58",
 )
 
@@ -328,7 +327,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "4a25127ad66b71ae4c91f1f42205b2ce679dd926",
+    commit = "d8a1795b81e6c037cfdc3a31bf81d1b925104751",
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
@@ -346,7 +345,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "aea59cd120a7f60ed64cc98ffc1af2e6a84c470f",
+    commit = "0c61f185f3d6e16bcda416874e7a0fca4696e7e0",
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -364,7 +363,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    commit = "78f39e8892d4f8c5c9f18679cc06d0b40ecab8cf",
+    commit = "8ad4cb43a93f543bd1449006f12dd8aab1149a42",
     importpath = "github.com/multiformats/go-multiaddr-dns",
 )
 
@@ -382,7 +381,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
+    commit = "3fb116b820352b7f0c281308a4d6250c22d94e27",
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -448,19 +447,19 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    commit = "3e6e47bc11bc7f93f9e2f1c7bd6481ba4802808b",
+    commit = "1c9c9bf4c93ee029810272d3e5b8a126aee5bf1f",
     importpath = "github.com/miekg/dns",
 )
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    commit = "bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d",
+    commit = "be550b025b433cdfa2f11efb962afa2ea3c4d967",
     importpath = "github.com/opentracing/opentracing-go",
 )
 
 go_repository(
     name = "com_github_libp2p_go_reuseport",
-    commit = "dd0c37d7767bc38280bd9813145b65f8bd560629",
+    commit = "8cfd5f2973c8e2476813120b9a516d9a82eb7c7a",
     importpath = "github.com/libp2p/go-reuseport",
 )
 
@@ -484,19 +483,19 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    commit = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
+    commit = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b",
     importpath = "github.com/satori/go.uuid",
 )
 
 go_repository(
     name = "com_github_sirupsen_logrus",
+    commit = "91da99df23e3bad7f384338a5a8f636d04093d9a",
     importpath = "github.com/sirupsen/logrus",
-    commit = "e54a77765aca7bbdd8e56c1c54f60579968b2dc9",
 )
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "3c6ecd8f22c6f40fbeec94c000a069d7d87c7624",
+    commit = "93218def8b18e66adbdab3eca8ec334700329f1f",
     importpath = "golang.org/x/sys",
 )
 
@@ -532,13 +531,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "246ec4b8bd9a5a539827eca50a6e6d4ce50bb056",
+    commit = "e61db42a8bd8cab398d3a6a982a4db9ad4de4aa0",
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+    commit = "3d3f9f413869b949e48070b5bc593aa22cc2b8f2",
     importpath = "golang.org/x/crypto",
 )
 
@@ -574,7 +573,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multiplex",
-    commit = "2b855d4f3a3051b0133f7783bffe06e4b7833d1e",
+    commit = "c9680d872b8e73a2fc8d9bba3eacabf1e8add80d",
     importpath = "github.com/whyrusleeping/go-smux-multiplex",
 )
 
@@ -592,7 +591,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "c4c61651e9e37fa117f53c5a906d3b63090d8445",
+    commit = "f9080354173f192dfc8821931eacf9cfd6819253",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -610,19 +609,19 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "f21fe3feadc5461b952191052818685a410428d4",
+    commit = "91a0276ece6ad4cbdc4b46116f88d2b47a5f58e5",
     importpath = "go.opencensus.io",
 )
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "7ca32eb868bf53ea2fc406698eb98583a8073d19",
+    commit = "83a9d304b1e613fc253e1e2710778642fe81af53",
     importpath = "google.golang.org/api",
 )
 
 go_repository(
     name = "org_golang_x_sync",
-    commit = "1d60e4601c6fd243af51cc01ddf169918a5407ca",
+    commit = "42b317875d0fa942474b76e1b46a6060d720ae6e",
     importpath = "golang.org/x/sync",
 )
 
@@ -634,7 +633,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_lint",
-    commit = "06c8688daad7faa9da5a0c2f163a3d14aac986ca",
+    commit = "c67002cb31c3a748b7688c27f20d8358b4193582",
     importpath = "golang.org/x/lint",
 )
 
@@ -646,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "1cafe34db7fdec6022e17e00e1c1ea501022f3e4",
+    commit = "3fb53dff765f8a3e0f9d8b1d5b86d4f8c4eb3a09",
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -658,7 +657,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "bcb74de08d37a417cb6789eec1d6c810040f0470",
+    commit = "1f2c4f3cd6db5fd6f68f36af6b6d5d936fd93c4e",
     importpath = "github.com/prometheus/common",
 )
 
@@ -670,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    commit = "5464c64853f2c795163286ca81201abe4ab7e454",
+    commit = "11b336e3ca5832b812725e050aa5b62655533517",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -731,9 +730,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
+    build_file_proto_mode = "disable_global",
     commit = "d70e92744b101ddf9ed93066a54ce128fa53aaa8",
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
-    build_file_proto_mode = "disable_global",
 )
 
 go_repository(
@@ -756,9 +755,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_record",
+    build_file_proto_mode = "disable_global",
     commit = "237ab9e10af172232eedad9e63ea8983c50859b1",
     importpath = "github.com/libp2p/go-libp2p-record",
-    build_file_proto_mode = "disable_global",
 )
 
 go_repository(
@@ -793,7 +792,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multibase",
-    commit = "bb91b53e5695e699a86654d77d03db7bc7506d12",
+    commit = "007b57d38809499c388eee69498dc042fa1336c9",
     importpath = "github.com/multiformats/go-multibase",
 )
 
@@ -807,4 +806,22 @@ go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
     commit = "489e2d62e87b8986d703b3b28d62a7fcc3978222",
     importpath = "github.com/ipfs/go-ipfs-addr",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_discovery",
+    commit = "7153173e40fcf3aa2c6845f00c54119bea8b427f",
+    importpath = "github.com/libp2p/go-libp2p-discovery",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_autonat",
+    commit = "c09caf7c16407d3f68a3b8c467cf1d7445443328",
+    importpath = "github.com/libp2p/go-libp2p-autonat",
+)
+
+go_repository(
+    name = "com_github_konsorten_go_windows_terminal_sequences",
+    commit = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242",
+    importpath = "github.com/konsorten/go-windows-terminal-sequences",
 )

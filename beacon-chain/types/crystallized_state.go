@@ -5,12 +5,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var shardCount = params.GetConfig().ShardCount
+var shardCount = params.BeaconConfig().ShardCount
 
 // CrystallizedState contains fields of every Slot state,
 // it changes every Slot.
@@ -60,8 +60,8 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 			ValidatorSetDeltaHashChain: make([]byte, 0, 32),
-			PreForkVersion:             params.GetConfig().InitialForkVersion,
-			PostForkVersion:            params.GetConfig().InitialForkVersion,
+			PreForkVersion:             params.BeaconConfig().InitialForkVersion,
+			PostForkVersion:            params.BeaconConfig().InitialForkVersion,
 		},
 	}, nil
 }
@@ -213,7 +213,7 @@ func (c *CrystallizedState) PostForkVersion() uint32 {
 // IsCycleTransition checks if a new cycle has been reached. At that point,
 // a new crystallized state and active state transition will occur.
 func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
-	return slotNumber >= c.LastStateRecalculationSlot()+params.GetConfig().CycleLength
+	return slotNumber >= c.LastStateRecalculationSlot()+params.BeaconConfig().CycleLength
 }
 
 // GetShardsAndCommitteesForSlot returns the shard committees of a given slot.
@@ -227,7 +227,7 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 	if c.LastFinalizedSlot() <= c.ValidatorSetChangeSlot() {
 		return false
 	}
-	if slotNumber-c.ValidatorSetChangeSlot() < params.GetConfig().MinValidatorSetChangeInterval {
+	if slotNumber-c.ValidatorSetChangeSlot() < params.BeaconConfig().MinValidatorSetChangeInterval {
 		return false
 	}
 
@@ -283,20 +283,20 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	recentBlockHashes := aState.RecentBlockHashes()
 	newState.data.Validators = casper.CopyValidators(newState.Validators())
 
-	if c.LastStateRecalculationSlot() < params.GetConfig().CycleLength {
+	if c.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
 		lastStateRecalculationSlotCycleBack = 0
 	} else {
-		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.GetConfig().CycleLength
+		lastStateRecalculationSlotCycleBack = c.LastStateRecalculationSlot() - params.BeaconConfig().CycleLength
 	}
 
 	// TODO(711): Need to implement clean-up mechanism for block vote cache.
-	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.GetConfig().CycleLength])
+	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.BeaconConfig().CycleLength])
 	if err != nil {
 		return nil, err
 	}
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to LastStateRecalculationSlot - 1.
-	for i := uint64(0); i < params.GetConfig().CycleLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().CycleLength; i++ {
 		var blockVoteBalance uint64
 
 		slot := lastStateRecalculationSlotCycleBack + i
@@ -317,7 +317,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newState.data.LastJustifiedSlot = justifiedSlot
 	newState.data.LastFinalizedSlot = finalizedSlot
 	newState.data.JustifiedStreak = justifiedStreak
-	newState.data.LastStateRecalculationSlot = newState.LastStateRecalculationSlot() + params.GetConfig().CycleLength
+	newState.data.LastStateRecalculationSlot = newState.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
 
 	// Process the pending special records gathered from last cycle.
 	newState.data.Validators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newState.Validators(), aState.PendingSpecials())
@@ -338,7 +338,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			return nil, err
 		}
 
-		period := uint32(block.SlotNumber() / params.GetConfig().WithdrawalPeriod)
+		period := uint32(block.SlotNumber() / params.BeaconConfig().WithdrawalPeriod)
 		totalPenalties := newState.penalizedETH(period)
 		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 
@@ -380,7 +380,7 @@ func (c *CrystallizedState) newValidatorSetRecalculations(seed [32]byte) ([]*pb.
 		return nil, err
 	}
 
-	return append(c.data.ShardAndCommitteesForSlots[params.GetConfig().CycleLength:], newShardCommitteeArray...), nil
+	return append(c.data.ShardAndCommitteesForSlots[params.BeaconConfig().CycleLength:], newShardCommitteeArray...), nil
 }
 
 // processCrosslinks checks if the proposed shard block has recevied
@@ -389,7 +389,7 @@ func (c *CrystallizedState) newValidatorSetRecalculations(seed [32]byte) ([]*pb.
 func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.AggregatedAttestation,
 	validators []*pb.ValidatorRecord, currentSlot uint64) ([]*pb.CrosslinkRecord, error) {
 	crosslinkRecords := c.data.Crosslinks
-	slot := c.LastStateRecalculationSlot() + params.GetConfig().CycleLength
+	slot := c.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
 
 	for _, attestation := range pendingAttestations {
 		indices, err := c.AttesterIndices(attestation)

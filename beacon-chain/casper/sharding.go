@@ -2,9 +2,9 @@ package casper
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
@@ -30,7 +30,7 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 	}
 
 	// Initialize with 3 cycles of the same committees.
-	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.GetConfig().CycleLength)
+	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.BeaconConfig().CycleLength)
 	initialCommittees = append(initialCommittees, committees...)
 	initialCommittees = append(initialCommittees, committees...)
 	initialCommittees = append(initialCommittees, committees...)
@@ -46,14 +46,14 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
 	// split the validator indices by slot.
-	validatorsBySlot := utils.SplitIndices(shuffledValidators, params.GetConfig().CycleLength)
+	validatorsBySlot := utils.SplitIndices(shuffledValidators, params.BeaconConfig().CycleLength)
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
 		shardStart := crosslinkStartShard + uint64(i)*committeesPerSlot
 
 		for j, validatorsForShard := range validatorsByShard {
-			shardID := (shardStart + uint64(j)) % params.GetConfig().ShardCount
+			shardID := (shardStart + uint64(j)) % params.BeaconConfig().ShardCount
 			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
 				Shard:     shardID,
 				Committee: validatorsForShard,
@@ -74,9 +74,9 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // numActiveValidators / CycleLength /  (MinCommitteeSize*2) + 1 or
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
-	cycleLength := params.GetConfig().CycleLength
-	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommitteeSize*2) + 1
-	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
+	cycleLength := params.BeaconConfig().CycleLength
+	boundOnValidators := numActiveValidators/cycleLength/(params.BeaconConfig().MinCommitteeSize*2) + 1
+	boundOnShardCount := params.BeaconConfig().ShardCount / cycleLength
 
 	// Ensure that comitteesPerSlot is at least 1.
 	if boundOnShardCount == 0 {
