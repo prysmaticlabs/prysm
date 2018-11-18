@@ -89,7 +89,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.GetBeaconConfig().SlotDuration) * time.Second,
+		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),

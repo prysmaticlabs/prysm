@@ -60,7 +60,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use demo config values if demo config flag is set.
 	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
-		params.SetDemoBeaconConfig()
+		params.UseDemoBeaconConfig()
 	}
 
 	if err := beacon.startDB(ctx); err != nil {

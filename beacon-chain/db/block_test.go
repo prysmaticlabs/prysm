@@ -184,7 +184,7 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get crystallized state: %v", err)
 	}
-	cycleLength := params.GetBeaconConfig().CycleLength
+	cycleLength := params.BeaconConfig().CycleLength
 
 	b1 := types.NewBlock(&pb.BeaconBlock{Slot: 1})
 	if err := db.SaveBlock(b1); err != nil {

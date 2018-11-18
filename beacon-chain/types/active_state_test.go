@@ -27,7 +27,7 @@ func TestGenesisActiveState_HashEquality(t *testing.T) {
 
 func TestGenesisActiveState_InitializesRecentBlockHashes(t *testing.T) {
 	as := NewGenesisActiveState()
-	want, got := len(as.data.RecentBlockHashes), 2*int(params.GetBeaconConfig().CycleLength)
+	want, got := len(as.data.RecentBlockHashes), 2*int(params.BeaconConfig().CycleLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
@@ -153,7 +153,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	})
 
 	recentBlockHashes := [][]byte{}
-	for i := 0; i < 2*int(params.GetBeaconConfig().CycleLength); i++ {
+	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{0})
 	}
 
@@ -166,8 +166,8 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 		t.Fatalf("failed to update recent blockhashes: %v", err)
 	}
 
-	if len(updated) != 2*int(params.GetBeaconConfig().CycleLength) {
-		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.GetBeaconConfig().CycleLength, len(updated))
+	if len(updated) != 2*int(params.BeaconConfig().CycleLength) {
+		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.BeaconConfig().CycleLength, len(updated))
 	}
 
 	for i := 0; i < len(updated); i++ {
@@ -191,7 +191,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	s := NewGenesisActiveState()
 	copy(s.data.RecentBlockHashes, interestingData)
-	original := make([][]byte, 2*params.GetBeaconConfig().CycleLength)
+	original := make([][]byte, 2*params.BeaconConfig().CycleLength)
 	copy(original, s.data.RecentBlockHashes)
 
 	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
@@ -240,7 +240,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 	}
 
 	recentBlockHashes := [][]byte{}
-	for i := 0; i < 2*int(params.GetBeaconConfig().CycleLength); i++ {
+	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
 		recentBlockHashes = append(recentBlockHashes, []byte{0})
 	}
 
@@ -267,7 +267,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
 	}
 
-	if len(aState.RecentBlockHashes()) != 2*int(params.GetBeaconConfig().CycleLength) {
+	if len(aState.RecentBlockHashes()) != 2*int(params.BeaconConfig().CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 
@@ -280,7 +280,7 @@ func TestCalculateNewActiveState(t *testing.T) {
 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
 	}
 
-	if len(aState.RecentBlockHashes()) != 2*int(params.GetBeaconConfig().CycleLength) {
+	if len(aState.RecentBlockHashes()) != 2*int(params.BeaconConfig().CycleLength) {
 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
 	}
 }
@@ -297,7 +297,7 @@ func createHashFromByte(repeatedByte byte) []byte {
 func TestGetSignedParentHashes(t *testing.T) {
 	// Test the scenario described in the spec:
 	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
-	cfg := params.GetBeaconConfig()
+	cfg := params.BeaconConfig()
 	oldCycleLength := cfg.CycleLength
 	cycleLength := uint64(4)
 	cfg.CycleLength = cycleLength
@@ -343,7 +343,7 @@ func TestGetSignedParentHashes(t *testing.T) {
 }
 
 func TestGetSignedParentHashesIndexFail(t *testing.T) {
-	cfg := params.GetBeaconConfig()
+	cfg := params.BeaconConfig()
 	oldCycleLength := cfg.CycleLength
 	cycleLength := uint64(4)
 	cfg.CycleLength = cycleLength

@@ -1,3 +1,5 @@
+// Package params defines important constants that are essential to the
+// Ethereum 2.0 services.
 package params
 
 import (
@@ -77,8 +79,6 @@ var demoBeaconConfig = &Config{
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
 
-var customConfig = &Config{}
-
 const (
 	// PendingActivation means a validator is queued and waiting to be active.
 	PendingActivation ValidatorStatusCode = iota
@@ -111,44 +111,24 @@ const (
 	Exit
 )
 
-type OverrideConfig struct {
-	Param string
+var beaconConfig = defaultBeaconConfig
+
+// BeaconConfig retrieves beacon node config.
+func BeaconConfig() *Config {
+	return beaconConfig
 }
 
-var emptyOverrideConfig = &OverrideConfig{}
-var demoOverrideConfig = &OverrideConfig{Param: "demo"}
-var customOverrideConfig = &OverrideConfig{Param: "custom"}
-
-func SetCustomConfig(c *Config) {
-	SetOverrideConfig(customOverrideConfig)
-	customConfig = c
+// UseDemoBeaconConfig for beacon chain services.
+func UseDemoBeaconConfig() {
+	beaconConfig = demoBeaconConfig
 }
 
-func SetDemoBeaconConfig() {
-	SetOverrideConfig(demoOverrideConfig)
-}
-
-func SetOverrideConfig(oc *OverrideConfig) {
-	emptyOverrideConfig = oc
-}
-
-func GetOverrideConfig() *OverrideConfig {
-	return emptyOverrideConfig
-}
-
-// GetBeaconConfig retrieves beacon node config.
-func GetBeaconConfig() *Config {
-	env = GetOverrideConfig().Param
-	switch env {
-	case "default":
-		return defaultBeaconConfig
-	case "demo":
-		return demoBeaconConfig
-	case "custom":
-		return customConfig
-	default:
-		return defaultBeaconConfig
-	}
+// OverrideBeaconConfig by replacing the config. The preferred pattern is to
+// call BeaconConfig(), change the specific parameters, and then call
+// OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
+// return this new configuration.
+func OverrideBeaconConfig(c *Config) {
+	beaconConfig = c
 }
 
 // DefaultValidatorConfig returns pointer to a Config value with same defaults.

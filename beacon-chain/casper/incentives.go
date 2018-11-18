@@ -25,7 +25,7 @@ func CalculateRewards(
 	penaltyQuotient := quadraticPenaltyQuotient()
 
 	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
-	if timeSinceFinality <= 3*params.GetBeaconConfig().CycleLength {
+	if timeSinceFinality <= 3*params.BeaconConfig().CycleLength {
 		for _, validatorIndex := range activeValidators {
 			var voted bool
 
@@ -73,13 +73,13 @@ func CalculateRewards(
 // reward validators for voting on blocks, or penalise them for being offline.
 func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
 	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
-	return params.GetBeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
+	return params.BeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
 }
 
 // quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
 // validators.
 func quadraticPenaltyQuotient() uint64 {
-	dropTimeFactor := params.GetBeaconConfig().SqrtExpDropTime
+	dropTimeFactor := params.BeaconConfig().SqrtExpDropTime
 	return dropTimeFactor * dropTimeFactor
 }
 

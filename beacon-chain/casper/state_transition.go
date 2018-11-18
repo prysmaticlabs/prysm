@@ -37,7 +37,7 @@ func FinalizeAndJustifySlots(
 	slot uint64, justifiedSlot uint64, finalizedSlot uint64,
 	justifiedStreak uint64, blockVoteBalance uint64, totalDeposits uint64) (uint64, uint64, uint64) {
 
-	cycleLength := params.GetBeaconConfig().CycleLength
+	cycleLength := params.BeaconConfig().CycleLength
 
 	if 3*blockVoteBalance >= 2*totalDeposits {
 		if slot > justifiedSlot {

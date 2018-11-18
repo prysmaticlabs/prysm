@@ -88,7 +88,7 @@ func (sim *Simulator) Start() {
 		return
 	}
 
-	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetBeaconConfig().SlotDuration)
+	slotTicker := slotticker.GetSlotTicker(genesisTime, params.BeaconConfig().SlotDuration)
 	go func() {
 		sim.run(slotTicker.C(), sim.blockRequestChan)
 		close(sim.blockRequestChan)
@@ -187,7 +187,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 				ActiveStateRoot:       aStateHash[:],
 				CrystallizedStateRoot: cStateHash[:],
 				AncestorHashes:        [][]byte{parentHash},
-				RandaoReveal:          params.GetBeaconConfig().SimulatedBlockRandao[:],
+				RandaoReveal:          params.BeaconConfig().SimulatedBlockRandao[:],
 				Attestations:          attestations,
 			})
 

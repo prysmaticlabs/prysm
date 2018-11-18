@@ -26,7 +26,7 @@ func TestInitGenesisJson(t *testing.T) {
 	fnamePath := pwd + fname
 	os.Remove(fnamePath)
 
-	params.SetDemoBeaconConfig()
+	params.UseDemoBeaconConfig()
 	cStateJSON := &pb.CrystallizedState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,

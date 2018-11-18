@@ -16,7 +16,7 @@ const bitsInByte = 8
 // InitialValidators creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidators() []*pb.ValidatorRecord {
-	config := params.GetBeaconConfig()
+	config := params.BeaconConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
@@ -47,7 +47,7 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	cycleLength := params.GetBeaconConfig().CycleLength
+	cycleLength := params.BeaconConfig().CycleLength
 
 	var lowerBound uint64
 	if lastStateRecalc >= cycleLength {
@@ -192,7 +192,7 @@ func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 	totalDeposit := TotalActiveValidatorDeposit(validators)
-	depositInEth := totalDeposit / params.GetBeaconConfig().Gwei
+	depositInEth := totalDeposit / params.BeaconConfig().Gwei
 
 	return depositInEth
 }
@@ -237,7 +237,7 @@ func AddPendingValidator(
 		WithdrawalShard:   withdrawalShard,
 		WithdrawalAddress: withdrawalAddr,
 		RandaoCommitment:  randaoCommitment,
-		Balance:           params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei,
+		Balance:           params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
 		Status:            status,
 		ExitSlot:          0,
 	}
@@ -270,7 +270,7 @@ func ExitValidator(
 
 // ChangeValidators updates the validator set during state transition.
 func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
-	maxAllowableChange := 2 * params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei
+	maxAllowableChange := 2 * params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
 
 	totalBalance := TotalActiveValidatorDeposit(validators)
 
@@ -283,7 +283,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == uint64(params.PendingActivation) {
 			validators[i].Status = uint64(params.Active)
-			totalChanged += params.GetBeaconConfig().DepositSize * params.GetBeaconConfig().Gwei
+			totalChanged += params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
 
 			// TODO(#614): Add validator set change.
 		}
@@ -304,7 +304,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
 		isPenalized := validators[i].Status == uint64(params.Penalized)
-		withdrawalSlot := validators[i].ExitSlot + params.GetBeaconConfig().WithdrawalPeriod
+		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().WithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3
@@ -345,7 +345,7 @@ func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 // it exits the validator if it's below.
 func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot uint64) []*pb.ValidatorRecord {
 	for index, validator := range validatorSet {
-		MinDepositInGWei := params.GetBeaconConfig().MinDeposit * params.GetBeaconConfig().Gwei
+		MinDepositInGWei := params.BeaconConfig().MinDeposit * params.BeaconConfig().Gwei
 		isValidatorActive := validator.Status == uint64(params.Active)
 		if validator.Balance < MinDepositInGWei && isValidatorActive {
 			validatorSet[index] = ExitValidator(validator, currentSlot, false)
