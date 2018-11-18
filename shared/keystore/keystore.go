@@ -182,7 +182,7 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyID []byte, err error) {
 	keyID = uuid.Parse(keyProtected.ID)
 	if keyProtected.Crypto.Cipher != "aes-128-ctr" {
-		return nil, nil, fmt.Errorf("Cipher not supported: %v", keyProtected.Crypto.Cipher)
+		return nil, nil, fmt.Errorf("cipher not supported: %v", keyProtected.Crypto.Cipher)
 	}
 
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
@@ -235,11 +235,11 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 		c := ensureInt(cryptoJSON.KDFParams["c"])
 		prf := cryptoJSON.KDFParams["prf"].(string)
 		if prf != "hmac-sha256" {
-			return nil, fmt.Errorf("Unsupported PBKDF2 PRF: %s", prf)
+			return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", prf)
 		}
 		key := pbkdf2.Key(authArray, salt, c, dkLen, sha256.New)
 		return key, nil
 	}
 
-	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
+	return nil, fmt.Errorf("unsupported KDF: %s", cryptoJSON.KDF)
 }
