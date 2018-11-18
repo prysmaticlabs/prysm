@@ -122,9 +122,14 @@ func (ss *Service) IsSyncedWithNetwork() bool {
 
 // Start begins the block processing goroutine.
 func (ss *Service) Start() {
-	if !ss.IsSyncedWithNetwork() {
-		log.Info("Not caught up with network, but continue sync")
-		// TODO(#661): Exit early if not synced.
+	synced, err := ss.queryService.IsSynced()
+	if err != nil {
+		log.Error(err)
+	}
+
+	if !synced {
+		log.Info("Chain state not detected starting initial sync")
+		return
 	}
 
 	go ss.run()
