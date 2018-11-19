@@ -120,7 +120,7 @@ func (s *InitialSync) Start() {
 
 	if synced {
 		// TODO(#661): Bail out of the sync service if the chain is only partially synced.
-		log.Info("Chain state detected, exiting initial sync")
+		log.Info("Chain fully synced, exiting initial sync")
 		return
 	}
 
