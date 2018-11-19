@@ -1,37 +1,39 @@
 package main
 
 import (
-	"io/ioutil"
-	"path"
+	"log"
 	"testing"
 
-	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 )
 
-// TestYamls tests constructing test cases from yaml file
-func TestYamls(t *testing.T) {
+// TestReadTestsFromYaml tests constructing test cases from yaml file
+func TestReadTestsFromYaml(t *testing.T) {
+	if _, err := readTestsFromYaml(string("./tests")); err != nil {
+		t.Fatalf("Failed to read yaml files")
+	}
+}
+
+// TestReadTestsFromYaml tests the running of provided tests structs
+func TestRunTests(t *testing.T) {
 	sb, err := backend.NewSimulatedBackend()
 	if err != nil {
-		t.Fatalf("Could not create backend: %v", err)
+		log.Fatalf("Could not create backend: %v", err)
 	}
 
-	var chainTests []*backend.ChainTest
-
-	files, err := ioutil.ReadDir("./sampletests")
-	if err != nil {
-		t.Fatalf("Could not read yaml tests directory: %v", err)
+	chainTestCase := &backend.ChainTestCase{
+		Config: &backend.ChainTestConfig{
+			ShardCount:       3,
+			CycleLength:      10,
+			MinCommitteeSize: 3,
+			ValidatorCount:   100,
+		},
 	}
+	shuffleTestCase := &backend.ShuffleTestCase{}
 
-	for _, file := range files {
-		data, err := ioutil.ReadFile(path.Join("./sampletests", file.Name()))
-		if err != nil {
-			t.Fatalf("Could not read yaml file: %v", err)
-		}
-		decoded := &backend.ChainTest{}
-		if err := yaml.Unmarshal(data, decoded); err != nil {
-			t.Fatalf("Could not unmarshal YAML file into test struct: %v", err)
-		}
-		chainTests = append(chainTests, decoded)
+	chainTest := &backend.ChainTest{TestCases: []*backend.ChainTestCase{chainTestCase}}
+	shuffleTest := &backend.ShuffleTest{TestCases: []*backend.ShuffleTestCase{shuffleTestCase}}
+	if err = runTests([]interface{}{chainTest, shuffleTest}, sb); err != nil {
+		log.Fatalf("Fail to run test cases: %v", err)
 	}
 }
