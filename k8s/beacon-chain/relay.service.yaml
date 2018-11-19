@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: relay
+  namespace: beacon-chain
+spec:
+  selector:
+    component: relay
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: relayport
+  type: ClusterIP

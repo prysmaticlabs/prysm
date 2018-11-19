@@ -24,6 +24,7 @@ _NAMESPACE = "beacon-chain"
 
 _services = [
     "beacon-chain",
+    "relay",
 ]
 
 k8s_objects(

@@ -15,5 +15,9 @@ spec:
     targetPort: 443
     protocol: TCP
     name: https
+  - port: 20000
+    targetPort: 20000
+    protocol: TCP
+    name: beacon-relay
   selector:
     app: nginx-ingress

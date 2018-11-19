@@ -26,6 +26,8 @@ spec:
           containerPort: 80
         - name: https
           containerPort: 443
+        - name: beacon-relay
+          containerPort: 20000
         env:
         - name: POD_NAMESPACE
           valueFrom:

@@ -4,3 +4,12 @@ metadata:
   name: nginx-config
   namespace: nginx-ingress
 data:
+  stream-snippets: |
+    upstream beacon-chain-relay-tcp {
+      server relay.beacon-chain.svc.cluster.local:4000;
+    }
+
+    server {
+      listen 20000;
+      proxy_pass beacon-chain-relay-tcp;
+    }
