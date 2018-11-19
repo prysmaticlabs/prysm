@@ -15,6 +15,7 @@ go_library(
         "@com_github_multiformats_go_multiaddr//:go_default_library",
     ],
 )
+
 go_image(
     name = "image",
     srcs = ["relaynode.go"],
