@@ -64,7 +64,6 @@ VERSION:
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
 		types.PubKeyFlag,
-		types.BeaconRPCProviderFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
