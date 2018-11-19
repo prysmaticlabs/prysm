@@ -29,7 +29,8 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 			return nil, fmt.Errorf("could not read yaml tests directory: %v", err)
 		}
 		for _, file := range files {
-			data, err := ioutil.ReadFile(path.Join(yamlDir, dir.Name(), file.Name()))
+			filePath := path.Join(yamlDir, dir.Name(), file.Name())
+			data, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, fmt.Errorf("could not read yaml file: %v", err)
 			}
