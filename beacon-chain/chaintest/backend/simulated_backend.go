@@ -6,9 +6,13 @@ package backend
 import (
 	"context"
 	"fmt"
+	"reflect"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,5 +82,21 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	//
 	// Then, we call the updateHead routine and confirm the
 	// chain's head is the expected result from the test case.
+	return nil
+}
+
+// RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
+// algorithm, then compare the output with the expected output from the YAML file.
+func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
+	defer teardownDB(sb.db)
+
+	seed := common.BytesToHash([]byte(testCase.Seed))
+	output, err := utils.ShuffleIndices(seed, testCase.Input)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(output, testCase.Output) {
+		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
+	}
 	return nil
 }

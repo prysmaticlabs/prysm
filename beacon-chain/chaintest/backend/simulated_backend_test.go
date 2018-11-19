@@ -19,3 +19,18 @@ func TestRunChainTest(t *testing.T) {
 		t.Errorf("Could not run chaintest: %v", err)
 	}
 }
+
+func TestRunShuffleTest(t *testing.T) {
+	sb, err := NewSimulatedBackend()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCase := &ShuffleTestCase{
+		Input:  []uint32{1, 2, 3, 4, 5},
+		Output: []uint32{2, 4, 1, 3, 5},
+		Seed:   "abcde",
+	}
+	if err := sb.RunShuffleTest(testCase); err != nil {
+		t.Errorf("Could not run chaintest: %v", err)
+	}
+}
