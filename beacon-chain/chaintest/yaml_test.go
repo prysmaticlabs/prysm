@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 )
 
+// TestYamls tests constructing test cases from yaml file
 func TestYamls(t *testing.T) {
 	sb, err := backend.NewSimulatedBackend()
 	if err != nil {
@@ -32,13 +33,5 @@ func TestYamls(t *testing.T) {
 			t.Fatalf("Could not unmarshal YAML file into test struct: %v", err)
 		}
 		chainTests = append(chainTests, decoded)
-	}
-
-	for _, tt := range chainTests {
-		for _, testCase := range tt.TestCases {
-			if err := sb.RunChainTest(testCase); err != nil {
-				t.Errorf("Beacon Chain test failed: %v", err)
-			}
-		}
 	}
 }
