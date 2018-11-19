@@ -70,6 +70,8 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		}
 
 		pubKey = blspubkey.BufferedPublicKey()
+	} else {
+		pubKey = []byte(ctx.GlobalString(types.PubKeyFlag.Name))
 	}
 
 	if err := ValidatorClient.startDB(ctx); err != nil {
