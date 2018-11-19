@@ -374,11 +374,7 @@ func TestStartNotSynced(t *testing.T) {
 	ss.Start()
 	ss.Stop()
 
-<<<<<<< HEAD
-	testutil.AssertLogsContain(t, hook, "Not caught up with network, starting initial sync")
-=======
 	testutil.AssertLogsContain(t, hook, "Chain state not detected starting initial sync")
->>>>>>> f46ee335bdb587dd3cafbb3d83d3e983154b34b5
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()

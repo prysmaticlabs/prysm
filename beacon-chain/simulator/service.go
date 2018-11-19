@@ -327,7 +327,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 		ActiveStateRoot:       aStateHash[:],
 		CrystallizedStateRoot: cStateHash[:],
 		AncestorHashes:        [][]byte{parentHash},
-		RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
+		RandaoReveal:          params.BeaconConfig().SimulatedBlockRandao[:],
 		Attestations:          attestations,
 	})
 	return block, nil

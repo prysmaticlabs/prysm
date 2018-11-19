@@ -17,11 +17,11 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,7 +46,7 @@ type Config struct {
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
 func DefaultConfig() Config {
 	return Config{
-		SyncPollingInterval:         time.Duration(int64(params.GetConfig().SlotDuration)) * time.Second * 4,
+		SyncPollingInterval:         time.Duration(int64(params.BeaconConfig().SlotDuration)) * time.Second * 4,
 		BlockBufferSize:             100,
 		BlockAnnounceBufferSize:     100,
 		CrystallizedStateBufferSize: 100,
