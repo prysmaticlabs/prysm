@@ -804,7 +804,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
-    commit = "489e2d62e87b8986d703b3b28d62a7fcc3978222",
+    tag = "v0.1.25",
     importpath = "github.com/ipfs/go-ipfs-addr",
 )
 
