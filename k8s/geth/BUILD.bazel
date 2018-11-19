@@ -2,17 +2,24 @@ package(default_visibility = ["//k8s:__subpackages__"])
 
 load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 load("@k8s_deploy//:defaults.bzl", "k8s_deploy")
-load("@k8s_service//:defaults.bzl", "k8s_service")
+load("@k8s_ingress//:defaults.bzl", "k8s_ingress")
+load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_secret//:defaults.bzl", "k8s_secret")
+load("@k8s_service//:defaults.bzl", "k8s_service")
 
 k8s_objects(
     name = "everything",
     objects = [
+        ":namespace", # Must be first
+        
+        ":deployments",
+        ":ingress",
         ":secrets",
         ":services",
-        ":deployments",
     ],
 )
+
+_NAMESPACE = "pow"
 
 _deployments = [
     "bootnode",
@@ -33,6 +40,17 @@ _secrets = [
     "genesis",
 ]
 
+k8s_ingress(
+    name = "ingress",
+    template = "ingress.yaml",
+    namespace = _NAMESPACE,
+)
+
+k8s_namespace(
+    name = "namespace",
+    template = "namespace.yaml",
+)
+
 k8s_objects(
     name = "deployments",
     objects = [":" + name + ".deploy" for name in _deployments],
@@ -41,6 +59,7 @@ k8s_objects(
 [k8s_deploy(
     name = name + ".deploy",
     template = name + ".deploy.yaml",
+    namespace = _NAMESPACE,
 ) for name in _deployments]
 
 k8s_objects(
@@ -51,6 +70,7 @@ k8s_objects(
 [k8s_secret(
     name = name + ".secret",
     template = name + ".secret.yaml",
+    namespace = _NAMESPACE,
 ) for name in _secrets]
 
 k8s_objects(
@@ -61,4 +81,5 @@ k8s_objects(
 [k8s_service(
     name = name + ".service",
     template = name + ".service.yaml",
+    namespace = _NAMESPACE,
 ) for name in _services]

@@ -68,13 +68,18 @@ _NAMESPACE = "default"
     cluster = _CLUSTER,
     #context = _CONTEXT,
     kind = kind,
-    namespace = _NAMESPACE,
+    #namespace = _NAMESPACE,
 ) for kind in [
+    "cluster_role",
+    "configmap",
     "deploy",
-    "service",
-    "secret",
-    "priority_class",
+    "ingress",
+    "namespace",
     "pod",
+    "priority_class",
+    "secret",
+    "service",
+    "service_account",
 ]]
 
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")

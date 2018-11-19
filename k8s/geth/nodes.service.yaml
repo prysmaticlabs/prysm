@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: geth-nodes
+  namespace: pow
 spec:
   selector:
     component: node

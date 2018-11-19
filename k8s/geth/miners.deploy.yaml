@@ -2,6 +2,7 @@ kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: miner
+  namespace: pow
   labels:
     universe: geth
     component: miner

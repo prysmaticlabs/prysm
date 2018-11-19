@@ -2,6 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: geth-bootnode
+  namespace: pow
 spec:
   replicas: 1
   template:
