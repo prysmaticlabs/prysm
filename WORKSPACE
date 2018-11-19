@@ -224,7 +224,7 @@ go_repository(
 
 go_repository(
     name = "com_github_coreos_go_semver",
-    commit = "e214231b295a8ea9479f11b70b35d5acf3556d9b",
+    tag = "v0.2.0",
     importpath = "github.com/coreos/go-semver",
 )
 
@@ -749,7 +749,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_cid",
-    commit = "033594dcd6201e8e8628659c8d584bb800d1734c",
+    tag = "v0.9.0",
     importpath = "github.com/ipfs/go-cid",
 )
 
@@ -798,13 +798,13 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_golang_lru",
-    commit = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
+    tag = "v0.5.0",
     importpath = "github.com/hashicorp/golang-lru",
 )
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
-    commit = "489e2d62e87b8986d703b3b28d62a7fcc3978222",
+    tag = "v0.1.25",
     importpath = "github.com/ipfs/go-ipfs-addr",
 )
 
