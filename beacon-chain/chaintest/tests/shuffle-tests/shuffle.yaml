@@ -1,0 +1,44 @@
+# Credits to Danny Ryan (Ethereum Foundation)
+---
+
+title: Shuffling Algorithm Tests
+summary: Test vectors for shuffling a list based upon a seed using `shuffle`
+test_suite: shuffle
+fork: tchaikovsky
+version: 1.0
+
+test_cases:
+- config:
+    validator_count: 100
+    cycle_length: 8
+    shard_count: 32
+    min_committee_size: 8
+- input: []
+  output: []
+  seed: !!binary ""
+- name: boring_list
+  description: List with a single element, 0
+  input: [0]
+  output: [0]
+  seed: !!binary ""
+- input: [255]
+  output: [255]
+  seed: !!binary ""
+- input: [4, 6, 2, 6, 1, 4, 6, 2, 1, 5]
+  output: [1, 1, 2, 6, 4, 4, 5, 6, 2, 6]
+  seed: !!binary ""
+- input: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+  output: [3, 8, 11, 7, 9, 5, 13, 4, 10, 6, 1, 2, 12]
+  seed: !!binary ""
+- input: [65, 6, 2, 6, 1, 4, 6, 2, 1, 5]
+  output: [65, 6, 6, 6, 2, 4, 1, 2, 1, 5]
+  seed: !!binary |
+    JlAYJ5H2j8g7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
+- input: [35, 6, 2, 6, 1, 4, 6, 2, 1, 5, 7, 98, 3, 2, 11]
+  output: [98, 2, 3, 6, 1, 6, 7, 2, 2, 35, 5, 6, 4, 1, 11]
+  seed: !!binary |
+    VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4=
+- input: [35, 6, 2, 6, 1, 4, 6, 2, 1, 5, 7, 98, 3, 2, 11]
+  output: [6, 6, 1, 98, 6, 2, 5, 7, 2, 11, 35, 1, 2, 4, 3]
+  seed: !!binary |
+    rDTbe23J4UA0yLIurjbJqk49VcavAC0Nysas+l5MlwvLc0B/JqQ=
