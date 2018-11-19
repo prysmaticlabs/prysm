@@ -86,7 +86,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 }
 
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
-// algorithm, then compare the output with the expected output from the YAML file
+// algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer teardownDB(sb.db)
 
