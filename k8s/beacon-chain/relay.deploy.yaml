@@ -1,0 +1,29 @@
+kind: Deployment
+apiVersion: apps/v1beta1
+metadata: 
+  name: relay
+  namespace: beacon-chain
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: relay
+  template:
+    metadata:
+      labels:
+        component: relay
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: relay
+          image: gcr.io/prysmaticlabs/prysm/relaynode:latest
+          args:
+            - "-debug"
+            - "-port=4000"
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "100m"
+          ports:
+            - containerPort: 4000
+              name: relayport

@@ -17,6 +17,7 @@ k8s_objects(
 
 _deployments = [
     "beacon-chain",
+    "relay",
 ]
 
 _NAMESPACE = "beacon-chain"
