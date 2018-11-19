@@ -15,6 +15,8 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
 	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
 	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},
+	pb.Topic_CHAIN_HEAD_REQUEST:                  &pb.ChainHeadRequest{},
+	pb.Topic_CHAIN_HEAD_RESPONSE:                 &pb.ChainHeadResponse{},
 	pb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE:    &pb.CrystallizedStateHashAnnounce{},
 	pb.Topic_CRYSTALLIZED_STATE_REQUEST:          &pb.CrystallizedStateRequest{},
 	pb.Topic_CRYSTALLIZED_STATE_RESPONSE:         &pb.CrystallizedStateResponse{},

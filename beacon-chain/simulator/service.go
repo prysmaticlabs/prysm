@@ -33,22 +33,24 @@ type powChainService interface {
 
 // Simulator struct.
 type Simulator struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	p2p              p2pAPI
-	web3Service      powChainService
-	beaconDB         beaconDB
-	enablePOWChain   bool
-	blockRequestChan chan p2p.Message
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	p2p                  p2pAPI
+	web3Service          powChainService
+	beaconDB             beaconDB
+	enablePOWChain       bool
+	blockRequestChan     chan p2p.Message
+	chainHeadRequestChan chan p2p.Message
 }
 
 // Config options for the simulator service.
 type Config struct {
-	BlockRequestBuf int
-	P2P             p2pAPI
-	Web3Service     powChainService
-	BeaconDB        beaconDB
-	EnablePOWChain  bool
+	BlockRequestBuf     int
+	ChainHeadRequestBuf int
+	P2P                 p2pAPI
+	Web3Service         powChainService
+	BeaconDB            beaconDB
+	EnablePOWChain      bool
 }
 
 type beaconDB interface {
@@ -61,7 +63,8 @@ type beaconDB interface {
 // DefaultConfig options for the simulator.
 func DefaultConfig() *Config {
 	return &Config{
-		BlockRequestBuf: 100,
+		BlockRequestBuf:     100,
+		ChainHeadRequestBuf: 100,
 	}
 }
 
@@ -69,13 +72,14 @@ func DefaultConfig() *Config {
 func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
-		ctx:              ctx,
-		cancel:           cancel,
-		p2p:              cfg.P2P,
-		web3Service:      cfg.Web3Service,
-		beaconDB:         cfg.BeaconDB,
-		enablePOWChain:   cfg.EnablePOWChain,
-		blockRequestChan: make(chan p2p.Message, cfg.BlockRequestBuf),
+		ctx:                  ctx,
+		cancel:               cancel,
+		p2p:                  cfg.P2P,
+		web3Service:          cfg.Web3Service,
+		beaconDB:             cfg.BeaconDB,
+		enablePOWChain:       cfg.EnablePOWChain,
+		blockRequestChan:     make(chan p2p.Message, cfg.BlockRequestBuf),
+		chainHeadRequestChan: make(chan p2p.Message, cfg.ChainHeadRequestBuf),
 	}
 }
 
@@ -104,8 +108,10 @@ func (sim *Simulator) Stop() error {
 }
 
 func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Message) {
+	chainHdReqSub := sim.p2p.Subscribe(&pb.ChainHeadRequest{}, sim.chainHeadRequestChan)
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	defer blockReqSub.Unsubscribe()
+	defer chainHdReqSub.Unsubscribe()
 
 	lastBlock, err := sim.beaconDB.GetChainHead()
 	if err != nil {
@@ -124,6 +130,13 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 		case <-sim.ctx.Done():
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
+		case msg := <-sim.chainHeadRequestChan:
+
+			log.Debug("Received Chain Head Request")
+			if err := sim.SendChainHead(msg.Peer); err != nil {
+				log.Errorf("Unable to send chain head response %v", err)
+			}
+
 		case slot := <-slotInterval:
 			aState, err := sim.beaconDB.GetActiveState()
 			if err != nil {
@@ -232,4 +245,33 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 			delete(broadcastedBlocks, hash)
 		}
 	}
+}
+
+// SendChainHead sends the latest head of the local chain
+// to the peer who requested it.
+func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
+
+	block, err := sim.beaconDB.GetChainHead()
+	if err != nil {
+		return err
+	}
+
+	hash, err := block.Hash()
+	if err != nil {
+		return err
+	}
+
+	res := &pb.ChainHeadResponse{
+		Hash:  hash[:],
+		Slot:  block.SlotNumber(),
+		Block: block.Proto(),
+	}
+
+	sim.p2p.Send(res, peer)
+
+	log.WithFields(logrus.Fields{
+		"hash": fmt.Sprintf("%#x", hash),
+	}).Debug("Responding to chain head request")
+
+	return nil
 }

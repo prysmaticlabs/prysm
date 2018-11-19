@@ -41,6 +41,12 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+type mockQueryService struct{}
+
+func (ms *mockQueryService) IsSynced() (bool, error) {
+	return false, nil
+}
+
 type mockAttestService struct{}
 
 func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
@@ -362,12 +368,13 @@ func TestStartNotSynced(t *testing.T) {
 	cfg.ChainService = &mockChainService{}
 	cfg.P2P = &mockP2P{}
 	cfg.BeaconDB = db
+	cfg.QueryService = &mockQueryService{}
 	ss := NewSyncService(context.Background(), cfg)
 
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsContain(t, hook, "Not caught up with network, but continue sync")
+	testutil.AssertLogsContain(t, hook, "Chain state not detected starting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
