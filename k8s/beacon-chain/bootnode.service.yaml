@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: bootnode
+  namespace: beacon-chain
+spec:
+  selector:
+    component: bootnode
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: bootnodeport
+  type: ClusterIP
