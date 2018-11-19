@@ -10,11 +10,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,7 +58,7 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 func NewGenesisBlock(activeStateRoot [32]byte, crystallizedStateRoot [32]byte) *Block {
 	// Genesis time here is static so error can be safely ignored.
 	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(params.GetConfig().GenesisTime)
+	protoGenesis, _ := ptypes.TimestampProto(params.BeaconConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
 
@@ -146,7 +146,7 @@ func (b *Block) Timestamp() (time.Time, error) {
 
 // isSlotValid compares the slot to the system clock to determine if the block is valid.
 func (b *Block) isSlotValid(genesisTime time.Time) bool {
-	slotDuration := time.Duration(b.SlotNumber()*params.GetConfig().SlotDuration) * time.Second
+	slotDuration := time.Duration(b.SlotNumber()*params.BeaconConfig().SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
@@ -167,7 +167,7 @@ func (b *Block) IsValid(
 	}
 
 	if b.SlotNumber() == 0 {
-		log.Error("Could not process a genesis block")
+		log.Error("Cannot process a genesis block: received block with slot 0")
 		return false
 	}
 
@@ -192,7 +192,10 @@ func (b *Block) IsValid(
 
 	cStateProposerRandaoSeed := cState.Validators()[proposerIndex].RandaoCommitment
 	blockRandaoReveal := b.RandaoReveal()
-	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.GetConfig().SimulatedBlockRandao[:])
+
+	// If this is a block created by the simulator service (while in development
+	// mode), we skip the RANDAO validation condition.
+	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.BeaconConfig().SimulatedBlockRandao[:])
 	if !isSimulatedBlock && !b.isRandaoValid(cStateProposerRandaoSeed) {
 		log.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), cStateProposerRandaoSeed)
 		return false
@@ -305,8 +308,8 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		attestation.JustifiedSlot,
 		forkVersion)
 
-	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
-		attestation.Shard, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
+	log.Debugf("Attestation message for shard: %v, slot %v is %#x",
+		attestation.Shard, attestation.Slot, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
@@ -329,10 +332,10 @@ func isAttestationSlotNumberValid(attestationSlot uint64, parentSlot uint64) boo
 		return false
 	}
 
-	if parentSlot >= params.GetConfig().CycleLength-1 && attestationSlot < parentSlot-params.GetConfig().CycleLength+1 {
+	if parentSlot >= params.BeaconConfig().CycleLength-1 && attestationSlot < parentSlot-params.BeaconConfig().CycleLength+1 {
 		log.Debugf("attestation slot number can't be lower than parent block's slot number by one CycleLength. Found: %d, Needed greater than: %d",
 			attestationSlot,
-			parentSlot-params.GetConfig().CycleLength+1)
+			parentSlot-params.BeaconConfig().CycleLength+1)
 		return false
 	}
 

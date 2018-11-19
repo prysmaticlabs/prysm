@@ -1,9 +1,11 @@
 package params
 
 import (
+	"math"
 	"testing"
 )
 
+//beacon-chain params test
 func TestValidatorStatusCode(t *testing.T) {
 	tests := []struct {
 		a ValidatorStatusCode
@@ -50,5 +52,21 @@ func TestValidatorSetDeltaFlags(t *testing.T) {
 		if int(tt.a) != tt.b {
 			t.Errorf("Incorrect validator set delta flags. Wanted: %d, Got: %d", int(tt.a), tt.b)
 		}
+	}
+}
+
+func TestOverrideBeaconConfig(t *testing.T) {
+	cfg := BeaconConfig()
+	cfg.ShardCount = 5
+	OverrideBeaconConfig(cfg)
+	if c := BeaconConfig(); c.ShardCount != 5 {
+		t.Errorf("Shardcount in BeaconConfig incorrect. Wanted %d, got %d", 5, c.ShardCount)
+	}
+}
+
+func TestCollationSize(t *testing.T) {
+	c := DefaultValidatorConfig()
+	if c.CollationSizeLimit != int64(math.Pow(float64(2), float64(20))) {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", int64(math.Pow(float64(2), float64(20))), c.CollationSizeLimit)
 	}
 }

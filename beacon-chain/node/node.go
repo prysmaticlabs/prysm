@@ -16,18 +16,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/sync-querier"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -59,7 +61,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use demo config values if demo config flag is set.
 	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
-		params.SetEnv("demo")
+		params.UseDemoBeaconConfig()
 	}
 
 	if err := beacon.startDB(ctx); err != nil {
@@ -78,7 +80,15 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerService(); err != nil {
+	if err := beacon.registerAttestationService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerSimulatorService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerQueryService(); err != nil {
 		return nil, err
 	}
 
@@ -90,12 +100,14 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerSimulatorService(ctx); err != nil {
+	if err := beacon.registerRPCService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerRPCService(ctx); err != nil {
-		return nil, err
+	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
+		if err := beacon.registerPrometheusService(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return beacon, nil
@@ -158,6 +170,8 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 
+	log.Info("checking db")
+
 	cState, err := db.GetCrystallizedState()
 	if err != nil {
 		return err
@@ -212,7 +226,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerService() error {
+func (b *BeaconNode) registerAttestationService() error {
 	attestationService := attestation.NewAttestationService(context.TODO(), &attestation.Config{
 		BeaconDB: b.db,
 	})
@@ -235,7 +249,10 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 		Endpoint: b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
 		Pubkey:   b.ctx.GlobalString(utils.PubKeyFlag.Name),
 		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
-	}, powClient, powClient, powClient)
+		Client:   powClient,
+		Reader:   powClient,
+		Logger:   powClient,
+	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
 	}
@@ -258,10 +275,16 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
+	var queryService *syncquerier.SyncQuerier
+	if err := b.services.FetchService(&queryService); err != nil {
+		return err
+	}
+
 	cfg := rbcsync.DefaultConfig()
 	cfg.ChainService = chainService
 	cfg.AttestService = attestationService
 	cfg.P2P = p2pService
+	cfg.QueryService = queryService
 	cfg.BeaconDB = b.db
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
@@ -284,9 +307,15 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
+	var queryService *syncquerier.SyncQuerier
+	if err := b.services.FetchService(&queryService); err != nil {
+		return err
+	}
+
 	cfg := initialsync.DefaultConfig()
 	cfg.P2P = p2pService
 	cfg.SyncService = syncService
+	cfg.QueryService = queryService
 	cfg.BeaconDB = b.db
 	initialSyncService := initialsync.NewInitialSyncService(context.Background(), cfg)
 	return b.services.RegisterService(initialSyncService)
@@ -326,6 +355,22 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	return b.services.RegisterService(simulatorService)
 }
 
+func (b *BeaconNode) registerQueryService() error {
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
+	defaultConfig := syncquerier.DefaultConfig()
+	cfg := &syncquerier.Config{
+		P2P:                p2pService,
+		BeaconDB:           b.db,
+		ResponseBufferSize: defaultConfig.ResponseBufferSize,
+	}
+	querierservice := syncquerier.NewSyncQuerierService(context.TODO(), cfg)
+	return b.services.RegisterService(querierservice)
+}
+
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	var chainService *blockchain.ChainService
 	if err := b.services.FetchService(&chainService); err != nil {
@@ -361,4 +406,13 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	})
 
 	return b.services.RegisterService(rpcService)
+}
+
+func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
+	service := prometheus.NewPrometheusService(
+		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+	)
+	hook := prometheus.NewLogrusCollector()
+	logrus.AddHook(hook)
+	return b.services.RegisterService(service)
 }

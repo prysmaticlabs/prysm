@@ -1,11 +1,11 @@
-// Package params defines important constants that are essential to the beacon chain.
+// Package params defines important constants that are essential to the
+// Ethereum 2.0 services.
 package params
 
 import (
+	"math"
 	"time"
 )
-
-var env = "default"
 
 // ValidatorStatusCode defines which stage a validator is in.
 type ValidatorStatusCode int
@@ -36,9 +36,10 @@ type Config struct {
 	MinDeposit                    uint64    // MinDeposit is the minimal amount of Ether a validator needs to participate.
 	SimulatedBlockRandao          [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed for simulated block to advance chain.
 	InitialForkVersion            uint32    // InitialForkVersion is used to track fork version between station transitions.
+	CollationSizeLimit            int64     // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
 }
 
-var defaultConfig = &Config{
+var defaultBeaconConfig = &Config{
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	ModuloBias:                    16777216 - 1,
 	CycleLength:                   uint64(64),
@@ -57,7 +58,7 @@ var defaultConfig = &Config{
 	InitialForkVersion:            0,
 }
 
-var demoConfig = &Config{
+var demoBeaconConfig = &Config{
 	GenesisTime:                   time.Now(),
 	ModuloBias:                    16777216 - 1,
 	CycleLength:                   uint64(5),
@@ -75,8 +76,6 @@ var demoConfig = &Config{
 	InitialForkVersion:            0,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 }
-
-var customConfig = &Config{}
 
 const (
 	// PendingActivation means a validator is queued and waiting to be active.
@@ -110,28 +109,45 @@ const (
 	Exit
 )
 
-// GetConfig retrieves beacon node config.
-func GetConfig() *Config {
-	switch env {
-	case "default":
-		return defaultConfig
-	case "demo":
-		return demoConfig
-	case "custom":
-		return customConfig
-	default:
-		return defaultConfig
+var beaconConfig = defaultBeaconConfig
+
+// BeaconConfig retrieves beacon node config.
+func BeaconConfig() *Config {
+	return beaconConfig
+}
+
+// UseDemoBeaconConfig for beacon chain services.
+func UseDemoBeaconConfig() {
+	beaconConfig = demoBeaconConfig
+}
+
+// OverrideBeaconConfig by replacing the config. The preferred pattern is to
+// call BeaconConfig(), change the specific parameters, and then call
+// OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
+// return this new configuration.
+func OverrideBeaconConfig(c *Config) {
+	beaconConfig = c
+}
+
+// DefaultValidatorConfig returns pointer to a Config value with same defaults.
+func DefaultValidatorConfig() *Config {
+	return &Config{
+		CollationSizeLimit: DefaultCollationSizeLimit(),
+		SlotDuration:       8.0,
+		CycleLength:        64,
 	}
 }
 
-// SetCustomConfig is useful for simulated backend configurations
-// in chain tests.
-func SetCustomConfig(c *Config) {
-	SetEnv("custom")
-	customConfig = c
+// DemoValidatorConfig for running the system under shorter defaults.
+func DemoValidatorConfig() *Config {
+	return &Config{
+		SlotDuration: 2.0,
+		CycleLength:  5,
+	}
 }
 
-// SetEnv sets which config to use.
-func SetEnv(e string) {
-	env = e
+// DefaultCollationSizeLimit is the integer value representing the maximum
+// number of bytes allowed in a given collation.
+func DefaultCollationSizeLimit() int64 {
+	return int64(math.Pow(float64(2), float64(20)))
 }

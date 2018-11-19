@@ -56,8 +56,8 @@ type Web3Service struct {
 	vrcAddress          common.Address
 	reader              Reader
 	logger              Logger
-	blockNumber         *big.Int    // the latest PoW chain blocknumber.
-	blockHash           common.Hash // the latest PoW chain blockhash.
+	blockNumber         *big.Int    // the latest PoW chain blockNumber.
+	blockHash           common.Hash // the latest PoW chain blockHash.
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -65,13 +65,19 @@ type Web3ServiceConfig struct {
 	Endpoint string
 	Pubkey   string
 	VrcAddr  common.Address
+	Client   Client
+	Reader   Reader
+	Logger   Logger
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client Client, reader Reader, logger Logger) (*Web3Service, error) {
+func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
-		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
+		return nil, fmt.Errorf(
+			"web3service requires either an IPC or WebSocket endpoint, provided %s",
+			config.Endpoint,
+		)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
@@ -85,9 +91,9 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client Clien
 		blockNumber:         nil,
 		blockHash:           common.BytesToHash([]byte{}),
 		vrcAddress:          config.VrcAddr,
-		client:              client,
-		reader:              reader,
-		logger:              logger,
+		client:              config.Client,
+		reader:              config.Reader,
+		logger:              config.Logger,
 	}, nil
 }
 
@@ -146,9 +152,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
-			// public key is the second topic from validatorRegistered log
+			// public key is the second topic from validatorRegistered log.
 			pubKeyLog := VRClog.Topics[1].Hex()
-			// Support user pubKeys with or without the leading 0x
+			// Support user pubKeys with or without the leading 0x.
 			if pubKeyLog == w.pubKey || pubKeyLog[2:] == w.pubKey {
 				log.WithFields(logrus.Fields{
 					"publicKey": pubKeyLog,
