@@ -19,6 +19,7 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 
 	var tests []interface{}
 
+	// #nosec
 	dirs, err := ioutil.ReadDir(yamlDir)
 	if err != nil {
 		return nil, fmt.Errorf("could not read yaml tests directory: %v", err)
