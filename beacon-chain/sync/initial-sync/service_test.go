@@ -302,7 +302,7 @@ func TestIsSyncedWithNetwork(t *testing.T) {
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Finished syncing with the network, exiting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
@@ -323,7 +323,7 @@ func TestIsNotSyncedWithNetwork(t *testing.T) {
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsDoNotContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsDoNotContain(t, hook, "Finished syncing with the network, exiting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()

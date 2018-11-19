@@ -308,8 +308,8 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 		attestation.JustifiedSlot,
 		forkVersion)
 
-	log.Debugf("Attestation message for shard: %v, slot %v, block hash %v is: %v",
-		attestation.Shard, attestation.Slot, attestation.ShardBlockHash, attestationMsg)
+	log.Debugf("Attestation message for shard: %v, slot %v is %#x",
+		attestation.Shard, attestation.Slot, attestationMsg)
 
 	// TODO(#258): Verify msgHash against aggregated pub key and aggregated signature.
 	return true
