@@ -175,10 +175,10 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				"hash": fmt.Sprintf("%#x", hash),
 				"slot": slot,
 			}).Debug("Broadcast block hash and slot")
-
-			if err := sim.updateLastStateRecalc(); err != nil {
-				log.Errorf("Unable to update last state recalc %v", err)
-			}
+			/*
+				if err := sim.updateLastStateRecalc(); err != nil {
+					log.Errorf("Unable to update last state recalc %v", err)
+				} */
 
 			broadcastedBlocksByHash[hash] = block
 			broadcastedBlocksBySlot[slot] = block
@@ -333,6 +333,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	return block, nil
 }
 
+/*
 // updateLastStateRecalc adds 1 to the last state recalculation
 // slot so that the simulator can continue running and not
 // fail validity conditions.
@@ -344,7 +345,7 @@ func (sim *Simulator) updateLastStateRecalc() error {
 	cState.Proto().LastStateRecalculationSlot++
 
 	return sim.beaconDB.SaveCrystallizedState(cState)
-}
+} */
 
 // SendChainHead sends the latest head of the local chain
 // to the peer who requested it.

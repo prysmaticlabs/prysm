@@ -29,6 +29,7 @@ type beaconDB interface {
 	GetCrystallizedState() (*types.CrystallizedState, error)
 	GetBlock([32]byte) (*types.Block, error)
 	HasBlock([32]byte) bool
+	GetChainHead() (*types.Block, error)
 	GetAttestation([32]byte) (*types.Attestation, error)
 	GetBlockBySlot(uint64) (*types.Block, error)
 }
@@ -67,6 +68,7 @@ type Service struct {
 	announceBlockBuf      chan p2p.Message
 	blockBuf              chan p2p.Message
 	blockRequestBySlot    chan p2p.Message
+	chainHeadReqBuf       chan p2p.Message
 	attestationBuf        chan p2p.Message
 }
 
@@ -76,6 +78,7 @@ type Config struct {
 	BlockBufferSize         int
 	BlockRequestBufferSize  int
 	AttestationBufferSize   int
+	ChainHeadReqBufferSize  int
 	ChainService            chainService
 	AttestService           attestationService
 	QueryService            queryService
@@ -89,6 +92,7 @@ func DefaultConfig() Config {
 		BlockAnnounceBufferSize: 100,
 		BlockBufferSize:         100,
 		BlockRequestBufferSize:  100,
+		ChainHeadReqBufferSize:  100,
 		AttestationBufferSize:   100,
 	}
 }
@@ -109,6 +113,7 @@ func NewSyncService(ctx context.Context, cfg Config) *Service {
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
 		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
 		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
+		chainHeadReqBuf:       make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 	}
 }
 
@@ -159,10 +164,12 @@ func (ss *Service) run() {
 	blockSub := ss.p2p.Subscribe(&pb.BeaconBlockResponse{}, ss.blockBuf)
 	blockRequestSub := ss.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
 	attestationSub := ss.p2p.Subscribe(&pb.AggregatedAttestation{}, ss.attestationBuf)
+	chainHeadReqSub := ss.p2p.Subscribe(&pb.ChainHeadRequest{}, ss.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
 	defer blockRequestSub.Unsubscribe()
+	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
 
 	for {
@@ -178,6 +185,8 @@ func (ss *Service) run() {
 			ss.receiveBlock(msg)
 		case msg := <-ss.blockRequestBySlot:
 			ss.handleBlockRequestBySlot(msg)
+		case msg := <-ss.chainHeadReqBuf:
+			ss.handleChainHeadRequest(msg)
 		}
 	}
 }
@@ -285,6 +294,33 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
 	ss.p2p.Send(block.Proto(), msg.Peer)
 	sendBlockSpan.End()
+}
+
+func (ss *Service) handleChainHeadRequest(msg p2p.Message) {
+	if _, ok := msg.Data.(*pb.ChainHeadRequest); !ok {
+		log.Errorf("message is of the incorrect type")
+		return
+	}
+
+	block, err := ss.db.GetChainHead()
+	if err != nil {
+		log.Errorf("Could not retrieve chain head %v", err)
+		return
+	}
+
+	hash, err := block.Hash()
+	if err != nil {
+		log.Errorf("Could not hash block %v", err)
+		return
+	}
+
+	req := &pb.ChainHeadResponse{
+		Slot:  block.SlotNumber(),
+		Hash:  hash[:],
+		Block: block.Proto(),
+	}
+
+	ss.p2p.Send(req, msg.Peer)
 }
 
 // receiveAttestation accepts an broadcasted attestation from the p2p layer,
