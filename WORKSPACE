@@ -699,7 +699,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    commit = "058210c5a0d042677367d923eb8a6dc072a15f7f",
+    tag = "v0.1.1",
     importpath = "github.com/libp2p/go-buffer-pool",
 )
 
