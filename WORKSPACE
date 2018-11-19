@@ -798,7 +798,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_golang_lru",
-    commit = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
+    tag = "v0.5.0",
     importpath = "github.com/hashicorp/golang-lru",
 )
 
