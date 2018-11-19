@@ -1,13 +1,12 @@
 package internal
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"os"
 	"path"
 	"testing"
-
-	"crypto/rand"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
