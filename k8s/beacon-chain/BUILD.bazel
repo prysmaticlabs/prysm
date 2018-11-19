@@ -2,11 +2,14 @@ package(default_visibility = ["//k8s:__subpackages__"])
 
 load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 load("@k8s_deploy//:defaults.bzl", "k8s_deploy")
+load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_service//:defaults.bzl", "k8s_service")
 
 k8s_objects(
     name = "everything",
     objects = [
+        ":namespace", # Must be first 
+
         ":deployments",
         ":services",
     ],
@@ -15,6 +18,8 @@ k8s_objects(
 _deployments = [
     "beacon-chain",
 ]
+
+_NAMESPACE = "beacon-chain"
 
 _services = [
     "beacon-chain",
@@ -28,7 +33,9 @@ k8s_objects(
 [k8s_deploy(
     name = name + ".deploy",
     template = name + ".deploy.yaml",
+    namespace = _NAMESPACE,
 ) for name in _deployments]
+
 
 k8s_objects(
     name = "services",
@@ -38,4 +45,11 @@ k8s_objects(
 [k8s_service(
     name = name + ".service",
     template = name + ".service.yaml",
+    namespace = _NAMESPACE,
 ) for name in _services]
+
+k8s_namespace(
+    name = "namespace",
+    template = "namespace.yaml",
+)
+

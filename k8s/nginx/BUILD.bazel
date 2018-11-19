@@ -10,7 +10,7 @@ load("@k8s_service//:defaults.bzl", "k8s_service")
 load("@k8s_service_account//:defaults.bzl", "k8s_service_account")
 
 k8s_objects(
-    name = "nginx",
+    name = "everything",
     objects = [
       ":namespace", # Must be first
 

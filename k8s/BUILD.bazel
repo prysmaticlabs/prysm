@@ -4,12 +4,15 @@ load("@k8s_priority_class//:defaults.bzl", "k8s_priority_class")
 k8s_objects(
     name = "everything",
     objects = [
-        "//k8s/geth:everything",
         ":priority_class",
+        "//k8s/geth:everything",
+        "//k8s/beacon-chain:everything",
+        "//k8s/nginx:everything",
     ],
 )
 
 k8s_priority_class(
     name = "priority_class",
     template = "priority.yaml",
+    namespace = "default",
 )

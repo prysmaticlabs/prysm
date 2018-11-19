@@ -2,6 +2,7 @@ kind: Deployment
 apiVersion: apps/v1beta1
 metadata:
   name: beacon-chain
+  namespace: beacon-chain
 spec:
   replicas: 3
   selector:
@@ -19,7 +20,7 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - "--web3provider=ws://$(GETH_NODES_SERVICE_HOST):$(GETH_NODES_SERVICE_PORT_WS)"
+            - "--web3provider=ws://geth-nodes.pow.svc.cluster.local:8546"
             - "--verbosity=debug"
             - "--vrcaddr=0x541AfaC5266c534de039B4A1a53519e76ea82846"
             - "--rpc-port=4000"

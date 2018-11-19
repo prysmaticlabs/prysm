@@ -5,4 +5,5 @@ load("@k8s_pod//:defaults.bzl", "k8s_pod")
 k8s_pod(
     name = "busybox.pod",
     template = "busybox.yaml",
+    namespace = "default",
 )
