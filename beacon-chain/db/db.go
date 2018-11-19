@@ -32,7 +32,7 @@ func (db *BeaconDB) view(fn func(*bolt.Tx) error) error {
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	for _, bucket := range buckets {
-		if _, err := tx.CreateBucket(bucket); err != nil {
+		if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
 			return err
 		}
 	}

@@ -1,16 +1,14 @@
 package backend
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"os"
 	"path"
 
-	log "github.com/sirupsen/logrus"
-
-	"crypto/rand"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	log "github.com/sirupsen/logrus"
 )
 
 // setupDB instantiates and returns a simulated backend BeaconDB instance.
