@@ -60,7 +60,7 @@ func main() {
 		}
 		opts = append(opts, libp2p.Identity(pk))
 	} else {
-		log.Warning("No private key provided. Using random key")
+		log.Warning("No private key provided. Using random key.")
 	}
 
 	h, err := libp2p.New(
