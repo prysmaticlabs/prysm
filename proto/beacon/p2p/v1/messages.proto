@@ -10,12 +10,14 @@ enum Topic {
   BEACON_BLOCK_REQUEST = 2;
   BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER = 3;
   BEACON_BLOCK_RESPONSE = 4;
-  CRYSTALLIZED_STATE_HASH_ANNOUNCE = 5;
-  CRYSTALLIZED_STATE_REQUEST = 6;
-  CRYSTALLIZED_STATE_RESPONSE = 7;
-  ACTIVE_STATE_HASH_ANNOUNCE = 8;
-  ACTIVE_STATE_REQUEST = 9;
-  ACTIVE_STATE_RESPONSE = 10;
+  CHAIN_HEAD_REQUEST = 5;
+  CHAIN_HEAD_RESPONSE = 6;
+  CRYSTALLIZED_STATE_HASH_ANNOUNCE = 7;
+  CRYSTALLIZED_STATE_REQUEST = 8;
+  CRYSTALLIZED_STATE_RESPONSE = 9;
+  ACTIVE_STATE_HASH_ANNOUNCE = 10;
+  ACTIVE_STATE_REQUEST = 11;
+  ACTIVE_STATE_RESPONSE = 12;
 }
 
 message BeaconBlockHashAnnounce {
@@ -45,6 +47,16 @@ message BeaconBlock {
   google.protobuf.Timestamp timestamp = 7;
   repeated AggregatedAttestation attestations = 8;
   repeated SpecialRecord specials = 9;
+}
+
+message ChainHeadRequest {
+  
+}
+
+message ChainHeadResponse {
+  bytes hash = 1;
+  uint64 slot = 2;
+  BeaconBlock block = 3;
 }
 
 message CrystallizedStateHashAnnounce {
