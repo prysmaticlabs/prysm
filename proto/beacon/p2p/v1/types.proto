@@ -14,13 +14,13 @@ message BeaconState {
   uint64 last_justified_slot = 6;
   uint64 justified_streak = 7;
   repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint64 persistent_committees = 9;
+  repeated uint32 persistent_committees = 9;
   repeated ShardReassignmentRecord persistent_committee_reassignment = 10;
   bytes next_shuffling_seed = 11;
   repeated uint64 deposits_penalized_in_period = 12;
   bytes validator_delta_hash_chain = 13;
   uint64 current_exit_seq = 14;
-  google.protobuf.Timestamp genesis_time = 15;
+  uint64 genesis_time = 15;
   bytes known_pow_receipt_root = 16;
   bytes candidate_pow_receipt_root = 17;
   uint64 candidate_pow_receipt_root_votes = 18;
@@ -44,7 +44,7 @@ message ValidatorRecord {
 }
 
 message ShardReassignmentRecord {
-  uint64 validator_index = 1;
+  uint32 validator_index = 1;
   uint64 shard = 2;
   uint64 slot = 3;
 }
