@@ -140,24 +140,20 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'A'},
-			Slot:            10,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'B'},
-			Slot:            10,
+			ShardBlockHash: []byte{'B'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'C'},
-			Slot:            10,
+			ShardBlockHash: []byte{'C'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'D'},
-			Slot:            10,
+			ShardBlockHash: []byte{'D'},
+			Slot:           10,
 		},
 	}
 
@@ -189,14 +185,12 @@ func TestCrosslinks(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'A'},
-			Slot:            10,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: true,
-			ShardBlockHash:  []byte{'A'},
-			Slot:            10,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
 		},
 	}
 
@@ -208,13 +202,6 @@ func TestCrosslinks(t *testing.T) {
 	}
 
 	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
-
-	if bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
-		t.Fatal("crosslink updated when it was not supposed to")
-	}
-
-	crossLinks[1].RecentlyChanged = false
-
 	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
