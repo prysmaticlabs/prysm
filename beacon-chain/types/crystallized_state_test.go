@@ -82,9 +82,8 @@ func TestCopyCrystallizedState(t *testing.T) {
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			RecentlyChanged: false,
-			ShardBlockHash:  make([]byte, 2, 34),
-			Slot:            2,
+			ShardBlockHash: make([]byte, 2, 34),
+			Slot:           2,
 		})
 	}
 	cState1.data.Crosslinks = crosslinks
@@ -259,7 +258,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		clRecord := &pb.CrosslinkRecord{RecentlyChanged: false, ShardBlockHash: []byte{'A'}, Slot: 1}
+		clRecord := &pb.CrosslinkRecord{ShardBlockHash: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
 
