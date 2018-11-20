@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -143,10 +142,6 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		}},
 	})
 
-	// Set validator index 9's RANDAO reveal to be A
-	validator9Index := b.Bytes8(9)
-	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{validator9Index, {byte('A')}}}}
-
 	db := &mockDB{}
 	newCState, err := cState.NewStateRecalculations(aState, block, db)
 	if err != nil {
@@ -167,10 +162,6 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 
 	if newCState.LastFinalizedSlot() != 0 {
 		t.Fatalf("xpected finalized slot to equal %d, got %d", 0, newCState.LastFinalizedSlot())
-	}
-
-	if !(bytes.Equal(newCState.Validators()[9].RandaoCommitment, []byte{'A'})) {
-		t.Fatal("failed to set validator 9's randao reveal")
 	}
 }
 
