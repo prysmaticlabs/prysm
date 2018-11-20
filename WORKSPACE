@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "3fb53dff765f8a3e0f9d8b1d5b86d4f8c4eb3a09",
+    tag = "v0.9.1",
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -792,7 +792,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multibase",
-    commit = "007b57d38809499c388eee69498dc042fa1336c9",
+    tag = "v0.3.0",
     importpath = "github.com/multiformats/go-multibase",
 )
 
