@@ -73,16 +73,14 @@ func ApplyCrosslinkRewardsAndPenalties(
 	for _, attesterIndex := range attesterIndices {
 		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
 
-		if !crosslinkRecords[attestation.Shard].GetRecentlyChanged() {
-			checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
-			if err != nil {
-				return err
-			}
-			if checkBit {
-				RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
-			} else {
-				PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
-			}
+		checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		if err != nil {
+			return err
+		}
+		if checkBit {
+			RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+		} else {
+			PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 		}
 	}
 	return nil
@@ -96,11 +94,10 @@ func ProcessCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
 	// if 2/3 of committee voted on this crosslink, update the crosslink
 	// with latest dynasty number, shard block hash, and slot number.
 	voteMajority := 3*voteBalance >= 2*totalBalance
-	if voteMajority && !crosslinkRecords[attestation.Shard].RecentlyChanged {
+	if voteMajority {
 		crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
-			RecentlyChanged: true,
-			ShardBlockHash:  attestation.ShardBlockHash,
-			Slot:            slot,
+			ShardBlockHash: attestation.ShardBlockHash,
+			Slot:           slot,
 		}
 	}
 	return crosslinkRecords
