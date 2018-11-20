@@ -22,10 +22,7 @@ go_binary(
 go_test(
     name = "go_default_test",
     srcs = ["yaml_test.go"],
-    data = glob(["sampletests/**"]),
+    data = glob(["tests/**"]),
     embed = [":go_default_library"],
-    deps = [
-        "//beacon-chain/chaintest/backend:go_default_library",
-        "@com_github_go_yaml_yaml//:go_default_library",
-    ],
+    deps = ["//beacon-chain/chaintest/backend:go_default_library"],
 )

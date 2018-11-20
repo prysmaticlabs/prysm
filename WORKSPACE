@@ -224,19 +224,19 @@ go_repository(
 
 go_repository(
     name = "com_github_coreos_go_semver",
-    commit = "e214231b295a8ea9479f11b70b35d5acf3556d9b",
+    tag = "v0.2.0",
     importpath = "github.com/coreos/go-semver",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
-    commit = "a75b79dbf71f47f55b00928ead7d5a44355e2b62",
+    tag = "v0.0.21",
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
 )
 
 go_repository(
     name = "com_github_libp2p_go_conn_security_multistream",
-    commit = "cda5d4f4ed431a63fdba6d48abab2acb9d2c7a9d",
+    tag = "v0.1.15",
     importpath = "github.com/libp2p/go-conn-security-multistream",
 )
 
@@ -435,7 +435,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_conn_security",
-    commit = "42db08f68cdfd8a1ec46eefde49160c2a9559b72",
+    tag = "v0.1.15",
     importpath = "github.com/libp2p/go-conn-security",
 )
 
@@ -495,7 +495,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "93218def8b18e66adbdab3eca8ec334700329f1f",
+    commit = "ec83556a53fe16b65c452a104ea9d1e86a671852",
     importpath = "golang.org/x/sys",
 )
 
@@ -507,7 +507,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_flow_metrics",
-    commit = "7e5a55af485341567f98d6847a373eb5ddcdcd43",
+    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-flow-metrics",
 )
 
@@ -597,7 +597,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "23a786e24e247b25b8708c8538d9e16cbfa4e4c9",
+    tag = "v0.3.15",
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
@@ -699,7 +699,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    commit = "058210c5a0d042677367d923eb8a6dc072a15f7f",
+    tag = "v0.1.1",
     importpath = "github.com/libp2p/go-buffer-pool",
 )
 
@@ -749,7 +749,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_cid",
-    commit = "033594dcd6201e8e8628659c8d584bb800d1734c",
+    tag = "v0.9.0",
     importpath = "github.com/ipfs/go-cid",
 )
 
@@ -798,13 +798,13 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_golang_lru",
-    commit = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768",
+    tag = "v0.5.0",
     importpath = "github.com/hashicorp/golang-lru",
 )
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
-    commit = "489e2d62e87b8986d703b3b28d62a7fcc3978222",
+    tag = "v0.1.25",
     importpath = "github.com/ipfs/go-ipfs-addr",
 )
 
