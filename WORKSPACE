@@ -705,7 +705,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_mplex",
-    commit = "f6e0e0f222d6bcd9638a5ca0ccce45fa8ce7a274",
+    tag = "v0.2.30",
     importpath = "github.com/libp2p/go-mplex",
 )
 
