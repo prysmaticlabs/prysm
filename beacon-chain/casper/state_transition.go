@@ -3,6 +3,7 @@ package casper
 import (
 	"encoding/binary"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -25,8 +26,17 @@ func TallyVoteBalances(
 
 	blockVoteBalance := blockVote.VoteTotalDeposit
 	voterIndices := blockVote.VoterIndices
-	validators = CalculateRewards(slot, voterIndices, validators,
-		blockVoteBalance, timeSinceFinality)
+	activeValidatorIndices := ActiveValidatorIndices(validators)
+	totalDeposit := TotalActiveValidatorDeposit(validators)
+	validators = incentives.CalculateRewards(
+		slot,
+		voterIndices,
+		activeValidatorIndices,
+		validators,
+		totalDeposit,
+		blockVoteBalance,
+		timeSinceFinality,
+	)
 
 	return blockVoteBalance, validators
 }
@@ -68,7 +78,8 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalBalance uint64,
 	voteBalance uint64) error {
 
-	rewardQuotient := RewardQuotient(validators)
+	totalDeposit := TotalActiveValidatorDeposit(validators)
+	rewardQuotient := incentives.RewardQuotient(totalDeposit)
 
 	for _, attesterIndex := range attesterIndices {
 		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
@@ -78,9 +89,9 @@ func ApplyCrosslinkRewardsAndPenalties(
 			return err
 		}
 		if checkBit {
-			RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+			incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 		} else {
-			PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+			incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 		}
 	}
 	return nil
