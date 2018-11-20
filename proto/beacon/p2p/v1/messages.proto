@@ -1,8 +1,7 @@
 syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
-
-import "google/protobuf/timestamp.proto";
+import "proto/beacon/p2p/v1/types.proto";
 
 enum Topic {
   UNKNOWN = 0;
@@ -37,21 +36,7 @@ message BeaconBlockResponse {
   AggregatedAttestation attestation = 2;
 }
 
-message BeaconBlock {
-  repeated bytes ancestor_hashes = 1;
-  uint64 slot = 2;
-  bytes randao_reveal = 3;
-  bytes pow_chain_ref = 4;
-  bytes active_state_root = 5;
-  bytes crystallized_state_root = 6;
-  google.protobuf.Timestamp timestamp = 7;
-  repeated AggregatedAttestation attestations = 8;
-  repeated SpecialRecord specials = 9;
-}
-
-message ChainHeadRequest {
-  
-}
+message ChainHeadRequest {}
 
 message ChainHeadResponse {
   bytes hash = 1;
@@ -71,26 +56,6 @@ message CrystallizedStateResponse {
   CrystallizedState crystallized_state = 1;
 }
 
-message CrystallizedState {
-  uint64 last_state_recalculation_slot = 1;
-  uint64 justified_streak = 2;
-  uint64 last_justified_slot = 3;
-  uint64 last_finalized_slot = 4;
-  uint64 validator_set_change_slot = 5;
-  repeated CrosslinkRecord crosslinks = 6;
-  repeated ValidatorRecord validators = 7;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint32 deposits_penalized_in_period = 9;
-  bytes validator_set_delta_hash_chain = 10;
-  uint32 pre_fork_version = 11;
-  uint32 post_fork_version = 12;
-  uint64 fork_slot_number =13;
-}
-
-message ShardAndCommitteeArray {
-  repeated ShardAndCommittee array_shard_and_committee = 1;
-}
-
 message ActiveStateHashAnnounce {
   bytes hash = 1;
 }
@@ -99,64 +64,6 @@ message ActiveStateRequest {
   bytes hash = 1;
 }
 
-message ShardAndCommittee {
-  uint64 shard = 1;
-  repeated uint32 committee = 2;
-}
-
 message ActiveStateResponse {
   ActiveState active_state = 1;
-}
-
-message ActiveState {
-  repeated AggregatedAttestation pending_attestations = 1;
-  repeated bytes recent_block_hashes = 2;
-  repeated SpecialRecord pending_specials = 3;
-  bytes randao_mix = 4;
-}
-
-message ValidatorRecord {
-  bytes pubkey = 1;
-  uint64 withdrawal_shard = 2;
-  bytes withdrawal_address = 3;
-  bytes randao_commitment = 4;
-  uint64 balance = 5;
-  uint64 status = 6;
-  uint64 exit_slot = 7;
-  uint64 randao_last_change = 8;
-}
-
-message AggregatedAttestation {
-  uint64 slot = 1;
-  uint64 shard = 2;
-  uint64 justified_slot = 3;
-  bytes justified_block_hash = 4;
-  bytes shard_block_hash = 5;
-  bytes attester_bitfield = 6;
-  repeated bytes oblique_parent_hashes = 7;
-  repeated uint64 aggregate_sig = 8;
-}
-
-message AttestationSignedData {
-  uint64 fork_version = 1;
-  uint64 slot = 2;
-  uint64 shard = 3;
-  repeated bytes parent_hashes = 4;
-  bytes shard_block_hash = 5;
-  uint64 justified_slot = 6;
-}
-
-message CrosslinkRecord {
-  bool recently_changed = 1;
-  bytes shard_block_hash = 2;
-  uint64 slot = 3;
-}
-
-message AttestationHashes {
-  repeated bytes attestation_hash = 1;
-}
-
-message SpecialRecord {
-    uint32 kind = 1;
-    repeated bytes data = 2;
 }

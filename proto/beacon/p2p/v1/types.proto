@@ -1,0 +1,128 @@
+
+syntax = "proto3";
+
+package ethereum.beacon.p2p.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message BeaconState {
+  uint64 validator_set_change_slot = 1;
+  repeated ValidatorRecord validators = 2;
+  repeated CrosslinkRecord crosslinks = 3;
+  uint64 last_state_recalculation_slot = 4;
+  uint64 last_finalized_slot = 5;
+  uint64 last_justified_slot = 6;
+  uint64 justified_streak = 7;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
+  repeated uint64 persistent_committees = 9;
+  repeated ShardReassignmentRecord persistent_committee_reassignment = 10;
+  bytes next_shuffling_seed = 11;
+  repeated uint64 deposits_penalized_in_period = 12;
+  bytes validator_delta_hash_chain = 13;
+  uint64 current_exit_seq = 14;
+  google.protobuf.Timestamp genesis_time = 15;
+  bytes known_pow_receipt_root = 16;
+  bytes candidate_pow_receipt_root = 17;
+  uint64 candidate_pow_receipt_root_votes = 18;
+  uint64 pre_fork_version = 19;
+  uint64 post_fork_version = 20;
+  uint64 fork_slot_number = 21;
+  repeated AggregatedAttestation pending_attestations = 22;
+  repeated bytes recent_block_hashes = 23;
+  bytes randao_mix = 24;
+}
+
+message ValidatorRecord {
+  bytes pubkey = 1;
+  uint64 withdrawal_shard = 2;
+  bytes withdrawal_address = 3;
+  bytes randao_commitment = 4;
+  uint64 balance = 5;
+  uint64 status = 6;
+  uint64 exit_slot = 7;
+  uint64 randao_last_change = 8;
+}
+
+message ShardReassignmentRecord {
+  uint64 validator_index = 1;
+  uint64 shard = 2;
+  uint64 slot = 3;
+}
+
+message AggregatedAttestation {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  uint64 justified_slot = 3;
+  bytes justified_block_hash = 4;
+  bytes shard_block_hash = 5;
+  bytes attester_bitfield = 6;
+  repeated bytes oblique_parent_hashes = 7;
+  repeated uint64 aggregate_sig = 8;
+}
+
+message AttestationSignedData {
+  uint64 fork_version = 1;
+  uint64 slot = 2;
+  uint64 shard = 3;
+  repeated bytes parent_hashes = 4;
+  bytes shard_block_hash = 5;
+  uint64 justified_slot = 6;
+}
+
+message AttestationHashes {
+  repeated bytes attestation_hash = 1;
+}
+
+message SpecialRecord {
+    uint32 kind = 1;
+    repeated bytes data = 2;
+}
+
+message CrosslinkRecord {
+  bytes shard_block_hash = 1;
+  uint64 slot = 2;
+}
+
+message ShardAndCommitteeArray {
+  repeated ShardAndCommittee array_shard_and_committee = 1;
+}
+
+message ShardAndCommittee {
+  uint64 shard = 1;
+  repeated uint32 committee = 2;
+}
+
+message BeaconBlock {
+  repeated bytes ancestor_hashes = 1;
+  uint64 slot = 2;
+  bytes randao_reveal = 3;
+  bytes pow_chain_ref = 4;
+  bytes active_state_root = 5;
+  bytes crystallized_state_root = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  repeated AggregatedAttestation attestations = 8;
+  repeated SpecialRecord specials = 9;
+}
+
+message CrystallizedState {
+  uint64 last_state_recalculation_slot = 1;
+  uint64 justified_streak = 2;
+  uint64 last_justified_slot = 3;
+  uint64 last_finalized_slot = 4;
+  uint64 validator_set_change_slot = 5;
+  repeated CrosslinkRecord crosslinks = 6;
+  repeated ValidatorRecord validators = 7;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
+  repeated uint32 deposits_penalized_in_period = 9;
+  bytes validator_set_delta_hash_chain = 10;
+  uint32 pre_fork_version = 11;
+  uint32 post_fork_version = 12;
+  uint64 fork_slot_number =13;
+}
+
+message ActiveState {
+  repeated AggregatedAttestation pending_attestations = 1;
+  repeated bytes recent_block_hashes = 2;
+  repeated SpecialRecord pending_specials = 3;
+  bytes randao_mix = 4;
+}
