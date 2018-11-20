@@ -792,7 +792,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multibase",
-    commit = "007b57d38809499c388eee69498dc042fa1336c9",
+    tag = "v0.3.0",
     importpath = "github.com/multiformats/go-multibase",
 )
 
