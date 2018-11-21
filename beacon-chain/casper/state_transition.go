@@ -87,9 +87,9 @@ func ApplyCrosslinkRewardsAndPenalties(
 			return err
 		}
 		if checkBit {
-			incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+			validators[attesterIndex] = incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 		} else {
-			incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+			validators[attesterIndex] = incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 		}
 	}
 	return nil

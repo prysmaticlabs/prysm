@@ -91,18 +91,42 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 
 // RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
 // TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
-func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	currentBalance := int64(validator.Balance)
-	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
-	validator.Balance = uint64(currentBalance)
+func RewardValidatorCrosslink(
+	totalDeposit uint64,
+	participatedDeposits uint64,
+	rewardQuotient uint64,
+	validator *pb.ValidatorRecord,
+) *pb.ValidatorRecord {
+	balance := calculateBalance(validator.Balance, rewardQuotient, participatedDeposits, totalDeposit)
+	return &pb.ValidatorRecord{
+		Pubkey:            validator.Pubkey,
+		WithdrawalShard:   validator.WithdrawalShard,
+		WithdrawalAddress: validator.WithdrawalAddress,
+		RandaoCommitment:  validator.RandaoCommitment,
+		Balance:           balance,
+		Status:            validator.Status,
+		ExitSlot:          validator.ExitSlot,
+	}
 }
 
 // PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
-func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	newBalance := validator.Balance
+func PenaliseValidatorCrosslink(
+	timeSinceLastConfirmation uint64,
+	rewardQuotient uint64,
+	validator *pb.ValidatorRecord,
+) *pb.ValidatorRecord {
 	quadraticQuotient := QuadraticPenaltyQuotient()
-	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
-	validator.Balance = newBalance
+	balance := validator.Balance
+	balance -= balance/rewardQuotient + balance*timeSinceLastConfirmation/quadraticQuotient
+	return &pb.ValidatorRecord{
+		Pubkey:            validator.Pubkey,
+		WithdrawalShard:   validator.WithdrawalShard,
+		WithdrawalAddress: validator.WithdrawalAddress,
+		RandaoCommitment:  validator.RandaoCommitment,
+		Balance:           balance,
+		Status:            validator.Status,
+		ExitSlot:          validator.ExitSlot,
+	}
 }
 
 // calculateBalance applies the Casper FFG reward calculation based on reward quotients

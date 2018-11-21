@@ -142,13 +142,11 @@ func TestRewardCrosslink(t *testing.T) {
 		Balance: 1e18,
 	}
 
-	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
+	validator = RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
 
 	if validator.Balance != 1e18 {
 		t.Errorf("validator balances have changed when they were not supposed to %d", validator.Balance)
 	}
-	participatedDeposit = uint64(4e18)
-	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
 }
 
 func TestPenaltyCrosslink(t *testing.T) {
@@ -160,7 +158,7 @@ func TestPenaltyCrosslink(t *testing.T) {
 	timeSinceConfirmation := uint64(10)
 	quadraticQuotient := QuadraticPenaltyQuotient()
 
-	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
+	validator = PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
 	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*timeSinceConfirmation/quadraticQuotient)
 
 	if validator.Balance != expectedBalance {
