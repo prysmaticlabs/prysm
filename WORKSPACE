@@ -128,7 +128,7 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    commit = "f4b3f83362a4cf2928e57914af040aea76c8a7d6",
+    tag = "v1.8.18",
 )
 
 go_repository(
