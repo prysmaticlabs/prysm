@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 )
 
 // TallyVoteBalances calculates all the votes behind a block and then rewards validators for their

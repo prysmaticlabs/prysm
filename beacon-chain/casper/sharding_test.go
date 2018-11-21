@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 )
 
 func TestGetShardAndCommitteesForSlots(t *testing.T) {

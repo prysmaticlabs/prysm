@@ -3,8 +3,8 @@ package validators
 import (
 	"bytes"
 	"fmt"
-	"github.com/prometheus/common/log"
 
+	"github.com/prometheus/common/log"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
