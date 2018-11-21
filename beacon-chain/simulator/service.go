@@ -268,22 +268,22 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 
 	aState, err := sim.beaconDB.GetActiveState()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get active state: %v", err)
+		return nil, fmt.Errorf("failed to get active state: %v", err)
 	}
 
 	cState, err := sim.beaconDB.GetCrystallizedState()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get crystallized state: %v", err)
+		return nil, fmt.Errorf("failed to get crystallized state: %v", err)
 	}
 
 	aStateHash, err := aState.Hash()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to hash active state: %v", err)
+		return nil, fmt.Errorf("failed to hash active state: %v", err)
 	}
 
 	cStateHash, err := cState.Hash()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to hash crystallized state: %v", err)
+		return nil, fmt.Errorf("failed to hash crystallized state: %v", err)
 
 	}
 
