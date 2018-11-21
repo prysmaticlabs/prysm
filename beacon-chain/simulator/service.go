@@ -110,8 +110,7 @@ func (sim *Simulator) Start() {
 		return
 	}
 
-	slotTicker := slotticker.GetSimulatorTicker(genesisTime, params.BeaconConfig().SlotDuration)
-	slotTicker := slotticker.GetSlotTicker(genesisTime, params.BeaconConfig().SlotDuration, currentSlot)
+	slotTicker := slotticker.GetSimulatorTicker(genesisTime, params.BeaconConfig().SlotDuration, currentSlot)
 	go func() {
 		sim.run(slotTicker.C())
 		close(sim.blockRequestChan)

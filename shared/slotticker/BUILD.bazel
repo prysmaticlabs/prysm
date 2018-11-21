@@ -12,6 +12,9 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["slotticker_test.go"],
+    srcs = [
+        "simulatorticker_test.go",
+        "slotticker_test.go",
+    ],
     embed = [":go_default_library"],
 )
