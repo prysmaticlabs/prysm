@@ -345,7 +345,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "0c61f185f3d6e16bcda416874e7a0fca4696e7e0",
+    tag = "v0.3.9",
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "83a9d304b1e613fc253e1e2710778642fe81af53",
+    commit = "faade3cbb06a30202f2da53a8a5e3c4afe60b0c2",
     importpath = "google.golang.org/api",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "3fb53dff765f8a3e0f9d8b1d5b86d4f8c4eb3a09",
+    tag = "v0.9.1",
     importpath = "github.com/prometheus/client_golang",
 )
 
