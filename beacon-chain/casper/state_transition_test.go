@@ -140,24 +140,20 @@ func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'A'},
-			Slot:            10,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'B'},
-			Slot:            10,
+			ShardBlockHash: []byte{'B'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'C'},
-			Slot:            10,
+			ShardBlockHash: []byte{'C'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'D'},
-			Slot:            10,
+			ShardBlockHash: []byte{'D'},
+			Slot:           10,
 		},
 	}
 
@@ -189,14 +185,12 @@ func TestCrosslinks(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			RecentlyChanged: false,
-			ShardBlockHash:  []byte{'A'},
-			Slot:            10,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
 		},
 		{
-			RecentlyChanged: true,
-			ShardBlockHash:  []byte{'A'},
-			Slot:            10,
+			ShardBlockHash: []byte{'A'},
+			Slot:           10,
 		},
 	}
 
@@ -208,13 +202,6 @@ func TestCrosslinks(t *testing.T) {
 	}
 
 	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
-
-	if bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
-		t.Fatal("crosslink updated when it was not supposed to")
-	}
-
-	crossLinks[1].RecentlyChanged = false
-
 	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
@@ -226,10 +213,8 @@ func TestCrosslinks(t *testing.T) {
 func TestProcessSpecialRecords(t *testing.T) {
 
 	specialRecords := []*pb.SpecialRecord{
-		{Kind: uint32(params.Logout), Data: [][]byte{b.Bytes8(4)}},                    // Validator 4
-		{Kind: uint32(params.Logout), Data: [][]byte{b.Bytes8(5)}},                    // Validator 5
-		{Kind: uint32(params.RandaoChange), Data: [][]byte{b.Bytes8(6), {byte('A')}}}, // Validator 6
-		{Kind: uint32(params.RandaoChange), Data: [][]byte{b.Bytes8(7), {byte('B')}}}, // Validator 7
+		{Kind: uint32(params.Logout), Data: [][]byte{b.Bytes8(4)}}, // Validator 4
+		{Kind: uint32(params.Logout), Data: [][]byte{b.Bytes8(5)}}, // Validator 5
 	}
 
 	validators := make([]*pb.ValidatorRecord, 10)
@@ -252,11 +237,5 @@ func TestProcessSpecialRecords(t *testing.T) {
 	}
 	if newValidators[5].ExitSlot != 99 {
 		t.Error("Validator 5 exit slot is not 99")
-	}
-	if !(bytes.Equal(newValidators[6].RandaoCommitment, []byte{'A'})) {
-		t.Error("Failed to set validator 7's randao reveal")
-	}
-	if !(bytes.Equal(newValidators[7].RandaoCommitment, []byte{'B'})) {
-		t.Error("Failed to set validator 8's randao reveal")
 	}
 }

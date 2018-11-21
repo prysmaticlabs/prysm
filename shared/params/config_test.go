@@ -1,7 +1,6 @@
 package params
 
 import (
-	"math"
 	"testing"
 )
 
@@ -16,7 +15,7 @@ func TestValidatorStatusCode(t *testing.T) {
 		{a: PendingExit, b: 2},
 		{a: PendingWithdraw, b: 3},
 		{a: Withdrawn, b: 4},
-		{a: Penalized, b: 128},
+		{a: Penalized, b: 127},
 	}
 	for _, tt := range tests {
 		if int(tt.a) != tt.b {
@@ -32,6 +31,8 @@ func TestSpecialRecordTypes(t *testing.T) {
 	}{
 		{a: Logout, b: 0},
 		{a: CasperSlashing, b: 1},
+		{a: ProposerSlashing, b: 2},
+		{a: DepositProof, b: 3},
 	}
 	for _, tt := range tests {
 		if int(tt.a) != tt.b {
@@ -61,12 +62,5 @@ func TestOverrideBeaconConfig(t *testing.T) {
 	OverrideBeaconConfig(cfg)
 	if c := BeaconConfig(); c.ShardCount != 5 {
 		t.Errorf("Shardcount in BeaconConfig incorrect. Wanted %d, got %d", 5, c.ShardCount)
-	}
-}
-
-func TestCollationSize(t *testing.T) {
-	c := DefaultValidatorConfig()
-	if c.CollationSizeLimit != int64(math.Pow(float64(2), float64(20))) {
-		t.Errorf("Shard count incorrect. Wanted %d, got %d", int64(math.Pow(float64(2), float64(20))), c.CollationSizeLimit)
 	}
 }

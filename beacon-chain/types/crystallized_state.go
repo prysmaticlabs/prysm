@@ -42,9 +42,8 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			RecentlyChanged: false,
-			ShardBlockHash:  make([]byte, 0, 32),
-			Slot:            0,
+			ShardBlockHash: make([]byte, 0, 32),
+			Slot:           0,
 		})
 	}
 
@@ -91,9 +90,8 @@ func (c *CrystallizedState) CopyState() *CrystallizedState {
 	crosslinks := make([]*pb.CrosslinkRecord, len(c.Crosslinks()))
 	for index, crossLink := range c.Crosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
-			RecentlyChanged: crossLink.GetRecentlyChanged(),
-			ShardBlockHash:  crossLink.GetShardBlockHash(),
-			Slot:            crossLink.GetSlot(),
+			ShardBlockHash: crossLink.GetShardBlockHash(),
+			Slot:           crossLink.GetSlot(),
 		}
 	}
 
@@ -338,22 +336,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			return nil, err
 		}
 
-		period := uint32(block.SlotNumber() / params.BeaconConfig().WithdrawalPeriod)
+		period := uint32(block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod)
 		totalPenalties := newState.penalizedETH(period)
 		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
-
-		newState.resetCrosslinks()
 	}
 
 	printCommittee(newState.data.ShardAndCommitteesForSlots)
 
 	return newState, nil
-}
-
-func (c *CrystallizedState) resetCrosslinks() {
-	for _, cl := range c.data.Crosslinks {
-		cl.RecentlyChanged = false
-	}
 }
 
 func printCommittee(shardAndCommittees []*pb.ShardAndCommitteeArray) {
