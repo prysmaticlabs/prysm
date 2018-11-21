@@ -367,6 +367,7 @@ func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
 	return nil
 }
 
+// Saves the current slot of the simulator.
 func (sim *Simulator) SaveSimulatorSlot(slot uint64) {
 	err := sim.beaconDB.SaveSimulatorSlot(slot)
 	if err != nil {
