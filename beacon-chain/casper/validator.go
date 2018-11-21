@@ -9,7 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "casper")
 
 const bitsInByte = 8
 

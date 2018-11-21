@@ -300,7 +300,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot, blockVoteCache,
+		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, blockVoteCache,
 			newState.data.Validators, timeSinceFinality)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,

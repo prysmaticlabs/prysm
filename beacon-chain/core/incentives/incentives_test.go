@@ -1,4 +1,4 @@
-package casper
+package incentives
 
 import (
 	"math"
@@ -9,9 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func NewValidators() []*pb.ValidatorRecord {
+func newValidators() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
-
 	for i := 0; i < 10; i++ {
 		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)}
 		validators = append(validators, validator)
@@ -20,13 +19,13 @@ func NewValidators() []*pb.ValidatorRecord {
 }
 
 func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
-	validators := NewValidators()
+	validators := newValidators()
 	defaultBalance := uint64(32 * 1e9)
 
-	rewQuotient := RewardQuotient(validators)
 	participatedDeposit := 4 * defaultBalance
 	totalDeposit := 10 * defaultBalance
-	penaltyQuotient := quadraticPenaltyQuotient()
+	rewQuotient := RewardQuotient(totalDeposit)
+	penaltyQuotient := QuadraticPenaltyQuotient()
 	timeSinceFinality := uint64(5)
 
 	data := &pb.CrystallizedState{
@@ -36,12 +35,21 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		LastFinalizedSlot:      3,
 	}
 
+	activeValidatorIndices := make([]uint32, 0, len(validators))
+	for i, v := range validators {
+		if v.Status == uint64(params.Active) {
+			activeValidatorIndices = append(activeValidatorIndices, uint32(i))
+		}
+	}
+
 	rewardedValidators := CalculateRewards(
-		5,
 		[]uint32{2, 3, 6, 9},
+		activeValidatorIndices,
 		data.Validators,
+		totalDeposit,
 		participatedDeposit,
-		timeSinceFinality)
+		timeSinceFinality,
+	)
 
 	expectedBalance := defaultBalance - defaultBalance/uint64(rewQuotient)
 
@@ -49,7 +57,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
 	}
 
-	expectedBalance = uint64(int64(defaultBalance) + int64(defaultBalance/rewQuotient)*int64(2*uint64(participatedDeposit)-uint64(totalDeposit))/int64(totalDeposit))
+	expectedBalance = calculateBalance(defaultBalance, rewQuotient, participatedDeposit, totalDeposit)
 
 	if rewardedValidators[6].Balance != expectedBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
@@ -59,13 +67,21 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[9].Balance, expectedBalance)
 	}
 
-	validators = NewValidators()
+	validators = newValidators()
 	timeSinceFinality = 200
 
+	activeValidatorIndices = make([]uint32, 0, len(validators))
+	for i, v := range validators {
+		if v.Status == uint64(params.Active) {
+			activeValidatorIndices = append(activeValidatorIndices, uint32(i))
+		}
+	}
+
 	rewardedValidators = CalculateRewards(
-		5,
 		[]uint32{1, 2, 7, 8},
+		activeValidatorIndices,
 		validators,
+		totalDeposit,
 		participatedDeposit,
 		timeSinceFinality)
 
@@ -90,10 +106,9 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 }
 
 func TestRewardQuotient(t *testing.T) {
-	validators := []*pb.ValidatorRecord{
-		{Balance: 1e9, Status: uint64(params.Active)},
-	}
-	rewQuotient := RewardQuotient(validators)
+	defaultBalance := uint64(2 * 1e9)
+	totalDeposit := defaultBalance
+	rewQuotient := RewardQuotient(totalDeposit)
 
 	if rewQuotient != params.BeaconConfig().BaseRewardQuotient {
 		t.Errorf("incorrect reward quotient: %d", rewQuotient)
@@ -101,7 +116,7 @@ func TestRewardQuotient(t *testing.T) {
 }
 
 func TestQuadraticPenaltyQuotient(t *testing.T) {
-	penaltyQuotient := quadraticPenaltyQuotient()
+	penaltyQuotient := QuadraticPenaltyQuotient()
 	if penaltyQuotient != uint64(math.Pow(2, 32)) {
 		t.Errorf("incorrect penalty quotient %d", penaltyQuotient)
 	}
@@ -127,14 +142,11 @@ func TestRewardCrosslink(t *testing.T) {
 		Balance: 1e18,
 	}
 
-	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
+	validator = RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
 
 	if validator.Balance != 1e18 {
 		t.Errorf("validator balances have changed when they were not supposed to %d", validator.Balance)
 	}
-	participatedDeposit = uint64(4e18)
-	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
-
 }
 
 func TestPenaltyCrosslink(t *testing.T) {
@@ -144,13 +156,12 @@ func TestPenaltyCrosslink(t *testing.T) {
 		Balance: 1e18,
 	}
 	timeSinceConfirmation := uint64(10)
-	quadraticQuotient := quadraticPenaltyQuotient()
+	quadraticQuotient := QuadraticPenaltyQuotient()
 
-	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
+	validator = PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
 	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*timeSinceConfirmation/quadraticQuotient)
 
 	if validator.Balance != expectedBalance {
 		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)
 	}
-
 }
