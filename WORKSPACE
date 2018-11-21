@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    commit = "11b336e3ca5832b812725e050aa5b62655533517",
+    tag = "0.20.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
