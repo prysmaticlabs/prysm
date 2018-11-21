@@ -133,7 +133,7 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    tag = "v0.1.0",
+    commit = "b67dcf995b6a7b7f14fad5fcb7cc5441b05e814b",
     importpath = "github.com/urfave/cli",
 )
 
@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    tag = "v1.3.0",
+    commit = "ec8630b6b7436b5d7f6c1c2366d3d7214d1b29e2",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -429,7 +429,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
-    tag = "v0.2.0",
+    tag = "v3.0.0",
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
 )
 
@@ -489,7 +489,7 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v0.11.5",
+    tag = "v1.2.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
