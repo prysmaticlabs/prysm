@@ -11,7 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -212,7 +212,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 		return nil, fmt.Errorf("could not get crystallized state: %v", err)
 	}
 
-	_, prevProposerIndex, err := casper.ProposerShardAndIndex(
+	_, prevProposerIndex, err := v.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		req.GetSlotNumber(),
@@ -290,7 +290,7 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 		return nil, fmt.Errorf("could not get crystallized state: %v", err)
 	}
 
-	shardID, err := casper.ValidatorShardID(
+	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
@@ -313,7 +313,7 @@ func (s *Service) ValidatorSlotAndResponsibility(
 		return nil, fmt.Errorf("could not get crystallized state: %v", err)
 	}
 
-	slot, role, err := casper.ValidatorSlotAndRole(
+	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
 		cState.Validators(),
 		cState.ShardAndCommitteesForSlots(),
@@ -333,9 +333,8 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 		return nil, fmt.Errorf("could not get crystallized state: %v", err)
 	}
 
-	index, err := casper.ValidatorIndex(
+	index, err := v.ValidatorIndex(
 		req.PublicKey,
-
 		cState.Validators(),
 	)
 	if err != nil {
@@ -405,7 +404,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
-		assignedSlot, role, err := casper.ValidatorSlotAndRole(
+		assignedSlot, role, err := v.ValidatorSlotAndRole(
 			val.GetPublicKey(),
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
@@ -416,7 +415,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 
 		// We determine the assigned shard ID for the validator
 		// based on a public key and current crystallized state.
-		shardID, err := casper.ValidatorShardID(
+		shardID, err := v.ValidatorShardID(
 			val.GetPublicKey(),
 			cState.Validators(),
 			cState.ShardAndCommitteesForSlots(),
