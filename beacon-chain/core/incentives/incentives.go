@@ -1,3 +1,7 @@
+// Package incentives defines Casper Proof of Stake rewards and penalties for validator
+// records based on Vitalik Buterin's Friendly Finality Gadget protocol. Validator balances
+// depend on time to finality as well as deposit-weighted functions. This package provides
+// pure functions that can then be incorporated into a beacon chain state transition.
 package incentives
 
 import (
