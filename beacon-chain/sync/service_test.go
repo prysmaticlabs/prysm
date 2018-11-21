@@ -55,11 +55,11 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 
 func setupService(t *testing.T, db *db.BeaconDB) *Service {
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
 	}
 	return NewSyncService(context.Background(), cfg)
 }
@@ -72,11 +72,11 @@ func TestProcessBlockHash(t *testing.T) {
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -88,7 +88,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}()
 
 	announceHash := hashutil.Hash([]byte{})
-	hashAnnounce := &pb.BeaconBlockHashAnnounce{
+	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
 	}
 
@@ -99,7 +99,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}
 
 	// if a new hash is processed
-	ss.announceBlockHashBuf <- msg
+	ss.announceBlockBuf <- msg
 
 	ss.cancel()
 	<-exitRoutine
@@ -118,12 +118,12 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
-		AttestService:       &mockAttestService{},
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+		AttestService:           &mockAttestService{},
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -185,12 +185,12 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
-		AttestService:       &mockAttestService{},
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+		AttestService:           &mockAttestService{},
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -269,7 +269,7 @@ func TestBlockRequestErrors(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	malformedRequest := &pb.BeaconBlockHashAnnounce{
+	malformedRequest := &pb.BeaconBlockAnnounce{
 		Hash: []byte{'t', 'e', 's', 't'},
 	}
 
@@ -325,13 +325,13 @@ func TestReceiveAttestation(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	cfg := Config{
-		BlockHashBufferSize:    0,
-		BlockBufferSize:        0,
-		BlockRequestBufferSize: 0,
-		ChainService:           ms,
-		AttestService:          as,
-		P2P:                    &mockP2P{},
-		BeaconDB:               db,
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		BlockRequestBufferSize:  0,
+		ChainService:            ms,
+		AttestService:           as,
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
