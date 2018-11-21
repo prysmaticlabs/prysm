@@ -141,7 +141,6 @@ go_repository(
     name = "com_github_go_yaml_yaml",
     commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
     importpath = "github.com/go-yaml/yaml",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
 )
 
 go_repository(
@@ -183,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    tag = "0.1.2",
+    tag = "v1.3.0",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -195,7 +194,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    tag = "0.1.0",
+    tag = "v1.0.8",
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -492,7 +491,6 @@ go_repository(
     name = "com_github_sirupsen_logrus",
     tag = "v0.11.5",
     importpath = "github.com/sirupsen/logrus",
-    commit = "91da99df23e3bad7f384338a5a8f636d04093d9a",
 )
 
 go_repository(
@@ -739,7 +737,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    tag = "v0.3.0",
+    tag = "v3.2.0",
     importpath = "github.com/ipfs/go-datastore",
 )
 
@@ -826,4 +824,10 @@ go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
     commit = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_interface_conn",
+    commit = "c7cda99284db0bea441058da8fd1f1373c763ed6",
+    importpath = "github.com/libp2p/go-libp2p-interface-conn",
 )
