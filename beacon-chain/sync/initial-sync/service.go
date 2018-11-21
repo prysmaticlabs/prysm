@@ -46,7 +46,7 @@ type Config struct {
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
 func DefaultConfig() Config {
 	return Config{
-		SyncPollingInterval:         time.Duration(int64(params.BeaconConfig().SlotDuration)) * time.Second * 4,
+		SyncPollingInterval:         time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
 		BlockBufferSize:             100,
 		BlockAnnounceBufferSize:     100,
 		CrystallizedStateBufferSize: 100,

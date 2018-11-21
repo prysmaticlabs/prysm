@@ -27,6 +27,7 @@ type BeaconChainConfig struct {
 	TargetCommitteeSize                  uint64         // TargetCommitteeSize is the minimal number of validator needs to be in a committee.
 	GenesisTime                          time.Time      // GenesisTime used by the protocol.
 	SlotDuration                         uint64         // SlotDuration is how many seconds are in a single slot.
+	SyncPollingInterval                  int64          // SyncPollingInterval queries network nodes for sync status.
 	CycleLength                          uint64         // CycleLength is one beacon chain cycle length in slots.
 	MinValidatorSetChangeInterval        uint64         // MinValidatorSetChangeInterval is the slots needed before validator set changes.
 	RandaoSlotsPerLayer                  uint64         // RandaoSlotsPerLayer defines how many randao slot a proposer can peel off once.
@@ -62,6 +63,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TargetCommitteeSize:           uint64(256),
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	SlotDuration:                  uint64(16),
+	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
 	CycleLength:                   uint64(64),
 	MinValidatorSetChangeInterval: uint64(256),
 	RandaoSlotsPerLayer:           uint64(4096),
@@ -83,6 +85,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	TargetCommitteeSize:           uint64(3),
 	GenesisTime:                   time.Now(),
 	SlotDuration:                  uint64(2),
+	SyncPollingInterval:           2 * 4, // Query nodes over the network every 4 slots for sync status.
 	CycleLength:                   uint64(5),
 	MinValidatorSetChangeInterval: uint64(15),
 	RandaoSlotsPerLayer:           uint64(5),
