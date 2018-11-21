@@ -3,41 +3,9 @@ package casper
 import (
 	"encoding/binary"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// TallyVoteBalances calculates all the votes behind a block and then rewards validators for their
-// participation in voting for that block.
-func TallyVoteBalances(
-	blockHash [32]byte,
-	blockVoteCache utils.BlockVoteCache,
-	validators []*pb.ValidatorRecord,
-	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
-
-	blockVote, ok := blockVoteCache[blockHash]
-	if !ok {
-		return 0, validators
-	}
-
-	blockVoteBalance := blockVote.VoteTotalDeposit
-	voterIndices := blockVote.VoterIndices
-	activeValidatorIndices := ActiveValidatorIndices(validators)
-	totalDeposit := TotalActiveValidatorDeposit(validators)
-	validators = incentives.CalculateRewards(
-		voterIndices,
-		activeValidatorIndices,
-		validators,
-		totalDeposit,
-		blockVoteBalance,
-		timeSinceFinality,
-	)
-
-	return blockVoteBalance, validators
-}
 
 // FinalizeAndJustifySlots justifies slots and sets the justified streak according to Casper FFG
 // conditions. It also finalizes slots when the conditions are fulfilled.
@@ -63,36 +31,6 @@ func FinalizeAndJustifySlots(
 	}
 
 	return justifiedSlot, finalizedSlot, justifiedStreak
-}
-
-// ApplyCrosslinkRewardsAndPenalties applies the appropriate rewards and penalties according to the attestation
-// for a shard.
-func ApplyCrosslinkRewardsAndPenalties(
-	crosslinkRecords []*pb.CrosslinkRecord,
-	slot uint64,
-	attesterIndices []uint32,
-	attestation *pb.AggregatedAttestation,
-	validators []*pb.ValidatorRecord,
-	totalBalance uint64,
-	voteBalance uint64) error {
-
-	totalDeposit := TotalActiveValidatorDeposit(validators)
-	rewardQuotient := incentives.RewardQuotient(totalDeposit)
-
-	for _, attesterIndex := range attesterIndices {
-		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
-
-		checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
-		if err != nil {
-			return err
-		}
-		if checkBit {
-			validators[attesterIndex] = incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
-		} else {
-			validators[attesterIndex] = incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
-		}
-	}
-	return nil
 }
 
 // ProcessCrosslink checks the vote balances and if there is a supermajority it sets the crosslink
