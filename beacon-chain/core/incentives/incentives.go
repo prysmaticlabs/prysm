@@ -5,10 +5,41 @@
 package incentives
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// TallyVoteBalances calculates all the votes behind a block and
+// then rewards validators for their participation in voting for that block.
+func TallyVoteBalances(
+	blockHash [32]byte,
+	blockVoteCache utils.BlockVoteCache,
+	validators []*pb.ValidatorRecord,
+	activeValidatorIndices []uint32,
+	totalActiveValidatorDeposit uint64,
+	timeSinceFinality uint64,
+) (uint64, []*pb.ValidatorRecord) {
+	blockVote, ok := blockVoteCache[blockHash]
+	if !ok {
+		return 0, validators
+	}
+
+	blockVoteBalance := blockVote.VoteTotalDeposit
+	voterIndices := blockVote.VoterIndices
+	validators = CalculateRewards(
+		voterIndices,
+		activeValidatorIndices,
+		validators,
+		totalActiveValidatorDeposit,
+		blockVoteBalance,
+		timeSinceFinality,
+	)
+
+	return blockVoteBalance, validators
+}
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
@@ -71,6 +102,35 @@ func CalculateRewards(
 	return validators
 }
 
+// ApplyCrosslinkRewardsAndPenalties applies the appropriate rewards and
+// penalties according to the attestation for a shard.
+func ApplyCrosslinkRewardsAndPenalties(
+	crosslinkRecords []*pb.CrosslinkRecord,
+	slot uint64,
+	attesterIndices []uint32,
+	attestation *pb.AggregatedAttestation,
+	validators []*pb.ValidatorRecord,
+	totalActiveValidatorDeposit uint64,
+	totalBalance uint64,
+	voteBalance uint64,
+) error {
+	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
+	for _, attesterIndex := range attesterIndices {
+		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
+
+		checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		if err != nil {
+			return err
+		}
+		if checkBit {
+			validators[attesterIndex] = RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+		} else {
+			validators[attesterIndex] = PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+		}
+	}
+	return nil
+}
+
 // RewardQuotient returns the reward quotient for validators which will be used to
 // reward validators for voting on blocks, or penalise them for being offline.
 func RewardQuotient(totalActiveValidatorDeposit uint64) uint64 {
@@ -93,8 +153,8 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 	return slotFactor / penaltyQuotient
 }
 
-// RewardValidatorCrosslink applies rewards to validators part of a shard
-// committee for voting on a shard.
+// RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
+// TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
 func RewardValidatorCrosslink(
 	totalDeposit uint64,
 	participatedDeposits uint64,
@@ -113,8 +173,7 @@ func RewardValidatorCrosslink(
 	}
 }
 
-// PenaliseValidatorCrosslink applies penalties to validators part of a shard committee
-// for not voting on a shard.
+// PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
 func PenaliseValidatorCrosslink(
 	timeSinceLastConfirmation uint64,
 	rewardQuotient uint64,

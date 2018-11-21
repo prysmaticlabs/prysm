@@ -4,61 +4,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-func TestTallyVoteBalances(t *testing.T) {
-
-	var validators []*pb.ValidatorRecord
-	var blockHash [32]byte
-
-	blockVoteCache := utils.NewBlockVoteCache()
-	initialBalance := uint64(1e9)
-	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{
-			WithdrawalShard: 0,
-			Balance:         initialBalance}
-
-		validators = append(validators, validator)
-	}
-
-	validators[20].Status = uint64(params.Active)
-	validators[10].Status = uint64(params.Active)
-
-	blockVote := &utils.BlockVote{
-		VoterIndices:     []uint32{20, 10},
-		VoteTotalDeposit: 300,
-	}
-	copy(blockHash[:], []byte{'t', 'e', 's', 't', 'i', 'n', 'g'})
-
-	blockVoteCache[blockHash] = blockVote
-
-	zeroBalance, _ := TallyVoteBalances([32]byte{}, blockVoteCache, validators, 2)
-
-	if zeroBalance != 0 {
-		t.Fatalf("votes have been calculated despite blockhash not existing in cache")
-	}
-
-	voteBalance, newValidators := TallyVoteBalances(blockHash, blockVoteCache, validators, 2)
-	if voteBalance != 300 {
-		t.Fatalf("vote balances is not the amount expected %d", voteBalance)
-	}
-
-	if newValidators[1].Balance != initialBalance {
-		t.Fatalf("validator balance changed %d ", newValidators[1].Balance)
-	}
-
-	if newValidators[20].Balance == initialBalance {
-		t.Fatalf("validator balance not changed %d ", newValidators[20].Balance)
-	}
-
-	if newValidators[10].Balance == initialBalance {
-		t.Errorf("validator balance not changed %d ", newValidators[10].Balance)
-	}
-}
 
 func TestFinalizeAndJustifySlots(t *testing.T) {
 	slot := uint64(10)
@@ -116,65 +65,6 @@ func TestFinalizeAndJustifySlots(t *testing.T) {
 
 	if finalizedSlot == 6 {
 		t.Fatalf("finalized slot not updated when it was supposed to %d", finalizedSlot)
-	}
-
-}
-
-func TestApplyCrosslinkRewardsAndPenalties(t *testing.T) {
-	var validators []*pb.ValidatorRecord
-	initialBalance := uint64(1e9)
-	totalBalance := uint64(5e9)
-	voteBalance := uint64(4e9)
-	indices := []uint32{20, 10}
-
-	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{
-			WithdrawalShard: 0,
-			Balance:         initialBalance}
-
-		validators = append(validators, validator)
-	}
-
-	validators[20].Status = uint64(params.Active)
-	validators[10].Status = uint64(params.Active)
-
-	crossLinks := []*pb.CrosslinkRecord{
-		{
-			ShardBlockHash: []byte{'A'},
-			Slot:           10,
-		},
-		{
-			ShardBlockHash: []byte{'B'},
-			Slot:           10,
-		},
-		{
-			ShardBlockHash: []byte{'C'},
-			Slot:           10,
-		},
-		{
-			ShardBlockHash: []byte{'D'},
-			Slot:           10,
-		},
-	}
-
-	attestation := &pb.AggregatedAttestation{
-		Slot:             10,
-		Shard:            1,
-		AttesterBitfield: []byte{100, 128, 8},
-	}
-
-	ApplyCrosslinkRewardsAndPenalties(crossLinks, 12, indices, attestation, validators, totalBalance, voteBalance)
-
-	if validators[20].Balance <= initialBalance {
-		t.Fatalf("validator balance has not been updated %d", validators[20].Balance)
-	}
-
-	if validators[10].Balance >= initialBalance {
-		t.Fatalf("validator balance has not been updated %d", validators[10].Balance)
-	}
-
-	if validators[1].Balance != initialBalance {
-		t.Fatalf("validator balance updated when it was not supposed to %d", validators[1].Balance)
 	}
 
 }

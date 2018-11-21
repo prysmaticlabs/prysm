@@ -5,6 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -301,8 +302,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, blockVoteCache,
-			newState.data.Validators, timeSinceFinality)
+		blockVoteBalance, newState.data.Validators = incentives.TallyVoteBalances(
+			blockHash,
+			blockVoteCache,
+			newState.data.Validators,
+			v.ActiveValidatorIndices(newState.data.Validators),
+			v.TotalActiveValidatorDeposit(newState.data.Validators),
+			timeSinceFinality,
+		)
 
 		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
@@ -395,8 +402,16 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			return nil, err
 		}
 
-		err = casper.ApplyCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
-			validators, totalBalance, voteBalance)
+		err = incentives.ApplyCrosslinkRewardsAndPenalties(
+			crosslinkRecords,
+			currentSlot,
+			indices,
+			attestation,
+			validators,
+			v.TotalActiveValidatorDeposit(validators),
+			totalBalance,
+			voteBalance,
+		)
 		if err != nil {
 			return nil, err
 		}
