@@ -93,8 +93,8 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 	return slotFactor / penaltyQuotient
 }
 
-// RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
-// TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
+// RewardValidatorCrosslink applies rewards to validators part of a shard
+// committee for voting on a shard.
 func RewardValidatorCrosslink(
 	totalDeposit uint64,
 	participatedDeposits uint64,
@@ -113,7 +113,8 @@ func RewardValidatorCrosslink(
 	}
 }
 
-// PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
+// PenaliseValidatorCrosslink applies penalties to validators part of a shard committee
+// for not voting on a shard.
 func PenaliseValidatorCrosslink(
 	timeSinceLastConfirmation uint64,
 	rewardQuotient uint64,
