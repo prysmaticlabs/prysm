@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -181,7 +181,7 @@ func (b *Block) IsValid(
 		return false
 	}
 
-	_, proposerIndex, err := casper.ProposerShardAndIndex(
+	_, proposerIndex, err := v.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		b.SlotNumber())
@@ -216,7 +216,7 @@ func (b *Block) areAttestationsValid(db beaconDB, aState *ActiveState, cState *C
 }
 
 func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot uint64) bool {
-	_, parentProposerIndex, err := casper.ProposerShardAndIndex(
+	_, parentProposerIndex, err := v.ProposerShardAndIndex(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		parentSlot)
@@ -288,7 +288,7 @@ func (b *Block) isAttestationValid(attestationIndex int, db beaconDB, aState *Ac
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
-	if !casper.AreAttesterBitfieldsValid(attestation, attesterIndices) {
+	if !v.AreAttesterBitfieldsValid(attestation, attesterIndices) {
 		log.Error("Unable to match attester bitfield with shard and committee bitfield")
 		return false
 	}

@@ -1,4 +1,4 @@
-package casper
+package validators
 
 import (
 	"bytes"

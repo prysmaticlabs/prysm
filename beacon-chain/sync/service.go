@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -238,7 +238,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	attestation := types.NewAttestation(response.Attestation)
 
-	proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
+	proposerShardID, _, err := v.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
 		return
