@@ -183,11 +183,8 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				"hash": fmt.Sprintf("%#x", hash),
 				"slot": slot,
 			}).Debug("Broadcast block hash and slot")
-			/*
-				if err := sim.updateLastStateRecalc(); err != nil {
-					log.Errorf("Unable to update last state recalc %v", err)
-				} */
 
+			sim.SaveSimulatorSlot(slot)
 			broadcastedBlocksByHash[hash] = block
 			broadcastedBlocksBySlot[slot] = block
 			lastHash = hash
@@ -341,20 +338,6 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	return block, nil
 }
 
-/*
-// updateLastStateRecalc adds 1 to the last state recalculation
-// slot so that the simulator can continue running and not
-// fail validity conditions.
-func (sim *Simulator) updateLastStateRecalc() error {
-	cState, err := sim.beaconDB.GetCrystallizedState()
-	if err != nil {
-		return err
-	}
-	cState.Proto().LastStateRecalculationSlot++
-
-	return sim.beaconDB.SaveCrystallizedState(cState)
-} */
-
 // SendChainHead sends the latest head of the local chain
 // to the peer who requested it.
 func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
@@ -382,4 +365,11 @@ func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
 	}).Debug("Responding to chain head request")
 
 	return nil
+}
+
+func (sim *Simulator) SaveSimulatorSlot(slot uint64) {
+	err := sim.beaconDB.SaveSimulatorSlot(slot)
+	if err != nil {
+		log.Error(err)
+	}
 }
