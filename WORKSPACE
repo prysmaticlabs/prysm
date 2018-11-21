@@ -687,7 +687,7 @@ go_repository(
 
 go_repository(
     name = "com_github_boltdb_bolt",
-    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    tag = "v1.3.1",
     importpath = "github.com/boltdb/bolt",
 )
 
