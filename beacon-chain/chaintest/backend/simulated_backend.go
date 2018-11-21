@@ -9,7 +9,6 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
