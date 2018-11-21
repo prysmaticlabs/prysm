@@ -139,13 +139,13 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
+    tag = "v2.2.1",
     importpath = "github.com/go-yaml/yaml",
 )
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    commit = "bb2702d423886830dee131692131d35648c382e2",
+    tag = "v0.5.2",
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
 )
 
@@ -163,7 +163,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "4341acb1b16d14020571f9cb99b4987e7c11a4df",
+    commit = "69ff94d8cf2e30670ca8c41c8a4f012e7dd73056",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -194,7 +194,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "a91e75d03bf4dba801af7b159c8b2aa7b5f47ea8",
+    tag = "v1.0.8",
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -345,7 +345,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    tag = "v0.3.9",
+    commit = "0c61f185f3d6e16bcda416874e7a0fca4696e7e0",
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -369,7 +369,7 @@ go_repository(
 
 go_repository(
     name = "com_github_fd_go_nat",
-    commit = "bad65a492f32121a87197f4a085905c35e2a367e",
+    tag = "v1.0.0",
     importpath = "github.com/fd/go-nat",
 )
 
@@ -429,7 +429,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
-    commit = "d240acf619f63dfb776821a1d4d28a918f77edd5",
+    tag = "v3.0.0",
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
 )
 
@@ -489,7 +489,7 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    commit = "91da99df23e3bad7f384338a5a8f636d04093d9a",
+    tag = "v1.2.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
@@ -549,7 +549,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    commit = "a7633860456a881830bde6a33d0722a4c457a61c",
+    tag = "v0.1.11",
     importpath = "github.com/libp2p/go-reuseport-transport",
 )
 
@@ -603,13 +603,13 @@ go_repository(
 
 go_repository(
     name = "com_github_steakknife_hamming",
-    commit = "c99c65617cd3d686aea8365fe563d6542f01d940",
+    tag = "0.2.5",
     importpath = "github.com/steakknife/hamming",
 )
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "91a0276ece6ad4cbdc4b46116f88d2b47a5f58e5",
+    tag = "v0.18.0",
     importpath = "go.opencensus.io",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    tag = "v0.9.1",
+    commit = "3fb53dff765f8a3e0f9d8b1d5b86d4f8c4eb3a09",
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -657,7 +657,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "aeab699e26f4d4089dba5e522e5d9babd2adbaf7",
+    commit = "1f2c4f3cd6db5fd6f68f36af6b6d5d936fd93c4e",
     importpath = "github.com/prometheus/common",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    commit = "11b336e3ca5832b812725e050aa5b62655533517",
+    tag = "0.20.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -687,7 +687,7 @@ go_repository(
 
 go_repository(
     name = "com_github_boltdb_bolt",
-    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    tag = "v1.3.1",
     importpath = "github.com/boltdb/bolt",
 )
 
@@ -724,7 +724,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_uuid",
-    commit = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8",
+    tag = "v1.1.0",
     importpath = "github.com/google/uuid",
 )
 
@@ -737,7 +737,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "277eeb2fded2592392256b6e0f80111208ed8aca",
+    tag = "v3.2.0",
     importpath = "github.com/ipfs/go-datastore",
 )
 
@@ -824,4 +824,10 @@ go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
     commit = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_interface_conn",
+    commit = "c7cda99284db0bea441058da8fd1f1373c763ed6",
+    importpath = "github.com/libp2p/go-libp2p-interface-conn",
 )
