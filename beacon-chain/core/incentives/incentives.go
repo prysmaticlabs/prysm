@@ -1,3 +1,7 @@
+// Package incentives defines Casper Proof of Stake rewards and penalties for validator
+// records based on Vitalik Buterin's Friendly Finality Gadget protocol. Validator balances
+// depend on time to finality as well as deposit-weighted functions. This package provides
+// pure functions that can then be incorporated into a beacon chain state transition.
 package incentives
 
 import (
@@ -11,7 +15,6 @@ import (
 // FFG Rewards scheme rewards validator who have voted on blocks, and penalises those validators
 // who are offline. The penalties are more severe the longer they are offline.
 func CalculateRewards(
-	slot uint64,
 	voterIndices []uint32,
 	activeValidatorIndices []uint32,
 	validators []*pb.ValidatorRecord,
@@ -92,18 +95,42 @@ func QuadraticPenalty(numberOfSlots uint64) uint64 {
 
 // RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
 // TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
-func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	currentBalance := validator.Balance
-	currentBalance += calculateBalance(currentBalance, rewardQuotient, participatedDeposits, totalDeposit)
-	validator.Balance = currentBalance
+func RewardValidatorCrosslink(
+	totalDeposit uint64,
+	participatedDeposits uint64,
+	rewardQuotient uint64,
+	validator *pb.ValidatorRecord,
+) *pb.ValidatorRecord {
+	balance := calculateBalance(validator.Balance, rewardQuotient, participatedDeposits, totalDeposit)
+	return &pb.ValidatorRecord{
+		Pubkey:            validator.Pubkey,
+		WithdrawalShard:   validator.WithdrawalShard,
+		WithdrawalAddress: validator.WithdrawalAddress,
+		RandaoCommitment:  validator.RandaoCommitment,
+		Balance:           balance,
+		Status:            validator.Status,
+		ExitSlot:          validator.ExitSlot,
+	}
 }
 
 // PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
-func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
-	newBalance := validator.Balance
+func PenaliseValidatorCrosslink(
+	timeSinceLastConfirmation uint64,
+	rewardQuotient uint64,
+	validator *pb.ValidatorRecord,
+) *pb.ValidatorRecord {
 	quadraticQuotient := QuadraticPenaltyQuotient()
-	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
-	validator.Balance = newBalance
+	balance := validator.Balance
+	balance -= balance/rewardQuotient + balance*timeSinceLastConfirmation/quadraticQuotient
+	return &pb.ValidatorRecord{
+		Pubkey:            validator.Pubkey,
+		WithdrawalShard:   validator.WithdrawalShard,
+		WithdrawalAddress: validator.WithdrawalAddress,
+		RandaoCommitment:  validator.RandaoCommitment,
+		Balance:           balance,
+		Status:            validator.Status,
+		ExitSlot:          validator.ExitSlot,
+	}
 }
 
 // calculateBalance applies the Casper FFG reward calculation based on reward quotients

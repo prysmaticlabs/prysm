@@ -15,7 +15,6 @@ import (
 // participation in voting for that block.
 func TallyVoteBalances(
 	blockHash [32]byte,
-	slot uint64,
 	blockVoteCache utils.BlockVoteCache,
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
@@ -30,7 +29,6 @@ func TallyVoteBalances(
 	activeValidatorIndices := v.ActiveValidatorIndices(validators)
 	totalDeposit := v.TotalActiveValidatorDeposit(validators)
 	validators = incentives.CalculateRewards(
-		slot,
 		voterIndices,
 		activeValidatorIndices,
 		validators,
@@ -90,9 +88,9 @@ func ApplyCrosslinkRewardsAndPenalties(
 			return err
 		}
 		if checkBit {
-			incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+			validators[attesterIndex] = incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 		} else {
-			incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+			validators[attesterIndex] = incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 		}
 	}
 	return nil
