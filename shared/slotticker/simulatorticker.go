@@ -26,12 +26,12 @@ func (s *SimulatorTicker) Done() {
 }
 
 // GetSimulatorTicker is the constructor for SimulatorTicker.
-func GetSimulatorTicker(genesisTime time.Time, slotDuration uint64) SimulatorTicker {
+func GetSimulatorTicker(genesisTime time.Time, slotDuration uint64, currentSlot uint64) SimulatorTicker {
 	ticker := SimulatorTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, slotDuration, time.Since, time.Until, time.After)
+	ticker.start(genesisTime, slotDuration, currentSlot, time.Since, time.Until, time.After)
 
 	return ticker
 }
@@ -54,6 +54,7 @@ func CurrentSimulatorSlot(
 func (s *SimulatorTicker) start(
 	genesisTime time.Time,
 	slotDuration uint64,
+	currentSlot uint64,
 	since func(time.Time) time.Duration,
 	until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
@@ -72,7 +73,7 @@ func (s *SimulatorTicker) start(
 		} else {
 			nextTick := sinceGenesis.Truncate(d) + d
 			nextTickTime = genesisTime.Add(nextTick)
-			slot = uint64(nextTick / d)
+			slot = currentSlot + 1
 		}
 
 		for {

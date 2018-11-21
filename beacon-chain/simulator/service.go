@@ -61,6 +61,8 @@ type Config struct {
 type beaconDB interface {
 	GetChainHead() (*types.Block, error)
 	GetGenesisTime() (time.Time, error)
+	GetSimulatorSlot() (uint64, error)
+	SaveSimulatorSlot(uint64) error
 	GetActiveState() (*types.ActiveState, error)
 	GetCrystallizedState() (*types.CrystallizedState, error)
 	SaveCrystallizedState(*types.CrystallizedState) error
@@ -102,7 +104,14 @@ func (sim *Simulator) Start() {
 		return
 	}
 
-	slotTicker := slotticker.GetSlotTicker(genesisTime, params.BeaconConfig().SlotDuration)
+	currentSlot, err := sim.beaconDB.GetSimulatorSlot()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	slotTicker := slotticker.GetSimulatorTicker(genesisTime, params.BeaconConfig().SlotDuration)
+	slotTicker := slotticker.GetSlotTicker(genesisTime, params.BeaconConfig().SlotDuration, currentSlot)
 	go func() {
 		sim.run(slotTicker.C())
 		close(sim.blockRequestChan)
