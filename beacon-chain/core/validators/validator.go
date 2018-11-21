@@ -8,18 +8,14 @@ package validators
 import (
 	"bytes"
 	"fmt"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 const bitsInByte = 8
-
-var log = logrus.WithField("prefix", "core/validators")
 
 // InitialValidators creates a new validator set that is used to
 // generate a new crystallized state.
@@ -85,8 +81,6 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
 	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
-		log.Debugf("Attestation has incorrect bitfield length. Found %v, expected %v",
-			len(attestation.AttesterBitfield), bitutil.BitLength(len(attesterIndices)))
 		return false
 	}
 
@@ -100,12 +94,10 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	for i := 0; i < bitsInByte-remainingBits; i++ {
 		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
 		if err != nil {
-			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
 			return false
 		}
 
 		if isBitSet {
-			log.Error("Attestation has non-zero trailing bits")
 			return false
 		}
 	}
