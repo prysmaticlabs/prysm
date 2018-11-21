@@ -43,7 +43,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 
 	rewardedValidators := CalculateRewards(
-		5,
 		[]uint32{2, 3, 6, 9},
 		activeValidatorIndices,
 		data.Validators,
@@ -79,7 +78,6 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	}
 
 	rewardedValidators = CalculateRewards(
-		5,
 		[]uint32{1, 2, 7, 8},
 		activeValidatorIndices,
 		validators,
@@ -151,7 +149,6 @@ func TestRewardCrosslink(t *testing.T) {
 	}
 	participatedDeposit = uint64(4e18)
 	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
-
 }
 
 func TestPenaltyCrosslink(t *testing.T) {
@@ -169,5 +166,4 @@ func TestPenaltyCrosslink(t *testing.T) {
 	if validator.Balance != expectedBalance {
 		t.Fatalf("balances not updated correctly %d, %d", validator.Balance, expectedBalance)
 	}
-
 }

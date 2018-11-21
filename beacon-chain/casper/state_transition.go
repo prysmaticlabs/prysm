@@ -14,7 +14,6 @@ import (
 // participation in voting for that block.
 func TallyVoteBalances(
 	blockHash [32]byte,
-	slot uint64,
 	blockVoteCache utils.BlockVoteCache,
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
@@ -29,7 +28,6 @@ func TallyVoteBalances(
 	activeValidatorIndices := ActiveValidatorIndices(validators)
 	totalDeposit := TotalActiveValidatorDeposit(validators)
 	validators = incentives.CalculateRewards(
-		slot,
 		voterIndices,
 		activeValidatorIndices,
 		validators,
