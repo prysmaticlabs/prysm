@@ -5,11 +5,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 )
 
 // ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
 func ShuffleValidatorsToCommittees(seed common.Hash, validators []*pb.ValidatorRecord, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
-	indices := ActiveValidatorIndices(validators)
+	indices := v.ActiveValidatorIndices(validators)
 
 	// split the shuffled list for slot.
 	shuffledValidators, err := utils.ShuffleIndices(seed, indices)

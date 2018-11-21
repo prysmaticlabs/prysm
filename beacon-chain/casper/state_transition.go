@@ -8,6 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 )
 
 // TallyVoteBalances calculates all the votes behind a block and then rewards validators for their
@@ -26,8 +27,8 @@ func TallyVoteBalances(
 
 	blockVoteBalance := blockVote.VoteTotalDeposit
 	voterIndices := blockVote.VoterIndices
-	activeValidatorIndices := ActiveValidatorIndices(validators)
-	totalDeposit := TotalActiveValidatorDeposit(validators)
+	activeValidatorIndices := v.ActiveValidatorIndices(validators)
+	totalDeposit := v.TotalActiveValidatorDeposit(validators)
 	validators = incentives.CalculateRewards(
 		slot,
 		voterIndices,
@@ -78,7 +79,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalBalance uint64,
 	voteBalance uint64) error {
 
-	totalDeposit := TotalActiveValidatorDeposit(validators)
+	totalDeposit := v.TotalActiveValidatorDeposit(validators)
 	rewardQuotient := incentives.RewardQuotient(totalDeposit)
 
 	for _, attesterIndex := range attesterIndices {
@@ -123,7 +124,7 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, 
 		// Covers validators submitted logouts from last cycle.
 		if specialRecord.Kind == uint32(params.Logout) {
 			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
-			exitedValidator := ExitValidator(validators[validatorIndex], slotNumber, false)
+			exitedValidator := v.ExitValidator(validators[validatorIndex], slotNumber, false)
 			validators[validatorIndex] = exitedValidator
 			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
 		}
