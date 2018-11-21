@@ -605,7 +605,7 @@ go_repository(
 
 go_repository(
     name = "com_github_steakknife_hamming",
-    commit = "c99c65617cd3d686aea8365fe563d6542f01d940",
+    tag = "0.2.5",
     importpath = "github.com/steakknife/hamming",
 )
 
