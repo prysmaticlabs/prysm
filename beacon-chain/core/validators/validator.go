@@ -305,7 +305,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
 		isPenalized := validators[i].Status == uint64(params.Penalized)
-		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().WithdrawalPeriod
+		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().MinWithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3

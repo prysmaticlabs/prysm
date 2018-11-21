@@ -61,7 +61,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
 	c.CycleLength = testCase.Config.CycleLength
-	c.MinCommitteeSize = testCase.Config.MinCommitteeSize
+	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
 	// Then, we create the validators based on the custom test config.

@@ -197,8 +197,9 @@ func TestRunningChainService(t *testing.T) {
 		AncestorHashes:        [][]byte{parentHash[:]},
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:               attestationSlot,
-			AttesterBitfield:   []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Slot: attestationSlot,
+			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Shard:              shard,
 			JustifiedBlockHash: parentHash[:],
 		}},
@@ -285,8 +286,9 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		ActiveStateRoot:       activeStateRoot[:],
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:               attestationSlot,
-			AttesterBitfield:   []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Slot: attestationSlot,
+			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Shard:              getShardForSlot(t, crystallized, attestationSlot),
 			JustifiedBlockHash: block0Hash[:],
 		}},

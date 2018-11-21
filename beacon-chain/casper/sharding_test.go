@@ -118,7 +118,7 @@ func TestSmallSampleValidators(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize / 4
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize / 4
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -127,7 +127,7 @@ func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -136,7 +136,7 @@ func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize * 8
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize * 8
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 5 {
@@ -149,7 +149,7 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 	oldShardCount := config.ShardCount
 	config.ShardCount = config.CycleLength - 1
 
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize
+	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidators)
 	if committesPerSlot != 1 {
@@ -161,7 +161,7 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 
 func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.BeaconConfig().CycleLength * params.BeaconConfig().MinCommitteeSize)
+	numValidators := int(params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize)
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
@@ -175,19 +175,19 @@ func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 	for i := 0; i < len(shardAndCommitteeArray); i++ {
 		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
 		if len(shardAndCommittees) != 1 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().MinCommitteeSize, 1)
+			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().TargetCommitteeSize, 1)
 		}
 
 		committeeSize := len(shardAndCommittees[0].Committee)
-		if committeeSize != int(params.BeaconConfig().MinCommitteeSize) {
-			t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().MinCommitteeSize, committeeSize)
+		if committeeSize != int(params.BeaconConfig().TargetCommitteeSize) {
+			t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize, committeeSize)
 		}
 	}
 }
 
 func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().MinCommitteeSize) * 2
+	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().TargetCommitteeSize) * 2
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
@@ -201,7 +201,7 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 	for i := 0; i < len(shardAndCommitteeArray); i++ {
 		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
 		if len(shardAndCommittees) != 2 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().MinCommitteeSize, 2)
+			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().TargetCommitteeSize, 2)
 		}
 
 		t.Logf("slot %d", i)
@@ -209,8 +209,8 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 			shardCommittee := shardAndCommittees[j]
 			t.Logf("shard %d", shardCommittee.Shard)
 			t.Logf("committee: %v", shardCommittee.Committee)
-			if len(shardCommittee.Committee) != int(params.BeaconConfig().MinCommitteeSize) {
-				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().MinCommitteeSize, len(shardCommittee.Committee))
+			if len(shardCommittee.Committee) != int(params.BeaconConfig().TargetCommitteeSize) {
+				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize, len(shardCommittee.Committee))
 			}
 		}
 
@@ -219,7 +219,7 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 
 func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().MinCommitteeSize) / 2
+	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().TargetCommitteeSize) / 2
 	for i := 0; i < numValidators; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
@@ -233,13 +233,13 @@ func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
 	for i := 0; i < len(shardAndCommitteeArray); i++ {
 		shardAndCommittees := shardAndCommitteeArray[i].ArrayShardAndCommittee
 		if len(shardAndCommittees) != 1 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().MinCommitteeSize, 1)
+			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().TargetCommitteeSize, 1)
 		}
 
 		for j := 0; j < len(shardAndCommittees); j++ {
 			shardCommittee := shardAndCommittees[j]
-			if len(shardCommittee.Committee) != int(params.BeaconConfig().MinCommitteeSize/2) {
-				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().MinCommitteeSize/2, len(shardCommittee.Committee))
+			if len(shardCommittee.Committee) != int(params.BeaconConfig().TargetCommitteeSize/2) {
+				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize/2, len(shardCommittee.Committee))
 			}
 		}
 	}

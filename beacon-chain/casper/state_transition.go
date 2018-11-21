@@ -129,11 +129,6 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, 
 			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
 		}
 
-		// Covers RANDAO updates for all the validators from last cycle.
-		if specialRecord.Kind == uint32(params.RandaoChange) {
-			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
-			validators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
-		}
 	}
 	return validators, nil
 }
