@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    commit = "be550b025b433cdfa2f11efb962afa2ea3c4d967",
+    tag = "v0.10.0",
     importpath = "github.com/opentracing/opentracing-go",
 )
 
