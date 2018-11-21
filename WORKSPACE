@@ -429,7 +429,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
-    commit = "d240acf619f63dfb776821a1d4d28a918f77edd5",
+    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
 )
 
