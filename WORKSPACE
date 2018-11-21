@@ -139,7 +139,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
+    tag = "v2.2.1",
     importpath = "github.com/go-yaml/yaml",
 )
 
