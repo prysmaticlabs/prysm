@@ -91,16 +91,34 @@ func TestBytes8(t *testing.T) {
 		b []byte
 	}{
 		{0, []byte{0, 0, 0, 0, 0, 0, 0, 0}},
+		{65536, []byte{1, 0, 0}},
 		{16777216, []byte{0, 0, 0, 0, 1, 0, 0, 0}},
 		{4294967296, []byte{0, 0, 0, 1, 0, 0, 0, 0}},
 		{4294967297, []byte{0, 0, 0, 1, 0, 0, 0, 1}},
-		{9223372036854775806, []byte{127, 255, 255, 255, 255, 255, 255, 254}},
 		{9223372036854775807, []byte{127, 255, 255, 255, 255, 255, 255, 255}},
 	}
 	for _, tt := range tests {
 		b := Bytes8(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Bytes8(%d) = %v, want = %d", tt.a, b, tt.b)
+		}
+	}
+}
+
+func TestFromBytes8(t *testing.T) {
+	tests := []uint64{
+		0,
+		1776,
+		96726,
+		4290997,
+		922376854775806,
+		42893720984775807,
+	}
+	for _, tt := range tests {
+		b := Bytes8(tt)
+		c := FromBytes8(b)
+		if c != tt {
+			t.Errorf("Wanted %d but got %d", tt, c)
 		}
 	}
 }
