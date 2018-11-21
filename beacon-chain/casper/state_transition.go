@@ -3,6 +3,7 @@ package casper
 import (
 	"encoding/binary"
 
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -59,7 +60,7 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, 
 		// Covers validators submitted logouts from last cycle.
 		if specialRecord.Kind == uint32(params.Logout) {
 			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
-			exitedValidator := ExitValidator(validators[validatorIndex], slotNumber, false)
+			exitedValidator := v.ExitValidator(validators[validatorIndex], slotNumber, false)
 			validators[validatorIndex] = exitedValidator
 			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
 		}
