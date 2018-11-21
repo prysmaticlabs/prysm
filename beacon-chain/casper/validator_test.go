@@ -104,7 +104,7 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	}
 
 	var indices []uint32
-	for i := uint32(0); i < uint32(params.BeaconConfig().MinCommitteeSize)+1; i++ {
+	for i := uint32(0); i < uint32(params.BeaconConfig().TargetCommitteeSize)+1; i++ {
 		indices = append(indices, i)
 	}
 
@@ -346,12 +346,12 @@ func TestAddValidators(t *testing.T) {
 
 func TestChangeValidators(t *testing.T) {
 	existingValidators := []*pb.ValidatorRecord{
-		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().WithdrawalPeriod},
-		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().WithdrawalPeriod},
-		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().WithdrawalPeriod},
-		{Pubkey: []byte{4}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().WithdrawalPeriod},
-		{Pubkey: []byte{5}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().WithdrawalPeriod},
-		{Pubkey: []byte{6}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().WithdrawalPeriod},
+		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{4}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{5}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{6}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), ExitSlot: params.BeaconConfig().MinWithdrawalPeriod},
 		{Pubkey: []byte{7}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
 		{Pubkey: []byte{8}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
 		{Pubkey: []byte{9}, Status: uint64(params.Penalized), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
@@ -362,7 +362,7 @@ func TestChangeValidators(t *testing.T) {
 		{Pubkey: []byte{14}, Status: uint64(params.Active), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
 	}
 
-	validators := ChangeValidators(params.BeaconConfig().WithdrawalPeriod+1, 50*10e9, existingValidators)
+	validators := ChangeValidators(params.BeaconConfig().MinWithdrawalPeriod+1, 50*10e9, existingValidators)
 
 	if validators[0].Status != uint64(params.Active) {
 		t.Errorf("Wanted status Active. Got: %d", validators[0].Status)
@@ -373,7 +373,7 @@ func TestChangeValidators(t *testing.T) {
 	if validators[1].Status != uint64(params.PendingWithdraw) {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[1].Status)
 	}
-	if validators[1].ExitSlot != params.BeaconConfig().WithdrawalPeriod+1 {
+	if validators[1].ExitSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator exit slot")
 	}
 	if validators[2].Status != uint64(params.Active) {
@@ -385,7 +385,7 @@ func TestChangeValidators(t *testing.T) {
 	if validators[3].Status != uint64(params.PendingWithdraw) {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[3].Status)
 	}
-	if validators[3].ExitSlot != params.BeaconConfig().WithdrawalPeriod+1 {
+	if validators[3].ExitSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator exit slot")
 	}
 	// Reach max validation rotation case, this validator couldn't be rotated.

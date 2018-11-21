@@ -336,7 +336,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			return nil, err
 		}
 
-		period := uint32(block.SlotNumber() / params.BeaconConfig().WithdrawalPeriod)
+		period := uint32(block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod)
 		totalPenalties := newState.penalizedETH(period)
 		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 	}

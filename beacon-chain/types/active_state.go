@@ -233,7 +233,6 @@ func (a *ActiveState) CalculateNewActiveState(
 	specialRecordData[1] = blockRandao[:]
 
 	newState.data.PendingSpecials = a.appendNewSpecialObject(&pb.SpecialRecord{
-		Kind: uint32(params.RandaoChange),
 		Data: specialRecordData,
 	})
 
