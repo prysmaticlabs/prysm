@@ -1,3 +1,9 @@
+// Package validators defines helper functions to locate validator
+// based on pubic key. Each validator is associated with a given index,
+// shard ID and slot number to propose or attest. This package also defines
+// functions to initialize validators, verify validator bit fields,
+// and rotate validator in and out of committees.
+
 package validators
 
 import (
