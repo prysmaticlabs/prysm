@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -197,8 +197,9 @@ func TestRunningChainService(t *testing.T) {
 		AncestorHashes:        [][]byte{parentHash[:]},
 		PowChainRef:           []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:               attestationSlot,
-			AttesterBitfield:   []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Slot: attestationSlot,
+			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Shard:              shard,
 			JustifiedBlockHash: parentHash[:],
 		}},
@@ -242,7 +243,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 }
 
 func getShardForSlot(t *testing.T, cState *types.CrystallizedState, slot uint64) uint64 {
-	shardAndCommittee, err := casper.GetShardAndCommitteesForSlot(
+	shardAndCommittee, err := v.GetShardAndCommitteesForSlot(
 		cState.ShardAndCommitteesForSlots(),
 		cState.LastStateRecalculationSlot(),
 		slot)
@@ -285,8 +286,9 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		ActiveStateRoot:       activeStateRoot[:],
 		CrystallizedStateRoot: crystallizedStateRoot[:],
 		Attestations: []*pb.AggregatedAttestation{{
-			Slot:               attestationSlot,
-			AttesterBitfield:   []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Slot: attestationSlot,
+			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			Shard:              getShardForSlot(t, crystallized, attestationSlot),
 			JustifiedBlockHash: block0Hash[:],
 		}},

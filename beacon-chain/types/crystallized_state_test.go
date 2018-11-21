@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -83,9 +82,8 @@ func TestCopyCrystallizedState(t *testing.T) {
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			RecentlyChanged: false,
-			ShardBlockHash:  make([]byte, 2, 34),
-			Slot:            2,
+			ShardBlockHash: make([]byte, 2, 34),
+			Slot:           2,
 		})
 	}
 	cState1.data.Crosslinks = crosslinks
@@ -143,10 +141,6 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		}},
 	})
 
-	// Set validator index 9's RANDAO reveal to be A
-	validator9Index := b.Bytes8(9)
-	aState.data.PendingSpecials = []*pb.SpecialRecord{{Kind: uint32(params.RandaoChange), Data: [][]byte{validator9Index, {byte('A')}}}}
-
 	db := &mockDB{}
 	newCState, err := cState.NewStateRecalculations(aState, block, db)
 	if err != nil {
@@ -167,10 +161,6 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 
 	if newCState.LastFinalizedSlot() != 0 {
 		t.Fatalf("xpected finalized slot to equal %d, got %d", 0, newCState.LastFinalizedSlot())
-	}
-
-	if !(bytes.Equal(newCState.Validators()[9].RandaoCommitment, []byte{'A'})) {
-		t.Fatal("failed to set validator 9's randao reveal")
 	}
 }
 
@@ -268,7 +258,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		clRecord := &pb.CrosslinkRecord{RecentlyChanged: false, ShardBlockHash: []byte{'A'}, Slot: 1}
+		clRecord := &pb.CrosslinkRecord{ShardBlockHash: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
 

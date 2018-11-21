@@ -2,6 +2,7 @@ package casper
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -9,7 +10,7 @@ import (
 
 // ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
 func ShuffleValidatorsToCommittees(seed common.Hash, validators []*pb.ValidatorRecord, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
-	indices := ActiveValidatorIndices(validators)
+	indices := v.ActiveValidatorIndices(validators)
 
 	// split the shuffled list for slot.
 	shuffledValidators, err := utils.ShuffleIndices(seed, indices)
@@ -75,7 +76,7 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
 	cycleLength := params.BeaconConfig().CycleLength
-	boundOnValidators := numActiveValidators/cycleLength/(params.BeaconConfig().MinCommitteeSize*2) + 1
+	boundOnValidators := numActiveValidators/cycleLength/(params.BeaconConfig().TargetCommitteeSize*2) + 1
 	boundOnShardCount := params.BeaconConfig().ShardCount / cycleLength
 
 	// Ensure that comitteesPerSlot is at least 1.

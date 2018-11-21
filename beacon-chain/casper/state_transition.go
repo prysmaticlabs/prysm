@@ -3,6 +3,8 @@ package casper
 import (
 	"encoding/binary"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -13,7 +15,6 @@ import (
 // participation in voting for that block.
 func TallyVoteBalances(
 	blockHash [32]byte,
-	slot uint64,
 	blockVoteCache utils.BlockVoteCache,
 	validators []*pb.ValidatorRecord,
 	timeSinceFinality uint64) (uint64, []*pb.ValidatorRecord) {
@@ -25,8 +26,16 @@ func TallyVoteBalances(
 
 	blockVoteBalance := blockVote.VoteTotalDeposit
 	voterIndices := blockVote.VoterIndices
-	validators = CalculateRewards(slot, voterIndices, validators,
-		blockVoteBalance, timeSinceFinality)
+	activeValidatorIndices := v.ActiveValidatorIndices(validators)
+	totalDeposit := v.TotalActiveValidatorDeposit(validators)
+	validators = incentives.CalculateRewards(
+		voterIndices,
+		activeValidatorIndices,
+		validators,
+		totalDeposit,
+		blockVoteBalance,
+		timeSinceFinality,
+	)
 
 	return blockVoteBalance, validators
 }
@@ -68,21 +77,20 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalBalance uint64,
 	voteBalance uint64) error {
 
-	rewardQuotient := RewardQuotient(validators)
+	totalDeposit := v.TotalActiveValidatorDeposit(validators)
+	rewardQuotient := incentives.RewardQuotient(totalDeposit)
 
 	for _, attesterIndex := range attesterIndices {
 		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
 
-		if !crosslinkRecords[attestation.Shard].GetRecentlyChanged() {
-			checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
-			if err != nil {
-				return err
-			}
-			if checkBit {
-				RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
-			} else {
-				PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
-			}
+		checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
+		if err != nil {
+			return err
+		}
+		if checkBit {
+			validators[attesterIndex] = incentives.RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+		} else {
+			validators[attesterIndex] = incentives.PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 		}
 	}
 	return nil
@@ -96,11 +104,10 @@ func ProcessCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
 	// if 2/3 of committee voted on this crosslink, update the crosslink
 	// with latest dynasty number, shard block hash, and slot number.
 	voteMajority := 3*voteBalance >= 2*totalBalance
-	if voteMajority && !crosslinkRecords[attestation.Shard].RecentlyChanged {
+	if voteMajority {
 		crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
-			RecentlyChanged: true,
-			ShardBlockHash:  attestation.ShardBlockHash,
-			Slot:            slot,
+			ShardBlockHash: attestation.ShardBlockHash,
+			Slot:           slot,
 		}
 	}
 	return crosslinkRecords
@@ -115,16 +122,11 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord, 
 		// Covers validators submitted logouts from last cycle.
 		if specialRecord.Kind == uint32(params.Logout) {
 			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
-			exitedValidator := ExitValidator(validators[validatorIndex], slotNumber, false)
+			exitedValidator := v.ExitValidator(validators[validatorIndex], slotNumber, false)
 			validators[validatorIndex] = exitedValidator
 			// TODO(#633): Verify specialRecord.Data[1] as signature. BLSVerify(pubkey=validator.pubkey, msg=hash(LOGOUT_MESSAGE + bytes8(version))
 		}
 
-		// Covers RANDAO updates for all the validators from last cycle.
-		if specialRecord.Kind == uint32(params.RandaoChange) {
-			validatorIndex := binary.BigEndian.Uint64(specialRecord.Data[0])
-			validators[validatorIndex].RandaoCommitment = specialRecord.Data[1]
-		}
 	}
 	return validators, nil
 }

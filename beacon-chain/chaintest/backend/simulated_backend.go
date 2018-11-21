@@ -9,7 +9,6 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -61,7 +60,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
 	c.CycleLength = testCase.Config.CycleLength
-	c.MinCommitteeSize = testCase.Config.MinCommitteeSize
+	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
 	// Then, we create the validators based on the custom test config.
