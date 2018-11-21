@@ -369,7 +369,7 @@ go_repository(
 
 go_repository(
     name = "com_github_fd_go_nat",
-    commit = "bad65a492f32121a87197f4a085905c35e2a367e",
+    tag = "v1.0.0",
     importpath = "github.com/fd/go-nat",
 )
 
