@@ -39,3 +39,9 @@ func Bytes8(x uint64) []byte {
 	binary.BigEndian.PutUint64(bytes, x)
 	return bytes
 }
+
+// FromBytes8 returns an integer which is stored in the big-endian format(8, 'big')
+// from a byte array.
+func FromBytes8(x []byte) uint64 {
+	return binary.BigEndian.Uint64(x)
+}
