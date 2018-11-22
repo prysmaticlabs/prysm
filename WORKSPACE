@@ -762,7 +762,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_routing",
-    commit = "cb72d923dcde7c3af89d09032443515bd0fe7075",
+    tag = "v2.7.1",
     importpath = "github.com/libp2p/go-libp2p-routing",
 )
 
