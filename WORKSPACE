@@ -822,7 +822,7 @@ go_repository(
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
-    commit = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242",
+    tag = "v1.0.1",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
 )
 
