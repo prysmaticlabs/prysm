@@ -718,7 +718,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_util",
-    commit = "05b6094b6fa9c1e49b4b941061fdc147db1a21b7",
+    tag = "v1.2.8",
     importpath = "github.com/ipfs/go-ipfs-util",
 )
 
