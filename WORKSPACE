@@ -756,7 +756,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_record",
     build_file_proto_mode = "disable_global",
-    commit = "237ab9e10af172232eedad9e63ea8983c50859b1",
+    tag = "v4.1.7",
     importpath = "github.com/libp2p/go-libp2p-record",
 )
 
