@@ -768,7 +768,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
-    commit = "5a67fa0572539e1e65cc7d0772c887ceda0cfea8",
+    tag = "v2.2.12",
     importpath = "github.com/libp2p/go-libp2p-kbucket",
 )
 
