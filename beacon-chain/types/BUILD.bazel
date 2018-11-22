@@ -36,7 +36,7 @@ go_test(
         "crystallized_state_test.go",
     ],
     embed = [":go_default_library"],
-    race = "off",  # TODO(#604): fix issues with tests failing with race on.
+    race = "on",
     deps = [
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/utils:go_default_library",
