@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -35,7 +35,7 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 
 	}
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(genesisValidators)
+	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +311,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			timeSinceFinality,
 		)
 
-		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
+		justifiedSlot, finalizedSlot, justifiedStreak = state.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 	}
 
@@ -326,7 +326,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newState.data.LastStateRecalculationSlot = newState.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
 
 	// Process the pending special records gathered from last cycle.
-	newState.data.Validators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newState.Validators(), aState.PendingSpecials())
+	newState.data.Validators, err = state.ProcessSpecialRecords(block.SlotNumber(), newState.Validators(), aState.PendingSpecials())
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (c *CrystallizedState) newValidatorSetRecalculations(seed [32]byte) ([]*pb.
 	crosslinkLastShard := c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].Shard
 	crosslinkNextShard := (crosslinkLastShard + 1) % uint64(shardCount)
 
-	newShardCommitteeArray, err := casper.ShuffleValidatorsToCommittees(
+	newShardCommitteeArray, err := v.ShuffleValidatorsToCommittees(
 		seed,
 		c.data.Validators,
 		crosslinkNextShard,
@@ -416,7 +416,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			return nil, err
 		}
 
-		crosslinkRecords = casper.ProcessCrosslink(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
+		crosslinkRecords = state.ProcessCrosslink(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
 
 	}
 	return crosslinkRecords, nil

@@ -1,4 +1,4 @@
-package casper
+package state
 
 import (
 	"bytes"

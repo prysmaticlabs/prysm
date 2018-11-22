@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -283,7 +283,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Process crosslinks happened at slot 50.
-	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(validators)
+	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(validators)
 	if err != nil {
 		t.Fatalf("failed to initialize indices for slots: %v", err)
 	}
