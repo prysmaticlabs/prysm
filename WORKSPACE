@@ -163,7 +163,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "69ff94d8cf2e30670ca8c41c8a4f012e7dd73056",
+    tag = "v6.0.23",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -188,7 +188,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "de9a213953d6ec0e053b56e9d79800565c3fc9ca",
+    tag = "v1.5.7",
     importpath = "github.com/ipfs/go-log",
 )
 
@@ -218,7 +218,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "f83937ed3384bb289ba39ee0c4f428f26013390a",
+    tag = "v2.3.2",
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
@@ -519,7 +519,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",
+    tag = "v1.0.5",
     importpath = "github.com/jackpal/gateway",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    tag = "v1.0.1",
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -822,7 +822,7 @@ go_repository(
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
-    commit = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242",
+    tag = "v1.0.1",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
 )
 
