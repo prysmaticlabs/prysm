@@ -780,7 +780,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_todocounter",
-    commit = "1e832b829506383050e6eebd12e05ea41a451532",
+    tag = "v1.0.1",
     importpath = "github.com/ipfs/go-todocounter",
 )
 
