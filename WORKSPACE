@@ -169,7 +169,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peer",
-    commit = "d3df4bca884d7a9c2d350c8120240db3c2b0f2ee",
+    tag = "v2.4.0",
     importpath = "github.com/libp2p/go-libp2p-peer",
 )
 
@@ -206,13 +206,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
-    commit = "5ab1f4ea0a8ad6f9cd7264bc9a3b6d908d07e21a",
+    tag = "v3.0.15",
     importpath = "github.com/libp2p/go-libp2p-host",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "0c6cf4a7990d7356fcb2c68ddd39083b893c51e6",
+    tag = "v2.0.6",
     importpath = "github.com/libp2p/go-libp2p-peerstore",
 )
 
@@ -242,13 +242,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_metrics",
-    commit = "2d5733beaa2a9fdd05ef696d7a734aa61549fb2a",
+    tag = "v2.1.7",
     importpath = "github.com/libp2p/go-libp2p-metrics",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_net",
-    commit = "41fb1c9f3f0e6214f93e2a2f9ee87db05e193fb7",
+    tag = "v3.0.15",
     importpath = "github.com/libp2p/go-libp2p-net",
 )
 
@@ -333,7 +333,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_protocol",
-    commit = "b29f3d97e3a2fb8b29c5d04290e6cb5c5018004b",
+    tag = "v1.0.0",
     importpath = "github.com/libp2p/go-libp2p-protocol",
 )
 
@@ -731,7 +731,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "d70e92744b101ddf9ed93066a54ce128fa53aaa8",
+    tag = "v4.4.12",
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -756,19 +756,19 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_record",
     build_file_proto_mode = "disable_global",
-    commit = "237ab9e10af172232eedad9e63ea8983c50859b1",
+    tag = "v4.1.7",
     importpath = "github.com/libp2p/go-libp2p-record",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_routing",
-    commit = "cb72d923dcde7c3af89d09032443515bd0fe7075",
+    tag = "v2.7.1",
     importpath = "github.com/libp2p/go-libp2p-routing",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
-    commit = "5a67fa0572539e1e65cc7d0772c887ceda0cfea8",
+    tag = "v2.2.12",
     importpath = "github.com/libp2p/go-libp2p-kbucket",
 )
 
