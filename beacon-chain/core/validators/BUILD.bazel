@@ -2,10 +2,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["validator.go"],
+    srcs = [
+        "committees.go",
+        "validator.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/validators",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//shared/bitutil:go_default_library",
@@ -16,11 +20,15 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["validator_test.go"],
+    srcs = [
+        "committees_test.go",
+        "validator_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bitutil:go_default_library",
         "//shared/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],
 )

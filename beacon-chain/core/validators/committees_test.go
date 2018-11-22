@@ -1,10 +1,9 @@
-package casper
+package validators
 
 import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -22,17 +21,17 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 				{Shard: 4, Committee: []uint32{5, 6, 7, 8, 9}},
 			}},
 		}}
-	if _, err := v.GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1000); err == nil {
+	if _, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1000); err == nil {
 		t.Error("getShardAndCommitteesForSlot should have failed with invalid slot")
 	}
-	committee, err := v.GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 0)
+	committee, err := GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 0)
 	if err != nil {
 		t.Errorf("getShardAndCommitteesForSlot failed: %v", err)
 	}
 	if committee.ArrayShardAndCommittee[0].Shard != 1 {
 		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 1, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
-	committee, _ = v.GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
+	committee, _ = GetShardAndCommitteesForSlot(state.ShardAndCommitteesForSlots, state.LastStateRecalculationSlot, 1)
 	if committee.ArrayShardAndCommittee[0].Shard != 3 {
 		t.Errorf("getShardAndCommitteesForSlot returns Shard should be 3, got: %v", committee.ArrayShardAndCommittee[0].Shard)
 	}
