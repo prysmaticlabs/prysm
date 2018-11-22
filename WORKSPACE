@@ -321,7 +321,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    commit = "eef79c8345f3960fba6c64b0d9f0b4edb71eeb89",
+    tag = "v2.0.17",
     importpath = "github.com/libp2p/go-libp2p-secio",
 )
 
@@ -351,7 +351,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_loggables",
-    commit = "024fce320cf7e720445c400721c6fa6d68c9aaa7",
+    tag = "v1.1.24",
     importpath = "github.com/libp2p/go-libp2p-loggables",
 )
 
@@ -495,7 +495,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "0cf1ed9e522b7dbb416f080a5c8003de9b702bf4",
+    commit = "62eef0e2fa9b2c385f7b2778e763486da6880d37",
     importpath = "golang.org/x/sys",
 )
 
