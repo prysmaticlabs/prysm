@@ -567,7 +567,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    commit = "483fb8d7c32fcb4b5636cd293a92e3935932e2f4",
+    tag = "v1.4.0",
     importpath = "github.com/gorilla/websocket",
 )
 
