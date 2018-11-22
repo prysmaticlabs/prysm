@@ -66,7 +66,7 @@ func CalculateRewards(
 				if voterIndex == validatorIndex {
 					voted = true
 					balance := validators[validatorIndex].GetBalance()
-					newBalance := calculateBalance(balance, rewardQuotient, totalParticipatedDeposit, totalActiveValidatorDeposit)
+					newBalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalActiveValidatorDeposit))/int64(totalActiveValidatorDeposit)
 					validators[validatorIndex].Balance = uint64(newBalance)
 					break
 				}
@@ -123,9 +123,9 @@ func ApplyCrosslinkRewardsAndPenalties(
 			return err
 		}
 		if checkBit {
-			validators[attesterIndex] = RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+			RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
 		} else {
-			validators[attesterIndex] = PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+			PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
 		}
 	}
 	return nil
@@ -160,17 +160,10 @@ func RewardValidatorCrosslink(
 	participatedDeposits uint64,
 	rewardQuotient uint64,
 	validator *pb.ValidatorRecord,
-) *pb.ValidatorRecord {
-	balance := calculateBalance(validator.Balance, rewardQuotient, participatedDeposits, totalDeposit)
-	return &pb.ValidatorRecord{
-		Pubkey:            validator.Pubkey,
-		WithdrawalShard:   validator.WithdrawalShard,
-		WithdrawalAddress: validator.WithdrawalAddress,
-		RandaoCommitment:  validator.RandaoCommitment,
-		Balance:           balance,
-		Status:            validator.Status,
-		ExitSlot:          validator.ExitSlot,
-	}
+) {
+	currentBalance := int64(validator.Balance)
+	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
+	validator.Balance = uint64(currentBalance)
 }
 
 // PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
@@ -178,29 +171,9 @@ func PenaliseValidatorCrosslink(
 	timeSinceLastConfirmation uint64,
 	rewardQuotient uint64,
 	validator *pb.ValidatorRecord,
-) *pb.ValidatorRecord {
+) {
+	newBalance := validator.Balance
 	quadraticQuotient := QuadraticPenaltyQuotient()
-	balance := validator.Balance
-	balance -= balance/rewardQuotient + balance*timeSinceLastConfirmation/quadraticQuotient
-	return &pb.ValidatorRecord{
-		Pubkey:            validator.Pubkey,
-		WithdrawalShard:   validator.WithdrawalShard,
-		WithdrawalAddress: validator.WithdrawalAddress,
-		RandaoCommitment:  validator.RandaoCommitment,
-		Balance:           balance,
-		Status:            validator.Status,
-		ExitSlot:          validator.ExitSlot,
-	}
-}
-
-// calculateBalance applies the Casper FFG reward calculation based on reward quotients
-// and total deposits from validators.
-func calculateBalance(
-	balance uint64,
-	rewardQuotient uint64,
-	totalParticipatedDeposit uint64,
-	totalActiveValidatorDeposit uint64,
-) uint64 {
-	participationNumerator := 2*int64(totalParticipatedDeposit) - int64(totalActiveValidatorDeposit)
-	return uint64(int64(balance) + int64(balance/rewardQuotient)*participationNumerator/int64(totalActiveValidatorDeposit))
+	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
+	validator.Balance = newBalance
 }

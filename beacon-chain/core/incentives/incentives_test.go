@@ -57,7 +57,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
 	}
 
-	expectedBalance = calculateBalance(defaultBalance, rewQuotient, participatedDeposit, totalDeposit)
+	expectedBalance = uint64(int64(defaultBalance) + int64(defaultBalance/rewQuotient)*(2*int64(participatedDeposit)-int64(totalDeposit))/int64(totalDeposit))
 
 	if rewardedValidators[6].Balance != expectedBalance {
 		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
@@ -142,7 +142,7 @@ func TestRewardCrosslink(t *testing.T) {
 		Balance: 1e18,
 	}
 
-	validator = RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
+	RewardValidatorCrosslink(totalDeposit, participatedDeposit, rewardQuotient, validator)
 
 	if validator.Balance != 1e18 {
 		t.Errorf("validator balances have changed when they were not supposed to %d", validator.Balance)
@@ -158,7 +158,7 @@ func TestPenaltyCrosslink(t *testing.T) {
 	timeSinceConfirmation := uint64(10)
 	quadraticQuotient := QuadraticPenaltyQuotient()
 
-	validator = PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
+	PenaliseValidatorCrosslink(timeSinceConfirmation, rewardQuotient, validator)
 	expectedBalance := 1e18 - (1e18/rewardQuotient + 1e18*timeSinceConfirmation/quadraticQuotient)
 
 	if validator.Balance != expectedBalance {
