@@ -333,7 +333,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_protocol",
-    commit = "b29f3d97e3a2fb8b29c5d04290e6cb5c5018004b",
+    tag = "v1.0.0",
     importpath = "github.com/libp2p/go-libp2p-protocol",
 )
 
