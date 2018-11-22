@@ -351,7 +351,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_loggables",
-    commit = "024fce320cf7e720445c400721c6fa6d68c9aaa7",
+    tag = "v1.1.24",
     importpath = "github.com/libp2p/go-libp2p-loggables",
 )
 
