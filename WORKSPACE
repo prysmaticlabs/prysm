@@ -423,7 +423,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_addr_util",
-    commit = "6e2ee01c0ae21694bcc33aaa7d6ce214279134f6",
+    tag = "v2.0.7",
     importpath = "github.com/libp2p/go-addr-util",
 )
 
