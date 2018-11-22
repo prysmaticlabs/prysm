@@ -163,7 +163,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "69ff94d8cf2e30670ca8c41c8a4f012e7dd73056",
+    tag = "v6.0.23",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
