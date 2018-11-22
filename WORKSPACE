@@ -731,7 +731,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "d70e92744b101ddf9ed93066a54ce128fa53aaa8",
+    tag = "v4.4.12",
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
