@@ -133,7 +133,7 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    commit = "b67dcf995b6a7b7f14fad5fcb7cc5441b05e814b",
+    tag = "v1.20.0",
     importpath = "github.com/urfave/cli",
 )
 
@@ -254,13 +254,13 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_mafmt",
-    commit = "c75a64cef2f64e7d538e6d43a8c58449ba2ab735",
+    tag = "v1.2.8",
     importpath = "github.com/whyrusleeping/mafmt",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "f0af4033635f1241179700537dacdc04f2803df8",
+    tag = "v1.6.3",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -308,13 +308,13 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "c8897612421d88a51012eaa53bf7267686173ae5",
+    tag = "v1.1.0",
     importpath = "github.com/mr-tron/base58",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_yamux",
-    commit = "49458276a01f7fbc32ff62c8955fa3e852b8e772",
+    tag = "v2.0.8",
     importpath = "github.com/whyrusleeping/go-smux-yamux",
 )
 
@@ -405,7 +405,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multistream",
-    commit = "e799b10bc6eea2cc5ce18f7b7b4d8e1a0439476d",
+    tag = "v2.0.2",
     importpath = "github.com/whyrusleeping/go-smux-multistream",
 )
 
@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    commit = "be550b025b433cdfa2f11efb962afa2ea3c4d967",
+    tag = "v1.0.2",
     importpath = "github.com/opentracing/opentracing-go",
 )
 
@@ -483,7 +483,7 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    commit = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b",
+    tag = "v1.2.0",
     importpath = "github.com/satori/go.uuid",
 )
 
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    commit = "5364a42fe4b5efa5967c11c8f9b0f049cac0c4a9",
+    tag = "v1.1.2",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
@@ -573,7 +573,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multiplex",
-    commit = "c9680d872b8e73a2fc8d9bba3eacabf1e8add80d",
+    tag = "v3.0.16",
     importpath = "github.com/whyrusleeping/go-smux-multiplex",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "0.20.0",
+    tag = "v2.5.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -693,7 +693,7 @@ go_repository(
 
 go_repository(
     name = "com_github_pborman_uuid",
-    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",
+    tag = "v1.2.0",
     importpath = "github.com/pborman/uuid",
 )
 
