@@ -200,7 +200,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "9e6ea7ee4ce0a5e969bf4bfea6b43b4d823726e8",
+    tag = "v3.0.22",
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
@@ -327,7 +327,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    commit = "d8a1795b81e6c037cfdc3a31bf81d1b925104751",
+    tag = "v2.0.16",
     importpath = "github.com/libp2p/go-tcp-transport",
 )
 
@@ -387,7 +387,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_stream_muxer",
-    commit = "9c6bd93eecbbab56630bb2688bb435d9fd1dfeb1",
+    tag = "v3.0.1",
     importpath = "github.com/libp2p/go-stream-muxer",
 )
 
@@ -399,7 +399,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_testutil",
-    commit = "39e561a7a13ac9fa9253ea87bb98caba72f392d1",
+    tag = "v1.2.10",
     importpath = "github.com/libp2p/go-testutil",
 )
 
@@ -411,13 +411,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    commit = "9e2c18e714b119399bf9ba45cd26805321bf22b5",
+    tag = "v1.1.10",
     importpath = "github.com/libp2p/go-maddr-filter",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport",
-    commit = "7400b517a07e9f4fceb2674a23ca7b420ee1dd7c",
+    tag = "v3.0.15",
     importpath = "github.com/libp2p/go-libp2p-transport",
 )
 
@@ -447,7 +447,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    commit = "1c9c9bf4c93ee029810272d3e5b8a126aee5bf1f",
+    tag = "v1.0.15",
     importpath = "github.com/miekg/dns",
 )
 
@@ -531,7 +531,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "e61db42a8bd8cab398d3a6a982a4db9ad4de4aa0",
+    tag = "v2.0.15",
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
@@ -555,7 +555,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_sockaddr",
-    commit = "a7494d4eefeb607c8bc491cf8850a6e8dbd41cab",
+    tag = "v1.0.3",
     importpath = "github.com/libp2p/go-sockaddr",
 )
 
@@ -681,7 +681,7 @@ go_repository(
 
 go_repository(
     name = "com_github_matttproud_golang_protobuf_extensions",
-    commit = "c12348ce28de40eed0136aa2b644d0ee0650e56c",
+    tag = "v1.0.1",
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
