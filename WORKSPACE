@@ -315,7 +315,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_yamux",
-    commit = "49458276a01f7fbc32ff62c8955fa3e852b8e772",
+    tag = "v2.0.8",
     importpath = "github.com/whyrusleeping/go-smux-yamux",
 )
 
