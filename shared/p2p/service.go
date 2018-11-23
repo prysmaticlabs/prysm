@@ -90,6 +90,12 @@ func (s *Server) Start() {
 		}
 	}
 
+	if s.relayNodeAddr != "" {
+		if err := dialRelayNode(s.ctx, s.host, s.relayNodeAddr); err != nil {
+			log.Errorf("Could not dial relay node: %v", err)
+		}
+	}
+
 	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
 		log.Errorf("Could not start peer discovery via mDNS: %v", err)
 		return

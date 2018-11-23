@@ -21,12 +21,16 @@ func relayAddrsOnly(relay string) config.AddrsFactory {
 			}
 			relayAddr, err := ma.NewMultiaddr(relay + "/p2p-circuit" + a.String())
 			if err != nil {
-				panic(err) // This might happen if `relay` is malformed multiaddr.
+				log.Errorf("Failed to create multiaddress for relay node: %v", err)
+			} else {
+				relayAddrs = append(relayAddrs, relayAddr)
 			}
-
-			relayAddrs = append(relayAddrs, relayAddr)
 		}
 
+		if len(relayAddrs) == 0 {
+			log.Warn("Addresses via relay node are zero. Using non-relay addresses")
+			return addrs
+		}
 		return relayAddrs
 	}
 }

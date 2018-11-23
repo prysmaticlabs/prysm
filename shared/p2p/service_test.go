@@ -35,6 +35,21 @@ func init() {
 	ipfslog.SetDebugLogging()
 }
 
+func TestStartDialRelayNodeFails(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	s, err := NewServer(&ServerConfig{
+		RelayNodeAddr: "bad",
+	})
+
+	if err != nil {
+		t.Fatalf("Unable to create server: %v", err)
+	}
+
+	s.Start()
+	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
+}
+
 func TestBroadcast(t *testing.T) {
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {

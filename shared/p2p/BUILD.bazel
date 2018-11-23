@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "addr_factory.go",
+        "dial_relay_node.go",
         "discovery.go",
         "feed.go",
         "message.go",
@@ -39,6 +40,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "addr_factory_test.go",
+        "dial_relay_node_test.go",
         "feed_example_test.go",
         "feed_test.go",
         "message_test.go",
