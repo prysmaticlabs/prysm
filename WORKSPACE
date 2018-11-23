@@ -163,7 +163,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "69ff94d8cf2e30670ca8c41c8a4f012e7dd73056",
+    tag = "v6.0.23",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -194,7 +194,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    tag = "0.1.0",
+    tag = "v1.0.8",
     importpath = "github.com/multiformats/go-multihash",
 )
 
@@ -429,7 +429,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
-    tag = "v0.2.0",
+    tag = "v3.0.0",
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
 )
 
@@ -489,7 +489,7 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v0.11.5",
+    tag = "v1.2.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
@@ -737,7 +737,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    tag = "v0.3.0",
+    tag = "v3.2.0",
     importpath = "github.com/ipfs/go-datastore",
 )
 
