@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    commit = "be550b025b433cdfa2f11efb962afa2ea3c4d967",
+    tag = "v1.0.2",
     importpath = "github.com/opentracing/opentracing-go",
 )
 
@@ -483,7 +483,7 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    commit = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b",
+    tag = "v1.2.0",
     importpath = "github.com/satori/go.uuid",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    commit = "11b336e3ca5832b812725e050aa5b62655533517",
+    tag = "v2.5.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
