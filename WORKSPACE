@@ -254,7 +254,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_mafmt",
-    commit = "c75a64cef2f64e7d538e6d43a8c58449ba2ab735",
+    tag = "v1.2.8",
     importpath = "github.com/whyrusleeping/mafmt",
 )
 
