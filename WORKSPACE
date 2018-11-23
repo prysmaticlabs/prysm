@@ -195,7 +195,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    tag = "v1.0.8",
+    tag = "0.1.0",
     importpath = "github.com/multiformats/go-multihash",
 )
 
