@@ -387,7 +387,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_stream_muxer",
-    commit = "9c6bd93eecbbab56630bb2688bb435d9fd1dfeb1",
+    tag = "v3.0.1",
     importpath = "github.com/libp2p/go-stream-muxer",
 )
 
