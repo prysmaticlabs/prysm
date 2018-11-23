@@ -158,7 +158,14 @@ func TestRegister(t *testing.T) {
 		t.Errorf("Validator registration failed: %v", err)
 	}
 	log, err := testAccount.contract.FilterValidatorRegistered(&bind.FilterOpts{}, [][32]byte{}, []common.Address{}, [][32]byte{})
-	defer log.Close()
+
+	defer func() {
+		err = log.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
 	if err != nil {
 		t.Fatal(err)
 	}
