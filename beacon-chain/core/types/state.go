@@ -45,6 +45,11 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 		})
 	}
 
+	var recentBlockHashes [][]byte
+	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
+		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
+	}
+
 	return &BeaconState{
 		data: &pb.BeaconState{
 			LastStateRecalculationSlot: 0,
@@ -58,6 +63,9 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 			PreForkVersion:             uint64(params.BeaconConfig().InitialForkVersion),
 			PostForkVersion:            uint64(params.BeaconConfig().InitialForkVersion),
+			PendingAttestations:        []*pb.AggregatedAttestation{},
+			RecentBlockHashes:          recentBlockHashes,
+			RandaoMix:                  make([]byte, 0, 32),
 		},
 	}, nil
 }
@@ -266,6 +274,11 @@ func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
 	b.data.Crosslinks = crossLinks
 }
 
+// SetDepositsPenalizedInPeriod updates the inner proto's penalized deposits.
+func (b *BeaconState) SetDepositsPenalizedInPeriod(penalizedDeposits []uint64) {
+	b.data.DepositsPenalizedInPeriod = penalizedDeposits
+}
+
 // SetLastJustifiedSlot updates the inner proto's last justified slot.
 func (b *BeaconState) SetLastJustifiedSlot(justifiedSlot uint64) {
 	b.data.LastJustifiedSlot = justifiedSlot
@@ -284,6 +297,11 @@ func (b *BeaconState) SetJustifiedStreak(justifiedSlot uint64) {
 // SetLastStateRecalculationSlot updates the inner proto's last state recalc slot.
 func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 	b.data.LastStateRecalculationSlot = slot
+}
+
+// SetRecentBlockHashes updates the inner proto's recent block hashes.
+func (b *BeaconState) SetRecentBlockHashes(recentShardBlockHashes [][]byte) {
+	b.data.RecentBlockHashes = recentShardBlockHashes
 }
 
 // SetShardAndCommitteesForSlots updates the inner proto's shard and committees for slots.
