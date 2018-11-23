@@ -575,7 +575,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multiplex",
-    commit = "c9680d872b8e73a2fc8d9bba3eacabf1e8add80d",
+    tag = "v3.0.16",
     importpath = "github.com/whyrusleeping/go-smux-multiplex",
 )
 
