@@ -1,30 +1,31 @@
-package casper
+package validators
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
-func ShuffleValidatorsToCommittees(seed common.Hash, validators []*pb.ValidatorRecord, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
+func ShuffleValidatorsToCommittees(
+	seed [32]byte,
+	validators []*pb.ValidatorRecord,
+	crosslinkStartShard uint64,
+) ([]*pb.ShardAndCommitteeArray, error) {
 	indices := ActiveValidatorIndices(validators)
-
 	// split the shuffled list for slot.
 	shuffledValidators, err := utils.ShuffleIndices(seed, indices)
 	if err != nil {
 		return nil, err
 	}
-
 	return splitBySlotShard(shuffledValidators, crosslinkStartShard), nil
 }
 
 // InitialShardAndCommitteesForSlots initialises the committees for shards by shuffling the validators
 // and assigning them to specific shards.
 func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
-	seed := make([]byte, 0, 32)
-	committees, err := ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1)
+	seed := [32]byte{}
+	committees, err := ShuffleValidatorsToCommittees(seed, validators, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,6 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 // to a single slot and shard. See getCommitteesPerSlot for more details.
 func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) []*pb.ShardAndCommitteeArray {
 	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidators)))
-
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
 	// split the validator indices by slot.
@@ -64,7 +64,6 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 			ArrayShardAndCommittee: shardCommittees,
 		})
 	}
-
 	return committeBySlotAndShard
 }
 
@@ -75,9 +74,8 @@ func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) [
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
 	cycleLength := params.BeaconConfig().CycleLength
-	boundOnValidators := numActiveValidators/cycleLength/(params.BeaconConfig().MinCommitteeSize*2) + 1
+	boundOnValidators := numActiveValidators/cycleLength/(params.BeaconConfig().TargetCommitteeSize*2) + 1
 	boundOnShardCount := params.BeaconConfig().ShardCount / cycleLength
-
 	// Ensure that comitteesPerSlot is at least 1.
 	if boundOnShardCount == 0 {
 		return 1

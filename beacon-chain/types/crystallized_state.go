@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -29,11 +31,11 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 	// bootstrap the system.
 	var err error
 	if genesisValidators == nil {
-		genesisValidators = casper.InitialValidators()
+		genesisValidators = v.InitialValidators()
 
 	}
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := casper.InitialShardAndCommitteesForSlots(genesisValidators)
+	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(genesisValidators)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +44,8 @@ func NewGenesisCrystallizedState(genesisValidators []*pb.ValidatorRecord) (*Crys
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < shardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			RecentlyChanged: false,
-			ShardBlockHash:  make([]byte, 0, 32),
-			Slot:            0,
+			ShardBlockHash: make([]byte, 0, 32),
+			Slot:           0,
 		})
 	}
 
@@ -91,9 +92,8 @@ func (c *CrystallizedState) CopyState() *CrystallizedState {
 	crosslinks := make([]*pb.CrosslinkRecord, len(c.Crosslinks()))
 	for index, crossLink := range c.Crosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
-			RecentlyChanged: crossLink.GetRecentlyChanged(),
-			ShardBlockHash:  crossLink.GetShardBlockHash(),
-			Slot:            crossLink.GetSlot(),
+			ShardBlockHash: crossLink.GetShardBlockHash(),
+			Slot:           crossLink.GetSlot(),
 		}
 	}
 
@@ -166,7 +166,7 @@ func (c *CrystallizedState) LastFinalizedSlot() uint64 {
 // TotalDeposits returns total balance of the deposits of the active validators.
 func (c *CrystallizedState) TotalDeposits() uint64 {
 	validators := c.data.Validators
-	totalDeposit := casper.TotalActiveValidatorDeposit(validators)
+	totalDeposit := v.TotalActiveValidatorDeposit(validators)
 	return totalDeposit
 }
 
@@ -218,7 +218,7 @@ func (c *CrystallizedState) IsCycleTransition(slotNumber uint64) bool {
 
 // GetShardsAndCommitteesForSlot returns the shard committees of a given slot.
 func (c *CrystallizedState) GetShardsAndCommitteesForSlot(slotNumber uint64) (*pb.ShardAndCommitteeArray, error) {
-	return casper.GetShardAndCommitteesForSlot(c.ShardAndCommitteesForSlots(), c.LastStateRecalculationSlot(), slotNumber)
+	return v.GetShardAndCommitteesForSlot(c.ShardAndCommitteesForSlots(), c.LastStateRecalculationSlot(), slotNumber)
 }
 
 // isValidatorSetChange checks if a validator set change transition can be processed. At that point,
@@ -250,7 +250,7 @@ func (c *CrystallizedState) isValidatorSetChange(slotNumber uint64) bool {
 
 // AttesterIndices fetches the attesters for a given attestation record.
 func (c *CrystallizedState) AttesterIndices(attestation *pb.AggregatedAttestation) ([]uint32, error) {
-	shardCommittees, err := casper.GetShardAndCommitteesForSlot(
+	shardCommittees, err := v.GetShardAndCommitteesForSlot(
 		c.ShardAndCommitteesForSlots(),
 		c.LastStateRecalculationSlot(),
 		attestation.GetSlot())
@@ -281,7 +281,7 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	finalizedSlot := c.LastFinalizedSlot()
 	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
 	recentBlockHashes := aState.RecentBlockHashes()
-	newState.data.Validators = casper.CopyValidators(newState.Validators())
+	newState.data.Validators = v.CopyValidators(newState.Validators())
 
 	if c.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
 		lastStateRecalculationSlotCycleBack = 0
@@ -302,10 +302,16 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		slot := lastStateRecalculationSlotCycleBack + i
 		blockHash := recentBlockHashes[i]
 
-		blockVoteBalance, newState.data.Validators = casper.TallyVoteBalances(blockHash, slot, blockVoteCache,
-			newState.data.Validators, timeSinceFinality)
+		blockVoteBalance, newState.data.Validators = incentives.TallyVoteBalances(
+			blockHash,
+			blockVoteCache,
+			newState.data.Validators,
+			v.ActiveValidatorIndices(newState.data.Validators),
+			v.TotalActiveValidatorDeposit(newState.data.Validators),
+			timeSinceFinality,
+		)
 
-		justifiedSlot, finalizedSlot, justifiedStreak = casper.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
+		justifiedSlot, finalizedSlot, justifiedStreak = state.FinalizeAndJustifySlots(slot, justifiedSlot, finalizedSlot,
 			justifiedStreak, blockVoteBalance, c.TotalDeposits())
 	}
 
@@ -320,13 +326,13 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 	newState.data.LastStateRecalculationSlot = newState.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
 
 	// Process the pending special records gathered from last cycle.
-	newState.data.Validators, err = casper.ProcessSpecialRecords(block.SlotNumber(), newState.Validators(), aState.PendingSpecials())
+	newState.data.Validators, err = state.ProcessSpecialRecords(block.SlotNumber(), newState.Validators(), aState.PendingSpecials())
 	if err != nil {
 		return nil, err
 	}
 
 	// Exit the validators when their balance fall below min online deposit size.
-	newState.data.Validators = casper.CheckValidatorMinDeposit(newState.Validators(), block.SlotNumber())
+	newState.data.Validators = v.CheckValidatorMinDeposit(newState.Validators(), block.SlotNumber())
 
 	newState.data.LastFinalizedSlot = finalizedSlot
 	// Entering new validator set change transition.
@@ -338,22 +344,14 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 			return nil, err
 		}
 
-		period := uint32(block.SlotNumber() / params.BeaconConfig().WithdrawalPeriod)
+		period := uint32(block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod)
 		totalPenalties := newState.penalizedETH(period)
-		newState.data.Validators = casper.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
-
-		newState.resetCrosslinks()
+		newState.data.Validators = v.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 	}
 
 	printCommittee(newState.data.ShardAndCommitteesForSlots)
 
 	return newState, nil
-}
-
-func (c *CrystallizedState) resetCrosslinks() {
-	for _, cl := range c.data.Crosslinks {
-		cl.RecentlyChanged = false
-	}
 }
 
 func printCommittee(shardAndCommittees []*pb.ShardAndCommitteeArray) {
@@ -373,7 +371,7 @@ func (c *CrystallizedState) newValidatorSetRecalculations(seed [32]byte) ([]*pb.
 	crosslinkLastShard := c.ShardAndCommitteesForSlots()[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].Shard
 	crosslinkNextShard := (crosslinkLastShard + 1) % uint64(shardCount)
 
-	newShardCommitteeArray, err := casper.ShuffleValidatorsToCommittees(
+	newShardCommitteeArray, err := v.ShuffleValidatorsToCommittees(
 		seed,
 		c.data.Validators,
 		crosslinkNextShard,
@@ -399,18 +397,26 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			return nil, err
 		}
 
-		totalBalance, voteBalance, err := casper.VotedBalanceInAttestation(validators, indices, attestation)
+		totalBalance, voteBalance, err := v.VotedBalanceInAttestation(validators, indices, attestation)
 		if err != nil {
 			return nil, err
 		}
 
-		err = casper.ApplyCrosslinkRewardsAndPenalties(crosslinkRecords, currentSlot, indices, attestation,
-			validators, totalBalance, voteBalance)
+		err = incentives.ApplyCrosslinkRewardsAndPenalties(
+			crosslinkRecords,
+			currentSlot,
+			indices,
+			attestation,
+			validators,
+			v.TotalActiveValidatorDeposit(validators),
+			totalBalance,
+			voteBalance,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		crosslinkRecords = casper.ProcessCrosslink(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
+		crosslinkRecords = state.ProcessCrosslink(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
 
 	}
 	return crosslinkRecords, nil

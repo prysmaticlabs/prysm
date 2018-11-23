@@ -112,10 +112,11 @@ func TestBlockValidity(t *testing.T) {
 		RandaoReveal: randaoPreCommit[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{
-				Slot:             0,
-				Shard:            1,
-				JustifiedSlot:    0,
-				AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				Slot:          0,
+				Shard:         1,
+				JustifiedSlot: 0,
+				AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 	})

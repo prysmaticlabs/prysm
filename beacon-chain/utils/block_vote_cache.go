@@ -34,10 +34,7 @@ func (v *BlockVote) Marshal() ([]byte, error) {
 func (v *BlockVote) Unmarshal(blob []byte) error {
 	buf := bytes.NewBuffer(blob)
 	decoder := gob.NewDecoder(buf)
-	if err := decoder.Decode(v); err != nil {
-		return err
-	}
-	return nil
+	return decoder.Decode(v)
 }
 
 // Copy copies a vote cache from itself to a new one.

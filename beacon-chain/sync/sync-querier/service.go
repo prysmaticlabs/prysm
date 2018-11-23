@@ -2,6 +2,7 @@ package syncquerier
 
 import (
 	"context"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/types"
@@ -84,9 +85,15 @@ func (s *SyncQuerier) Stop() error {
 
 func (s *SyncQuerier) run() {
 	responseSub := s.p2p.Subscribe(&pb.ChainHeadResponse{}, s.responseBuf)
+
+	// Ticker so that service will keep on requesting for chain head
+	// until they get a response.
+	ticker := time.NewTicker(1 * time.Second)
+
 	defer func() {
 		responseSub.Unsubscribe()
 		close(s.responseBuf)
+		ticker.Stop()
 	}()
 
 	s.RequestLatestHead()
@@ -96,11 +103,15 @@ func (s *SyncQuerier) run() {
 		case <-s.ctx.Done():
 			log.Info("Exiting goroutine")
 			return
+		case <-ticker.C:
+			s.RequestLatestHead()
 		case msg := <-s.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
 			log.Infof("Latest Chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
 			s.curentHeadSlot = response.Slot
 			s.currentHeadHash = response.Hash
+
+			ticker.Stop()
 			responseSub.Unsubscribe()
 			s.cancel()
 		}
