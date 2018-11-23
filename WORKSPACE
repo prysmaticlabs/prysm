@@ -133,7 +133,7 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    tag = "v0.1.0",
+    tag = "v1.20.0",
     importpath = "github.com/urfave/cli",
 )
 
