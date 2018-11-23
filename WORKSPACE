@@ -681,7 +681,7 @@ go_repository(
 
 go_repository(
     name = "com_github_matttproud_golang_protobuf_extensions",
-    commit = "c12348ce28de40eed0136aa2b644d0ee0650e56c",
+    tag = "v1.0.1",
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
