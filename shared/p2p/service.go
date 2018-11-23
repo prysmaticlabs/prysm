@@ -88,15 +88,17 @@ func (s *Server) Start() {
 		if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
-	} else if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
-		log.Errorf("Could not start peer discovery via mDNS: %v", err)
-		return
 	}
 
 	if s.relayNodeAddr != "" {
 		if err := dialRelayNode(s.ctx, s.host, s.relayNodeAddr); err != nil {
 			log.Errorf("Could not dial relay node: %v", err)
 		}
+	}
+
+	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+		log.Errorf("Could not start peer discovery via mDNS: %v", err)
+		return
 	}
 
 	startPeerWatcher(s.ctx, s.host)
