@@ -503,7 +503,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    commit = "5364a42fe4b5efa5967c11c8f9b0f049cac0c4a9",
+    tag = "v1.1.2",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
