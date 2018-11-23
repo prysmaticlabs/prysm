@@ -141,7 +141,6 @@ go_repository(
     name = "com_github_go_yaml_yaml",
     tag = "v2.2.1",
     importpath = "github.com/go-yaml/yaml",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
 )
 
 go_repository(
@@ -492,7 +491,6 @@ go_repository(
     name = "com_github_sirupsen_logrus",
     tag = "v0.11.5",
     importpath = "github.com/sirupsen/logrus",
-    commit = "91da99df23e3bad7f384338a5a8f636d04093d9a",
 )
 
 go_repository(
