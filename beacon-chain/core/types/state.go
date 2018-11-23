@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -71,4 +72,45 @@ func (b *BeaconState) LastJustifiedSlot() uint64 {
 // JustifiedStreak returns number of consecutive justified slots ending at head.
 func (b *BeaconState) JustifiedStreak() uint64 {
 	return b.data.JustifiedStreak
+}
+
+// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period.
+func (b *BeaconState) DepositsPenalizedInPeriod() []uint64 {
+	return b.data.DepositsPenalizedInPeriod
+}
+
+// ForkSlotNumber returns the slot of last fork.
+func (b *BeaconState) ForkSlotNumber() uint64 {
+	return b.data.ForkSlotNumber
+}
+
+// PreForkVersion returns the last pre fork version.
+func (b *BeaconState) PreForkVersion() uint64 {
+	return b.data.PreForkVersion
+}
+
+// PostForkVersion returns the last post fork version.
+func (b *BeaconState) PostForkVersion() uint64 {
+	return b.data.PostForkVersion
+}
+
+// RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
+func (b *BeaconState) RecentBlockHashes() [][32]byte {
+	var blockhashes [][32]byte
+	for _, hash := range b.data.RecentBlockHashes {
+		blockhashes = append(blockhashes, common.BytesToHash(hash))
+	}
+	return blockhashes
+}
+
+// PendingAttestations returns attestations that have not yet been processed.
+func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
+	return b.data.PendingAttestations
+}
+
+// RandaoMix tracks the current RANDAO state.
+func (b *BeaconState) RandaoMix() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.RandaoMix)
+	return h
 }
