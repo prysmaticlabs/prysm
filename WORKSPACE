@@ -405,7 +405,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multistream",
-    commit = "e799b10bc6eea2cc5ce18f7b7b4d8e1a0439476d",
+    tag = "v2.0.2",
     importpath = "github.com/whyrusleeping/go-smux-multistream",
 )
 
