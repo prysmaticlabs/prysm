@@ -67,7 +67,7 @@ var (
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = cli.Int64Flag{
-		Name:  "monitoring-flag",
+		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
 	}

@@ -88,6 +88,9 @@ func (s *Server) Start() {
 		if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
+	} else if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+		log.Errorf("Could not start peer discovery via mDNS: %v", err)
+		return
 	}
 
 	if s.relayNodeAddr != "" {
@@ -96,10 +99,7 @@ func (s *Server) Start() {
 		}
 	}
 
-	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
-		log.Errorf("Could not start peer discovery via mDNS: %v", err)
-		return
-	}
+	startPeerWatcher(s.ctx, s.host)
 }
 
 // Stop the main p2p loop.
