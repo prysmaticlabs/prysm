@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "add_relay.go",
+        "addr_factory.go",
         "discovery.go",
         "feed.go",
         "message.go",
@@ -38,7 +38,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "add_relay_test.go",
+        "addr_factory_test.go",
         "feed_example_test.go",
         "feed_test.go",
         "message_test.go",

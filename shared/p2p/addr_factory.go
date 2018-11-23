@@ -5,9 +5,9 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-// addRelayAddrs adds a relay connection string for each address in Addrs().
-func addRelayAddrs(relay string, relayOnly bool) config.AddrsFactory {
-
+// relayAddrsOnly returns an AddrFactory which will only return Multiaddr via
+// specified relay string.
+func relayAddrsOnly(relay string) config.AddrsFactory {
 	return func(addrs []ma.Multiaddr) []ma.Multiaddr {
 		if relay == "" {
 			return addrs
@@ -27,10 +27,6 @@ func addRelayAddrs(relay string, relayOnly bool) config.AddrsFactory {
 			relayAddrs = append(relayAddrs, relayAddr)
 		}
 
-		if relayOnly {
-			return relayAddrs
-		}
-
-		return append(addrs, relayAddrs...)
+		return relayAddrs
 	}
 }

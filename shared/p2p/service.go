@@ -48,7 +48,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
 	if cfg.RelayNodeAddr != "" {
-		opts = append(opts, libp2p.AddrsFactory(addRelayAddrs(cfg.RelayNodeAddr, true /*relayOnly*/)))
+		opts = append(opts, libp2p.AddrsFactory(relayAddrsOnly(cfg.RelayNodeAddr)))
 	}
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
