@@ -555,7 +555,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_sockaddr",
-    commit = "a7494d4eefeb607c8bc491cf8850a6e8dbd41cab",
+    tag = "v1.0.3",
     importpath = "github.com/libp2p/go-sockaddr",
 )
 
