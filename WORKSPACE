@@ -738,7 +738,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    tag = "v3.2.0",
+    tag = "v0.3.0",
     importpath = "github.com/ipfs/go-datastore",
 )
 
