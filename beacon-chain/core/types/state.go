@@ -142,6 +142,32 @@ func (b *BeaconState) ValidatorSetChangeSlot() uint64 {
 	return b.data.ValidatorSetChangeSlot
 }
 
+// IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
+// validator shuffle will occur.
+func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
+	if b.LastFinalizedSlot() <= b.ValidatorSetChangeSlot() {
+		return false
+	}
+	if slotNumber-b.ValidatorSetChangeSlot() < params.BeaconConfig().MinValidatorSetChangeInterval {
+		return false
+	}
+
+	shardProcessed := map[uint64]bool{}
+	for _, shardAndCommittee := range b.ShardAndCommitteesForSlots() {
+		for _, committee := range shardAndCommittee.ArrayShardAndCommittee {
+			shardProcessed[committee.Shard] = true
+		}
+	}
+
+	crosslinks := b.Crosslinks()
+	for shard := range shardProcessed {
+		if b.ValidatorSetChangeSlot() >= crosslinks[shard].Slot {
+			return false
+		}
+	}
+	return true
+}
+
 // ShardAndCommitteesForSlots returns the shard committee object.
 func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray {
 	return b.data.ShardAndCommitteesForSlots
@@ -218,7 +244,68 @@ func (b *BeaconState) RandaoMix() [32]byte {
 	return h
 }
 
+// PenalizedETH calculates penalized total ETH during the last 3 withdrawal periods.
+func (b *BeaconState) PenalizedETH(period uint64) uint64 {
+	var totalPenalty uint64
+	penalties := b.DepositsPenalizedInPeriod()
+	totalPenalty += getPenaltyForPeriod(penalties, period)
+
+	if period >= 1 {
+		totalPenalty += getPenaltyForPeriod(penalties, period-1)
+	}
+
+	if period >= 2 {
+		totalPenalty += getPenaltyForPeriod(penalties, period-2)
+	}
+
+	return totalPenalty
+}
+
+// SetCrossLinks updates the inner proto's cross link records.
+func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
+	b.data.Crosslinks = crossLinks
+}
+
+// SetLastJustifiedSlot updates the inner proto's last justified slot.
+func (b *BeaconState) SetLastJustifiedSlot(justifiedSlot uint64) {
+	b.data.LastJustifiedSlot = justifiedSlot
+}
+
+// SetLastFinalizedSlot updates the inner proto's last finalized slot.
+func (b *BeaconState) SetLastFinalizedSlot(finalizedSlot uint64) {
+	b.data.LastFinalizedSlot = finalizedSlot
+}
+
+// SetJustifiedStreak updates the inner proto's justified streak.
+func (b *BeaconState) SetJustifiedStreak(justifiedSlot uint64) {
+	b.data.JustifiedStreak = justifiedSlot
+}
+
+// SetLastStateRecalculationSlot updates the inner proto's last state recalc slot.
+func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
+	b.data.LastStateRecalculationSlot = slot
+}
+
+// SetShardAndCommitteesForSlots updates the inner proto's shard and committees for slots.
+func (b *BeaconState) SetShardAndCommitteesForSlots(shardAndCommitteesForSlot []*pb.ShardAndCommitteeArray) {
+	b.data.ShardAndCommitteesForSlots = shardAndCommitteesForSlot
+}
+
 // SetValidators updates the state's internal validator set.
 func (b *BeaconState) SetValidators(validators []*pb.ValidatorRecord) {
 	b.data.Validators = validators
+}
+
+// SetValidatorSetChangeSlot updates the inner proto's validator set change slot.
+func (b *BeaconState) SetValidatorSetChangeSlot(slot uint64) {
+	b.data.ValidatorSetChangeSlot = slot
+}
+
+func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {
+	numPeriods := uint64(len(penalties))
+	if numPeriods < period+1 {
+		return 0
+	}
+
+	return penalties[period]
 }
