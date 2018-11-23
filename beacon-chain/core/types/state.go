@@ -62,6 +62,61 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 	}, nil
 }
 
+// CopyState returns a deep copy of the current state.
+func (b *BeaconState) CopyState() *BeaconState {
+	crosslinks := make([]*pb.CrosslinkRecord, len(b.Crosslinks()))
+	for index, crossLink := range b.Crosslinks() {
+		crosslinks[index] = &pb.CrosslinkRecord{
+			ShardBlockHash: crossLink.GetShardBlockHash(),
+			Slot:           crossLink.GetSlot(),
+		}
+	}
+
+	validators := make([]*pb.ValidatorRecord, len(b.Validators()))
+	for index, validator := range b.Validators() {
+		validators[index] = &pb.ValidatorRecord{
+			Pubkey:            validator.GetPubkey(),
+			WithdrawalShard:   validator.GetWithdrawalShard(),
+			WithdrawalAddress: validator.GetWithdrawalAddress(),
+			RandaoCommitment:  validator.GetRandaoCommitment(),
+			Balance:           validator.GetBalance(),
+			Status:            validator.GetStatus(),
+			ExitSlot:          validator.GetExitSlot(),
+		}
+	}
+
+	shardAndCommitteesForSlots := make([]*pb.ShardAndCommitteeArray, len(b.ShardAndCommitteesForSlots()))
+	for index, shardAndCommitteesForSlot := range b.ShardAndCommitteesForSlots() {
+		shardAndCommittees := make([]*pb.ShardAndCommittee, len(shardAndCommitteesForSlot.GetArrayShardAndCommittee()))
+		for index, shardAndCommittee := range shardAndCommitteesForSlot.GetArrayShardAndCommittee() {
+			shardAndCommittees[index] = &pb.ShardAndCommittee{
+				Shard:     shardAndCommittee.GetShard(),
+				Committee: shardAndCommittee.GetCommittee(),
+			}
+		}
+		shardAndCommitteesForSlots[index] = &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardAndCommittees,
+		}
+	}
+
+	newState := BeaconState{&pb.BeaconState{
+		LastStateRecalculationSlot: b.LastStateRecalculationSlot(),
+		JustifiedStreak:            b.JustifiedStreak(),
+		LastJustifiedSlot:          b.LastJustifiedSlot(),
+		LastFinalizedSlot:          b.LastFinalizedSlot(),
+		ValidatorSetChangeSlot:     b.ValidatorSetChangeSlot(),
+		Crosslinks:                 crosslinks,
+		Validators:                 validators,
+		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
+		PreForkVersion:             b.data.PreForkVersion,
+		PostForkVersion:            b.data.PostForkVersion,
+		ForkSlotNumber:             b.data.ForkSlotNumber,
+	}}
+
+	return &newState
+}
+
 // Proto returns the underlying protobuf data within a state primitive.
 func (b *BeaconState) Proto() *pb.BeaconState {
 	return b.data
@@ -161,4 +216,9 @@ func (b *BeaconState) RandaoMix() [32]byte {
 	var h [32]byte
 	copy(h[:], b.data.RandaoMix)
 	return h
+}
+
+// SetValidators updates the state's internal validator set.
+func (b *BeaconState) SetValidators(validators []*pb.ValidatorRecord) {
+	b.data.Validators = validators
 }
