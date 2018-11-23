@@ -484,7 +484,7 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    commit = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b",
+    tag = "v1.2.0",
     importpath = "github.com/satori/go.uuid",
 )
 
