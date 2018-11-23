@@ -3,8 +3,10 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // BeaconState defines the core beacon chain's single
@@ -12,6 +14,52 @@ import (
 // set, recent block hashes, finalized slots, and more.
 type BeaconState struct {
 	data *pb.BeaconState
+}
+
+// NewBeaconState creates a new beacon state with a explicitly set data field.
+func NewBeaconState(data *pb.BeaconState) *BeaconState {
+	return &BeaconState{data: data}
+}
+
+// NewGenesisBeaconState initializes the beacon chain state for slot 0.
+func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconState, error) {
+	// We seed the genesis state with a bunch of validators to
+	// bootstrap the system.
+	var err error
+	if genesisValidators == nil {
+		genesisValidators = v.InitialValidators()
+
+	}
+	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
+	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(genesisValidators)
+	if err != nil {
+		return nil, err
+	}
+
+	// Bootstrap cross link records.
+	var crosslinks []*pb.CrosslinkRecord
+	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
+		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
+			ShardBlockHash: make([]byte, 0, 32),
+			Slot:           0,
+		})
+	}
+
+	return &BeaconState{
+		data: &pb.BeaconState{
+			LastStateRecalculationSlot: 0,
+			JustifiedStreak:            0,
+			LastJustifiedSlot:          0,
+			LastFinalizedSlot:          0,
+			ValidatorSetChangeSlot:     0,
+			ForkSlotNumber:             0,
+			Crosslinks:                 crosslinks,
+			Validators:                 genesisValidators,
+			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
+			PreForkVersion:             uint64(params.BeaconConfig().InitialForkVersion),
+			PostForkVersion:            uint64(params.BeaconConfig().InitialForkVersion),
+		},
+	}, nil
 }
 
 // Proto returns the underlying protobuf data within a state primitive.
