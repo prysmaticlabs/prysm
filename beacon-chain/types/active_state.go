@@ -76,9 +76,7 @@ func (a *ActiveState) CopyState() *ActiveState {
 	}
 
 	recentBlockHashes := make([][]byte, len(a.data.RecentBlockHashes))
-	for r, hash := range a.data.RecentBlockHashes {
-		recentBlockHashes[r] = hash
-	}
+	copy(recentBlockHashes, a.data.RecentBlockHashes)
 
 	pendingSpecials := make([]*pb.SpecialRecord, len(a.data.PendingSpecials))
 	for index, pendingSpecial := range a.data.PendingSpecials {
