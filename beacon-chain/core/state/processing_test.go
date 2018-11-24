@@ -91,8 +91,8 @@ func TestCrosslinks(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
-	crossLinks = ProcessCrosslink(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = UpdateCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = UpdateCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())
