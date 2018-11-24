@@ -58,7 +58,7 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
-		CStateReqBuf:    10,
+		StateReqBuf:     10,
 	}
 
 	return NewSimulator(ctx, cfg), p2pService

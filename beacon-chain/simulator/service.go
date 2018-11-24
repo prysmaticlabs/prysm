@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -38,7 +39,7 @@ type Simulator struct {
 	cancel               context.CancelFunc
 	p2p                  p2pAPI
 	web3Service          powChainService
-	beaconDB             *db.beaconDB
+	beaconDB             *db.BeaconDB
 	enablePOWChain       bool
 	blockRequestChan     chan p2p.Message
 	blockBySlotChan      chan p2p.Message
@@ -54,7 +55,7 @@ type Config struct {
 	StateReqBuf         int
 	P2P                 p2pAPI
 	Web3Service         powChainService
-	BeaconDB            beaconDB
+	BeaconDB            *db.BeaconDB
 	EnablePOWChain      bool
 }
 
@@ -240,7 +241,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			if !bytes.Equal(data.GetHash(), hash[:]) {
 				log.WithFields(logrus.Fields{
 					"hash": fmt.Sprintf("%#x", data.GetHash()),
-				}).Debug("Requested state is of a different hash")
+				}).Debug("Requested beacon state is of a different hash")
 				continue
 			}
 
@@ -261,14 +262,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Block, error) {
 	beaconState, err := sim.beaconDB.GetState()
 	if err != nil {
-		log.Errorf("Could not retrieve beacon state: %v", err)
-		continue
+		return nil, fmt.Errorf("Could not retrieve beacon state: %v", err)
 	}
 
 	stateHash, err := beaconState.Hash()
 	if err != nil {
-		log.Errorf("Could not hash beacon state: %v", err)
-		continue
+		return nil, fmt.Errorf("Could not hash beacon state: %v", err)
 	}
 
 	var powChainRef []byte
@@ -279,10 +278,9 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	}
 
 	parentSlot := slot - 1
-	committees, err := beaconState.GetShardsAndCommitteesForSlot(parentSlot)
+	committees, err := v.GetShardAndCommitteesForSlot(beaconState.ShardAndCommitteesForSlots(), beaconState.LastStateRecalculationSlot(), parentSlot)
 	if err != nil {
-		log.Errorf("Failed to get shard committee: %v", err)
-
+		return nil, fmt.Errorf("Failed to get shard committee: %v", err)
 	}
 
 	parentHash := make([]byte, 32)
