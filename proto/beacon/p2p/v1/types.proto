@@ -97,11 +97,10 @@ message BeaconBlock {
   uint64 slot = 2;
   bytes randao_reveal = 3;
   bytes pow_chain_ref = 4;
-  bytes active_state_root = 5;
-  bytes crystallized_state_root = 6;
-  google.protobuf.Timestamp timestamp = 7;
-  repeated AggregatedAttestation attestations = 8;
-  repeated SpecialRecord specials = 9;
+  bytes stateRoot = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  repeated AggregatedAttestation attestations = 7;
+  repeated SpecialRecord specials = 8;
 }
 
 message CrystallizedState {

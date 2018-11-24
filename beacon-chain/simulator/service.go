@@ -5,12 +5,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -38,11 +38,11 @@ type Simulator struct {
 	cancel               context.CancelFunc
 	p2p                  p2pAPI
 	web3Service          powChainService
-	beaconDB             beaconDB
+	beaconDB             *db.beaconDB
 	enablePOWChain       bool
 	blockRequestChan     chan p2p.Message
 	blockBySlotChan      chan p2p.Message
-	cStateReqChan        chan p2p.Message
+	stateReqChan         chan p2p.Message
 	chainHeadRequestChan chan p2p.Message
 }
 
@@ -51,21 +51,11 @@ type Config struct {
 	BlockRequestBuf     int
 	BlockSlotBuf        int
 	ChainHeadRequestBuf int
-	CStateReqBuf        int
+	StateReqBuf         int
 	P2P                 p2pAPI
 	Web3Service         powChainService
 	BeaconDB            beaconDB
 	EnablePOWChain      bool
-}
-
-type beaconDB interface {
-	GetChainHead() (*types.Block, error)
-	GetGenesisTime() (time.Time, error)
-	GetSimulatorSlot() (uint64, error)
-	SaveSimulatorSlot(uint64) error
-	GetActiveState() (*types.ActiveState, error)
-	GetCrystallizedState() (*types.CrystallizedState, error)
-	SaveCrystallizedState(*types.CrystallizedState) error
 }
 
 // DefaultConfig options for the simulator.
@@ -73,7 +63,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		BlockRequestBuf:     100,
 		BlockSlotBuf:        100,
-		CStateReqBuf:        100,
+		StateReqBuf:         100,
 		ChainHeadRequestBuf: 100,
 	}
 }
@@ -90,7 +80,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		enablePOWChain:       cfg.EnablePOWChain,
 		blockRequestChan:     make(chan p2p.Message, cfg.BlockRequestBuf),
 		blockBySlotChan:      make(chan p2p.Message, cfg.BlockSlotBuf),
-		cStateReqChan:        make(chan p2p.Message, cfg.CStateReqBuf),
+		stateReqChan:         make(chan p2p.Message, cfg.StateReqBuf),
 		chainHeadRequestChan: make(chan p2p.Message, cfg.ChainHeadRequestBuf),
 	}
 }
@@ -130,10 +120,10 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 	chainHdReqSub := sim.p2p.Subscribe(&pb.ChainHeadRequest{}, sim.chainHeadRequestChan)
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
 	blockBySlotSub := sim.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, sim.blockBySlotChan)
-	cStateReqSub := sim.p2p.Subscribe(&pb.CrystallizedStateRequest{}, sim.cStateReqChan)
+	stateReqSub := sim.p2p.Subscribe(&pb.BeaconStateRequest{}, sim.stateReqChan)
 	defer blockReqSub.Unsubscribe()
 	defer blockBySlotSub.Unsubscribe()
-	defer cStateReqSub.Unsubscribe()
+	defer stateReqSub.Unsubscribe()
 	defer chainHdReqSub.Unsubscribe()
 
 	lastBlock, err := sim.beaconDB.GetChainHead()
@@ -156,13 +146,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			return
 		case msg := <-sim.chainHeadRequestChan:
 
-			log.Debug("Received Chain Head Request")
+			log.Debug("Received chain head request")
 			if err := sim.SendChainHead(msg.Peer); err != nil {
 				log.Errorf("Unable to send chain head response %v", err)
 			}
 
 		case slot := <-slotInterval:
-
 			block, err := sim.generateBlock(slot, lastHash)
 			if err != nil {
 				log.Error(err)
@@ -233,35 +222,35 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				AttesterBitfield: []byte{byte(255)},
 			}}
 			sim.p2p.Send(res, msg.Peer)
-		case msg := <-sim.cStateReqChan:
-			data := msg.Data.(*pb.CrystallizedStateRequest)
+		case msg := <-sim.stateReqChan:
+			data := msg.Data.(*pb.BeaconStateRequest)
 
-			cState, err := sim.beaconDB.GetCrystallizedState()
+			beaconState, err := sim.beaconDB.GetState()
 			if err != nil {
-				log.Errorf("Could not retrieve crystallized state: %v", err)
+				log.Errorf("Could not retrieve beacon state: %v", err)
 				continue
 			}
 
-			hash, err := cState.Hash()
+			hash, err := beaconState.Hash()
 			if err != nil {
-				log.Errorf("Could not hash crystallized state: %v", err)
+				log.Errorf("Could not hash beacon state: %v", err)
 				continue
 			}
 
 			if !bytes.Equal(data.GetHash(), hash[:]) {
 				log.WithFields(logrus.Fields{
 					"hash": fmt.Sprintf("%#x", data.GetHash()),
-				}).Debug("Requested Crystallized state is of a different hash")
+				}).Debug("Requested state is of a different hash")
 				continue
 			}
 
 			log.WithFields(logrus.Fields{
 				"hash": fmt.Sprintf("%#x", hash),
-			}).Debug("Responding to full crystallized state request")
+			}).Debug("Responding to full beacon state request")
 
 			// Sends the full crystallized state to the requester.
-			res := &pb.CrystallizedStateResponse{
-				CrystallizedState: cState.Proto(),
+			res := &pb.BeaconStateResponse{
+				BeaconState: beaconState.Proto(),
 			}
 			sim.p2p.Send(res, msg.Peer)
 		}
@@ -270,26 +259,16 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 // generateBlock generates fake blocks for the simulator.
 func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Block, error) {
-
-	aState, err := sim.beaconDB.GetActiveState()
+	beaconState, err := sim.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get active state: %v", err)
+		log.Errorf("Could not retrieve beacon state: %v", err)
+		continue
 	}
 
-	cState, err := sim.beaconDB.GetCrystallizedState()
+	stateHash, err := beaconState.Hash()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get crystallized state: %v", err)
-	}
-
-	aStateHash, err := aState.Hash()
-	if err != nil {
-		return nil, fmt.Errorf("failed to hash active state: %v", err)
-	}
-
-	cStateHash, err := cState.Hash()
-	if err != nil {
-		return nil, fmt.Errorf("failed to hash crystallized state: %v", err)
-
+		log.Errorf("Could not hash beacon state: %v", err)
+		continue
 	}
 
 	var powChainRef []byte
@@ -300,7 +279,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	}
 
 	parentSlot := slot - 1
-	committees, err := cState.GetShardsAndCommitteesForSlot(parentSlot)
+	committees, err := beaconState.GetShardsAndCommitteesForSlot(parentSlot)
 	if err != nil {
 		log.Errorf("Failed to get shard committee: %v", err)
 
@@ -326,14 +305,13 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:                  slot,
-		Timestamp:             ptypes.TimestampNow(),
-		PowChainRef:           powChainRef,
-		ActiveStateRoot:       aStateHash[:],
-		CrystallizedStateRoot: cStateHash[:],
-		AncestorHashes:        [][]byte{parentHash},
-		RandaoReveal:          params.BeaconConfig().SimulatedBlockRandao[:],
-		Attestations:          attestations,
+		Slot:           slot,
+		Timestamp:      ptypes.TimestampNow(),
+		PowChainRef:    powChainRef,
+		StateRoot:      stateHash[:],
+		AncestorHashes: [][]byte{parentHash},
+		RandaoReveal:   params.BeaconConfig().SimulatedBlockRandao[:],
+		Attestations:   attestations,
 	})
 	return block, nil
 }

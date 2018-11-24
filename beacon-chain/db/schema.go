@@ -23,8 +23,7 @@ var (
 	simulatorBucket      = []byte("simulator-bucket")
 
 	mainChainHeightKey = []byte("chain-height")
-	aStateLookupKey    = []byte("active-state")
-	cStateLookupKey    = []byte("crystallized-state")
+	stateLookupKey     = []byte("state")
 	simSlotLookupKey   = []byte("simulator-slot")
 )
 

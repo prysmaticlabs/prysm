@@ -11,9 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -56,7 +56,7 @@ type Service struct {
 	withKey               string
 	grpcServer            *grpc.Server
 	canonicalBlockChan    chan *types.Block
-	canonicalStateChan    chan *types.CrystallizedState
+	canonicalStateChan    chan *types.BeaconState
 	incomingAttestation   chan *types.Attestation
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
@@ -91,7 +91,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withKey:               cfg.KeyFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *types.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
 		enablePOWChain:        cfg.EnablePOWChain,
 	}
@@ -170,13 +170,13 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	if err != nil {
 		return nil, fmt.Errorf("could not get genesis block: %v", err)
 	}
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 	var keys []*pb.PublicKey
 	if req.AllValidators {
-		for _, val := range cState.Validators() {
+		for _, val := range beaconState.Validators() {
 			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 		}
 	} else {
@@ -185,7 +185,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 			return nil, errors.New("no public keys specified in request")
 		}
 	}
-	assignments, err := assignmentsForPublicKeys(keys, cState)
+	assignments, err := assignmentsForPublicKeys(keys, beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
 	}
@@ -207,17 +207,16 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	//TODO(#589) The attestation should be aggregated in the validator client side not in the beacon node.
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
 	_, prevProposerIndex, err := v.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalculationSlot(),
+		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.LastStateRecalculationSlot(),
 		req.GetSlotNumber(),
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
 	}
@@ -285,15 +284,15 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
 func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
 	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
-		cState.Validators(),
-		cState.ShardAndCommitteesForSlots(),
+		beaconState.Validators(),
+		beaconState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
@@ -308,15 +307,15 @@ func (s *Service) ValidatorSlotAndResponsibility(
 	ctx context.Context,
 	req *pb.PublicKey,
 ) (*pb.SlotResponsibilityResponse, error) {
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
 	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
-		cState.Validators(),
-		cState.ShardAndCommitteesForSlots(),
+		beaconState.Validators(),
+		beaconState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
@@ -328,14 +327,13 @@ func (s *Service) ValidatorSlotAndResponsibility(
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-
 	index, err := v.ValidatorIndex(
 		req.PublicKey,
-		cState.Validators(),
+		beaconState.Validators(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -351,16 +349,16 @@ func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
 	stream pb.BeaconService_ValidatorAssignmentsServer) error {
 
-	sub := s.chainService.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
+	sub := s.chainService.CanonicalStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case cState := <-s.canonicalStateChan:
+		case beaconState := <-s.canonicalStateChan:
 			log.Info("Sending new cycle assignments to validator clients")
 
 			var keys []*pb.PublicKey
 			if req.AllValidators {
-				for _, val := range cState.Validators() {
+				for _, val := range beaconState.Validators() {
 					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 				}
 			} else {
@@ -370,7 +368,7 @@ func (s *Service) ValidatorAssignments(
 				}
 			}
 
-			assignments, err := assignmentsForPublicKeys(keys, cState)
+			assignments, err := assignmentsForPublicKeys(keys, beaconState)
 			if err != nil {
 				return fmt.Errorf("could not get assignments for public keys: %v", err)
 			}
@@ -396,7 +394,7 @@ func (s *Service) ValidatorAssignments(
 
 // assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
 // given a crystallized state.
-func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedState) ([]*pb.Assignment, error) {
+func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconState) ([]*pb.Assignment, error) {
 	// Next, for each public key in the request, we build
 	// up an array of assignments.
 	assignments := []*pb.Assignment{}
@@ -406,8 +404,8 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// should act as a proposer or attester.
 		assignedSlot, role, err := v.ValidatorSlotAndRole(
 			val.GetPublicKey(),
-			cState.Validators(),
-			cState.ShardAndCommitteesForSlots(),
+			beaconState.Validators(),
+			beaconState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {
 			return nil, err
@@ -417,8 +415,8 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// based on a public key and current crystallized state.
 		shardID, err := v.ValidatorShardID(
 			val.GetPublicKey(),
-			cState.Validators(),
-			cState.ShardAndCommitteesForSlots(),
+			beaconState.Validators(),
+			beaconState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {
 			return nil, err
