@@ -33,9 +33,9 @@ func FinalizeAndJustifySlots(
 	return justifiedSlot, finalizedSlot, justifiedStreak
 }
 
-// ProcessCrosslink checks the vote balances and if there is a supermajority it sets the crosslink
+// UpdateCrosslinks checks the vote balances and if there is a supermajority it sets the crosslink
 // for that shard.
-func ProcessCrosslink(slot uint64, voteBalance uint64, totalBalance uint64,
+func UpdateCrosslinks(slot uint64, voteBalance uint64, totalBalance uint64,
 	attestation *pb.AggregatedAttestation, crosslinkRecords []*pb.CrosslinkRecord) []*pb.CrosslinkRecord {
 	// if 2/3 of committee voted on this crosslink, update the crosslink
 	// with latest dynasty number, shard block hash, and slot number.

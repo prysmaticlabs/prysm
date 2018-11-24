@@ -1,6 +1,8 @@
 package validators
 
 import (
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,6 +38,22 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 	initialCommittees = append(initialCommittees, committees...)
 	initialCommittees = append(initialCommittees, committees...)
 	return initialCommittees, nil
+}
+
+// AttesterIndices returns the validator indices that acted as attesters
+// for a particular attestation.
+func AttesterIndices(
+	shardCommittees *pb.ShardAndCommitteeArray,
+	attestation *pb.AggregatedAttestation,
+) ([]uint32, error) {
+	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
+	for _, shardCommittee := range shardCommitteesArray {
+		if attestation.Shard == shardCommittee.Shard {
+			return shardCommittee.Committee, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.Shard)
 }
 
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
