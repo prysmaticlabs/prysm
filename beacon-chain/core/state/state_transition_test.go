@@ -24,10 +24,9 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes:        [][]byte{},
-		Slot:                  0,
-		ActiveStateRoot:       []byte{},
-		CrystallizedStateRoot: []byte{},
+		AncestorHashes: [][]byte{},
+		Slot:           0,
+		StateRoot:      []byte{},
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: attesterBitfield,
@@ -205,7 +204,7 @@ func TestProcessCrosslinks(t *testing.T) {
 func TestIsNewValidatorSetTransition(t *testing.T) {
 	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("Failed to initialize crystallized state: %v", err)
+		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	beaconState.SetValidatorSetChangeSlot(1)
 	if beaconState.IsValidatorSetChange(0) {

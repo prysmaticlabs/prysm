@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+var clock utils.Clock = &utils.RealClock{}
 
 // Block defines a beacon chain core primitive.
 type Block struct {
@@ -84,9 +88,31 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
-// Stateroot returns the state hash.
+// AttestationCount returns the number of attestations.
+func (b *Block) AttestationCount() int {
+	return len(b.data.Attestations)
+}
+
+// Attestations returns an array of attestations in the block.
+func (b *Block) Attestations() []*pb.AggregatedAttestation {
+	return b.data.Attestations
+}
+
+// PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
+func (b *Block) PowChainRef() common.Hash {
+	return common.BytesToHash(b.data.PowChainRef)
+}
+
+// StateRoot returns the state hash.
 func (b *Block) StateRoot() [32]byte {
 	var h [32]byte
 	copy(h[:], b.data.StateRoot)
 	return h
+}
+
+// isSlotValid compares the slot to the system clock to determine if the block is valid.
+func (b *Block) isSlotValid(genesisTime time.Time) bool {
+	slotDuration := time.Duration(b.SlotNumber()*params.BeaconConfig().SlotDuration) * time.Second
+	validTimeThreshold := genesisTime.Add(slotDuration)
+	return clock.Now().After(validTimeThreshold)
 }

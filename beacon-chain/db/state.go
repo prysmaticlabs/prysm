@@ -84,75 +84,42 @@ func (db *BeaconDB) SaveState(beaconState *types.BeaconState) error {
 
 // GetUnfinalizedBlockState fetches an unfinalized block's
 // active and crystallized state pair.
-// func (db *BeaconDB) GetUnfinalizedBlockState(
-// 	aStateRoot [32]byte,
-// 	cStateRoot [32]byte,
-// ) (*types.ActiveState, *types.CrystallizedState, error) {
-// 	var aState *types.ActiveState
-// 	var cState *types.CrystallizedState
-// 	err := db.view(func(tx *bolt.Tx) error {
-// 		chainInfo := tx.Bucket(chainInfoBucket)
+func (db *BeaconDB) GetUnfinalizedBlockState(stateRoot [32]byte) (*types.BeaconState, error) {
+	var beaconState *types.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encState := chainInfo.Get(stateRoot[:])
+		if encState == nil {
+			return nil
+		}
 
-// 		encActive := chainInfo.Get(aStateRoot[:])
-// 		if encActive == nil {
-// 			return nil
-// 		}
-// 		encCrystallized := chainInfo.Get(cStateRoot[:])
-// 		if encCrystallized == nil {
-// 			return nil
-// 		}
+		var err error
+		beaconState, err = createState(encState)
+		return err
+	})
+	return beaconState, err
+}
 
-// 		var err error
-// 		aState, err = createActiveState(encActive)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		cState, err = createCrystallizedState(encCrystallized)
-// 		return err
-// 	})
+// SaveUnfinalizedBlockState persists the associated state
+// for a given unfinalized block.
+func (db *BeaconDB) SaveUnfinalizedBlockState(beaconState *types.BeaconState) error {
+	stateHash, err := beaconState.Hash()
+	if err != nil {
+		return fmt.Errorf("unable to hash the beacon state: %v", err)
+	}
+	beaconStateEnc, err := beaconState.Marshal()
+	if err != nil {
+		return fmt.Errorf("unable to encode the beacon state: %v", err)
+	}
 
-// 	return aState, cState, err
-// }
-
-// SaveUnfinalizedBlockState persists the associated crystallized and
-// active state pair for a given unfinalized block.
-// func (db *BeaconDB) SaveUnfinalizedBlockState(aState *types.ActiveState, cState *types.CrystallizedState) error {
-// 	aStateHash, err := aState.Hash()
-// 	if err != nil {
-// 		return fmt.Errorf("unable to hash the active state: %v", err)
-// 	}
-// 	aStateEnc, err := aState.Marshal()
-// 	if err != nil {
-// 		return fmt.Errorf("unable to encode the active state: %v", err)
-// 	}
-
-// 	var cStateEnc []byte
-// 	var cStateHash [32]byte
-// 	if cState != nil {
-// 		cStateHash, err = cState.Hash()
-// 		if err != nil {
-// 			return fmt.Errorf("unable to hash the crystallized state: %v", err)
-// 		}
-// 		cStateEnc, err = cState.Marshal()
-// 		if err != nil {
-// 			return fmt.Errorf("unable to encode the crystallized state: %v", err)
-// 		}
-// 	}
-
-// 	return db.update(func(tx *bolt.Tx) error {
-// 		chainInfo := tx.Bucket(chainInfoBucket)
-// 		if err := chainInfo.Put(aStateHash[:], aStateEnc); err != nil {
-// 			return fmt.Errorf("failed to save active state as canonical: %v", err)
-// 		}
-
-// 		if cStateEnc != nil {
-// 			if err := chainInfo.Put(cStateHash[:], cStateEnc); err != nil {
-// 				return fmt.Errorf("failed to save crystallized state as canonical: %v", err)
-// 			}
-// 		}
-// 		return nil
-// 	})
-// }
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		if err := chainInfo.Put(stateHash[:], beaconStateEnc); err != nil {
+			return fmt.Errorf("failed to save beacon state: %v", err)
+		}
+		return nil
+	})
+}
 
 func createState(enc []byte) (*types.BeaconState, error) {
 	protoState := &pb.BeaconState{}

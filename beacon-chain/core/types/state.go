@@ -305,6 +305,11 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 	b.data.LastStateRecalculationSlot = slot
 }
 
+// SetPendingAttestations updates the inner proto's pending attestations.
+func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
+	b.data.PendingAttestations = pendingAttestations
+}
+
 // SetRecentBlockHashes updates the inner proto's recent block hashes.
 func (b *BeaconState) SetRecentBlockHashes(recentShardBlockHashes [][]byte) {
 	b.data.RecentBlockHashes = recentShardBlockHashes
