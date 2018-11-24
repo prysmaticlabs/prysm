@@ -11,8 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -52,7 +52,7 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return m.blockFeed
 }
 
-func (m *mockChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+func (m *mockChainService) CanonicalStateFeed() *event.Feed {
 	return m.stateFeed
 }
 
@@ -117,18 +117,17 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis := types.NewGenesisBlock([32]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	aState := types.NewGenesisActiveState()
-	cState, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -149,7 +148,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis = types.NewGenesisBlock([32]byte{})
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
 		t.Errorf(
 			"Received different genesis timestamp, wanted: %v, received: %v",
@@ -164,18 +163,17 @@ func TestProposeBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis := types.NewGenesisBlock([32]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	aState := types.NewGenesisActiveState()
-	cState, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -300,18 +298,17 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis := types.NewGenesisBlock([32]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	aState := types.NewGenesisActiveState()
-	cState, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -333,18 +330,17 @@ func TestValidatorIndex(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis := types.NewGenesisBlock([32]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	aState := types.NewGenesisActiveState()
-	cState, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, aState, cState); err != nil {
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -366,19 +362,18 @@ func TestValidatorShardID(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis := types.NewGenesisBlock([32]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	astate := types.NewGenesisActiveState()
-	cstate, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("could not instantiate initial crystallized state: %v", err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, astate, cstate); err != nil {
-		t.Fatalf("could not save genesis state: %v", err)
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -400,19 +395,18 @@ func TestValidatorAssignments(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := newMockChainService()
 
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis := types.NewGenesisBlock([32]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	astate := types.NewGenesisActiveState()
-	cstate, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("could not instantiate initial crystallized state: %v", err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	if err := db.UpdateChainHead(genesis, astate, cstate); err != nil {
-		t.Fatalf("could not save genesis state: %v", err)
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
@@ -443,12 +437,12 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	genesisState, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err = types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	rpcService.canonicalStateChan <- genesisState
+	rpcService.canonicalStateChan <- beaconState
 	rpcService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")

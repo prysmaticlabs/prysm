@@ -31,7 +31,7 @@ type chainService interface {
 	// but instead streamed to connected validators every
 	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
-	CanonicalCrystallizedStateFeed() *event.Feed
+	CanonicalStateFeed() *event.Feed
 }
 
 type attestationService interface {
