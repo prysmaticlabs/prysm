@@ -5,6 +5,7 @@
 package incentives
 
 import (
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -54,19 +55,7 @@ func CalculateRewards(
 	timeSinceFinality uint64,
 ) []*pb.ValidatorRecord {
 
-	newValidatorSet := make([]*pb.ValidatorRecord, len(validators))
-
-	for i, validator := range validators {
-		newValidatorSet[i] = &pb.ValidatorRecord{
-			Pubkey:            validator.Pubkey,
-			WithdrawalShard:   validator.WithdrawalShard,
-			WithdrawalAddress: validator.WithdrawalAddress,
-			RandaoCommitment:  validator.RandaoCommitment,
-			Balance:           validator.Balance,
-			Status:            validator.Status,
-			ExitSlot:          validator.ExitSlot,
-		}
-	}
+	newValidatorSet := v.CopyValidators(validators)
 
 	// Calculate the reward and penalty quotients for the validator set.
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
@@ -128,18 +117,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalBalance uint64,
 	voteBalance uint64,
 ) ([]*pb.ValidatorRecord, error) {
-	newValidatorSet := make([]*pb.ValidatorRecord, len(validators))
-	for i, validator := range validators {
-		newValidatorSet[i] = &pb.ValidatorRecord{
-			Pubkey:            validator.Pubkey,
-			WithdrawalShard:   validator.WithdrawalShard,
-			WithdrawalAddress: validator.WithdrawalAddress,
-			RandaoCommitment:  validator.RandaoCommitment,
-			Balance:           validator.Balance,
-			Status:            validator.Status,
-			ExitSlot:          validator.ExitSlot,
-		}
-	}
+	newValidatorSet := v.CopyValidators(validators)
 
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
 	for _, attesterIndex := range attesterIndices {
