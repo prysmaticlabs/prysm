@@ -176,6 +176,12 @@ func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
 	return true
 }
 
+// IsCycleTransition checks if a new cycle has been reached. At that point,
+// a new state transition will occur in the beacon chain.
+func (b *BeaconState) IsCycleTransition(slotNumber uint64) bool {
+	return slotNumber >= b.LastStateRecalculationSlot()+params.BeaconConfig().CycleLength
+}
+
 // ShardAndCommitteesForSlots returns the shard committee object.
 func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray {
 	return b.data.ShardAndCommitteesForSlots
