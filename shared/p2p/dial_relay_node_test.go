@@ -23,7 +23,7 @@ func TestMakePeerSucceeds(t *testing.T) {
 	}
 
 	if a.ID.Pretty() != "QmUn6ycS8Fu6L462uZvuEfDoSgYX6kqP4aSZWMa7z1tWAX" {
-		t.Errorf("Unexpected peer ID %v", a.ID.Pretty)
+		t.Errorf("Unexpected peer ID %v", a.ID.Pretty())
 	}
 }
 
