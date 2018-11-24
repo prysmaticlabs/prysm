@@ -29,7 +29,7 @@ func TallyVoteBalances(
 
 	blockVoteBalance := blockVote.VoteTotalDeposit
 	voterIndices := blockVote.VoterIndices
-	validators = CalculateRewards(
+	newValidators := CalculateRewards(
 		voterIndices,
 		activeValidatorIndices,
 		validators,
@@ -38,7 +38,7 @@ func TallyVoteBalances(
 		timeSinceFinality,
 	)
 
-	return blockVoteBalance, validators
+	return blockVoteBalance, newValidators
 }
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
@@ -54,6 +54,20 @@ func CalculateRewards(
 	timeSinceFinality uint64,
 ) []*pb.ValidatorRecord {
 
+	newValidatorSet := make([]*pb.ValidatorRecord, len(validators))
+
+	for i, validator := range validators {
+		newValidatorSet[i] = &pb.ValidatorRecord{
+			Pubkey:            validator.Pubkey,
+			WithdrawalShard:   validator.WithdrawalShard,
+			WithdrawalAddress: validator.WithdrawalAddress,
+			RandaoCommitment:  validator.RandaoCommitment,
+			Balance:           validator.Balance,
+			Status:            validator.Status,
+			ExitSlot:          validator.ExitSlot,
+		}
+	}
+
 	// Calculate the reward and penalty quotients for the validator set.
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
 	penaltyQuotient := QuadraticPenaltyQuotient()
@@ -67,15 +81,15 @@ func CalculateRewards(
 					voted = true
 					balance := validators[validatorIndex].GetBalance()
 					newBalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalActiveValidatorDeposit))/int64(totalActiveValidatorDeposit)
-					validators[validatorIndex].Balance = uint64(newBalance)
+					newValidatorSet[validatorIndex].Balance = uint64(newBalance)
 					break
 				}
 			}
 
 			if !voted {
-				newBalance := validators[validatorIndex].GetBalance()
+				newBalance := newValidatorSet[validatorIndex].GetBalance()
 				newBalance -= newBalance / rewardQuotient
-				validators[validatorIndex].Balance = newBalance
+				newValidatorSet[validatorIndex].Balance = newBalance
 			}
 		}
 
@@ -91,15 +105,15 @@ func CalculateRewards(
 			}
 
 			if !voted {
-				newBalance := validators[validatorIndex].GetBalance()
+				newBalance := newValidatorSet[validatorIndex].GetBalance()
 				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/penaltyQuotient
-				validators[validatorIndex].Balance = newBalance
+				newValidatorSet[validatorIndex].Balance = newBalance
 			}
 		}
 
 	}
 
-	return validators
+	return newValidatorSet
 }
 
 // ApplyCrosslinkRewardsAndPenalties applies the appropriate rewards and
@@ -113,22 +127,35 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalActiveValidatorDeposit uint64,
 	totalBalance uint64,
 	voteBalance uint64,
-) error {
+) ([]*pb.ValidatorRecord, error) {
+	newValidatorSet := make([]*pb.ValidatorRecord, len(validators))
+	for i, validator := range validators {
+		newValidatorSet[i] = &pb.ValidatorRecord{
+			Pubkey:            validator.Pubkey,
+			WithdrawalShard:   validator.WithdrawalShard,
+			WithdrawalAddress: validator.WithdrawalAddress,
+			RandaoCommitment:  validator.RandaoCommitment,
+			Balance:           validator.Balance,
+			Status:            validator.Status,
+			ExitSlot:          validator.ExitSlot,
+		}
+	}
+
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
 	for _, attesterIndex := range attesterIndices {
 		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
 
 		checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if checkBit {
-			RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, validators[attesterIndex])
+			newValidatorSet[attesterIndex] = RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, newValidatorSet[attesterIndex])
 		} else {
-			PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, validators[attesterIndex])
+			newValidatorSet[attesterIndex] = PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, newValidatorSet[attesterIndex])
 		}
 	}
-	return nil
+	return newValidatorSet, nil
 }
 
 // RewardQuotient returns the reward quotient for validators which will be used to
@@ -160,10 +187,18 @@ func RewardValidatorCrosslink(
 	participatedDeposits uint64,
 	rewardQuotient uint64,
 	validator *pb.ValidatorRecord,
-) {
+) *pb.ValidatorRecord {
 	currentBalance := int64(validator.Balance)
 	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
-	validator.Balance = uint64(currentBalance)
+	return &pb.ValidatorRecord{
+		Pubkey:            validator.Pubkey,
+		WithdrawalShard:   validator.WithdrawalShard,
+		WithdrawalAddress: validator.WithdrawalAddress,
+		RandaoCommitment:  validator.RandaoCommitment,
+		Balance:           uint64(currentBalance),
+		Status:            validator.Status,
+		ExitSlot:          validator.ExitSlot,
+	}
 }
 
 // PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
@@ -171,9 +206,17 @@ func PenaliseValidatorCrosslink(
 	timeSinceLastConfirmation uint64,
 	rewardQuotient uint64,
 	validator *pb.ValidatorRecord,
-) {
+) *pb.ValidatorRecord {
 	newBalance := validator.Balance
 	quadraticQuotient := QuadraticPenaltyQuotient()
 	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
-	validator.Balance = newBalance
+	return &pb.ValidatorRecord{
+		Pubkey:            validator.Pubkey,
+		WithdrawalShard:   validator.WithdrawalShard,
+		WithdrawalAddress: validator.WithdrawalAddress,
+		RandaoCommitment:  validator.RandaoCommitment,
+		Balance:           uint64(newBalance),
+		Status:            validator.Status,
+		ExitSlot:          validator.ExitSlot,
+	}
 }

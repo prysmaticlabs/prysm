@@ -402,7 +402,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			return nil, err
 		}
 
-		err = incentives.ApplyCrosslinkRewardsAndPenalties(
+		_, err = incentives.ApplyCrosslinkRewardsAndPenalties(
 			crosslinkRecords,
 			currentSlot,
 			indices,
@@ -416,7 +416,7 @@ func (c *CrystallizedState) processCrosslinks(pendingAttestations []*pb.Aggregat
 			return nil, err
 		}
 
-		crosslinkRecords = state.ProcessCrosslink(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
+		crosslinkRecords = state.UpdateCrosslinks(slot, voteBalance, totalBalance, attestation, crosslinkRecords)
 
 	}
 	return crosslinkRecords, nil

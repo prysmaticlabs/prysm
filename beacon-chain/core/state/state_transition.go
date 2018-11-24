@@ -9,6 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type beaconDB interface {
+	ReadBlockVoteCache(recentBlockHashes [][32]byte) (utils.BlockVoteCache, error)
+}
+
 // NewStateTransition computes the new beacon state, given the previous beacon state
 // and a beacon block. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new
@@ -16,7 +20,7 @@ import (
 func NewStateTransition(
 	st *types.BeaconState,
 	block *types.Block,
-	blockVoteCache utils.BlockVoteCache,
+	db beaconDB,
 ) (*types.BeaconState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
 	var err error
@@ -33,6 +37,11 @@ func NewStateTransition(
 		lastStateRecalculationSlotCycleBack = 0
 	} else {
 		lastStateRecalculationSlotCycleBack = st.LastStateRecalculationSlot() - params.BeaconConfig().CycleLength
+	}
+
+	blockVoteCache, err := db.ReadBlockVoteCache(recentBlockHashes[0:params.BeaconConfig().CycleLength])
+	if err != nil {
+		return nil, err
 	}
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to
@@ -77,7 +86,7 @@ func NewStateTransition(
 
 	newState.SetLastJustifiedSlot(justifiedSlot)
 	newState.SetLastFinalizedSlot(finalizedSlot)
-	newState.SetJustifiedStreak(justifiedSlot)
+	newState.SetJustifiedStreak(justifiedStreak)
 	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength)
 
 	// Exit the validators when their balance fall below min online deposit size.
@@ -130,7 +139,7 @@ func crossLinkCalculations(
 			return nil, err
 		}
 
-		err = incentives.ApplyCrosslinkRewardsAndPenalties(
+		newValidatorSet, err := incentives.ApplyCrosslinkRewardsAndPenalties(
 			crossLinkRecords,
 			currentSlot,
 			indices,
@@ -143,6 +152,7 @@ func crossLinkCalculations(
 		if err != nil {
 			return nil, err
 		}
+		st.SetValidators(newValidatorSet)
 		crossLinkRecords = UpdateCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
 	}
 	return crossLinkRecords, nil
