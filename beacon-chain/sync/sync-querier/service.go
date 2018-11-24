@@ -73,7 +73,7 @@ func NewSyncQuerierService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *SyncQuerier) Start() {
-	s.run()
+	go s.run()
 }
 
 // Stop kills the sync querier goroutine.
