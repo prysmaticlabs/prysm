@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/binary"
+	"log"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,9 +16,13 @@ func FinalizeAndJustifySlots(
 	justifiedStreak uint64, blockVoteBalance uint64, totalDeposits uint64) (uint64, uint64, uint64) {
 	cycleLength := params.BeaconConfig().CycleLength
 
+	log.Printf("Current slot: %v", slot)
+	log.Printf("block vote balance: %v, total deposits: %v", 3*blockVoteBalance, 2*totalDeposits)
 	if 3*blockVoteBalance >= 2*totalDeposits {
+		log.Printf("Current justified: %v", justifiedSlot)
 		if slot > justifiedSlot {
 			justifiedSlot = slot
+			log.Printf("Post justified: %v", justifiedSlot)
 		}
 		justifiedStreak++
 	} else {

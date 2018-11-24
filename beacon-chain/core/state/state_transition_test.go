@@ -12,22 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-type mockDB struct {
-	blockVoteCache utils.BlockVoteCache
-}
-
-func (f *mockDB) HasBlock(h [32]byte) bool {
-	return true
-}
-
-func (f *mockDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error) {
-	return f.blockVoteCache, nil
-}
-
-func (f *mockDB) loadMockBlockVoteCache(blockVoteCache utils.BlockVoteCache) {
-	f.blockVoteCache = blockVoteCache
-}
-
 func TestInitialDeriveCrystallizedState(t *testing.T) {
 	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
@@ -51,8 +35,8 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		}},
 	})
 
-	db := &mockDB{}
-	newState, err := NewStateTransition(beaconState, block, db)
+	var blockVoteCache utils.BlockVoteCache
+	newState, err := NewStateTransition(beaconState, block, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive new state: %v", err)
 	}
@@ -83,9 +67,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	block := types.NewBlock(nil)
 
 	blockVoteCache := utils.NewBlockVoteCache()
-	db := &mockDB{}
 
-	beaconState, err = NewStateTransition(beaconState, block, db)
+	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -107,11 +90,8 @@ func TestNextDeriveSlot(t *testing.T) {
 		}
 	}
 
-	db.loadMockBlockVoteCache(blockVoteCache)
-
 	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-
-	beaconState, err = NewStateTransition(beaconState, block, db)
+	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}
@@ -129,7 +109,7 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 
 	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, db)
+	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}
@@ -147,7 +127,7 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 
 	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, db)
+	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}

@@ -349,8 +349,6 @@ func (c *CrystallizedState) NewStateRecalculations(aState *ActiveState, block *B
 		newState.data.Validators = v.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators())
 	}
 
-	printCommittee(newState.data.ShardAndCommitteesForSlots)
-
 	return newState, nil
 }
 
