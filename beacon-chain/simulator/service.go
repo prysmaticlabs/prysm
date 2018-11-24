@@ -278,7 +278,11 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	}
 
 	parentSlot := slot - 1
-	committees, err := v.GetShardAndCommitteesForSlot(beaconState.ShardAndCommitteesForSlots(), beaconState.LastStateRecalculationSlot(), parentSlot)
+	committees, err := v.GetShardAndCommitteesForSlot(
+		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.LastStateRecalculationSlot(),
+		parentSlot,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get shard committee: %v", err)
 	}

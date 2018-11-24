@@ -83,3 +83,10 @@ func (b *Block) Marshal() ([]byte, error) {
 func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
+
+// Stateroot returns the state hash.
+func (b *Block) StateRoot() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.StateRoot)
+	return h
+}

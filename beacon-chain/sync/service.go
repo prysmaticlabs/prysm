@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -23,15 +24,6 @@ type chainService interface {
 
 type attestationService interface {
 	IncomingAttestationFeed() *event.Feed
-}
-
-type beaconDB interface {
-	GetCrystallizedState() (*types.CrystallizedState, error)
-	GetBlock([32]byte) (*types.Block, error)
-	HasBlock([32]byte) bool
-	GetChainHead() (*types.Block, error)
-	GetAttestation([32]byte) (*types.Attestation, error)
-	GetBlockBySlot(uint64) (*types.Block, error)
 }
 
 type queryService interface {
@@ -63,7 +55,7 @@ type Service struct {
 	chainService          chainService
 	attestationService    attestationService
 	queryService          queryService
-	db                    beaconDB
+	db                    *db.BeaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockBuf      chan p2p.Message
 	blockBuf              chan p2p.Message
@@ -82,7 +74,7 @@ type Config struct {
 	ChainService            chainService
 	AttestService           attestationService
 	QueryService            queryService
-	BeaconDB                beaconDB
+	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 }
 
@@ -233,13 +225,13 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	cState, err := ss.db.GetCrystallizedState()
+	beaconState, err := ss.db.GetState()
 	if err != nil {
-		log.Errorf("Failed to get crystallized state: %v", err)
+		log.Errorf("Failed to get beacon state: %v", err)
 		return
 	}
 
-	if block.SlotNumber() < cState.LastFinalizedSlot() {
+	if block.SlotNumber() < beaconState.LastFinalizedSlot() {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
@@ -247,7 +239,11 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	attestation := types.NewAttestation(response.Attestation)
 
-	proposerShardID, _, err := v.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
+	proposerShardID, _, err := v.ProposerShardAndIndex(
+		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.LastStateRecalculationSlot(),
+		block.SlotNumber(),
+	)
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
 		return
