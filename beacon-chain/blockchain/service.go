@@ -285,7 +285,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
 	}
 
-	log.Infof("Processed block: %#x", blockHash)
+	log.WithField("hash", fmt.Sprintf("%#x", blockHash)).Info("Processed beacon block")
 
 	// We keep a map of unfinalized blocks in memory along with their state
 	// pair to apply the fork choice rule.
@@ -299,7 +299,7 @@ func (c *ChainService) executeStateTransition(
 	block *types.Block,
 	parentSlot uint64,
 ) (*types.BeaconState, error) {
-	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
+	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
 	blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.RecentBlockHashes())
 	if err != nil {
 		return nil, err
@@ -307,6 +307,9 @@ func (c *ChainService) executeStateTransition(
 	newState, err := state.NewStateTransition(beaconState, block, parentSlot, blockVoteCache)
 	if err != nil {
 		return nil, err
+	}
+	if newState.IsValidatorSetChange(block.SlotNumber()) {
+		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
 	}
 	return newState, nil
 }

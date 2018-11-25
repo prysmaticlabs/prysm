@@ -48,12 +48,12 @@ func TestInitialDeriveState(t *testing.T) {
 		t.Fatalf("expected justified streak to equal %d: got %d", 0, newState.JustifiedStreak())
 	}
 
-	if newState.LastStateRecalculationSlot() != params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", params.BeaconConfig().CycleLength, newState.LastStateRecalculationSlot())
+	if newState.LastStateRecalculationSlot() != 1 {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 1, newState.LastStateRecalculationSlot())
 	}
 
 	if newState.LastFinalizedSlot() != 0 {
-		t.Fatalf("xpected finalized slot to equal %d, got %d", 0, newState.LastFinalizedSlot())
+		t.Fatalf("expected finalized slot to equal %d, got %d", 0, newState.LastFinalizedSlot())
 	}
 }
 
@@ -91,13 +91,17 @@ func TestNextDeriveSlot(t *testing.T) {
 		}
 	}
 	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-
-	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
+	beaconState.SetLastStateRecalculationSlot(params.BeaconConfig().CycleLength - 1)
+	block = types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{{'A'}},
+		Slot:           params.BeaconConfig().CycleLength,
+	})
+	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}
-	if beaconState.LastStateRecalculationSlot() != 2*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 2*params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
+	if beaconState.LastStateRecalculationSlot() != params.BeaconConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
 	}
 	if beaconState.LastJustifiedSlot() != params.BeaconConfig().CycleLength-1 {
 		t.Fatalf("expected justified slot to equal %d: got %d", params.BeaconConfig().CycleLength-1, beaconState.LastJustifiedSlot())
@@ -110,39 +114,26 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 
 	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
+	beaconState.SetLastStateRecalculationSlot(2*params.BeaconConfig().CycleLength - 1)
+	block = types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{{'A'}},
+		Slot:           params.BeaconConfig().CycleLength * 2,
+	})
+	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength*2, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}
-	if beaconState.LastStateRecalculationSlot() != 3*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
+	if beaconState.LastStateRecalculationSlot() != 2*params.BeaconConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 3, beaconState.LastStateRecalculationSlot())
 	}
-	if beaconState.LastJustifiedSlot() != 2*params.BeaconConfig().CycleLength-1 {
+	if beaconState.LastJustifiedSlot() != 2*(params.BeaconConfig().CycleLength-1) {
 		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.BeaconConfig().CycleLength-1, beaconState.LastJustifiedSlot())
 	}
 	if beaconState.JustifiedStreak() != 2*params.BeaconConfig().CycleLength {
 		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.BeaconConfig().CycleLength, beaconState.JustifiedStreak())
 	}
-	if beaconState.LastFinalizedSlot() != params.BeaconConfig().CycleLength-2 {
+	if beaconState.LastFinalizedSlot() != params.BeaconConfig().CycleLength-3 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.BeaconConfig().CycleLength-2, beaconState.LastFinalizedSlot())
-	}
-
-	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
-	if err != nil {
-		t.Fatalf("failed to derive state: %v", err)
-	}
-	if beaconState.LastStateRecalculationSlot() != 4*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
-	}
-	if beaconState.LastJustifiedSlot() != 3*params.BeaconConfig().CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 3*params.BeaconConfig().CycleLength-1, beaconState.LastJustifiedSlot())
-	}
-	if beaconState.JustifiedStreak() != 3*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected justified streak to equal %d: got %d", 3*params.BeaconConfig().CycleLength, beaconState.JustifiedStreak())
-	}
-	if beaconState.LastFinalizedSlot() != 2*params.BeaconConfig().CycleLength-2 {
-		t.Fatalf("expected finalized slot to equal %d: got %d", 2*params.BeaconConfig().CycleLength-2, beaconState.LastFinalizedSlot())
 	}
 }
 
