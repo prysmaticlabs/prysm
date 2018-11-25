@@ -72,9 +72,15 @@ func TestCopyState(t *testing.T) {
 		)
 	}
 
+<<<<<<< HEAD:beacon-chain/core/types/state_test.go
 	state1.data.RandaoMix = []byte{22, 21}
 	state2.data.RandaoMix = []byte{40, 31}
 	if state1.data.RandaoMix[0] == state2.data.RandaoMix[0] {
+=======
+	aState1.data.RandaoMix = []byte{22, 21}
+	aState2.data.RandaoMix = []byte{40, 31}
+	if aState1.data.RandaoMix[0] == aState2.data.RandaoMix[0] {
+>>>>>>> master:beacon-chain/types/active_state_test.go
 		t.Fatalf("The RandaoMix should not equal each other %d, %d",
 			state1.data.RandaoMix[0],
 			state2.data.RandaoMix[0],

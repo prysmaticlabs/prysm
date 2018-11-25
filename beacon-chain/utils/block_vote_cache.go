@@ -37,17 +37,6 @@ func (v *BlockVote) Unmarshal(blob []byte) error {
 	return decoder.Decode(v)
 }
 
-// Copy copies a vote cache from itself to a new one.
-func (v *BlockVote) copy() *BlockVote {
-	voterIndices := make([]uint32, len(v.VoterIndices))
-	copy(voterIndices, v.VoterIndices)
-
-	return &BlockVote{
-		VoterIndices:     voterIndices,
-		VoteTotalDeposit: v.VoteTotalDeposit,
-	}
-}
-
 // NewBlockVoteCache creates a new BlockVoteCache.
 func NewBlockVoteCache() BlockVoteCache {
 	return make(BlockVoteCache)
@@ -57,18 +46,4 @@ func NewBlockVoteCache() BlockVoteCache {
 func (blockVoteCache BlockVoteCache) IsVoteCacheExist(blockHash [32]byte) bool {
 	_, ok := blockVoteCache[blockHash]
 	return ok
-}
-
-// BlockVoteCacheDeepCopy copies the every BlockVote inside the old cache
-// and create a new cache
-func BlockVoteCacheDeepCopy(old BlockVoteCache) BlockVoteCache {
-	new := BlockVoteCache{}
-	for k, v := range old {
-		newK := [32]byte{}
-		copy(newK[:], k[:])
-
-		new[newK] = v.copy()
-	}
-
-	return new
 }
