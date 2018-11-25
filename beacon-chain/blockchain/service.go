@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -195,10 +196,14 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				continue
 			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-			// We fire events that notify listeners of a new block (or crystallized state in
-			// the case of a state transition). This is useful for the beacon node's gRPC
+			// We fire events that notify listeners of a new block in
+			// the case of a state transition. This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			c.canonicalStateFeed.Send(newState)
+			// When the transition is a cycle transition, we stream the state containing the new validator
+			// assignments to clients.
+			if block.SlotNumber()%params.BeaconConfig().CycleLength == 0 {
+				c.canonicalStateFeed.Send(newState)
+			}
 			c.canonicalBlockFeed.Send(newHead)
 		}
 	}
