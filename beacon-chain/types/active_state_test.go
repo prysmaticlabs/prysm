@@ -71,18 +71,6 @@ func TestCopyActiveState(t *testing.T) {
 		)
 	}
 
-	newSpecial := &pb.SpecialRecord{
-		Kind: 323,
-		Data: [][]byte{{10}},
-	}
-	aState1.data.PendingSpecials = aState1.appendNewSpecialObject(newSpecial)
-	if len(aState1.PendingSpecials()) == len(aState2.PendingSpecials()) {
-		t.Fatalf("The PendingSpecials should not equal each other %d, %d",
-			len(aState1.PendingSpecials()),
-			len(aState2.PendingSpecials()),
-		)
-	}
-
 	aState1.data.RandaoMix = []byte{22, 21}
 	aState2.data.RandaoMix = []byte{40, 31}
 	if aState1.data.RandaoMix[0] == aState2.data.RandaoMix[0] {
