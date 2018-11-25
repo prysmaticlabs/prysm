@@ -236,6 +236,7 @@ func (b *Block) doesParentProposerExist(cState *CrystallizedState, parentSlot ui
 
 // UpdateAncestorHashes updates the skip list of ancestor block hashes.
 // i'th item is 2**i'th ancestor for i = 0, ..., 31.
+// TODO(#712): Use this for per-block processing check for incoming block's ancestor hashes.
 func UpdateAncestorHashes(parentAncestorHashes [][32]byte, parentSlotNum uint64, parentHash [32]byte) [][32]byte {
 	newAncestorHashes := parentAncestorHashes
 	for i := range parentAncestorHashes {
