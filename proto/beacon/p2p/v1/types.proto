@@ -97,31 +97,8 @@ message BeaconBlock {
   uint64 slot = 2;
   bytes randao_reveal = 3;
   bytes pow_chain_ref = 4;
-  bytes stateRoot = 5;
+  bytes state_root = 5;
   google.protobuf.Timestamp timestamp = 6;
   repeated AggregatedAttestation attestations = 7;
   repeated SpecialRecord specials = 8;
-}
-
-message CrystallizedState {
-  uint64 last_state_recalculation_slot = 1;
-  uint64 justified_streak = 2;
-  uint64 last_justified_slot = 3;
-  uint64 last_finalized_slot = 4;
-  uint64 validator_set_change_slot = 5;
-  repeated CrosslinkRecord crosslinks = 6;
-  repeated ValidatorRecord validators = 7;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint32 deposits_penalized_in_period = 9;
-  bytes validator_set_delta_hash_chain = 10;
-  uint32 pre_fork_version = 11;
-  uint32 post_fork_version = 12;
-  uint64 fork_slot_number =13;
-}
-
-message ActiveState {
-  repeated AggregatedAttestation pending_attestations = 1;
-  repeated bytes recent_block_hashes = 2;
-  repeated SpecialRecord pending_specials = 3;
-  bytes randao_mix = 4;
 }
