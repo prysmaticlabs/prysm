@@ -62,7 +62,12 @@ func IsValidBlock(
 	// mode), we skip the RANDAO validation condition.
 	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.BeaconConfig().SimulatedBlockRandao[:])
 	if !isSimulatedBlock && !block.IsRandaoValid(stateProposerRandaoSeed) {
-		return fmt.Errorf("Pre-image of %#x is %#x, Got: %#x", blockRandaoReveal[:], hashutil.Hash(blockRandaoReveal[:]), stateProposerRandaoSeed)
+		return fmt.Errorf(
+			"pre-image of %#x is %#x, Got: %#x",
+			blockRandaoReveal[:],
+			hashutil.Hash(blockRandaoReveal[:]),
+			stateProposerRandaoSeed,
+		)
 	}
 	return nil
 }
@@ -134,7 +139,7 @@ func isBlockAttestationValid(
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
 	if !v.AreAttesterBitfieldsValid(attestation, attesterIndices) {
-		return fmt.Errorf("Unable to match attester bitfield with shard and committee bitfield")
+		return fmt.Errorf("unable to match attester bitfield with shard and committee bitfield")
 	}
 
 	forkVersion := beaconState.PostForkVersion()

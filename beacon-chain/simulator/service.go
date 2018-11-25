@@ -262,12 +262,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Block, error) {
 	beaconState, err := sim.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("Could not retrieve beacon state: %v", err)
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
 	stateHash, err := beaconState.Hash()
 	if err != nil {
-		return nil, fmt.Errorf("Could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
 
 	var powChainRef []byte
@@ -284,7 +284,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 		parentSlot,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get shard committee: %v", err)
+		return nil, fmt.Errorf("failed to get shard committee: %v", err)
 	}
 
 	parentHash := make([]byte, 32)
