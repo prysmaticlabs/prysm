@@ -1,4 +1,9 @@
-package casper
+// Package validators defines helper functions to locate validator
+// based on pubic key. Each validator is associated with a given index,
+// shard ID and slot number to propose or attest. This package also defines
+// functions to initialize validators, verify validator bit fields,
+// and rotate validator in and out of committees.
+package validators
 
 import (
 	"bytes"
@@ -77,8 +82,6 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
 	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
-		log.Debugf("Attestation has incorrect bitfield length. Found %v, expected %v",
-			len(attestation.AttesterBitfield), bitutil.BitLength(len(attesterIndices)))
 		return false
 	}
 
@@ -92,12 +95,10 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	for i := 0; i < bitsInByte-remainingBits; i++ {
 		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
 		if err != nil {
-			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
 			return false
 		}
 
 		if isBitSet {
-			log.Error("Attestation has non-zero trailing bits")
 			return false
 		}
 	}
@@ -304,7 +305,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
 		isPenalized := validators[i].Status == uint64(params.Penalized)
-		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().WithdrawalPeriod
+		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().MinWithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3

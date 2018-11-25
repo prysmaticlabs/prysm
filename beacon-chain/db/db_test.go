@@ -1,13 +1,12 @@
 package db
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"os"
 	"path"
 	"testing"
-
-	"crypto/rand"
 )
 
 // setupDB instantiates and returns a BeaconDB instance.

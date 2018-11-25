@@ -23,7 +23,7 @@ func TestFeed_ReturnsSameFeed(t *testing.T) {
 		{a: &testpb.Puzzle{}, b: &testpb.TestMessage{}, want: false},
 	}
 
-	s, _ := NewServer("")
+	s, _ := NewServer(&ServerConfig{})
 
 	for _, tt := range tests {
 		feed1 := s.Feed(tt.a)

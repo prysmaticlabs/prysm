@@ -38,5 +38,6 @@ func buildOptions() []libp2p.Option {
 	return []libp2p.Option{
 		libp2p.ListenAddrs(listen),
 		libp2p.Identity(priv),
+		libp2p.EnableRelay(), // Allows dialing to peers via relay.
 	}
 }

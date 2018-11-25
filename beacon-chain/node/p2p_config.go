@@ -11,10 +11,12 @@ import (
 )
 
 var topicMappings = map[pb.Topic]proto.Message{
-	pb.Topic_BEACON_BLOCK_HASH_ANNOUNCE:          &pb.BeaconBlockHashAnnounce{},
+	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &pb.BeaconBlockAnnounce{},
 	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
 	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
 	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},
+	pb.Topic_CHAIN_HEAD_REQUEST:                  &pb.ChainHeadRequest{},
+	pb.Topic_CHAIN_HEAD_RESPONSE:                 &pb.ChainHeadResponse{},
 	pb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE:    &pb.CrystallizedStateHashAnnounce{},
 	pb.Topic_CRYSTALLIZED_STATE_REQUEST:          &pb.CrystallizedStateRequest{},
 	pb.Topic_CRYSTALLIZED_STATE_RESPONSE:         &pb.CrystallizedStateResponse{},
@@ -24,7 +26,10 @@ var topicMappings = map[pb.Topic]proto.Message{
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
-	s, err := p2p.NewServer(ctx.GlobalString(cmd.BootstrapNode.Name))
+	s, err := p2p.NewServer(&p2p.ServerConfig{
+		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
+		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+	})
 	if err != nil {
 		return nil, err
 	}

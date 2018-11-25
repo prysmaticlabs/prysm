@@ -5,9 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -78,9 +76,7 @@ func (a *ActiveState) CopyState() *ActiveState {
 	}
 
 	recentBlockHashes := make([][]byte, len(a.data.RecentBlockHashes))
-	for r, hash := range a.data.RecentBlockHashes {
-		recentBlockHashes[r] = hash
-	}
+	copy(recentBlockHashes, a.data.RecentBlockHashes)
 
 	pendingSpecials := make([]*pb.SpecialRecord, len(a.data.PendingSpecials))
 	for index, pendingSpecial := range a.data.PendingSpecials {
@@ -135,13 +131,6 @@ func (a *ActiveState) UpdateAttestations(attestations []*pb.AggregatedAttestatio
 
 	newState.data.PendingAttestations = append(newState.data.PendingAttestations, attestations...)
 	return newState
-}
-
-// appendNewSpecialObject appends new special record object from block in to active state.
-// this is called during block processing.
-func (a *ActiveState) appendNewSpecialObject(record *pb.SpecialRecord) []*pb.SpecialRecord {
-	existing := a.data.PendingSpecials
-	return append(existing, record)
 }
 
 // clearAttestations removes attestations older than last state recalc slot.
@@ -212,30 +201,8 @@ func (a *ActiveState) CalculateNewActiveState(
 
 	log.Debugf("Calculating new active state. Crystallized state lastStateRecalc is %d", cState.LastStateRecalculationSlot())
 
-	_, proposerIndex, err := casper.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalculationSlot(),
-		parentSlot)
-	if err != nil {
-		return nil, fmt.Errorf("could not get proposer index %v", err)
-	}
-
 	newRandao := setRandaoMix(block.RandaoReveal(), a.RandaoMix())
 	newState.data.RandaoMix = newRandao[:]
-
-	specialRecordData := make([][]byte, 2)
-	for i := range specialRecordData {
-		specialRecordData[i] = make([]byte, 32)
-	}
-	blockRandao := block.RandaoReveal()
-	proposerIndexBytes := b.Bytes8(proposerIndex)
-	specialRecordData[0] = proposerIndexBytes
-	specialRecordData[1] = blockRandao[:]
-
-	newState.data.PendingSpecials = a.appendNewSpecialObject(&pb.SpecialRecord{
-		Kind: uint32(params.RandaoChange),
-		Data: specialRecordData,
-	})
 
 	return newState, nil
 }

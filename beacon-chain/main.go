@@ -71,6 +71,7 @@ VERSION:
 		utils.GenesisJSON,
 		utils.EnablePOWChain,
 		cmd.BootstrapNode,
+		cmd.RelayNode,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,

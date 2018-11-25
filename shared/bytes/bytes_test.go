@@ -104,3 +104,21 @@ func TestBytes8(t *testing.T) {
 		}
 	}
 }
+
+func TestFromBytes8(t *testing.T) {
+	tests := []uint64{
+		0,
+		1776,
+		96726,
+		4290997,
+		922376854775806,
+		42893720984775807,
+	}
+	for _, tt := range tests {
+		b := Bytes8(tt)
+		c := FromBytes8(b)
+		if c != tt {
+			t.Errorf("Wanted %d but got %d", tt, c)
+		}
+	}
+}

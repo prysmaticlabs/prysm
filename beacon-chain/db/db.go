@@ -32,7 +32,7 @@ func (db *BeaconDB) view(fn func(*bolt.Tx) error) error {
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	for _, bucket := range buckets {
-		if _, err := tx.CreateBucket(bucket); err != nil {
+		if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
 			return err
 		}
 	}
@@ -54,7 +54,9 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
 
 	if err := db.update(func(tx *bolt.Tx) error {
-		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket, chainInfoBucket, blockVoteCacheBucket)
+		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
+			chainInfoBucket, blockVoteCacheBucket, simulatorBucket)
+
 	}); err != nil {
 		return nil, err
 	}

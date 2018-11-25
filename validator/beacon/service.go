@@ -77,7 +77,7 @@ func (s *Service) Start() {
 	// responsbility to perform.
 	go s.listenForAssignmentChange(beaconServiceClient)
 
-	slotTicker := slotticker.GetSlotTicker(s.genesisTimestamp, params.DemoValidatorConfig().SlotDuration)
+	slotTicker := slotticker.GetSlotTicker(s.genesisTimestamp, params.BeaconConfig().SlotDuration)
 	go func() {
 		s.waitForAssignment(slotTicker.C(), beaconServiceClient)
 		slotTicker.Done()
@@ -236,8 +236,8 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 
 // startSlot returns the first slot of the given slot's cycle.
 func (s *Service) startSlot() uint64 {
-	duration := params.DemoValidatorConfig().SlotDuration
-	cycleLength := params.DemoValidatorConfig().CycleLength
+	duration := params.BeaconConfig().SlotDuration
+	cycleLength := params.BeaconConfig().CycleLength
 	slot := slotticker.CurrentSlot(s.genesisTimestamp, duration, time.Since)
 	return slot - slot%cycleLength
 }
