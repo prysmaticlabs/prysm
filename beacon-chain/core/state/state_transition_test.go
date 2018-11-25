@@ -69,7 +69,6 @@ func TestNextDeriveSlot(t *testing.T) {
 	})
 
 	blockVoteCache := utils.NewBlockVoteCache()
-
 	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
@@ -91,8 +90,8 @@ func TestNextDeriveSlot(t *testing.T) {
 			VoteTotalDeposit: totalDeposits * 3 / 4,
 		}
 	}
-
 	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
+
 	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
