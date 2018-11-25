@@ -1,6 +1,9 @@
 package state
 
 import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -10,12 +13,13 @@ import (
 )
 
 // NewStateTransition computes the new beacon state, given the previous beacon state
-// and a beacon block. This method is called during a cycle transition.
+// a beacon block, and its parent slot. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new
 // committees if necessary during this transition.
 func NewStateTransition(
 	st *types.BeaconState,
 	block *types.Block,
+	parentSlot uint64,
 	blockVoteCache utils.BlockVoteCache,
 ) (*types.BeaconState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
@@ -26,7 +30,6 @@ func NewStateTransition(
 	justifiedSlot := st.LastJustifiedSlot()
 	finalizedSlot := st.LastFinalizedSlot()
 	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
-	recentBlockHashes := st.RecentBlockHashes()
 	newState.SetValidators(v.CopyValidators(newState.Validators()))
 
 	if st.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
@@ -34,6 +37,20 @@ func NewStateTransition(
 	} else {
 		lastStateRecalculationSlotCycleBack = st.LastStateRecalculationSlot() - params.BeaconConfig().CycleLength
 	}
+
+	newState.ClearAttestations(st.LastStateRecalculationSlot())
+	// Derive the new set of recent block hashes.
+	recentBlockHashes, err := newState.CalculateNewBlockHashes(block, parentSlot)
+	if err != nil {
+		return nil, err
+	}
+	newState.SetRecentBlockHashes(recentBlockHashes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
+	}
+
+	newRandao := createRandaoMix(block.RandaoReveal(), st.RandaoMix())
+	newState.SetRandaoMix(newRandao[:])
 
 	// walk through all the slots from LastStateRecalculationSlot - cycleLength to
 	// LastStateRecalculationSlot - 1.
@@ -44,7 +61,7 @@ func NewStateTransition(
 		blockHash := recentBlockHashes[i]
 
 		blockVoteBalance, validators := incentives.TallyVoteBalances(
-			blockHash,
+			common.BytesToHash(blockHash),
 			blockVoteCache,
 			newState.Validators(),
 			v.ActiveValidatorIndices(newState.Validators()),
@@ -170,4 +187,12 @@ func validatorSetRecalculations(
 	}
 
 	return append(shardAndCommittesForSlots[params.BeaconConfig().CycleLength:], newShardCommitteeArray...), nil
+}
+
+// createRandaoMix sets the block randao seed into a beacon state randao.
+func createRandaoMix(blockRandao [32]byte, beaconStateRandao [32]byte) [32]byte {
+	for i, b := range blockRandao {
+		beaconStateRandao[i] ^= b
+	}
+	return beaconStateRandao
 }

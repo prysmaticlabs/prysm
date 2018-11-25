@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -275,6 +277,76 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 	return totalPenalty
 }
 
+// SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
+func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
+	recentBlockHashes := b.RecentBlockHashes()
+	obliqueParentHashes := attestation.ObliqueParentHashes
+	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
+
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
+	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
+	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
+		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
+	}
+
+	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
+	for i := startIdx; i < endIdx; i++ {
+		hashes = append(hashes, recentBlockHashes[i])
+	}
+
+	for i := 0; i < len(obliqueParentHashes); i++ {
+		hash := common.BytesToHash(obliqueParentHashes[i])
+		hashes = append(hashes, hash)
+	}
+	return hashes, nil
+}
+
+// ClearAttestations removes attestations older than last state recalc slot.
+func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
+	existing := b.data.PendingAttestations
+	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	for _, a := range existing {
+		if a.GetSlot() >= lastStateRecalc {
+			update = append(update, a)
+		}
+	}
+	b.data.PendingAttestations = update
+}
+
+// CalculateNewBlockHashes builds a new slice of recent block hashes with the
+// provided block and the parent slot number.
+//
+// The algorithm is:
+//   1) shift the array by block.SlotNumber - parentSlot (i.e. truncate the
+//     first by the number of slots that have occurred between the block and
+//     its parent).
+//
+//   2) fill the array with the parent block hash for all values between the parent
+//     slot and the block slot.
+//
+// Computation of the state hash depends on this feature that slots with
+// missing blocks have the block hash of the next block hash in the chain.
+//
+// For example, if we have a segment of recent block hashes that look like this
+//   [0xF, 0x7, 0x0, 0x0, 0x5]
+//
+// Where 0x0 is an empty or missing hash where no block was produced in the
+// alloted slot. When storing the list (or at least when computing the hash of
+// the active state), the list should be backfilled as such:
+//
+//   [0xF, 0x7, 0x5, 0x5, 0x5]
+//
+// This method does not mutate the state.
+func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
+	distance := block.SlotNumber() - parentSlot
+	existing := b.data.RecentBlockHashes
+	update := existing[distance:]
+	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
+		update = append(update, block.AncestorHashes()[0])
+	}
+	return update, nil
+}
+
 // SetCrossLinks updates the inner proto's cross link records.
 func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
 	b.data.Crosslinks = crossLinks
@@ -308,6 +380,11 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 // SetPendingAttestations updates the inner proto's pending attestations.
 func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
 	b.data.PendingAttestations = pendingAttestations
+}
+
+// SetRandaoMix updates the inner proto's randao mix.
+func (b *BeaconState) SetRandaoMix(randaoMix []byte) {
+	b.data.RandaoMix = randaoMix
 }
 
 // SetRecentBlockHashes updates the inner proto's recent block hashes.

@@ -88,6 +88,11 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
+// AncestorHashes of the block.
+func (b *Block) AncestorHashes() [][]byte {
+	return b.data.AncestorHashes
+}
+
 // AttestationCount returns the number of attestations.
 func (b *Block) AttestationCount() int {
 	return len(b.data.Attestations)
@@ -103,6 +108,13 @@ func (b *Block) PowChainRef() common.Hash {
 	return common.BytesToHash(b.data.PowChainRef)
 }
 
+// RandaoReveal returns the blake2b randao hash.
+func (b *Block) RandaoReveal() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.RandaoReveal)
+	return h
+}
+
 // StateRoot returns the state hash.
 func (b *Block) StateRoot() [32]byte {
 	var h [32]byte
@@ -110,8 +122,17 @@ func (b *Block) StateRoot() [32]byte {
 	return h
 }
 
-// isSlotValid compares the slot to the system clock to determine if the block is valid.
-func (b *Block) isSlotValid(genesisTime time.Time) bool {
+// IsRandaoValid verifies the validity of randao from block by comparing it with
+// the proposer's randao from the beacon state.
+func (b *Block) IsRandaoValid(stateRandao []byte) bool {
+	var h [32]byte
+	copy(h[:], stateRandao)
+	blockRandaoReveal := b.RandaoReveal()
+	return hashutil.Hash(blockRandaoReveal[:]) == h
+}
+
+// IsSlotValid compares the slot to the system clock to determine if the block is valid.
+func (b *Block) IsSlotValid(genesisTime time.Time) bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.BeaconConfig().SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
