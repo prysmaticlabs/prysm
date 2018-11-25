@@ -34,12 +34,22 @@ type Server struct {
 	gsub          *pubsub.PubSub
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
+	relayNodeAddr string
+}
+
+// ServerConfig for peer to peer networking.
+type ServerConfig struct {
+	BootstrapNodeAddr string
+	RelayNodeAddr     string
 }
 
 // NewServer creates a new p2p server instance.
-func NewServer(bootstrapNode string) (*Server, error) {
+func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
+	if cfg.RelayNodeAddr != "" {
+		opts = append(opts, libp2p.AddrsFactory(relayAddrsOnly(cfg.RelayNodeAddr)))
+	}
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		cancel()
@@ -65,7 +75,8 @@ func NewServer(bootstrapNode string) (*Server, error) {
 		gsub:          gsub,
 		mutex:         &sync.Mutex{},
 		topicMapping:  make(map[reflect.Type]string),
-		bootstrapNode: bootstrapNode,
+		bootstrapNode: cfg.BootstrapNodeAddr,
+		relayNodeAddr: cfg.RelayNodeAddr,
 	}, nil
 }
 
@@ -79,10 +90,18 @@ func (s *Server) Start() {
 		}
 	}
 
+	if s.relayNodeAddr != "" {
+		if err := dialRelayNode(s.ctx, s.host, s.relayNodeAddr); err != nil {
+			log.Errorf("Could not dial relay node: %v", err)
+		}
+	}
+
 	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
 		log.Errorf("Could not start peer discovery via mDNS: %v", err)
 		return
 	}
+
+	startPeerWatcher(s.ctx, s.host)
 }
 
 // Stop the main p2p loop.
