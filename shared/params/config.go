@@ -43,7 +43,7 @@ type BeaconChainConfig struct {
 	POWContractMerkleTreeDepth           uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
 	MaxSpecialsPerBlock                  uint64         // MaxSpecialsPerBlock defines the max number special records permitted per beacon block.
 	LogOutMessage                        string         // LogOutMessage is the message a validator submits to log out.
-	InitialForkVersion                   uint32         // InitialForkVersion is used to track fork version between state transitions.
+	InitialForkVersion                   uint64         // InitialForkVersion is used to track fork version between state transitions.
 	SimulatedBlockRandao                 [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
 	ModuloBias                           uint64         // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
 	BootstrappedValidatorsCount          uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.

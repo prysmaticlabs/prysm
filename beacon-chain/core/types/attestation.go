@@ -44,10 +44,10 @@ func AttestationMsg(
 	slot uint64,
 	shardID uint64,
 	justifiedSlot uint64,
-	forkVersion uint32,
+	forkVersion uint64,
 ) [32]byte {
 	msg := make([]byte, binary.MaxVarintLen64)
-	binary.BigEndian.PutUint32(msg, forkVersion)
+	binary.BigEndian.PutUint64(msg, forkVersion)
 	binary.PutUvarint(msg, slot%params.BeaconConfig().CycleLength)
 	for _, parentHash := range parentHashes {
 		msg = append(msg, parentHash[:]...)

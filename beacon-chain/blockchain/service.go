@@ -189,10 +189,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			}
 
 			// TODO(#674): Handle chain reorgs.
-			var newState *types.BeaconState
-			if c.unfinalizedBlocks[h].IsCycleTransition(block.SlotNumber()) {
-				newState = blockState
-			}
+			newState := blockState
 			if err := c.beaconDB.UpdateChainHead(newHead, newState); err != nil {
 				log.Errorf("Failed to update chain: %v", err)
 				continue
@@ -201,9 +198,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			// We fire events that notify listeners of a new block (or crystallized state in
 			// the case of a state transition). This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if c.unfinalizedBlocks[h].IsCycleTransition(block.SlotNumber()) {
-				c.canonicalStateFeed.Send(newState)
-			}
+			c.canonicalStateFeed.Send(newState)
 			c.canonicalBlockFeed.Send(newHead)
 		}
 	}
@@ -257,13 +252,16 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if valid := state.IsValidBlock(
+	// Verifies the block against the validity conditions specifies as part of the
+	// Ethereum 2.0 specification.
+	if err := state.IsValidBlock(
 		block,
 		beaconState,
 		parent.SlotNumber(),
 		c.genesisTime,
-	); !valid {
-		return errors.New("block failed validity conditions")
+		c.beaconDB.HasBlock,
+	); err != nil {
+		return fmt.Errorf("block failed validity conditions: %v", err)
 	}
 
 	if err := c.calculateNewBlockVotes(block, beaconState); err != nil {
@@ -275,11 +273,9 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	beaconState.SetPendingAttestations(block.Attestations())
 
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
-	if beaconState.IsCycleTransition(block.SlotNumber()) {
-		beaconState, err = c.executeStateTransition(beaconState, block, parent.SlotNumber())
-		if err != nil {
-			return fmt.Errorf("initialize new cycle transition failed: %v", err)
-		}
+	beaconState, err = c.executeStateTransition(beaconState, block, parent.SlotNumber())
+	if err != nil {
+		return fmt.Errorf("initialize new cycle transition failed: %v", err)
 	}
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {
@@ -303,17 +299,14 @@ func (c *ChainService) executeStateTransition(
 	block *types.Block,
 	parentSlot uint64,
 ) (*types.BeaconState, error) {
-	newState := beaconState
 	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
-	for beaconState.IsCycleTransition(block.SlotNumber()) {
-		blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.RecentBlockHashes())
-		if err != nil {
-			return nil, err
-		}
-		newState, err = state.NewStateTransition(beaconState, block, parentSlot, blockVoteCache)
-		if err != nil {
-			return nil, err
-		}
+	blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.RecentBlockHashes())
+	if err != nil {
+		return nil, err
+	}
+	newState, err := state.NewStateTransition(beaconState, block, parentSlot, blockVoteCache)
+	if err != nil {
+		return nil, err
 	}
 	return newState, nil
 }
