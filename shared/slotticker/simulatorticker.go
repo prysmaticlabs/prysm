@@ -36,21 +36,6 @@ func GetSimulatorTicker(genesisTime time.Time, slotDuration uint64, currentSlot 
 	return ticker
 }
 
-// CurrentSimulatorSlot accepts the genesis time and returns the current time's slot.
-func CurrentSimulatorSlot(
-	genesisTime time.Time,
-	slotDuration uint64,
-	since func(time.Time) time.Duration) uint64 {
-
-	sinceGenesis := since(genesisTime)
-	if sinceGenesis < 0 {
-		return 0
-	}
-
-	durationInSeconds := time.Duration(slotDuration) * time.Second
-	return uint64(sinceGenesis / durationInSeconds)
-}
-
 func (s *SimulatorTicker) start(
 	genesisTime time.Time,
 	slotDuration uint64,
