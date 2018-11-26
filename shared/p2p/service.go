@@ -41,12 +41,13 @@ type Server struct {
 type ServerConfig struct {
 	BootstrapNodeAddr string
 	RelayNodeAddr     string
+	Port              int
 }
 
 // NewServer creates a new p2p server instance.
 func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	opts := buildOptions()
+	opts := buildOptions(cfg.Port)
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(relayAddrsOnly(cfg.RelayNodeAddr)))
 	}
