@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "185b4288413d2a0dd0806f78c90dde719829e5ae",
+    commit = "619930b0b4713cc1280189bf0a4c54b3fb506f60",
     importpath = "github.com/prometheus/procfs",
 )
 
