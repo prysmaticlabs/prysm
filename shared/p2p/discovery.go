@@ -9,6 +9,7 @@ import (
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "p2p")
@@ -33,6 +34,9 @@ func startmDNSDiscovery(ctx context.Context, host host.Host) error {
 
 // startDHTDiscovery supports discovery via DHT.
 func startDHTDiscovery(ctx context.Context, host host.Host, bootstrapAddr string) error {
+	ctx, span := trace.StartSpan(ctx, "p2p_startDHTDiscovery")
+	defer span.End()
+
 	addr, err := iaddr.ParseString(bootstrapAddr)
 	if err != nil {
 		return err
