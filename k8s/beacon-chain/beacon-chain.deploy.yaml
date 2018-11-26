@@ -14,6 +14,9 @@ spec:
       labels:
         component: beacon-chain
         universe: beacon-chain
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
     spec:
       priorityClassName: production-priority
       containers:
@@ -25,6 +28,9 @@ spec:
             - "--vrcaddr=0x541AfaC5266c534de039B4A1a53519e76ea82846"
             - "--rpc-port=4000"
             - "--simulator=false"
+            - "--monitoring-port=9090"
+            - "--bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5" 
+            - "--relay-node=/ip4/35.221.47.224/tcp/20000/p2p/QmXNZeGdHYshgwyYyJnYG7u5iQ1Hej5R9QshgEZ5NACc1x" 
           resources:
             requests:
               memory: "100Mi"
@@ -35,3 +41,5 @@ spec:
           ports:
             - containerPort: 4000
               name: grpc
+            - containerPort: 9090
+              name: prometheus

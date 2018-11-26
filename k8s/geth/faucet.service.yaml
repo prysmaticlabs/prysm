@@ -1,13 +1,13 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: geth-ethstats
+  name: geth-faucet
   namespace: pow
 spec:
   selector:
-    component: ethstats
+    component: faucet
     universe: geth
   ports:
-    - port: 3000
-      targetPort: 3000
+    - port: 8080
+      targetPort: 8080
   type: ClusterIP

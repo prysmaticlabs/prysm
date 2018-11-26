@@ -24,6 +24,7 @@ _NAMESPACE = "pow"
 _deployments = [
     "bootnode",
     "ethstats",
+    "faucet",
     "miners",
     "nodes",
 ]
@@ -31,12 +32,14 @@ _deployments = [
 _services = [
     "bootnode",
     "ethstats",
+    "faucet",
     "nodes",
 ]
 
 _secrets = [
     "bootnode",
     "ethstats",
+    "faucet",
     "genesis",
 ]
 

@@ -13,3 +13,12 @@ data:
       listen 20000;
       proxy_pass beacon-chain-relay-tcp;
     }
+
+    upstream beacon-chain-bootnode-tcp {
+      server bootnode.beacon-chain.svc.cluster.local:4000;
+    }
+
+    server {
+      listen 20001;
+      proxy_pass beacon-chain-bootnode-tcp;
+    }

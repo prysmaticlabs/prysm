@@ -16,4 +16,4 @@ spec:
       targetPort: 8546
       name: ws
       protocol: TCP
-  type: LoadBalancer
+  type: ClusterIP

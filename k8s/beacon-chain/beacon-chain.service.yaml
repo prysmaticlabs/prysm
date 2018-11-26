@@ -11,4 +11,4 @@ spec:
     - port: 4000
       targetPort: 4000
       name: grpc
-  type: LoadBalancer
+  type: ClusterIP

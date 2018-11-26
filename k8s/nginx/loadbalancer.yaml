@@ -6,6 +6,7 @@ metadata:
 spec:
   externalTrafficPolicy: Local
   type: LoadBalancer
+  loadBalancerIP: 35.221.47.224  
   ports:
   - port: 80
     targetPort: 80
@@ -19,5 +20,9 @@ spec:
     targetPort: 20000
     protocol: TCP
     name: beacon-relay
+  - port: 20001
+    targetPort: 20001
+    protocol: TCP
+    name: beacon-bootnode
   selector:
     app: nginx-ingress

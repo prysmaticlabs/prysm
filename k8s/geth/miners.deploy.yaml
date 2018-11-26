@@ -43,7 +43,8 @@ spec:
             - >
               geth
               --networkid=1337
-              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0
@@ -54,7 +55,7 @@ spec:
               --verbosity=4
               --mine
               --minerthreads=1
-              --etherbase=0x717c3a6e4cbd476c2312612155eb233bf498dd5b
+              --etherbase=0x8882042b8e93c85312f623f058ef252c8025a7ae
               --extradata=$HOSTNAME
               --ethash.dagsinmem=1
               --ethash.dagsondisk=2
@@ -83,7 +84,7 @@ spec:
               memory: "2Gi"
               cpu: "500m"
             limits:
-              memory: "2.5Gi"
+              memory: "4Gi"
               cpu: "500m"
       initContainers:
         - name: genesis
@@ -112,4 +113,4 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 2Gi
+            storage: 5Gi
