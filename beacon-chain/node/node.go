@@ -233,6 +233,10 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerDBCleanService(ctx *cli.Context) error {
+	if !ctx.GlobalBool(utils.EnableDBCleanup.Name) {
+		return nil
+	}
+
 	var chainService *blockchain.ChainService
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
