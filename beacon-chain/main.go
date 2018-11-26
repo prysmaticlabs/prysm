@@ -72,6 +72,7 @@ VERSION:
 		utils.EnablePOWChain,
 		cmd.BootstrapNode,
 		cmd.RelayNode,
+		cmd.P2PPort,
 		cmd.DataDirFlag,
 		cmd.VerbosityFlag,
 		cmd.EnableTracingFlag,
