@@ -1,3 +1,9 @@
+// Bootstrap / DHT query tool
+//
+// Usage: bazel run //tools/boostrap-query -- $RELAY_ADDRESS
+//
+// This tool queries the bootstrap / DHT node for peers then attempts to dial
+// and ping each of them.
 package main
 
 import (
