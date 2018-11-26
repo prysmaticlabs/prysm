@@ -16,6 +16,7 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -31,6 +32,7 @@ type Server struct {
 	mutex         *sync.Mutex
 	feeds         map[reflect.Type]Feed
 	host          host.Host
+	dht           *kaddht.IpfsDHT
 	gsub          *pubsub.PubSub
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
@@ -73,6 +75,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		cancel:        cancel,
 		feeds:         make(map[reflect.Type]Feed),
 		host:          h,
+		dht:           dht,
 		gsub:          gsub,
 		mutex:         &sync.Mutex{},
 		topicMapping:  make(map[reflect.Type]string),
@@ -83,26 +86,29 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
+	ctx, span = trace.StartSpan(s.ctx, "p2p_server_start")
+	defer span.End()
 	log.Info("Starting service")
 
 	if s.bootstrapNode != "" {
-		if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
+		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
+		s.dht.Bootstrap(ctx)
 	}
 
 	if s.relayNodeAddr != "" {
-		if err := dialRelayNode(s.ctx, s.host, s.relayNodeAddr); err != nil {
+		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
 			log.Errorf("Could not dial relay node: %v", err)
 		}
 	}
 
-	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+	if err := startmDNSDiscovery(ctx, s.host); err != nil {
 		log.Errorf("Could not start peer discovery via mDNS: %v", err)
 		return
 	}
 
-	startPeerWatcher(s.ctx, s.host)
+	startPeerWatcher(ctx, s.host)
 }
 
 // Stop the main p2p loop.
