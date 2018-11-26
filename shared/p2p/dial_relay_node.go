@@ -8,7 +8,8 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-func makePeer(addr string) (*peerstore.PeerInfo, error) {
+// MakePeer from multiaddress string.
+func MakePeer(addr string) (*peerstore.PeerInfo, error) {
 	maddr, err := multiaddr.NewMultiaddr(addr)
 	if err != nil {
 		return nil, err
@@ -17,7 +18,7 @@ func makePeer(addr string) (*peerstore.PeerInfo, error) {
 }
 
 func dialRelayNode(ctx context.Context, h host.Host, relayAddr string) error {
-	p, err := makePeer(relayAddr)
+	p, err := MakePeer(relayAddr)
 	if err != nil {
 		return err
 	}
