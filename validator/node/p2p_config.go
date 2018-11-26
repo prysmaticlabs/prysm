@@ -19,6 +19,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 	s, err := p2p.NewServer(&p2p.ServerConfig{
 		BootstrapNodeAddr: ctx.GlobalString(cmd.BootstrapNode.Name),
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
+		Port:              ctx.GlobalInt(cmd.P2PPort.Name),
 	})
 	if err != nil {
 		return nil, err
