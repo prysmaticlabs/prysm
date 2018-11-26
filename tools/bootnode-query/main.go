@@ -71,7 +71,7 @@ func pingPeer(ctx context.Context, h host.Host, p *dhtpb.Message_Peer) error {
 	}
 
 	// Any response is OK
-	_ := sendMessageAndWait(s, dhtpb.NewMessage(dhtpb.Message_PING, []byte{}, 0))
+	_ = sendMessageAndWait(s, dhtpb.NewMessage(dhtpb.Message_PING, []byte{}, 0))
 	return nil
 }
 
