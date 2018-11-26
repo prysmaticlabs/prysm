@@ -151,6 +151,7 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 		params.BeaconConfig().InitialForkVersion,
 	)
 	_ = attestationMsg
+	_ = pubKey
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
 	return nil
 }
