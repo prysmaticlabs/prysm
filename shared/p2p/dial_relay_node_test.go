@@ -10,14 +10,14 @@ import (
 )
 
 func TestMakePeerFails(t *testing.T) {
-	_, err := makePeer("/ip4")
+	_, err := MakePeer("/ip4")
 	if err == nil {
 		t.Error("Expect error when invalid multiaddress was provided")
 	}
 }
 
 func TestMakePeerSucceeds(t *testing.T) {
-	a, err := makePeer("/ip4/127.0.0.1/tcp/5678/p2p/QmUn6ycS8Fu6L462uZvuEfDoSgYX6kqP4aSZWMa7z1tWAX")
+	a, err := MakePeer("/ip4/127.0.0.1/tcp/5678/p2p/QmUn6ycS8Fu6L462uZvuEfDoSgYX6kqP4aSZWMa7z1tWAX")
 	if err != nil {
 		t.Fatalf("Unexpected error when making a valid peer: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestMakePeerSucceeds(t *testing.T) {
 }
 
 func TestDialRelayNodeFailsInvalidPeerString(t *testing.T) {
-	if err := dialRelayNode(nil, nil, "/ip4"); err == nil {
+	if err := dialRelayNode(context.Background(), nil, "/ip4"); err == nil {
 		t.Fatal("Expected to fail with invalid peer string, but there was no error")
 	}
 }
