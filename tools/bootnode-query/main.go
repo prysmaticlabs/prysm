@@ -1,6 +1,6 @@
 // Bootstrap / DHT query tool
 //
-// Usage: bazel run //tools/boostrap-query -- $RELAY_ADDRESS
+// Usage: bazel run //tools/boostrap-query -- $BOOTNODE_ADDRESS
 //
 // This tool queries the bootstrap / DHT node for peers then attempts to dial
 // and ping each of them.
@@ -70,10 +70,8 @@ func pingPeer(ctx context.Context, h host.Host, p *dhtpb.Message_Peer) error {
 		return err
 	}
 
-	resp := sendMessageAndWait(s, dhtpb.NewMessage(dhtpb.Message_PING, []byte{}, 0))
-
-	_ = resp
-
+	// Any response is OK
+	_ := sendMessageAndWait(s, dhtpb.NewMessage(dhtpb.Message_PING, []byte{}, 0))
 	return nil
 }
 
