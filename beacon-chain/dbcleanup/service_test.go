@@ -1,0 +1,112 @@
+package dbcleanup
+
+import (
+	"context"
+	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+
+	"github.com/prysmaticlabs/prysm/shared/event"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+)
+
+type mockChainService struct {
+	stateFeed *event.Feed
+}
+
+func (m *mockChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+	return m.stateFeed
+}
+
+func newMockChainService() *mockChainService {
+	return &mockChainService{
+		stateFeed: new(event.Feed),
+	}
+}
+
+func createCleanupService(beaconDB *db.BeaconDB) *CleanupService {
+	chainService := newMockChainService()
+
+	cleanupService := NewCleanupService(context.Background(), &Config{
+		SubscriptionBuf: 100,
+		BeaconDB:        beaconDB,
+		ChainService:    chainService,
+	})
+	return cleanupService
+}
+
+func TestLifecycle(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
+	cleanupService := createCleanupService(beaconDB)
+
+	cleanupService.Start()
+	testutil.AssertLogsContain(t, hook, "Starting cleanup service")
+
+	if err := cleanupService.Stop(); err != nil {
+		t.Fatalf("failed to stop cleanup service")
+	}
+	testutil.AssertLogsContain(t, hook, "Stopping cleanup service")
+}
+
+func TestCleanBlockVoteCache(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
+	var err error
+
+	// Pre-fill block vote cache in DB
+	if err = beaconDB.InitializeState(nil); err != nil {
+		t.Fatalf("failed to initialize DB")
+	}
+	oldBlock := types.NewBlock(&pb.BeaconBlock{Slot: 1})
+	oldBlockHash, _ := oldBlock.Hash()
+	if err = beaconDB.SaveBlock(oldBlock); err != nil {
+		t.Fatalf("failed to write block int DB")
+	}
+	oldAState := types.NewActiveState(&pb.ActiveState{})
+	oldCState := types.NewCrystallizedState(&pb.CrystallizedState{})
+	if err = beaconDB.UpdateChainHead(oldBlock, oldAState, oldCState); err != nil {
+		t.Fatalf("failed to pre-fill DB")
+	}
+	oldBlockVoteCache := utils.NewBlockVoteCache()
+	oldBlockVoteCache[oldBlockHash] = utils.NewBlockVote()
+	if err = beaconDB.WriteBlockVoteCache(oldBlockVoteCache); err != nil {
+		t.Fatalf("failed to write block vote cache into DB")
+	}
+
+	// Verify block vote cache is not cleaned before running the cleanup service
+	blockHashes := [][32]byte{oldBlockHash}
+	var blockVoteCache utils.BlockVoteCache
+	if blockVoteCache, err = beaconDB.ReadBlockVoteCache(blockHashes); err != nil {
+		t.Fatalf("failed to read block vote cache from DB")
+	}
+	if len(blockVoteCache) != 1 {
+		t.Fatalf("failed to reach pre-filled block vote cache status")
+	}
+
+	// Now let the cleanup service do its job
+	cleanupService := createCleanupService(beaconDB)
+	cState := types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 1})
+	if err = cleanupService.cleanBlockVoteCache(cState.LastFinalizedSlot()); err != nil {
+		t.Fatalf("failed to clean block vote cache")
+	}
+
+	// Check the block vote cache has been cleaned up
+	if blockVoteCache, err = beaconDB.ReadBlockVoteCache(blockHashes); err != nil {
+		t.Fatalf("failed to read block vote cache from DB")
+	}
+	if len(blockVoteCache) != 0 {
+		t.Fatalf("block vote cache is expected to be cleaned up")
+	}
+}

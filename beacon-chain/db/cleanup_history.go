@@ -1,0 +1,42 @@
+package db
+
+import (
+	"fmt"
+
+	"github.com/boltdb/bolt"
+)
+
+// GetCleanedFinalizedSlot returns the most recent finalized slot when we did a DB clean up.
+func (db *BeaconDB) GetCleanedFinalizedSlot() (uint64, error) {
+	var lastFinalizedSlot uint64
+
+	err := db.view(func(tx *bolt.Tx) error {
+		cleanupHistory := tx.Bucket(cleanupHistoryBucket)
+
+		slotEnc := cleanupHistory.Get(cleanedFinalizedSlotKey)
+		if slotEnc == nil {
+			return fmt.Errorf("last finalized slot not found in DB")
+		}
+
+		lastFinalizedSlot = decodeToSlotNumber(slotEnc)
+		return nil
+	})
+
+	return lastFinalizedSlot, err
+}
+
+// SaveCleanedFinalizedSlot writes the slot when we did DB cleanup so we can start from here in future cleanup tasks.
+func (db *BeaconDB) SaveCleanedFinalizedSlot(slot uint64) error {
+	slotEnc := encodeSlotNumber(slot)
+
+	err := db.update(func(tx *bolt.Tx) error {
+		cleanupHistory := tx.Bucket(cleanupHistoryBucket)
+
+		if err := cleanupHistory.Put(cleanedFinalizedSlotKey, slotEnc); err != nil {
+			return fmt.Errorf("failed to store cleaned finalized slot in DB")
+		}
+
+		return nil
+	})
+	return err
+}

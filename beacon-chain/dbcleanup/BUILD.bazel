@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["service.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/db:go_default_library",
