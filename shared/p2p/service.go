@@ -86,7 +86,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
-	ctx, span = trace.StartSpan(s.ctx, "p2p_server_start")
+	ctx, span := trace.StartSpan(s.ctx, "p2p_server_start")
 	defer span.End()
 	log.Info("Starting service")
 
