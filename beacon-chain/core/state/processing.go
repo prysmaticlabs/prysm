@@ -2,7 +2,6 @@ package state
 
 import (
 	"encoding/binary"
-	"log"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -19,9 +18,7 @@ func FinalizeAndJustifySlots(
 	if 3*blockVoteBalance >= 2*totalDeposits {
 		if slot > justifiedSlot {
 			justifiedSlot = slot
-			log.Printf("UPDATED JUSTIFIED SLOT: %v", justifiedSlot)
 		}
-		log.Printf("JUSTIFIED SLOT: %v, SLOT: %v", justifiedSlot, slot)
 		justifiedStreak++
 	} else {
 		justifiedStreak = 0
