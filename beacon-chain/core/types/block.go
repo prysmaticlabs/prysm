@@ -47,7 +47,6 @@ func NewGenesisBlock(stateRoot [32]byte) *Block {
 	protoGenesis, _ := ptypes.TimestampProto(params.BeaconConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
-
 	gb.data.StateRoot = stateRoot[:]
 	return gb
 }
