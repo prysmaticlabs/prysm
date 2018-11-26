@@ -94,7 +94,9 @@ func (s *Server) Start() {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
-		s.dht.Bootstrap(ctx)
+		if err := s.dht.Bootstrap(ctx); err != nil {
+			log.Errorf("Failed to bootstrap DHT: %v", err)
+		}
 	}
 
 	if s.relayNodeAddr != "" {
