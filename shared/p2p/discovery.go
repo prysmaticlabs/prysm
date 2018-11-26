@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
-	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p-host"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
+	"github.com/prysmaticlabs/prysm/shared/p2p/dhtutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "p2p")
@@ -33,17 +34,36 @@ func startmDNSDiscovery(ctx context.Context, host host.Host) error {
 
 // startDHTDiscovery supports discovery via DHT.
 func startDHTDiscovery(ctx context.Context, host host.Host, bootstrapAddr string) error {
-	addr, err := iaddr.ParseString(bootstrapAddr)
-	if err != nil {
-		return err
-	}
-	peerinfo, err := ps.InfoFromP2pAddr(addr.Multiaddr())
+	ctx, span := trace.StartSpan(ctx, "p2p.startDHTDiscovery")
+	defer span.End()
+
+	peerinfo, err := MakePeer(bootstrapAddr)
 	if err != nil {
 		return err
 	}
 
-	err = host.Connect(ctx, *peerinfo)
-	return err
+	if err := host.Connect(ctx, *peerinfo); err != nil {
+		return err
+	}
+
+	// Connect to initial peers from bootnode
+	go func() {
+		ctx, span := trace.StartSpan(ctx, "p2p.startDHTDiscovery_initialPeers")
+		defer span.End()
+
+		peers, err := dhtutil.PeerInfoFromDHT(ctx, host, peerinfo.ID)
+		if err != nil {
+			log.Errorf("Failed to get peer info from DHT: %v", err)
+			return
+		}
+		for _, peerInfo := range peers {
+			if err := host.Connect(ctx, *peerInfo); err != nil {
+				log.Warnf("Failed to connect to peer %s", peerInfo.ID.Pretty())
+			}
+		}
+	}()
+
+	return nil
 }
 
 // Discovery implements mDNS notifee interface.
