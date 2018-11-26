@@ -95,6 +95,7 @@ var (
 			"relay node and advertise their address via the relay node to other peers",
 	}
 
+	// P2PFlag defines the port to be used by libp2p.
 	P2PPort = cli.IntFlag{
 		Name:  "p2p-port",
 		Usage: "The port used by libp2p.",
