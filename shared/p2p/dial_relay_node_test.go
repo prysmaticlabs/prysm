@@ -28,7 +28,7 @@ func TestMakePeerSucceeds(t *testing.T) {
 }
 
 func TestDialRelayNodeFailsInvalidPeerString(t *testing.T) {
-	if err := dialRelayNode(nil, nil, "/ip4"); err == nil {
+	if err := dialRelayNode(context.Background(), nil, "/ip4"); err == nil {
 		t.Fatal("Expected to fail with invalid peer string, but there was no error")
 	}
 }
