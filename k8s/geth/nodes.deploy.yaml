@@ -48,6 +48,7 @@ spec:
               --rpc
               --rpcaddr=0.0.0.0
               --rpccorsdomain="*"
+              --rpcvhosts="*"
               --ws
               --wsaddr=0.0.0.0
               --wsorigins="*"

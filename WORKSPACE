@@ -74,6 +74,7 @@ _NAMESPACE = "default"
     "configmap",
     "deploy",
     "ingress",
+    "job",
     "namespace",
     "pod",
     "priority_class",

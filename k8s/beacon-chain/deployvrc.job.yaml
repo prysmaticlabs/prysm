@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: deploy-vrc
+  namespace: beacon-chain
+spec:
+  #ttlSecondsAfterFinished: 7200
+  backoffLimit: 1
+  template:
+    spec:
+      priorityClassName: batch-priority 
+      containers:
+      - name: deployvcr
+        image: gcr.io/prysmaticlabs/prysm/deployvrc:latest
+        args:
+        - "--httpPath=http://geth-nodes.pow.svc.cluster.local:8545"
+        - "--privKey=783da8ef5343c3019748506305d400bca8c324a5819f3a7f7fbf0c0a0d799b09"
+      restartPolicy: OnFailure
