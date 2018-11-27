@@ -25,7 +25,7 @@ spec:
           args: 
             - "--web3provider=ws://geth-nodes.pow.svc.cluster.local:8546"
             - "--verbosity=debug"
-            - "--vrcaddr=0x541AfaC5266c534de039B4A1a53519e76ea82846"
+            - "--vrcaddr=$(VALIDATOR_REGISTRATION_CONTRACT_ADDRESS)"
             - "--rpc-port=4000"
             - "--simulator=false"
             - "--monitoring-port=9090"
@@ -46,3 +46,9 @@ spec:
               name: p2p
             - containerPort: 9090
               name: prometheus
+          env:
+            - name: VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: beacon-config
+                  key: VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
