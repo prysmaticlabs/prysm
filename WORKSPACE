@@ -61,6 +61,7 @@ k8s_repositories()
 
 [k8s_defaults(
     name = "k8s_" + kind,
+    cluster = "minikube",
     kind = kind,
 ) for kind in [
     "cluster_role",
