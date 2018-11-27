@@ -51,12 +51,12 @@ func TestLifecycle(t *testing.T) {
 	cleanupService := createCleanupService(beaconDB)
 
 	cleanupService.Start()
-	testutil.AssertLogsContain(t, hook, "Starting cleanup service")
+	testutil.AssertLogsContain(t, hook, "Starting service")
 
 	if err := cleanupService.Stop(); err != nil {
-		t.Fatalf("failed to stop cleanup service")
+		t.Fatalf("failed to stop cleanup service: %v", err)
 	}
-	testutil.AssertLogsContain(t, hook, "Stopping cleanup service")
+	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
 func TestCleanBlockVoteCache(t *testing.T) {
@@ -67,29 +67,29 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Pre-fill block vote cache in DB
 	if err = beaconDB.InitializeState(nil); err != nil {
-		t.Fatalf("failed to initialize DB")
+		t.Fatalf("failed to initialize DB: %v", err)
 	}
 	oldBlock := types.NewBlock(&pb.BeaconBlock{Slot: 1})
 	oldBlockHash, _ := oldBlock.Hash()
 	if err = beaconDB.SaveBlock(oldBlock); err != nil {
-		t.Fatalf("failed to write block int DB")
+		t.Fatalf("failed to write block int DB: %v", err)
 	}
 	oldAState := types.NewActiveState(&pb.ActiveState{})
 	oldCState := types.NewCrystallizedState(&pb.CrystallizedState{})
 	if err = beaconDB.UpdateChainHead(oldBlock, oldAState, oldCState); err != nil {
-		t.Fatalf("failed to pre-fill DB")
+		t.Fatalf("failed to pre-fill DB: %v", err)
 	}
 	oldBlockVoteCache := utils.NewBlockVoteCache()
 	oldBlockVoteCache[oldBlockHash] = utils.NewBlockVote()
 	if err = beaconDB.WriteBlockVoteCache(oldBlockVoteCache); err != nil {
-		t.Fatalf("failed to write block vote cache into DB")
+		t.Fatalf("failed to write block vote cache into DB: %v", err)
 	}
 
 	// Verify block vote cache is not cleaned before running the cleanup service
 	blockHashes := [][32]byte{oldBlockHash}
 	var blockVoteCache utils.BlockVoteCache
 	if blockVoteCache, err = beaconDB.ReadBlockVoteCache(blockHashes); err != nil {
-		t.Fatalf("failed to read block vote cache from DB")
+		t.Fatalf("failed to read block vote cache from DB: %v", err)
 	}
 	if len(blockVoteCache) != 1 {
 		t.Fatalf("failed to reach pre-filled block vote cache status")
@@ -104,9 +104,9 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Check the block vote cache has been cleaned up
 	if blockVoteCache, err = beaconDB.ReadBlockVoteCache(blockHashes); err != nil {
-		t.Fatalf("failed to read block vote cache from DB")
+		t.Errorf("failed to read block vote cache from DB: %v", err)
 	}
 	if len(blockVoteCache) != 0 {
-		t.Fatalf("block vote cache is expected to be cleaned up")
+		t.Error("block vote cache is expected to be cleaned up")
 	}
 }

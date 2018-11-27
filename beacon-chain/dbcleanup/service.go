@@ -51,7 +51,7 @@ func NewCleanupService(ctx context.Context, cfg *Config) *CleanupService {
 
 // Start a cleanup service.
 func (d *CleanupService) Start() {
-	log.Infoln("Starting cleanup service")
+	log.Info("Starting service")
 	go d.cleanDB()
 }
 
@@ -59,7 +59,7 @@ func (d *CleanupService) Start() {
 func (d *CleanupService) Stop() error {
 	defer d.cancel()
 
-	log.Info("Stopping cleanup service")
+	log.Info("Stopping service")
 	return nil
 }
 
@@ -86,11 +86,11 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 
 	lastCleanedFinalizedSlot, err = d.beaconDB.GetCleanedFinalizedSlot()
 	if err != nil {
-		log.Warnf("Cannot find last cleaned finalized slot, assume it to be 0")
+		log.Warn("Cannot find last cleaned finalized slot, assume it to be 0")
 		lastCleanedFinalizedSlot = uint64(0)
 	}
 
-	log.Infof("Finalized slot: latest: %v, last cleaned: %v, %d blocks' vote cache will be cleaned",
+	log.Infof("Finalized slot: latest: %d, last cleaned: %d, %d blocks' vote cache will be cleaned",
 		latestFinalizedSlot, lastCleanedFinalizedSlot, latestFinalizedSlot-lastCleanedFinalizedSlot)
 
 	var blockHashes [][32]byte
@@ -98,12 +98,13 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 		var block *types.Block
 		block, err = d.beaconDB.GetBlockBySlot(slot)
 		if err != nil {
-			return fmt.Errorf("failed to read block at slot: %v", slot)
+			return fmt.Errorf("failed to read block at slot %d: %v", slot, err)
 		}
 		if block != nil {
-			blockHash, hashErr := block.Hash()
-			if hashErr != nil {
-				return fmt.Errorf("failed to get hash of block")
+			var blockHash [32]byte
+			blockHash, err = block.Hash()
+			if err != nil {
+				return fmt.Errorf("failed to get hash of block: %v", err)
 			}
 			blockHashes = append(blockHashes, blockHash)
 		}

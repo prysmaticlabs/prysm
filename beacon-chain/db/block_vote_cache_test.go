@@ -58,9 +58,9 @@ func TestBlockVoteCacheDelete(t *testing.T) {
 	var voteCache utils.BlockVoteCache
 	voteCache, err = db.ReadBlockVoteCache([][32]byte{blockHash1})
 	if err != nil {
-		t.Fatalf("should not expect error when reading already deletect block vote cache")
+		t.Error("should not expect error when reading already deleted block vote cache")
 	}
 	if len(voteCache) != 0 {
-		t.Fatalf("should expect empty result when reading already deleted block vote cache")
+		t.Error("should expect empty result when reading already deleted block vote cache")
 	}
 }

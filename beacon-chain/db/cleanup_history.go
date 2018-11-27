@@ -1,7 +1,7 @@
 package db
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/boltdb/bolt"
 )
@@ -15,7 +15,7 @@ func (db *BeaconDB) GetCleanedFinalizedSlot() (uint64, error) {
 
 		slotEnc := cleanupHistory.Get(cleanedFinalizedSlotKey)
 		if slotEnc == nil {
-			return fmt.Errorf("last finalized slot not found in DB")
+			return errors.New("last finalized slot not found in DB")
 		}
 
 		lastFinalizedSlot = decodeToSlotNumber(slotEnc)
@@ -33,7 +33,7 @@ func (db *BeaconDB) SaveCleanedFinalizedSlot(slot uint64) error {
 		cleanupHistory := tx.Bucket(cleanupHistoryBucket)
 
 		if err := cleanupHistory.Put(cleanedFinalizedSlotKey, slotEnc); err != nil {
-			return fmt.Errorf("failed to store cleaned finalized slot in DB")
+			return errors.New("failed to store cleaned finalized slot in DB")
 		}
 
 		return nil

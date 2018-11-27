@@ -34,7 +34,7 @@ func (db *BeaconDB) DeleteBlockVoteCache(blockHashes [][32]byte) error {
 		blockVoteCacheInfo := tx.Bucket(blockVoteCacheBucket)
 		for _, h := range blockHashes {
 			if err := blockVoteCacheInfo.Delete(h[:]); err != nil {
-				return fmt.Errorf("failed to delete block vote cache for block hash %x", h)
+				return fmt.Errorf("failed to delete block vote cache for block hash %x: %v", h, err)
 			}
 		}
 		return nil

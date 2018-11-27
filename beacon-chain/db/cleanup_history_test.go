@@ -10,7 +10,7 @@ func TestSaveCleanedFinalizedSlot(t *testing.T) {
 
 	slot := uint64(100)
 	if err := db.SaveCleanedFinalizedSlot(slot); err != nil {
-		t.Fatalf("failed to save cleaned finalized slot %v", err)
+		t.Errorf("failed to save cleaned finalized slot %v", err)
 	}
 }
 
@@ -20,7 +20,7 @@ func TestGetCleanedFinalizedSlot_NotFound(t *testing.T) {
 
 	_, err := db.GetCleanedFinalizedSlot()
 	if err == nil {
-		t.Fatalf("should expect error if last finalized slot not found in DB")
+		t.Error("should expect error if last finalized slot not found in DB")
 	}
 }
 
@@ -38,6 +38,6 @@ func TestGetCleanedFinalizedSlot(t *testing.T) {
 		t.Fatalf("failed to read cleaned finalized slot from DB %v", err)
 	}
 	if readSlot != slot {
-		t.Fatalf("got wrong result when reading cleaned finalized slot from DB")
+		t.Error("got wrong result when reading cleaned finalized slot from DB")
 	}
 }
