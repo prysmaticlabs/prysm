@@ -6,6 +6,7 @@ load("@k8s_deploy//:defaults.bzl", "k8s_deploy")
 load("@k8s_job//:defaults.bzl", "k8s_job")
 load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_service//:defaults.bzl", "k8s_service")
+load("@k8s_service_account//:defaults.bzl", "k8s_service_account")
 
 k8s_objects(
     name = "everything",
@@ -39,6 +40,10 @@ _services = [
     "beacon-chain",
     "bootnode",
     "relay",
+]
+
+_service_accounts = [
+  "deployvrc",
 ]
 
 k8s_objects(
@@ -87,6 +92,18 @@ k8s_objects(
     template = name + ".service.yaml",
     namespace = _NAMESPACE,
 ) for name in _services]
+
+k8s_objects(
+    name = "service_accounts",
+    objects = [":" + name + ".service_account" for name in _service_accounts],
+)
+
+[k8s_service_account(
+    name = name + ".service_account",
+    template = name + ".serviceaccount.yaml",
+    namespace = _NAMESPACE,
+) for name in _service_accounts]
+
 
 k8s_namespace(
     name = "namespace",
