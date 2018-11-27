@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -17,6 +18,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 func main() {
@@ -25,6 +29,7 @@ func main() {
 	var passwordFile string
 	var httpPath string
 	var privKeyString string
+	var k8sConfigMapName string
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -62,6 +67,11 @@ func main() {
 			Name:        "privKey",
 			Usage:       "Private key to unlock account",
 			Destination: &privKeyString,
+		},
+		cli.StringFlag{
+			Name:        "k8s-config",
+			Usage:       "Name of kubernetes config map to update with the VRC address",
+			Destination: &k8sConfigMapName,
 		},
 	}
 
@@ -136,10 +146,46 @@ func main() {
 		log.WithFields(logrus.Fields{
 			"address": addr.Hex(),
 		}).Info("New contract deployed")
+
+		if k8sConfigMapName != "" {
+			if err := updateKubernetesConfigMap(k8sConfigMapName, addr.Hex()); err != nil {
+				log.Errorf("Failed to update kubernetes config map: %v", err)
+			} else {
+				log.Printf("Updated config map %s", k8sConfigMapName)
+			}
+		}
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// updateKubernetesConfigMap in the beacon-chain namespace. This specifically
+// updates the data value for VALIDATOR_REGISTRATION_CONTRACT_ADDRESS.
+func updateKubernetesConfigMap(configMapName string, vrcAddr string) error {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
+
+	client, err := k8s.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	cm, err := client.CoreV1().ConfigMaps("beacon-chain").Get("beacon-config", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if cm.Data["VALIDATOR_REGISTRATION_CONTRACT_ADDRESS"] != "0x0" {
+		return fmt.Errorf("existing vcr address in config map = %v", cm.Data["VALIDATOR_REGISTRATION_CONTRACT_ADDRESS"])
+	}
+	cm.Data["VALIDATOR_REGISTRATION_CONTRACT_ADDRESS"] = vrcAddr
+
+	_, err = client.CoreV1().ConfigMaps("beacon-chain").Update(cm)
+
+	return err
 }
