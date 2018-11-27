@@ -12,14 +12,13 @@ load("@k8s_service_account//:defaults.bzl", "k8s_service_account")
 k8s_objects(
     name = "everything",
     objects = [
-      ":namespace", # Must be first
-
-      ":config",
-      ":default_server_secret",
-      ":deployment",
-      ":rbac",
-      ":service",
-      ":service_account",
+        ":namespace",  # Must be first
+        ":config",
+        ":default_server_secret",
+        ":deployment",
+        ":rbac",
+        ":service",
+        ":service_account",
     ],
 )
 

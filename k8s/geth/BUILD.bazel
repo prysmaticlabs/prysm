@@ -10,8 +10,7 @@ load("@k8s_service//:defaults.bzl", "k8s_service")
 k8s_objects(
     name = "everything",
     objects = [
-        ":namespace", # Must be first
-        
+        ":namespace",  # Must be first
         ":deployments",
         ":ingress",
         ":secrets",

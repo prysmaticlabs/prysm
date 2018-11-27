@@ -11,8 +11,7 @@ load("@k8s_service_account//:defaults.bzl", "k8s_service_account")
 k8s_objects(
     name = "everything",
     objects = [
-        ":namespace", # Must be first 
-
+        ":namespace",  # Must be first
         ":configs",
         ":deployments",
         ":services",
@@ -43,7 +42,7 @@ _services = [
 ]
 
 _service_accounts = [
-  "deployvrc",
+    "deployvrc",
 ]
 
 k8s_objects(
@@ -56,7 +55,6 @@ k8s_objects(
     template = name + ".config.yaml",
     namespace = _NAMESPACE,
 ) for name in _configs]
-
 
 k8s_objects(
     name = "deployments",
@@ -80,8 +78,6 @@ k8s_objects(
     namespace = _NAMESPACE,
 ) for name in _jobs]
 
-
-
 k8s_objects(
     name = "services",
     objects = [":" + name + ".service" for name in _services],
@@ -104,9 +100,7 @@ k8s_objects(
     namespace = _NAMESPACE,
 ) for name in _service_accounts]
 
-
 k8s_namespace(
     name = "namespace",
     template = "namespace.yaml",
 )
-
