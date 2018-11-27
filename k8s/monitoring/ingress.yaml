@@ -3,10 +3,6 @@ kind: Ingress
 metadata:
   name: nginx-ingress
   namespace: monitoring
-  annotations:
-    ingress.kubernetes.io/auth-realm: "Authentication Required"
-    ingress.kubernetes.io/auth-secret: internal-services-auth
-    ingress.kubernetes.io/auth-type: basic
 spec:
   rules:
   - host: alertmanager.prylabs.network
