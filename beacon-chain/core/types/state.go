@@ -341,6 +341,21 @@ func (b *BeaconState) SetDepositsPenalizedInPeriod(penalizedDeposits []uint64) {
 	b.data.DepositsPenalizedInPeriod = penalizedDeposits
 }
 
+// SetJustificationSource updates the inner proto's justification source.
+func (b *BeaconState) SetJustificationSource(justificationSource uint64) {
+	b.data.JustificationSource = justificationSource
+}
+
+// SetPrevCycleJustificationSource updates the inner proto's previous cycle justification source.
+func (b *BeaconState) SetPrevCycleJustificationSource(justificationSource uint64) {
+	b.data.PrevCycleJustificationSource = justificationSource
+}
+
+// SetJustifiedSlotBitfield updates the inner proto's justified slot bitfield.
+func (b *BeaconState) SetJustifiedSlotBitfield(bitfield []byte) {
+	b.data.JustifiedSlotBitfield = bitfield
+}
+
 // SetLastFinalizedSlot updates the inner proto's last finalized slot.
 func (b *BeaconState) SetLastFinalizedSlot(finalizedSlot uint64) {
 	b.data.LastFinalizedSlot = finalizedSlot
