@@ -86,8 +86,7 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 
 	lastCleanedFinalizedSlot, err = d.beaconDB.GetCleanedFinalizedSlot()
 	if err != nil {
-		log.Warn("Cannot find last cleaned finalized slot, assume it to be 0")
-		lastCleanedFinalizedSlot = uint64(0)
+		return fmt.Errorf("failed to read cleaned finalized slot from DB: %v", err)
 	}
 
 	log.Infof("Finalized slot: latest: %d, last cleaned: %d, %d blocks' vote cache will be cleaned",

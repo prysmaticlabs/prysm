@@ -14,8 +14,9 @@ func (db *BeaconDB) GetCleanedFinalizedSlot() (uint64, error) {
 		cleanupHistory := tx.Bucket(cleanupHistoryBucket)
 
 		slotEnc := cleanupHistory.Get(cleanedFinalizedSlotKey)
+		// If last cleaned slot number is not found, we will return 0 instead
 		if slotEnc == nil {
-			return errors.New("last finalized slot not found in DB")
+			return nil
 		}
 
 		lastFinalizedSlot = decodeToSlotNumber(slotEnc)

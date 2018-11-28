@@ -18,9 +18,13 @@ func TestGetCleanedFinalizedSlot_NotFound(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	_, err := db.GetCleanedFinalizedSlot()
-	if err == nil {
-		t.Error("should expect error if last finalized slot not found in DB")
+	var slot uint64
+	slot, err := db.GetCleanedFinalizedSlot()
+	if err != nil {
+		t.Error("got DB error when reading cleaned finalized slot")
+	}
+	if slot != 0 {
+		t.Error("expect 0 if DB doesn't have last cleaned finalized slot")
 	}
 }
 
