@@ -591,7 +591,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "353a9fca669c44dedb58d5a074f6d052fb0f58e0",
+    commit = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae",
     importpath = "github.com/syndtr/goleveldb",
 )
 
