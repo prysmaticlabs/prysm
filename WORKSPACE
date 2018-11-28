@@ -59,22 +59,22 @@ load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
 
 k8s_repositories()
 
-_CLUSTER = "minikube"
-
-_NAMESPACE = "default"
-
 [k8s_defaults(
     name = "k8s_" + kind,
-    cluster = _CLUSTER,
-    #context = _CONTEXT,
+    cluster = "minikube",
     kind = kind,
-    namespace = _NAMESPACE,
 ) for kind in [
+    "cluster_role",
+    "configmap",
     "deploy",
-    "service",
-    "secret",
-    "priority_class",
+    "ingress",
+    "job",
+    "namespace",
     "pod",
+    "priority_class",
+    "secret",
+    "service",
+    "service_account",
 ]]
 
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
