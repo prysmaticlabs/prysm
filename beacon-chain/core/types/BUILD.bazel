@@ -25,11 +25,14 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_test.go",
+        "block_test.go",
         "state_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_golang_protobuf//ptypes:go_default_library_gen",
     ],
 )
