@@ -591,7 +591,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "d5f8e13ca70d404acb9f9f8daab06b3818425145",
+    commit = "353a9fca669c44dedb58d5a074f6d052fb0f58e0",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "faade3cbb06a30202f2da53a8a5e3c4afe60b0c2",
+    commit = "bed42c95df7d5f673175b43d85f6b4047efe3814",
     importpath = "google.golang.org/api",
 )
 
