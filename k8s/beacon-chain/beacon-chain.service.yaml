@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: beacon-chain
+  namespace: beacon-chain
 spec:
   selector:
     component: beacon-chain
@@ -10,4 +11,4 @@ spec:
     - port: 4000
       targetPort: 4000
       name: grpc
-  type: LoadBalancer
+  type: ClusterIP

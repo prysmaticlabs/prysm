@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: geth-ethstats
+  namespace: pow
 spec:
   selector:
     component: ethstats
@@ -9,4 +10,4 @@ spec:
   ports:
     - port: 3000
       targetPort: 3000
-  type: LoadBalancer
+  type: ClusterIP

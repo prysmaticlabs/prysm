@@ -133,13 +133,6 @@ func (a *ActiveState) UpdateAttestations(attestations []*pb.AggregatedAttestatio
 	return newState
 }
 
-// appendNewSpecialObject appends new special record object from block in to active state.
-// this is called during block processing.
-func (a *ActiveState) appendNewSpecialObject(record *pb.SpecialRecord) []*pb.SpecialRecord {
-	existing := a.data.PendingSpecials
-	return append(existing, record)
-}
-
 // clearAttestations removes attestations older than last state recalc slot.
 func (a *ActiveState) clearAttestations(lastStateRecalc uint64) {
 	existing := a.data.PendingAttestations

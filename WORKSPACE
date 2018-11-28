@@ -59,22 +59,22 @@ load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
 
 k8s_repositories()
 
-_CLUSTER = "minikube"
-
-_NAMESPACE = "default"
-
 [k8s_defaults(
     name = "k8s_" + kind,
-    cluster = _CLUSTER,
-    #context = _CONTEXT,
+    cluster = "minikube",
     kind = kind,
-    namespace = _NAMESPACE,
 ) for kind in [
+    "cluster_role",
+    "configmap",
     "deploy",
-    "service",
-    "secret",
-    "priority_class",
+    "ingress",
+    "job",
+    "namespace",
     "pod",
+    "priority_class",
+    "secret",
+    "service",
+    "service_account",
 ]]
 
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
@@ -495,7 +495,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "62eef0e2fa9b2c385f7b2778e763486da6880d37",
+    commit = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31",
     importpath = "golang.org/x/sys",
 )
 
@@ -537,7 +537,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "3d3f9f413869b949e48070b5bc593aa22cc2b8f2",
+    commit = "eb0de9b17e854e9b1ccd9963efafc79862359959",
     importpath = "golang.org/x/crypto",
 )
 
@@ -591,7 +591,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "f9080354173f192dfc8821931eacf9cfd6819253",
+    commit = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "faade3cbb06a30202f2da53a8a5e3c4afe60b0c2",
+    commit = "0a71a4356c3f4bcbdd16294c78ca2a31fda36cca",
     importpath = "google.golang.org/api",
 )
 
@@ -657,13 +657,13 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "1f2c4f3cd6db5fd6f68f36af6b6d5d936fd93c4e",
+    commit = "4724e9255275ce38f7179b2478abeae4e28c904f",
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "185b4288413d2a0dd0806f78c90dde719829e5ae",
+    commit = "619930b0b4713cc1280189bf0a4c54b3fb506f60",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -830,4 +830,36 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_interface_conn",
     commit = "c7cda99284db0bea441058da8fd1f1373c763ed6",
     importpath = "github.com/libp2p/go-libp2p-interface-conn",
+)
+
+go_repository(
+    name = "io_k8s_client_go",
+    commit = "8abb21031259350aad0799bb42ba213ee8bb3399",
+    importpath = "k8s.io/client-go",
+)
+
+go_repository(
+    name = "io_k8s_apimachinery",
+    build_file_proto_mode = "disable_global",
+    commit = "4a9a8137c0a17bc4594f544987b3f0d48b2e3d3a",
+    importpath = "k8s.io/apimachinery",
+)
+
+go_repository(
+    name = "io_k8s_klog",
+    commit = "9be023858d57e1beb4d7c29fa54093cea2cf9583",
+    importpath = "k8s.io/klog",
+)
+
+go_repository(
+    name = "com_github_google_gofuzz",
+    commit = "24818f796faf91cd76ec7bddd72458fbced7a6c1",
+    importpath = "github.com/google/gofuzz",
+)
+
+go_repository(
+    name = "io_k8s_api",
+    build_file_proto_mode = "disable_global",
+    commit = "b7bd5f2d334ce968edc54f5fdb2ac67ce39c56d5",
+    importpath = "k8s.io/api",
 )

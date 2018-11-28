@@ -16,6 +16,7 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -31,15 +32,27 @@ type Server struct {
 	mutex         *sync.Mutex
 	feeds         map[reflect.Type]Feed
 	host          host.Host
+	dht           *kaddht.IpfsDHT
 	gsub          *pubsub.PubSub
 	topicMapping  map[reflect.Type]string
 	bootstrapNode string
+	relayNodeAddr string
+}
+
+// ServerConfig for peer to peer networking.
+type ServerConfig struct {
+	BootstrapNodeAddr string
+	RelayNodeAddr     string
+	Port              int
 }
 
 // NewServer creates a new p2p server instance.
-func NewServer(bootstrapNode string) (*Server, error) {
+func NewServer(cfg *ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	opts := buildOptions()
+	opts := buildOptions(cfg.Port)
+	if cfg.RelayNodeAddr != "" {
+		opts = append(opts, libp2p.AddrsFactory(relayAddrsOnly(cfg.RelayNodeAddr)))
+	}
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		cancel()
@@ -62,27 +75,42 @@ func NewServer(bootstrapNode string) (*Server, error) {
 		cancel:        cancel,
 		feeds:         make(map[reflect.Type]Feed),
 		host:          h,
+		dht:           dht,
 		gsub:          gsub,
 		mutex:         &sync.Mutex{},
 		topicMapping:  make(map[reflect.Type]string),
-		bootstrapNode: bootstrapNode,
+		bootstrapNode: cfg.BootstrapNodeAddr,
+		relayNodeAddr: cfg.RelayNodeAddr,
 	}, nil
 }
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
+	ctx, span := trace.StartSpan(s.ctx, "p2p_server_start")
+	defer span.End()
 	log.Info("Starting service")
 
 	if s.bootstrapNode != "" {
-		if err := startDHTDiscovery(s.ctx, s.host, s.bootstrapNode); err != nil {
+		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
+		}
+		if err := s.dht.Bootstrap(ctx); err != nil {
+			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
 	}
 
-	if err := startmDNSDiscovery(s.ctx, s.host); err != nil {
+	if s.relayNodeAddr != "" {
+		if err := dialRelayNode(ctx, s.host, s.relayNodeAddr); err != nil {
+			log.Errorf("Could not dial relay node: %v", err)
+		}
+	}
+
+	if err := startmDNSDiscovery(ctx, s.host); err != nil {
 		log.Errorf("Could not start peer discovery via mDNS: %v", err)
 		return
 	}
+
+	startPeerWatcher(ctx, s.host)
 }
 
 // Stop the main p2p loop.

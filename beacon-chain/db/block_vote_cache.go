@@ -28,6 +28,20 @@ func (db *BeaconDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteC
 	return blockVoteCache, err
 }
 
+// DeleteBlockVoteCache removes vote cache for specified blocks from DB.
+func (db *BeaconDB) DeleteBlockVoteCache(blockHashes [][32]byte) error {
+	err := db.update(func(tx *bolt.Tx) error {
+		blockVoteCacheInfo := tx.Bucket(blockVoteCacheBucket)
+		for _, h := range blockHashes {
+			if err := blockVoteCacheInfo.Delete(h[:]); err != nil {
+				return fmt.Errorf("failed to delete block vote cache for block hash %x: %v", h, err)
+			}
+		}
+		return nil
+	})
+	return err
+}
+
 // WriteBlockVoteCache write block vote cache object into DB.
 func (db *BeaconDB) WriteBlockVoteCache(blockVoteCache utils.BlockVoteCache) error {
 	err := db.update(func(tx *bolt.Tx) error {

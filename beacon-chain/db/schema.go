@@ -26,6 +26,10 @@ var (
 	aStateLookupKey    = []byte("active-state")
 	cStateLookupKey    = []byte("crystallized-state")
 	simSlotLookupKey   = []byte("simulator-slot")
+
+	// DB internal use
+	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
+	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint64.
