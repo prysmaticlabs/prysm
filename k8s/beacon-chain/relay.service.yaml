@@ -1,14 +1,13 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: beacon-chain
+  name: relay
   namespace: beacon-chain
 spec:
   selector:
-    component: beacon-chain
-    universe: beacon-chain
+    component: relay
   ports:
     - port: 4000
       targetPort: 4000
-      name: grpc
+      name: relayport
   type: ClusterIP

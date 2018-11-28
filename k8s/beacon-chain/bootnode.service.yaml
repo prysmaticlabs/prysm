@@ -1,14 +1,13 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: beacon-chain
+  name: bootnode
   namespace: beacon-chain
 spec:
   selector:
-    component: beacon-chain
-    universe: beacon-chain
+    component: bootnode
   ports:
     - port: 4000
       targetPort: 4000
-      name: grpc
+      name: bootnodeport
   type: ClusterIP

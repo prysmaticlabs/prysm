@@ -2,6 +2,7 @@ kind: Deployment
 apiVersion: apps/v1beta1
 metadata:
   name: node
+  namespace: pow
   labels:
     universe: geth
     component: node
@@ -41,11 +42,13 @@ spec:
             - >
               geth
               --networkid=1337
-              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP) 
+              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0
               --rpccorsdomain="*"
+              --rpcvhosts="*"
               --ws
               --wsaddr=0.0.0.0
               --wsorigins="*"
@@ -53,6 +56,7 @@ spec:
               --debug
               --verbosity=4
               --nousb
+              --lightserv=50
           volumeMounts:
             - name: chaindata
               mountPath: "/ethereum"

@@ -25,6 +25,10 @@ var (
 	mainChainHeightKey = []byte("chain-height")
 	stateLookupKey     = []byte("state")
 	simSlotLookupKey   = []byte("simulator-slot")
+
+	// DB internal use
+	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
+	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint64.
