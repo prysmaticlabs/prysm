@@ -149,7 +149,7 @@ func main() {
 
 		if k8sConfigMapName != "" {
 			if err := updateKubernetesConfigMap(k8sConfigMapName, addr.Hex()); err != nil {
-				log.Errorf("Failed to update kubernetes config map: %v", err)
+				log.Fatalf("Failed to update kubernetes config map: %v", err)
 			} else {
 				log.Printf("Updated config map %s", k8sConfigMapName)
 			}
