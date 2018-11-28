@@ -6,6 +6,7 @@ load("@k8s_ingress//:defaults.bzl", "k8s_ingress")
 load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_secret//:defaults.bzl", "k8s_secret")
 load("@k8s_service//:defaults.bzl", "k8s_service")
+load("//tools:kubesec.bzl", "k8s_encrypted_secret")
 
 k8s_objects(
     name = "everything",
@@ -73,6 +74,12 @@ k8s_objects(
     name = name + ".secret",
     template = name + ".secret.yaml",
     namespace = _NAMESPACE,
+) for name in _secrets]
+
+[k8s_encrypted_secret(
+    name = name + ".encrypted_secret",
+    template = name + ".encrypted_secret.yaml",
+    out = name + ".secret.yaml",
 ) for name in _secrets]
 
 k8s_objects(

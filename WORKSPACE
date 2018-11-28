@@ -928,3 +928,9 @@ go_repository(
     commit = "41590e5e6d7a5a30921e686fbc57c45545d8bf29",
     importpath = "cloud.google.com/go",
 )
+
+go_repository(
+    name = "com_github_inconshreveable_mousetrap",
+    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    importpath = "github.com/inconshreveable/mousetrap",
+)
