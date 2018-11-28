@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "bed42c95df7d5f673175b43d85f6b4047efe3814",
+    commit = "0a71a4356c3f4bcbdd16294c78ca2a31fda36cca",
     importpath = "google.golang.org/api",
 )
 
@@ -830,4 +830,36 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_interface_conn",
     commit = "c7cda99284db0bea441058da8fd1f1373c763ed6",
     importpath = "github.com/libp2p/go-libp2p-interface-conn",
+)
+
+go_repository(
+    name = "io_k8s_client_go",
+    commit = "8abb21031259350aad0799bb42ba213ee8bb3399",
+    importpath = "k8s.io/client-go",
+)
+
+go_repository(
+    name = "io_k8s_apimachinery",
+    build_file_proto_mode = "disable_global",
+    commit = "4a9a8137c0a17bc4594f544987b3f0d48b2e3d3a",
+    importpath = "k8s.io/apimachinery",
+)
+
+go_repository(
+    name = "io_k8s_klog",
+    commit = "9be023858d57e1beb4d7c29fa54093cea2cf9583",
+    importpath = "k8s.io/klog",
+)
+
+go_repository(
+    name = "com_github_google_gofuzz",
+    commit = "24818f796faf91cd76ec7bddd72458fbced7a6c1",
+    importpath = "github.com/google/gofuzz",
+)
+
+go_repository(
+    name = "io_k8s_api",
+    build_file_proto_mode = "disable_global",
+    commit = "b7bd5f2d334ce968edc54f5fdb2ac67ce39c56d5",
+    importpath = "k8s.io/api",
 )
