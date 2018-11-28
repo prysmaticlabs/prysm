@@ -198,6 +198,23 @@ func (b *BeaconState) Validators() []*pb.ValidatorRecord {
 	return b.data.Validators
 }
 
+// JustifiedSlotBitfield returns the bitfield of justified slots corresponding to
+// this beacon block.
+func (b *BeaconState) JustifiedSlotBitfield() []byte {
+	return b.data.JustifiedSlotBitfield
+}
+
+// JustificationSource returns the beacon block's justification source.
+func (b *BeaconState) JustificationSource() uint64 {
+	return b.data.JustificationSource
+}
+
+// PrevCycleJustificationSource returns the previous cycle's justification source
+// for this block.
+func (b *BeaconState) PrevCycleJustificationSource() uint64 {
+	return b.data.PrevCycleJustificationSource
+}
+
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.
 func (b *BeaconState) LastStateRecalculationSlot() uint64 {
 	return b.data.LastStateRecalculationSlot
