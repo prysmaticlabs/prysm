@@ -1,4 +1,3 @@
-
 syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
@@ -11,36 +10,34 @@ message BeaconState {
   repeated CrosslinkRecord crosslinks = 3;
   uint64 last_state_recalculation_slot = 4;
   uint64 last_finalized_slot = 5;
-  uint64 last_justified_slot = 6;
-  uint64 justified_streak = 7;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint32 persistent_committees = 9;
-  repeated ShardReassignmentRecord persistent_committee_reassignment = 10;
-  bytes next_shuffling_seed = 11;
-  repeated uint64 deposits_penalized_in_period = 12;
-  bytes validator_delta_hash_chain = 13;
-  uint64 current_exit_seq = 14;
-  uint64 genesis_time = 15;
-  bytes known_pow_receipt_root = 16;
-  bytes candidate_pow_receipt_root = 17;
-  uint64 candidate_pow_receipt_root_votes = 18;
-  uint64 pre_fork_version = 19;
-  uint64 post_fork_version = 20;
-  uint64 fork_slot_number = 21;
-  repeated AggregatedAttestation pending_attestations = 22;
-  repeated bytes recent_block_hashes = 23;
-  bytes randao_mix = 24;
+  uint64 justification_source = 6;
+  uint64 prev_cycle_justification_source = 7;
+  bytes justified_slot_bitfield = 8;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 9;
+  repeated uint32 persistent_committees = 10;
+  repeated ShardReassignmentRecord persistent_committee_reassignment = 11;
+  bytes next_shuffling_seed = 12;
+  repeated uint64 deposits_penalized_in_period = 13;
+  bytes validator_delta_hash_chain = 14;
+  uint64 current_exit_seq = 15;
+  uint64 genesis_time = 16;
+  bytes processed_pow_receipt_root = 17;
+  ForkData fork_data = 18; 
+  repeated CandidatePowReceiptRootRecord candidate_pow_receipt_roots = 19;
+  repeated AggregatedAttestation pending_attestations = 20;
+  repeated bytes recent_block_hashes = 21;
+  bytes randao_mix = 22;
 }
 
 message ValidatorRecord {
   bytes pubkey = 1;
-  uint64 withdrawal_shard = 2;
-  bytes withdrawal_address = 3;
-  bytes randao_commitment = 4;
+  bytes withdrawal_credentials = 2;
+  bytes randao_commitment = 3;
+  uint64 randao_skips = 4;
   uint64 balance = 5;
   uint64 status = 6;
-  uint64 exit_slot = 7;
-  uint64 randao_last_change = 8;
+  uint64 last_status_change_slot = 7;
+  uint64 exit_seq = 8;
 }
 
 message ShardReassignmentRecord {
@@ -50,23 +47,21 @@ message ShardReassignmentRecord {
 }
 
 message AggregatedAttestation {
-  uint64 slot = 1;
-  uint64 shard = 2;
-  uint64 justified_slot = 3;
-  bytes justified_block_hash = 4;
-  bytes shard_block_hash = 5;
-  bytes attester_bitfield = 6;
-  repeated bytes oblique_parent_hashes = 7;
-  repeated uint64 aggregate_sig = 8;
+  AttestationSignedData signed_data = 1;
+  bytes attester_bitfield = 2;
+  bytes poc_bitfield = 3;
+  repeated uint64 aggregate_sig = 4;
 }
 
 message AttestationSignedData {
-  uint64 fork_version = 1;
-  uint64 slot = 2;
-  uint64 shard = 3;
-  repeated bytes parent_hashes = 4;
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes block_hash = 3;
+  bytes cycle_boundary_hash = 4;
   bytes shard_block_hash = 5;
-  uint64 justified_slot = 6;
+  bytes last_crosslink_hash = 6;
+  uint64 justified_slot = 7;
+  bytes justified_block_hash = 8;
 }
 
 message AttestationHashes {
@@ -92,13 +87,25 @@ message ShardAndCommittee {
   repeated uint32 committee = 2;
 }
 
+message CandidatePowReceiptRootRecord {
+  bytes candidate_pow_receipt_root = 1;
+  uint64 votes = 2;
+}
+
+message ForkData {
+  uint64 pre_fork_version = 1;
+  uint64 post_fork_version = 2;
+  uint64 fork_slot_number = 3;
+}
+
 message BeaconBlock {
   repeated bytes ancestor_hashes = 1;
   uint64 slot = 2;
   bytes randao_reveal = 3;
-  bytes pow_chain_ref = 4;
+  bytes candidate_pow_receipt_root = 4;
   bytes state_root = 5;
   google.protobuf.Timestamp timestamp = 6;
   repeated AggregatedAttestation attestations = 7;
   repeated SpecialRecord specials = 8;
+  repeated uint64 proposer_signature = 9;
 }
