@@ -49,12 +49,13 @@ func TestCopyState(t *testing.T) {
 	state1, _ := NewGenesisBeaconState(nil)
 	state2 := state1.CopyState()
 
-	newAttestations := []*pb.AggregatedAttestation{
-		{
+	newAttestations := []*pb.AggregatedAttestation{}
+	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 1,
 		},
-	}
+	})
 
 	state1.data.PendingAttestations = append(state1.data.PendingAttestations, newAttestations...)
 	if len(state1.data.PendingAttestations) == len(state2.data.PendingAttestations) {
@@ -85,16 +86,19 @@ func TestCopyState(t *testing.T) {
 func TestUpdateAttestations(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
 
-	newAttestations := []*pb.AggregatedAttestation{
-		{
+	newAttestations := []*pb.AggregatedAttestation{}
+	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 0,
 		},
-		{
+	})
+	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 1,
 		},
-	}
+	})
 
 	state.SetPendingAttestations(newAttestations)
 	attestations := state.data.PendingAttestations
@@ -105,16 +109,19 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
-	newAttestations := []*pb.AggregatedAttestation{
-		{
+	newAttestations := []*pb.AggregatedAttestation{}
+	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+		SignedData: &pb.AttestationSignedData{
 			Slot:  10,
 			Shard: 2,
 		},
-		{
+	})
+	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+		SignedData: &pb.AttestationSignedData{
 			Slot:  9,
 			Shard: 3,
 		},
-	}
+	})
 
 	state.SetPendingAttestations(newAttestations)
 	state.ClearAttestations(8)
@@ -203,160 +210,4 @@ func areBytesEqual(s1, s2 []byte) bool {
 		}
 	}
 	return true
-}
-
-// func TestCalculateNewActiveState(t *testing.T) {
-// 	block := NewBlock(&pb.BeaconBlock{
-// 		Slot:           10,
-// 		AncestorHashes: [][]byte{{}},
-// 	})
-
-// 	cState, err := NewGenesisCrystallizedState(nil)
-// 	if err != nil {
-// 		t.Fatalf("failed to initialize genesis crystallized state: %v", err)
-// 	}
-
-// 	recentBlockHashes := [][]byte{}
-// 	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-// 		recentBlockHashes = append(recentBlockHashes, []byte{0})
-// 	}
-
-// 	aState := NewActiveState(&pb.ActiveState{
-// 		PendingAttestations: []*pb.AggregatedAttestation{
-// 			{
-// 				Slot:  0,
-// 				Shard: 0,
-// 			},
-// 			{
-// 				Slot:  0,
-// 				Shard: 1,
-// 			},
-// 		},
-// 		RecentBlockHashes: recentBlockHashes,
-// 	})
-
-// 	aState, err = aState.CalculateNewActiveState(block, cState, 0)
-// 	if err != nil {
-// 		t.Fatalf("failed to calculate new active state: %v", err)
-// 	}
-
-// 	if len(aState.PendingAttestations()) != 2 {
-// 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
-// 	}
-
-// 	if len(aState.RecentBlockHashes()) != 2*int(params.BeaconConfig().CycleLength) {
-// 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
-// 	}
-
-// 	aState, err = aState.CalculateNewActiveState(block, cState, 0)
-// 	if err != nil {
-// 		t.Fatalf("failed to calculate new active state: %v", err)
-// 	}
-
-// 	if len(aState.PendingAttestations()) != 2 {
-// 		t.Fatalf("expected 2 pending attestations, got %d", len(aState.PendingAttestations()))
-// 	}
-
-// 	if len(aState.RecentBlockHashes()) != 2*int(params.BeaconConfig().CycleLength) {
-// 		t.Fatalf("incorrect number of items in RecentBlockHashes: %d", len(aState.RecentBlockHashes()))
-// 	}
-// }
-
-func TestGetSignedParentHashes(t *testing.T) {
-	// Test the scenario described in the spec:
-	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	recentBlockHashes := make([][]byte, 11)
-	recentBlockHashes[0] = createHashFromByte('Z')
-	recentBlockHashes[1] = createHashFromByte('A')
-	recentBlockHashes[2] = createHashFromByte('B')
-	recentBlockHashes[3] = createHashFromByte('C')
-	recentBlockHashes[4] = createHashFromByte('D')
-	recentBlockHashes[5] = createHashFromByte('E')
-	recentBlockHashes[6] = createHashFromByte('F')
-	recentBlockHashes[7] = createHashFromByte('G')
-	recentBlockHashes[8] = createHashFromByte('H')
-	recentBlockHashes[9] = createHashFromByte('I')
-	recentBlockHashes[10] = createHashFromByte('J')
-
-	state := NewBeaconState(&pb.BeaconState{RecentBlockHashes: recentBlockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 11})
-
-	obliqueParentHashes := make([][]byte, 2)
-	obliqueParentHashes[0] = createHashFromByte(0)
-	obliqueParentHashes[1] = createHashFromByte(1)
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: obliqueParentHashes,
-		Slot:                5,
-	}
-
-	hashes, err := state.SignedParentHashes(b, a)
-	if err != nil {
-		t.Fatalf("failed to SignedParentHashes: %v", err)
-	}
-	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-	if hashes[2][0] != 0 || hashes[3][0] != 1 {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-}
-
-func TestGetSignedParentHashesIndexFail(t *testing.T) {
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	recentBlockHashes := make([][]byte, 8)
-	recentBlockHashes[0] = createHashFromByte('Z')
-	recentBlockHashes[1] = createHashFromByte('A')
-	recentBlockHashes[2] = createHashFromByte('B')
-	recentBlockHashes[3] = createHashFromByte('C')
-	recentBlockHashes[4] = createHashFromByte('D')
-	recentBlockHashes[5] = createHashFromByte('E')
-	recentBlockHashes[6] = createHashFromByte('F')
-	recentBlockHashes[7] = createHashFromByte('G')
-
-	state := NewBeaconState(&pb.BeaconState{RecentBlockHashes: recentBlockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 8})
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                2,
-	}
-
-	_, err := state.SignedParentHashes(b, a)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-
-	a2 := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                9,
-	}
-	_, err = state.SignedParentHashes(b, a2)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-}
-
-func createHashFromByte(repeatedByte byte) []byte {
-	hash := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		hash[i] = repeatedByte
-	}
-
-	return hash
 }

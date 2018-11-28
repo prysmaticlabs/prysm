@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -41,10 +40,6 @@ func TestGenesisBlock(t *testing.T) {
 
 	if b1.RandaoReveal() != [32]byte{} {
 		t.Error("genesis block missing RandaoReveal field")
-	}
-
-	if b1.PowChainRef() != common.BytesToHash([]byte{}) {
-		t.Error("genesis block missing PowChainRef field")
 	}
 
 	if b1.StateRoot() != stateHash {

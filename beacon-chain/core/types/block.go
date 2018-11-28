@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -30,7 +29,6 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 			data: &pb.BeaconBlock{
 				AncestorHashes: ancestorHashes,
 				RandaoReveal:   []byte{0},
-				PowChainRef:    []byte{0},
 				StateRoot:      []byte{0},
 				Specials:       []*pb.SpecialRecord{},
 			},
@@ -100,11 +98,6 @@ func (b *Block) AttestationCount() int {
 // Attestations returns an array of attestations in the block.
 func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
-}
-
-// PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
-func (b *Block) PowChainRef() common.Hash {
-	return common.BytesToHash(b.data.PowChainRef)
 }
 
 // RandaoReveal returns the blake2b randao hash.

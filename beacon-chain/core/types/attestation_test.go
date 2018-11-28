@@ -10,14 +10,15 @@ import (
 
 func TestAttestation(t *testing.T) {
 	data := &pb.AggregatedAttestation{
-		Slot:                0,
-		Shard:               0,
-		JustifiedSlot:       0,
-		JustifiedBlockHash:  []byte{0},
-		ShardBlockHash:      []byte{0},
-		AttesterBitfield:    []byte{0},
-		ObliqueParentHashes: [][]byte{{0}},
-		AggregateSig:        []uint64{0},
+		SignedData: &pb.AttestationSignedData{
+			Slot:               0,
+			Shard:              0,
+			JustifiedSlot:      0,
+			JustifiedBlockHash: []byte{0},
+			ShardBlockHash:     []byte{0},
+		},
+		AttesterBitfield: []byte{0},
+		AggregateSig:     []uint64{0},
 	}
 	attestation := NewAttestation(data)
 	attestation.SlotNumber()
@@ -25,9 +26,9 @@ func TestAttestation(t *testing.T) {
 	attestation.JustifiedSlotNumber()
 	attestation.JustifiedBlockHash()
 	attestation.AttesterBitfield()
-	attestation.ObliqueParentHashes()
 	attestation.AggregateSig()
 	attestation.Key()
+	attestation.SignedData()
 
 	emptyAttestation := &Attestation{}
 	if _, err := emptyAttestation.Marshal(); err == nil {
@@ -59,8 +60,10 @@ func TestAttestation(t *testing.T) {
 
 func TestContainsValidator(t *testing.T) {
 	attestation := NewAttestation(&pb.AggregatedAttestation{
-		Slot:             0,
-		Shard:            0,
+		SignedData: &pb.AttestationSignedData{
+			Slot:  0,
+			Shard: 0,
+		},
 		AttesterBitfield: []byte{7}, // 0000 0111
 	})
 
