@@ -45,7 +45,7 @@ spec:
               -bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               -ethport=30303
               -ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
-              -faucet.amount=35
+              -faucet.amount=350
               -faucet.minutes=1440
               -faucet.name=validator-faucet
               -faucet.tiers=3
