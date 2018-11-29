@@ -38,8 +38,8 @@ k8s_encrypted_secret(
     template = "default-server-secret-encrypted.yaml",
     out = "default-server-secret.yaml",
     tags = [
-       "local",
-       "manual",
+        "local",
+        "manual",
     ],
 )
 
