@@ -1,48 +1,81 @@
-pragma solidity 0.4.23;
+pragma solidity 0.5.0;
+
 
 contract ValidatorRegistration {
-    event ValidatorRegistered(
-        bytes32 indexed hashedPubkey,
-        uint256 withdrawalShardID,
-        address indexed withdrawalAddressbytes32,
-        bytes32 indexed randaoCommitment
+
+    event HashChainValue(
+        bytes32 indexed previousReceiptRoot,
+        byte[2064] data,
+        uint totalDepositcount
     );
 
-    mapping (bytes32 => bool) public usedHashedPubkey;
+    event ChainStart(
+        bytes32 indexed receiptRoot,
+        bytes[8] time
+    );
 
-    uint public constant VALIDATOR_DEPOSIT = 32 ether;
+    uint public constant DEPOSIT_SIZE = 32 ether;
+    uint public constant DEPOSITS_FOR_CHAIN_START = 2 ** 14;
+    uint public constant MIN_TOPUP_SIZE = 1 ether;
+    uint public constant GWEI_PER_ETH = 10 ** 9;
+    uint public constant MERKLE_TREE_DEPTH = 32;
+    uint public constant SECONDS_PER_DAY = 86400;
 
-    // Validator registers by sending a transaction of 32ETH to
-    // the following deposit function. The deposit function takes in
-    // validator's public key, withdrawal shard ID (which shard
-    // to send the deposit back to), withdrawal address (which address
-    // to send the deposit back to) and randao commitment.
+    mapping (uint => bytes32) public receiptTree;
+    uint public totalDepositCount;
+
+    // When users wish to become a validator by moving ETH from
+    // 1.0 chian to the 2.0 chain, they should call this function
+    // sending along DEPOSIT_SIZE ETH and providing depositParams
+    // as a simple serialize'd DepositParams object of the following
+    // form: 
+    // {
+    //    'pubkey': 'int256',
+    //    'proof_of_possession': ['int256'],
+    //    'withdrawal_credentials`: 'hash32',
+    //    'randao_commitment`: 'hash32'
+    // }
     function deposit(
-        bytes _pubkey,
-        uint _withdrawalShardID,
-        address _withdrawalAddressbytes32,
-        bytes32 _randaoCommitment
+        bytes[2064] depositParams
     )
         public
         payable
     {
+        uint memory index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
+        bytes[8] storage msgGweiInBytes = bytes8(msg.value);
+        bytes[8] storage timeStampInBytes = bytes8(msg.value);
+        bytes[2064] storage depositData = msgGweiInBytes + timeStampInBytes + depositParams;
+        
+        emit HashChainValue(receiptTree[1], depositParams, totalDepositCount);
+
+        receiptTree[index] = keccak256(depositData);
+        for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
+            index = index / 2;
+            receiptTree[index] = keccak256(receiptTree[index * 2] + receiptTree[index * 2 + 1]);
+        }
+
         require(
-            msg.value == VALIDATOR_DEPOSIT,
-            "Incorrect validator deposit"
+            msg.value < DEPOSIT_SIZE,
+            "Deposit can't be greater than DEPOSIT_SIZE."
         );
         require(
-            _pubkey.length == 48,
-            "Public key is not 48 bytes"
+            msg.value > MIN_TOPUP_SIZE,
+            "Deposit can't be lesser than MIN_TOPUP_SIZE."
         );
+        if (msg.value == DEPOSIT_SIZE) {
+            totalDepositCount++;
+        }
 
-        bytes32 hashedPubkey = keccak256(abi.encodePacked(_pubkey));
-        require(
-            !usedHashedPubkey[hashedPubkey],
-            "Public key already used"
-        );
+        // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
+        // as genesis time.
+        if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
+            uint memory timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+            bytes[8] memory timestampDayBoundryBytes = bytes8(timestampDayBoundry);
+            emit Chainstart(receiptTree[1], timestampDayBoundryBytes);
+        }
+    }
 
-        usedHashedPubkey[hashedPubkey] = true;
-
-        emit ValidatorRegistered(hashedPubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment);
+    function getReceiptRoot() public constant returns(bytes32) {
+        return receiptTree[1];
     }
 }
