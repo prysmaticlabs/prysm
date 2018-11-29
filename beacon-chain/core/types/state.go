@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -65,7 +63,7 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 				PostForkVersion: uint64(params.BeaconConfig().InitialForkVersion),
 				ForkSlotNumber:  0,
 			},
-			PendingAttestations: []*pb.AggregatedAttestation{},
+			PendingAttestations: []*pb.ProcessedAttestation{},
 			RecentBlockHashes:   recentBlockHashes,
 			RandaoMix:           make([]byte, 0, 32),
 		},
@@ -116,6 +114,7 @@ func (b *BeaconState) CopyState() *BeaconState {
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
+		PendingAttestations:        b.PendingAttestations(),
 		ForkData: &pb.ForkData{
 			PreForkVersion:  b.data.ForkData.PreForkVersion,
 			PostForkVersion: b.data.ForkData.PostForkVersion,
@@ -255,7 +254,7 @@ func (b *BeaconState) RecentBlockHashes() [][32]byte {
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
-func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
+func (b *BeaconState) PendingAttestations() []*pb.ProcessedAttestation {
 	return b.data.PendingAttestations
 }
 
@@ -283,29 +282,10 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 	return totalPenalty
 }
 
-// SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
-	recentBlockHashes := b.RecentBlockHashes()
-	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
-
-	startIdx := int(attestation.SignedData.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
-	endIdx := startIdx - int(params.BeaconConfig().CycleLength)
-	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
-		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
-	}
-
-	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
-	for i := startIdx; i < endIdx; i++ {
-		hashes = append(hashes, recentBlockHashes[i])
-	}
-
-	return hashes, nil
-}
-
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 	existing := b.data.PendingAttestations
-	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	update := make([]*pb.ProcessedAttestation, 0, len(existing))
 	for _, a := range existing {
 		if a.SignedData.Slot >= lastStateRecalc {
 			update = append(update, a)
@@ -384,7 +364,7 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 }
 
 // SetPendingAttestations updates the inner proto's pending attestations.
-func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
+func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.ProcessedAttestation) {
 	b.data.PendingAttestations = pendingAttestations
 }
 

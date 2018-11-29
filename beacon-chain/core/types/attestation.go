@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -196,9 +197,9 @@ func VerifyProposerAttestation(
 }
 
 // ContainsValidator checks if the validator is included in the attestation.
-// TODO(#569): Modify method to accept a single index rather than a bitfield.
 func ContainsValidator(attesterBitfield []byte, bitfield []byte) bool {
 	for i := 0; i < len(bitfield); i++ {
+		log.Printf("%v", bitfield[i]&attesterBitfield[i])
 		if bitfield[i]&attesterBitfield[i] != 0 {
 			return true
 		}
