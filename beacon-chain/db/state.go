@@ -16,6 +16,8 @@ func (db *BeaconDB) InitializeState(genesisValidators []*pb.ValidatorRecord) err
 		return err
 	}
 
+	// These functions are safe to ignore as the genesis types will not
+	// fail a hash or marshal call.
 	// #nosec G104
 	stateHash, _ := beaconState.Hash()
 	genesisBlock := types.NewGenesisBlock(stateHash)
@@ -52,7 +54,7 @@ func (db *BeaconDB) InitializeState(genesisValidators []*pb.ValidatorRecord) err
 	})
 }
 
-// GetState --
+// GetState retrieves the current canonical beacon state in the node.
 func (db *BeaconDB) GetState() (*types.BeaconState, error) {
 	var beaconState *types.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
