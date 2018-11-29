@@ -866,7 +866,7 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "b3b38efff0ecda7fd59ae59b5d09469fda51b5d7",
+    commit = "258a089d123e6d519a5cf93bbe57a77a8a3aaf68",
     importpath = "github.com/shyiko/kubesec",
     # Update after https://github.com/shyiko/kubesec/pull/19
     remote = "https://github.com/prestonvanloon/kubesec",
