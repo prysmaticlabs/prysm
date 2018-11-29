@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -55,19 +53,19 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 	return &BeaconState{
 		data: &pb.BeaconState{
 			LastStateRecalculationSlot: 0,
-			JustifiedStreak:            0,
-			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
-			ForkSlotNumber:             0,
 			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
-			PreForkVersion:             uint64(params.BeaconConfig().InitialForkVersion),
-			PostForkVersion:            uint64(params.BeaconConfig().InitialForkVersion),
-			PendingAttestations:        []*pb.AggregatedAttestation{},
-			RecentBlockHashes:          recentBlockHashes,
-			RandaoMix:                  make([]byte, 0, 32),
+			ForkData: &pb.ForkData{
+				PreForkVersion:  uint64(params.BeaconConfig().InitialForkVersion),
+				PostForkVersion: uint64(params.BeaconConfig().InitialForkVersion),
+				ForkSlotNumber:  0,
+			},
+			PendingAttestations: []*pb.ProcessedAttestation{},
+			RecentBlockHashes:   recentBlockHashes,
+			RandaoMix:           make([]byte, 0, 32),
 		},
 	}, nil
 }
@@ -85,13 +83,12 @@ func (b *BeaconState) CopyState() *BeaconState {
 	validators := make([]*pb.ValidatorRecord, len(b.Validators()))
 	for index, validator := range b.Validators() {
 		validators[index] = &pb.ValidatorRecord{
-			Pubkey:            validator.GetPubkey(),
-			WithdrawalShard:   validator.GetWithdrawalShard(),
-			WithdrawalAddress: validator.GetWithdrawalAddress(),
-			RandaoCommitment:  validator.GetRandaoCommitment(),
-			Balance:           validator.GetBalance(),
-			Status:            validator.GetStatus(),
-			ExitSlot:          validator.GetExitSlot(),
+			Pubkey:                validator.GetPubkey(),
+			WithdrawalCredentials: validator.GetWithdrawalCredentials(),
+			RandaoCommitment:      validator.GetRandaoCommitment(),
+			Balance:               validator.GetBalance(),
+			Status:                validator.GetStatus(),
+			LastStatusChangeSlot:  validator.GetLastStatusChangeSlot(),
 		}
 	}
 
@@ -111,17 +108,18 @@ func (b *BeaconState) CopyState() *BeaconState {
 
 	newState := BeaconState{&pb.BeaconState{
 		LastStateRecalculationSlot: b.LastStateRecalculationSlot(),
-		JustifiedStreak:            b.JustifiedStreak(),
-		LastJustifiedSlot:          b.LastJustifiedSlot(),
 		LastFinalizedSlot:          b.LastFinalizedSlot(),
 		ValidatorSetChangeSlot:     b.ValidatorSetChangeSlot(),
 		Crosslinks:                 crosslinks,
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
-		PreForkVersion:             b.data.PreForkVersion,
-		PostForkVersion:            b.data.PostForkVersion,
-		ForkSlotNumber:             b.data.ForkSlotNumber,
+		PendingAttestations:        b.PendingAttestations(),
+		ForkData: &pb.ForkData{
+			PreForkVersion:  b.data.ForkData.PreForkVersion,
+			PostForkVersion: b.data.ForkData.PostForkVersion,
+			ForkSlotNumber:  b.data.ForkData.ForkSlotNumber,
+		},
 	}}
 
 	return &newState
@@ -199,6 +197,23 @@ func (b *BeaconState) Validators() []*pb.ValidatorRecord {
 	return b.data.Validators
 }
 
+// JustifiedSlotBitfield returns the bitfield of justified slots corresponding to
+// this beacon block.
+func (b *BeaconState) JustifiedSlotBitfield() []byte {
+	return b.data.JustifiedSlotBitfield
+}
+
+// JustificationSource returns the beacon block's justification source.
+func (b *BeaconState) JustificationSource() uint64 {
+	return b.data.JustificationSource
+}
+
+// PrevCycleJustificationSource returns the previous cycle's justification source
+// for this block.
+func (b *BeaconState) PrevCycleJustificationSource() uint64 {
+	return b.data.PrevCycleJustificationSource
+}
+
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.
 func (b *BeaconState) LastStateRecalculationSlot() uint64 {
 	return b.data.LastStateRecalculationSlot
@@ -209,16 +224,6 @@ func (b *BeaconState) LastFinalizedSlot() uint64 {
 	return b.data.LastFinalizedSlot
 }
 
-// LastJustifiedSlot return the last justified slot of the beacon chain.
-func (b *BeaconState) LastJustifiedSlot() uint64 {
-	return b.data.LastJustifiedSlot
-}
-
-// JustifiedStreak returns number of consecutive justified slots ending at head.
-func (b *BeaconState) JustifiedStreak() uint64 {
-	return b.data.JustifiedStreak
-}
-
 // DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period.
 func (b *BeaconState) DepositsPenalizedInPeriod() []uint64 {
 	return b.data.DepositsPenalizedInPeriod
@@ -226,17 +231,17 @@ func (b *BeaconState) DepositsPenalizedInPeriod() []uint64 {
 
 // ForkSlotNumber returns the slot of last fork.
 func (b *BeaconState) ForkSlotNumber() uint64 {
-	return b.data.ForkSlotNumber
+	return b.data.ForkData.ForkSlotNumber
 }
 
 // PreForkVersion returns the last pre fork version.
 func (b *BeaconState) PreForkVersion() uint64 {
-	return b.data.PreForkVersion
+	return b.data.ForkData.PreForkVersion
 }
 
 // PostForkVersion returns the last post fork version.
 func (b *BeaconState) PostForkVersion() uint64 {
-	return b.data.PostForkVersion
+	return b.data.ForkData.PostForkVersion
 }
 
 // RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
@@ -249,7 +254,7 @@ func (b *BeaconState) RecentBlockHashes() [][32]byte {
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
-func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
+func (b *BeaconState) PendingAttestations() []*pb.ProcessedAttestation {
 	return b.data.PendingAttestations
 }
 
@@ -277,36 +282,12 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 	return totalPenalty
 }
 
-// SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
-	recentBlockHashes := b.RecentBlockHashes()
-	obliqueParentHashes := attestation.ObliqueParentHashes
-	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
-
-	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
-	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
-	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
-		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
-	}
-
-	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
-	for i := startIdx; i < endIdx; i++ {
-		hashes = append(hashes, recentBlockHashes[i])
-	}
-
-	for i := 0; i < len(obliqueParentHashes); i++ {
-		hash := common.BytesToHash(obliqueParentHashes[i])
-		hashes = append(hashes, hash)
-	}
-	return hashes, nil
-}
-
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 	existing := b.data.PendingAttestations
-	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	update := make([]*pb.ProcessedAttestation, 0, len(existing))
 	for _, a := range existing {
-		if a.GetSlot() >= lastStateRecalc {
+		if a.SignedData.Slot >= lastStateRecalc {
 			update = append(update, a)
 		}
 	}
@@ -357,19 +338,24 @@ func (b *BeaconState) SetDepositsPenalizedInPeriod(penalizedDeposits []uint64) {
 	b.data.DepositsPenalizedInPeriod = penalizedDeposits
 }
 
-// SetLastJustifiedSlot updates the inner proto's last justified slot.
-func (b *BeaconState) SetLastJustifiedSlot(justifiedSlot uint64) {
-	b.data.LastJustifiedSlot = justifiedSlot
+// SetJustificationSource updates the inner proto's justification source.
+func (b *BeaconState) SetJustificationSource(justificationSource uint64) {
+	b.data.JustificationSource = justificationSource
+}
+
+// SetPrevCycleJustificationSource updates the inner proto's previous cycle justification source.
+func (b *BeaconState) SetPrevCycleJustificationSource(justificationSource uint64) {
+	b.data.PrevCycleJustificationSource = justificationSource
+}
+
+// SetJustifiedSlotBitfield updates the inner proto's justified slot bitfield.
+func (b *BeaconState) SetJustifiedSlotBitfield(bitfield []byte) {
+	b.data.JustifiedSlotBitfield = bitfield
 }
 
 // SetLastFinalizedSlot updates the inner proto's last finalized slot.
 func (b *BeaconState) SetLastFinalizedSlot(finalizedSlot uint64) {
 	b.data.LastFinalizedSlot = finalizedSlot
-}
-
-// SetJustifiedStreak updates the inner proto's justified streak.
-func (b *BeaconState) SetJustifiedStreak(justifiedSlot uint64) {
-	b.data.JustifiedStreak = justifiedSlot
 }
 
 // SetLastStateRecalculationSlot updates the inner proto's last state recalc slot.
@@ -378,7 +364,7 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 }
 
 // SetPendingAttestations updates the inner proto's pending attestations.
-func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
+func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.ProcessedAttestation) {
 	b.data.PendingAttestations = pendingAttestations
 }
 
@@ -412,6 +398,5 @@ func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {
 	if numPeriods < period+1 {
 		return 0
 	}
-
 	return penalties[period]
 }

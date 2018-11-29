@@ -128,10 +128,10 @@ func (p *Proposer) processAttestation(done <-chan struct{}) {
 		case <-done:
 			log.Debug("Proposer context closed, exiting goroutine")
 			return
-		case attestationRecord := <-p.attestationChan:
-			attestationExists := p.DoesAttestationExist(attestationRecord)
+		case AggregatedAttestation := <-p.attestationChan:
+			attestationExists := p.DoesAttestationExist(AggregatedAttestation)
 			if !attestationExists {
-				p.AddPendingAttestation(attestationRecord)
+				p.AddPendingAttestation(AggregatedAttestation)
 				log.Info("Attestation stored in memory")
 			}
 		}

@@ -27,11 +27,11 @@ func InitialValidators() []*pb.ValidatorRecord {
 	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
 	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           config.DepositSize * config.Gwei,
-			WithdrawalAddress: []byte{},
-			Pubkey:            []byte{},
-			RandaoCommitment:  randaoReveal[:],
+			Status:                uint64(params.Active),
+			Balance:               config.DepositSize * config.Gwei,
+			WithdrawalCredentials: []byte{},
+			Pubkey:                []byte{},
+			RandaoCommitment:      randaoReveal[:],
 		}
 	}
 	return validators
@@ -226,21 +226,19 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
-	withdrawalShard uint64,
-	withdrawalAddr []byte,
+	withdrawalCreds []byte,
 	randaoCommitment []byte,
 	status uint64) []*pb.ValidatorRecord {
 
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
 	newValidatorRecord := &pb.ValidatorRecord{
-		Pubkey:            pubKey,
-		WithdrawalShard:   withdrawalShard,
-		WithdrawalAddress: withdrawalAddr,
-		RandaoCommitment:  randaoCommitment,
-		Balance:           params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
-		Status:            status,
-		ExitSlot:          0,
+		Pubkey:                pubKey,
+		WithdrawalCredentials: withdrawalCreds,
+		RandaoCommitment:      randaoCommitment,
+		Balance:               params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
+		Status:                status,
+		LastStatusChangeSlot:  0,
 	}
 
 	index := minEmptyValidator(validators)
@@ -260,7 +258,7 @@ func ExitValidator(
 	currentSlot uint64,
 	panalize bool) *pb.ValidatorRecord {
 	// TODO(#614): Add validator set change
-	validator.ExitSlot = currentSlot
+	validator.LastStatusChangeSlot = currentSlot
 	if panalize {
 		validator.Status = uint64(params.Penalized)
 	} else {
@@ -290,7 +288,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 		}
 		if validators[i].Status == uint64(params.PendingExit) {
 			validators[i].Status = uint64(params.PendingWithdraw)
-			validators[i].ExitSlot = currentSlot
+			validators[i].LastStatusChangeSlot = currentSlot
 			totalChanged += validators[i].Balance
 
 			// TODO(#614): Add validator set change.
@@ -305,7 +303,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
 		isPenalized := validators[i].Status == uint64(params.Penalized)
-		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().MinWithdrawalPeriod
+		withdrawalSlot := validators[i].LastStatusChangeSlot + params.BeaconConfig().MinWithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3
@@ -330,13 +328,12 @@ func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 
 	for i, validator := range validatorSet {
 		newValidatorSet[i] = &pb.ValidatorRecord{
-			Pubkey:            validator.Pubkey,
-			WithdrawalShard:   validator.WithdrawalShard,
-			WithdrawalAddress: validator.WithdrawalAddress,
-			RandaoCommitment:  validator.RandaoCommitment,
-			Balance:           validator.Balance,
-			Status:            validator.Status,
-			ExitSlot:          validator.ExitSlot,
+			Pubkey:                validator.Pubkey,
+			WithdrawalCredentials: validator.WithdrawalCredentials,
+			RandaoCommitment:      validator.RandaoCommitment,
+			Balance:               validator.Balance,
+			Status:                validator.Status,
+			LastStatusChangeSlot:  validator.LastStatusChangeSlot,
 		}
 	}
 	return newValidatorSet
