@@ -24,7 +24,7 @@ message BeaconState {
   bytes processed_pow_receipt_root = 17;
   ForkData fork_data = 18; 
   repeated CandidatePowReceiptRootRecord candidate_pow_receipt_roots = 19;
-  repeated AggregatedAttestation pending_attestations = 20;
+  repeated AttestationRecord pending_attestations = 20;
   repeated bytes recent_block_hashes = 21;
   bytes randao_mix = 22;
 }
@@ -46,11 +46,17 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
-message AggregatedAttestation {
+// AttestationRecord can either be an aggregate attestation
+// which includes a BLS aggregate signature, or it could be
+// a processed attestation instance which does not track
+// aggregate signatures but instead just tracks the slot
+// it was included in.
+message AttestationRecord {
   AttestationSignedData signed_data = 1;
   bytes attester_bitfield = 2;
   bytes poc_bitfield = 3;
-  repeated uint64 aggregate_sig = 4;
+  uint64 slot_included = 4;
+  repeated uint64 aggregate_sig = 5;
 }
 
 message AttestationSignedData {
@@ -105,7 +111,7 @@ message BeaconBlock {
   bytes candidate_pow_receipt_root = 4;
   bytes state_root = 5;
   google.protobuf.Timestamp timestamp = 6;
-  repeated AggregatedAttestation attestations = 7;
+  repeated AttestationRecord attestations = 7;
   repeated SpecialRecord specials = 8;
   repeated uint64 proposer_signature = 9;
 }

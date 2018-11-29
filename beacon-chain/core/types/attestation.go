@@ -16,15 +16,42 @@ type Attestation struct {
 	data *pb.AggregatedAttestation
 }
 
-// NewAttestation explicitly sets the data field of a attestation.
-// Return attestation with default fields if data is nil.
-func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
+// NewAggregatedAttestation explicitly sets the data field of an
+// attestation record including an aggregate BLS signature.
+// This returns an attestation with default fields if data is nil.
+func NewAggregatedAttestation(data *pb.AggregatedAttestation) *Attestation {
 	if data == nil {
 		return &Attestation{
 			data: &pb.AggregatedAttestation{
 				AttesterBitfield: []byte{},
 				AggregateSig:     []uint64{},
 				PocBitfield:      []byte{},
+				SignedData: &pb.AttestationSignedData{
+					Slot:               0,
+					Shard:              0,
+					BlockHash:          []byte{},
+					CycleBoundaryHash:  []byte{},
+					LastCrosslinkHash:  []byte{},
+					JustifiedSlot:      0,
+					JustifiedBlockHash: []byte{},
+					ShardBlockHash:     []byte{},
+				},
+			},
+		}
+	}
+	return &Attestation{data: data}
+}
+
+// NewProcessedAttestation creates an attestation record instance that
+// does not care about aggregate signatures and just tracks the
+// slot it was included in.
+func NewProcessedAttestation(data *pb.AggregatedAttestation) *Attestation {
+	if data == nil {
+		return &Attestation{
+			data: &pb.AggregatedAttestation{
+				AttesterBitfield: []byte{},
+				PocBitfield:      []byte{},
+				SlotIncluded:     0,
 				SignedData: &pb.AttestationSignedData{
 					Slot:               0,
 					Shard:              0,

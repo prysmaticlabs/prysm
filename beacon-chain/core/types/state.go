@@ -418,6 +418,5 @@ func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {
 	if numPeriods < period+1 {
 		return 0
 	}
-
 	return penalties[period]
 }
