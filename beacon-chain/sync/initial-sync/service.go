@@ -317,13 +317,14 @@ func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotnumber})
 }
 
-// requestBatchedBlocks sends out multiple requests for blocks till a
+// requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
-	log.Debug("Requesting batched blocks")
-	for i := s.currentSlot + 1; i <= endSlot; i++ {
-		s.requestNextBlockBySlot(i)
-	}
+	log.Debugf("Requesting batched blocks from slot %d to %d", s.currentSlot+1, endSlot)
+	s.p2p.Broadcast(&pb.BatchedBeaconBlockRequest{
+		StartSlot: s.currentSlot + 1,
+		EndSlot:   endSlot,
+	})
 }
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
