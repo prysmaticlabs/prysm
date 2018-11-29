@@ -202,7 +202,7 @@ func TestAttestHead(t *testing.T) {
 		AttestationService: mockAttestationService,
 	})
 	req := &pb.AttestRequest{
-		Attestation: &pbp2p.AttestationRecord{
+		Attestation: &pbp2p.AggregatedAttestation{
 			Slot:           999,
 			Shard:          1,
 			ShardBlockHash: []byte{'a'},

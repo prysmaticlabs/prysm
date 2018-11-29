@@ -51,7 +51,7 @@ func TestBlockValidity(t *testing.T) {
 	b := types.NewBlock(&pb.BeaconBlock{
 		Slot:         1,
 		RandaoReveal: randaoPreCommit[:],
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:          0,
 				Shard:         1,
@@ -91,7 +91,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
 		Slot:         2,
 		RandaoReveal: []byte{'B'},
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
 				Shard:            1,
@@ -126,7 +126,7 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
 		Slot:         1,
 		RandaoReveal: []byte{'B'},
-		Attestations: []*pb.AttestationRecord{
+		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
 				Shard:            1,

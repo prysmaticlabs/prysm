@@ -96,7 +96,7 @@ func (b *Block) AttestationCount() int {
 }
 
 // Attestations returns an array of attestations in the block.
-func (b *Block) Attestations() []*pb.AttestationRecord {
+func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 

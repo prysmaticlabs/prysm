@@ -57,7 +57,7 @@ func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 }
 
 func createAttestation(enc []byte) (*types.Attestation, error) {
-	protoAttestation := &pb.AttestationRecord{}
+	protoAttestation := &pb.AggregatedAttestation{}
 	err := proto.Unmarshal(enc, protoAttestation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)

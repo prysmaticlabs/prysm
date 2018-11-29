@@ -222,7 +222,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	proposerBitfield := uint64(math.Pow(2, (7 - float64(prevProposerIndex))))
-	attestation := &pbp2p.AttestationRecord{
+	attestation := &pbp2p.AggregatedAttestation{
 		AttesterBitfield: []byte{byte(proposerBitfield)},
 	}
 
@@ -231,7 +231,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 		PowChainRef:    powChainHash[:],
 		AncestorHashes: [][]byte{req.GetParentHash()},
 		Timestamp:      req.GetTimestamp(),
-		Attestations:   []*pbp2p.AttestationRecord{attestation},
+		Attestations:   []*pbp2p.AggregatedAttestation{attestation},
 	}
 
 	block := types.NewBlock(data)

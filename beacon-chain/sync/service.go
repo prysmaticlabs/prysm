@@ -155,7 +155,7 @@ func (ss *Service) run() {
 	announceBlockSub := ss.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, ss.announceBlockBuf)
 	blockSub := ss.p2p.Subscribe(&pb.BeaconBlockResponse{}, ss.blockBuf)
 	blockRequestSub := ss.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
-	attestationSub := ss.p2p.Subscribe(&pb.AttestationRecord{}, ss.attestationBuf)
+	attestationSub := ss.p2p.Subscribe(&pb.AggregatedAttestation{}, ss.attestationBuf)
 	chainHeadReqSub := ss.p2p.Subscribe(&pb.ChainHeadRequest{}, ss.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -323,7 +323,7 @@ func (ss *Service) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // service if we have not.
 func (ss *Service) receiveAttestation(msg p2p.Message) {
-	data := msg.Data.(*pb.AttestationRecord)
+	data := msg.Data.(*pb.AggregatedAttestation)
 	a := types.NewAttestation(data)
 	h := a.Key()
 

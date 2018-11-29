@@ -114,7 +114,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			attesterBitfield := bitutil.SetBitfield(int(attesterIndex.Index))
 
 			attestReq := &pb.AttestRequest{
-				Attestation: &pbp2p.AttestationRecord{
+				Attestation: &pbp2p.AggregatedAttestation{
 					Slot:             latestBeaconBlock.GetSlot(),
 					Shard:            a.shardID,
 					AttesterBitfield: attesterBitfield,

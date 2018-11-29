@@ -169,7 +169,7 @@ func (m *ProposeResponse) GetBlockHash() []byte {
 }
 
 type AttestRequest struct {
-	Attestation          *v1.AttestationRecord `protobuf:"bytes,1,opt,name=attestation,proto3" json:"attestation,omitempty"`
+	Attestation          *v1.AggregatedAttestation `protobuf:"bytes,1,opt,name=attestation,proto3" json:"attestation,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
 	XXX_unrecognized     []byte                    `json:"-"`
 	XXX_sizecache        int32                     `json:"-"`
@@ -199,7 +199,7 @@ func (m *AttestRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AttestRequest proto.InternalMessageInfo
 
-func (m *AttestRequest) GetAttestation() *v1.AttestationRecord {
+func (m *AttestRequest) GetAttestation() *v1.AggregatedAttestation {
 	if m != nil {
 		return m.Attestation
 	}
@@ -675,7 +675,7 @@ func (c *beaconServiceClient) LatestAttestation(ctx context.Context, in *empty.E
 }
 
 type BeaconService_LatestAttestationClient interface {
-	Recv() (*v1.AttestationRecord, error)
+	Recv() (*v1.AggregatedAttestation, error)
 	grpc.ClientStream
 }
 
@@ -683,8 +683,8 @@ type beaconServiceLatestAttestationClient struct {
 	grpc.ClientStream
 }
 
-func (x *beaconServiceLatestAttestationClient) Recv() (*v1.AttestationRecord, error) {
-	m := new(v1.AttestationRecord)
+func (x *beaconServiceLatestAttestationClient) Recv() (*v1.AggregatedAttestation, error) {
+	m := new(v1.AggregatedAttestation)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -780,7 +780,7 @@ func _BeaconService_LatestAttestation_Handler(srv interface{}, stream grpc.Serve
 }
 
 type BeaconService_LatestAttestationServer interface {
-	Send(*v1.AttestationRecord) error
+	Send(*v1.AggregatedAttestation) error
 	grpc.ServerStream
 }
 
@@ -788,7 +788,7 @@ type beaconServiceLatestAttestationServer struct {
 	grpc.ServerStream
 }
 
-func (x *beaconServiceLatestAttestationServer) Send(m *v1.AttestationRecord) error {
+func (x *beaconServiceLatestAttestationServer) Send(m *v1.AggregatedAttestation) error {
 	return x.ServerStream.SendMsg(m)
 }
 

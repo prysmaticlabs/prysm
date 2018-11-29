@@ -9,7 +9,7 @@ import (
 )
 
 func TestAttestation(t *testing.T) {
-	data := &pb.AttestationRecord{
+	data := &pb.AggregatedAttestation{
 		SignedData: &pb.AttestationSignedData{
 			Slot:               0,
 			Shard:              0,
@@ -59,7 +59,7 @@ func TestAttestation(t *testing.T) {
 }
 
 func TestContainsValidator(t *testing.T) {
-	attestation := NewAggregatedAttestation(&pb.AttestationRecord{
+	attestation := NewAggregatedAttestation(&pb.AggregatedAttestation{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 0,
