@@ -93,8 +93,8 @@ spec:
         - name: chaindata
           emptyDir: {}
         - name: genesis
-          secret: 
-            secretName: geth-genesis
+          configMap: 
+            name: genesis
             items:
               - key: json
                 path: genesis.json
