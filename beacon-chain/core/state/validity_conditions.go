@@ -94,7 +94,7 @@ func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState,
 // isBlockAttestationValid verifies a block's attestations pass validity conditions.
 func isBlockAttestationValid(
 	block *types.Block,
-	attestation *pb.AggregatedAttestation,
+	attestation *pb.AttestationRecord,
 	beaconState *types.BeaconState,
 	parentSlot uint64,
 	isInChain func(blockHash [32]byte) bool,

@@ -194,7 +194,7 @@ func TestRunningChainService(t *testing.T) {
 		StateRoot:      stateRoot[:],
 		AncestorHashes: [][]byte{parentHash[:]},
 		PowChainRef:    []byte("a"),
-		Attestations: []*pb.AggregatedAttestation{{
+		Attestations: []*pb.AttestationRecord{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -281,7 +281,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 		AncestorHashes: [][]byte{block0Hash[:]},
 		Slot:           currentSlot,
 		StateRoot:      stateRoot[:],
-		Attestations: []*pb.AggregatedAttestation{{
+		Attestations: []*pb.AttestationRecord{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -315,7 +315,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	block2 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{block1Hash[:]},
 		Slot:           currentSlot,
-		Attestations: []*pb.AggregatedAttestation{
+		Attestations: []*pb.AttestationRecord{
 			{
 				Slot:               currentSlot - 1,
 				AttesterBitfield:   []byte{64, 0},
@@ -340,7 +340,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	block3 := types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{block2Hash[:]},
 		Slot:           currentSlot,
-		Attestations: []*pb.AggregatedAttestation{
+		Attestations: []*pb.AttestationRecord{
 			{
 				Slot:               currentSlot - 1,
 				AttesterBitfield:   []byte{32, 0},
@@ -470,7 +470,7 @@ func TestUpdateBlockVoteCache(t *testing.T) {
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:           1,
 		AncestorHashes: [][]byte{},
-		Attestations: []*pb.AggregatedAttestation{
+		Attestations: []*pb.AttestationRecord{
 			{
 				Slot:             0,
 				Shard:            1,

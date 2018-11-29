@@ -44,7 +44,7 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 // for a particular attestation.
 func AttesterIndices(
 	shardCommittees *pb.ShardAndCommitteeArray,
-	attestation *pb.AggregatedAttestation,
+	attestation *pb.AttestationRecord,
 ) ([]uint32, error) {
 	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
 	for _, shardCommittee := range shardCommitteesArray {

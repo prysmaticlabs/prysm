@@ -194,7 +194,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			}).Debug("Responding to full block request")
 
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AttestationRecord{
 				Slot:             block.SlotNumber(),
 				AttesterBitfield: []byte{byte(255)},
 			}}
@@ -218,7 +218,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			}).Debug("Responding to full block request")
 
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
+			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AttestationRecord{
 				Slot:             block.SlotNumber(),
 				AttesterBitfield: []byte{byte(255)},
 			}}
@@ -291,14 +291,14 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	copy(parentHash, lastHash[:])
 
 	shardCommittees := committees.ArrayShardAndCommittee
-	attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
+	attestations := make([]*pb.AttestationRecord, len(shardCommittees))
 
 	// Create attestations for all committees of the previous block.
 	// Ensure that all attesters have voted by calling FillBitfield.
 	for i, shardCommittee := range shardCommittees {
 		shardID := shardCommittee.Shard
 		numAttesters := len(shardCommittee.Committee)
-		attestations[i] = &pb.AggregatedAttestation{
+		attestations[i] = &pb.AttestationRecord{
 			Slot:               parentSlot,
 			AttesterBitfield:   bitutil.FillBitfield(numAttesters),
 			JustifiedBlockHash: parentHash,

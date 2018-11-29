@@ -84,7 +84,7 @@ func TestCrosslinks(t *testing.T) {
 		},
 	}
 
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		Slot:             10,
 		Shard:            1,
 		ShardBlockHash:   []byte{'B'},

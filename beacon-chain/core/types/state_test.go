@@ -49,8 +49,8 @@ func TestCopyState(t *testing.T) {
 	state1, _ := NewGenesisBeaconState(nil)
 	state2 := state1.CopyState()
 
-	newAttestations := []*pb.AggregatedAttestation{}
-	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+	newAttestations := []*pb.AttestationRecord{}
+	newAttestations = append(newAttestations, &pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 1,
@@ -86,14 +86,14 @@ func TestCopyState(t *testing.T) {
 func TestUpdateAttestations(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
 
-	newAttestations := []*pb.AggregatedAttestation{}
-	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+	newAttestations := []*pb.AttestationRecord{}
+	newAttestations = append(newAttestations, &pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 0,
 		},
 	})
-	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+	newAttestations = append(newAttestations, &pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 1,
@@ -109,14 +109,14 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
-	newAttestations := []*pb.AggregatedAttestation{}
-	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+	newAttestations := []*pb.AttestationRecord{}
+	newAttestations = append(newAttestations, &pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  10,
 			Shard: 2,
 		},
 	})
-	newAttestations = append(newAttestations, &pb.AggregatedAttestation{
+	newAttestations = append(newAttestations, &pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  9,
 			Shard: 3,

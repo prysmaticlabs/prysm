@@ -111,7 +111,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	crosslinkRecords []*pb.CrosslinkRecord,
 	slot uint64,
 	attesterIndices []uint32,
-	attestation *pb.AggregatedAttestation,
+	attestation *pb.AttestationRecord,
 	validators []*pb.ValidatorRecord,
 	totalActiveValidatorDeposit uint64,
 	totalBalance uint64,

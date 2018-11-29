@@ -149,7 +149,7 @@ func TestProcessBlock(t *testing.T) {
 		AncestorHashes: [][]byte{parentHash[:]},
 		Slot:           1,
 	}
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		Slot:           0,
 		Shard:          0,
 		ShardBlockHash: []byte{'A'},
@@ -220,7 +220,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	responseBlock1 := &pb.BeaconBlockResponse{
 		Block:       data1,
-		Attestation: &pb.AggregatedAttestation{},
+		Attestation: &pb.AttestationRecord{},
 	}
 
 	msg1 := p2p.Message{
@@ -237,7 +237,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	responseBlock2 := &pb.BeaconBlockResponse{
 		Block:       data2,
-		Attestation: &pb.AggregatedAttestation{},
+		Attestation: &pb.AttestationRecord{},
 	}
 
 	msg2 := p2p.Message{
@@ -341,7 +341,7 @@ func TestReceiveAttestation(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.AggregatedAttestation{
+	request1 := &pb.AttestationRecord{
 		Slot:             0,
 		AttesterBitfield: []byte{99},
 	}

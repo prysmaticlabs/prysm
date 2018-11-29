@@ -173,9 +173,9 @@ func (mr *MockBeaconService_LatestAttestationClientMockRecorder) Header() *gomoc
 }
 
 // Recv mocks base method
-func (m *MockBeaconService_LatestAttestationClient) Recv() (*v1.AggregatedAttestation, error) {
+func (m *MockBeaconService_LatestAttestationClient) Recv() (*v1.AttestationRecord, error) {
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1.AggregatedAttestation)
+	ret0, _ := ret[0].(*v1.AttestationRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -27,7 +27,7 @@ func TestInitialDeriveState(t *testing.T) {
 		AncestorHashes: [][]byte{{'A'}},
 		Slot:           0,
 		StateRoot:      []byte{},
-		Attestations: []*pb.AggregatedAttestation{{
+		Attestations: []*pb.AttestationRecord{{
 			Slot:             0,
 			AttesterBitfield: attesterBitfield,
 			Shard:            0,
@@ -156,7 +156,7 @@ func TestProcessCrosslinks(t *testing.T) {
 	}
 
 	// Set up pending attestations.
-	pAttestations := []*pb.AggregatedAttestation{
+	pAttestations := []*pb.AttestationRecord{
 		{
 			Slot:             0,
 			Shard:            1,

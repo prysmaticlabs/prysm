@@ -13,16 +13,16 @@ import (
 // Attestation is the primary source of load on the beacon chain, it's used to
 // attest to some parent block in the chain and block hash in a shard.
 type Attestation struct {
-	data *pb.AggregatedAttestation
+	data *pb.AttestationRecord
 }
 
 // NewAggregatedAttestation explicitly sets the data field of an
 // attestation record including an aggregate BLS signature.
 // This returns an attestation with default fields if data is nil.
-func NewAggregatedAttestation(data *pb.AggregatedAttestation) *Attestation {
+func NewAggregatedAttestation(data *pb.AttestationRecord) *Attestation {
 	if data == nil {
 		return &Attestation{
-			data: &pb.AggregatedAttestation{
+			data: &pb.AttestationRecord{
 				AttesterBitfield: []byte{},
 				AggregateSig:     []uint64{},
 				PocBitfield:      []byte{},
@@ -45,10 +45,10 @@ func NewAggregatedAttestation(data *pb.AggregatedAttestation) *Attestation {
 // NewProcessedAttestation creates an attestation record instance that
 // does not care about aggregate signatures and just tracks the
 // slot it was included in.
-func NewProcessedAttestation(data *pb.AggregatedAttestation) *Attestation {
+func NewProcessedAttestation(data *pb.AttestationRecord) *Attestation {
 	if data == nil {
 		return &Attestation{
-			data: &pb.AggregatedAttestation{
+			data: &pb.AttestationRecord{
 				AttesterBitfield: []byte{},
 				PocBitfield:      []byte{},
 				SlotIncluded:     0,
@@ -87,7 +87,7 @@ func AttestationMsg(
 }
 
 // Proto returns the underlying protobuf data.
-func (a *Attestation) Proto() *pb.AggregatedAttestation {
+func (a *Attestation) Proto() *pb.AttestationRecord {
 	return a.data
 }
 

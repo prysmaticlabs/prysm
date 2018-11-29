@@ -189,7 +189,7 @@ func (m *BeaconBlockRequestBySlotNumber) GetSlotNumber() uint64 {
 
 type BeaconBlockResponse struct {
 	Block                *BeaconBlock           `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
-	Attestation          *AggregatedAttestation `protobuf:"bytes,2,opt,name=attestation,proto3" json:"attestation,omitempty"`
+	Attestation          *AttestationRecord `protobuf:"bytes,2,opt,name=attestation,proto3" json:"attestation,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}               `json:"-"`
 	XXX_unrecognized     []byte                 `json:"-"`
 	XXX_sizecache        int32                  `json:"-"`
@@ -226,7 +226,7 @@ func (m *BeaconBlockResponse) GetBlock() *BeaconBlock {
 	return nil
 }
 
-func (m *BeaconBlockResponse) GetAttestation() *AggregatedAttestation {
+func (m *BeaconBlockResponse) GetAttestation() *AttestationRecord {
 	if m != nil {
 		return m.Attestation
 	}

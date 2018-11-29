@@ -32,7 +32,7 @@ message BeaconBlockRequestBySlotNumber{
 
 message BeaconBlockResponse {
   BeaconBlock block = 1;
-  AggregatedAttestation attestation = 2;
+  AttestationRecord attestation = 2;
 }
 
 message ChainHeadRequest {}

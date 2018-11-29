@@ -9,7 +9,7 @@ import (
 )
 
 func TestAttestation(t *testing.T) {
-	data := &pb.AggregatedAttestation{
+	data := &pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:               0,
 			Shard:              0,
@@ -20,7 +20,7 @@ func TestAttestation(t *testing.T) {
 		AttesterBitfield: []byte{0},
 		AggregateSig:     []uint64{0},
 	}
-	attestation := NewAttestation(data)
+	attestation := NewAggregatedAttestation(data)
 	attestation.SlotNumber()
 	attestation.ShardID()
 	attestation.JustifiedSlotNumber()
@@ -46,7 +46,7 @@ func TestAttestation(t *testing.T) {
 	if attestation.SlotNumber() != 0 {
 		t.Errorf("mismatched attestation slot number: wanted 0, received %v", attestation.SlotNumber())
 	}
-	attestationWithNilData := NewAttestation(nil)
+	attestationWithNilData := NewAggregatedAttestation(nil)
 	if attestationWithNilData.ShardID() != 0 {
 		t.Errorf("mismatched attestation shard id: wanted 0, received %v", attestation.ShardID())
 	}
@@ -59,7 +59,7 @@ func TestAttestation(t *testing.T) {
 }
 
 func TestContainsValidator(t *testing.T) {
-	attestation := NewAttestation(&pb.AggregatedAttestation{
+	attestation := NewAggregatedAttestation(&pb.AttestationRecord{
 		SignedData: &pb.AttestationSignedData{
 			Slot:  0,
 			Shard: 0,

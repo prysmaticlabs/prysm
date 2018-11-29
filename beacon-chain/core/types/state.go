@@ -65,7 +65,7 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 				PostForkVersion: uint64(params.BeaconConfig().InitialForkVersion),
 				ForkSlotNumber:  0,
 			},
-			PendingAttestations: []*pb.AggregatedAttestation{},
+			PendingAttestations: []*pb.AttestationRecord{},
 			RecentBlockHashes:   recentBlockHashes,
 			RandaoMix:           make([]byte, 0, 32),
 		},
@@ -255,7 +255,7 @@ func (b *BeaconState) RecentBlockHashes() [][32]byte {
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
-func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
+func (b *BeaconState) PendingAttestations() []*pb.AttestationRecord {
 	return b.data.PendingAttestations
 }
 
@@ -284,7 +284,7 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 }
 
 // SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
+func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AttestationRecord) ([][32]byte, error) {
 	recentBlockHashes := b.RecentBlockHashes()
 	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
 
@@ -305,7 +305,7 @@ func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.Aggregate
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 	existing := b.data.PendingAttestations
-	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	update := make([]*pb.AttestationRecord, 0, len(existing))
 	for _, a := range existing {
 		if a.SignedData.Slot >= lastStateRecalc {
 			update = append(update, a)
@@ -384,7 +384,7 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 }
 
 // SetPendingAttestations updates the inner proto's pending attestations.
-func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
+func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AttestationRecord) {
 	b.data.PendingAttestations = pendingAttestations
 }
 

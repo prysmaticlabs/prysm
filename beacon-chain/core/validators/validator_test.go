@@ -12,7 +12,7 @@ import (
 
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
-	pendingAttestation := &pb.AggregatedAttestation{
+	pendingAttestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{255},
 	}
 
@@ -28,7 +28,7 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	// Setting bit field to 01010101.
-	pendingAttestation = &pb.AggregatedAttestation{
+	pendingAttestation = &pb.AttestationRecord{
 		AttesterBitfield: []byte{85},
 	}
 
@@ -60,7 +60,7 @@ func TestInitialValidators(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValid(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{'F'},
 	}
 
@@ -73,7 +73,7 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{'F', 'F'},
 	}
 
@@ -86,7 +86,7 @@ func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{'F'},
 	}
 
@@ -99,7 +99,7 @@ func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{'E'},
 	}
 
@@ -263,7 +263,7 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	}
 
 	// Calculating balances with zero votes by attesters.
-	attestation := &pb.AggregatedAttestation{
+	attestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{0},
 	}
 
@@ -286,7 +286,7 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 
 	// Calculating balances with 3 votes by attesters.
 
-	newAttestation := &pb.AggregatedAttestation{
+	newAttestation := &pb.AttestationRecord{
 		AttesterBitfield: []byte{224}, // 128 + 64 + 32
 	}
 
