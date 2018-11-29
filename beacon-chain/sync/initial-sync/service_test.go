@@ -62,6 +62,32 @@ func (m *mockDB) SaveCrystallizedState(*types.CrystallizedState) error {
 	return nil
 }
 
+func blockResponse(slot uint64, t *testing.T) (p2p.Message, [32]byte) {
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
+
+	block := &pb.BeaconBlock{
+		PowChainRef:           []byte{1, 2, 3},
+		AncestorHashes:        [][]byte{genericHash},
+		Slot:                  slot,
+		CrystallizedStateRoot: nil,
+	}
+
+	blockResponse := &pb.BeaconBlockResponse{
+		Block: block,
+	}
+
+	hash, err := types.NewBlock(block).Hash()
+	if err != nil {
+		t.Fatalf("unable to hash block %v", err)
+	}
+
+	return p2p.Message{
+		Peer: p2p.Peer{},
+		Data: blockResponse,
+	}, hash
+}
+
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -85,21 +111,8 @@ func TestSetBlockForInitialSync(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	block := &pb.BeaconBlock{
-		PowChainRef:           []byte{1, 2, 3},
-		AncestorHashes:        [][]byte{genericHash},
-		Slot:                  uint64(1),
-		CrystallizedStateRoot: genericHash,
-	}
-
-	blockResponse := &pb.BeaconBlockResponse{Block: block}
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse,
-	}
+	msg1, _ := blockResponse(1, t)
+	block := msg1.Data.(*pb.BeaconBlockResponse).GetBlock()
 
 	ss.blockBuf <- msg1
 
@@ -107,10 +120,10 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	<-exitRoutine
 
 	var hash [32]byte
-	copy(hash[:], blockResponse.Block.CrystallizedStateRoot)
+	copy(hash[:], block.CrystallizedStateRoot)
 
 	if hash != ss.initialCrystallizedStateRoot {
-		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.CrystallizedStateRoot)
+		t.Fatalf("Crystallized state hash not updated: %#x", block.CrystallizedStateRoot)
 	}
 
 	hook.Reset()
@@ -120,9 +133,10 @@ func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
-		BeaconDB:    &mockDB{},
+		P2P:                         &mockP2P{},
+		SyncService:                 &mockSyncService{},
+		BeaconDB:                    &mockDB{},
+		CrystallizedStateBufferSize: 100,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -479,7 +493,7 @@ func TestRequestBatchedBlocks(t *testing.T) {
 
 	for i := ss.currentSlot + 1; i <= 10; i++ {
 		response, _ := getBlockResponse(i)
-		ss.inMemoryBlocks[i] = response
+		ss.inMemoryBlocks[i] = response.Block
 	}
 
 	ss.requestBatchedBlocks(10)
