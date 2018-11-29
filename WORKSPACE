@@ -51,7 +51,7 @@ yarn_install(
 # This requires rules_docker to be fully instantiated before it is pulled in.
 git_repository(
     name = "io_bazel_rules_k8s",
-    commit = "2054f7bf4d51f9e439313c56d7a208960a8a179f",  # 2018-07-29
+    commit = "2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
     remote = "https://github.com/bazelbuild/rules_k8s.git",
 )
 
