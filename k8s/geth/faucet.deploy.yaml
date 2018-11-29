@@ -37,7 +37,7 @@ spec:
             - "/bin/sh"
             - "-c"
             - > 
-              touch /tmp/pwd;
+              touch /tmp/pwd; # empty password file
               faucet
               -account.json=/data/accounts/account.json
               -account.pass=/tmp/pwd
@@ -93,7 +93,5 @@ spec:
             items: 
               - key: json
                 path: account.json
-              - key: password
-                path: password
         - name: faucet-data
           emptyDir: {}
