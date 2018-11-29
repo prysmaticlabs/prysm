@@ -133,10 +133,9 @@ func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := Config{
-		P2P:                         &mockP2P{},
-		SyncService:                 &mockSyncService{},
-		BeaconDB:                    &mockDB{},
-		CrystallizedStateBufferSize: 100,
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    &mockDB{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -432,78 +431,6 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	// waiting for the current slot to come up to the
 	// expected one.
-	testutil.WaitForLog(t, hook, expString)
-
-	delayChan <- time.Time{}
-
-	ss.cancel()
-	<-exitRoutine
-
-	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
-
-	hook.Reset()
-}
-
-func TestRequestBatchedBlocks(t *testing.T) {
-	hook := logTest.NewGlobal()
-	cfg := Config{
-		P2P:             &mockP2P{},
-		SyncService:     &mockSyncService{},
-		BeaconDB:        &mockDB{},
-		BlockBufferSize: 100,
-	}
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-
-	defer func() {
-		close(exitRoutine)
-		close(delayChan)
-	}()
-
-	go func() {
-		ss.run(delayChan)
-		exitRoutine <- true
-	}()
-
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	getBlockResponse := func(Slot uint64) (*pb.BeaconBlockResponse, [32]byte) {
-
-		block := &pb.BeaconBlock{
-			PowChainRef:           []byte{1, 2, 3},
-			AncestorHashes:        [][]byte{genericHash},
-			Slot:                  Slot,
-			CrystallizedStateRoot: nil,
-		}
-
-		blockResponse := &pb.BeaconBlockResponse{
-			Block: block,
-		}
-
-		hash, err := types.NewBlock(block).Hash()
-		if err != nil {
-			t.Fatalf("unable to hash block %v", err)
-		}
-
-		return blockResponse, hash
-	}
-
-	for i := ss.currentSlot + 1; i <= 10; i++ {
-		response, _ := getBlockResponse(i)
-		ss.inMemoryBlocks[i] = response.Block
-	}
-
-	ss.requestBatchedBlocks(10)
-
-	_, hash := getBlockResponse(10)
-	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 10)
-
-	// waiting for the current slot to come up to the
-	// expected one.
-
 	testutil.WaitForLog(t, hook, expString)
 
 	delayChan <- time.Time{}

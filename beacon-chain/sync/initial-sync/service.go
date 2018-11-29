@@ -146,6 +146,7 @@ func (s *InitialSync) Start() {
 		s.run(ticker.C)
 		ticker.Stop()
 	}()
+	go s.checkInMemoryBlocks()
 }
 
 // Stop kills the initial sync goroutine.
@@ -203,13 +204,12 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			log.Debugf("Successfully requested the next block with slot: %d", data.GetSlotNumber())
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
-
 			s.processBlock(data.GetBlock(), msg.Peer)
 		case msg := <-s.crystallizedStateBuf:
 			data := msg.Data.(*pb.CrystallizedStateResponse)
 
 			if s.initialCrystallizedStateRoot == [32]byte{} {
-				return
+				continue
 			}
 
 			cState := types.NewCrystallizedState(data.CrystallizedState)
@@ -219,7 +219,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 
 			if hash != s.initialCrystallizedStateRoot {
-				return
+				continue
 			}
 
 			if err := s.db.SaveCrystallizedState(cState); err != nil {
@@ -229,7 +229,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			log.Debug("Successfully saved crystallized state to the db")
 
 			if s.currentSlot >= cState.LastFinalizedSlot() {
-				return
+				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
@@ -246,9 +246,29 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 	}
 }
 
+func (s *InitialSync) checkInMemoryBlocks() {
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+			if s.currentSlot == s.highestObservedSlot {
+				return
+			}
+			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
+				s.processBlock(block, p2p.Peer{})
+			}
+		}
+	}
+}
+
 func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	if block.GetSlot() > s.highestObservedSlot {
 		s.highestObservedSlot = block.GetSlot()
+	}
+
+	if block.GetSlot() < s.currentSlot {
+		return
 	}
 
 	if s.currentSlot == 0 {
