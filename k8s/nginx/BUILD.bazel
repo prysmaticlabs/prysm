@@ -8,6 +8,7 @@ load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_secret//:defaults.bzl", "k8s_secret")
 load("@k8s_service//:defaults.bzl", "k8s_service")
 load("@k8s_service_account//:defaults.bzl", "k8s_service_account")
+load("//tools:kubesec.bzl", "k8s_encrypted_secret")
 
 k8s_objects(
     name = "everything",
@@ -20,6 +21,7 @@ k8s_objects(
         ":service",
         ":service_account",
     ],
+    tags = ["manual"],
 )
 
 _NAMESPACE = "nginx-ingress"
@@ -28,6 +30,17 @@ k8s_secret(
     name = "default_server_secret",
     template = ":default-server-secret.yaml",
     namespace = _NAMESPACE,
+    tags = ["manual"],
+)
+
+k8s_encrypted_secret(
+    name = "default_server_secret_encrypted",
+    template = "default-server-secret-encrypted.yaml",
+    out = "default-server-secret.yaml",
+    tags = [
+        "local",
+        "manual",
+    ],
 )
 
 k8s_deploy(
