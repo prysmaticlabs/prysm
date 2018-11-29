@@ -246,6 +246,9 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 	}
 }
 
+// checkInMemoryBlocks is another routine which will run concurrently with the
+// main routine for initial sync, where it checks the blocks saved in memory regularly
+// to see if the blocks are valid enough to be processed.
 func (s *InitialSync) checkInMemoryBlocks() {
 	for {
 		select {
@@ -262,6 +265,9 @@ func (s *InitialSync) checkInMemoryBlocks() {
 	}
 }
 
+// processBlock is the main method that validates each block which is received
+// for initial sync. It checks if the blocks are valid and then will continue to
+// process and save it into the db.
 func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	if block.GetSlot() > s.highestObservedSlot {
 		s.highestObservedSlot = block.GetSlot()
@@ -308,6 +314,8 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 
 }
 
+// processBatchedBlocks processes all the received blocks from
+// the p2p message.
 func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.GetBatchedBlocks()
