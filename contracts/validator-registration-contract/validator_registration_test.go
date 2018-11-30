@@ -22,10 +22,10 @@ var (
 )
 
 type testAccount struct {
-	addr              common.Address
-	contract          *ValidatorRegistration
-	backend           *backends.SimulatedBackend
-	txOpts            *bind.TransactOpts
+	addr     common.Address
+	contract *ValidatorRegistration
+	backend  *backends.SimulatedBackend
+	txOpts   *bind.TransactOpts
 }
 
 func setup() (*testAccount, error) {
