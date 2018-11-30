@@ -931,6 +931,6 @@ go_repository(
 
 go_repository(
     name = "com_github_inconshreveable_mousetrap",
-    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    tag = "v1.0.0",
     importpath = "github.com/inconshreveable/mousetrap",
 )
