@@ -6,12 +6,12 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/event:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@com_github_ethereum_go_ethereum//event:go_default_library",
     ],
 )
 
