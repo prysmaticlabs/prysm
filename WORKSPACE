@@ -139,7 +139,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    tag = "v2.2.1",
+    tag = "v2.2.2",
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "0a71a4356c3f4bcbdd16294c78ca2a31fda36cca",
+    commit = "af4fc4062c262223ddc2d92f5f35a93690db383a",
     importpath = "google.golang.org/api",
 )
 
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "619930b0b4713cc1280189bf0a4c54b3fb506f60",
+    commit = "aa55a523dc0a8297edf51bb75e8eec13eb3be45d",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -887,7 +887,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "d2d81d9a96e23f0255397222bb0b4e3165e492dc",
+    tag = "v0.0.3",
     importpath = "github.com/spf13/cobra",
 )
 
