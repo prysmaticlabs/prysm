@@ -1,0 +1,5 @@
+
+alias(
+  name = "kubesec",
+  actual = "@com_github_shyiko_kubesec//:kubesec",
+)
