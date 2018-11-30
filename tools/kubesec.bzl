@@ -17,7 +17,7 @@ k8s_encrypted_secret = rule(
       "_kubesec": attr.label(
         executable = True,
         cfg = "host",
-        default = "@com_github_shyiko_kubesec//:kubesec",
+        default = "//tools:kubesec",
       ),
       "template": attr.label(
           allow_files = True, 
