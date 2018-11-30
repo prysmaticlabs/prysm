@@ -51,7 +51,7 @@ yarn_install(
 # This requires rules_docker to be fully instantiated before it is pulled in.
 git_repository(
     name = "io_bazel_rules_k8s",
-    commit = "2054f7bf4d51f9e439313c56d7a208960a8a179f",  # 2018-07-29
+    commit = "2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
     remote = "https://github.com/bazelbuild/rules_k8s.git",
 )
 
@@ -447,7 +447,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.0.15",
+    tag = "v1.1.0",
     importpath = "github.com/miekg/dns",
 )
 
@@ -862,4 +862,75 @@ go_repository(
     build_file_proto_mode = "disable_global",
     commit = "b7bd5f2d334ce968edc54f5fdb2ac67ce39c56d5",
     importpath = "k8s.io/api",
+)
+
+go_repository(
+    name = "com_github_shyiko_kubesec",
+    commit = "b3b38efff0ecda7fd59ae59b5d09469fda51b5d7",
+    importpath = "github.com/shyiko/kubesec",
+    # Update after https://github.com/shyiko/kubesec/pull/19
+    remote = "https://github.com/prestonvanloon/kubesec",
+    vcs = "git",
+)
+
+go_repository(
+    name = "in_gopkg_yaml_v2",
+    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+    importpath = "gopkg.in/yaml.v2",
+)
+
+go_repository(
+    name = "com_github_spf13_pflag",
+    commit = "aea12ed6721610dc6ed40141676d7ab0a1dac9e9",
+    importpath = "github.com/spf13/pflag",
+)
+
+go_repository(
+    name = "com_github_spf13_cobra",
+    commit = "d2d81d9a96e23f0255397222bb0b4e3165e492dc",
+    importpath = "github.com/spf13/cobra",
+)
+
+go_repository(
+    name = "com_github_aws_aws_sdk_go",
+    tag = "v0.10.4",
+    importpath = "github.com/aws/aws-sdk-go",
+)
+
+go_repository(
+    name = "com_github_posener_complete",
+    commit = "699ede78373dfb0168f00170591b698042378437",
+    importpath = "github.com/posener/complete",
+    remote = "https://github.com/shyiko/complete",
+    vcs = "git",
+)
+
+go_repository(
+    name = "org_golang_x_oauth2",
+    commit = "28207608b83849a028d4f12e46533a6b6894ecaf",
+    importpath = "golang.org/x/oauth2",
+)
+
+go_repository(
+    name = "com_github_hashicorp_go_multierror",
+    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+    importpath = "github.com/hashicorp/go-multierror",
+)
+
+go_repository(
+    name = "com_github_hashicorp_errwrap",
+    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",
+    importpath = "github.com/hashicorp/errwrap",
+)
+
+go_repository(
+    name = "com_google_cloud_go",
+    commit = "41590e5e6d7a5a30921e686fbc57c45545d8bf29",
+    importpath = "cloud.google.com/go",
+)
+
+go_repository(
+    name = "com_github_inconshreveable_mousetrap",
+    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    importpath = "github.com/inconshreveable/mousetrap",
 )

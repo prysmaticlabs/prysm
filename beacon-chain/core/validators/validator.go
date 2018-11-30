@@ -346,7 +346,7 @@ func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 // it exits the validator if it's below.
 func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot uint64) []*pb.ValidatorRecord {
 	for index, validator := range validatorSet {
-		MinDepositInGWei := params.BeaconConfig().MinDeposit * params.BeaconConfig().Gwei
+		MinDepositInGWei := params.BeaconConfig().MinOnlineDepositSize * params.BeaconConfig().Gwei
 		isValidatorActive := validator.Status == uint64(params.Active)
 		if validator.Balance < MinDepositInGWei && isValidatorActive {
 			validatorSet[index] = ExitValidator(validator, currentSlot, false)

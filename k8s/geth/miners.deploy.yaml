@@ -55,7 +55,7 @@ spec:
               --verbosity=4
               --mine
               --minerthreads=1
-              --etherbase=0x8882042b8e93c85312f623f058ef252c8025a7ae
+              --etherbase=0x00c4ac4d2a14be6a9b55652f9aabdb70fdeb07bc
               --extradata=$HOSTNAME
               --ethash.dagsinmem=1
               --ethash.dagsondisk=2
@@ -101,8 +101,8 @@ spec:
         - name: chaindata
           emptyDir: {}
         - name: genesis
-          secret: 
-            secretName: geth-genesis
+          configMap: 
+            name: genesis
             items:
               - key: json
                 path: genesis.json
