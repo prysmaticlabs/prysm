@@ -59,4 +59,9 @@ var (
 		Name:  "enable-powchain",
 		Usage: "Enable a real, web3 proof-of-work chain endpoint in the beacon node",
 	}
+	// EnableDBCleanup tells the beacon node to automatically clean DB content such as block vote cache.
+	EnableDBCleanup = cli.BoolFlag{
+		Name:  "enable-db-cleanup",
+		Usage: "Enable automatic DB cleanup routine",
+	}
 )

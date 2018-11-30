@@ -401,7 +401,7 @@ func TestChangeValidators(t *testing.T) {
 }
 
 func TestValidatorMinDeposit(t *testing.T) {
-	minDeposit := params.BeaconConfig().MinDeposit * params.BeaconConfig().Gwei
+	minDeposit := params.BeaconConfig().MinOnlineDepositSize * params.BeaconConfig().Gwei
 	currentSlot := uint64(99)
 	validators := []*pb.ValidatorRecord{
 		{Status: uint64(params.Active), Balance: uint64(minDeposit) + 1},

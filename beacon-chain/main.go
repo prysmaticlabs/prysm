@@ -70,6 +70,7 @@ VERSION:
 		utils.KeyFlag,
 		utils.GenesisJSON,
 		utils.EnablePOWChain,
+		utils.EnableDBCleanup,
 		cmd.BootstrapNode,
 		cmd.RelayNode,
 		cmd.P2PPort,
