@@ -893,7 +893,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    commit = "dbd68419518a1846f7cf787f424af62c2d0bb4f2",
+    tag = "v1.15.88",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
