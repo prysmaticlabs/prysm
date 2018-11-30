@@ -317,12 +317,15 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
 func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
+	log.Debug("Processing batched block response")
+
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.GetBatchedBlocks()
 
 	for _, block := range batchedBlocks {
 		s.processBlock(block, msg.Peer)
 	}
+	log.Debug("Finished processing batched blocks")
 }
 
 // requestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state

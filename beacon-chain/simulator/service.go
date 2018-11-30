@@ -303,7 +303,12 @@ func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 	startSlot := data.GetStartSlot()
 	endSlot := data.GetEndSlot()
 
-	response := make([]*pb.BeaconBlock, endSlot-startSlot)
+	if endSlot <= startSlot {
+		log.Debugf("Invalid Batch Request end slot %d is less than or equal to start slot %d", endSlot, startSlot)
+		return
+	}
+
+	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
 
 	for i := startSlot; i <= endSlot; i++ {
 		block := sim.broadcastedBlocksBySlot[i]
