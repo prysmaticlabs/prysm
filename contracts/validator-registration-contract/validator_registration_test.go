@@ -1,6 +1,7 @@
 package vrc
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"log"
@@ -15,18 +16,13 @@ import (
 )
 
 var (
-	amount33Eth, _ = new(big.Int).SetString("33000000000000000000", 10)
-	amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
-	amount31Eth, _ = new(big.Int).SetString("31000000000000000000", 10)
-	amount2Eth, _ = new(big.Int).SetString("1000000000000000000", 10)
-	amount1Eth, _ = new(big.Int).SetString("2000000000000000000", 10)
+	amount33Eth, _        = new(big.Int).SetString("33000000000000000000", 10)
+	amount32Eth, _        = new(big.Int).SetString("32000000000000000000", 10)
+	amountLessThan1Eth, _ = new(big.Int).SetString("500000000000000000", 10)
 )
 
 type testAccount struct {
 	addr              common.Address
-	withdrawalAddress common.Address
-	randaoCommitment  [32]byte
-	pubKey            []byte
 	contract          *ValidatorRegistration
 	backend           *backends.SimulatedBackend
 	txOpts            *bind.TransactOpts
@@ -47,7 +43,7 @@ func setup() (*testAccount, error) {
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	txOpts := bind.NewKeyedTransactor(privKey)
-	startingBalance, _ := new(big.Int).SetString("100000000000000000000", 10)
+	startingBalance, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 2100000)
 
@@ -56,7 +52,7 @@ func setup() (*testAccount, error) {
 		return nil, err
 	}
 
-	return &testAccount{addr, common.Address{}, [32]byte{}, pubKey, contract, backend, txOpts}, nil
+	return &testAccount{addr, contract, backend, txOpts}, nil
 }
 
 func TestSetupAndContractRegistration(t *testing.T) {
@@ -66,100 +62,58 @@ func TestSetupAndContractRegistration(t *testing.T) {
 	}
 }
 
-// negative test case, public key that is not 48 bytes.
-func TestRegisterWithLessThan48BytesPubkey(t *testing.T) {
+// negative test case, deposit with less than 1 ETH which is less than the top off amount.
+func TestRegisterWithLessThan1Eth(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var pubKey = make([]byte, 32)
-	copy(pubKey, testAccount.pubKey[:])
-	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
-	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
 
-	testAccount.txOpts.Value = amount32Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
-	if err == nil {
-		t.Error("Validator registration should have failed with a 32 bytes pubkey")
-	}
-}
-
-// negative test case, deposit with less than 32 ETH.
-func TestRegisterWithLessThan32Eth(t *testing.T) {
-	testAccount, err := setup()
-	if err != nil {
-		t.Fatal(err)
-	}
-	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
-	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
-
-	testAccount.txOpts.Value = amount31Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, testAccount.pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
+	testAccount.txOpts.Value = amountLessThan1Eth
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{})
 	if err == nil {
 		t.Error("Validator registration should have failed with insufficient deposit")
 	}
 }
 
-// negative test case, deposit more than 32 ETH.
+// negative test case, deposit with more than 32 ETH which is more than the asked amount.
 func TestRegisterWithMoreThan32Eth(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
-	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
 
 	testAccount.txOpts.Value = amount33Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, testAccount.pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{})
 	if err == nil {
-		t.Error("Validator registration should have failed with more than deposit amount")
+		t.Error("Validator registration should have failed with more than asked deposit amount")
 	}
 }
 
-// negative test case, test registering with the same public key twice.
-func TestRegisterTwice(t *testing.T) {
+// normal test case, test depositing 32 ETH and verify HashChainValue event is correctly emitted.
+func TestValidatorRegisters(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
 	}
-	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
-	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
-
 	testAccount.txOpts.Value = amount32Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, testAccount.pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-
-	testAccount.txOpts.Value = amount32Eth
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, testAccount.pubKey, big.NewInt(0), *withdrawAddr, *randaoCommitment)
-	testAccount.backend.Commit()
-	if err == nil {
-		t.Errorf("Registration should have failed with same public key twice")
-	}
-}
-
-// normal test case, test depositing 32 ETH and verify validatorRegistered event is correctly emitted.
-func TestRegister(t *testing.T) {
-	testAccount, err := setup()
-	if err != nil {
-		t.Fatal(err)
-	}
-	withdrawAddr := &common.Address{'A', 'D', 'D', 'R', 'E', 'S', 'S'}
-	randaoCommitment := &[32]byte{'S', 'H', 'H', 'H', 'H', 'I', 'T', 'S', 'A', 'S', 'E', 'C', 'R', 'E', 'T'}
-	shardID := big.NewInt(99)
-	testAccount.txOpts.Value = amount32Eth
-
-	var hashedPub [32]byte
-	copy(hashedPub[:], crypto.Keccak256(testAccount.pubKey))
-
-	_, err = testAccount.contract.Deposit(testAccount.txOpts, testAccount.pubKey, shardID, *withdrawAddr, *randaoCommitment)
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'B'})
 	testAccount.backend.Commit()
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	log, err := testAccount.contract.FilterValidatorRegistered(&bind.FilterOpts{}, [][32]byte{}, []common.Address{}, [][32]byte{})
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'C'})
+	testAccount.backend.Commit()
+	if err != nil {
+		t.Errorf("Validator registration failed: %v", err)
+	}
+	log, err := testAccount.contract.FilterHashChainValue(&bind.FilterOpts{}, [][]byte{})
 
 	defer func() {
 		err = log.Close()
@@ -175,16 +129,65 @@ func TestRegister(t *testing.T) {
 		t.Fatal(log.Error())
 	}
 	log.Next()
-	if log.Event.WithdrawalShardID.Cmp(shardID) != 0 {
-		t.Errorf("validatorRegistered event withdrawal shard ID miss matched. Want: %v, Got: %v", shardID, log.Event.WithdrawalShardID)
+
+	if log.Event.TotalDepositcount.Cmp(big.NewInt(0)) != 0 {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(0), log.Event.TotalDepositcount)
 	}
-	if log.Event.RandaoCommitment != *randaoCommitment {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", *randaoCommitment, log.Event.RandaoCommitment)
+	if !bytes.Equal(log.Event.Data, []byte{'A'}) {
+		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'A'}, log.Event.Data)
 	}
-	if log.Event.HashedPubkey != hashedPub {
-		t.Errorf("validatorRegistered event public key miss matched. Want: %v, Got: %v", common.BytesToHash(testAccount.pubKey), log.Event.HashedPubkey)
+
+	log.Next()
+	if log.Event.TotalDepositcount.Cmp(big.NewInt(1)) != 0 {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(1), log.Event.TotalDepositcount)
 	}
-	if log.Event.WithdrawalAddressbytes32 != *withdrawAddr {
-		t.Errorf("validatorRegistered event withdrawal address miss matched. Want: %v, Got: %v", *withdrawAddr, log.Event.WithdrawalAddressbytes32)
+	if !bytes.Equal(log.Event.Data, []byte{'B'}) {
+		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data)
+	}
+
+	log.Next()
+	if log.Event.TotalDepositcount.Cmp(big.NewInt(2)) != 0 {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(1), log.Event.TotalDepositcount)
+	}
+	if !bytes.Equal(log.Event.Data, []byte{'C'}) {
+		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data)
+	}
+}
+
+// normal test case, test beacon chain start log event.
+func TestChainStarts(t *testing.T) {
+	testAccount, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testAccount.txOpts.Value = amount32Eth
+
+	for i := 0; i < 9; i++ {
+		_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+		testAccount.backend.Commit()
+		if err != nil {
+			t.Errorf("Validator registration failed: %v", err)
+		}
+	}
+
+	log, err := testAccount.contract.FilterChainStart(&bind.FilterOpts{}, [][]byte{})
+
+	defer func() {
+		err = log.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if log.Error() != nil {
+		t.Fatal(log.Error())
+	}
+	log.Next()
+
+	if len(log.Event.Time) == 0 {
+		t.Error("Chain start even did not get emitted, The start time is empty")
 	}
 }

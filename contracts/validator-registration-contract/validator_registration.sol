@@ -16,10 +16,11 @@ contract ValidatorRegistration {
     );
 
     uint public constant DEPOSIT_SIZE = 32 ether;
-    uint public constant DEPOSITS_FOR_CHAIN_START = 2 ** 14;
+    uint public constant DEPOSITS_FOR_CHAIN_START = 8;
     uint public constant MIN_TOPUP_SIZE = 1 ether;
     uint public constant GWEI_PER_ETH = 10 ** 9;
-    uint public constant MERKLE_TREE_DEPTH = 32;
+    // Setting MERKLE_TREE_DEPTH to 16 instead of 32 due to gas limit
+    uint public constant MERKLE_TREE_DEPTH = 16;
     uint public constant SECONDS_PER_DAY = 86400;
 
     mapping (uint => bytes) public receiptTree;
@@ -49,18 +50,18 @@ contract ValidatorRegistration {
 
         emit HashChainValue(receiptTree[1], depositParams, totalDepositCount);
 
-        receiptTree[index] = abi.encodePacked(keccak256(depositData));
+        receiptTree[index] = abi.encodePacked(keccak256(mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1])));
         for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
             index = index / 2;
-            receiptTree[index] = abi.encodePacked(keccak256(mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1])));
+            receiptTree[index] = mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1]);
         }
 
         require(
-            msg.value < DEPOSIT_SIZE,
+            msg.value <= DEPOSIT_SIZE,
             "Deposit can't be greater than DEPOSIT_SIZE."
         );
         require(
-            msg.value > MIN_TOPUP_SIZE,
+            msg.value >= MIN_TOPUP_SIZE,
             "Deposit can't be lesser than MIN_TOPUP_SIZE."
         );
         if (msg.value == DEPOSIT_SIZE) {
