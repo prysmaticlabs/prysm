@@ -46,14 +46,14 @@ contract ValidatorRegistration {
         uint index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
         bytes memory msgGweiInBytes = toBytes(msg.value);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
-        bytes memory depositData = mergeBytes( mergeBytes(msgGweiInBytes, timeStampInBytes), depositParams);
+        bytes memory depositData = mergeBytes(mergeBytes(msgGweiInBytes, timeStampInBytes), depositParams);
 
         emit HashChainValue(receiptTree[1], depositParams, totalDepositCount);
 
-        receiptTree[index] = abi.encodePacked(keccak256(mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1])));
+        receiptTree[index] = abi.encodePacked(keccak256(depositData));
         for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
             index = index / 2;
-            receiptTree[index] = mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1]);
+            receiptTree[index] = abi.encodePacked(keccak256(mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1])));
         }
 
         require(
