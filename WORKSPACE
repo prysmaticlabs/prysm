@@ -881,7 +881,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_pflag",
-    commit = "aea12ed6721610dc6ed40141676d7ab0a1dac9e9",
+    tag = "v1.0.3",
     importpath = "github.com/spf13/pflag",
 )
 
