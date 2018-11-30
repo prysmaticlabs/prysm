@@ -919,7 +919,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_errwrap",
-    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",
+    tag = "v1.0.0",
     importpath = "github.com/hashicorp/errwrap",
 )
 
