@@ -18,6 +18,8 @@ var (
 	amount33Eth, _ = new(big.Int).SetString("33000000000000000000", 10)
 	amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
 	amount31Eth, _ = new(big.Int).SetString("31000000000000000000", 10)
+	amount2Eth, _ = new(big.Int).SetString("1000000000000000000", 10)
+	amount1Eth, _ = new(big.Int).SetString("2000000000000000000", 10)
 )
 
 type testAccount struct {
