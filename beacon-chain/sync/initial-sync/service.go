@@ -411,6 +411,44 @@ func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
 	return nil
 }
 
+func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
+	block := types.NewBlock(rawBlock)
+	blockHash, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("Could not hash received block: %v", err)
+	}
+
+	log.Debugf("Processing response to block request: %#x", blockHash)
+
+	if ss.db.HasBlock(blockHash) {
+		return errors.New("Received a block that already exists. Exiting...")
+	}
+
+	cState, err := ss.db.GetCrystallizedState()
+	if err != nil {
+		return fmt.Errorf("Failed to get crystallized state: %v", err)
+	}
+
+	if block.SlotNumber() < cState.LastFinalizedSlot() {
+		return errors.New("Discarding received block with a slot number smaller than the last finalized slot")
+	}
+
+	// Verify attestation coming from proposer then forward block to the subscribers.
+	attestation := types.NewAttestation(response.Attestation)
+
+	proposerShardID, _, err := v.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
+	if err != nil {
+		return fmt.Errorf("Failed to get proposer shard ID: %v", err)
+	}
+
+	// TODO(#258): stubbing public key with empty 32 bytes.
+	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
+		return fmt.Errorf("Failed to verify proposer attestation: %v", err)
+	}
+
+	return nil
+}
+
 // writeBlockToDB saves the corresponding block to the local DB.
 func (s *InitialSync) writeBlockToDB(block *types.Block) error {
 	return s.db.SaveBlock(block)
