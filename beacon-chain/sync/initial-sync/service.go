@@ -420,11 +420,11 @@ func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
 
 	log.Debugf("Processing response to block request: %#x", blockHash)
 
-	if ss.db.HasBlock(blockHash) {
+	if s.db.HasBlock(blockHash) {
 		return errors.New("Received a block that already exists. Exiting...")
 	}
 
-	cState, err := ss.db.GetCrystallizedState()
+	cState, err := s.db.GetCrystallizedState()
 	if err != nil {
 		return fmt.Errorf("Failed to get crystallized state: %v", err)
 	}
