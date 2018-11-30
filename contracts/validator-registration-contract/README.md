@@ -1,10 +1,23 @@
 ## Validator Registration Contract
 
-For beacon chain design, a validator will deposit 32 ETH to the main chain smart contract.
+A validator will deposit 32 ETH to the registration
+contract. The contract will generate a receipt showing the validator as a
+qualified validator. 
 The deposit is considered to be burned. As you burn the 32 ETH to participate,
 the beacon chain will see it and will credit the validator with the validator bond,
-and the validator can begin to validate. At some point in the future, after a hard fork,
-the original deposit + interest can be withdrawn back on one of the shards.
+At some point in the future, after a hard fork,
+the original deposit + interest can be withdrawn back on one of the shards.  
+To call the `registration` function, it takes arguments of `pubkey`, 
+`proof_of_possession`, `withdrawal_credentials` and `randao_commitment`. 
+If the user wants to deposit more than `DEPOSIT_SIZE` ETH, they would
+need to make multiple `registration` calls.  
+When the contract publishes the `ChainStart` log, beacon nodes will
+start off the beacon chain with slot 0 and last recorded `block.timestamp`
+as beacon chain genesis time.
+The registration contract generate receipts with the various arguments
+for consumption by beacon nodes. It does not validate `proof_of_possession`
+and `withdrawal_credentials`, pushing the validation logic to the
+beacon chain.
 
 ## How to execute tests
 
