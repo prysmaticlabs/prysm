@@ -313,7 +313,7 @@ func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 		response = append(response, block.Proto())
 	}
 
-	log.Debugf("Sending respone for batch blocks to peer %v", msg.Peer)
+	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
 	sim.p2p.Send(&pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
 	}, msg.Peer)
