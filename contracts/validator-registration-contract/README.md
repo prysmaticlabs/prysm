@@ -12,7 +12,7 @@ To call the `registration` function, it takes arguments of `pubkey`,
 If the user wants to deposit more than `DEPOSIT_SIZE` ETH, they would
 need to make multiple `registration` calls.  
 When the contract publishes the `ChainStart` log, beacon nodes will
-start off the beacon chain with slot 0 and last recored `block.timestamp`
+start off the beacon chain with slot 0 and last recorded `block.timestamp`
 as beacon chain genesis time.
 The registration contract generate receipts with the various arguments
 for consumption by beacon nodes. It does not validate `proof_of_possession`

@@ -1,17 +1,18 @@
-pragma solidity 0.5.0;
+pragma solidity ^0.4.23;
+pragma experimental ABIEncoderV2;
 
 
 contract ValidatorRegistration {
 
     event HashChainValue(
-        bytes32 indexed previousReceiptRoot,
-        byte[2064] data,
+        bytes indexed previousReceiptRoot,
+        bytes data,
         uint totalDepositcount
     );
 
     event ChainStart(
-        bytes32 indexed receiptRoot,
-        bytes[8] time
+        bytes indexed receiptRoot,
+        bytes time
     );
 
     uint public constant DEPOSIT_SIZE = 32 ether;
@@ -21,7 +22,7 @@ contract ValidatorRegistration {
     uint public constant MERKLE_TREE_DEPTH = 32;
     uint public constant SECONDS_PER_DAY = 86400;
 
-    mapping (uint => bytes32) public receiptTree;
+    mapping (uint => bytes) public receiptTree;
     uint public totalDepositCount;
 
     // When users wish to become a validator by moving ETH from
@@ -36,22 +37,22 @@ contract ValidatorRegistration {
     //    'randao_commitment`: 'hash32'
     // }
     function deposit(
-        bytes[2064] depositParams
+        bytes depositParams
     )
         public
         payable
     {
-        uint memory index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
-        bytes[8] storage msgGweiInBytes = bytes8(msg.value);
-        bytes[8] storage timeStampInBytes = bytes8(msg.value);
-        bytes[2064] storage depositData = msgGweiInBytes + timeStampInBytes + depositParams;
-        
+        uint index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
+        bytes memory msgGweiInBytes = toBytes(msg.value);
+        bytes memory timeStampInBytes = toBytes(block.timestamp);
+        bytes memory depositData = mergeBytes( mergeBytes(msgGweiInBytes, timeStampInBytes), depositParams);
+
         emit HashChainValue(receiptTree[1], depositParams, totalDepositCount);
 
-        receiptTree[index] = keccak256(depositData);
+        receiptTree[index] = abi.encodePacked(keccak256(depositData));
         for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
             index = index / 2;
-            receiptTree[index] = keccak256(receiptTree[index * 2] + receiptTree[index * 2 + 1]);
+            receiptTree[index] = abi.encodePacked(keccak256(mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1])));
         }
 
         require(
@@ -69,13 +70,41 @@ contract ValidatorRegistration {
         // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
         // as genesis time.
         if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
-            uint memory timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
-            bytes[8] memory timestampDayBoundryBytes = bytes8(timestampDayBoundry);
-            emit Chainstart(receiptTree[1], timestampDayBoundryBytes);
+            uint timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+            bytes memory timestampDayBoundryBytes = toBytes(timestampDayBoundry);
+            emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
         }
     }
 
-    function getReceiptRoot() public constant returns(bytes32) {
+    function getReceiptRoot() public constant returns (bytes) {
         return receiptTree[1];
+    }
+
+    function toBytes(uint x) private constant returns (bytes memory) {
+        bytes memory b = new bytes(32);
+        assembly { mstore(add(b, 32), x) }
+        return b;
+    }
+
+    function mergeBytes(bytes memory a, bytes memory b) private returns (bytes memory c) {
+        // Store the length of the first array
+        uint alen = a.length;
+        // Store the length of BOTH arrays
+        uint totallen = alen + b.length;
+        // Count the loops required for array a (sets of 32 bytes)
+        uint loopsa = (a.length + 31) / 32;
+        // Count the loops required for array b (sets of 32 bytes)
+        uint loopsb = (b.length + 31) / 32;
+        assembly {
+            let m := mload(0x40)
+            // Load the length of both arrays to the head of the new bytes array
+            mstore(m, totallen)
+            // Add the contents of a to the array
+            for {  let i := 0 } lt(i, loopsa) { i := add(1, i) } { mstore(add(m, mul(32, add(1, i))), mload(add(a, mul(32, add(1, i))))) }
+            // Add the contents of b to the array
+            for {  let i := 0 } lt(i, loopsb) { i := add(1, i) } { mstore(add(m, add(mul(32, add(1, i)), alen)), mload(add(b, mul(32, add(1, i))))) }
+            mstore(0x40, add(m, add(32, totallen)))
+            c := m
+        }
     }
 }
