@@ -303,7 +303,7 @@ func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 	startSlot := data.GetStartSlot()
 	endSlot := data.GetEndSlot()
 
-	response := make([]*pb.BeaconBlock, startSlot-endSlot)
+	response := make([]*pb.BeaconBlock, endSlot-startSlot)
 
 	for i := startSlot; i <= endSlot; i++ {
 		block := sim.broadcastedBlocksBySlot[i]
