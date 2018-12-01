@@ -16,6 +16,7 @@ import (
 
 // IsValidBlock verifies a block is valid according to the ETH 2.0 specification for
 // validity conditions taking into consideration attestation processing and more.
+// TODO(#781): Refactor with the new spec validity conditions.
 func IsValidBlock(
 	block *types.Block,
 	beaconState *types.BeaconState,
@@ -92,6 +93,7 @@ func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState,
 }
 
 // isBlockAttestationValid verifies a block's attestations pass validity conditions.
+// TODO(#781): Refactor with the new spec attestation checking conditions.
 func isBlockAttestationValid(
 	block *types.Block,
 	attestation *pb.AggregatedAttestation,
