@@ -639,7 +639,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "5faa74ffbed7096292069fdcd0eae96146a3158a",
+    commit = "f7cbe917ef623dd7062366ce4a1a0558c997f437",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -875,13 +875,13 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+    tag = "v2.2.2",
     importpath = "gopkg.in/yaml.v2",
 )
 
 go_repository(
     name = "com_github_spf13_pflag",
-    commit = "aea12ed6721610dc6ed40141676d7ab0a1dac9e9",
+    tag = "v1.0.3",
     importpath = "github.com/spf13/pflag",
 )
 
@@ -913,13 +913,13 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+    tag = "v1.0.0",
     importpath = "github.com/hashicorp/go-multierror",
 )
 
 go_repository(
     name = "com_github_hashicorp_errwrap",
-    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",
+    tag = "v1.0.0",
     importpath = "github.com/hashicorp/errwrap",
 )
 
@@ -931,6 +931,6 @@ go_repository(
 
 go_repository(
     name = "com_github_inconshreveable_mousetrap",
-    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    tag = "v1.0.0",
     importpath = "github.com/inconshreveable/mousetrap",
 )
