@@ -99,6 +99,7 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 		if err != nil {
 			return fmt.Errorf("failed to read block at slot %d: %v", slot, err)
 		}
+		log.Infof("block: %v", block)
 		if block != nil {
 			var blockHash [32]byte
 			blockHash, err = block.Hash()
@@ -108,6 +109,7 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 			blockHashes = append(blockHashes, blockHash)
 		}
 	}
+	log.Infof("hashes: %v", blockHashes)
 	if err = d.beaconDB.DeleteBlockVoteCache(blockHashes); err != nil {
 		return fmt.Errorf("failed to delete block vote cache: %v", err)
 	}

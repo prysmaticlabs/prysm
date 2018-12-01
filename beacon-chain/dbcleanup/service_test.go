@@ -78,6 +78,9 @@ func TestCleanBlockVoteCache(t *testing.T) {
 	if err = beaconDB.SaveState(oldState); err != nil {
 		t.Fatalf("failed to pre-fill DB: %v", err)
 	}
+	if err := beaconDB.UpdateChainHead(oldBlock, oldState); err != nil {
+		t.Fatalf("failed to update chain head: %v", err)
+	}
 	oldBlockVoteCache := utils.NewBlockVoteCache()
 	oldBlockVoteCache[oldBlockHash] = utils.NewBlockVote()
 	if err = beaconDB.WriteBlockVoteCache(oldBlockVoteCache); err != nil {

@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -91,7 +92,7 @@ func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 
 		height := chainInfo.Get(mainChainHeightKey)
 		if height == nil {
-			return errors.New("unable to determinechain height")
+			return errors.New("unable to determine chain height")
 		}
 
 		blockhash := mainChain.Get(height)
@@ -166,6 +167,7 @@ func (db *BeaconDB) GetBlockBySlot(slot uint64) (*types.Block, error) {
 		if blockhash == nil {
 			return nil
 		}
+		log.Printf("block hash in db: %v", blockhash)
 
 		enc := blockBkt.Get(blockhash)
 		if enc == nil {
