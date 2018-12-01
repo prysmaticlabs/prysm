@@ -8,6 +8,8 @@
       "error",
       "double"
     ],
+    "security/no-inline-assembly": ["warning"],
+
     "indentation": [
       "error",
       4

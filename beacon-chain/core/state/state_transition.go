@@ -139,6 +139,10 @@ func crossLinkCalculations(
 			st.LastStateRecalculationSlot(),
 			attestation.GetSlot(),
 		)
+		if err != nil {
+			return nil, err
+		}
+
 		indices, err := v.AttesterIndices(shardCommittees, attestation)
 		if err != nil {
 			return nil, err
