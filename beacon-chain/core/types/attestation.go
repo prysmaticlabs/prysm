@@ -13,33 +13,64 @@ import (
 // Attestation is the primary source of load on the beacon chain, it's used to
 // attest to some parent block in the chain and block hash in a shard.
 type Attestation struct {
-	data *pb.AggregatedAttestation
+	data *pb.AttestationRecord
 }
 
-// NewAttestation explicitly sets the data field of a attestation.
-// Return attestation with default fields if data is nil.
-func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
+// NewAggregatedAttestation explicitly sets the data field of an
+// attestation record including an aggregate BLS signature.
+// This returns an attestation with default fields if data is nil.
+func NewAggregatedAttestation(data *pb.AttestationRecord) *Attestation {
 	if data == nil {
 		return &Attestation{
-			data: &pb.AggregatedAttestation{
-				Slot:                0,
-				Shard:               0,
-				JustifiedSlot:       0,
-				JustifiedBlockHash:  []byte{},
-				ShardBlockHash:      []byte{},
-				AttesterBitfield:    []byte{},
-				ObliqueParentHashes: [][]byte{{}},
-				AggregateSig:        []uint64{},
+			data: &pb.AttestationRecord{
+				AttesterBitfield: []byte{},
+				AggregateSig:     []uint64{},
+				PocBitfield:      []byte{},
+				SignedData: &pb.AttestationSignedData{
+					Slot:               0,
+					Shard:              0,
+					BlockHash:          []byte{},
+					CycleBoundaryHash:  []byte{},
+					LastCrosslinkHash:  []byte{},
+					JustifiedSlot:      0,
+					JustifiedBlockHash: []byte{},
+					ShardBlockHash:     []byte{},
+				},
 			},
 		}
 	}
 	return &Attestation{data: data}
 }
 
-// AttestationMsg hashes parentHashes + shardID + slotNumber + shardBlockHash + justifiedSlot
+// NewProcessedAttestation creates an attestation record instance that
+// does not care about aggregate signatures and just tracks the
+// slot it was included.
+func NewProcessedAttestation(data *pb.AttestationRecord) *Attestation {
+	if data == nil {
+		return &Attestation{
+			data: &pb.AttestationRecord{
+				AttesterBitfield: []byte{},
+				PocBitfield:      []byte{},
+				SlotIncluded:     0,
+				SignedData: &pb.AttestationSignedData{
+					Slot:               0,
+					Shard:              0,
+					BlockHash:          []byte{},
+					CycleBoundaryHash:  []byte{},
+					LastCrosslinkHash:  []byte{},
+					JustifiedSlot:      0,
+					JustifiedBlockHash: []byte{},
+					ShardBlockHash:     []byte{},
+				},
+			},
+		}
+	}
+	return &Attestation{data: data}
+}
+
+// AttestationMsg hashes shardID + slotNumber + shardBlockHash + justifiedSlot
 // into a message to use for verifying with aggregated public key and signature.
 func AttestationMsg(
-	parentHashes [][32]byte,
 	blockHash []byte,
 	slot uint64,
 	shardID uint64,
@@ -49,9 +80,6 @@ func AttestationMsg(
 	msg := make([]byte, binary.MaxVarintLen64)
 	binary.BigEndian.PutUint64(msg, forkVersion)
 	binary.PutUvarint(msg, slot%params.BeaconConfig().CycleLength)
-	for _, parentHash := range parentHashes {
-		msg = append(msg, parentHash[:]...)
-	}
 	binary.PutUvarint(msg, shardID)
 	msg = append(msg, blockHash...)
 	binary.PutUvarint(msg, justifiedSlot)
@@ -59,7 +87,7 @@ func AttestationMsg(
 }
 
 // Proto returns the underlying protobuf data.
-func (a *Attestation) Proto() *pb.AggregatedAttestation {
+func (a *Attestation) Proto() *pb.AttestationRecord {
 	return a.data
 }
 
@@ -77,59 +105,50 @@ func (a *Attestation) Hash() ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
+// SignedData returns the innter attestation signed data object.
+func (a *Attestation) SignedData() *pb.AttestationSignedData {
+	return a.data.SignedData
+}
+
 // Key generates the blake2b hash of the following attestation fields:
-// slotNumber + shardID + blockHash + obliqueParentHash
+// slotNumber + shardID + blockHash
 // This is used for attestation table look up in localDB.
 func (a *Attestation) Key() [32]byte {
 	key := make([]byte, binary.MaxVarintLen64)
 	binary.PutUvarint(key, a.SlotNumber())
 	binary.PutUvarint(key, a.ShardID())
 	key = append(key, a.ShardBlockHash()...)
-	for _, pHash := range a.ObliqueParentHashes() {
-		key = append(key, pHash[:]...)
-	}
 	return hashutil.Hash(key)
 }
 
 // SlotNumber of the block, which this attestation is attesting to.
 func (a *Attestation) SlotNumber() uint64 {
-	return a.data.Slot
+	return a.data.SignedData.Slot
 }
 
 // ShardID of the block, which this attestation is attesting to.
 func (a *Attestation) ShardID() uint64 {
-	return a.data.Shard
+	return a.data.SignedData.Shard
 }
 
 // ShardBlockHash of the block, which this attestation is attesting to.
 func (a *Attestation) ShardBlockHash() []byte {
-	return a.data.ShardBlockHash
+	return a.data.SignedData.ShardBlockHash
 }
 
 // JustifiedSlotNumber of the attestation should be earlier than the last justified slot in crystallized state.
 func (a *Attestation) JustifiedSlotNumber() uint64 {
-	return a.data.JustifiedSlot
+	return a.data.SignedData.JustifiedSlot
 }
 
 // JustifiedBlockHash should be in the chain of the block being processed.
 func (a *Attestation) JustifiedBlockHash() []byte {
-	return a.data.JustifiedBlockHash
+	return a.data.SignedData.JustifiedBlockHash
 }
 
 // AttesterBitfield represents which validator in the committee has voted.
 func (a *Attestation) AttesterBitfield() []byte {
 	return a.data.AttesterBitfield
-}
-
-// ObliqueParentHashes represents the block hashes this attestation is not attesting for.
-func (a *Attestation) ObliqueParentHashes() [][32]byte {
-	var obliqueParentHashes [][32]byte
-	for _, hash := range a.data.ObliqueParentHashes {
-		var h [32]byte
-		copy(h[:], hash)
-		obliqueParentHashes = append(obliqueParentHashes, h)
-	}
-	return obliqueParentHashes
 }
 
 // AggregateSig represents the aggregated signature from all the validators attesting to this block.
@@ -143,7 +162,6 @@ func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID
 	// Verify the attestation attached with block response.
 	// Get proposer index and shardID.
 	attestationMsg := AttestationMsg(
-		a.ObliqueParentHashes(),
 		a.ShardBlockHash(),
 		a.SlotNumber(),
 		proposerShardID,
