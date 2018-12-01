@@ -1,6 +1,9 @@
 package state
 
 import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -10,12 +13,13 @@ import (
 )
 
 // NewStateTransition computes the new beacon state, given the previous beacon state
-// and a beacon block. This method is called during a cycle transition.
+// a beacon block, and its parent slot. This method is called during a cycle transition.
 // We also check for validator set change transition and compute for new
 // committees if necessary during this transition.
 func NewStateTransition(
 	st *types.BeaconState,
 	block *types.Block,
+	parentSlot uint64,
 	blockVoteCache utils.BlockVoteCache,
 ) (*types.BeaconState, error) {
 	var lastStateRecalculationSlotCycleBack uint64
@@ -26,81 +30,96 @@ func NewStateTransition(
 	justifiedSlot := st.LastJustifiedSlot()
 	finalizedSlot := st.LastFinalizedSlot()
 	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
-	recentBlockHashes := st.RecentBlockHashes()
 	newState.SetValidators(v.CopyValidators(newState.Validators()))
 
-	if st.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
-		lastStateRecalculationSlotCycleBack = 0
-	} else {
-		lastStateRecalculationSlotCycleBack = st.LastStateRecalculationSlot() - params.BeaconConfig().CycleLength
-	}
-
-	// walk through all the slots from LastStateRecalculationSlot - cycleLength to
-	// LastStateRecalculationSlot - 1.
-	for i := uint64(0); i < params.BeaconConfig().CycleLength; i++ {
-		var blockVoteBalance uint64
-
-		slot := lastStateRecalculationSlotCycleBack + i
-		blockHash := recentBlockHashes[i]
-
-		blockVoteBalance, validators := incentives.TallyVoteBalances(
-			blockHash,
-			blockVoteCache,
-			newState.Validators(),
-			v.ActiveValidatorIndices(newState.Validators()),
-			v.TotalActiveValidatorDeposit(newState.Validators()),
-			timeSinceFinality,
-		)
-
-		newState.SetValidators(validators)
-
-		justifiedSlot, finalizedSlot, justifiedStreak = FinalizeAndJustifySlots(
-			slot,
-			justifiedSlot,
-			finalizedSlot,
-			justifiedStreak,
-			blockVoteBalance,
-			v.TotalActiveValidatorDeposit(st.Validators()),
-		)
-	}
-
-	crossLinks, err := crossLinkCalculations(
-		newState,
-		st.PendingAttestations(),
-		block.SlotNumber(),
-	)
+	newState.ClearAttestations(st.LastStateRecalculationSlot())
+	// Derive the new set of recent block hashes.
+	recentBlockHashes, err := st.CalculateNewBlockHashes(block, parentSlot)
 	if err != nil {
 		return nil, err
 	}
+	newState.SetRecentBlockHashes(recentBlockHashes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
+	}
 
-	newState.SetCrossLinks(crossLinks)
+	newRandao := createRandaoMix(block.RandaoReveal(), st.RandaoMix())
+	newState.SetRandaoMix(newRandao[:])
 
-	newState.SetLastJustifiedSlot(justifiedSlot)
-	newState.SetLastFinalizedSlot(finalizedSlot)
-	newState.SetJustifiedStreak(justifiedStreak)
-	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength)
+	// The changes below are only applied if this is a cycle transition.
+	if block.SlotNumber()%params.BeaconConfig().CycleLength == 0 {
+		if st.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
+			lastStateRecalculationSlotCycleBack = 0
+		} else {
+			lastStateRecalculationSlotCycleBack = st.LastStateRecalculationSlot() - params.BeaconConfig().CycleLength
+		}
 
-	// Exit the validators when their balance fall below min online deposit size.
-	newState.SetValidators(v.CheckValidatorMinDeposit(newState.Validators(), block.SlotNumber()))
+		// walk through all the slots from LastStateRecalculationSlot - cycleLength to
+		// LastStateRecalculationSlot - 1.
+		for i := uint64(0); i < params.BeaconConfig().CycleLength; i++ {
+			var blockVoteBalance uint64
 
-	// Entering new validator set change transition.
-	if newState.IsValidatorSetChange(block.SlotNumber()) {
-		newState.SetValidatorSetChangeSlot(newState.LastStateRecalculationSlot())
-		shardAndCommitteesForSlots, err := validatorSetRecalculations(
-			newState.ShardAndCommitteesForSlots(),
-			newState.Validators(),
-			block.ParentHash(),
+			slot := lastStateRecalculationSlotCycleBack + i
+			blockHash := recentBlockHashes[i]
+
+			blockVoteBalance, validators := incentives.TallyVoteBalances(
+				common.BytesToHash(blockHash),
+				blockVoteCache,
+				newState.Validators(),
+				v.ActiveValidatorIndices(newState.Validators()),
+				v.TotalActiveValidatorDeposit(newState.Validators()),
+				timeSinceFinality,
+			)
+
+			newState.SetValidators(validators)
+
+			justifiedSlot, finalizedSlot, justifiedStreak = FinalizeAndJustifySlots(
+				slot,
+				justifiedSlot,
+				finalizedSlot,
+				justifiedStreak,
+				blockVoteBalance,
+				v.TotalActiveValidatorDeposit(st.Validators()),
+			)
+		}
+
+		crossLinks, err := crossLinkCalculations(
+			newState,
+			st.PendingAttestations(),
+			block.SlotNumber(),
 		)
 		if err != nil {
 			return nil, err
 		}
-		newState.SetShardAndCommitteesForSlots(shardAndCommitteesForSlots)
 
-		period := block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod
-		totalPenalties := newState.PenalizedETH(period)
-		newState.SetValidators(v.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators()))
+		newState.SetCrossLinks(crossLinks)
+
+		newState.SetLastJustifiedSlot(justifiedSlot)
+		newState.SetLastFinalizedSlot(finalizedSlot)
+		newState.SetJustifiedStreak(justifiedStreak)
+
+		// Exit the validators when their balance fall below min online deposit size.
+		newState.SetValidators(v.CheckValidatorMinDeposit(newState.Validators(), block.SlotNumber()))
+
+		// Entering new validator set change transition.
+		if newState.IsValidatorSetChange(block.SlotNumber()) {
+			newState.SetValidatorSetChangeSlot(newState.LastStateRecalculationSlot())
+			shardAndCommitteesForSlots, err := validatorSetRecalculations(
+				newState.ShardAndCommitteesForSlots(),
+				newState.Validators(),
+				block.ParentHash(),
+			)
+			if err != nil {
+				return nil, err
+			}
+			newState.SetShardAndCommitteesForSlots(shardAndCommitteesForSlots)
+
+			period := block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod
+			totalPenalties := newState.PenalizedETH(period)
+			newState.SetValidators(v.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators()))
+		}
 	}
-
+	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + 1)
 	return newState, nil
 }
 
@@ -174,4 +193,14 @@ func validatorSetRecalculations(
 	}
 
 	return append(shardAndCommittesForSlots[params.BeaconConfig().CycleLength:], newShardCommitteeArray...), nil
+}
+
+// createRandaoMix sets the block randao seed into a beacon state randao. This function
+// XOR's the current state randao with the block's randao value added by the
+// proposer.
+func createRandaoMix(blockRandao [32]byte, beaconStateRandao [32]byte) [32]byte {
+	for i, b := range blockRandao {
+		beaconStateRandao[i] ^= b
+	}
+	return beaconStateRandao
 }

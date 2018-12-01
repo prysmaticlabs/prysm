@@ -58,7 +58,7 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
-		CStateReqBuf:    10,
+		StateReqBuf:     10,
 	}
 
 	return NewSimulator(ctx, cfg), p2pService
@@ -187,7 +187,7 @@ func TestBlockRequestBySlot(t *testing.T) {
 	hook.Reset()
 }
 
-func TestCrystallizedStateRequest(t *testing.T) {
+func TestStateRequest(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -202,43 +202,43 @@ func TestCrystallizedStateRequest(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	cState, err := sim.beaconDB.GetCrystallizedState()
+	beaconState, err := sim.beaconDB.GetState()
 	if err != nil {
-		t.Fatalf("could not retrieve crystallized state %v", err)
+		t.Fatalf("could not retrieve beacon state %v", err)
 	}
 
-	hash, err := cState.Hash()
+	hash, err := beaconState.Hash()
 	if err != nil {
-		t.Fatalf("could not hash crystallized state %v", err)
+		t.Fatalf("could not hash beacon state %v", err)
 	}
 
-	cStateRequest := &pb.CrystallizedStateRequest{
+	beaconStateRequest := &pb.BeaconStateRequest{
 		Hash: []byte{'t', 'e', 's', 't'},
 	}
 
 	message := p2p.Message{
-		Data: cStateRequest,
+		Data: beaconStateRequest,
 	}
 
-	sim.cStateReqChan <- message
+	sim.stateReqChan <- message
 
-	testutil.WaitForLog(t, hook, "Requested Crystallized state is of a different hash")
-	testutil.AssertLogsDoNotContain(t, hook, "Responding to full crystallized state request")
+	testutil.WaitForLog(t, hook, "Requested beacon state is of a different hash")
+	testutil.AssertLogsDoNotContain(t, hook, "Responding to full beacon state request")
 
 	hook.Reset()
 
-	newCStateReq := &pb.CrystallizedStateRequest{
+	newStateReq := &pb.BeaconStateRequest{
 		Hash: hash[:],
 	}
 
 	newMessage := p2p.Message{
-		Data: newCStateReq,
+		Data: newStateReq,
 	}
 
-	sim.cStateReqChan <- newMessage
+	sim.stateReqChan <- newMessage
 
-	testutil.WaitForLog(t, hook, "Responding to full crystallized state request")
-	testutil.AssertLogsDoNotContain(t, hook, "Requested Crystallized state is of a different hash")
+	testutil.WaitForLog(t, hook, "Responding to full beacon state request")
+	testutil.AssertLogsDoNotContain(t, hook, "Requested beacon state is of a different hash")
 
 	sim.cancel()
 	exitRoutine <- true

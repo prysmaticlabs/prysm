@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 )
 
 func createBlock(enc []byte) (*types.Block, error) {
@@ -90,7 +91,7 @@ func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 
 		height := chainInfo.Get(mainChainHeightKey)
 		if height == nil {
-			return errors.New("unable to determinechain height")
+			return errors.New("unable to determine chain height")
 		}
 
 		blockhash := mainChain.Get(height)
@@ -114,23 +115,15 @@ func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
-func (db *BeaconDB) UpdateChainHead(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
-	blockhash, err := block.Hash()
+func (db *BeaconDB) UpdateChainHead(block *types.Block, beaconState *types.BeaconState) error {
+	blockHash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("unable to get the block hash: %v", err)
 	}
 
-	aStateEnc, err := aState.Marshal()
+	beaconStateEnc, err := beaconState.Marshal()
 	if err != nil {
-		return fmt.Errorf("unable to encode the active state: %v", err)
-	}
-
-	var cStateEnc []byte
-	if cState != nil {
-		cStateEnc, err = cState.Marshal()
-		if err != nil {
-			return fmt.Errorf("unable to encode the crystallized state: %v", err)
-		}
+		return fmt.Errorf("unable to encode the beacon state: %v", err)
 	}
 
 	slotBinary := encodeSlotNumber(block.SlotNumber())
@@ -140,11 +133,11 @@ func (db *BeaconDB) UpdateChainHead(block *types.Block, aState *types.ActiveStat
 		chainInfo := tx.Bucket(chainInfoBucket)
 		mainChain := tx.Bucket(mainChainBucket)
 
-		if blockBucket.Get(blockhash[:]) == nil {
-			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockhash, err)
+		if blockBucket.Get(blockHash[:]) == nil {
+			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockHash, err)
 		}
 
-		if err := mainChain.Put(slotBinary, blockhash[:]); err != nil {
+		if err := mainChain.Put(slotBinary, blockHash[:]); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 
@@ -152,16 +145,9 @@ func (db *BeaconDB) UpdateChainHead(block *types.Block, aState *types.ActiveStat
 			return fmt.Errorf("failed to record the block as the head of the main chain: %v", err)
 		}
 
-		if err := chainInfo.Put(aStateLookupKey, aStateEnc); err != nil {
-			return fmt.Errorf("failed to save active state as canonical: %v", err)
+		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
+			return fmt.Errorf("failed to save beacon state as canonical: %v", err)
 		}
-
-		if cStateEnc != nil {
-			if err := chainInfo.Put(cStateLookupKey, cStateEnc); err != nil {
-				return fmt.Errorf("failed to save crystallized state as canonical: %v", err)
-			}
-		}
-
 		return nil
 	})
 }
