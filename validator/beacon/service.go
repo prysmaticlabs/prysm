@@ -229,7 +229,7 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 			continue
 		}
 
-		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
+		log.WithField("slotNumber", attestation.SignedData.GetSlot()).Info("Latest attestation slot number")
 		s.processedAttestationFeed.Send(attestation)
 	}
 }

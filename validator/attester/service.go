@@ -115,11 +115,13 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 
 			attestReq := &pb.AttestRequest{
 				Attestation: &pbp2p.AggregatedAttestation{
-					Slot:             latestBeaconBlock.GetSlot(),
-					Shard:            a.shardID,
+					SignedData: &pbp2p.AttestationSignedData{
+						Slot:           latestBeaconBlock.GetSlot(),
+						Shard:          a.shardID,
+						ShardBlockHash: latestBlockHash[:], // Is a stub for actual shard blockhash.
+					},
 					AttesterBitfield: attesterBitfield,
-					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
-					AggregateSig:     []uint64{},         // TODO(258): Need Signature verification scheme/library
+					AggregateSig:     []uint64{}, // TODO(258): Need Signature verification scheme/library
 				},
 			}
 
