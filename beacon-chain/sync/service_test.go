@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"

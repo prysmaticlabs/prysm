@@ -27,7 +27,7 @@ func TestInitGenesisJson(t *testing.T) {
 	os.Remove(fnamePath)
 
 	params.UseDemoBeaconConfig()
-	cStateJSON := &pb.CrystallizedState{
+	stateJSON := &pb.BeaconState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,
 		LastFinalizedSlot:          99,
@@ -42,7 +42,7 @@ func TestInitGenesisJson(t *testing.T) {
 	}
 
 	ma := jsonpb.Marshaler{}
-	err = ma.Marshal(f, cStateJSON)
+	err = ma.Marshal(f, stateJSON)
 	if err != nil {
 		t.Fatalf("can't marshal file %v", err)
 	}

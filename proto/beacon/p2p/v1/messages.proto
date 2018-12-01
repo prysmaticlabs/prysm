@@ -12,12 +12,9 @@ enum Topic {
   BEACON_BLOCK_RESPONSE = 4;
   CHAIN_HEAD_REQUEST = 5;
   CHAIN_HEAD_RESPONSE = 6;
-  CRYSTALLIZED_STATE_HASH_ANNOUNCE = 7;
-  CRYSTALLIZED_STATE_REQUEST = 8;
-  CRYSTALLIZED_STATE_RESPONSE = 9;
-  ACTIVE_STATE_HASH_ANNOUNCE = 10;
-  ACTIVE_STATE_REQUEST = 11;
-  ACTIVE_STATE_RESPONSE = 12;
+  BEACON_STATE_HASH_ANNOUNCE = 7;
+  BEACON_STATE_REQUEST = 8;
+  BEACON_STATE_RESPONSE = 9;
 }
 
 message BeaconBlockAnnounce {
@@ -46,26 +43,14 @@ message ChainHeadResponse {
   BeaconBlock block = 3;
 }
 
-message CrystallizedStateHashAnnounce {
+message BeaconStateHashAnnounce {
   bytes hash = 1;
 }
 
-message CrystallizedStateRequest {
+message BeaconStateRequest {
   bytes hash = 1;
 }
 
-message CrystallizedStateResponse {
-  CrystallizedState crystallized_state = 1;
-}
-
-message ActiveStateHashAnnounce {
-  bytes hash = 1;
-}
-
-message ActiveStateRequest {
-  bytes hash = 1;
-}
-
-message ActiveStateResponse {
-  ActiveState active_state = 1;
+message BeaconStateResponse {
+  BeaconState beacon_state = 1;
 }

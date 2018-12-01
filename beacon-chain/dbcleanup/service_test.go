@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -21,7 +21,7 @@ type mockChainService struct {
 	stateFeed *event.Feed
 }
 
-func (m *mockChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+func (m *mockChainService) CanonicalStateFeed() *event.Feed {
 	return m.stateFeed
 }
 
@@ -74,10 +74,12 @@ func TestCleanBlockVoteCache(t *testing.T) {
 	if err = beaconDB.SaveBlock(oldBlock); err != nil {
 		t.Fatalf("failed to write block int DB: %v", err)
 	}
-	oldAState := types.NewActiveState(&pb.ActiveState{})
-	oldCState := types.NewCrystallizedState(&pb.CrystallizedState{})
-	if err = beaconDB.UpdateChainHead(oldBlock, oldAState, oldCState); err != nil {
+	oldState := types.NewBeaconState(&pb.BeaconState{})
+	if err = beaconDB.SaveState(oldState); err != nil {
 		t.Fatalf("failed to pre-fill DB: %v", err)
+	}
+	if err := beaconDB.UpdateChainHead(oldBlock, oldState); err != nil {
+		t.Fatalf("failed to update chain head: %v", err)
 	}
 	oldBlockVoteCache := utils.NewBlockVoteCache()
 	oldBlockVoteCache[oldBlockHash] = utils.NewBlockVote()
@@ -97,8 +99,8 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Now let the cleanup service do its job
 	cleanupService := createCleanupService(beaconDB)
-	cState := types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 1})
-	if err = cleanupService.cleanBlockVoteCache(cState.LastFinalizedSlot()); err != nil {
+	state := types.NewBeaconState(&pb.BeaconState{LastFinalizedSlot: 1})
+	if err = cleanupService.cleanBlockVoteCache(state.LastFinalizedSlot()); err != nil {
 		t.Fatalf("failed to clean block vote cache")
 	}
 

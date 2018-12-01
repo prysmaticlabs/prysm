@@ -82,7 +82,7 @@ func TestChainReqResponse(t *testing.T) {
 
 	sq.responseBuf <- msg
 
-	expMsg := fmt.Sprintf("Latest Chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+	expMsg := fmt.Sprintf("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
 
 	testutil.WaitForLog(t, hook, expMsg)
 

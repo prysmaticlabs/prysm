@@ -17,7 +17,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -30,14 +31,14 @@ var log = logrus.WithField("prefix", "initial-sync")
 // Config defines the configurable properties of InitialSync.
 //
 type Config struct {
-	SyncPollingInterval         time.Duration
-	BlockBufferSize             int
-	BlockAnnounceBufferSize     int
-	CrystallizedStateBufferSize int
-	BeaconDB                    beaconDB
-	P2P                         p2pAPI
-	SyncService                 syncService
-	QueryService                queryService
+	SyncPollingInterval     time.Duration
+	BlockBufferSize         int
+	BlockAnnounceBufferSize int
+	StateBufferSize         int
+	BeaconDB                *db.BeaconDB
+	P2P                     p2pAPI
+	SyncService             syncService
+	QueryService            queryService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -46,10 +47,10 @@ type Config struct {
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
 func DefaultConfig() Config {
 	return Config{
-		SyncPollingInterval:         time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BlockBufferSize:             100,
-		BlockAnnounceBufferSize:     100,
-		CrystallizedStateBufferSize: 100,
+		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
+		BlockBufferSize:         100,
+		BlockAnnounceBufferSize: 100,
+		StateBufferSize:         100,
 	}
 }
 
@@ -57,11 +58,6 @@ type p2pAPI interface {
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 	Send(msg proto.Message, peer p2p.Peer)
 	Broadcast(msg proto.Message)
-}
-
-type beaconDB interface {
-	SaveBlock(*types.Block) error
-	SaveCrystallizedState(*types.CrystallizedState) error
 }
 
 // SyncService is the interface for the Sync service.
@@ -79,20 +75,20 @@ type queryService interface {
 // InitialSync defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type InitialSync struct {
-	ctx                          context.Context
-	cancel                       context.CancelFunc
-	p2p                          p2pAPI
-	syncService                  syncService
-	queryService                 queryService
-	db                           beaconDB
-	blockAnnounceBuf             chan p2p.Message
-	blockBuf                     chan p2p.Message
-	crystallizedStateBuf         chan p2p.Message
-	currentSlot                  uint64
-	highestObservedSlot          uint64
-	syncPollingInterval          time.Duration
-	initialCrystallizedStateRoot [32]byte
-	inMemoryBlocks               map[uint64]*pb.BeaconBlockResponse
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	p2p                 p2pAPI
+	syncService         syncService
+	queryService        queryService
+	db                  *db.BeaconDB
+	blockAnnounceBuf    chan p2p.Message
+	blockBuf            chan p2p.Message
+	stateBuf            chan p2p.Message
+	currentSlot         uint64
+	highestObservedSlot uint64
+	syncPollingInterval time.Duration
+	initialStateRoot    [32]byte
+	inMemoryBlocks      map[uint64]*pb.BeaconBlockResponse
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -103,23 +99,23 @@ func NewInitialSyncService(ctx context.Context,
 	ctx, cancel := context.WithCancel(ctx)
 
 	blockBuf := make(chan p2p.Message, cfg.BlockBufferSize)
-	crystallizedStateBuf := make(chan p2p.Message, cfg.CrystallizedStateBufferSize)
+	stateBuf := make(chan p2p.Message, cfg.StateBufferSize)
 	blockAnnounceBuf := make(chan p2p.Message, cfg.BlockAnnounceBufferSize)
 
 	return &InitialSync{
-		ctx:                  ctx,
-		cancel:               cancel,
-		p2p:                  cfg.P2P,
-		syncService:          cfg.SyncService,
-		db:                   cfg.BeaconDB,
-		currentSlot:          0,
-		highestObservedSlot:  0,
-		blockBuf:             blockBuf,
-		crystallizedStateBuf: crystallizedStateBuf,
-		blockAnnounceBuf:     blockAnnounceBuf,
-		syncPollingInterval:  cfg.SyncPollingInterval,
-		inMemoryBlocks:       map[uint64]*pb.BeaconBlockResponse{},
-		queryService:         cfg.QueryService,
+		ctx:                 ctx,
+		cancel:              cancel,
+		p2p:                 cfg.P2P,
+		syncService:         cfg.SyncService,
+		db:                  cfg.BeaconDB,
+		currentSlot:         0,
+		highestObservedSlot: 0,
+		blockBuf:            blockBuf,
+		stateBuf:            stateBuf,
+		blockAnnounceBuf:    blockAnnounceBuf,
+		syncPollingInterval: cfg.SyncPollingInterval,
+		inMemoryBlocks:      map[uint64]*pb.BeaconBlockResponse{},
+		queryService:        cfg.QueryService,
 	}
 }
 
@@ -153,17 +149,17 @@ func (s *InitialSync) Stop() error {
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run(delaychan <-chan time.Time) {
+func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
-	crystallizedStateSub := s.p2p.Subscribe(&pb.CrystallizedStateResponse{}, s.crystallizedStateBuf)
+	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
 		blockSub.Unsubscribe()
 		blockAnnounceSub.Unsubscribe()
-		crystallizedStateSub.Unsubscribe()
+		beaconStateSub.Unsubscribe()
 		close(s.blockBuf)
-		close(s.crystallizedStateBuf)
+		close(s.stateBuf)
 	}()
 
 	for {
@@ -171,7 +167,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
-		case <-delaychan:
+		case <-delayChan:
 			if s.currentSlot == 0 {
 				continue
 			}
@@ -201,7 +197,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 
 			if s.currentSlot == 0 {
-				if s.initialCrystallizedStateRoot != [32]byte{} {
+				if s.initialStateRoot != [32]byte{} {
 					continue
 				}
 				if data.GetBlock().GetSlot() != 1 {
@@ -216,8 +212,8 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				if err := s.setBlockForInitialSync(data); err != nil {
 					log.Errorf("Could not set block for initial sync: %v", err)
 				}
-				if err := s.requestCrystallizedStateFromPeer(data, msg.Peer); err != nil {
-					log.Errorf("Could not request crystallized state from peer: %v", err)
+				if err := s.requestStateFromPeer(data, msg.Peer); err != nil {
+					log.Errorf("Could not request beacon state from peer: %v", err)
 				}
 
 				continue
@@ -234,51 +230,51 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 				log.Errorf("Unable to save block: %v", err)
 			}
 			s.requestNextBlockBySlot(s.currentSlot + 1)
-		case msg := <-s.crystallizedStateBuf:
-			data := msg.Data.(*pb.CrystallizedStateResponse)
+		case msg := <-s.stateBuf:
+			data := msg.Data.(*pb.BeaconStateResponse)
 
-			if s.initialCrystallizedStateRoot == [32]byte{} {
+			if s.initialStateRoot == [32]byte{} {
 				continue
 			}
 
-			cState := types.NewCrystallizedState(data.CrystallizedState)
-			hash, err := cState.Hash()
+			beaconState := types.NewBeaconState(data.BeaconState)
+			hash, err := beaconState.Hash()
 			if err != nil {
-				log.Errorf("Unable to hash crytsallized state: %v", err)
+				log.Errorf("Unable to hash beacon state: %v", err)
 			}
 
-			if hash != s.initialCrystallizedStateRoot {
+			if hash != s.initialStateRoot {
 				continue
 			}
 
-			if err := s.db.SaveCrystallizedState(cState); err != nil {
-				log.Errorf("Unable to set crystallized state for initial sync %v", err)
+			if err := s.db.SaveState(beaconState); err != nil {
+				log.Errorf("Unable to set beacon state for initial sync %v", err)
 			}
 
-			log.Debug("Successfully saved crystallized state to the db")
+			log.Debug("Successfully saved beacon state to the db")
 
-			if s.currentSlot >= cState.LastFinalizedSlot() {
+			if s.currentSlot >= beaconState.LastFinalizedSlot() {
 				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = cState.LastFinalizedSlot()
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", cState.LastFinalizedSlot())
+			s.currentSlot = beaconState.LastFinalizedSlot()
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.LastFinalizedSlot())
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
-			crystallizedStateSub.Unsubscribe()
+			beaconStateSub.Unsubscribe()
 		}
 	}
 }
 
-// requestCrystallizedStateFromPeer sends a request to a peer for the corresponding crystallized state
+// requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
-func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
+func (s *InitialSync) requestStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block := types.NewBlock(data.Block)
-	h := block.CrystallizedStateRoot()
-	log.Debugf("Successfully processed incoming block with crystallized state hash: %#x", h)
-	s.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
+	h := block.StateRoot()
+	log.Debugf("Successfully processed incoming block with state hash: %#x", h)
+	s.p2p.Send(&pb.BeaconStateRequest{Hash: h[:]}, peer)
 	return nil
 }
 
@@ -291,13 +287,13 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	if err != nil {
 		return err
 	}
-	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Crystallized state hash exists locally")
+	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("State state hash exists locally")
 
 	if err := s.writeBlockToDB(block); err != nil {
 		return err
 	}
 
-	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
+	s.initialStateRoot = block.StateRoot()
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
 	s.currentSlot = block.SlotNumber()
@@ -306,15 +302,15 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 }
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
-func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
-	log.Debugf("Requesting block %d ", slotnumber)
-	if _, ok := s.inMemoryBlocks[slotnumber]; ok {
+func (s *InitialSync) requestNextBlockBySlot(slotNumber uint64) {
+	log.Debugf("Requesting block %d ", slotNumber)
+	if _, ok := s.inMemoryBlocks[slotNumber]; ok {
 		s.blockBuf <- p2p.Message{
-			Data: s.inMemoryBlocks[slotnumber],
+			Data: s.inMemoryBlocks[slotNumber],
 		}
 		return
 	}
-	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotnumber})
+	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
 }
 
 // requestBatchedBlocks sends out multiple requests for blocks till a
@@ -340,7 +336,6 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 	}
 
 	if (s.currentSlot + 1) == block.SlotNumber() {
-
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
 		}
