@@ -9,7 +9,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// InitializeState ...
+// InitializeState creates an initial genesis state for the beacon
+// node using a set of genesis validators.
 func (db *BeaconDB) InitializeState(genesisValidators []*pb.ValidatorRecord) error {
 	beaconState, err := types.NewGenesisBeaconState(genesisValidators)
 	if err != nil {
@@ -54,7 +55,7 @@ func (db *BeaconDB) InitializeState(genesisValidators []*pb.ValidatorRecord) err
 	})
 }
 
-// GetState retrieves the current canonical beacon state in the node.
+// GetState fetches the canonical beacon chain's state from the DB.
 func (db *BeaconDB) GetState() (*types.BeaconState, error) {
 	var beaconState *types.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {

@@ -16,10 +16,10 @@ import (
 )
 
 // ValidatorRegistrationABI is the input ABI used to generate the binding from.
-const ValidatorRegistrationABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"VALIDATOR_DEPOSIT\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"usedHashedPubkey\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_pubkey\",\"type\":\"bytes\"},{\"name\":\"_withdrawalShardID\",\"type\":\"uint256\"},{\"name\":\"_withdrawalAddressbytes32\",\"type\":\"address\"},{\"name\":\"_randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"hashedPubkey\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"withdrawalShardID\",\"type\":\"uint256\"},{\"indexed\":true,\"name\":\"withdrawalAddressbytes32\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"randaoCommitment\",\"type\":\"bytes32\"}],\"name\":\"ValidatorRegistered\",\"type\":\"event\"}]"
+const ValidatorRegistrationABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"MIN_TOPUP_SIZE\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"GWEI_PER_ETH\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"MERKLE_TREE_DEPTH\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"DEPOSIT_SIZE\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getReceiptRoot\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"receiptTree\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"SECONDS_PER_DAY\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"depositParams\",\"type\":\"bytes\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"DEPOSITS_FOR_CHAIN_START\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalDepositCount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousReceiptRoot\",\"type\":\"bytes\"},{\"indexed\":false,\"name\":\"data\",\"type\":\"bytes\"},{\"indexed\":false,\"name\":\"totalDepositcount\",\"type\":\"uint256\"}],\"name\":\"HashChainValue\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"receiptRoot\",\"type\":\"bytes\"},{\"indexed\":false,\"name\":\"time\",\"type\":\"bytes\"}],\"name\":\"ChainStart\",\"type\":\"event\"}]"
 
 // ValidatorRegistrationBin is the compiled bytecode used for deploying new contracts.
-const ValidatorRegistrationBin = `0x608060405234801561001057600080fd5b50610406806100206000396000f3006080604052600436106100565763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663441d92cc811461005b5780638618d77814610082578063878df5ac146100ae575b600080fd5b34801561006757600080fd5b5061007061011e565b60408051918252519081900360200190f35b34801561008e57600080fd5b5061009a60043561012b565b604080519115158252519081900360200190f35b6040805160206004803580820135601f810184900484028501840190955284845261011c9436949293602493928401919081908401838280828437509497505084359550505050602082013573ffffffffffffffffffffffffffffffffffffffff1691604001359050610140565b005b6801bc16d674ec80000081565b60006020819052908152604090205460ff1681565b6000346801bc16d674ec800000146101b957604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601b60248201527f496e636f72726563742076616c696461746f72206465706f7369740000000000604482015290519081900360640190fd5b845160301461022957604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f5075626c6963206b6579206973206e6f74203438206279746573000000000000604482015290519081900360640190fd5b846040516020018082805190602001908083835b6020831061025c5780518252601f19909201916020918201910161023d565b6001836020036101000a0380198251168184511680821785525050505050509050019150506040516020818303038152906040526040518082805190602001908083835b602083106102bf5780518252601f1990920191602091820191016102a0565b51815160209384036101000a60001901801990921691161790526040805192909401829003909120600081815291829052929020549194505060ff1615915061036b905057604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f5075626c6963206b657920616c72656164792075736564000000000000000000604482015290519081900360640190fd5b60008181526020818152604091829020805460ff1916600117905581518681529151849273ffffffffffffffffffffffffffffffffffffffff87169285927f7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af512749281900390910190a450505050505600a165627a7a72305820f94ed1bea88aec62badbde73ec4adcd500e067fa0245052ea42e662c529b94870029`
+const ValidatorRegistrationBin = `0x608060405234801561001057600080fd5b50610c47806100206000396000f3006080604052600436106100a35763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166320d24cb781146100a857806324eda209146100d35780633568cda0146100e857806336bf3325146100fd5780634213155f14610112578063701f82121461013457806374f0314f1461015457806398b1e06a14610169578063cac0057c1461017e578063d634386714610193575b600080fd5b3480156100b457600080fd5b506100bd6101a8565b6040516100ca9190610b66565b60405180910390f35b3480156100df57600080fd5b506100bd6101b4565b3480156100f457600080fd5b506100bd6101bc565b34801561010957600080fd5b506100bd6101c1565b34801561011e57600080fd5b506101276101ce565b6040516100ca9190610b0f565b34801561014057600080fd5b5061012761014f366004610a01565b61028a565b34801561016057600080fd5b506100bd610324565b61017c6101773660046109c4565b61032b565b005b34801561018a57600080fd5b506100bd610812565b34801561019f57600080fd5b506100bd610817565b670de0b6b3a764000081565b633b9aca0081565b601081565b6801bc16d674ec80000081565b6001600081815260209081527fada5013122d395ba3c54772283fb069b10426056ef8ca54750cb9bb552a59e7d805460408051600295831615610100026000190190921694909404601f8101849004840282018401909452838152606093909283018282801561027f5780601f106102545761010080835404028352916020019161027f565b820191906000526020600020905b81548152906001019060200180831161026257829003601f168201915b505050505090505b90565b600060208181529181526040908190208054825160026001831615610100026000190190921691909104601f81018590048502820185019093528281529290919083018282801561031c5780601f106102f15761010080835404028352916020019161031c565b820191906000526020600020905b8154815290600101906020018083116102ff57829003601f168201915b505050505081565b6201518081565b600154620100000160608080600080826103443461081d565b955061034f4261081d565b945061036461035e878761084e565b8961084e565b93506000806001815260200190815260200160002060405180828054600181600116156101000203166002900480156103d45780601f106103b25761010080835404028352918201916103d4565b820191906000526020600020905b8154815290600101906020018083116103c0575b505091505060405180910390207fd60002d8f2bba463e7d533a8fa9b84d9d7451dc0bb7e9da868104601a5d2b9ef89600154604051610414929190610b20565b60405180910390a2836040518082805190602001908083835b6020831061044c5780518252601f19909201916020918201910161042d565b51815160209384036101000a60001901801990921691161790526040805192909401829003822082820152835180830382018152918401845260008d81528082529390932081516104a5965090945092019190506108c5565b50600092505b601083101561068b5760028704600281810260009081526020818152604091829020805483516001821615610100026000190190911694909404601f8101839004830285018301909352828452939a506105f79391908301828280156105525780601f1061052757610100808354040283529160200191610552565b820191906000526020600020905b81548152906001019060200180831161053557829003601f168201915b50505050506002898102600190810160009081526020818152604091829020805483519481161561010002600019011694909404601f81018290048202840182019092528183529192918301828280156105ed5780601f106105c2576101008083540402835291602001916105ed565b820191906000526020600020905b8154815290600101906020018083116105d057829003601f168201915b505050505061084e565b6040518082805190602001908083835b602083106106265780518252601f199092019160209182019101610607565b51815160209384036101000a60001901801990921691161790526040805192909401829003822082820152835180830382018152918401845260008d815280825293909320815161067f965090945092019190506108c5565b506001909201916104ab565b6801bc16d674ec8000003411156106d7576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016106ce90610b56565b60405180910390fd5b670de0b6b3a7640000341015610719576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016106ce90610b40565b6801bc16d674ec8000003414156107335760018054810190555b60086001541415610808576201518080420642030191506107538261081d565b90506000806001815260200190815260200160002060405180828054600181600116156101000203166002900480156107c35780601f106107a15761010080835404028352918201916107c3565b820191906000526020600020905b8154815290600101906020018083116107af575b505091505060405180910390207fb24eb1954aa12b3433be2b11740f2f73c8673453064575f93f223a85f1215f3a826040516107ff9190610b0f565b60405180910390a25b5050505050505050565b600881565b60015481565b6040805160208082528183019092526060918291908082016104008038833950505060208101939093525090919050565b815181516040518183018082526060939290916020601f8086018290049301049060005b8381101561088e57600101602081028981015190830152610872565b5060005b828110156108b0576001016020810288810151908701830152610892565b50928301602001604052509095945050505050565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061090657805160ff1916838001178555610933565b82800160010185558215610933579182015b82811115610933578251825591602001919060010190610918565b5061093f929150610943565b5090565b61028791905b8082111561093f5760008155600101610949565b6000601f8201831361096e57600080fd5b813561098161097c82610b9b565b610b74565b9150808252602083016020830185838301111561099d57600080fd5b6109a8838284610bc7565b50505092915050565b60006109bd8235610287565b9392505050565b6000602082840312156109d657600080fd5b813567ffffffffffffffff8111156109ed57600080fd5b6109f98482850161095d565b949350505050565b600060208284031215610a1357600080fd5b60006109f984846109b1565b6000610a2a82610bc3565b808452610a3e816020860160208601610bd3565b610a4781610c03565b9093016020019392505050565b602c81527f4465706f7369742063616e2774206265206c6573736572207468616e204d494e60208201527f5f544f5055505f53495a452e0000000000000000000000000000000000000000604082015260600190565b602b81527f4465706f7369742063616e27742062652067726561746572207468616e20444560208201527f504f5349545f53495a452e000000000000000000000000000000000000000000604082015260600190565b610b0981610287565b82525050565b602080825281016109bd8184610a1f565b60408082528101610b318185610a1f565b90506109bd6020830184610b00565b60208082528101610b5081610a54565b92915050565b60208082528101610b5081610aaa565b60208101610b508284610b00565b60405181810167ffffffffffffffff81118282101715610b9357600080fd5b604052919050565b600067ffffffffffffffff821115610bb257600080fd5b506020601f91909101601f19160190565b5190565b82818337506000910152565b60005b83811015610bee578181015183820152602001610bd6565b83811115610bfd576000848401525b50505050565b601f01601f1916905600a265627a7a723058204d491b9e875a7e6e11d109c2cedde9996656182f359ec144cc1a353afe420c4b6c6578706572696d656e74616cf50037`
 
 // DeployValidatorRegistration deploys a new Ethereum contract, binding an instance of ValidatorRegistration to it.
 func DeployValidatorRegistration(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ValidatorRegistration, error) {
@@ -176,82 +176,264 @@ func (_ValidatorRegistration *ValidatorRegistrationTransactorRaw) Transact(opts 
 	return _ValidatorRegistration.Contract.contract.Transact(opts, method, params...)
 }
 
-// VALIDATORDEPOSIT is a free data retrieval call binding the contract method 0x441d92cc.
+// DEPOSITSFORCHAINSTART is a free data retrieval call binding the contract method 0xcac0057c.
 //
-// Solidity: function VALIDATOR_DEPOSIT() constant returns(uint256)
-func (_ValidatorRegistration *ValidatorRegistrationCaller) VALIDATORDEPOSIT(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function DEPOSITS_FOR_CHAIN_START() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) DEPOSITSFORCHAINSTART(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _ValidatorRegistration.contract.Call(opts, out, "VALIDATOR_DEPOSIT")
+	err := _ValidatorRegistration.contract.Call(opts, out, "DEPOSITS_FOR_CHAIN_START")
 	return *ret0, err
 }
 
-// VALIDATORDEPOSIT is a free data retrieval call binding the contract method 0x441d92cc.
+// DEPOSITSFORCHAINSTART is a free data retrieval call binding the contract method 0xcac0057c.
 //
-// Solidity: function VALIDATOR_DEPOSIT() constant returns(uint256)
-func (_ValidatorRegistration *ValidatorRegistrationSession) VALIDATORDEPOSIT() (*big.Int, error) {
-	return _ValidatorRegistration.Contract.VALIDATORDEPOSIT(&_ValidatorRegistration.CallOpts)
+// Solidity: function DEPOSITS_FOR_CHAIN_START() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) DEPOSITSFORCHAINSTART() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.DEPOSITSFORCHAINSTART(&_ValidatorRegistration.CallOpts)
 }
 
-// VALIDATORDEPOSIT is a free data retrieval call binding the contract method 0x441d92cc.
+// DEPOSITSFORCHAINSTART is a free data retrieval call binding the contract method 0xcac0057c.
 //
-// Solidity: function VALIDATOR_DEPOSIT() constant returns(uint256)
-func (_ValidatorRegistration *ValidatorRegistrationCallerSession) VALIDATORDEPOSIT() (*big.Int, error) {
-	return _ValidatorRegistration.Contract.VALIDATORDEPOSIT(&_ValidatorRegistration.CallOpts)
+// Solidity: function DEPOSITS_FOR_CHAIN_START() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) DEPOSITSFORCHAINSTART() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.DEPOSITSFORCHAINSTART(&_ValidatorRegistration.CallOpts)
 }
 
-// UsedHashedPubkey is a free data retrieval call binding the contract method 0x8618d778.
+// DEPOSITSIZE is a free data retrieval call binding the contract method 0x36bf3325.
 //
-// Solidity: function usedHashedPubkey( bytes32) constant returns(bool)
-func (_ValidatorRegistration *ValidatorRegistrationCaller) UsedHashedPubkey(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
+// Solidity: function DEPOSIT_SIZE() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) DEPOSITSIZE(opts *bind.CallOpts) (*big.Int, error) {
 	var (
-		ret0 = new(bool)
+		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _ValidatorRegistration.contract.Call(opts, out, "usedHashedPubkey", arg0)
+	err := _ValidatorRegistration.contract.Call(opts, out, "DEPOSIT_SIZE")
 	return *ret0, err
 }
 
-// UsedHashedPubkey is a free data retrieval call binding the contract method 0x8618d778.
+// DEPOSITSIZE is a free data retrieval call binding the contract method 0x36bf3325.
 //
-// Solidity: function usedHashedPubkey( bytes32) constant returns(bool)
-func (_ValidatorRegistration *ValidatorRegistrationSession) UsedHashedPubkey(arg0 [32]byte) (bool, error) {
-	return _ValidatorRegistration.Contract.UsedHashedPubkey(&_ValidatorRegistration.CallOpts, arg0)
+// Solidity: function DEPOSIT_SIZE() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) DEPOSITSIZE() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.DEPOSITSIZE(&_ValidatorRegistration.CallOpts)
 }
 
-// UsedHashedPubkey is a free data retrieval call binding the contract method 0x8618d778.
+// DEPOSITSIZE is a free data retrieval call binding the contract method 0x36bf3325.
 //
-// Solidity: function usedHashedPubkey( bytes32) constant returns(bool)
-func (_ValidatorRegistration *ValidatorRegistrationCallerSession) UsedHashedPubkey(arg0 [32]byte) (bool, error) {
-	return _ValidatorRegistration.Contract.UsedHashedPubkey(&_ValidatorRegistration.CallOpts, arg0)
+// Solidity: function DEPOSIT_SIZE() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) DEPOSITSIZE() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.DEPOSITSIZE(&_ValidatorRegistration.CallOpts)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0x878df5ac.
+// GWEIPERETH is a free data retrieval call binding the contract method 0x24eda209.
 //
-// Solidity: function deposit(_pubkey bytes, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationTransactor) Deposit(opts *bind.TransactOpts, _pubkey []byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
-	return _ValidatorRegistration.contract.Transact(opts, "deposit", _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
+// Solidity: function GWEI_PER_ETH() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) GWEIPERETH(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "GWEI_PER_ETH")
+	return *ret0, err
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0x878df5ac.
+// GWEIPERETH is a free data retrieval call binding the contract method 0x24eda209.
 //
-// Solidity: function deposit(_pubkey bytes, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationSession) Deposit(_pubkey []byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
-	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
+// Solidity: function GWEI_PER_ETH() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) GWEIPERETH() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.GWEIPERETH(&_ValidatorRegistration.CallOpts)
 }
 
-// Deposit is a paid mutator transaction binding the contract method 0x878df5ac.
+// GWEIPERETH is a free data retrieval call binding the contract method 0x24eda209.
 //
-// Solidity: function deposit(_pubkey bytes, _withdrawalShardID uint256, _withdrawalAddressbytes32 address, _randaoCommitment bytes32) returns()
-func (_ValidatorRegistration *ValidatorRegistrationTransactorSession) Deposit(_pubkey []byte, _withdrawalShardID *big.Int, _withdrawalAddressbytes32 common.Address, _randaoCommitment [32]byte) (*types.Transaction, error) {
-	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, _pubkey, _withdrawalShardID, _withdrawalAddressbytes32, _randaoCommitment)
+// Solidity: function GWEI_PER_ETH() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) GWEIPERETH() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.GWEIPERETH(&_ValidatorRegistration.CallOpts)
 }
 
-// ValidatorRegistrationValidatorRegisteredIterator is returned from FilterValidatorRegistered and is used to iterate over the raw logs and unpacked data for ValidatorRegistered events raised by the ValidatorRegistration contract.
-type ValidatorRegistrationValidatorRegisteredIterator struct {
-	Event *ValidatorRegistrationValidatorRegistered // Event containing the contract specifics and raw log
+// MERKLETREEDEPTH is a free data retrieval call binding the contract method 0x3568cda0.
+//
+// Solidity: function MERKLE_TREE_DEPTH() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) MERKLETREEDEPTH(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "MERKLE_TREE_DEPTH")
+	return *ret0, err
+}
+
+// MERKLETREEDEPTH is a free data retrieval call binding the contract method 0x3568cda0.
+//
+// Solidity: function MERKLE_TREE_DEPTH() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) MERKLETREEDEPTH() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.MERKLETREEDEPTH(&_ValidatorRegistration.CallOpts)
+}
+
+// MERKLETREEDEPTH is a free data retrieval call binding the contract method 0x3568cda0.
+//
+// Solidity: function MERKLE_TREE_DEPTH() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) MERKLETREEDEPTH() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.MERKLETREEDEPTH(&_ValidatorRegistration.CallOpts)
+}
+
+// MINTOPUPSIZE is a free data retrieval call binding the contract method 0x20d24cb7.
+//
+// Solidity: function MIN_TOPUP_SIZE() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) MINTOPUPSIZE(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "MIN_TOPUP_SIZE")
+	return *ret0, err
+}
+
+// MINTOPUPSIZE is a free data retrieval call binding the contract method 0x20d24cb7.
+//
+// Solidity: function MIN_TOPUP_SIZE() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) MINTOPUPSIZE() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.MINTOPUPSIZE(&_ValidatorRegistration.CallOpts)
+}
+
+// MINTOPUPSIZE is a free data retrieval call binding the contract method 0x20d24cb7.
+//
+// Solidity: function MIN_TOPUP_SIZE() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) MINTOPUPSIZE() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.MINTOPUPSIZE(&_ValidatorRegistration.CallOpts)
+}
+
+// SECONDSPERDAY is a free data retrieval call binding the contract method 0x74f0314f.
+//
+// Solidity: function SECONDS_PER_DAY() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) SECONDSPERDAY(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "SECONDS_PER_DAY")
+	return *ret0, err
+}
+
+// SECONDSPERDAY is a free data retrieval call binding the contract method 0x74f0314f.
+//
+// Solidity: function SECONDS_PER_DAY() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) SECONDSPERDAY() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.SECONDSPERDAY(&_ValidatorRegistration.CallOpts)
+}
+
+// SECONDSPERDAY is a free data retrieval call binding the contract method 0x74f0314f.
+//
+// Solidity: function SECONDS_PER_DAY() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) SECONDSPERDAY() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.SECONDSPERDAY(&_ValidatorRegistration.CallOpts)
+}
+
+// GetReceiptRoot is a free data retrieval call binding the contract method 0x4213155f.
+//
+// Solidity: function getReceiptRoot() constant returns(bytes)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) GetReceiptRoot(opts *bind.CallOpts) ([]byte, error) {
+	var (
+		ret0 = new([]byte)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "getReceiptRoot")
+	return *ret0, err
+}
+
+// GetReceiptRoot is a free data retrieval call binding the contract method 0x4213155f.
+//
+// Solidity: function getReceiptRoot() constant returns(bytes)
+func (_ValidatorRegistration *ValidatorRegistrationSession) GetReceiptRoot() ([]byte, error) {
+	return _ValidatorRegistration.Contract.GetReceiptRoot(&_ValidatorRegistration.CallOpts)
+}
+
+// GetReceiptRoot is a free data retrieval call binding the contract method 0x4213155f.
+//
+// Solidity: function getReceiptRoot() constant returns(bytes)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) GetReceiptRoot() ([]byte, error) {
+	return _ValidatorRegistration.Contract.GetReceiptRoot(&_ValidatorRegistration.CallOpts)
+}
+
+// ReceiptTree is a free data retrieval call binding the contract method 0x701f8212.
+//
+// Solidity: function receiptTree( uint256) constant returns(bytes)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) ReceiptTree(opts *bind.CallOpts, arg0 *big.Int) ([]byte, error) {
+	var (
+		ret0 = new([]byte)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "receiptTree", arg0)
+	return *ret0, err
+}
+
+// ReceiptTree is a free data retrieval call binding the contract method 0x701f8212.
+//
+// Solidity: function receiptTree( uint256) constant returns(bytes)
+func (_ValidatorRegistration *ValidatorRegistrationSession) ReceiptTree(arg0 *big.Int) ([]byte, error) {
+	return _ValidatorRegistration.Contract.ReceiptTree(&_ValidatorRegistration.CallOpts, arg0)
+}
+
+// ReceiptTree is a free data retrieval call binding the contract method 0x701f8212.
+//
+// Solidity: function receiptTree( uint256) constant returns(bytes)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) ReceiptTree(arg0 *big.Int) ([]byte, error) {
+	return _ValidatorRegistration.Contract.ReceiptTree(&_ValidatorRegistration.CallOpts, arg0)
+}
+
+// TotalDepositCount is a free data retrieval call binding the contract method 0xd6343867.
+//
+// Solidity: function totalDepositCount() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCaller) TotalDepositCount(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ValidatorRegistration.contract.Call(opts, out, "totalDepositCount")
+	return *ret0, err
+}
+
+// TotalDepositCount is a free data retrieval call binding the contract method 0xd6343867.
+//
+// Solidity: function totalDepositCount() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationSession) TotalDepositCount() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.TotalDepositCount(&_ValidatorRegistration.CallOpts)
+}
+
+// TotalDepositCount is a free data retrieval call binding the contract method 0xd6343867.
+//
+// Solidity: function totalDepositCount() constant returns(uint256)
+func (_ValidatorRegistration *ValidatorRegistrationCallerSession) TotalDepositCount() (*big.Int, error) {
+	return _ValidatorRegistration.Contract.TotalDepositCount(&_ValidatorRegistration.CallOpts)
+}
+
+// Deposit is a paid mutator transaction binding the contract method 0x98b1e06a.
+//
+// Solidity: function deposit(depositParams bytes) returns()
+func (_ValidatorRegistration *ValidatorRegistrationTransactor) Deposit(opts *bind.TransactOpts, depositParams []byte) (*types.Transaction, error) {
+	return _ValidatorRegistration.contract.Transact(opts, "deposit", depositParams)
+}
+
+// Deposit is a paid mutator transaction binding the contract method 0x98b1e06a.
+//
+// Solidity: function deposit(depositParams bytes) returns()
+func (_ValidatorRegistration *ValidatorRegistrationSession) Deposit(depositParams []byte) (*types.Transaction, error) {
+	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, depositParams)
+}
+
+// Deposit is a paid mutator transaction binding the contract method 0x98b1e06a.
+//
+// Solidity: function deposit(depositParams bytes) returns()
+func (_ValidatorRegistration *ValidatorRegistrationTransactorSession) Deposit(depositParams []byte) (*types.Transaction, error) {
+	return _ValidatorRegistration.Contract.Deposit(&_ValidatorRegistration.TransactOpts, depositParams)
+}
+
+// ValidatorRegistrationChainStartIterator is returned from FilterChainStart and is used to iterate over the raw logs and unpacked data for ChainStart events raised by the ValidatorRegistration contract.
+type ValidatorRegistrationChainStartIterator struct {
+	Event *ValidatorRegistrationChainStart // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -265,7 +447,7 @@ type ValidatorRegistrationValidatorRegisteredIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ValidatorRegistrationValidatorRegisteredIterator) Next() bool {
+func (it *ValidatorRegistrationChainStartIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -274,7 +456,7 @@ func (it *ValidatorRegistrationValidatorRegisteredIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ValidatorRegistrationValidatorRegistered)
+			it.Event = new(ValidatorRegistrationChainStart)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -289,7 +471,7 @@ func (it *ValidatorRegistrationValidatorRegisteredIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ValidatorRegistrationValidatorRegistered)
+		it.Event = new(ValidatorRegistrationChainStart)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -305,72 +487,52 @@ func (it *ValidatorRegistrationValidatorRegisteredIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ValidatorRegistrationValidatorRegisteredIterator) Error() error {
+func (it *ValidatorRegistrationChainStartIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ValidatorRegistrationValidatorRegisteredIterator) Close() error {
+func (it *ValidatorRegistrationChainStartIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ValidatorRegistrationValidatorRegistered represents a ValidatorRegistered event raised by the ValidatorRegistration contract.
-type ValidatorRegistrationValidatorRegistered struct {
-	HashedPubkey             [32]byte
-	WithdrawalShardID        *big.Int
-	WithdrawalAddressbytes32 common.Address
-	RandaoCommitment         [32]byte
-	Raw                      types.Log // Blockchain specific contextual infos
+// ValidatorRegistrationChainStart represents a ChainStart event raised by the ValidatorRegistration contract.
+type ValidatorRegistrationChainStart struct {
+	ReceiptRoot common.Hash
+	Time        []byte
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterValidatorRegistered is a free log retrieval operation binding the contract event 0x7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af51274.
+// FilterChainStart is a free log retrieval operation binding the contract event 0xb24eb1954aa12b3433be2b11740f2f73c8673453064575f93f223a85f1215f3a.
 //
-// Solidity: event ValidatorRegistered(hashedPubkey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
-func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterValidatorRegistered(opts *bind.FilterOpts, hashedPubkey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (*ValidatorRegistrationValidatorRegisteredIterator, error) {
+// Solidity: event ChainStart(receiptRoot indexed bytes, time bytes)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterChainStart(opts *bind.FilterOpts, receiptRoot [][]byte) (*ValidatorRegistrationChainStartIterator, error) {
 
-	var hashedPubkeyRule []interface{}
-	for _, hashedPubkeyItem := range hashedPubkey {
-		hashedPubkeyRule = append(hashedPubkeyRule, hashedPubkeyItem)
+	var receiptRootRule []interface{}
+	for _, receiptRootItem := range receiptRoot {
+		receiptRootRule = append(receiptRootRule, receiptRootItem)
 	}
 
-	var withdrawalAddressbytes32Rule []interface{}
-	for _, withdrawalAddressbytes32Item := range withdrawalAddressbytes32 {
-		withdrawalAddressbytes32Rule = append(withdrawalAddressbytes32Rule, withdrawalAddressbytes32Item)
-	}
-	var randaoCommitmentRule []interface{}
-	for _, randaoCommitmentItem := range randaoCommitment {
-		randaoCommitmentRule = append(randaoCommitmentRule, randaoCommitmentItem)
-	}
-
-	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "ValidatorRegistered", hashedPubkeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
+	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "ChainStart", receiptRootRule)
 	if err != nil {
 		return nil, err
 	}
-	return &ValidatorRegistrationValidatorRegisteredIterator{contract: _ValidatorRegistration.contract, event: "ValidatorRegistered", logs: logs, sub: sub}, nil
+	return &ValidatorRegistrationChainStartIterator{contract: _ValidatorRegistration.contract, event: "ChainStart", logs: logs, sub: sub}, nil
 }
 
-// WatchValidatorRegistered is a free log subscription operation binding the contract event 0x7b0678aab009b61a805f5004869728b53a444f9a3e6bb9e22b8537c89af51274.
+// WatchChainStart is a free log subscription operation binding the contract event 0xb24eb1954aa12b3433be2b11740f2f73c8673453064575f93f223a85f1215f3a.
 //
-// Solidity: event ValidatorRegistered(hashedPubkey indexed bytes32, withdrawalShardID uint256, withdrawalAddressbytes32 indexed address, randaoCommitment indexed bytes32)
-func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegistered(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationValidatorRegistered, hashedPubkey [][32]byte, withdrawalAddressbytes32 []common.Address, randaoCommitment [][32]byte) (event.Subscription, error) {
+// Solidity: event ChainStart(receiptRoot indexed bytes, time bytes)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchChainStart(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationChainStart, receiptRoot [][]byte) (event.Subscription, error) {
 
-	var hashedPubkeyRule []interface{}
-	for _, hashedPubkeyItem := range hashedPubkey {
-		hashedPubkeyRule = append(hashedPubkeyRule, hashedPubkeyItem)
+	var receiptRootRule []interface{}
+	for _, receiptRootItem := range receiptRoot {
+		receiptRootRule = append(receiptRootRule, receiptRootItem)
 	}
 
-	var withdrawalAddressbytes32Rule []interface{}
-	for _, withdrawalAddressbytes32Item := range withdrawalAddressbytes32 {
-		withdrawalAddressbytes32Rule = append(withdrawalAddressbytes32Rule, withdrawalAddressbytes32Item)
-	}
-	var randaoCommitmentRule []interface{}
-	for _, randaoCommitmentItem := range randaoCommitment {
-		randaoCommitmentRule = append(randaoCommitmentRule, randaoCommitmentItem)
-	}
-
-	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "ValidatorRegistered", hashedPubkeyRule, withdrawalAddressbytes32Rule, randaoCommitmentRule)
+	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "ChainStart", receiptRootRule)
 	if err != nil {
 		return nil, err
 	}
@@ -380,8 +542,142 @@ func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchValidatorRegis
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ValidatorRegistrationValidatorRegistered)
-				if err := _ValidatorRegistration.contract.UnpackLog(event, "ValidatorRegistered", log); err != nil {
+				event := new(ValidatorRegistrationChainStart)
+				if err := _ValidatorRegistration.contract.UnpackLog(event, "ChainStart", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ValidatorRegistrationHashChainValueIterator is returned from FilterHashChainValue and is used to iterate over the raw logs and unpacked data for HashChainValue events raised by the ValidatorRegistration contract.
+type ValidatorRegistrationHashChainValueIterator struct {
+	Event *ValidatorRegistrationHashChainValue // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ValidatorRegistrationHashChainValueIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ValidatorRegistrationHashChainValue)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ValidatorRegistrationHashChainValue)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ValidatorRegistrationHashChainValueIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ValidatorRegistrationHashChainValueIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ValidatorRegistrationHashChainValue represents a HashChainValue event raised by the ValidatorRegistration contract.
+type ValidatorRegistrationHashChainValue struct {
+	PreviousReceiptRoot common.Hash
+	Data                []byte
+	TotalDepositcount   *big.Int
+	Raw                 types.Log // Blockchain specific contextual infos
+}
+
+// FilterHashChainValue is a free log retrieval operation binding the contract event 0xd60002d8f2bba463e7d533a8fa9b84d9d7451dc0bb7e9da868104601a5d2b9ef.
+//
+// Solidity: event HashChainValue(previousReceiptRoot indexed bytes, data bytes, totalDepositcount uint256)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) FilterHashChainValue(opts *bind.FilterOpts, previousReceiptRoot [][]byte) (*ValidatorRegistrationHashChainValueIterator, error) {
+
+	var previousReceiptRootRule []interface{}
+	for _, previousReceiptRootItem := range previousReceiptRoot {
+		previousReceiptRootRule = append(previousReceiptRootRule, previousReceiptRootItem)
+	}
+
+	logs, sub, err := _ValidatorRegistration.contract.FilterLogs(opts, "HashChainValue", previousReceiptRootRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ValidatorRegistrationHashChainValueIterator{contract: _ValidatorRegistration.contract, event: "HashChainValue", logs: logs, sub: sub}, nil
+}
+
+// WatchHashChainValue is a free log subscription operation binding the contract event 0xd60002d8f2bba463e7d533a8fa9b84d9d7451dc0bb7e9da868104601a5d2b9ef.
+//
+// Solidity: event HashChainValue(previousReceiptRoot indexed bytes, data bytes, totalDepositcount uint256)
+func (_ValidatorRegistration *ValidatorRegistrationFilterer) WatchHashChainValue(opts *bind.WatchOpts, sink chan<- *ValidatorRegistrationHashChainValue, previousReceiptRoot [][]byte) (event.Subscription, error) {
+
+	var previousReceiptRootRule []interface{}
+	for _, previousReceiptRootItem := range previousReceiptRoot {
+		previousReceiptRootRule = append(previousReceiptRootRule, previousReceiptRootItem)
+	}
+
+	logs, sub, err := _ValidatorRegistration.contract.WatchLogs(opts, "HashChainValue", previousReceiptRootRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ValidatorRegistrationHashChainValue)
+				if err := _ValidatorRegistration.contract.UnpackLog(event, "HashChainValue", log); err != nil {
 					return err
 				}
 				event.Raw = log

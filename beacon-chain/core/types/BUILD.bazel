@@ -17,6 +17,10 @@ go_library(
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+<<<<<<< HEAD
+=======
+        "@com_github_golang_protobuf//proto:go_default_library",
+>>>>>>> master
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
     ],
 )
@@ -32,6 +36,10 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
+<<<<<<< HEAD
+=======
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+>>>>>>> master
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
     ],
 )

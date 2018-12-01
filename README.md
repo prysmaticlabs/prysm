@@ -89,7 +89,8 @@ With the binary executable:
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
-  --demo-config
+  --demo-config \
+  --p2p-port 9000
 ```
 
 With bazel:
@@ -100,7 +101,8 @@ bazel run //beacon-chain --\
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
-  --demo-config
+  --demo-config \
+  --p2p-port 9000
 ```
 
 
@@ -156,7 +158,8 @@ docker run -p 4000:4000 -v /path/to/genesis.json:/genesis.json gcr.io/prysmaticl
   --genesis-json /genesis.json \
   --rpc-port 4000 \
   --simulator \
-  --demo-config
+  --demo-config \
+  --p2p-port 9000
 ```
 
 Then, to run a validator client, use:
@@ -184,7 +187,8 @@ go run ./beacon-chain main.go \
    --datadir /path/to/your/datadir \
    --rpc-port 4000 \
    --simulator \
-   --demo-config
+   --demo-config \
+   --p2p-port 9000
 ```
 
 After the beacon chain is up and running, run the validator client as a separate process as follows:

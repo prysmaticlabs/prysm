@@ -91,7 +91,7 @@ func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 
 		height := chainInfo.Get(mainChainHeightKey)
 		if height == nil {
-			return errors.New("unable to determinechain height")
+			return errors.New("unable to determine chain height")
 		}
 
 		blockhash := mainChain.Get(height)

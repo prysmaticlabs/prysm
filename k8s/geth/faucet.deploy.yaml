@@ -37,7 +37,7 @@ spec:
             - "/bin/sh"
             - "-c"
             - > 
-              touch /tmp/pwd;
+              touch /tmp/pwd; # empty password file
               faucet
               -account.json=/data/accounts/account.json
               -account.pass=/tmp/pwd
@@ -45,7 +45,7 @@ spec:
               -bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               -ethport=30303
               -ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
-              -faucet.amount=35
+              -faucet.amount=350
               -faucet.minutes=1440
               -faucet.name=validator-faucet
               -faucet.tiers=3
@@ -82,8 +82,8 @@ spec:
               cpu: "100m"
       volumes:
         - name: genesis
-          secret: 
-            secretName: geth-genesis
+          configMap: 
+            name: genesis
             items:
               - key: json
                 path: genesis.json
@@ -93,7 +93,5 @@ spec:
             items: 
               - key: json
                 path: account.json
-              - key: password
-                path: password
         - name: faucet-data
           emptyDir: {}

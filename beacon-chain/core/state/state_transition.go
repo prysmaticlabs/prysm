@@ -139,6 +139,10 @@ func crossLinkCalculations(
 			st.LastStateRecalculationSlot(),
 			attestation.GetSlot(),
 		)
+		if err != nil {
+			return nil, err
+		}
+
 		indices, err := v.AttesterIndices(shardCommittees, attestation)
 		if err != nil {
 			return nil, err
@@ -191,7 +195,9 @@ func validatorSetRecalculations(
 	return append(shardAndCommittesForSlots[params.BeaconConfig().CycleLength:], newShardCommitteeArray...), nil
 }
 
-// createRandaoMix sets the block randao seed into a beacon state randao.
+// createRandaoMix sets the block randao seed into a beacon state randao. This function
+// XOR's the current state randao with the block's randao value added by the
+// proposer.
 func createRandaoMix(blockRandao [32]byte, beaconStateRandao [32]byte) [32]byte {
 	for i, b := range blockRandao {
 		beaconStateRandao[i] ^= b

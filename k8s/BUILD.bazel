@@ -9,6 +9,7 @@ k8s_objects(
         "//k8s/beacon-chain:everything",
         "//k8s/nginx:everything",
     ],
+    tags = ["manual"],
 )
 
 k8s_priority_class(

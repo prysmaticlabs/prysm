@@ -10,38 +10,26 @@ import (
 
 func TestAttestation(t *testing.T) {
 	data := &pb.AggregatedAttestation{
-		SignedData: &pb.AttestationSignedData{
-			Slot:               0,
-			Shard:              0,
-			JustifiedSlot:      0,
-			JustifiedBlockHash: []byte{0},
-			ShardBlockHash:     []byte{0},
-		},
-		AttesterBitfield: []byte{0},
-		AggregateSig:     []uint64{0},
+		Slot:                0,
+		Shard:               0,
+		JustifiedSlot:       0,
+		JustifiedBlockHash:  []byte{0},
+		ShardBlockHash:      []byte{0},
+		AttesterBitfield:    []byte{0},
+		ObliqueParentHashes: [][]byte{{0}},
+		AggregateSig:        []uint64{0},
 	}
-	data2 := &pb.ProcessedAttestation{
-		SignedData: &pb.AttestationSignedData{
-			Slot:               0,
-			Shard:              0,
-			JustifiedSlot:      0,
-			JustifiedBlockHash: []byte{0},
-			ShardBlockHash:     []byte{0},
-		},
-		AttesterBitfield: []byte{0},
-		SlotIncluded:     0,
-	}
-	attestation := NewAggregatedAttestation(data)
-	processed := NewProcessedAttestation(data2)
+	attestation := NewAttestation(data)
+	attestation.SlotNumber()
+	attestation.ShardID()
+	attestation.JustifiedSlotNumber()
+	attestation.JustifiedBlockHash()
 	attestation.AttesterBitfield()
+	attestation.ObliqueParentHashes()
 	attestation.AggregateSig()
-	attestation.SignedData()
+	attestation.Key()
 
-	processed.AttesterBitfield()
-	processed.SlotIncluded()
-	processed.SignedData()
-
-	emptyAttestation := &AggregatedAttestation{}
+	emptyAttestation := &Attestation{}
 	if _, err := emptyAttestation.Marshal(); err == nil {
 		t.Error("marshal with empty data should fail")
 	}
@@ -54,35 +42,33 @@ func TestAttestation(t *testing.T) {
 	if !reflect.DeepEqual(attestation.data, attestation.Proto()) {
 		t.Errorf("inner block data did not match proto: received %v, wanted %v", attestation.Proto(), attestation.data)
 	}
-	if attestation.SignedData().GetSlot() != 0 {
-		t.Errorf("mismatched attestation slot number: wanted 0, received %v", attestation.SignedData().GetSlot())
+	if attestation.SlotNumber() != 0 {
+		t.Errorf("mismatched attestation slot number: wanted 0, received %v", attestation.SlotNumber())
 	}
-	attestationWithNilData := NewAggregatedAttestation(nil)
-	if attestationWithNilData.SignedData().GetShard() != 0 {
-		t.Errorf("mismatched attestation shard id: wanted 0, received %v", attestationWithNilData.SignedData().GetShard())
+	attestationWithNilData := NewAttestation(nil)
+	if attestationWithNilData.ShardID() != 0 {
+		t.Errorf("mismatched attestation shard id: wanted 0, received %v", attestation.ShardID())
 	}
-	if !bytes.Equal(attestation.SignedData().GetShardBlockHash(), []byte{0}) {
+	if !bytes.Equal(attestation.ShardBlockHash(), []byte{0}) {
 		t.Errorf("mismatched shard block hash")
 	}
-	if err := VerifyProposerAttestation([32]byte{}, 0, attestation.SignedData().GetShardBlockHash(), attestation.SignedData().GetSlot(), attestation.SignedData().GetJustifiedSlot()); err != nil {
+	if err := attestation.VerifyProposerAttestation([32]byte{}, 0); err != nil {
 		t.Errorf("verify attestation failed: %v", err)
 	}
 }
 
 func TestContainsValidator(t *testing.T) {
-	attestation := NewAggregatedAttestation(&pb.AggregatedAttestation{
-		SignedData: &pb.AttestationSignedData{
-			Slot:  0,
-			Shard: 0,
-		},
+	attestation := NewAttestation(&pb.AggregatedAttestation{
+		Slot:             0,
+		Shard:            0,
 		AttesterBitfield: []byte{7}, // 0000 0111
 	})
 
-	if !ContainsValidator(attestation.AttesterBitfield(), []byte{4}) {
+	if !attestation.ContainsValidator([]byte{4}) {
 		t.Error("Attestation should contain validator")
 	}
 
-	if ContainsValidator(attestation.AttesterBitfield(), []byte{8}) {
+	if attestation.ContainsValidator([]byte{8}) {
 		t.Error("Attestation should not contain validator")
 	}
 }
