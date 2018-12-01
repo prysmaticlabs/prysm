@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: genesis
+  namespace: pow
+data:
+  json: |
+    {
+      "config":{
+        "chainId":1337,
+        "homesteadBlock":0,
+        "eip155Block":0,
+        "eip158Block":0
+       },
+       "difficulty":"0x0",
+       "gasLimit":"0x2100000",
+       "alloc":{
+         "00c4ac4d2a14be6a9b55652f9aabdb70fdeb07bc":{
+           "balance":"0x1337000000000000000000"
+         }
+       }
+     }
