@@ -11,7 +11,7 @@ import (
 	"log"
 	"os"
 
-	ggio "github.com/gogo/protobuf/io"
+	ggio "github.com/golang/protobuf/io"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-host"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
