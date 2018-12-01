@@ -22,23 +22,26 @@ http_archive(
 http_archive(
     name = "com_github_atlassian_bazel_tools",
     strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.zip"],
+    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.tar.gz"],
+    sha256 = "e7d0c0e2963a7f9cb2c377e241502119dae24909708adef1918e8dcb70ae9e8c",
 )
 
-git_repository(
+http_archive(
     name = "io_bazel_rules_docker",
-    commit = "7401cb256222615c497c0dee5a4de5724a4f4cc7",  # 2018-06-22
-    remote = "https://github.com/bazelbuild/rules_docker.git",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.5.1.tar.gz",
+    strip_prefix = "rules_docker-0.5.1",
+    sha256 = "29d109605e0d6f9c892584f07275b8c9260803bf0c6fcb7de2623b2bedc910bd",
 )
 
 load("@io_bazel_rules_docker//docker:docker.bzl", "docker_repositories")
 
 docker_repositories()
 
-git_repository(
+http_archive(
     name = "build_bazel_rules_nodejs",
-    remote = "https://github.com/bazelbuild/rules_nodejs.git",
-    tag = "0.16.2",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.2.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.2",
+    sha256 = "5dea8b55e41caae044f4b1697f2bbf882d99563cf6c012929384063fddc801d4",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -56,10 +59,11 @@ yarn_install(
 )
 
 # This requires rules_docker to be fully instantiated before it is pulled in.
-git_repository(
+http_archive(
     name = "io_bazel_rules_k8s",
-    commit = "2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
-    remote = "https://github.com/bazelbuild/rules_k8s.git",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
+    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
+    sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
 )
 
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
@@ -105,16 +109,11 @@ load(
 
 _go_image_repos()
 
-git_repository(
+http_archive(
     name = "io_kubernetes_build",
-    commit = "4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
-    remote = "https://github.com/kubernetes/repo-infra.git",
-)
-
-git_repository(
-    name = "com_github_jmhodges_bazel_gomock",
-    commit = "5b73edb74e569ff404b3beffc809d6d9f205e0e4",
-    remote = "https://github.com/jmhodges/bazel_gomock.git",
+    url = "https://github.com/kubernetes/repo-infra/archive/4ce715fbe67d8fbed05ec2bb47a148e754100a4b.tar.gz",
+    strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
+    sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
 )
 
 go_repository(
