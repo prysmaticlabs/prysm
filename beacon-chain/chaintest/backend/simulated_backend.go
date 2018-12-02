@@ -71,7 +71,6 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 		validators[i] = &pb.ValidatorRecord{
 			Status:            uint64(params.Active),
 			Balance:           c.DepositSize * c.Gwei,
-			WithdrawalAddress: []byte{},
 			Pubkey:            []byte{},
 			RandaoCommitment:  randaoReveal[:],
 		}

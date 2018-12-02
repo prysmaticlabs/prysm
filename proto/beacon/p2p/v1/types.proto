@@ -95,13 +95,14 @@ message AttestationData {
 
 message ValidatorRecord {
   bytes pubkey = 1;
-  uint64 withdrawal_shard = 2;
-  bytes withdrawal_address = 3;
-  bytes randao_commitment = 4;
+  TODO: The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  bytes withdrawal_credentials = 2;
+  bytes randao_commitment = 3;
+  uint64 randao_skips = 4;
   uint64 balance = 5;
   uint64 status = 6;
-  uint64 exit_slot = 7;
-  uint64 randao_last_change = 8;
+  uint64 latest_status_change_slot = 7;
+  uint64 exit_count = 8;
 }
 
 message ShardReassignmentRecord {
