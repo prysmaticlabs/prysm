@@ -38,7 +38,7 @@ message BeaconState {
   repeated bytes processed_pow_receipt_root_hash32 = 4001;
   repeated CandidatePoWReceiptRootRecord candidate_pow_receipt_roots = 4002;
 
-  // Miscellanous [5001-6000]
+  // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
   ForkData fork_data = 5002;
 
