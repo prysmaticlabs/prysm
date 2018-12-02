@@ -139,8 +139,12 @@ message SpecialRecord {
 }
 
 message CrosslinkRecord {
-  bytes shard_block_hash = 1;
-  uint64 slot = 2;
+  uint64 slot = 1;
+  bytes shard_block_hash32 = 2;
+
+  // Deprecated fields
+  // All fields must be annotated with [deprecated=true];
+  bytes shard_block_hash = 1001 [deprecated=true]; // Renamed to shard_block_hash32
 }
 
 message ShardAndCommitteeArray {
@@ -150,6 +154,7 @@ message ShardAndCommitteeArray {
 message ShardAndCommittee {
   uint64 shard = 1;
   repeated uint32 committee = 2;
+  uint64 total_validator_count = 3;
 }
 
 message BeaconBlock {
