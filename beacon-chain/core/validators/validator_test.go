@@ -315,7 +315,7 @@ func TestAddValidators(t *testing.T) {
 	}
 
 	// Create a new validator.
-	validators := AddPendingValidator(existingValidators, []byte{'A'}, 99, []byte{'B'}, []byte{'C'}, uint64(params.PendingActivation))
+	validators := AddPendingValidator(existingValidators, []byte{'A'}, []byte{'B'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 10.
 	if validators[10].Status != uint64(params.PendingActivation) {
@@ -327,7 +327,7 @@ func TestAddValidators(t *testing.T) {
 
 	// Set validator 6 to withdrawn
 	existingValidators[5].Status = uint64(params.Withdrawn)
-	validators = AddPendingValidator(existingValidators, []byte{'D'}, 100, []byte{'E'}, []byte{'F'}, uint64(params.PendingActivation))
+	validators = AddPendingValidator(existingValidators, []byte{'D'}, []byte{'E'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 5.
 	if validators[5].Status != uint64(params.PendingActivation) {
@@ -436,11 +436,11 @@ func TestMinEmptyValidator(t *testing.T) {
 func TestDeepCopyValidators(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	defaultValidator := &pb.ValidatorRecord{
-		Pubkey:            []byte{'k', 'e', 'y'},
-		RandaoCommitment:  []byte{'r', 'a', 'n', 'd', 'a', 'o'},
-		Balance:           uint64(1e9),
-		Status:            uint64(params.Active),
-		LatestStatusChangeSlot:          10,
+		Pubkey:                 []byte{'k', 'e', 'y'},
+		RandaoCommitment:       []byte{'r', 'a', 'n', 'd', 'a', 'o'},
+		Balance:                uint64(1e9),
+		Status:                 uint64(params.Active),
+		LatestStatusChangeSlot: 10,
 	}
 	for i := 0; i < 100; i++ {
 		validators = append(validators, defaultValidator)

@@ -83,11 +83,11 @@ func (b *BeaconState) CopyState() *BeaconState {
 	validators := make([]*pb.ValidatorRecord, len(b.Validators()))
 	for index, validator := range b.Validators() {
 		validators[index] = &pb.ValidatorRecord{
-			Pubkey:            validator.GetPubkey(),
-			RandaoCommitment:  validator.GetRandaoCommitment(),
-			Balance:           validator.GetBalance(),
-			Status:            validator.GetStatus(),
-			LatestStatusChangeSlot:          validator.GetLatestStatusChangeSlot(),
+			Pubkey:                 validator.GetPubkey(),
+			RandaoCommitment:       validator.GetRandaoCommitment(),
+			Balance:                validator.GetBalance(),
+			Status:                 validator.GetStatus(),
+			LatestStatusChangeSlot: validator.GetLatestStatusChangeSlot(),
 		}
 	}
 

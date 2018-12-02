@@ -95,7 +95,7 @@ message AttestationData {
 
 message ValidatorRecord {
   bytes pubkey = 1;
-  TODO: The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials = 2;
   bytes randao_commitment = 3;
   uint64 randao_skips = 4;

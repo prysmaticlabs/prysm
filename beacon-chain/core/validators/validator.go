@@ -27,10 +27,10 @@ func InitialValidators() []*pb.ValidatorRecord {
 	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
 	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           config.DepositSize * config.Gwei,
-			Pubkey:            []byte{},
-			RandaoCommitment:  randaoReveal[:],
+			Status:           uint64(params.Active),
+			Balance:          config.DepositSize * config.Gwei,
+			Pubkey:           []byte{},
+			RandaoCommitment: randaoReveal[:],
 		}
 	}
 	return validators
@@ -225,18 +225,16 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
-	withdrawalShard uint64,
-	withdrawalAddr []byte,
 	randaoCommitment []byte,
 	status uint64) []*pb.ValidatorRecord {
 
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
 	newValidatorRecord := &pb.ValidatorRecord{
-		Pubkey:            pubKey,
-		RandaoCommitment:  randaoCommitment,
-		Balance:           params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
-		Status:            status,
+		Pubkey:           pubKey,
+		RandaoCommitment: randaoCommitment,
+		Balance:          params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
+		Status:           status,
 	}
 
 	index := minEmptyValidator(validators)
@@ -326,11 +324,11 @@ func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 
 	for i, validator := range validatorSet {
 		newValidatorSet[i] = &pb.ValidatorRecord{
-			Pubkey:            validator.Pubkey,
-			RandaoCommitment:  validator.RandaoCommitment,
-			Balance:           validator.Balance,
-			Status:            validator.Status,
-			LatestStatusChangeSlot:          validator.LatestStatusChangeSlot,
+			Pubkey:                 validator.Pubkey,
+			RandaoCommitment:       validator.RandaoCommitment,
+			Balance:                validator.Balance,
+			Status:                 validator.Status,
+			LatestStatusChangeSlot: validator.LatestStatusChangeSlot,
 		}
 	}
 	return newValidatorSet
