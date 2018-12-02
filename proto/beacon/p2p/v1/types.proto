@@ -61,9 +61,6 @@ message BeaconState {
   bytes known_pow_receipt_root = 10012 [deprecated=true]; // Deprecated by better handling of pow receipts
   bytes candidate_pow_receipt_root = 10013 [deprecated=true]; // Replaced by candidate_pow_receipt_roots.
   uint64 candidate_pow_receipt_root_votes = 10014 [deprecated=true]; // Replaced by candidate_pow_receipt_roots
-  uint64 pre_fork_version = 10015 [deprecated=true]; // Moved into ForkData 
-  uint64 post_fork_version = 10016 [deprecated=true]; // Moved into ForkData 
-  uint64 fork_slot_number = 10017 [deprecated=true]; // Moved into ForkData 
   repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
 }
 
@@ -113,15 +110,16 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
+// AggregatedAttestation is deprecated entirely by AttestationRecord.
 message AggregatedAttestation {
-  uint64 slot = 1;
-  uint64 shard = 2;
-  uint64 justified_slot = 3;
-  bytes justified_block_hash = 4;
-  bytes shard_block_hash = 5;
-  bytes attester_bitfield = 6;
-  repeated bytes oblique_parent_hashes = 7;
-  repeated uint64 aggregate_sig = 8;
+  uint64 slot = 1 [deprecated=true];
+  uint64 shard = 2 [deprecated=true];
+  uint64 justified_slot = 3 [deprecated=true];
+  bytes justified_block_hash = 4 [deprecated=true];
+  bytes shard_block_hash = 5 [deprecated=true];
+  bytes attester_bitfield = 6 [deprecated=true];
+  repeated bytes oblique_parent_hashes = 7 [deprecated=true];
+  repeated uint64 aggregate_sig = 8 [deprecated=true];
 }
 
 message SpecialRecord {
@@ -144,12 +142,29 @@ message ShardAndCommittee {
 }
 
 message BeaconBlock {
-  repeated bytes ancestor_hashes = 1;
-  uint64 slot = 2;
-  bytes randao_reveal = 3;
-  bytes pow_chain_ref = 4;
-  bytes state_root = 5;
-  google.protobuf.Timestamp timestamp = 6;
-  repeated AggregatedAttestation attestations = 7;
-  repeated SpecialRecord specials = 8;
+  uint64 slot = 1;
+  bytes randao_reveal_hash32 = 2;
+  bytes candidate_pow_receipt_root_hash32 = 3;
+  // Ancestor hashes represent a skip list of ancestor beacon block hashes.
+  // i'th item is the most recent ancestor whose slot is a multiple of 2^i 
+  // for i in the range of 0 to 31.
+  repeated bytes ancestor_hash32s = 4; 
+  bytes state_root_hash32 = 5;
+  // TODO: attestations should be a list of attestionRecords according to spec
+  // at ethereum/eth2.0-specs@11d4473. Update this field to AttestionRecord
+  // and remove the AggregatedAttestion message.
+  repeated AggregatedAttestation attestations = 6 [deprecated=true];
+  // repeated AttestationRecord attestations = 6;
+  // Specials consist of exist, penalities, etc.
+  repeated SpecialRecord specials = 7;
+  repeated bytes proposer_signature = 8; // Type of [uint384]?
+
+
+  // Deprecated fields
+  // All fields must be annotated with [deprecated=true];
+  repeated bytes ancestor_hashes = 1002 [deprecated=true]; // Renamed to ancestor_hash32s.
+  bytes randao_reveal = 1003 [deprecated=true]; // Renamed to ancestor_hash32s.
+  bytes pow_chain_ref = 1004 [deprecated=true]; // Obsolete?
+  bytes state_root = 1005 [deprecated=true]; // Renamed to state_root_hash32.
+  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Obsolete?
 }

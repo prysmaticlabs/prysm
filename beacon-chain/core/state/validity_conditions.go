@@ -144,9 +144,11 @@ func isBlockAttestationValid(
 		return fmt.Errorf("unable to match attester bitfield with shard and committee bitfield")
 	}
 
-	forkVersion := beaconState.PostForkVersion()
-	if attestation.Slot < beaconState.ForkSlotNumber() {
-		forkVersion = beaconState.PreForkVersion()
+	// TODO(#258): Add coverage for determining fork version for an attestation.
+	forkData := beaconState.ForkData()
+	forkVersion := forkData.PostForkVersion
+	if attestation.Slot < forkData.ForkSlot {
+		forkVersion = forkData.PreForkVersion
 	}
 
 	// TODO(#258): Generate validators aggregated pub key.

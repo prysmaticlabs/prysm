@@ -59,15 +59,13 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
-			ForkSlotNumber:             0,
 			Crosslinks:                 crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
-			PreForkVersion:             uint64(params.BeaconConfig().InitialForkVersion),
-			PostForkVersion:            uint64(params.BeaconConfig().InitialForkVersion),
 			PendingAttestations:        []*pb.AggregatedAttestation{},
 			LatestBlockHash32S:         latestBlockHashes,
 			RandaoMix:                  make([]byte, 0, 32),
+			ForkData:                   &pb.ForkData{},
 		},
 	}, nil
 }
@@ -119,9 +117,7 @@ func (b *BeaconState) CopyState() *BeaconState {
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
-		PreForkVersion:             b.data.PreForkVersion,
-		PostForkVersion:            b.data.PostForkVersion,
-		ForkSlotNumber:             b.data.ForkSlotNumber,
+		ForkData:                   b.ForkData(),
 	}}
 
 	return &newState
@@ -224,19 +220,9 @@ func (b *BeaconState) DepositsPenalizedInPeriod() []uint64 {
 	return b.data.DepositsPenalizedInPeriod
 }
 
-// ForkSlotNumber returns the slot of last fork.
-func (b *BeaconState) ForkSlotNumber() uint64 {
-	return b.data.ForkSlotNumber
-}
-
-// PreForkVersion returns the last pre fork version.
-func (b *BeaconState) PreForkVersion() uint64 {
-	return b.data.PreForkVersion
-}
-
-// PostForkVersion returns the last post fork version.
-func (b *BeaconState) PostForkVersion() uint64 {
-	return b.data.PostForkVersion
+// ForkData returns the relevant fork data for this beacon state.
+func (b *BeaconState) ForkData() *pb.ForkData {
+	return b.data.ForkData
 }
 
 // LatestBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
