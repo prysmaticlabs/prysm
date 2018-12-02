@@ -114,15 +114,16 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
+// AggregatedAttestation is deprecated entirely by AttestationRecord.
 message AggregatedAttestation {
-  uint64 slot = 1;
-  uint64 shard = 2;
-  uint64 justified_slot = 3;
-  bytes justified_block_hash = 4;
-  bytes shard_block_hash = 5;
-  bytes attester_bitfield = 6;
-  repeated bytes oblique_parent_hashes = 7;
-  repeated uint64 aggregate_sig = 8;
+  uint64 slot = 1 [deprecated=true];
+  uint64 shard = 2 [deprecated=true];
+  uint64 justified_slot = 3 [deprecated=true];
+  bytes justified_block_hash = 4 [deprecated=true];
+  bytes shard_block_hash = 5 [deprecated=true];
+  bytes attester_bitfield = 6 [deprecated=true];
+  repeated bytes oblique_parent_hashes = 7 [deprecated=true];
+  repeated uint64 aggregate_sig = 8 [deprecated=true];
 }
 
 message SpecialRecord {
@@ -154,7 +155,8 @@ message BeaconBlock {
   repeated bytes ancestor_hash32s = 4; 
   bytes state_root_hash32 = 5;
   // TODO: attestations should be a list of attestionRecords according to spec
-  // at ethereum/eth2.0-specs@11d4473
+  // at ethereum/eth2.0-specs@11d4473. Update this field to AttestionRecord
+  // and remove the AggregatedAttestion message.
   repeated AggregatedAttestation attestations = 6 [deprecated=true];
   // repeated AttestationRecord attestations = 6;
   // Specials consist of exist, penalities, etc.
