@@ -90,7 +90,7 @@ message AttestationData {
   uint64 slot = 1;
   uint64 shard = 2;
   bytes beacon_block_hash32 = 3;
-  bytes epoch_boundry_hash32 = 4;
+  bytes epoch_boundary_hash32 = 4;
   bytes shard_block_hash32 = 5;
   bytes latest_crosslink_hash32 = 6;
   uint64 justified_slot = 7;
