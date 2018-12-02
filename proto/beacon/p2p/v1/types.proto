@@ -11,25 +11,23 @@ message BeaconState {
   repeated CrosslinkRecord crosslinks = 3;
   uint64 last_state_recalculation_slot = 4;
   uint64 last_finalized_slot = 5;
-  uint64 last_justified_slot = 6;
-  uint64 justified_streak = 7;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint32 persistent_committees = 9;
-  repeated ShardReassignmentRecord persistent_committee_reassignment = 10;
-  bytes next_shuffling_seed = 11;
-  repeated uint64 deposits_penalized_in_period = 12;
-  bytes validator_delta_hash_chain = 13;
-  uint64 current_exit_seq = 14;
-  uint64 genesis_time = 15;
-  bytes known_pow_receipt_root = 16;
-  bytes candidate_pow_receipt_root = 17;
-  uint64 candidate_pow_receipt_root_votes = 18;
-  uint64 pre_fork_version = 19;
-  uint64 post_fork_version = 20;
-  uint64 fork_slot_number = 21;
-  repeated AggregatedAttestation pending_attestations = 22;
-  repeated bytes recent_block_hashes = 23;
-  bytes randao_mix = 24;
+  uint64 justification_source = 6;
+  uint64 prev_cycle_justification_source = 7;
+  bytes justified_slot_bitfield = 8;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 9;
+  repeated uint32 persistent_committees = 10;
+  repeated ShardReassignmentRecord persistent_committee_reassignment = 11;
+  bytes next_shuffling_seed = 12;
+  repeated uint64 deposits_penalized_in_period = 13;
+  bytes validator_delta_hash_chain = 14;
+  uint64 current_exit_seq = 15;
+  uint64 genesis_time = 16;
+  bytes processed_pow_receipt_root = 17;
+  ForkData fork_data = 18; 
+  repeated CandidatePowReceiptRootRecord candidate_pow_receipt_roots = 19;
+  repeated AggregatedAttestation pending_attestations = 20;
+  repeated bytes recent_block_hashes = 21;
+  bytes randao_mix = 22;
 }
 
 message ValidatorRecord {
