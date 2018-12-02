@@ -25,20 +25,20 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	}
 }
 
-func TestGenesisState_InitializesRecentBlockHashes(t *testing.T) {
+func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := NewGenesisBeaconState(nil)
-	want, got := len(s.data.RecentBlockHashes), 2*int(params.BeaconConfig().CycleLength)
+	want, got := len(s.data.LatestBlockHash32S), 2*int(params.BeaconConfig().CycleLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.data.RecentBlockHashes)
+	want = cap(s.data.LatestBlockHash32S)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
 	zero := make([]byte, 0, 32)
-	for _, h := range s.data.RecentBlockHashes {
+	for _, h := range s.data.LatestBlockHash32S {
 		if !bytes.Equal(h, zero) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
@@ -64,11 +64,11 @@ func TestCopyState(t *testing.T) {
 		)
 	}
 
-	state1.data.RecentBlockHashes = [][]byte{{'A'}}
-	if len(state1.RecentBlockHashes()) == len(state2.RecentBlockHashes()) {
-		t.Fatalf("The RecentBlockHashes should not equal each other %d, %d",
-			len(state1.RecentBlockHashes()),
-			len(state2.RecentBlockHashes()),
+	state1.data.LatestBlockHash32S = [][]byte{{'A'}}
+	if len(state1.LatestBlockHashes()) == len(state2.LatestBlockHashes()) {
+		t.Fatalf("The LatestBlockHashes should not equal each other %d, %d",
+			len(state1.LatestBlockHashes()),
+			len(state2.LatestBlockHashes()),
 		)
 	}
 
@@ -123,7 +123,7 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	}
 }
 
-func TestUpdateRecentBlockHashes(t *testing.T) {
+func TestUpdateLatestBlockHashes(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
 		Slot:           10,
 		AncestorHashes: [][]byte{{'A'}},
@@ -135,7 +135,7 @@ func TestUpdateRecentBlockHashes(t *testing.T) {
 	}
 
 	state := NewBeaconState(&pb.BeaconState{
-		RecentBlockHashes: recentBlockHashes,
+		LatestBlockHash32S: recentBlockHashes,
 	})
 
 	updated, err := state.CalculateNewBlockHashes(block, 0)
@@ -167,11 +167,11 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 	}
 
 	s, _ := NewGenesisBeaconState(nil)
-	copy(s.data.RecentBlockHashes, interestingData)
+	copy(s.data.LatestBlockHash32S, interestingData)
 	original := make([][]byte, 2*params.BeaconConfig().CycleLength)
-	copy(original, s.data.RecentBlockHashes)
+	copy(original, s.data.LatestBlockHash32S)
 
-	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
+	if !reflect.DeepEqual(s.data.LatestBlockHash32S, original) {
 		t.Fatal("setup data should be equal!")
 	}
 
@@ -184,7 +184,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	result, _ := s.CalculateNewBlockHashes(block, 0 /*parentSlot*/)
 
-	if !reflect.DeepEqual(s.data.RecentBlockHashes, original) {
+	if !reflect.DeepEqual(s.data.LatestBlockHash32S, original) {
 		t.Error("data has mutated from the original")
 	}
 
@@ -216,20 +216,20 @@ func TestGetSignedParentHashes(t *testing.T) {
 		cfg.CycleLength = oldCycleLength
 	}()
 
-	recentBlockHashes := make([][]byte, 11)
-	recentBlockHashes[0] = createHashFromByte('Z')
-	recentBlockHashes[1] = createHashFromByte('A')
-	recentBlockHashes[2] = createHashFromByte('B')
-	recentBlockHashes[3] = createHashFromByte('C')
-	recentBlockHashes[4] = createHashFromByte('D')
-	recentBlockHashes[5] = createHashFromByte('E')
-	recentBlockHashes[6] = createHashFromByte('F')
-	recentBlockHashes[7] = createHashFromByte('G')
-	recentBlockHashes[8] = createHashFromByte('H')
-	recentBlockHashes[9] = createHashFromByte('I')
-	recentBlockHashes[10] = createHashFromByte('J')
+	blockHashes := make([][]byte, 11)
+	blockHashes[0] = createHashFromByte('Z')
+	blockHashes[1] = createHashFromByte('A')
+	blockHashes[2] = createHashFromByte('B')
+	blockHashes[3] = createHashFromByte('C')
+	blockHashes[4] = createHashFromByte('D')
+	blockHashes[5] = createHashFromByte('E')
+	blockHashes[6] = createHashFromByte('F')
+	blockHashes[7] = createHashFromByte('G')
+	blockHashes[8] = createHashFromByte('H')
+	blockHashes[9] = createHashFromByte('I')
+	blockHashes[10] = createHashFromByte('J')
 
-	state := NewBeaconState(&pb.BeaconState{RecentBlockHashes: recentBlockHashes})
+	state := NewBeaconState(&pb.BeaconState{LatestBlockHash32S: blockHashes})
 
 	b := NewBlock(&pb.BeaconBlock{Slot: 11})
 
@@ -262,17 +262,17 @@ func TestGetSignedParentHashesIndexFail(t *testing.T) {
 		cfg.CycleLength = oldCycleLength
 	}()
 
-	recentBlockHashes := make([][]byte, 8)
-	recentBlockHashes[0] = createHashFromByte('Z')
-	recentBlockHashes[1] = createHashFromByte('A')
-	recentBlockHashes[2] = createHashFromByte('B')
-	recentBlockHashes[3] = createHashFromByte('C')
-	recentBlockHashes[4] = createHashFromByte('D')
-	recentBlockHashes[5] = createHashFromByte('E')
-	recentBlockHashes[6] = createHashFromByte('F')
-	recentBlockHashes[7] = createHashFromByte('G')
+	blockHashes := make([][]byte, 8)
+	blockHashes[0] = createHashFromByte('Z')
+	blockHashes[1] = createHashFromByte('A')
+	blockHashes[2] = createHashFromByte('B')
+	blockHashes[3] = createHashFromByte('C')
+	blockHashes[4] = createHashFromByte('D')
+	blockHashes[5] = createHashFromByte('E')
+	blockHashes[6] = createHashFromByte('F')
+	blockHashes[7] = createHashFromByte('G')
 
-	state := NewBeaconState(&pb.BeaconState{RecentBlockHashes: recentBlockHashes})
+	state := NewBeaconState(&pb.BeaconState{LatestBlockHash32S: blockHashes})
 
 	b := NewBlock(&pb.BeaconBlock{Slot: 8})
 	a := &pb.AggregatedAttestation{
