@@ -51,8 +51,10 @@ func TestCopyState(t *testing.T) {
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:  0,
-			Shard: 1,
+			SignedData: &pb.AttestationSignedData{
+				Slot:  0,
+				Shard: 1,
+			},
 		},
 	}
 
@@ -87,12 +89,16 @@ func TestUpdateAttestations(t *testing.T) {
 
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:  0,
-			Shard: 0,
+			SignedData: &pb.AttestationSignedData{
+				Slot:  0,
+				Shard: 0,
+			},
 		},
 		{
-			Slot:  0,
-			Shard: 1,
+			SignedData: &pb.AttestationSignedData{
+				Slot:  0,
+				Shard: 1,
+			},
 		},
 	}
 
@@ -107,12 +113,16 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
 	newAttestations := []*pb.AggregatedAttestation{
 		{
-			Slot:  10,
-			Shard: 2,
+			SignedData: &pb.AttestationSignedData{
+				Slot:  10,
+				Shard: 2,
+			},
 		},
 		{
-			Slot:  9,
-			Shard: 3,
+			SignedData: &pb.AttestationSignedData{
+				Slot:  9,
+				Shard: 3,
+			},
 		},
 	}
 
@@ -203,103 +213,4 @@ func areBytesEqual(s1, s2 []byte) bool {
 		}
 	}
 	return true
-}
-
-func TestGetSignedParentHashes(t *testing.T) {
-	// Test the scenario described in the spec:
-	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	recentBlockHashes := make([][]byte, 11)
-	recentBlockHashes[0] = createHashFromByte('Z')
-	recentBlockHashes[1] = createHashFromByte('A')
-	recentBlockHashes[2] = createHashFromByte('B')
-	recentBlockHashes[3] = createHashFromByte('C')
-	recentBlockHashes[4] = createHashFromByte('D')
-	recentBlockHashes[5] = createHashFromByte('E')
-	recentBlockHashes[6] = createHashFromByte('F')
-	recentBlockHashes[7] = createHashFromByte('G')
-	recentBlockHashes[8] = createHashFromByte('H')
-	recentBlockHashes[9] = createHashFromByte('I')
-	recentBlockHashes[10] = createHashFromByte('J')
-
-	state := NewBeaconState(&pb.BeaconState{RecentBlockHashes: recentBlockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 11})
-
-	obliqueParentHashes := make([][]byte, 2)
-	obliqueParentHashes[0] = createHashFromByte(0)
-	obliqueParentHashes[1] = createHashFromByte(1)
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: obliqueParentHashes,
-		Slot:                5,
-	}
-
-	hashes, err := state.SignedParentHashes(b, a)
-	if err != nil {
-		t.Fatalf("failed to SignedParentHashes: %v", err)
-	}
-	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-	if hashes[2][0] != 0 || hashes[3][0] != 1 {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-}
-
-func TestGetSignedParentHashesIndexFail(t *testing.T) {
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	recentBlockHashes := make([][]byte, 8)
-	recentBlockHashes[0] = createHashFromByte('Z')
-	recentBlockHashes[1] = createHashFromByte('A')
-	recentBlockHashes[2] = createHashFromByte('B')
-	recentBlockHashes[3] = createHashFromByte('C')
-	recentBlockHashes[4] = createHashFromByte('D')
-	recentBlockHashes[5] = createHashFromByte('E')
-	recentBlockHashes[6] = createHashFromByte('F')
-	recentBlockHashes[7] = createHashFromByte('G')
-
-	state := NewBeaconState(&pb.BeaconState{RecentBlockHashes: recentBlockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 8})
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                2,
-	}
-
-	_, err := state.SignedParentHashes(b, a)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-
-	a2 := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                9,
-	}
-	_, err = state.SignedParentHashes(b, a2)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-}
-
-func createHashFromByte(repeatedByte byte) []byte {
-	hash := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		hash[i] = repeatedByte
-	}
-
-	return hash
 }
