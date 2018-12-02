@@ -90,6 +90,17 @@ message ShardAndCommittee {
   repeated uint32 committee = 2;
 }
 
+message CandidatePowReceiptRootRecord {
+  bytes candidate_pow_receipt_root = 1;
+  uint64 votes = 2;
+}
+
+message ForkData {
+  uint64 pre_fork_version = 1;
+  uint64 post_fork_version = 2;
+  uint64 fork_slot_number = 3;
+}
+
 message BeaconBlock {
   repeated bytes ancestor_hashes = 1;
   uint64 slot = 2;
