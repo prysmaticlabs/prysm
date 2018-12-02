@@ -47,9 +47,9 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 		})
 	}
 
-	var recentBlockHashes [][]byte
+	var latestBlockHashes [][]byte
 	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
+		latestBlockHashes = append(latestBlockHashes, make([]byte, 0, 32))
 	}
 
 	return &BeaconState{
@@ -63,7 +63,7 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 			PendingAttestations:        []*pb.AggregatedAttestation{},
-			RecentBlockHashes:          recentBlockHashes,
+			LatestBlockHash32S:         latestBlockHashes,
 			RandaoMix:                  make([]byte, 0, 32),
 			ForkData:                   &pb.ForkData{},
 		},
@@ -225,10 +225,10 @@ func (b *BeaconState) ForkData() *pb.ForkData {
 	return b.data.ForkData
 }
 
-// RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
-func (b *BeaconState) RecentBlockHashes() [][32]byte {
+// LatestBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
+func (b *BeaconState) LatestBlockHashes() [][32]byte {
 	var blockhashes [][32]byte
-	for _, hash := range b.data.RecentBlockHashes {
+	for _, hash := range b.data.LatestBlockHash32S {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
 	return blockhashes
@@ -265,19 +265,19 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 
 // SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
 func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
-	recentBlockHashes := b.RecentBlockHashes()
+	latestBlockHashes := b.LatestBlockHashes()
 	obliqueParentHashes := attestation.ObliqueParentHashes
-	earliestSlot := int(block.SlotNumber()) - len(recentBlockHashes)
+	earliestSlot := int(block.SlotNumber()) - len(latestBlockHashes)
 
 	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
 	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
-	if startIdx < 0 || endIdx > len(recentBlockHashes) || endIdx <= startIdx {
+	if startIdx < 0 || endIdx > len(latestBlockHashes) || endIdx <= startIdx {
 		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
 	}
 
 	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
 	for i := startIdx; i < endIdx; i++ {
-		hashes = append(hashes, recentBlockHashes[i])
+		hashes = append(hashes, latestBlockHashes[i])
 	}
 
 	for i := 0; i < len(obliqueParentHashes); i++ {
@@ -325,7 +325,7 @@ func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 // This method does not mutate the state.
 func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
 	distance := block.SlotNumber() - parentSlot
-	existing := b.data.RecentBlockHashes
+	existing := b.data.LatestBlockHash32S
 	update := existing[distance:]
 	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
 		update = append(update, block.AncestorHashes()[0])
@@ -373,9 +373,9 @@ func (b *BeaconState) SetRandaoMix(randaoMix []byte) {
 	b.data.RandaoMix = randaoMix
 }
 
-// SetRecentBlockHashes updates the inner proto's recent block hashes.
-func (b *BeaconState) SetRecentBlockHashes(recentShardBlockHashes [][]byte) {
-	b.data.RecentBlockHashes = recentShardBlockHashes
+// SetLatestBlockHashes updates the inner proto's recent block hashes.
+func (b *BeaconState) SetLatestBlockHashes(blockHashes [][]byte) {
+	b.data.LatestBlockHash32S = blockHashes
 }
 
 // SetShardAndCommitteesForSlots updates the inner proto's shard and committees for slots.

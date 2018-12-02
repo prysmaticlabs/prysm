@@ -62,7 +62,6 @@ message BeaconState {
   bytes candidate_pow_receipt_root = 10013 [deprecated=true]; // Replaced by candidate_pow_receipt_roots.
   uint64 candidate_pow_receipt_root_votes = 10014 [deprecated=true]; // Replaced by candidate_pow_receipt_roots
   repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
-  repeated bytes recent_block_hashes = 10019 [deprecated=true]; // Replaced/renamed by latest_block_hashes
 }
 
 message ForkData {

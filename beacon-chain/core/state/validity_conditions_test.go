@@ -46,7 +46,7 @@ func TestBlockValidity(t *testing.T) {
 	validators := beaconState.Validators()
 	validators[1].RandaoCommitment = hashedRandaoPreCommit[:]
 	beaconState.SetValidators(validators)
-	beaconState.SetRecentBlockHashes(recentBlockHashes)
+	beaconState.SetLatestBlockHashes(recentBlockHashes)
 
 	b := types.NewBlock(&pb.BeaconBlock{
 		Slot:         1,
@@ -82,7 +82,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 
-	beaconState.SetRecentBlockHashes(recentBlockHashes)
+	beaconState.SetLatestBlockHashes(recentBlockHashes)
 
 	parentSlot := uint64(1)
 	db := &mockDB{}
@@ -117,7 +117,7 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 
-	beaconState.SetRecentBlockHashes(recentBlockHashes)
+	beaconState.SetLatestBlockHashes(recentBlockHashes)
 
 	parentSlot := uint64(0)
 	db := &mockDB{}
