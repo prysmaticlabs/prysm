@@ -32,7 +32,7 @@ message BeaconState {
   uint64 last_state_recalculation_slot = 3002;
   repeated bytes latest_block_hash32s = 3003;
   repeated uint64 latest_penalized_exit_balances = 3004;
-  //repeated PendingAttestationRecord latest_attestations = 3005;
+  repeated PendingAttestationRecord latest_attestations = 3005;
 
   // PoW receipt root [4001-5000]
   repeated bytes processed_pow_receipt_root_hash32 = 4001;
@@ -79,6 +79,24 @@ message CandidatePoWReceiptRootRecord {
   uint64 votes = 2;
 }
 
+message PendingAttestationRecord {
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  uint64 slot_included = 4;
+}
+
+message AttestationData {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes beacon_block_hash32 = 3;
+  bytes epoch_boundry_hash32 = 4;
+  bytes shard_block_hash32 = 5;
+  bytes latest_crosslink_hash32 = 6;
+  uint64 justified_slot = 7;
+  bytes justified_block_hash32 = 8;
+}
+
 message ValidatorRecord {
   bytes pubkey = 1;
   uint64 withdrawal_shard = 2;
@@ -105,19 +123,6 @@ message AggregatedAttestation {
   bytes attester_bitfield = 6;
   repeated bytes oblique_parent_hashes = 7;
   repeated uint64 aggregate_sig = 8;
-}
-
-message AttestationSignedData {
-  uint64 fork_version = 1;
-  uint64 slot = 2;
-  uint64 shard = 3;
-  repeated bytes parent_hashes = 4;
-  bytes shard_block_hash = 5;
-  uint64 justified_slot = 6;
-}
-
-message AttestationHashes {
-  repeated bytes attestation_hash = 1;
 }
 
 message SpecialRecord {
