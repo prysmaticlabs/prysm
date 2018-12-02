@@ -65,7 +65,6 @@ message BeaconState {
   uint64 post_fork_version = 10016 [deprecated=true]; // Moved into ForkData 
   uint64 fork_slot_number = 10017 [deprecated=true]; // Moved into ForkData 
   repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
-  repeated bytes recent_block_hashes = 10019 [deprecated=true]; // Replaced/renamed by latest_block_hashes
 }
 
 message ForkData {
