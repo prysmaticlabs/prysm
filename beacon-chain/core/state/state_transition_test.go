@@ -90,7 +90,7 @@ func TestNextDeriveSlot(t *testing.T) {
 			VoteTotalDeposit: totalDeposits * 3 / 4,
 		}
 	}
-	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
+	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(params.BeaconConfig().CycleLength - 1)
 	block = types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{{'A'}},
@@ -113,7 +113,7 @@ func TestNextDeriveSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, beaconState.LastFinalizedSlot())
 	}
 
-	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
+	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(2*params.BeaconConfig().CycleLength - 1)
 	block = types.NewBlock(&pb.BeaconBlock{
 		AncestorHashes: [][]byte{{'A'}},

@@ -38,7 +38,7 @@ func NewStateTransition(
 	if err != nil {
 		return nil, err
 	}
-	newState.SetRecentBlockHashes(recentBlockHashes)
+	newState.SetLatestBlockHashes(recentBlockHashes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
