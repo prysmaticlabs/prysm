@@ -16,7 +16,7 @@ message BeaconState {
   bytes randao_mix_hash32 = 1001;
   bytes next_seed_hash32 = 1002;
   repeated ShardAndCommitteeArray shard_and_committees_for_slots = 1003;
-  // TODO: Persistent committees should be a 2d uint24 array.
+  // TODO(781): Persistent committees should be a 2d uint24 array.
   repeated uint32 persistent_committees = 1004 [deprecated=true];
   // repeated Uint32Array persistent_committees = 1004;
   repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
@@ -151,7 +151,7 @@ message BeaconBlock {
   // for i in the range of 0 to 31.
   repeated bytes ancestor_hash32s = 4; 
   bytes state_root_hash32 = 5;
-  // TODO: attestations should be a list of attestionRecords according to spec
+  // TODO(781): attestations should be a list of attestionRecords according to spec
   // at ethereum/eth2.0-specs@11d4473. Update this field to AttestionRecord
   // and remove the AggregatedAttestion message.
   repeated AggregatedAttestation attestations = 6 [deprecated=true];
