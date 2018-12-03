@@ -271,6 +271,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	if err != nil {
 		return fmt.Errorf("could not get parent block: %v", err)
 	}
+	log.Infof("slot %d pareent %v", block.SlotNumber(), parent)
 	if parent == nil {
 		return fmt.Errorf("block points to nil parent: %#x", block.ParentHash())
 	}

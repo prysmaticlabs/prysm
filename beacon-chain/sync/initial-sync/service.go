@@ -39,6 +39,7 @@ type Config struct {
 	P2P                         p2pAPI
 	SyncService                 syncService
 	QueryService                queryService
+	ChainService                chainService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -62,8 +63,13 @@ type p2pAPI interface {
 }
 
 type beaconDB interface {
-	SaveBlock(*types.Block) error
 	SaveCrystallizedState(*types.CrystallizedState) error
+	GetCrystallizedState() (*types.CrystallizedState, error)
+	HasBlock([32]byte) bool
+}
+
+type chainService interface {
+	IncomingBlockFeed() *event.Feed
 }
 
 // SyncService is the interface for the Sync service.
@@ -86,6 +92,7 @@ type InitialSync struct {
 	p2p                          p2pAPI
 	syncService                  syncService
 	queryService                 queryService
+	chainService                 chainService
 	db                           beaconDB
 	blockAnnounceBuf             chan p2p.Message
 	batchedBlockBuf              chan p2p.Message
@@ -115,6 +122,7 @@ func NewInitialSyncService(ctx context.Context,
 		cancel:               cancel,
 		p2p:                  cfg.P2P,
 		syncService:          cfg.SyncService,
+		chainService:         cfg.ChainService,
 		db:                   cfg.BeaconDB,
 		currentSlot:          0,
 		highestObservedSlot:  0,
@@ -281,13 +289,17 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		if s.initialCrystallizedStateRoot != [32]byte{} {
 			return
 		}
-		if block.GetSlot() != 1 {
+		// check for genesis block , or block with slot 1
+		if block.GetSlot() > 1 {
 
 			// saves block in memory if it isn't the initial block.
 			if _, ok := s.inMemoryBlocks[block.GetSlot()]; !ok {
 				s.inMemoryBlocks[block.GetSlot()] = block
 			}
 			s.requestNextBlockBySlot(1)
+			return
+		}
+		if !s.checkForGenesisBlock(block, peer) {
 			return
 		}
 		if err := s.setBlockForInitialSync(block); err != nil {
@@ -349,9 +361,7 @@ func (s *InitialSync) setBlockForInitialSync(rawBlock *pb.BeaconBlock) error {
 	}
 	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Crystallized state hash exists locally")
 
-	if err := s.writeBlockToDB(block); err != nil {
-		return err
-	}
+	s.chainService.IncomingBlockFeed().Send(block)
 
 	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
 
@@ -369,6 +379,12 @@ func (s *InitialSync) requestNextBlockBySlot(slotnumber uint64) {
 		return
 	}
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotnumber})
+}
+
+func (s *InitialSync) requestBlockByHash(hash [32]byte, peer p2p.Peer) {
+	s.p2p.Send(&pb.BeaconBlockRequest{
+		Hash: hash[:],
+	}, peer)
 }
 
 // requestBatchedBlocks sends out a request for multiple blocks till a
@@ -396,7 +412,7 @@ func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
 
 	if (s.currentSlot + 1) == block.SlotNumber() {
 
-		if err := s.writeBlockToDB(block); err != nil {
+		if err := s.checkBlockValidity(rawBlock); err != nil {
 			return err
 		}
 
@@ -407,6 +423,9 @@ func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
 		if _, ok := s.inMemoryBlocks[block.SlotNumber()]; ok {
 			delete(s.inMemoryBlocks, block.SlotNumber())
 		}
+
+		// Send block to main chain service to be processed
+		s.chainService.IncomingBlockFeed().Send(block)
 	}
 	return nil
 }
@@ -415,41 +434,40 @@ func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
 	block := types.NewBlock(rawBlock)
 	blockHash, err := block.Hash()
 	if err != nil {
-		return fmt.Errorf("Could not hash received block: %v", err)
+		return fmt.Errorf("could not hash received block: %v", err)
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockHash)
 
 	if s.db.HasBlock(blockHash) {
-		return errors.New("Received a block that already exists. Exiting...")
+		return errors.New("received a block that already exists. Exiting")
 	}
 
 	cState, err := s.db.GetCrystallizedState()
 	if err != nil {
-		return fmt.Errorf("Failed to get crystallized state: %v", err)
+		return fmt.Errorf("failed to get crystallized state: %v", err)
 	}
 
 	if block.SlotNumber() < cState.LastFinalizedSlot() {
-		return errors.New("Discarding received block with a slot number smaller than the last finalized slot")
+		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
-
-	// Verify attestation coming from proposer then forward block to the subscribers.
-	attestation := types.NewAttestation(response.Attestation)
-
-	proposerShardID, _, err := v.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
-	if err != nil {
-		return fmt.Errorf("Failed to get proposer shard ID: %v", err)
-	}
-
-	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
-		return fmt.Errorf("Failed to verify proposer attestation: %v", err)
-	}
+	// Attestation from proposer not verified as, other nodes only store blocks not proposer
+	// attestations.
 
 	return nil
 }
 
-// writeBlockToDB saves the corresponding block to the local DB.
-func (s *InitialSync) writeBlockToDB(block *types.Block) error {
-	return s.db.SaveBlock(block)
+func (s *InitialSync) checkForGenesisBlock(rawBlock *pb.BeaconBlock, peer p2p.Peer) bool {
+	block := types.NewBlock(rawBlock)
+
+	if block.ParentHash() == [32]byte{} {
+		return false
+	}
+
+	if s.db.HasBlock(block.ParentHash()) {
+		return true
+	}
+
+	s.requestBlockByHash(block.ParentHash(), peer)
+	return false
 }

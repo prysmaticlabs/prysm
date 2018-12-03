@@ -68,6 +68,7 @@ type Service struct {
 	announceBlockBuf      chan p2p.Message
 	blockBuf              chan p2p.Message
 	blockRequestBySlot    chan p2p.Message
+	blockRequestByHash    chan p2p.Message
 	chainHeadReqBuf       chan p2p.Message
 	attestationBuf        chan p2p.Message
 }
@@ -76,7 +77,8 @@ type Service struct {
 type Config struct {
 	BlockAnnounceBufferSize int
 	BlockBufferSize         int
-	BlockRequestBufferSize  int
+	BlockReqSlotBufferSize  int
+	BlockReqHashBufferSize  int
 	AttestationBufferSize   int
 	ChainHeadReqBufferSize  int
 	ChainService            chainService
@@ -91,7 +93,8 @@ func DefaultConfig() Config {
 	return Config{
 		BlockAnnounceBufferSize: 100,
 		BlockBufferSize:         100,
-		BlockRequestBufferSize:  100,
+		BlockReqSlotBufferSize:  100,
+		BlockReqHashBufferSize:  100,
 		ChainHeadReqBufferSize:  100,
 		AttestationBufferSize:   100,
 	}
@@ -111,7 +114,8 @@ func NewSyncService(ctx context.Context, cfg Config) *Service {
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
+		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
+		blockRequestByHash:    make(chan p2p.Message, cfg.BlockReqHashBufferSize),
 		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
 		chainHeadReqBuf:       make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 	}
@@ -163,12 +167,14 @@ func (ss *Service) run() {
 	announceBlockSub := ss.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, ss.announceBlockBuf)
 	blockSub := ss.p2p.Subscribe(&pb.BeaconBlockResponse{}, ss.blockBuf)
 	blockRequestSub := ss.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, ss.blockRequestBySlot)
+	blockRequestHashSub := ss.p2p.Subscribe(&pb.BeaconBlockRequest{}, ss.blockRequestByHash)
 	attestationSub := ss.p2p.Subscribe(&pb.AggregatedAttestation{}, ss.attestationBuf)
 	chainHeadReqSub := ss.p2p.Subscribe(&pb.ChainHeadRequest{}, ss.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
 	defer blockRequestSub.Unsubscribe()
+	defer blockRequestHashSub.Unsubscribe()
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
 
@@ -185,6 +191,8 @@ func (ss *Service) run() {
 			ss.receiveBlock(msg)
 		case msg := <-ss.blockRequestBySlot:
 			ss.handleBlockRequestBySlot(msg)
+		case msg := <-ss.blockRequestByHash:
+			ss.handleBlockRequestByHash(msg)
 		case msg := <-ss.chainHeadReqBuf:
 			ss.handleChainHeadRequest(msg)
 		}
@@ -292,7 +300,9 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
-	ss.p2p.Send(block.Proto(), msg.Peer)
+	ss.p2p.Send(&pb.BeaconBlockResponse{
+		Block: block.Proto(),
+	}, msg.Peer)
 	sendBlockSpan.End()
 }
 
@@ -347,4 +357,26 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
 	// Request the full block data from peer that sent the block hash.
 	ss.attestationService.IncomingAttestationFeed().Send(a)
+}
+
+func (ss *Service) handleBlockRequestByHash(msg p2p.Message) {
+	data := msg.Data.(*pb.BeaconBlockRequest)
+
+	var hash [32]byte
+	copy(hash[:], data.Hash)
+
+	block, err := ss.db.GetBlock(hash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if block == nil {
+		log.Debug("Block does not exist")
+		return
+	}
+
+	ss.p2p.Send(&pb.BeaconBlockResponse{
+		Block: block.Proto(),
+	}, msg.Peer)
+
 }

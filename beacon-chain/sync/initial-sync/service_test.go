@@ -54,12 +54,16 @@ func (ms *mockQueryService) IsSynced() (bool, error) {
 
 type mockDB struct{}
 
-func (m *mockDB) SaveBlock(*types.Block) error {
+func (m *mockDB) SaveCrystallizedState(*types.CrystallizedState) error {
 	return nil
 }
 
-func (m *mockDB) SaveCrystallizedState(*types.CrystallizedState) error {
-	return nil
+func (m *mockDB) GetCrystallizedState() (*types.CrystallizedState, error) {
+	return nil, nil
+}
+
+func (m *mockDB) HasBlock([32]byte) bool {
+	return false
 }
 
 func blockResponse(slot uint64, t *testing.T) (p2p.Message, [32]byte) {

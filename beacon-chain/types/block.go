@@ -89,6 +89,9 @@ func (b *Block) Hash() ([32]byte, error) {
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte
+	if len(b.data.AncestorHashes) == 0 {
+		return [32]byte{}
+	}
 	copy(h[:], b.data.AncestorHashes[0])
 	return h
 }

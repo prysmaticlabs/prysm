@@ -341,6 +341,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 	cfg.P2P = p2pService
 	cfg.SyncService = syncService
 	cfg.QueryService = queryService
+	cfg.ChainService = chainService
 	cfg.BeaconDB = b.db
 	initialSyncService := initialsync.NewInitialSyncService(context.Background(), cfg)
 	return b.services.RegisterService(initialSyncService)
