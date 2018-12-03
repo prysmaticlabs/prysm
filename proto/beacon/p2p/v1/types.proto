@@ -48,7 +48,6 @@ message BeaconState {
   // All fields mustbe annotated with [deprecated=true];
   repeated ValidatorRecord validators = 10000 [deprecated=true]; // Deprecated by validator_registry 
   uint64 validator_set_change_slot = 10001  [deprecated=true]; // Deprecated by validator_registry_latest_change_slot
-  repeated CrosslinkRecord crosslinks = 10002 [deprecated=true]; // Deprecated by latest_cross_links
   bytes randao_mix = 10003 [deprecated=true]; // Renamed to randao_mix_hash32
   uint64 last_finalized_slot = 10005 [deprecated=true]; // Replaced/renamed by finalized_slot
   uint64 last_justified_slot = 10006 [deprecated=true]; // Replaced/renamed by justified_slot

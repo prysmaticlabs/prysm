@@ -137,7 +137,7 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinks(t *testing.T) {
+func TestProcessLatestCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
@@ -176,20 +176,20 @@ func TestProcessCrosslinks(t *testing.T) {
 	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
 
 	beaconState := types.NewBeaconState(&pb.BeaconState{
-		Crosslinks:                 clRecords,
+		LatestCrosslinks:           clRecords,
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
+	newLatestCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
 
-	if newCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
-		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newCrosslinks[0].Slot)
+	if newLatestCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
+		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newLatestCrosslinks[0].Slot)
 	}
-	if !bytes.Equal(newCrosslinks[1].ShardBlockHash, []byte{'a'}) {
-		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].ShardBlockHash)
+	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockHash, []byte{'a'}) {
+		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockHash)
 	}
 	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }

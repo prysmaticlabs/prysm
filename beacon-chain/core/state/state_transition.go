@@ -132,7 +132,7 @@ func crossLinkCalculations(
 	currentSlot uint64,
 ) ([]*pb.CrosslinkRecord, error) {
 	slot := st.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
-	crossLinkRecords := st.Crosslinks()
+	crossLinkRecords := st.LatestCrosslinks()
 	for _, attestation := range pendingAttestations {
 		shardCommittees, err := v.GetShardAndCommitteesForSlot(
 			st.ShardAndCommitteesForSlots(),
@@ -167,7 +167,7 @@ func crossLinkCalculations(
 			return nil, err
 		}
 		st.SetValidators(newValidatorSet)
-		crossLinkRecords = UpdateCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
+		crossLinkRecords = UpdateLatestCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
 	}
 	return crossLinkRecords, nil
 }
