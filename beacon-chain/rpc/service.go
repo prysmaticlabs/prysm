@@ -176,7 +176,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	}
 	var keys []*pb.PublicKey
 	if req.AllValidators {
-		for _, val := range beaconState.Validators() {
+		for _, val := range beaconState.ValidatorRegistry() {
 			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 		}
 	} else {
@@ -291,7 +291,7 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 		beaconState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
@@ -314,7 +314,7 @@ func (s *Service) ValidatorSlotAndResponsibility(
 
 	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 		beaconState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
@@ -333,7 +333,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	}
 	index, err := v.ValidatorIndex(
 		req.PublicKey,
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -358,7 +358,7 @@ func (s *Service) ValidatorAssignments(
 
 			var keys []*pb.PublicKey
 			if req.AllValidators {
-				for _, val := range beaconState.Validators() {
+				for _, val := range beaconState.ValidatorRegistry() {
 					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 				}
 			} else {
@@ -404,7 +404,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconSta
 		// should act as a proposer or attester.
 		assignedSlot, role, err := v.ValidatorSlotAndRole(
 			val.GetPublicKey(),
-			beaconState.Validators(),
+			beaconState.ValidatorRegistry(),
 			beaconState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {
@@ -415,7 +415,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconSta
 		// based on a public key and current crystallized state.
 		shardID, err := v.ValidatorShardID(
 			val.GetPublicKey(),
-			beaconState.Validators(),
+			beaconState.ValidatorRegistry(),
 			beaconState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {

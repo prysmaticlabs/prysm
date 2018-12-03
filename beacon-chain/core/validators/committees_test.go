@@ -37,7 +37,7 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 	}
 }
 
-func TestExceedingMaxValidatorsFails(t *testing.T) {
+func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
 	size := params.BeaconConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
@@ -46,13 +46,13 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 		validators[i] = validator
 	}
 
-	// ValidatorsBySlotShard should fail the same.
-	if _, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1); err == nil {
-		t.Errorf("ValidatorsBySlotShard should have failed")
+	// ValidatorRegistryBySlotShard should fail the same.
+	if _, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1); err == nil {
+		t.Errorf("ValidatorRegistryBySlotShard should have failed")
 	}
 }
 
-func BenchmarkMaxValidators(b *testing.B) {
+func BenchmarkMaxValidatorRegistry(b *testing.B) {
 	var validators []*pb.ValidatorRecord
 	validator := &pb.ValidatorRecord{}
 	for i := uint64(0); i < params.BeaconConfig().ModuloBias; i++ {
@@ -61,12 +61,12 @@ func BenchmarkMaxValidators(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1)
+		ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1)
 	}
 }
 
 func TestInitialShardAndCommiteeForSlots(t *testing.T) {
-	// Create 1000 validators in ActiveValidators.
+	// Create 1000 validators in ActiveValidatorRegistry.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{}
@@ -82,15 +82,15 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 	}
 
 }
-func TestShuffleActiveValidators(t *testing.T) {
-	// Create 1000 validators in ActiveValidators.
+func TestShuffleActiveValidatorRegistry(t *testing.T) {
+	// Create 1000 validators in ActiveValidatorRegistry.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
 		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1)
+	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
@@ -99,15 +99,15 @@ func TestShuffleActiveValidators(t *testing.T) {
 	}
 }
 
-func TestSmallSampleValidators(t *testing.T) {
-	// Create a small number of validators validators in ActiveValidators.
+func TestSmallSampleValidatorRegistry(t *testing.T) {
+	// Create a small number of validators validators in ActiveValidatorRegistry.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 20; i++ {
 		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorsToCommittees(common.Hash{'A'}, validators, 1)
+	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
@@ -117,27 +117,27 @@ func TestSmallSampleValidators(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize / 4
+	numValidatorRegistry := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize / 4
 
-	committesPerSlot := getCommitteesPerSlot(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
 }
 
 func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize
+	numValidatorRegistry := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize
 
-	committesPerSlot := getCommitteesPerSlot(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
 }
 
 func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize * 8
+	numValidatorRegistry := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize * 8
 
-	committesPerSlot := getCommitteesPerSlot(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
 	if committesPerSlot != 5 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 5, committesPerSlot)
 	}
@@ -148,9 +148,9 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 	oldShardCount := config.ShardCount
 	config.ShardCount = config.CycleLength - 1
 
-	numValidators := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize
+	numValidatorRegistry := params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize
 
-	committesPerSlot := getCommitteesPerSlot(numValidators)
+	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
 	if committesPerSlot != 1 {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
 	}
@@ -158,10 +158,10 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 	config.ShardCount = oldShardCount
 }
 
-func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
+func TestValidatorRegistryBySlotShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize)
-	for i := 0; i < numValidators; i++ {
+	numValidatorRegistry := int(params.BeaconConfig().CycleLength * params.BeaconConfig().TargetCommitteeSize)
+	for i := 0; i < numValidatorRegistry; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
@@ -184,10 +184,10 @@ func TestValidatorsBySlotShardRegularValidatorSet(t *testing.T) {
 	}
 }
 
-func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
+func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().TargetCommitteeSize) * 2
-	for i := 0; i < numValidators; i++ {
+	numValidatorRegistry := int(params.BeaconConfig().CycleLength*params.BeaconConfig().TargetCommitteeSize) * 2
+	for i := 0; i < numValidatorRegistry; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
@@ -216,10 +216,10 @@ func TestValidatorsBySlotShardLargeValidatorSet(t *testing.T) {
 	}
 }
 
-func TestValidatorsBySlotShardSmallValidatorSet(t *testing.T) {
+func TestValidatorRegistryBySlotShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidators := int(params.BeaconConfig().CycleLength*params.BeaconConfig().TargetCommitteeSize) / 2
-	for i := 0; i < numValidators; i++ {
+	numValidatorRegistry := int(params.BeaconConfig().CycleLength*params.BeaconConfig().TargetCommitteeSize) / 2
+	for i := 0; i < numValidatorRegistry; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 

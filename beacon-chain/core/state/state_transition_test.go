@@ -74,12 +74,12 @@ func TestNextDeriveSlot(t *testing.T) {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
 
-	beaconState.SetValidators([]*pb.ValidatorRecord{
+	beaconState.SetValidatorRegistry([]*pb.ValidatorRecord{
 		{Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei),
 			Status: uint64(params.Active)},
 	})
 
-	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.Validators())
+	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.ValidatorRegistry())
 	recentShardBlockHashes := make([][]byte, 3*params.BeaconConfig().CycleLength)
 	for i := 0; i < int(params.BeaconConfig().CycleLength); i++ {
 		shardBlockHash := [32]byte{}
@@ -177,7 +177,7 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 
 	beaconState := types.NewBeaconState(&pb.BeaconState{
 		LatestCrosslinks:           clRecords,
-		Validators:                 validators,
+		ValidatorRegistry:          validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
 	newLatestCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
@@ -199,7 +199,7 @@ func TestIsNewValidatorSetTransition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	beaconState.SetValidatorSetChangeSlot(1)
+	beaconState.SetValidatorRegistryLastChangeSlot(1)
 	if beaconState.IsValidatorSetChange(0) {
 		t.Errorf("Is new validator set change should be false, last changed slot greater than finalized slot")
 	}
@@ -245,17 +245,17 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	// Negative test case, shuffle validators with more than MaxValidators.
+	// Negative test case, shuffle validators with more than MaxValidatorRegistry.
 	size := params.BeaconConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
 	for i := uint64(0); i < size; i++ {
 		validators[i] = validator
 	}
-	beaconState.SetValidators(validators)
+	beaconState.SetValidatorRegistry(validators)
 	if _, err := validatorSetRecalculations(
 		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 		[32]byte{'A'},
 	); err == nil {
 		t.Error("Validator set change calculation should have failed with invalid validator count")
@@ -284,7 +284,7 @@ func TestNewValidatorSetRecalculations(t *testing.T) {
 
 	_, err = validatorSetRecalculations(
 		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 		[32]byte{'A'},
 	)
 	if err != nil {

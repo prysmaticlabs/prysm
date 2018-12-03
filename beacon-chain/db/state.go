@@ -11,8 +11,8 @@ import (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisValidators []*pb.ValidatorRecord) error {
-	beaconState, err := types.NewGenesisBeaconState(genesisValidators)
+func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorRecord) error {
+	beaconState, err := types.NewGenesisBeaconState(genesisValidatorRegistry)
 	if err != nil {
 		return err
 	}
