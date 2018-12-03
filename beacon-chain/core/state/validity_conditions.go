@@ -56,7 +56,7 @@ func IsValidBlock(
 		return fmt.Errorf("could not get proposer index: %v", err)
 	}
 
-	stateProposerRandaoSeed := beaconState.Validators()[proposerIndex].RandaoCommitment
+	stateProposerRandaoSeed := beaconState.Validators()[proposerIndex].RandaoCommitmentHash32
 	blockRandaoReveal := block.RandaoReveal()
 
 	// If this is a block created by the simulator service (while in development
