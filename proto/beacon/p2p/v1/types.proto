@@ -167,9 +167,5 @@ message BeaconBlock {
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
-  repeated bytes ancestor_hashes = 1002 [deprecated=true]; // Renamed to ancestor_hash32s.
-  bytes randao_reveal = 1003 [deprecated=true]; // Renamed to ancestor_hash32s.
-  bytes pow_chain_ref = 1004 [deprecated=true]; // Obsolete?
-  bytes state_root = 1005 [deprecated=true]; // Renamed to state_root_hash32.
-  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Obsolete?
+  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
 }

@@ -55,7 +55,7 @@ func (ValidatorRole) EnumDescriptor() ([]byte, []int) {
 type ProposeRequest struct {
 	ParentHash              []byte               `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
 	SlotNumber              uint64               `protobuf:"varint,2,opt,name=slot_number,json=slotNumber,proto3" json:"slot_number,omitempty"`
-	RandaoReveal            []byte               `protobuf:"bytes,3,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
+	RandaoRevealHash32      []byte               `protobuf:"bytes,3,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
 	AttestationBitmask      []byte               `protobuf:"bytes,4,opt,name=attestation_bitmask,json=attestationBitmask,proto3" json:"attestation_bitmask,omitempty"`
 	AttestationAggregateSig []uint32             `protobuf:"varint,5,rep,packed,name=attestation_aggregate_sig,json=attestationAggregateSig,proto3" json:"attestation_aggregate_sig,omitempty"`
 	Timestamp               *timestamp.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
@@ -102,9 +102,9 @@ func (m *ProposeRequest) GetSlotNumber() uint64 {
 	return 0
 }
 
-func (m *ProposeRequest) GetRandaoReveal() []byte {
+func (m *ProposeRequest) GetRandaoRevealHash32() []byte {
 	if m != nil {
-		return m.RandaoReveal
+		return m.RandaoRevealHash32
 	}
 	return nil
 }
