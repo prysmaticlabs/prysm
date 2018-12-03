@@ -97,12 +97,22 @@ message ValidatorRecord {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials = 2;
-  bytes randao_commitment = 3;
+  bytes randao_commitment_hash32 = 3;
   uint64 randao_skips = 4;
+  // Balance in Gwei
   uint64 balance = 5;
-  uint64 status = 6;
+  // Possible validator status code:
+  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+  enum ValiatorStateCode {
+    pending_activation = 0;
+    active = 1;
+    exited_without_penalty = 2;
+    exited_with_penalty = 3;
+  }
+  ValiatorStateCode status_code = 6;
   uint64 latest_status_change_slot = 7;
   uint64 exit_count = 8;
+  uint64 status = 9 [deprecated=true]; // Replaced by status_code
 }
 
 message ShardReassignmentRecord {
