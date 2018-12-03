@@ -66,6 +66,10 @@ func (m *mockDB) HasBlock([32]byte) bool {
 	return false
 }
 
+func (m *mockDB) SaveBlock(block *types.Block) error {
+	return nil
+}
+
 func blockResponse(slot uint64, t *testing.T) (p2p.Message, [32]byte) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'

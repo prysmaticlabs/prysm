@@ -66,6 +66,7 @@ type beaconDB interface {
 	SaveCrystallizedState(*types.CrystallizedState) error
 	GetCrystallizedState() (*types.CrystallizedState, error)
 	HasBlock([32]byte) bool
+	SaveBlock(block *types.Block) error
 }
 
 type chainService interface {
@@ -102,6 +103,7 @@ type InitialSync struct {
 	highestObservedSlot          uint64
 	syncPollingInterval          time.Duration
 	initialCrystallizedStateRoot [32]byte
+	genesisHash                  [32]byte
 	inMemoryBlocks               map[uint64]*pb.BeaconBlock
 }
 
@@ -266,6 +268,11 @@ func (s *InitialSync) checkInMemoryBlocks() {
 			if s.currentSlot == s.highestObservedSlot {
 				return
 			}
+
+			if block, ok := s.inMemoryBlocks[0]; ok && s.currentSlot == 0 {
+				s.processBlock(block, p2p.Peer{})
+			}
+
 			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
 				s.processBlock(block, p2p.Peer{})
 			}
@@ -285,12 +292,31 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		return
 	}
 
+	wrappedBlock := types.NewBlock(block)
+	hash, err := wrappedBlock.Hash()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// set hash of the genesis block
+	if s.genesisHash == [32]byte{} && block.GetSlot() == 1 && s.currentSlot == 0 {
+		s.genesisHash = wrappedBlock.ParentHash()
+	}
+
 	if s.currentSlot == 0 {
 		if s.initialCrystallizedStateRoot != [32]byte{} {
 			return
 		}
-		// check for genesis block , or block with slot 1
-		if block.GetSlot() > 1 {
+
+		if hash == s.genesisHash {
+			if err := s.writeBlockToDB(wrappedBlock); err != nil {
+				log.Error(err)
+			}
+			return
+		}
+
+		if block.GetSlot() != 1 {
 
 			// saves block in memory if it isn't the initial block.
 			if _, ok := s.inMemoryBlocks[block.GetSlot()]; !ok {
@@ -299,9 +325,11 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 			s.requestNextBlockBySlot(1)
 			return
 		}
-		if !s.checkForGenesisBlock(block, peer) {
+
+		if s.genesisHash != [32]byte{} && !s.checkForGenesisBlock(s.genesisHash, peer) {
 			return
 		}
+
 		if err := s.setBlockForInitialSync(block); err != nil {
 			log.Errorf("Could not set block for initial sync: %v", err)
 		}
@@ -457,17 +485,20 @@ func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
 	return nil
 }
 
-func (s *InitialSync) checkForGenesisBlock(rawBlock *pb.BeaconBlock, peer p2p.Peer) bool {
-	block := types.NewBlock(rawBlock)
+func (s *InitialSync) writeBlockToDB(block *types.Block) error {
+	return s.db.SaveBlock(block)
+}
 
-	if block.ParentHash() == [32]byte{} {
+func (s *InitialSync) checkForGenesisBlock(hash [32]byte, peer p2p.Peer) bool {
+
+	if hash == [32]byte{} {
 		return false
 	}
 
-	if s.db.HasBlock(block.ParentHash()) {
+	if s.db.HasBlock(hash) {
 		return true
 	}
 
-	s.requestBlockByHash(block.ParentHash(), peer)
+	s.requestBlockByHash(hash, peer)
 	return false
 }
