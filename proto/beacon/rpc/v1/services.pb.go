@@ -8,7 +8,7 @@ import fmt "fmt"
 import math "math"
 import _ "github.com/golang/protobuf/ptypes/empty"
 import timestamp "github.com/golang/protobuf/ptypes/timestamp"
-import v1 "proto/beacon/p2p/v1"
+import v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
