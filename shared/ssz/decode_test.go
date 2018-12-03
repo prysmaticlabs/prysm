@@ -44,3 +44,23 @@ func TestDecodeBytes(t *testing.T) {
 	}
 	fmt.Println(*output)
 }
+
+func TestDecodeSlice(t *testing.T) {
+	input := []byte{0,0,0,10,0,1,0,2,0,3,0,4,0,5}
+	bytesReader := bytes.NewReader(input)
+	output := new([]uint16)
+	if err := Decode(bytesReader, output); err != nil {
+		t.Errorf("%v", err)
+	}
+	fmt.Println(*output)
+}
+
+func TestDecodeSlice1(t *testing.T) {
+	input := []byte{0,0,0,24,0,0,0,8,0,1,0,2,0,3,0,4,0,0,0,8,0,5,0,6,0,7,0,8}
+	bytesReader := bytes.NewReader(input)
+	output := new([][]uint16)
+	if err := Decode(bytesReader, output); err != nil {
+		t.Errorf("%v", err)
+	}
+	fmt.Println(*output)
+}

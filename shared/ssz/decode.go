@@ -12,24 +12,25 @@ import (
 // - Create error types so we have fewer error texts all over the code
 
 func Decode(r io.Reader, val interface{}) error {
-	return decode(r, val)
+	_, err := decode(r, val)
+	return err
 }
 
-func decode(r io.Reader, val interface{}) error {
+func decode(r io.Reader, val interface{}) (uint32, error) {
 	if val == nil {
-		return fmt.Errorf("ssz: cannot output to nil")
+		return 0, fmt.Errorf("ssz: cannot output to nil")
 	}
 	rval := reflect.ValueOf(val)
 	rtyp := rval.Type()
 	if rtyp.Kind() != reflect.Ptr {
-		return fmt.Errorf("ssz: can only output to ptr")
+		return 0, fmt.Errorf("ssz: can only output to ptr")
 	}
 	if rval.IsNil() {
-		return fmt.Errorf("ssz: cannot output to nil")
+		return 0, fmt.Errorf("ssz: cannot output to nil")
 	}
 	encDec, err := getEncoderDecoderForType(rval.Elem().Type())
 	if err != nil {
-		return err
+		return 0, err
 	}
 	return encDec.decoder(r, rval.Elem())
 }
@@ -43,52 +44,96 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeUint16, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
 		return decodeBytes, nil
+	case kind == reflect.Slice:
+		return makeSliceDecoder(typ)
 	default:
 		return nil, fmt.Errorf("ssz: type %v is not deserializable", typ)
 	}
 }
 
-func decodeUint8(r io.Reader, val reflect.Value) error {
+func decodeUint8(r io.Reader, val reflect.Value) (uint32, error) {
 	b := make([]byte, 1)
 	if err := readBytes(r, 1, b); err != nil {
-		return fmt.Errorf("failed to decode uint8: %v", err)
+		return 0, fmt.Errorf("failed to decode uint8: %v", err)
 	}
 	val.SetUint(uint64(b[0]))
-	return nil
+	return 1, nil
 }
 
-func decodeUint16(r io.Reader, val reflect.Value) error {
+func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 	b := make([]byte, 2)
 	if err := readBytes(r, 2, b); err != nil {
-		return fmt.Errorf("failed to decode uint16: %v", err)
+		return 0, fmt.Errorf("failed to decode uint16: %v", err)
 	}
 	val.SetUint(uint64(binary.BigEndian.Uint16(b)))
-	return nil
+	return 2, nil
 }
 
-func decodeBytes(r io.Reader, val reflect.Value) error {
-	lengthEnc := make([]byte, 4)
-	if err := readBytes(r, 4, lengthEnc); err != nil {
-		return fmt.Errorf("failed to decode header of bytes: %v", err)
+func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
+	sizeEnc := make([]byte, 4)
+	if err := readBytes(r, 4, sizeEnc); err != nil {
+		return 0, fmt.Errorf("failed to decode header of bytes: %v", err)
 	}
-	length := binary.BigEndian.Uint32(lengthEnc)
-	fmt.Println(length)
+	size := binary.BigEndian.Uint32(sizeEnc)
+	fmt.Println(size)
 
-	b := make([]byte, length)
-	if err := readBytes(r, int(length), b); err != nil {
-		return fmt.Errorf("failed to decode bytes: %v", err)
+	b := make([]byte, size)
+	if err := readBytes(r, int(size), b); err != nil {
+		return 0, fmt.Errorf("failed to decode bytes: %v", err)
 	}
 	val.SetBytes(b)
-	return nil
+	return 4 + size, nil
 }
 
-func readBytes(r io.Reader, length int, b []byte) error {
-	if length != len(b) {
-		return fmt.Errorf("output buffer size is %d while expected read length is %d", len(b), length)
+func makeSliceDecoder(typ reflect.Type) (decoder, error) {
+	elemType := typ.Elem()
+	elemEncoderDecoder, err := getEncoderDecoderForType(elemType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+	}
+	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
+		sizeEnc := make([]byte, 4)
+		if err := readBytes(r, 4, sizeEnc); err != nil {
+			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
+		}
+		size := binary.BigEndian.Uint32(sizeEnc)
+
+		for i, decodeSize := 0, uint32(0); decodeSize < size; i++ {
+			// Grow slice's capacity if necessary
+			if i >= val.Cap() {
+				newCap := val.Cap() * 2
+				if newCap < 4 {
+					newCap = 4
+				}
+				newVal := reflect.MakeSlice(val.Type(), val.Len(), newCap)
+				reflect.Copy(newVal, val)
+				val.Set(newVal)
+			}
+
+			// Add place holder for new element
+			if i >= val.Len() {
+				val.SetLen(i + 1)
+			}
+
+			// Decode and write into the new element
+			elemDecodeSize, err := elemEncoderDecoder.decoder(r, val.Index(i))
+			if err != nil {
+				return 0, fmt.Errorf("failed to decode element of slice: %v", err)
+			}
+			decodeSize += elemDecodeSize
+		}
+		return 4 + size, nil
+	}
+	return decoder, nil
+}
+
+func readBytes(r io.Reader, size int, b []byte) error {
+	if size != len(b) {
+		return fmt.Errorf("output buffer size is %d while expected read size is %d", len(b), size)
 	}
 	readLen, err := r.Read(b)
-	if readLen != length {
-		return fmt.Errorf("can only read %d bytes while expected to read %d bytes", readLen, length)
+	if readLen != size {
+		return fmt.Errorf("can only read %d bytes while expected to read %d bytes", readLen, size)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to read from input: %v", err)
