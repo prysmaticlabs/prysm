@@ -28,7 +28,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	penaltyQuotient := QuadraticPenaltyQuotient()
 	timeSinceFinality := uint64(5)
 
-	data := &pb.CrystallizedState{
+	data := &pb.BeaconState{
 		Validators:             validators,
 		ValidatorSetChangeSlot: 1,
 		LastJustifiedSlot:      4,

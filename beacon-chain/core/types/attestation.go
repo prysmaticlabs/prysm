@@ -1,4 +1,3 @@
-// Package types defines the essential types used throughout the beacon-chain.
 package types
 
 import (
@@ -35,6 +34,28 @@ func NewAttestation(data *pb.AggregatedAttestation) *Attestation {
 		}
 	}
 	return &Attestation{data: data}
+}
+
+// AttestationMsg hashes parentHashes + shardID + slotNumber + shardBlockHash + justifiedSlot
+// into a message to use for verifying with aggregated public key and signature.
+func AttestationMsg(
+	parentHashes [][32]byte,
+	blockHash []byte,
+	slot uint64,
+	shardID uint64,
+	justifiedSlot uint64,
+	forkVersion uint64,
+) [32]byte {
+	msg := make([]byte, binary.MaxVarintLen64)
+	binary.BigEndian.PutUint64(msg, forkVersion)
+	binary.PutUvarint(msg, slot%params.BeaconConfig().CycleLength)
+	for _, parentHash := range parentHashes {
+		msg = append(msg, parentHash[:]...)
+	}
+	binary.PutUvarint(msg, shardID)
+	msg = append(msg, blockHash...)
+	binary.PutUvarint(msg, justifiedSlot)
+	return hashutil.Hash(msg)
 }
 
 // Proto returns the underlying protobuf data.
@@ -119,40 +140,20 @@ func (a *Attestation) AggregateSig() []uint64 {
 // VerifyProposerAttestation verifies the proposer's attestation of the block.
 // Proposers broadcast the attestation along with the block to its peers.
 func (a *Attestation) VerifyProposerAttestation(pubKey [32]byte, proposerShardID uint64) error {
-
 	// Verify the attestation attached with block response.
 	// Get proposer index and shardID.
-
 	attestationMsg := AttestationMsg(
 		a.ObliqueParentHashes(),
 		a.ShardBlockHash(),
 		a.SlotNumber(),
 		proposerShardID,
 		a.JustifiedSlotNumber(),
-		params.BeaconConfig().InitialForkVersion)
-
-	log.Debugf("Constructing attestation message for incoming block %#x", attestationMsg)
-
+		params.BeaconConfig().InitialForkVersion,
+	)
+	_ = attestationMsg
+	_ = pubKey
 	// TODO(#258): use attestationMsg to verify against signature and public key. Return error if incorrect.
-	log.Debugf("Verifying attestation with public key %#x", pubKey)
-
-	log.Debugf("Successfully verified attestation with incoming block")
 	return nil
-}
-
-// AttestationMsg hashes parentHashes + shardID + slotNumber + shardBlockHash + justifiedSlot
-// into a message to use for verifying with aggregated public key and signature.
-func AttestationMsg(parentHashes [][32]byte, blockHash []byte, slot uint64, shardID uint64, justifiedSlot uint64, forkVersion uint32) [32]byte {
-	msg := make([]byte, binary.MaxVarintLen64)
-	binary.BigEndian.PutUint32(msg, forkVersion)
-	binary.PutUvarint(msg, slot%params.BeaconConfig().CycleLength)
-	for _, parentHash := range parentHashes {
-		msg = append(msg, parentHash[:]...)
-	}
-	binary.PutUvarint(msg, shardID)
-	msg = append(msg, blockHash...)
-	binary.PutUvarint(msg, justifiedSlot)
-	return hashutil.Hash(msg)
 }
 
 // ContainsValidator checks if the validator is included in the attestation.

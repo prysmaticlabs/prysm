@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestInitialDeriveCrystallizedState(t *testing.T) {
+func TestInitialDeriveState(t *testing.T) {
 	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize beacon state: %v", err)
@@ -24,10 +24,9 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes:        [][]byte{},
-		Slot:                  0,
-		ActiveStateRoot:       []byte{},
-		CrystallizedStateRoot: []byte{},
+		AncestorHashes: [][]byte{{'A'}},
+		Slot:           0,
+		StateRoot:      []byte{},
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: attesterBitfield,
@@ -36,7 +35,7 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 	})
 
 	var blockVoteCache utils.BlockVoteCache
-	newState, err := NewStateTransition(beaconState, block, blockVoteCache)
+	newState, err := NewStateTransition(beaconState, block, 0, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive new state: %v", err)
 	}
@@ -49,12 +48,12 @@ func TestInitialDeriveCrystallizedState(t *testing.T) {
 		t.Fatalf("expected justified streak to equal %d: got %d", 0, newState.JustifiedStreak())
 	}
 
-	if newState.LastStateRecalculationSlot() != params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", params.BeaconConfig().CycleLength, newState.LastStateRecalculationSlot())
+	if newState.LastStateRecalculationSlot() != 1 {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 1, newState.LastStateRecalculationSlot())
 	}
 
 	if newState.LastFinalizedSlot() != 0 {
-		t.Fatalf("xpected finalized slot to equal %d, got %d", 0, newState.LastFinalizedSlot())
+		t.Fatalf("expected finalized slot to equal %d, got %d", 0, newState.LastFinalizedSlot())
 	}
 }
 
@@ -64,11 +63,13 @@ func TestNextDeriveSlot(t *testing.T) {
 		t.Fatalf("Failed to initialized state: %v", err)
 	}
 
-	block := types.NewBlock(nil)
+	block := types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{{'A'}},
+		Slot:           0,
+	})
 
 	blockVoteCache := utils.NewBlockVoteCache()
-
-	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
+	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
@@ -89,14 +90,18 @@ func TestNextDeriveSlot(t *testing.T) {
 			VoteTotalDeposit: totalDeposits * 3 / 4,
 		}
 	}
-
-	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
+	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
+	beaconState.SetLastStateRecalculationSlot(params.BeaconConfig().CycleLength - 1)
+	block = types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{{'A'}},
+		Slot:           params.BeaconConfig().CycleLength,
+	})
+	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}
-	if beaconState.LastStateRecalculationSlot() != 2*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 2*params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
+	if beaconState.LastStateRecalculationSlot() != params.BeaconConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
 	}
 	if beaconState.LastJustifiedSlot() != params.BeaconConfig().CycleLength-1 {
 		t.Fatalf("expected justified slot to equal %d: got %d", params.BeaconConfig().CycleLength-1, beaconState.LastJustifiedSlot())
@@ -108,44 +113,31 @@ func TestNextDeriveSlot(t *testing.T) {
 		t.Fatalf("expected finalized slot to equal %d: got %d", 0, beaconState.LastFinalizedSlot())
 	}
 
-	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
+	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
+	beaconState.SetLastStateRecalculationSlot(2*params.BeaconConfig().CycleLength - 1)
+	block = types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{{'A'}},
+		Slot:           params.BeaconConfig().CycleLength * 2,
+	})
+	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength*2, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
 	}
-	if beaconState.LastStateRecalculationSlot() != 3*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
+	if beaconState.LastStateRecalculationSlot() != 2*params.BeaconConfig().CycleLength {
+		t.Fatalf("expected last state recalc to equal %d: got %d", 3, beaconState.LastStateRecalculationSlot())
 	}
-	if beaconState.LastJustifiedSlot() != 2*params.BeaconConfig().CycleLength-1 {
+	if beaconState.LastJustifiedSlot() != 2*(params.BeaconConfig().CycleLength-1) {
 		t.Fatalf("expected justified slot to equal %d: got %d", 2*params.BeaconConfig().CycleLength-1, beaconState.LastJustifiedSlot())
 	}
 	if beaconState.JustifiedStreak() != 2*params.BeaconConfig().CycleLength {
 		t.Fatalf("expected justified streak to equal %d: got %d", 2*params.BeaconConfig().CycleLength, beaconState.JustifiedStreak())
 	}
-	if beaconState.LastFinalizedSlot() != params.BeaconConfig().CycleLength-2 {
+	if beaconState.LastFinalizedSlot() != params.BeaconConfig().CycleLength-3 {
 		t.Fatalf("expected finalized slot to equal %d: got %d", params.BeaconConfig().CycleLength-2, beaconState.LastFinalizedSlot())
-	}
-
-	beaconState.SetRecentBlockHashes(recentShardBlockHashes)
-	beaconState, err = NewStateTransition(beaconState, block, blockVoteCache)
-	if err != nil {
-		t.Fatalf("failed to derive state: %v", err)
-	}
-	if beaconState.LastStateRecalculationSlot() != 4*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected last state recalc to equal %d: got %d", 3*params.BeaconConfig().CycleLength, beaconState.LastStateRecalculationSlot())
-	}
-	if beaconState.LastJustifiedSlot() != 3*params.BeaconConfig().CycleLength-1 {
-		t.Fatalf("expected justified slot to equal %d: got %d", 3*params.BeaconConfig().CycleLength-1, beaconState.LastJustifiedSlot())
-	}
-	if beaconState.JustifiedStreak() != 3*params.BeaconConfig().CycleLength {
-		t.Fatalf("expected justified streak to equal %d: got %d", 3*params.BeaconConfig().CycleLength, beaconState.JustifiedStreak())
-	}
-	if beaconState.LastFinalizedSlot() != 2*params.BeaconConfig().CycleLength-2 {
-		t.Fatalf("expected finalized slot to equal %d: got %d", 2*params.BeaconConfig().CycleLength-2, beaconState.LastFinalizedSlot())
 	}
 }
 
-func TestProcessCrosslinks(t *testing.T) {
+func TestProcessLatestCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
@@ -184,20 +176,20 @@ func TestProcessCrosslinks(t *testing.T) {
 	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
 
 	beaconState := types.NewBeaconState(&pb.BeaconState{
-		Crosslinks:                 clRecords,
+		LatestCrosslinks:           clRecords,
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
+	newLatestCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
 
-	if newCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
-		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newCrosslinks[0].Slot)
+	if newLatestCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
+		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newLatestCrosslinks[0].Slot)
 	}
-	if !bytes.Equal(newCrosslinks[1].ShardBlockHash, []byte{'a'}) {
-		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].ShardBlockHash)
+	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockHash, []byte{'a'}) {
+		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockHash)
 	}
 	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }
@@ -205,7 +197,7 @@ func TestProcessCrosslinks(t *testing.T) {
 func TestIsNewValidatorSetTransition(t *testing.T) {
 	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatalf("Failed to initialize crystallized state: %v", err)
+		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	beaconState.SetValidatorSetChangeSlot(1)
 	if beaconState.IsValidatorSetChange(0) {

@@ -19,12 +19,9 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BATCHED_BEACON_BLOCK_RESPONSE:       &pb.BatchedBeaconBlockResponse{},
 	pb.Topic_CHAIN_HEAD_REQUEST:                  &pb.ChainHeadRequest{},
 	pb.Topic_CHAIN_HEAD_RESPONSE:                 &pb.ChainHeadResponse{},
-	pb.Topic_CRYSTALLIZED_STATE_HASH_ANNOUNCE:    &pb.CrystallizedStateHashAnnounce{},
-	pb.Topic_CRYSTALLIZED_STATE_REQUEST:          &pb.CrystallizedStateRequest{},
-	pb.Topic_CRYSTALLIZED_STATE_RESPONSE:         &pb.CrystallizedStateResponse{},
-	pb.Topic_ACTIVE_STATE_HASH_ANNOUNCE:          &pb.ActiveStateHashAnnounce{},
-	pb.Topic_ACTIVE_STATE_REQUEST:                &pb.ActiveStateRequest{},
-	pb.Topic_ACTIVE_STATE_RESPONSE:               &pb.ActiveStateResponse{},
+	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},
+	pb.Topic_BEACON_STATE_REQUEST:                &pb.BeaconStateRequest{},
+	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {

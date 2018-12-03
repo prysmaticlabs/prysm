@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -15,7 +15,7 @@ import (
 var log = logrus.WithField("prefix", "dbcleaner")
 
 type chainService interface {
-	CanonicalCrystallizedStateFeed() *event.Feed
+	CanonicalStateFeed() *event.Feed
 }
 
 // CleanupService represents a service that handles routine task for cleaning up
@@ -27,7 +27,7 @@ type CleanupService struct {
 	cancel             context.CancelFunc
 	beaconDB           *db.BeaconDB
 	chainService       chainService
-	canonicalStateChan chan *types.CrystallizedState
+	canonicalStateChan chan *types.BeaconState
 }
 
 // Config defines the needed fields for creating a new cleanup service.
@@ -45,7 +45,7 @@ func NewCleanupService(ctx context.Context, cfg *Config) *CleanupService {
 		cancel:             cancel,
 		beaconDB:           cfg.BeaconDB,
 		chainService:       cfg.ChainService,
-		canonicalStateChan: make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		canonicalStateChan: make(chan *types.BeaconState, cfg.SubscriptionBuf),
 	}
 }
 
@@ -64,7 +64,7 @@ func (d *CleanupService) Stop() error {
 }
 
 func (d *CleanupService) cleanDB() {
-	cStateSub := d.chainService.CanonicalCrystallizedStateFeed().Subscribe(d.canonicalStateChan)
+	cStateSub := d.chainService.CanonicalStateFeed().Subscribe(d.canonicalStateChan)
 	defer cStateSub.Unsubscribe()
 
 	for {

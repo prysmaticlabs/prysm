@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetShardAndCommitteesForSlots(t *testing.T) {
-	state := &pb.CrystallizedState{
+	state := &pb.BeaconState{
 		LastStateRecalculationSlot: 64,
 		ShardAndCommitteesForSlots: []*pb.ShardAndCommitteeArray{
 			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -41,7 +41,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
 	size := params.BeaconConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{WithdrawalShard: 0, Status: uint64(params.Active)}
+	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
 	for i := uint64(0); i < size; i++ {
 		validators[i] = validator
 	}
@@ -54,7 +54,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 
 func BenchmarkMaxValidators(b *testing.B) {
 	var validators []*pb.ValidatorRecord
-	validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+	validator := &pb.ValidatorRecord{}
 	for i := uint64(0); i < params.BeaconConfig().ModuloBias; i++ {
 		validators = append(validators, validator)
 	}
@@ -69,7 +69,7 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 	shardAndCommitteeArray, err := InitialShardAndCommitteesForSlots(validators)
@@ -86,7 +86,7 @@ func TestShuffleActiveValidators(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 
@@ -103,7 +103,7 @@ func TestSmallSampleValidators(t *testing.T) {
 	// Create a small number of validators validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 20; i++ {
-		validator := &pb.ValidatorRecord{WithdrawalShard: 0}
+		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 

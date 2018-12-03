@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -45,9 +47,9 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 		})
 	}
 
-	var recentBlockHashes [][]byte
+	var latestBlockHashes [][]byte
 	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 0, 32))
+		latestBlockHashes = append(latestBlockHashes, make([]byte, 0, 32))
 	}
 
 	return &BeaconState{
@@ -57,23 +59,21 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
-			ForkSlotNumber:             0,
-			Crosslinks:                 crosslinks,
+			LatestCrosslinks:           crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
-			PreForkVersion:             uint64(params.BeaconConfig().InitialForkVersion),
-			PostForkVersion:            uint64(params.BeaconConfig().InitialForkVersion),
 			PendingAttestations:        []*pb.AggregatedAttestation{},
-			RecentBlockHashes:          recentBlockHashes,
+			LatestBlockHash32S:         latestBlockHashes,
 			RandaoMix:                  make([]byte, 0, 32),
+			ForkData:                   &pb.ForkData{},
 		},
 	}, nil
 }
 
 // CopyState returns a deep copy of the current state.
 func (b *BeaconState) CopyState() *BeaconState {
-	crosslinks := make([]*pb.CrosslinkRecord, len(b.Crosslinks()))
-	for index, crossLink := range b.Crosslinks() {
+	crosslinks := make([]*pb.CrosslinkRecord, len(b.LatestCrosslinks()))
+	for index, crossLink := range b.LatestCrosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
 			ShardBlockHash: crossLink.GetShardBlockHash(),
 			Slot:           crossLink.GetSlot(),
@@ -83,13 +83,11 @@ func (b *BeaconState) CopyState() *BeaconState {
 	validators := make([]*pb.ValidatorRecord, len(b.Validators()))
 	for index, validator := range b.Validators() {
 		validators[index] = &pb.ValidatorRecord{
-			Pubkey:            validator.GetPubkey(),
-			WithdrawalShard:   validator.GetWithdrawalShard(),
-			WithdrawalAddress: validator.GetWithdrawalAddress(),
-			RandaoCommitment:  validator.GetRandaoCommitment(),
-			Balance:           validator.GetBalance(),
-			Status:            validator.GetStatus(),
-			ExitSlot:          validator.GetExitSlot(),
+			Pubkey:                 validator.GetPubkey(),
+			RandaoCommitmentHash32: validator.GetRandaoCommitmentHash32(),
+			Balance:                validator.GetBalance(),
+			Status:                 validator.GetStatus(),
+			LatestStatusChangeSlot: validator.GetLatestStatusChangeSlot(),
 		}
 	}
 
@@ -113,13 +111,11 @@ func (b *BeaconState) CopyState() *BeaconState {
 		LastJustifiedSlot:          b.LastJustifiedSlot(),
 		LastFinalizedSlot:          b.LastFinalizedSlot(),
 		ValidatorSetChangeSlot:     b.ValidatorSetChangeSlot(),
-		Crosslinks:                 crosslinks,
+		LatestCrosslinks:           crosslinks,
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
-		PreForkVersion:             b.data.PreForkVersion,
-		PostForkVersion:            b.data.PostForkVersion,
-		ForkSlotNumber:             b.data.ForkSlotNumber,
+		ForkData:                   b.ForkData(),
 	}}
 
 	return &newState
@@ -167,7 +163,7 @@ func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
 		}
 	}
 
-	crosslinks := b.Crosslinks()
+	crosslinks := b.LatestCrosslinks()
 	for shard := range shardProcessed {
 		if b.ValidatorSetChangeSlot() >= crosslinks[shard].Slot {
 			return false
@@ -176,14 +172,20 @@ func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
 	return true
 }
 
+// IsCycleTransition checks if a new cycle has been reached. At that point,
+// a new state transition will occur in the beacon chain.
+func (b *BeaconState) IsCycleTransition(slotNumber uint64) bool {
+	return slotNumber >= b.LastStateRecalculationSlot()+params.BeaconConfig().CycleLength
+}
+
 // ShardAndCommitteesForSlots returns the shard committee object.
 func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray {
 	return b.data.ShardAndCommitteesForSlots
 }
 
-// Crosslinks returns the cross link records of the all the shards.
-func (b *BeaconState) Crosslinks() []*pb.CrosslinkRecord {
-	return b.data.Crosslinks
+// LatestCrosslinks returns the cross link records of the all the shards.
+func (b *BeaconState) LatestCrosslinks() []*pb.CrosslinkRecord {
+	return b.data.LatestCrosslinks
 }
 
 // Validators returns list of validators.
@@ -216,25 +218,15 @@ func (b *BeaconState) DepositsPenalizedInPeriod() []uint64 {
 	return b.data.DepositsPenalizedInPeriod
 }
 
-// ForkSlotNumber returns the slot of last fork.
-func (b *BeaconState) ForkSlotNumber() uint64 {
-	return b.data.ForkSlotNumber
+// ForkData returns the relevant fork data for this beacon state.
+func (b *BeaconState) ForkData() *pb.ForkData {
+	return b.data.ForkData
 }
 
-// PreForkVersion returns the last pre fork version.
-func (b *BeaconState) PreForkVersion() uint64 {
-	return b.data.PreForkVersion
-}
-
-// PostForkVersion returns the last post fork version.
-func (b *BeaconState) PostForkVersion() uint64 {
-	return b.data.PostForkVersion
-}
-
-// RecentBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
-func (b *BeaconState) RecentBlockHashes() [][32]byte {
+// LatestBlockHashes returns the most recent 2*EPOCH_LENGTH block hashes.
+func (b *BeaconState) LatestBlockHashes() [][32]byte {
 	var blockhashes [][32]byte
-	for _, hash := range b.data.RecentBlockHashes {
+	for _, hash := range b.data.LatestBlockHash32S {
 		blockhashes = append(blockhashes, common.BytesToHash(hash))
 	}
 	return blockhashes
@@ -269,9 +261,79 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 	return totalPenalty
 }
 
+// SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
+func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
+	latestBlockHashes := b.LatestBlockHashes()
+	obliqueParentHashes := attestation.ObliqueParentHashes
+	earliestSlot := int(block.SlotNumber()) - len(latestBlockHashes)
+
+	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
+	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
+	if startIdx < 0 || endIdx > len(latestBlockHashes) || endIdx <= startIdx {
+		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
+	}
+
+	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
+	for i := startIdx; i < endIdx; i++ {
+		hashes = append(hashes, latestBlockHashes[i])
+	}
+
+	for i := 0; i < len(obliqueParentHashes); i++ {
+		hash := common.BytesToHash(obliqueParentHashes[i])
+		hashes = append(hashes, hash)
+	}
+	return hashes, nil
+}
+
+// ClearAttestations removes attestations older than last state recalc slot.
+func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
+	existing := b.data.PendingAttestations
+	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	for _, a := range existing {
+		if a.GetSlot() >= lastStateRecalc {
+			update = append(update, a)
+		}
+	}
+	b.data.PendingAttestations = update
+}
+
+// CalculateNewBlockHashes builds a new slice of recent block hashes with the
+// provided block and the parent slot number.
+//
+// The algorithm is:
+//   1) shift the array by block.SlotNumber - parentSlot (i.e. truncate the
+//     first by the number of slots that have occurred between the block and
+//     its parent).
+//
+//   2) fill the array with the parent block hash for all values between the parent
+//     slot and the block slot.
+//
+// Computation of the state hash depends on this feature that slots with
+// missing blocks have the block hash of the next block hash in the chain.
+//
+// For example, if we have a segment of recent block hashes that look like this
+//   [0xF, 0x7, 0x0, 0x0, 0x5]
+//
+// Where 0x0 is an empty or missing hash where no block was produced in the
+// alloted slot. When storing the list (or at least when computing the hash of
+// the active state), the list should be backfilled as such:
+//
+//   [0xF, 0x7, 0x5, 0x5, 0x5]
+//
+// This method does not mutate the state.
+func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
+	distance := block.SlotNumber() - parentSlot
+	existing := b.data.LatestBlockHash32S
+	update := existing[distance:]
+	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
+		update = append(update, block.AncestorHashes()[0])
+	}
+	return update, nil
+}
+
 // SetCrossLinks updates the inner proto's cross link records.
 func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
-	b.data.Crosslinks = crossLinks
+	b.data.LatestCrosslinks = crossLinks
 }
 
 // SetDepositsPenalizedInPeriod updates the inner proto's penalized deposits.
@@ -299,9 +361,19 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 	b.data.LastStateRecalculationSlot = slot
 }
 
-// SetRecentBlockHashes updates the inner proto's recent block hashes.
-func (b *BeaconState) SetRecentBlockHashes(recentShardBlockHashes [][]byte) {
-	b.data.RecentBlockHashes = recentShardBlockHashes
+// SetPendingAttestations updates the inner proto's pending attestations.
+func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
+	b.data.PendingAttestations = pendingAttestations
+}
+
+// SetRandaoMix updates the inner proto's randao mix.
+func (b *BeaconState) SetRandaoMix(randaoMix []byte) {
+	b.data.RandaoMix = randaoMix
+}
+
+// SetLatestBlockHashes updates the inner proto's recent block hashes.
+func (b *BeaconState) SetLatestBlockHashes(blockHashes [][]byte) {
+	b.data.LatestBlockHash32S = blockHashes
 }
 
 // SetShardAndCommitteesForSlots updates the inner proto's shard and committees for slots.

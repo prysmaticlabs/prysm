@@ -1,9 +1,16 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
+    name = "bazel_skylib",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.6.0.tar.gz",
+    sha256 = "eb5c57e4c12e68c0c20bc774bfbc60a568e800d025557bc4ea022c6479acc867",
+    strip_prefix = "bazel-skylib-0.6.0",
+)
+
+http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.2/rules_go-0.16.2.tar.gz",
-    sha256 = "f87fa87475ea107b3c69196f39c82b7bbf58fe27c62a338684c20ca17d1d8613",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.3/rules_go-0.16.3.tar.gz",
+    sha256 = "b7a62250a3a73277ade0ce306d22f122365b513f5402222403e507f2f997d421",
 )
 
 http_archive(
@@ -15,23 +22,26 @@ http_archive(
 http_archive(
     name = "com_github_atlassian_bazel_tools",
     strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.zip"],
+    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.tar.gz"],
+    sha256 = "e7d0c0e2963a7f9cb2c377e241502119dae24909708adef1918e8dcb70ae9e8c",
 )
 
-git_repository(
+http_archive(
     name = "io_bazel_rules_docker",
-    commit = "7401cb256222615c497c0dee5a4de5724a4f4cc7",  # 2018-06-22
-    remote = "https://github.com/bazelbuild/rules_docker.git",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.5.1.tar.gz",
+    strip_prefix = "rules_docker-0.5.1",
+    sha256 = "29d109605e0d6f9c892584f07275b8c9260803bf0c6fcb7de2623b2bedc910bd",
 )
 
 load("@io_bazel_rules_docker//docker:docker.bzl", "docker_repositories")
 
 docker_repositories()
 
-git_repository(
+http_archive(
     name = "build_bazel_rules_nodejs",
-    remote = "https://github.com/bazelbuild/rules_nodejs.git",
-    tag = "0.16.2",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.2.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.2",
+    sha256 = "5dea8b55e41caae044f4b1697f2bbf882d99563cf6c012929384063fddc801d4",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -49,10 +59,11 @@ yarn_install(
 )
 
 # This requires rules_docker to be fully instantiated before it is pulled in.
-git_repository(
+http_archive(
     name = "io_bazel_rules_k8s",
-    commit = "2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
-    remote = "https://github.com/bazelbuild/rules_k8s.git",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
+    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
+    sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
 )
 
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
@@ -98,16 +109,11 @@ load(
 
 _go_image_repos()
 
-git_repository(
+http_archive(
     name = "io_kubernetes_build",
-    commit = "4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
-    remote = "https://github.com/kubernetes/repo-infra.git",
-)
-
-git_repository(
-    name = "com_github_jmhodges_bazel_gomock",
-    commit = "5b73edb74e569ff404b3beffc809d6d9f205e0e4",
-    remote = "https://github.com/jmhodges/bazel_gomock.git",
+    url = "https://github.com/kubernetes/repo-infra/archive/4ce715fbe67d8fbed05ec2bb47a148e754100a4b.tar.gz",
+    strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
+    sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
 )
 
 go_repository(
@@ -139,7 +145,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    tag = "v2.2.1",
+    tag = "v2.2.2",
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -296,7 +302,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "3dcf298fed2d5fd65918dc560b3942b2aa0629e8",
+    commit = "7d2daa5bfef28c5e282571bc06416516936115ee",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -447,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.0",
+    tag = "v1.1.1",
     importpath = "github.com/miekg/dns",
 )
 
@@ -537,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "eb0de9b17e854e9b1ccd9963efafc79862359959",
+    commit = "505ab145d0a99da450461ae2c1a9f6cd10d1f447",
     importpath = "golang.org/x/crypto",
 )
 
@@ -615,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "0a71a4356c3f4bcbdd16294c78ca2a31fda36cca",
+    commit = "af4fc4062c262223ddc2d92f5f35a93690db383a",
     importpath = "google.golang.org/api",
 )
 
@@ -639,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "5faa74ffbed7096292069fdcd0eae96146a3158a",
+    commit = "f7cbe917ef623dd7062366ce4a1a0558c997f437",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -663,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "619930b0b4713cc1280189bf0a4c54b3fb506f60",
+    commit = "aa55a523dc0a8297edf51bb75e8eec13eb3be45d",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -875,25 +881,25 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    commit = "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+    tag = "v2.2.2",
     importpath = "gopkg.in/yaml.v2",
 )
 
 go_repository(
     name = "com_github_spf13_pflag",
-    commit = "aea12ed6721610dc6ed40141676d7ab0a1dac9e9",
+    tag = "v1.0.3",
     importpath = "github.com/spf13/pflag",
 )
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "d2d81d9a96e23f0255397222bb0b4e3165e492dc",
+    tag = "v0.0.3",
     importpath = "github.com/spf13/cobra",
 )
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v0.10.4",
+    tag = "v1.15.88",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
@@ -913,24 +919,24 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+    tag = "v1.0.0",
     importpath = "github.com/hashicorp/go-multierror",
 )
 
 go_repository(
     name = "com_github_hashicorp_errwrap",
-    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",
+    tag = "v1.0.0",
     importpath = "github.com/hashicorp/errwrap",
 )
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "41590e5e6d7a5a30921e686fbc57c45545d8bf29",
+    tag = "v0.33.1",
     importpath = "cloud.google.com/go",
 )
 
 go_repository(
     name = "com_github_inconshreveable_mousetrap",
-    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    tag = "v1.0.0",
     importpath = "github.com/inconshreveable/mousetrap",
 )

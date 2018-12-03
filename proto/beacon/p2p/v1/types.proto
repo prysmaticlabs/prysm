@@ -6,41 +6,106 @@ package ethereum.beacon.p2p.v1;
 import "google/protobuf/timestamp.proto";
 
 message BeaconState {
-  uint64 validator_set_change_slot = 1;
-  repeated ValidatorRecord validators = 2;
-  repeated CrosslinkRecord crosslinks = 3;
-  uint64 last_state_recalculation_slot = 4;
-  uint64 last_finalized_slot = 5;
-  uint64 last_justified_slot = 6;
-  uint64 justified_streak = 7;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint32 persistent_committees = 9;
-  repeated ShardReassignmentRecord persistent_committee_reassignment = 10;
-  bytes next_shuffling_seed = 11;
-  repeated uint64 deposits_penalized_in_period = 12;
-  bytes validator_delta_hash_chain = 13;
-  uint64 current_exit_seq = 14;
-  uint64 genesis_time = 15;
-  bytes known_pow_receipt_root = 16;
-  bytes candidate_pow_receipt_root = 17;
-  uint64 candidate_pow_receipt_root_votes = 18;
-  uint64 pre_fork_version = 19;
-  uint64 post_fork_version = 20;
-  uint64 fork_slot_number = 21;
-  repeated AggregatedAttestation pending_attestations = 22;
-  repeated bytes recent_block_hashes = 23;
-  bytes randao_mix = 24;
+  // Validator registry [1-1000] 
+  repeated ValidatorRecord validator_registry = 1;
+  uint64 validator_registry_last_change_slot = 2;
+  uint64 validator_registry_exit_count = 3;
+  bytes validator_registry_delta_chain_tip_hash32 = 4; 
+
+  // Randomness and committees [1001-2000]
+  bytes randao_mix_hash32 = 1001;
+  bytes next_seed_hash32 = 1002;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 1003;
+  // TODO(781): Persistent committees should be a 2d uint24 array.
+  repeated uint32 persistent_committees = 1004 [deprecated=true];
+  // repeated Uint32Array persistent_committees = 1004;
+  repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
+
+  // Finality [2001-3000] 
+  uint64 previous_justified_slot = 2001;
+  uint64 justified_slot = 2002;
+  uint64 justified_slot_bitfield = 2003;
+  uint64 finalized_slot = 2004;
+
+  // Recent state [3001-4000]
+  repeated CrosslinkRecord latest_crosslinks = 3001;
+  uint64 last_state_recalculation_slot = 3002;
+  repeated bytes latest_block_hash32s = 3003;
+  repeated uint64 latest_penalized_exit_balances = 3004;
+  repeated PendingAttestationRecord latest_attestations = 3005;
+
+  // PoW receipt root [4001-5000]
+  repeated bytes processed_pow_receipt_root_hash32 = 4001;
+  repeated CandidatePoWReceiptRootRecord candidate_pow_receipt_roots = 4002;
+
+  // Miscellaneous [5001-6000]
+  uint64 genesis_time = 5001;
+  ForkData fork_data = 5002;
+
+
+
+  // Deprecated fields 
+  // All fields mustbe annotated with [deprecated=true];
+  repeated ValidatorRecord validators = 10000 [deprecated=true]; // Deprecated by validator_registry 
+  uint64 validator_set_change_slot = 10001  [deprecated=true]; // Deprecated by validator_registry_latest_change_slot
+  bytes randao_mix = 10003 [deprecated=true]; // Renamed to randao_mix_hash32
+  uint64 last_finalized_slot = 10005 [deprecated=true]; // Replaced/renamed by finalized_slot
+  uint64 last_justified_slot = 10006 [deprecated=true]; // Replaced/renamed by justified_slot
+  uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
+  bytes next_shuffling_seed = 10008 [deprecated=true]; // Replaced/renamed by next_seed_hash32 
+  repeated uint64 deposits_penalized_in_period = 10009 [deprecated=true]; // Replaced by latest_penalized_exit_balances
+  repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
+}
+
+message ForkData {
+  uint64 pre_fork_version = 1;
+  uint64 post_fork_version = 2;
+  uint64 fork_slot = 3;
+}
+
+message CandidatePoWReceiptRootRecord {
+  bytes candidate_pow_receipt_root_hash32 = 1;
+  uint64 votes = 2;
+}
+
+message PendingAttestationRecord {
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  uint64 slot_included = 4;
+}
+
+message AttestationData {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes beacon_block_hash32 = 3;
+  bytes epoch_boundary_hash32 = 4;
+  bytes shard_block_hash32 = 5;
+  bytes latest_crosslink_hash32 = 6;
+  uint64 justified_slot = 7;
+  bytes justified_block_hash32 = 8;
 }
 
 message ValidatorRecord {
   bytes pubkey = 1;
-  uint64 withdrawal_shard = 2;
-  bytes withdrawal_address = 3;
-  bytes randao_commitment = 4;
+  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  bytes withdrawal_credentials = 2;
+  bytes randao_commitment_hash32 = 3;
+  uint64 randao_skips = 4;
+  // Balance in Gwei
   uint64 balance = 5;
-  uint64 status = 6;
-  uint64 exit_slot = 7;
-  uint64 randao_last_change = 8;
+  // Possible validator status code:
+  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+  enum ValiatorStateCode {
+    pending_activation = 0;
+    active = 1;
+    exited_without_penalty = 2;
+    exited_with_penalty = 3;
+  }
+  ValiatorStateCode status_code = 6;
+  uint64 latest_status_change_slot = 7;
+  uint64 exit_count = 8;
+  uint64 status = 9 [deprecated=true]; // Replaced by status_code
 }
 
 message ShardReassignmentRecord {
@@ -49,28 +114,16 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
+// AggregatedAttestation is deprecated entirely by AttestationRecord.
 message AggregatedAttestation {
-  uint64 slot = 1;
-  uint64 shard = 2;
-  uint64 justified_slot = 3;
-  bytes justified_block_hash = 4;
-  bytes shard_block_hash = 5;
-  bytes attester_bitfield = 6;
-  repeated bytes oblique_parent_hashes = 7;
-  repeated uint64 aggregate_sig = 8;
-}
-
-message AttestationSignedData {
-  uint64 fork_version = 1;
-  uint64 slot = 2;
-  uint64 shard = 3;
-  repeated bytes parent_hashes = 4;
-  bytes shard_block_hash = 5;
-  uint64 justified_slot = 6;
-}
-
-message AttestationHashes {
-  repeated bytes attestation_hash = 1;
+  uint64 slot = 1 [deprecated=true];
+  uint64 shard = 2 [deprecated=true];
+  uint64 justified_slot = 3 [deprecated=true];
+  bytes justified_block_hash = 4 [deprecated=true];
+  bytes shard_block_hash = 5 [deprecated=true];
+  bytes attester_bitfield = 6 [deprecated=true];
+  repeated bytes oblique_parent_hashes = 7 [deprecated=true];
+  repeated uint64 aggregate_sig = 8 [deprecated=true];
 }
 
 message SpecialRecord {
@@ -93,36 +146,29 @@ message ShardAndCommittee {
 }
 
 message BeaconBlock {
-  repeated bytes ancestor_hashes = 1;
-  uint64 slot = 2;
-  bytes randao_reveal = 3;
-  bytes pow_chain_ref = 4;
-  bytes active_state_root = 5;
-  bytes crystallized_state_root = 6;
-  google.protobuf.Timestamp timestamp = 7;
-  repeated AggregatedAttestation attestations = 8;
-  repeated SpecialRecord specials = 9;
-}
+  uint64 slot = 1;
+  bytes randao_reveal_hash32 = 2;
+  bytes candidate_pow_receipt_root_hash32 = 3;
+  // Ancestor hashes represent a skip list of ancestor beacon block hashes.
+  // i'th item is the most recent ancestor whose slot is a multiple of 2^i 
+  // for i in the range of 0 to 31.
+  repeated bytes ancestor_hash32s = 4; 
+  bytes state_root_hash32 = 5;
+  // TODO(781): attestations should be a list of attestionRecords according to spec
+  // at ethereum/eth2.0-specs@11d4473. Update this field to AttestionRecord
+  // and remove the AggregatedAttestion message.
+  repeated AggregatedAttestation attestations = 6 [deprecated=true];
+  // repeated AttestationRecord attestations = 6;
+  // Specials consist of exist, penalities, etc.
+  repeated SpecialRecord specials = 7;
+  repeated bytes proposer_signature = 8; // Type of [uint384]?
 
-message CrystallizedState {
-  uint64 last_state_recalculation_slot = 1;
-  uint64 justified_streak = 2;
-  uint64 last_justified_slot = 3;
-  uint64 last_finalized_slot = 4;
-  uint64 validator_set_change_slot = 5;
-  repeated CrosslinkRecord crosslinks = 6;
-  repeated ValidatorRecord validators = 7;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 8;
-  repeated uint32 deposits_penalized_in_period = 9;
-  bytes validator_set_delta_hash_chain = 10;
-  uint32 pre_fork_version = 11;
-  uint32 post_fork_version = 12;
-  uint64 fork_slot_number =13;
-}
 
-message ActiveState {
-  repeated AggregatedAttestation pending_attestations = 1;
-  repeated bytes recent_block_hashes = 2;
-  repeated SpecialRecord pending_specials = 3;
-  bytes randao_mix = 4;
+  // Deprecated fields
+  // All fields must be annotated with [deprecated=true];
+  repeated bytes ancestor_hashes = 1002 [deprecated=true]; // Renamed to ancestor_hash32s.
+  bytes randao_reveal = 1003 [deprecated=true]; // Renamed to ancestor_hash32s.
+  bytes pow_chain_ref = 1004 [deprecated=true]; // Obsolete?
+  bytes state_root = 1005 [deprecated=true]; // Renamed to state_root_hash32.
+  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Obsolete?
 }

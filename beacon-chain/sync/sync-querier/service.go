@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -19,7 +19,7 @@ var log = logrus.WithField("prefix", "syncQuerier")
 type Config struct {
 	ResponseBufferSize int
 	P2P                p2pAPI
-	BeaconDB           beaconDB
+	BeaconDB           *db.BeaconDB
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -36,18 +36,13 @@ type p2pAPI interface {
 	Broadcast(msg proto.Message)
 }
 
-type beaconDB interface {
-	SaveBlock(*types.Block) error
-	GetChainHead() (*types.Block, error)
-}
-
 // SyncQuerier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type SyncQuerier struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	p2p             p2pAPI
-	db              beaconDB
+	db              *db.BeaconDB
 	curentHeadSlot  uint64
 	currentHeadHash []byte
 	responseBuf     chan p2p.Message
@@ -107,7 +102,7 @@ func (s *SyncQuerier) run() {
 			s.RequestLatestHead()
 		case msg := <-s.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
-			log.Infof("Latest Chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+			log.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
 			s.curentHeadSlot = response.Slot
 			s.currentHeadHash = response.Hash
 
