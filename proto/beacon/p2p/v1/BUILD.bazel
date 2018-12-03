@@ -7,6 +7,9 @@ go_proto_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
+    deps = [
+        "//proto/common:common_go_proto",
+    ],
 )
 
 go_library(
@@ -18,7 +21,13 @@ go_library(
 
 proto_library(
     name = "v1_proto",
-    srcs = ["messages.proto", "types.proto"],
+    srcs = [
+        "messages.proto",
+        "types.proto",
+    ],
     visibility = ["//visibility:public"],
-    deps = ["@com_google_protobuf//:timestamp_proto"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+        "//proto/common:common_proto",
+    ],
 )
