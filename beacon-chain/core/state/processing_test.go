@@ -119,13 +119,13 @@ func TestProcessSpecialRecords(t *testing.T) {
 	if newValidators[4].Status != uint64(params.PendingExit) {
 		t.Error("Validator 4 status is not PendingExit")
 	}
-	if newValidators[4].ExitSlot != 99 {
-		t.Error("Validator 4 exit slot is not 99")
+	if newValidators[4].LatestStatusChangeSlot != 99 {
+		t.Error("Validator 4 last status change slot is not 99")
 	}
 	if newValidators[5].Status != uint64(params.PendingExit) {
 		t.Error("Validator 5 status is not PendingExit")
 	}
-	if newValidators[5].ExitSlot != 99 {
-		t.Error("Validator 5 exit slot is not 99")
+	if newValidators[5].LatestStatusChangeSlot != 99 {
+		t.Error("Validator 5 last status change slot is not 99")
 	}
 }
