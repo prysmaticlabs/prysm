@@ -2,16 +2,22 @@ package ssz
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
 )
 
-// TODOs:
+// TODOs for this PR:
 // - Review all existing error handling
 // - Add error handing when decoding invalid input stream
 // - Create error types so we have fewer error texts all over the code
+// - Use constant to replace hard coding of number 4
 
+// TODOs for later PR:
+// - Add support for more types
+
+// Decode TODO add comments
 func Decode(r io.Reader, val interface{}) error {
 	_, err := decode(r, val)
 	return err
@@ -68,6 +74,7 @@ func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 	if err := readBytes(r, 2, b); err != nil {
 		return 0, fmt.Errorf("failed to decode uint16: %v", err)
 	}
+	fmt.Println(val.Type().String())
 	val.SetUint(uint64(binary.BigEndian.Uint16(b)))
 	return 2, nil
 }
@@ -131,7 +138,31 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 }
 
 func makeStructDecoder(typ reflect.Type) (decoder, error) {
-	return nil, nil
+	fields, err := sortedStructFields(typ)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+	}
+	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
+		sizeEnc := make([]byte, 4)
+		if err := readBytes(r, 4, sizeEnc); err != nil {
+			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
+		}
+		size := binary.BigEndian.Uint32(sizeEnc)
+
+		for i, decodeSize := 0, uint32(0); i < len(fields); i++ {
+			if decodeSize >= size {
+				return 0, errors.New("not enough input data to decode into specified struct")
+			}
+			f := fields[i]
+			fieldDecodeSize, err := f.encDec.decoder(r, val.Field(f.index))
+			if err != nil {
+				return 0, fmt.Errorf("failed to decode field of slice: %v", err)
+			}
+			decodeSize += fieldDecodeSize
+		}
+		return 4 + size, nil
+	}
+	return decoder, nil
 }
 
 func readBytes(r io.Reader, size int, b []byte) error {

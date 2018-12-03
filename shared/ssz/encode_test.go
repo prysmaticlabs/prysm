@@ -8,6 +8,7 @@ import (
 
 // TODOs for this PR:
 // - Make the test data-driven (data + runner). Do not write so many test functions
+// - Add more tests (try cross-over types)
 
 func TestEncodeUint8(t *testing.T) {
 	b := new(bytes.Buffer)
@@ -56,17 +57,17 @@ func TestEncodeSlice1(t *testing.T) {
 }
 
 func TestEncodeStruct(t *testing.T) {
-	type subelem struct {
-		num uint16
+	type Subelem struct {
+		Num uint16
 	}
-	type elem struct {
-		num    byte
-		member subelem
+	type Elem struct {
+		Num    byte
+		Member Subelem
 	}
-	data := elem{
-		num: 10,
-		member: subelem{
-			num: 11,
+	data := Elem{
+		Num: 10,
+		Member: Subelem{
+			Num: 11,
 		},
 	}
 	b := new(bytes.Buffer)
@@ -77,18 +78,18 @@ func TestEncodeStruct(t *testing.T) {
 }
 
 func TestEncodeStruct1(t *testing.T) {
-	type subelem struct {
-		num uint16
+	type Subelem struct {
+		Num uint16
 	}
-	type elem struct {
-		member2 subelem
-		member  subelem
+	type Elem struct {
+		Member2 Subelem
+		Member  Subelem
 	}
-	data := elem{
-		member2: subelem{
-			num: 11,
+	data := Elem{
+		Member2: Subelem{
+			Num: 11,
 		},
-		member: subelem{
+		Member: Subelem{
 			10,
 		},
 	}

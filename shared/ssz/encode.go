@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"sort"
 )
 
 // TODOs for this PR:
 // - Review all error handling
 // - Use customized error types to avoid error string everywhere!
 // - Add check for input sizes! (2 << 32)
+// - Use constant to replace hard coding of number 4
 
+// TODOs for later PR:
+// - Add support for more types
+
+// Encode TODO add comments
 func Encode(w io.Writer, val interface{}) error {
 	eb := &encbuf{}
 	if err := eb.encode(val); err != nil {
@@ -103,28 +107,6 @@ func makeSliceEncoder(typ reflect.Type) (encoder, error) {
 		return nil
 	}
 	return encoder, nil
-}
-
-type field struct {
-	index  int
-	name   string
-	encDec *encoderDecoder
-}
-
-func sortedStructFields(typ reflect.Type) (fields []field, err error) {
-	for i := 0; i < typ.NumField(); i++ {
-		f := typ.Field(i)
-		encDec, err := getEncoderDecoderForType(f.Type)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
-		}
-		name := f.Name
-		fields = append(fields, field{i, name, encDec})
-	}
-	sort.SliceStable(fields, func(i, j int) bool {
-		return fields[i].name < fields[j].name
-	})
-	return fields, nil
 }
 
 func makeStructEncoder(typ reflect.Type) (encoder, error) {
