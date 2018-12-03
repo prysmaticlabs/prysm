@@ -5,6 +5,9 @@ import (
 	"reflect"
 )
 
+// TODOs for this PR:
+// - Implement encoder/decoder caches for types
+
 type encoder func(reflect.Value, *encbuf) error
 type decoder func(io.Reader, reflect.Value) error
 
