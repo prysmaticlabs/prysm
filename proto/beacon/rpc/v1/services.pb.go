@@ -6,9 +6,14 @@ package ethereum_beacon_rpc_v1
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/golang/protobuf/ptypes/empty"
+import empty "github.com/golang/protobuf/ptypes/empty"
 import timestamp "github.com/golang/protobuf/ptypes/timestamp"
-import v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import v1 "proto/beacon/p2p/v1"
+
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -608,6 +613,512 @@ func init() {
 	proto.RegisterType((*ShardIDResponse)(nil), "ethereum.beacon.rpc.v1.ShardIDResponse")
 	proto.RegisterType((*CurrentAssignmentsResponse)(nil), "ethereum.beacon.rpc.v1.CurrentAssignmentsResponse")
 	proto.RegisterEnum("ethereum.beacon.rpc.v1.ValidatorRole", ValidatorRole_name, ValidatorRole_value)
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// BeaconServiceClient is the client API for BeaconService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type BeaconServiceClient interface {
+	// CanonicalHead can be called on demand to fetch the current, head block of a
+	// beacon node.
+	CanonicalHead(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.BeaconBlock, error)
+	// LatestAttestation streams the latest aggregated attestation to connected
+	// validator clients.
+	LatestAttestation(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestAttestationClient, error)
+	// CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
+	// to a beacon node in order to determine the current validator assignments
+	// and genesis timestamp of the protocol.
+	CurrentAssignmentsAndGenesisTime(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (*CurrentAssignmentsResponse, error)
+	// ValidatorAssignments streams validator assignments to clients
+	// for a subset of public keys in the active validator set.
+	ValidatorAssignments(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (BeaconService_ValidatorAssignmentsClient, error)
+}
+
+type beaconServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewBeaconServiceClient(cc *grpc.ClientConn) BeaconServiceClient {
+	return &beaconServiceClient{cc}
+}
+
+func (c *beaconServiceClient) CanonicalHead(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.BeaconBlock, error) {
+	out := new(v1.BeaconBlock)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.BeaconService/CanonicalHead", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *beaconServiceClient) LatestAttestation(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (BeaconService_LatestAttestationClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.BeaconService/LatestAttestation", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &beaconServiceLatestAttestationClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type BeaconService_LatestAttestationClient interface {
+	Recv() (*v1.AggregatedAttestation, error)
+	grpc.ClientStream
+}
+
+type beaconServiceLatestAttestationClient struct {
+	grpc.ClientStream
+}
+
+func (x *beaconServiceLatestAttestationClient) Recv() (*v1.AggregatedAttestation, error) {
+	m := new(v1.AggregatedAttestation)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *beaconServiceClient) CurrentAssignmentsAndGenesisTime(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (*CurrentAssignmentsResponse, error) {
+	out := new(CurrentAssignmentsResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.BeaconService/CurrentAssignmentsAndGenesisTime", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *beaconServiceClient) ValidatorAssignments(ctx context.Context, in *ValidatorAssignmentRequest, opts ...grpc.CallOption) (BeaconService_ValidatorAssignmentsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_BeaconService_serviceDesc.Streams[1], "/ethereum.beacon.rpc.v1.BeaconService/ValidatorAssignments", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &beaconServiceValidatorAssignmentsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type BeaconService_ValidatorAssignmentsClient interface {
+	Recv() (*ValidatorAssignmentResponse, error)
+	grpc.ClientStream
+}
+
+type beaconServiceValidatorAssignmentsClient struct {
+	grpc.ClientStream
+}
+
+func (x *beaconServiceValidatorAssignmentsClient) Recv() (*ValidatorAssignmentResponse, error) {
+	m := new(ValidatorAssignmentResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// BeaconServiceServer is the server API for BeaconService service.
+type BeaconServiceServer interface {
+	// CanonicalHead can be called on demand to fetch the current, head block of a
+	// beacon node.
+	CanonicalHead(context.Context, *empty.Empty) (*v1.BeaconBlock, error)
+	// LatestAttestation streams the latest aggregated attestation to connected
+	// validator clients.
+	LatestAttestation(*empty.Empty, BeaconService_LatestAttestationServer) error
+	// CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
+	// to a beacon node in order to determine the current validator assignments
+	// and genesis timestamp of the protocol.
+	CurrentAssignmentsAndGenesisTime(context.Context, *ValidatorAssignmentRequest) (*CurrentAssignmentsResponse, error)
+	// ValidatorAssignments streams validator assignments to clients
+	// for a subset of public keys in the active validator set.
+	ValidatorAssignments(*ValidatorAssignmentRequest, BeaconService_ValidatorAssignmentsServer) error
+}
+
+func RegisterBeaconServiceServer(s *grpc.Server, srv BeaconServiceServer) {
+	s.RegisterService(&_BeaconService_serviceDesc, srv)
+}
+
+func _BeaconService_CanonicalHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeaconServiceServer).CanonicalHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.BeaconService/CanonicalHead",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconServiceServer).CanonicalHead(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BeaconService_LatestAttestation_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(empty.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BeaconServiceServer).LatestAttestation(m, &beaconServiceLatestAttestationServer{stream})
+}
+
+type BeaconService_LatestAttestationServer interface {
+	Send(*v1.AggregatedAttestation) error
+	grpc.ServerStream
+}
+
+type beaconServiceLatestAttestationServer struct {
+	grpc.ServerStream
+}
+
+func (x *beaconServiceLatestAttestationServer) Send(m *v1.AggregatedAttestation) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _BeaconService_CurrentAssignmentsAndGenesisTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatorAssignmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeaconServiceServer).CurrentAssignmentsAndGenesisTime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.BeaconService/CurrentAssignmentsAndGenesisTime",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconServiceServer).CurrentAssignmentsAndGenesisTime(ctx, req.(*ValidatorAssignmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BeaconService_ValidatorAssignments_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ValidatorAssignmentRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BeaconServiceServer).ValidatorAssignments(m, &beaconServiceValidatorAssignmentsServer{stream})
+}
+
+type BeaconService_ValidatorAssignmentsServer interface {
+	Send(*ValidatorAssignmentResponse) error
+	grpc.ServerStream
+}
+
+type beaconServiceValidatorAssignmentsServer struct {
+	grpc.ServerStream
+}
+
+func (x *beaconServiceValidatorAssignmentsServer) Send(m *ValidatorAssignmentResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+var _BeaconService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.BeaconService",
+	HandlerType: (*BeaconServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CanonicalHead",
+			Handler:    _BeaconService_CanonicalHead_Handler,
+		},
+		{
+			MethodName: "CurrentAssignmentsAndGenesisTime",
+			Handler:    _BeaconService_CurrentAssignmentsAndGenesisTime_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "LatestAttestation",
+			Handler:       _BeaconService_LatestAttestation_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ValidatorAssignments",
+			Handler:       _BeaconService_ValidatorAssignments_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
+}
+
+// AttesterServiceClient is the client API for AttesterService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type AttesterServiceClient interface {
+	AttestHead(ctx context.Context, in *AttestRequest, opts ...grpc.CallOption) (*AttestResponse, error)
+}
+
+type attesterServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewAttesterServiceClient(cc *grpc.ClientConn) AttesterServiceClient {
+	return &attesterServiceClient{cc}
+}
+
+func (c *attesterServiceClient) AttestHead(ctx context.Context, in *AttestRequest, opts ...grpc.CallOption) (*AttestResponse, error) {
+	out := new(AttestResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.AttesterService/AttestHead", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AttesterServiceServer is the server API for AttesterService service.
+type AttesterServiceServer interface {
+	AttestHead(context.Context, *AttestRequest) (*AttestResponse, error)
+}
+
+func RegisterAttesterServiceServer(s *grpc.Server, srv AttesterServiceServer) {
+	s.RegisterService(&_AttesterService_serviceDesc, srv)
+}
+
+func _AttesterService_AttestHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttesterServiceServer).AttestHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.AttesterService/AttestHead",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttesterServiceServer).AttestHead(ctx, req.(*AttestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _AttesterService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.AttesterService",
+	HandlerType: (*AttesterServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AttestHead",
+			Handler:    _AttesterService_AttestHead_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
+}
+
+// ProposerServiceClient is the client API for ProposerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type ProposerServiceClient interface {
+	ProposeBlock(ctx context.Context, in *ProposeRequest, opts ...grpc.CallOption) (*ProposeResponse, error)
+}
+
+type proposerServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewProposerServiceClient(cc *grpc.ClientConn) ProposerServiceClient {
+	return &proposerServiceClient{cc}
+}
+
+func (c *proposerServiceClient) ProposeBlock(ctx context.Context, in *ProposeRequest, opts ...grpc.CallOption) (*ProposeResponse, error) {
+	out := new(ProposeResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ProposerService/ProposeBlock", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ProposerServiceServer is the server API for ProposerService service.
+type ProposerServiceServer interface {
+	ProposeBlock(context.Context, *ProposeRequest) (*ProposeResponse, error)
+}
+
+func RegisterProposerServiceServer(s *grpc.Server, srv ProposerServiceServer) {
+	s.RegisterService(&_ProposerService_serviceDesc, srv)
+}
+
+func _ProposerService_ProposeBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProposeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProposerServiceServer).ProposeBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.ProposerService/ProposeBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProposerServiceServer).ProposeBlock(ctx, req.(*ProposeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _ProposerService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.ProposerService",
+	HandlerType: (*ProposerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ProposeBlock",
+			Handler:    _ProposerService_ProposeBlock_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
+}
+
+// ValidatorServiceClient is the client API for ValidatorService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type ValidatorServiceClient interface {
+	// These endpoints can be called on demand in the future
+	// by some web3 API for users to conveniently know their assignment.
+	ValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error)
+	ValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error)
+	ValidatorSlotAndResponsibility(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponsibilityResponse, error)
+}
+
+type validatorServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewValidatorServiceClient(cc *grpc.ClientConn) ValidatorServiceClient {
+	return &validatorServiceClient{cc}
+}
+
+func (c *validatorServiceClient) ValidatorShardID(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*ShardIDResponse, error) {
+	out := new(ShardIDResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorShardID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validatorServiceClient) ValidatorIndex(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*IndexResponse, error) {
+	out := new(IndexResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorIndex", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *validatorServiceClient) ValidatorSlotAndResponsibility(ctx context.Context, in *PublicKey, opts ...grpc.CallOption) (*SlotResponsibilityResponse, error) {
+	out := new(SlotResponsibilityResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorSlotAndResponsibility", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ValidatorServiceServer is the server API for ValidatorService service.
+type ValidatorServiceServer interface {
+	// These endpoints can be called on demand in the future
+	// by some web3 API for users to conveniently know their assignment.
+	ValidatorShardID(context.Context, *PublicKey) (*ShardIDResponse, error)
+	ValidatorIndex(context.Context, *PublicKey) (*IndexResponse, error)
+	ValidatorSlotAndResponsibility(context.Context, *PublicKey) (*SlotResponsibilityResponse, error)
+}
+
+func RegisterValidatorServiceServer(s *grpc.Server, srv ValidatorServiceServer) {
+	s.RegisterService(&_ValidatorService_serviceDesc, srv)
+}
+
+func _ValidatorService_ValidatorShardID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublicKey)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServiceServer).ValidatorShardID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorShardID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServiceServer).ValidatorShardID(ctx, req.(*PublicKey))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidatorService_ValidatorIndex_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublicKey)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServiceServer).ValidatorIndex(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorIndex",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServiceServer).ValidatorIndex(ctx, req.(*PublicKey))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ValidatorService_ValidatorSlotAndResponsibility_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublicKey)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServiceServer).ValidatorSlotAndResponsibility(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ValidatorSlotAndResponsibility",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServiceServer).ValidatorSlotAndResponsibility(ctx, req.(*PublicKey))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _ValidatorService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ethereum.beacon.rpc.v1.ValidatorService",
+	HandlerType: (*ValidatorServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ValidatorShardID",
+			Handler:    _ValidatorService_ValidatorShardID_Handler,
+		},
+		{
+			MethodName: "ValidatorIndex",
+			Handler:    _ValidatorService_ValidatorIndex_Handler,
+		},
+		{
+			MethodName: "ValidatorSlotAndResponsibility",
+			Handler:    _ValidatorService_ValidatorSlotAndResponsibility_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/beacon/rpc/v1/services.proto",
 }
 
 func init() {
