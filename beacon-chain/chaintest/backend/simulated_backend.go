@@ -69,11 +69,10 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           c.DepositSize * c.Gwei,
-			WithdrawalAddress: []byte{},
-			Pubkey:            []byte{},
-			RandaoCommitment:  randaoReveal[:],
+			Status:                 uint64(params.Active),
+			Balance:                c.DepositSize * c.Gwei,
+			Pubkey:                 []byte{},
+			RandaoCommitmentHash32: randaoReveal[:],
 		}
 	}
 	// TODO(#718): Next step is to update and save the blocks specified
