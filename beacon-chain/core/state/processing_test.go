@@ -69,7 +69,7 @@ func TestFinalizeAndJustifySlots(t *testing.T) {
 
 }
 
-func TestCrosslinks(t *testing.T) {
+func TestLatestCrosslinks(t *testing.T) {
 	totalBalance := uint64(5e9)
 	voteBalance := uint64(4e9)
 
@@ -91,8 +91,8 @@ func TestCrosslinks(t *testing.T) {
 		AttesterBitfield: []byte{100, 128, 8},
 	}
 
-	crossLinks = UpdateCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
-	crossLinks = UpdateCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = UpdateLatestCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
+	crossLinks = UpdateLatestCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
 
 	if !bytes.Equal(crossLinks[1].GetShardBlockHash(), []byte{'B'}) {
 		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash())
