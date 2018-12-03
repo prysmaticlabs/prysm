@@ -54,7 +54,7 @@ func TestExceedingMaxValidatorsFails(t *testing.T) {
 
 func BenchmarkMaxValidators(b *testing.B) {
 	var validators []*pb.ValidatorRecord
-	validator := &pb.ValidatorRecord{Pubkey: []byte{'A'}}
+	validator := &pb.ValidatorRecord{}
 	for i := uint64(0); i < params.BeaconConfig().ModuloBias; i++ {
 		validators = append(validators, validator)
 	}
@@ -69,7 +69,7 @@ func TestInitialShardAndCommiteeForSlots(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{Pubkey: []byte{'A'}}
+		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 	shardAndCommitteeArray, err := InitialShardAndCommitteesForSlots(validators)
@@ -86,7 +86,7 @@ func TestShuffleActiveValidators(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{Pubkey: []byte{'A'}}
+		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 
@@ -103,7 +103,7 @@ func TestSmallSampleValidators(t *testing.T) {
 	// Create a small number of validators validators in ActiveValidators.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 20; i++ {
-		validator := &pb.ValidatorRecord{Pubkey: []byte{'A'}}
+		validator := &pb.ValidatorRecord{}
 		validators = append(validators, validator)
 	}
 
