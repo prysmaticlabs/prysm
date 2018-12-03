@@ -112,6 +112,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 			// Grow slice's capacity if necessary
 			if i >= val.Cap() {
 				newCap := val.Cap() * 2
+				// Skip initial small growth
 				if newCap < 4 {
 					newCap = 4
 				}

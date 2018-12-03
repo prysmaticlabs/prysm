@@ -22,6 +22,8 @@ type encoderDecoder struct {
 	decoder
 }
 
+// TODO: We can let this function return (encDec *encoderDecoder, encodeTargetSize uint32, err error)
+// if we want to know the encode output size before the actual encoding
 func getEncoderDecoderForType(typ reflect.Type) (encDec *encoderDecoder, err error) {
 	encDec = new(encoderDecoder)
 	if encDec.encoder, err = makeEncoder(typ); err != nil {

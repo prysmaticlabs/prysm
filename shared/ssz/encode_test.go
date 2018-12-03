@@ -2,7 +2,6 @@ package ssz
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -15,7 +14,9 @@ func TestEncodeUint8(t *testing.T) {
 	if err := Encode(b, uint8(12)); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{12}) {
+		t.Error("wrong encode result")
+	}
 }
 
 func TestEncodeUint16(t *testing.T) {
@@ -23,7 +24,9 @@ func TestEncodeUint16(t *testing.T) {
 	if err := Encode(b, uint16(256)); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{1, 0}) {
+		t.Error("wrong encode result")
+	}
 }
 
 func TestEncodeBytes(t *testing.T) {
@@ -32,7 +35,9 @@ func TestEncodeBytes(t *testing.T) {
 	if err := Encode(b, data); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{0, 0, 0, 6, 1, 2, 3, 4, 5, 6}) {
+		t.Error("wrong encode result")
+	}
 }
 
 func TestEncodeSlice(t *testing.T) {
@@ -41,7 +46,9 @@ func TestEncodeSlice(t *testing.T) {
 	if err := Encode(b, data); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{0, 0, 0, 10, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5}) {
+		t.Error("wrong encode result")
+	}
 }
 
 func TestEncodeSlice1(t *testing.T) {
@@ -53,7 +60,9 @@ func TestEncodeSlice1(t *testing.T) {
 	if err := Encode(b, data); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{0, 0, 0, 24, 0, 0, 0, 8, 0, 1, 0, 2, 0, 3, 0, 4, 0, 0, 0, 8, 0, 5, 0, 6, 0, 7, 0, 8}) {
+		t.Error("wrong encode result")
+	}
 }
 
 func TestEncodeStruct(t *testing.T) {
@@ -74,7 +83,9 @@ func TestEncodeStruct(t *testing.T) {
 	if err := Encode(b, data); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{0, 0, 0, 7, 0, 0, 0, 2, 0, 11, 10}) {
+		t.Error("wrong encode result")
+	}
 }
 
 func TestEncodeStruct1(t *testing.T) {
@@ -97,5 +108,7 @@ func TestEncodeStruct1(t *testing.T) {
 	if err := Encode(b, data); err != nil {
 		t.Errorf("%v", err)
 	}
-	fmt.Println(b)
+	if b.String() != string([]byte{0, 0, 0, 12, 0, 0, 0, 2, 0, 10, 0, 0, 0, 2, 0, 11}) {
+		t.Error("wrong encode result")
+	}
 }

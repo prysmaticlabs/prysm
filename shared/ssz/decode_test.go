@@ -19,10 +19,10 @@ func TestDecodeUint8(t *testing.T) {
 	if err := Decode(bytesReader, output); err != nil {
 		t.Errorf("%v", err)
 	}
-	if *output != 10 {
-		t.Error("decode result wrong")
-	}
 	fmt.Println(*output)
+	if *output != 10 {
+		t.Error("wrong decode result")
+	}
 }
 
 func TestDecodeUint16(t *testing.T) {
@@ -32,10 +32,10 @@ func TestDecodeUint16(t *testing.T) {
 	if err := Decode(bytesReader, output); err != nil {
 		t.Errorf("%v", err)
 	}
-	if *output != 256 {
-		t.Error("decode result wrong")
-	}
 	fmt.Println(*output)
+	if *output != 256 {
+		t.Error("wrong decode result")
+	}
 }
 
 func TestDecodeBytes(t *testing.T) {
@@ -46,6 +46,9 @@ func TestDecodeBytes(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 	fmt.Println(*output)
+	if string(*output) != string([]byte{1, 2, 3, 4, 5, 6}) {
+		t.Error("wrong decode result")
+	}
 }
 
 func TestDecodeSlice(t *testing.T) {
@@ -56,6 +59,9 @@ func TestDecodeSlice(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 	fmt.Println(*output)
+	if !reflect.DeepEqual(*output, []uint16{1, 2, 3, 4, 5}) {
+		t.Error("wrong decode result")
+	}
 }
 
 func TestDecodeSlice1(t *testing.T) {
@@ -66,6 +72,9 @@ func TestDecodeSlice1(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 	fmt.Println(*output)
+	if !reflect.DeepEqual(*output, [][]uint16{{1, 2, 3, 4}, {5, 6, 7, 8}}) {
+		t.Error("wrong decode result")
+	}
 }
 
 func TestDecodeStruct(t *testing.T) {
