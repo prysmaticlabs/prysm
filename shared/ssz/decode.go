@@ -8,7 +8,8 @@ import (
 )
 
 // TODOs:
-// - Review all error handling
+// - Review all existing error handling
+// - Add error handing when decoding invalid input stream
 // - Create error types so we have fewer error texts all over the code
 
 func Decode(r io.Reader, val interface{}) error {
@@ -46,6 +47,8 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeBytes, nil
 	case kind == reflect.Slice:
 		return makeSliceDecoder(typ)
+	case kind == reflect.Struct:
+		return makeStructDecoder(typ)
 	default:
 		return nil, fmt.Errorf("ssz: type %v is not deserializable", typ)
 	}
@@ -125,6 +128,10 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 		return 4 + size, nil
 	}
 	return decoder, nil
+}
+
+func makeStructDecoder(typ reflect.Type) (decoder, error) {
+	return nil, nil
 }
 
 func readBytes(r io.Reader, size int, b []byte) error {

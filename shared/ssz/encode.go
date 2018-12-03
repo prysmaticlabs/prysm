@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 )
 
 // TODOs for this PR:
 // - Review all error handling
 // - Use customized error types to avoid error string everywhere!
-// - Add check for input sizes!
+// - Add check for input sizes! (2 << 32)
 
 func Encode(w io.Writer, val interface{}) error {
 	eb := &encbuf{}
@@ -51,6 +52,8 @@ func makeEncoder(typ reflect.Type) (encoder, error) {
 		return encodeBytes, nil
 	case kind == reflect.Slice:
 		return makeSliceEncoder(typ)
+	case kind == reflect.Struct:
+		return makeStructEncoder(typ)
 	default:
 		return nil, fmt.Errorf("ssz: type %v is not serializable", typ)
 	}
@@ -96,7 +99,51 @@ func makeSliceEncoder(typ reflect.Type) (encoder, error) {
 		}
 		totalSize := len(w.str) - 4 - origBufSize
 		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
-		copy(w.str[origBufSize: origBufSize+4], totalSizeEnc)
+		copy(w.str[origBufSize:origBufSize+4], totalSizeEnc)
+		return nil
+	}
+	return encoder, nil
+}
+
+type field struct {
+	index  int
+	name   string
+	encDec *encoderDecoder
+}
+
+func sortedStructFields(typ reflect.Type) (fields []field, err error) {
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		encDec, err := getEncoderDecoderForType(f.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+		}
+		name := f.Name
+		fields = append(fields, field{i, name, encDec})
+	}
+	sort.SliceStable(fields, func(i, j int) bool {
+		return fields[i].name < fields[j].name
+	})
+	return fields, nil
+}
+
+func makeStructEncoder(typ reflect.Type) (encoder, error) {
+	fields, err := sortedStructFields(typ)
+	if err != nil {
+		return nil, err
+	}
+	encoder := func(val reflect.Value, w *encbuf) error {
+		origBufSize := len(w.str)
+		totalSizeEnc := make([]byte, 4)
+		w.str = append(w.str, totalSizeEnc...)
+		for _, f := range fields {
+			if err := f.encDec.encoder(val.Field(f.index), w); err != nil {
+				return err
+			}
+		}
+		totalSize := len(w.str) - 4 - origBufSize
+		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
+		copy(w.str[origBufSize:origBufSize+4], totalSizeEnc)
 		return nil
 	}
 	return encoder, nil
