@@ -368,7 +368,7 @@ func TestChangeValidators(t *testing.T) {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[1].Status)
 	}
 	if validators[1].LatestStatusChangeSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
-		t.Errorf("Failed to set validator exit slot")
+		t.Errorf("Failed to set validator lastest status change slot")
 	}
 	if validators[2].Status != uint64(params.Active) {
 		t.Errorf("Wanted status Active. Got: %d", validators[2].Status)
@@ -380,7 +380,7 @@ func TestChangeValidators(t *testing.T) {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[3].Status)
 	}
 	if validators[3].LatestStatusChangeSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
-		t.Errorf("Failed to set validator exit slot")
+		t.Errorf("Failed to set validator lastest status change slot")
 	}
 	// Reach max validation rotation case, this validator couldn't be rotated.
 	if validators[5].Status != uint64(params.PendingExit) {
@@ -413,7 +413,7 @@ func TestValidatorMinDeposit(t *testing.T) {
 		t.Error("Validator should be pending exit")
 	}
 	if newValidators[2].LatestStatusChangeSlot != currentSlot {
-		t.Errorf("Validator's exit slot should be %d got %d", currentSlot, newValidators[2].LatestStatusChangeSlot)
+		t.Errorf("Validator's lastest status change slot should be %d got %d", currentSlot, newValidators[2].LatestStatusChangeSlot)
 	}
 }
 
@@ -476,7 +476,7 @@ func TestDeepCopyValidators(t *testing.T) {
 		}
 
 		if validator.LatestStatusChangeSlot == defaultValidator.LatestStatusChangeSlot {
-			t.Errorf("validator with index %d was unable to have their exit slot copied correctly %d", i, validator.LatestStatusChangeSlot)
+			t.Errorf("validator with index %d was unable to have their lastest status change slot copied correctly %d", i, validator.LatestStatusChangeSlot)
 		}
 	}
 
