@@ -59,7 +59,7 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 			LastJustifiedSlot:          0,
 			LastFinalizedSlot:          0,
 			ValidatorSetChangeSlot:     0,
-			Crosslinks:                 crosslinks,
+			LatestCrosslinks:           crosslinks,
 			Validators:                 genesisValidators,
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 			PendingAttestations:        []*pb.AggregatedAttestation{},
@@ -76,8 +76,8 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 
 // CopyState returns a deep copy of the current state.
 func (b *BeaconState) CopyState() *BeaconState {
-	crosslinks := make([]*pb.CrosslinkRecord, len(b.Crosslinks()))
-	for index, crossLink := range b.Crosslinks() {
+	crosslinks := make([]*pb.CrosslinkRecord, len(b.LatestCrosslinks()))
+	for index, crossLink := range b.LatestCrosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
 			ShardBlockHash: crossLink.GetShardBlockHash(),
 			Slot:           crossLink.GetSlot(),
@@ -115,7 +115,7 @@ func (b *BeaconState) CopyState() *BeaconState {
 		LastJustifiedSlot:          b.LastJustifiedSlot(),
 		LastFinalizedSlot:          b.LastFinalizedSlot(),
 		ValidatorSetChangeSlot:     b.ValidatorSetChangeSlot(),
-		Crosslinks:                 crosslinks,
+		LatestCrosslinks:           crosslinks,
 		Validators:                 validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
@@ -167,7 +167,7 @@ func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
 		}
 	}
 
-	crosslinks := b.Crosslinks()
+	crosslinks := b.LatestCrosslinks()
 	for shard := range shardProcessed {
 		if b.ValidatorSetChangeSlot() >= crosslinks[shard].Slot {
 			return false
@@ -187,9 +187,9 @@ func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray 
 	return b.data.ShardAndCommitteesForSlots
 }
 
-// Crosslinks returns the cross link records of the all the shards.
-func (b *BeaconState) Crosslinks() []*pb.CrosslinkRecord {
-	return b.data.Crosslinks
+// LatestCrosslinks returns the cross link records of the all the shards.
+func (b *BeaconState) LatestCrosslinks() []*pb.CrosslinkRecord {
+	return b.data.LatestCrosslinks
 }
 
 // Validators returns list of validators.
@@ -337,7 +337,7 @@ func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) (
 
 // SetCrossLinks updates the inner proto's cross link records.
 func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
-	b.data.Crosslinks = crossLinks
+	b.data.LatestCrosslinks = crossLinks
 }
 
 // SetDepositsPenalizedInPeriod updates the inner proto's penalized deposits.

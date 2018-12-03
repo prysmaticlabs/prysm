@@ -48,19 +48,12 @@ message BeaconState {
   // All fields mustbe annotated with [deprecated=true];
   repeated ValidatorRecord validators = 10000 [deprecated=true]; // Deprecated by validator_registry 
   uint64 validator_set_change_slot = 10001  [deprecated=true]; // Deprecated by validator_registry_latest_change_slot
-  repeated CrosslinkRecord crosslinks = 10002 [deprecated=true]; // Deprecated by latest_cross_links
   bytes randao_mix = 10003 [deprecated=true]; // Renamed to randao_mix_hash32
-  repeated ShardReassignmentRecord persistent_committee_reassignment = 10004 [deprecated=true]; // Renamed to persistent_committee_resassigments (plural).
   uint64 last_finalized_slot = 10005 [deprecated=true]; // Replaced/renamed by finalized_slot
   uint64 last_justified_slot = 10006 [deprecated=true]; // Replaced/renamed by justified_slot
   uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
   bytes next_shuffling_seed = 10008 [deprecated=true]; // Replaced/renamed by next_seed_hash32 
   repeated uint64 deposits_penalized_in_period = 10009 [deprecated=true]; // Replaced by latest_penalized_exit_balances
-  bytes validator_delta_hash_chain = 10010 [deprecated=true]; // Replaced by validator_registry_delta_chain_tip
-  uint64 current_exit_seq = 10011 [deprecated=true]; // No longer needed?
-  bytes known_pow_receipt_root = 10012 [deprecated=true]; // Deprecated by better handling of pow receipts
-  bytes candidate_pow_receipt_root = 10013 [deprecated=true]; // Replaced by candidate_pow_receipt_roots.
-  uint64 candidate_pow_receipt_root_votes = 10014 [deprecated=true]; // Replaced by candidate_pow_receipt_roots
   repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
 }
 
