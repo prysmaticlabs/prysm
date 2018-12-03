@@ -41,7 +41,7 @@ service ValidatorService {
 message ProposeRequest {
     bytes parent_hash = 1;
     uint64 slot_number = 2;
-    bytes randao_reveal = 3;
+    bytes randao_reveal_hash32 = 3;
     bytes attestation_bitmask = 4;
     repeated uint32 attestation_aggregate_sig = 5;
     google.protobuf.Timestamp timestamp = 6;

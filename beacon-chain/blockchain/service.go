@@ -113,7 +113,7 @@ func (c *ChainService) CanonicalStateFeed() *event.Feed {
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.PowChainRef())
+	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.CandidatePowReceiptRootHash32())
 	if err != nil {
 		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 		return false
@@ -161,7 +161,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			newHead := currentHead
 			// If both blocks have the same crystallized state root, we favor one which has
 			// the higher slot.
-			if currentHead.StateRoot() == block.StateRoot() {
+			if currentHead.StateRootHash32() == block.StateRootHash32() {
 				if block.SlotNumber() > currentHead.SlotNumber() {
 					newHead = block
 					headUpdated = true

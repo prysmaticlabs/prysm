@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -142,8 +141,8 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService := setupBeaconChain(t, true, db)
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:        1,
-		PowChainRef: []byte("a"),
+		Slot:                          1,
+		CandidatePowReceiptRootHash32: []byte("a"),
 	})
 
 	blockChan := make(chan *types.Block)
@@ -190,10 +189,10 @@ func TestRunningChainService(t *testing.T) {
 	shard := beaconState.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:           currentSlot,
-		StateRoot:      stateRoot[:],
-		AncestorHashes: [][]byte{parentHash[:]},
-		PowChainRef:    []byte("a"),
+		Slot:                          currentSlot,
+		StateRootHash32:               stateRoot[:],
+		AncestorHash32S:               [][]byte{parentHash[:]},
+		CandidatePowReceiptRootHash32: []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -278,9 +277,9 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	attestationSlot := currentSlot - 1
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{block0Hash[:]},
-		Slot:           currentSlot,
-		StateRoot:      stateRoot[:],
+		AncestorHash32S: [][]byte{block0Hash[:]},
+		Slot:            currentSlot,
+		StateRootHash32: stateRoot[:],
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -313,8 +312,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 
 	// Add 1 more attestation field for slot2
 	block2 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{block1Hash[:]},
-		Slot:           currentSlot,
+		AncestorHash32S: [][]byte{block1Hash[:]},
+		Slot:            currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:               currentSlot - 1,
@@ -338,8 +337,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 
 	// Add 1 more attestation field for slot3
 	block3 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{block2Hash[:]},
-		Slot:           currentSlot,
+		AncestorHash32S: [][]byte{block2Hash[:]},
+		Slot:            currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:               currentSlot - 1,
@@ -427,10 +426,10 @@ func TestUpdateHead(t *testing.T) {
 
 		stateRoot, _ := tt.state.Hash()
 		block := types.NewBlock(&pb.BeaconBlock{
-			Slot:           tt.blockSlot,
-			StateRoot:      stateRoot[:],
-			AncestorHashes: [][]byte{genesisHash[:]},
-			PowChainRef:    []byte("a"),
+			Slot:                          tt.blockSlot,
+			StateRootHash32:               stateRoot[:],
+			AncestorHash32S:               [][]byte{genesisHash[:]},
+			CandidatePowReceiptRootHash32: []byte("a"),
 		})
 		h, err := block.Hash()
 		if err != nil {
@@ -468,8 +467,8 @@ func TestUpdateBlockVoteCache(t *testing.T) {
 		t.Fatalf("failed to initialize genesis state: %v", err)
 	}
 	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:           1,
-		AncestorHashes: [][]byte{},
+		Slot:            1,
+		AncestorHash32S: [][]byte{},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
