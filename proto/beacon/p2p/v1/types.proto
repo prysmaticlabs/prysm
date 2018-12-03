@@ -16,7 +16,7 @@ message BeaconState {
   bytes randao_mix_hash32 = 1001;
   bytes next_seed_hash32 = 1002;
   repeated ShardAndCommitteeArray shard_and_committees_for_slots = 1003;
-  // TODO: Persistent committees should be a 2d uint24 array.
+  // TODO(781): Persistent committees should be a 2d uint24 array.
   repeated uint32 persistent_committees = 1004 [deprecated=true];
   // repeated Uint32Array persistent_committees = 1004;
   repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
@@ -38,7 +38,7 @@ message BeaconState {
   repeated bytes processed_pow_receipt_root_hash32 = 4001;
   repeated CandidatePoWReceiptRootRecord candidate_pow_receipt_roots = 4002;
 
-  // Miscellanous [5001-6000]
+  // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
   ForkData fork_data = 5002;
 
@@ -89,13 +89,24 @@ message AttestationData {
 
 message ValidatorRecord {
   bytes pubkey = 1;
-  uint64 withdrawal_shard = 2;
-  bytes withdrawal_address = 3;
-  bytes randao_commitment = 4;
+  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  bytes withdrawal_credentials = 2;
+  bytes randao_commitment_hash32 = 3;
+  uint64 randao_skips = 4;
+  // Balance in Gwei
   uint64 balance = 5;
-  uint64 status = 6;
-  uint64 exit_slot = 7;
-  uint64 randao_last_change = 8;
+  // Possible validator status code:
+  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+  enum ValiatorStateCode {
+    pending_activation = 0;
+    active = 1;
+    exited_without_penalty = 2;
+    exited_with_penalty = 3;
+  }
+  ValiatorStateCode status_code = 6;
+  uint64 latest_status_change_slot = 7;
+  uint64 exit_count = 8;
+  uint64 status = 9 [deprecated=true]; // Replaced by status_code
 }
 
 message ShardReassignmentRecord {
@@ -144,7 +155,7 @@ message BeaconBlock {
   // for i in the range of 0 to 31.
   repeated bytes ancestor_hash32s = 4; 
   bytes state_root_hash32 = 5;
-  // TODO: attestations should be a list of attestionRecords according to spec
+  // TODO(781): attestations should be a list of attestionRecords according to spec
   // at ethereum/eth2.0-specs@11d4473. Update this field to AttestionRecord
   // and remove the AggregatedAttestion message.
   repeated AggregatedAttestation attestations = 6 [deprecated=true];
