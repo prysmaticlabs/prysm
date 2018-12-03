@@ -65,7 +65,11 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 			PendingAttestations:        []*pb.AggregatedAttestation{},
 			LatestBlockHash32S:         latestBlockHashes,
 			RandaoMix:                  make([]byte, 0, 32),
-			ForkData:                   &pb.ForkData{},
+			ForkData: &pb.ForkData{
+				PreForkVersion:  params.BeaconConfig().InitialForkVersion,
+				PostForkVersion: params.BeaconConfig().InitialForkVersion,
+				ForkSlot:        params.BeaconConfig().InitialForkSlot,
+			},
 		},
 	}, nil
 }
