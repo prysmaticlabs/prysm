@@ -43,7 +43,7 @@ func NewStateTransition(
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
-	newRandao := createRandaoMix(block.RandaoReveal(), st.RandaoMix())
+	newRandao := createRandaoMix(block.RandaoRevealHash32(), st.RandaoMix())
 	newState.SetRandaoMix(newRandao[:])
 
 	// The changes below are only applied if this is a cycle transition.

@@ -127,8 +127,8 @@ func TestUpdateChainHead(t *testing.T) {
 	}
 
 	b2 := types.NewBlock(&pb.BeaconBlock{
-		Slot:           1,
-		AncestorHashes: [][]byte{bHash[:]},
+		Slot:            1,
+		AncestorHash32S: [][]byte{bHash[:]},
 	})
 	b2Hash, err := b2.Hash()
 	if err != nil {

@@ -326,7 +326,7 @@ func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) (
 	existing := b.data.LatestBlockHash32S
 	update := existing[distance:]
 	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
-		update = append(update, block.AncestorHashes()[0])
+		update = append(update, block.AncestorHash32S()[0])
 	}
 	return update, nil
 }

@@ -172,7 +172,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				ParentHash: latestBlockHash[:],
 				// TODO(#511): Fix to be the actual, timebased slot number instead.
 				SlotNumber:         latestBeaconBlock.GetSlot() + 1,
-				RandaoReveal:       []byte{},
+				RandaoRevealHash32: []byte{},
 				AttestationBitmask: bitmask,
 				Timestamp:          ptypes.TimestampNow(),
 			}
