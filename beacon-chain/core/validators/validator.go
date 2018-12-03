@@ -225,8 +225,6 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
-	withdrawalShard uint64,
-	withdrawalAddr []byte,
 	randaoCommitment []byte,
 	status uint64) []*pb.ValidatorRecord {
 
