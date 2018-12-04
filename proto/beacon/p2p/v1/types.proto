@@ -1,4 +1,3 @@
-
 syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
@@ -165,4 +164,12 @@ message BeaconBlock {
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
   google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
+}
+
+message DepositParametersRecord {
+  bytes pubkey = 1;
+  bytes proof_of_possession = 2; // Type of ['uint384']??
+  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  bytes withdrawal_credentials = 3;
+  bytes randao_commitment_hash32 = 4;
 }
