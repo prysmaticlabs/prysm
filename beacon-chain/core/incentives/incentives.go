@@ -30,7 +30,7 @@ func TallyVoteBalances(
 
 	blockVoteBalance := blockVote.VoteTotalDeposit
 	voterIndices := blockVote.VoterIndices
-	newValidators := CalculateRewards(
+	newValidatorRegistry := CalculateRewards(
 		voterIndices,
 		activeValidatorIndices,
 		validators,
@@ -39,7 +39,7 @@ func TallyVoteBalances(
 		timeSinceFinality,
 	)
 
-	return blockVoteBalance, newValidators
+	return blockVoteBalance, newValidatorRegistry
 }
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
@@ -55,7 +55,7 @@ func CalculateRewards(
 	timeSinceFinality uint64,
 ) []*pb.ValidatorRecord {
 
-	newValidatorSet := v.CopyValidators(validators)
+	newValidatorSet := v.CopyValidatorRegistry(validators)
 
 	// Calculate the reward and penalty quotients for the validator set.
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
@@ -117,7 +117,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalBalance uint64,
 	voteBalance uint64,
 ) ([]*pb.ValidatorRecord, error) {
-	newValidatorSet := v.CopyValidators(validators)
+	newValidatorSet := v.CopyValidatorRegistry(validators)
 
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
 	for _, attesterIndex := range attesterIndices {

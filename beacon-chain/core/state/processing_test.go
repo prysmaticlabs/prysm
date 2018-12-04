@@ -112,20 +112,20 @@ func TestProcessSpecialRecords(t *testing.T) {
 		validators[i] = &pb.ValidatorRecord{Status: uint64(params.Active)}
 	}
 
-	newValidators, err := ProcessSpecialRecords(99, validators, specialRecords)
+	newValidatorRegistry, err := ProcessSpecialRecords(99, validators, specialRecords)
 	if err != nil {
 		t.Fatalf("Failed to call process special records %v", err)
 	}
-	if newValidators[4].Status != uint64(params.PendingExit) {
+	if newValidatorRegistry[4].Status != uint64(params.PendingExit) {
 		t.Error("Validator 4 status is not PendingExit")
 	}
-	if newValidators[4].LatestStatusChangeSlot != 99 {
+	if newValidatorRegistry[4].LatestStatusChangeSlot != 99 {
 		t.Error("Validator 4 last status change slot is not 99")
 	}
-	if newValidators[5].Status != uint64(params.PendingExit) {
+	if newValidatorRegistry[5].Status != uint64(params.PendingExit) {
 		t.Error("Validator 5 status is not PendingExit")
 	}
-	if newValidators[5].LatestStatusChangeSlot != 99 {
+	if newValidatorRegistry[5].LatestStatusChangeSlot != 99 {
 		t.Error("Validator 5 last status change slot is not 99")
 	}
 }

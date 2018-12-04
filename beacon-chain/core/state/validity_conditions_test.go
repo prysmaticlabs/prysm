@@ -43,9 +43,9 @@ func TestBlockValidity(t *testing.T) {
 	}
 	randaoPreCommit := [32]byte{'A'}
 	hashedRandaoPreCommit := hashutil.Hash(randaoPreCommit[:])
-	validators := beaconState.Validators()
+	validators := beaconState.ValidatorRegistry()
 	validators[1].RandaoCommitmentHash32 = hashedRandaoPreCommit[:]
-	beaconState.SetValidators(validators)
+	beaconState.SetValidatorRegistry(validators)
 	beaconState.SetLatestBlockHashes(recentBlockHashes)
 
 	b := types.NewBlock(&pb.BeaconBlock{
