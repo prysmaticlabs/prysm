@@ -14,7 +14,7 @@ func TestInitGenesisJsonFailure(t *testing.T) {
 	pwd, _ := os.Getwd()
 	fnamePath := pwd + fname
 
-	_, err := InitialValidatorsFromJSON(fnamePath)
+	_, err := InitialValidatorRegistryFromJSON(fnamePath)
 	if err == nil {
 		t.Fatalf("genesis.json should have failed %v", err)
 	}
@@ -31,7 +31,7 @@ func TestInitGenesisJson(t *testing.T) {
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,
 		LastFinalizedSlot:          99,
-		Validators: []*pb.ValidatorRecord{
+		ValidatorRegistry: []*pb.ValidatorRecord{
 			{Pubkey: []byte{}, Balance: 32, Status: uint64(params.Active)},
 		},
 	}
@@ -47,7 +47,7 @@ func TestInitGenesisJson(t *testing.T) {
 		t.Fatalf("can't marshal file %v", err)
 	}
 
-	validators, err := InitialValidatorsFromJSON(fnamePath)
+	validators, err := InitialValidatorRegistryFromJSON(fnamePath)
 	if err != nil {
 		t.Fatalf("genesis.json failed %v", err)
 	}
