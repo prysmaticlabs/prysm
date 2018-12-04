@@ -86,7 +86,7 @@ message AttestationData {
 message ValidatorRecord {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
-  bytes withdrawal_credentials = 2;
+  bytes withdrawal_credentials = 2; // TODO(781): this is hash32, rename with suffix _hash32
   bytes randao_commitment_hash32 = 3;
   uint64 randao_skips = 4;
   // Balance in Gwei
@@ -170,6 +170,6 @@ message DepositParametersRecord {
   bytes pubkey = 1;
   bytes proof_of_possession = 2; // Type of ['uint384']??
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
-  bytes withdrawal_credentials = 3;
+  bytes withdrawal_credentials_hash32 = 3;
   bytes randao_commitment_hash32 = 4;
 }
