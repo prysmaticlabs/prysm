@@ -24,16 +24,16 @@ func NewBeaconState(data *pb.BeaconState) *BeaconState {
 }
 
 // NewGenesisBeaconState initializes the beacon chain state for slot 0.
-func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconState, error) {
+func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*BeaconState, error) {
 	// We seed the genesis state with a bunch of validators to
 	// bootstrap the system.
 	var err error
-	if genesisValidators == nil {
-		genesisValidators = v.InitialValidators()
+	if genesisValidatorRegistry == nil {
+		genesisValidatorRegistry = v.InitialValidatorRegistry()
 
 	}
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(genesisValidators)
+	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(genesisValidatorRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -54,42 +54,44 @@ func NewGenesisBeaconState(genesisValidators []*pb.ValidatorRecord) (*BeaconStat
 
 	return &BeaconState{
 		data: &pb.BeaconState{
-			LastStateRecalculationSlot: 0,
-			JustifiedStreak:            0,
-			LastJustifiedSlot:          0,
-			LastFinalizedSlot:          0,
-			ValidatorSetChangeSlot:     0,
-			Crosslinks:                 crosslinks,
-			Validators:                 genesisValidators,
-			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
-			PendingAttestations:        []*pb.AggregatedAttestation{},
-			LatestBlockHash32S:         latestBlockHashes,
-			RandaoMix:                  make([]byte, 0, 32),
-			ForkData:                   &pb.ForkData{},
+			LastStateRecalculationSlot:      0,
+			JustifiedStreak:                 0,
+			LastJustifiedSlot:               0,
+			LastFinalizedSlot:               0,
+			ValidatorRegistryLastChangeSlot: 0,
+			LatestCrosslinks:                crosslinks,
+			ValidatorRegistry:               genesisValidatorRegistry,
+			ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
+			PendingAttestations:             []*pb.AggregatedAttestation{},
+			LatestBlockHash32S:              latestBlockHashes,
+			RandaoMix:                       make([]byte, 0, 32),
+			ForkData: &pb.ForkData{
+				PreForkVersion:  params.BeaconConfig().InitialForkVersion,
+				PostForkVersion: params.BeaconConfig().InitialForkVersion,
+				ForkSlot:        params.BeaconConfig().InitialForkSlot,
+			},
 		},
 	}, nil
 }
 
 // CopyState returns a deep copy of the current state.
 func (b *BeaconState) CopyState() *BeaconState {
-	crosslinks := make([]*pb.CrosslinkRecord, len(b.Crosslinks()))
-	for index, crossLink := range b.Crosslinks() {
+	crosslinks := make([]*pb.CrosslinkRecord, len(b.LatestCrosslinks()))
+	for index, crossLink := range b.LatestCrosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
 			ShardBlockHash: crossLink.GetShardBlockHash(),
 			Slot:           crossLink.GetSlot(),
 		}
 	}
 
-	validators := make([]*pb.ValidatorRecord, len(b.Validators()))
-	for index, validator := range b.Validators() {
+	validators := make([]*pb.ValidatorRecord, len(b.ValidatorRegistry()))
+	for index, validator := range b.ValidatorRegistry() {
 		validators[index] = &pb.ValidatorRecord{
-			Pubkey:            validator.GetPubkey(),
-			WithdrawalShard:   validator.GetWithdrawalShard(),
-			WithdrawalAddress: validator.GetWithdrawalAddress(),
-			RandaoCommitment:  validator.GetRandaoCommitment(),
-			Balance:           validator.GetBalance(),
-			Status:            validator.GetStatus(),
-			ExitSlot:          validator.GetExitSlot(),
+			Pubkey:                 validator.GetPubkey(),
+			RandaoCommitmentHash32: validator.GetRandaoCommitmentHash32(),
+			Balance:                validator.GetBalance(),
+			Status:                 validator.GetStatus(),
+			LatestStatusChangeSlot: validator.GetLatestStatusChangeSlot(),
 		}
 	}
 
@@ -108,16 +110,16 @@ func (b *BeaconState) CopyState() *BeaconState {
 	}
 
 	newState := BeaconState{&pb.BeaconState{
-		LastStateRecalculationSlot: b.LastStateRecalculationSlot(),
-		JustifiedStreak:            b.JustifiedStreak(),
-		LastJustifiedSlot:          b.LastJustifiedSlot(),
-		LastFinalizedSlot:          b.LastFinalizedSlot(),
-		ValidatorSetChangeSlot:     b.ValidatorSetChangeSlot(),
-		Crosslinks:                 crosslinks,
-		Validators:                 validators,
-		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
-		DepositsPenalizedInPeriod:  b.DepositsPenalizedInPeriod(),
-		ForkData:                   b.ForkData(),
+		LastStateRecalculationSlot:      b.LastStateRecalculationSlot(),
+		JustifiedStreak:                 b.JustifiedStreak(),
+		LastJustifiedSlot:               b.LastJustifiedSlot(),
+		LastFinalizedSlot:               b.LastFinalizedSlot(),
+		ValidatorRegistryLastChangeSlot: b.ValidatorRegistryLastChangeSlot(),
+		LatestCrosslinks:                crosslinks,
+		ValidatorRegistry:               validators,
+		ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
+		DepositsPenalizedInPeriod:       b.DepositsPenalizedInPeriod(),
+		ForkData:                        b.ForkData(),
 	}}
 
 	return &newState
@@ -143,18 +145,18 @@ func (b *BeaconState) Hash() ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
-// ValidatorSetChangeSlot returns the slot of last time validator set changes.
-func (b *BeaconState) ValidatorSetChangeSlot() uint64 {
-	return b.data.ValidatorSetChangeSlot
+// ValidatorRegistryLastChangeSlot returns the slot of last time validator set changes.
+func (b *BeaconState) ValidatorRegistryLastChangeSlot() uint64 {
+	return b.data.ValidatorRegistryLastChangeSlot
 }
 
 // IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
 // validator shuffle will occur.
 func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
-	if b.LastFinalizedSlot() <= b.ValidatorSetChangeSlot() {
+	if b.LastFinalizedSlot() <= b.ValidatorRegistryLastChangeSlot() {
 		return false
 	}
-	if slotNumber-b.ValidatorSetChangeSlot() < params.BeaconConfig().MinValidatorSetChangeInterval {
+	if slotNumber-b.ValidatorRegistryLastChangeSlot() < params.BeaconConfig().MinValidatorSetChangeInterval {
 		return false
 	}
 
@@ -165,9 +167,9 @@ func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
 		}
 	}
 
-	crosslinks := b.Crosslinks()
+	crosslinks := b.LatestCrosslinks()
 	for shard := range shardProcessed {
-		if b.ValidatorSetChangeSlot() >= crosslinks[shard].Slot {
+		if b.ValidatorRegistryLastChangeSlot() >= crosslinks[shard].Slot {
 			return false
 		}
 	}
@@ -185,14 +187,14 @@ func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray 
 	return b.data.ShardAndCommitteesForSlots
 }
 
-// Crosslinks returns the cross link records of the all the shards.
-func (b *BeaconState) Crosslinks() []*pb.CrosslinkRecord {
-	return b.data.Crosslinks
+// LatestCrosslinks returns the cross link records of the all the shards.
+func (b *BeaconState) LatestCrosslinks() []*pb.CrosslinkRecord {
+	return b.data.LatestCrosslinks
 }
 
-// Validators returns list of validators.
-func (b *BeaconState) Validators() []*pb.ValidatorRecord {
-	return b.data.Validators
+// ValidatorRegistry returns list of validators.
+func (b *BeaconState) ValidatorRegistry() []*pb.ValidatorRecord {
+	return b.data.ValidatorRegistry
 }
 
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.
@@ -328,14 +330,14 @@ func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) (
 	existing := b.data.LatestBlockHash32S
 	update := existing[distance:]
 	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
-		update = append(update, block.AncestorHashes()[0])
+		update = append(update, block.AncestorHash32S()[0])
 	}
 	return update, nil
 }
 
 // SetCrossLinks updates the inner proto's cross link records.
 func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
-	b.data.Crosslinks = crossLinks
+	b.data.LatestCrosslinks = crossLinks
 }
 
 // SetDepositsPenalizedInPeriod updates the inner proto's penalized deposits.
@@ -383,14 +385,14 @@ func (b *BeaconState) SetShardAndCommitteesForSlots(shardAndCommitteesForSlot []
 	b.data.ShardAndCommitteesForSlots = shardAndCommitteesForSlot
 }
 
-// SetValidators updates the state's internal validator set.
-func (b *BeaconState) SetValidators(validators []*pb.ValidatorRecord) {
-	b.data.Validators = validators
+// SetValidatorRegistry updates the state's internal validator set.
+func (b *BeaconState) SetValidatorRegistry(validators []*pb.ValidatorRecord) {
+	b.data.ValidatorRegistry = validators
 }
 
-// SetValidatorSetChangeSlot updates the inner proto's validator set change slot.
-func (b *BeaconState) SetValidatorSetChangeSlot(slot uint64) {
-	b.data.ValidatorSetChangeSlot = slot
+// SetValidatorRegistryLastChangeSlot updates the inner proto's validator set change slot.
+func (b *BeaconState) SetValidatorRegistryLastChangeSlot(slot uint64) {
+	b.data.ValidatorRegistryLastChangeSlot = slot
 }
 
 func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {

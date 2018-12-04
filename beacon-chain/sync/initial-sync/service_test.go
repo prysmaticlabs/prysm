@@ -82,10 +82,10 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(1),
-		StateRoot:      genericHash,
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		AncestorHash32S:               [][]byte{genericHash},
+		Slot:                          uint64(1),
+		StateRootHash32:               genericHash,
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{Block: block}
@@ -100,10 +100,10 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	<-exitRoutine
 
 	var hash [32]byte
-	copy(hash[:], blockResponse.Block.StateRoot)
+	copy(hash[:], blockResponse.Block.StateRootHash32)
 
-	if hash != ss.initialStateRoot {
-		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.StateRoot)
+	if hash != ss.initialStateRootHash32 {
+		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.StateRootHash32)
 	}
 
 	hook.Reset()
@@ -154,17 +154,17 @@ func TestSavingBlocksInSync(t *testing.T) {
 		BeaconState: incorrectState,
 	}
 
-	beaconStateRoot, err := types.NewBeaconState(beaconState).Hash()
+	beaconStateRootHash32, err := types.NewBeaconState(beaconState).Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of state: %v", err)
 	}
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
-			StateRoot:      beaconStateRoot[:],
+			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+			AncestorHash32S:               [][]byte{genericHash},
+			Slot:                          Slot,
+			StateRootHash32:               beaconStateRootHash32[:],
 		}
 
 		blockResponse := &pb.BeaconBlockResponse{
@@ -195,10 +195,10 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if beaconStateRoot != ss.initialStateRoot {
+	if beaconStateRootHash32 != ss.initialStateRootHash32 {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("state hash not updated to: %#x instead it is %#x", br.Block.StateRoot,
-			ss.initialStateRoot)
+		t.Fatalf("state hash not updated to: %#x instead it is %#x", br.Block.StateRootHash32,
+			ss.initialStateRootHash32)
 	}
 
 	msg1 = getBlockResponseMsg(30)
@@ -257,16 +257,16 @@ func TestDelayChan(t *testing.T) {
 		BeaconState: beaconState,
 	}
 
-	beaconStateRoot, err := types.NewBeaconState(stateResponse.BeaconState).Hash()
+	beaconStateRootHash32, err := types.NewBeaconState(stateResponse.BeaconState).Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of state: %v", err)
 	}
 
 	block := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3},
-		AncestorHashes: [][]byte{genericHash},
-		Slot:           uint64(1),
-		StateRoot:      beaconStateRoot[:],
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		AncestorHash32S:               [][]byte{genericHash},
+		Slot:                          uint64(1),
+		StateRootHash32:               beaconStateRootHash32[:],
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{
@@ -383,10 +383,10 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	getBlockResponseMsg := func(Slot uint64) (p2p.Message, [32]byte) {
 
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
-			StateRoot:      nil,
+			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+			AncestorHash32S:               [][]byte{genericHash},
+			Slot:                          Slot,
+			StateRootHash32:               nil,
 		}
 
 		blockResponse := &pb.BeaconBlockResponse{
@@ -464,10 +464,10 @@ func TestRequestBatchedBlocks(t *testing.T) {
 	getBlockResponse := func(Slot uint64) (*pb.BeaconBlockResponse, [32]byte) {
 
 		block := &pb.BeaconBlock{
-			PowChainRef:    []byte{1, 2, 3},
-			AncestorHashes: [][]byte{genericHash},
-			Slot:           Slot,
-			StateRoot:      nil,
+			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+			AncestorHash32S:               [][]byte{genericHash},
+			Slot:                          Slot,
+			StateRootHash32:               nil,
 		}
 
 		blockResponse := &pb.BeaconBlockResponse{

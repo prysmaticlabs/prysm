@@ -28,11 +28,11 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 		// It is assumed when data==nil, a genesis block will be returned.
 		return &Block{
 			data: &pb.BeaconBlock{
-				AncestorHashes: ancestorHashes,
-				RandaoReveal:   []byte{0},
-				PowChainRef:    []byte{0},
-				StateRoot:      []byte{0},
-				Specials:       []*pb.SpecialRecord{},
+				AncestorHash32S:               ancestorHashes,
+				RandaoRevealHash32:            []byte{0},
+				CandidatePowReceiptRootHash32: []byte{0},
+				StateRootHash32:               []byte{0},
+				Specials:                      []*pb.SpecialRecord{},
 			},
 		}
 	}
@@ -47,7 +47,7 @@ func NewGenesisBlock(stateRoot [32]byte) *Block {
 	protoGenesis, _ := ptypes.TimestampProto(params.BeaconConfig().GenesisTime)
 	gb := NewBlock(nil)
 	gb.data.Timestamp = protoGenesis
-	gb.data.StateRoot = stateRoot[:]
+	gb.data.StateRootHash32 = stateRoot[:]
 	return gb
 }
 
@@ -59,7 +59,7 @@ func (b *Block) SlotNumber() uint64 {
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.AncestorHashes[0])
+	copy(h[:], b.data.AncestorHash32S[0])
 	return h
 }
 
@@ -87,9 +87,9 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
-// AncestorHashes of the block.
-func (b *Block) AncestorHashes() [][]byte {
-	return b.data.AncestorHashes
+// AncestorHash32S of the block.
+func (b *Block) AncestorHash32S() [][]byte {
+	return b.data.AncestorHash32S
 }
 
 // AttestationCount returns the number of attestations.
@@ -102,22 +102,22 @@ func (b *Block) Attestations() []*pb.AggregatedAttestation {
 	return b.data.Attestations
 }
 
-// PowChainRef returns a keccak256 hash corresponding to a PoW chain block.
-func (b *Block) PowChainRef() common.Hash {
-	return common.BytesToHash(b.data.PowChainRef)
+// CandidatePowReceiptRootHash32 returns a keccak256 hash corresponding to a PoW chain block.
+func (b *Block) CandidatePowReceiptRootHash32() common.Hash {
+	return common.BytesToHash(b.data.CandidatePowReceiptRootHash32)
 }
 
-// RandaoReveal returns the blake2b randao hash.
-func (b *Block) RandaoReveal() [32]byte {
+// RandaoRevealHash32 returns the blake2b randao hash.
+func (b *Block) RandaoRevealHash32() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.RandaoReveal)
+	copy(h[:], b.data.RandaoRevealHash32)
 	return h
 }
 
-// StateRoot returns the state hash.
-func (b *Block) StateRoot() [32]byte {
+// StateRootHash32 returns the state hash.
+func (b *Block) StateRootHash32() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.StateRoot)
+	copy(h[:], b.data.StateRootHash32)
 	return h
 }
 
@@ -126,8 +126,8 @@ func (b *Block) StateRoot() [32]byte {
 func (b *Block) IsRandaoValid(stateRandao []byte) bool {
 	var h [32]byte
 	copy(h[:], stateRandao)
-	blockRandaoReveal := b.RandaoReveal()
-	return hashutil.Hash(blockRandaoReveal[:]) == h
+	blockRandaoRevealHash32 := b.RandaoRevealHash32()
+	return hashutil.Hash(blockRandaoRevealHash32[:]) == h
 }
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.

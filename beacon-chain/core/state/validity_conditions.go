@@ -56,17 +56,17 @@ func IsValidBlock(
 		return fmt.Errorf("could not get proposer index: %v", err)
 	}
 
-	stateProposerRandaoSeed := beaconState.Validators()[proposerIndex].RandaoCommitment
-	blockRandaoReveal := block.RandaoReveal()
+	stateProposerRandaoSeed := beaconState.ValidatorRegistry()[proposerIndex].RandaoCommitmentHash32
+	blockRandaoRevealHash32 := block.RandaoRevealHash32()
 
 	// If this is a block created by the simulator service (while in development
 	// mode), we skip the RANDAO validation condition.
-	isSimulatedBlock := bytes.Equal(blockRandaoReveal[:], params.BeaconConfig().SimulatedBlockRandao[:])
+	isSimulatedBlock := bytes.Equal(blockRandaoRevealHash32[:], params.BeaconConfig().SimulatedBlockRandao[:])
 	if !isSimulatedBlock && !block.IsRandaoValid(stateProposerRandaoSeed) {
 		return fmt.Errorf(
 			"pre-image of %#x is %#x, Got: %#x",
-			blockRandaoReveal[:],
-			hashutil.Hash(blockRandaoReveal[:]),
+			blockRandaoRevealHash32[:],
+			hashutil.Hash(blockRandaoRevealHash32[:]),
 			stateProposerRandaoSeed,
 		)
 	}

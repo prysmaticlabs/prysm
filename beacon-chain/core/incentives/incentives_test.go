@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func newValidators() []*pb.ValidatorRecord {
+func newValidatorRegistry() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
 		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)}
@@ -19,7 +19,7 @@ func newValidators() []*pb.ValidatorRecord {
 }
 
 func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
-	validators := newValidators()
+	validators := newValidatorRegistry()
 	defaultBalance := uint64(32 * 1e9)
 
 	participatedDeposit := 4 * defaultBalance
@@ -29,10 +29,10 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	timeSinceFinality := uint64(5)
 
 	data := &pb.BeaconState{
-		Validators:             validators,
-		ValidatorSetChangeSlot: 1,
-		LastJustifiedSlot:      4,
-		LastFinalizedSlot:      3,
+		ValidatorRegistry:               validators,
+		ValidatorRegistryLastChangeSlot: 1,
+		LastJustifiedSlot:               4,
+		LastFinalizedSlot:               3,
 	}
 
 	activeValidatorIndices := make([]uint32, 0, len(validators))
@@ -42,10 +42,10 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		}
 	}
 
-	rewardedValidators := CalculateRewards(
+	rewardedValidatorRegistry := CalculateRewards(
 		[]uint32{2, 3, 6, 9},
 		activeValidatorIndices,
-		data.Validators,
+		data.ValidatorRegistry,
 		totalDeposit,
 		participatedDeposit,
 		timeSinceFinality,
@@ -53,21 +53,21 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	expectedBalance := defaultBalance - defaultBalance/uint64(rewQuotient)
 
-	if rewardedValidators[0].Balance != expectedBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
+	if rewardedValidatorRegistry[0].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[0].Balance, expectedBalance)
 	}
 
 	expectedBalance = uint64(int64(defaultBalance) + int64(defaultBalance/rewQuotient)*(2*int64(participatedDeposit)-int64(totalDeposit))/int64(totalDeposit))
 
-	if rewardedValidators[6].Balance != expectedBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[6].Balance, expectedBalance)
+	if rewardedValidatorRegistry[6].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[6].Balance, expectedBalance)
 	}
 
-	if rewardedValidators[9].Balance != expectedBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[9].Balance, expectedBalance)
+	if rewardedValidatorRegistry[9].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[9].Balance, expectedBalance)
 	}
 
-	validators = newValidators()
+	validators = newValidatorRegistry()
 	timeSinceFinality = 200
 
 	activeValidatorIndices = make([]uint32, 0, len(validators))
@@ -77,7 +77,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		}
 	}
 
-	rewardedValidators = CalculateRewards(
+	rewardedValidatorRegistry = CalculateRewards(
 		[]uint32{1, 2, 7, 8},
 		activeValidatorIndices,
 		validators,
@@ -85,22 +85,22 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 		participatedDeposit,
 		timeSinceFinality)
 
-	if rewardedValidators[1].Balance != defaultBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[1].Balance, defaultBalance)
+	if rewardedValidatorRegistry[1].Balance != defaultBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[1].Balance, defaultBalance)
 	}
 
-	if rewardedValidators[7].Balance != defaultBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[7].Balance, defaultBalance)
+	if rewardedValidatorRegistry[7].Balance != defaultBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[7].Balance, defaultBalance)
 	}
 
 	expectedBalance = defaultBalance - (defaultBalance/rewQuotient + defaultBalance*timeSinceFinality/penaltyQuotient)
 
-	if rewardedValidators[0].Balance != expectedBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[0].Balance, expectedBalance)
+	if rewardedValidatorRegistry[0].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[0].Balance, expectedBalance)
 	}
 
-	if rewardedValidators[9].Balance != expectedBalance {
-		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidators[9].Balance, expectedBalance)
+	if rewardedValidatorRegistry[9].Balance != expectedBalance {
+		t.Fatalf("validator balance not updated correctly: %d, %d", rewardedValidatorRegistry[9].Balance, expectedBalance)
 	}
 
 }

@@ -44,6 +44,7 @@ type BeaconChainConfig struct {
 	MaxValidatorChurnQuotient               uint64         // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 	POWContractMerkleTreeDepth              uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
 	InitialForkVersion                      uint64         // InitialForkVersion is used to track fork version between state transitions.
+	InitialForkSlot                         uint64         // InitialForkSlot is used to initialize the fork slot in the initial Beacon state.
 	SimulatedBlockRandao                    [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
 	ModuloBias                              uint64         // ModuloBias is the upper bound of validator shuffle function. Can shuffle validator lists up to that size.
 	BootstrappedValidatorsCount             uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
@@ -75,6 +76,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardQuotient:            uint64(32768),
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
+	InitialForkSlot:               0,
 	ModuloBias:                    16777216 - 1,
 	BootstrappedValidatorsCount:   16384,
 	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
@@ -99,6 +101,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	BaseRewardQuotient:            uint64(32768),
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
+	InitialForkSlot:               defaultBeaconConfig.InitialForkSlot,
 	ModuloBias:                    16777216 - 1,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 	SyncPollingInterval:           2 * 4, // Query nodes over the network every 4 slots for sync status.

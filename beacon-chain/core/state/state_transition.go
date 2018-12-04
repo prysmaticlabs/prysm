@@ -30,7 +30,7 @@ func NewStateTransition(
 	justifiedSlot := st.LastJustifiedSlot()
 	finalizedSlot := st.LastFinalizedSlot()
 	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
-	newState.SetValidators(v.CopyValidators(newState.Validators()))
+	newState.SetValidatorRegistry(v.CopyValidatorRegistry(newState.ValidatorRegistry()))
 
 	newState.ClearAttestations(st.LastStateRecalculationSlot())
 	// Derive the new set of recent block hashes.
@@ -43,7 +43,7 @@ func NewStateTransition(
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
-	newRandao := createRandaoMix(block.RandaoReveal(), st.RandaoMix())
+	newRandao := createRandaoMix(block.RandaoRevealHash32(), st.RandaoMix())
 	newState.SetRandaoMix(newRandao[:])
 
 	// The changes below are only applied if this is a cycle transition.
@@ -65,13 +65,13 @@ func NewStateTransition(
 			blockVoteBalance, validators := incentives.TallyVoteBalances(
 				common.BytesToHash(blockHash),
 				blockVoteCache,
-				newState.Validators(),
-				v.ActiveValidatorIndices(newState.Validators()),
-				v.TotalActiveValidatorDeposit(newState.Validators()),
+				newState.ValidatorRegistry(),
+				v.ActiveValidatorIndices(newState.ValidatorRegistry()),
+				v.TotalActiveValidatorDeposit(newState.ValidatorRegistry()),
 				timeSinceFinality,
 			)
 
-			newState.SetValidators(validators)
+			newState.SetValidatorRegistry(validators)
 
 			justifiedSlot, finalizedSlot, justifiedStreak = FinalizeAndJustifySlots(
 				slot,
@@ -79,7 +79,7 @@ func NewStateTransition(
 				finalizedSlot,
 				justifiedStreak,
 				blockVoteBalance,
-				v.TotalActiveValidatorDeposit(st.Validators()),
+				v.TotalActiveValidatorDeposit(st.ValidatorRegistry()),
 			)
 		}
 
@@ -99,14 +99,14 @@ func NewStateTransition(
 		newState.SetJustifiedStreak(justifiedStreak)
 
 		// Exit the validators when their balance fall below min online deposit size.
-		newState.SetValidators(v.CheckValidatorMinDeposit(newState.Validators(), block.SlotNumber()))
+		newState.SetValidatorRegistry(v.CheckValidatorMinDeposit(newState.ValidatorRegistry(), block.SlotNumber()))
 
 		// Entering new validator set change transition.
 		if newState.IsValidatorSetChange(block.SlotNumber()) {
-			newState.SetValidatorSetChangeSlot(newState.LastStateRecalculationSlot())
+			newState.SetValidatorRegistryLastChangeSlot(newState.LastStateRecalculationSlot())
 			shardAndCommitteesForSlots, err := validatorSetRecalculations(
 				newState.ShardAndCommitteesForSlots(),
-				newState.Validators(),
+				newState.ValidatorRegistry(),
 				block.ParentHash(),
 			)
 			if err != nil {
@@ -116,7 +116,7 @@ func NewStateTransition(
 
 			period := block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod
 			totalPenalties := newState.PenalizedETH(period)
-			newState.SetValidators(v.ChangeValidators(block.SlotNumber(), totalPenalties, newState.Validators()))
+			newState.SetValidatorRegistry(v.ChangeValidatorRegistry(block.SlotNumber(), totalPenalties, newState.ValidatorRegistry()))
 		}
 	}
 	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + 1)
@@ -132,7 +132,7 @@ func crossLinkCalculations(
 	currentSlot uint64,
 ) ([]*pb.CrosslinkRecord, error) {
 	slot := st.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
-	crossLinkRecords := st.Crosslinks()
+	crossLinkRecords := st.LatestCrosslinks()
 	for _, attestation := range pendingAttestations {
 		shardCommittees, err := v.GetShardAndCommitteesForSlot(
 			st.ShardAndCommitteesForSlots(),
@@ -148,7 +148,7 @@ func crossLinkCalculations(
 			return nil, err
 		}
 
-		totalBalance, voteBalance, err := v.VotedBalanceInAttestation(st.Validators(), indices, attestation)
+		totalBalance, voteBalance, err := v.VotedBalanceInAttestation(st.ValidatorRegistry(), indices, attestation)
 		if err != nil {
 			return nil, err
 		}
@@ -158,16 +158,16 @@ func crossLinkCalculations(
 			currentSlot,
 			indices,
 			attestation,
-			st.Validators(),
-			v.TotalActiveValidatorDeposit(st.Validators()),
+			st.ValidatorRegistry(),
+			v.TotalActiveValidatorDeposit(st.ValidatorRegistry()),
 			totalBalance,
 			voteBalance,
 		)
 		if err != nil {
 			return nil, err
 		}
-		st.SetValidators(newValidatorSet)
-		crossLinkRecords = UpdateCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
+		st.SetValidatorRegistry(newValidatorSet)
+		crossLinkRecords = UpdateLatestCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
 	}
 	return crossLinkRecords, nil
 }
@@ -183,7 +183,7 @@ func validatorSetRecalculations(
 	crosslinkLastShard := shardAndCommittesForSlots[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].Shard
 	crosslinkNextShard := (crosslinkLastShard + 1) % params.BeaconConfig().ShardCount
 
-	newShardCommitteeArray, err := v.ShuffleValidatorsToCommittees(
+	newShardCommitteeArray, err := v.ShuffleValidatorRegistryToCommittees(
 		seed,
 		validators,
 		crosslinkNextShard,
