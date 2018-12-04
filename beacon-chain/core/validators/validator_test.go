@@ -47,8 +47,8 @@ func TestHasVoted(t *testing.T) {
 	}
 }
 
-func TestInitialValidators(t *testing.T) {
-	validators := InitialValidators()
+func TestInitialValidatorRegistry(t *testing.T) {
+	validators := InitialValidatorRegistry()
 	for _, validator := range validators {
 		if validator.GetBalance() != params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei {
 			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
@@ -308,14 +308,14 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 
 }
 
-func TestAddValidators(t *testing.T) {
-	var existingValidators []*pb.ValidatorRecord
+func TestAddValidatorRegistry(t *testing.T) {
+	var existingValidatorRegistry []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		existingValidators = append(existingValidators, &pb.ValidatorRecord{Status: uint64(params.Active)})
+		existingValidatorRegistry = append(existingValidatorRegistry, &pb.ValidatorRecord{Status: uint64(params.Active)})
 	}
 
 	// Create a new validator.
-	validators := AddPendingValidator(existingValidators, []byte{'A'}, []byte{'C'}, uint64(params.PendingActivation))
+	validators := AddPendingValidator(existingValidatorRegistry, []byte{'A'}, []byte{'C'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 10.
 	if validators[10].Status != uint64(params.PendingActivation) {
@@ -326,8 +326,8 @@ func TestAddValidators(t *testing.T) {
 	}
 
 	// Set validator 6 to withdrawn
-	existingValidators[5].Status = uint64(params.Withdrawn)
-	validators = AddPendingValidator(existingValidators, []byte{'E'}, []byte{'F'}, uint64(params.PendingActivation))
+	existingValidatorRegistry[5].Status = uint64(params.Withdrawn)
+	validators = AddPendingValidator(existingValidatorRegistry, []byte{'E'}, []byte{'F'}, uint64(params.PendingActivation))
 
 	// The newly added validator should be indexed 5.
 	if validators[5].Status != uint64(params.PendingActivation) {
@@ -338,8 +338,8 @@ func TestAddValidators(t *testing.T) {
 	}
 }
 
-func TestChangeValidators(t *testing.T) {
-	existingValidators := []*pb.ValidatorRecord{
+func TestChangeValidatorRegistry(t *testing.T) {
+	existingValidatorRegistry := []*pb.ValidatorRecord{
 		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
 		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
 		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
@@ -356,7 +356,7 @@ func TestChangeValidators(t *testing.T) {
 		{Pubkey: []byte{14}, Status: uint64(params.Active), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
 	}
 
-	validators := ChangeValidators(params.BeaconConfig().MinWithdrawalPeriod+1, 50*10e9, existingValidators)
+	validators := ChangeValidatorRegistry(params.BeaconConfig().MinWithdrawalPeriod+1, 50*10e9, existingValidatorRegistry)
 
 	if validators[0].Status != uint64(params.Active) {
 		t.Errorf("Wanted status Active. Got: %d", validators[0].Status)
@@ -402,18 +402,18 @@ func TestValidatorMinDeposit(t *testing.T) {
 		{Status: uint64(params.Active), Balance: uint64(minDeposit)},
 		{Status: uint64(params.Active), Balance: uint64(minDeposit) - 1},
 	}
-	newValidators := CheckValidatorMinDeposit(validators, currentSlot)
-	if newValidators[0].Status != uint64(params.Active) {
+	newValidatorRegistry := CheckValidatorMinDeposit(validators, currentSlot)
+	if newValidatorRegistry[0].Status != uint64(params.Active) {
 		t.Error("Validator should be active")
 	}
-	if newValidators[1].Status != uint64(params.Active) {
+	if newValidatorRegistry[1].Status != uint64(params.Active) {
 		t.Error("Validator should be active")
 	}
-	if newValidators[2].Status != uint64(params.PendingExit) {
+	if newValidatorRegistry[2].Status != uint64(params.PendingExit) {
 		t.Error("Validator should be pending exit")
 	}
-	if newValidators[2].LatestStatusChangeSlot != currentSlot {
-		t.Errorf("Validator's lastest status change slot should be %d got %d", currentSlot, newValidators[2].LatestStatusChangeSlot)
+	if newValidatorRegistry[2].LatestStatusChangeSlot != currentSlot {
+		t.Errorf("Validator's lastest status change slot should be %d got %d", currentSlot, newValidatorRegistry[2].LatestStatusChangeSlot)
 	}
 }
 
@@ -433,7 +433,7 @@ func TestMinEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestDeepCopyValidators(t *testing.T) {
+func TestDeepCopyValidatorRegistry(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	defaultValidator := &pb.ValidatorRecord{
 		Pubkey:                 []byte{'k', 'e', 'y'},
@@ -446,7 +446,7 @@ func TestDeepCopyValidators(t *testing.T) {
 		validators = append(validators, defaultValidator)
 	}
 
-	newValidatorSet := CopyValidators(validators)
+	newValidatorSet := CopyValidatorRegistry(validators)
 
 	defaultValidator.Pubkey = []byte{'n', 'e', 'w', 'k', 'e', 'y'}
 	defaultValidator.RandaoCommitmentHash32 = []byte{'n', 'e', 'w', 'r', 'a', 'n', 'd', 'a', 'o'}

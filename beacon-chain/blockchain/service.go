@@ -383,7 +383,7 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 				}
 				if !attesterExists {
 					blockVoteCache[h].VoterIndices = append(blockVoteCache[h].VoterIndices, attesterIndex)
-					blockVoteCache[h].VoteTotalDeposit += beaconState.Validators()[attesterIndex].Balance
+					blockVoteCache[h].VoteTotalDeposit += beaconState.ValidatorRegistry()[attesterIndex].Balance
 				}
 			}
 		}

@@ -18,9 +18,9 @@ import (
 
 const bitsInByte = 8
 
-// InitialValidators creates a new validator set that is used to
+// InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
-func InitialValidators() []*pb.ValidatorRecord {
+func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	config := params.BeaconConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
@@ -122,9 +122,9 @@ func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastSta
 
 // ValidatorIndex returns the index of the validator given an input public key.
 func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, error) {
-	activeValidators := ActiveValidatorIndices(validators)
+	activeValidatorRegistry := ActiveValidatorIndices(validators)
 
-	for _, index := range activeValidators {
+	for _, index := range activeValidatorRegistry {
 		if bytes.Equal(validators[index].Pubkey, pubKey) {
 			return index, nil
 		}
@@ -263,8 +263,8 @@ func ExitValidator(
 	return validator
 }
 
-// ChangeValidators updates the validator set during state transition.
-func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+// ChangeValidatorRegistry updates the validator set during state transition.
+func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 	maxAllowableChange := 2 * params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
 
 	totalBalance := TotalActiveValidatorDeposit(validators)
@@ -316,10 +316,10 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	return validators
 }
 
-// CopyValidators creates a fresh new validator set by copying all the validator information
+// CopyValidatorRegistry creates a fresh new validator set by copying all the validator information
 // from the old validator set. This is used in calculating the new state of the crystallized
 // state, where the changes to the validator balances are applied to the new validator set.
-func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+func CopyValidatorRegistry(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
 
 	for i, validator := range validatorSet {
