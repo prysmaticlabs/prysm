@@ -5,6 +5,8 @@ package ethereum.beacon.p2p.v1;
 
 import "google/protobuf/timestamp.proto";
 
+import "proto/common/messages.proto";
+
 message BeaconState {
   // Validator registry [1-1000] 
   repeated ValidatorRecord validator_registry = 1;
@@ -16,9 +18,7 @@ message BeaconState {
   bytes randao_mix_hash32 = 1001;
   bytes next_seed_hash32 = 1002;
   repeated ShardAndCommitteeArray shard_and_committees_for_slots = 1003;
-  // TODO(781): Persistent committees should be a 2d uint24 array.
-  repeated uint32 persistent_committees = 1004 [deprecated=true];
-  // repeated Uint32Array persistent_committees = 1004;
+  repeated ethereum.common.Uint32List persistent_committees = 1004;
   repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
 
   // Finality [2001-3000] 
