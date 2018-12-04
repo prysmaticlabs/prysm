@@ -21,7 +21,7 @@ func TestInitGenesisJsonFailure(t *testing.T) {
 }
 
 func TestInitGenesisJson(t *testing.T) {
-	fNamePath := os.Getenv("GOPATH") + "/src/github.com/prysmaticlabs/prysm/genesis.json"
+	fNamePath := "./genesis.json"
 
 	params.UseDemoBeaconConfig()
 	state := &pb.BeaconState{
