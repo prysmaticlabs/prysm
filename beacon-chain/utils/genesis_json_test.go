@@ -2,9 +2,9 @@ package utils
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/jsonpb"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -21,39 +21,21 @@ func TestInitGenesisJsonFailure(t *testing.T) {
 }
 
 func TestInitGenesisJson(t *testing.T) {
-	fname := "/genesis.json"
-	pwd, _ := os.Getwd()
-	fnamePath := pwd + fname
-	os.Remove(fnamePath)
+	fNamePath := os.Getenv("GOPATH") + "/src/github.com/prysmaticlabs/prysm/genesis.json"
 
 	params.UseDemoBeaconConfig()
-	stateJSON := &pb.BeaconState{
-		LastStateRecalculationSlot: 0,
-		JustifiedStreak:            1,
-		LastFinalizedSlot:          99,
+	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Pubkey: []byte{}, Balance: 32, Status: uint64(params.Active)},
+			{Pubkey: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), Balance: 32000000000, Status: uint64(params.Active)},
 		},
 	}
-	os.Create(fnamePath)
-	f, err := os.OpenFile(fnamePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+
+	validators, err := InitialValidatorRegistryFromJSON(fNamePath)
 	if err != nil {
-		t.Fatalf("can't open file %v", err)
+		t.Fatalf("Reading validatory registry from genesis.json failed %v", err)
 	}
 
-	ma := jsonpb.Marshaler{}
-	err = ma.Marshal(f, stateJSON)
-	if err != nil {
-		t.Fatalf("can't marshal file %v", err)
+	if !reflect.DeepEqual(state.ValidatorRegistry[0], validators[0]) {
+		t.Error("Validator registry mismatched")
 	}
-
-	validators, err := InitialValidatorRegistryFromJSON(fnamePath)
-	if err != nil {
-		t.Fatalf("genesis.json failed %v", err)
-	}
-
-	if validators[0].Status != 1 {
-		t.Errorf("Failed to load of genesis json")
-	}
-	os.Remove(fnamePath)
 }
