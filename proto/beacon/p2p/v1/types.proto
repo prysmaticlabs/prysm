@@ -66,19 +66,18 @@ message CandidatePoWReceiptRootRecord {
   uint64 votes = 2;
 }
 
-// PendingAttestationRecord is deprecated entirely by AttestationRecord.
 message PendingAttestationRecord {
-  AttestationData data = 1 [deprecated=true];
-  bytes participation_bitfield = 2 [deprecated=true];
-  bytes custody_bitfield = 3 [deprecated=true];
-  uint64 slot_included = 4 [deprecated=true];
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  uint64 slot_included = 4;
 }
 
 message AttestationRecord {
   AttestationData data = 1;
   bytes participation_bitfield = 2;
   bytes custody_bitfield = 3;
-  bytes aggregate_sig = 4; // Type of [uint384] ?
+  bytes aggregate_signature = 4; // Type of [uint384] ?
 }
 
 message AttestationData {
