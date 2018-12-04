@@ -125,8 +125,8 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 
 func TestUpdateLatestBlockHashes(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
-		Slot:           10,
-		AncestorHashes: [][]byte{{'A'}},
+		Slot:            10,
+		AncestorHash32S: [][]byte{{'A'}},
 	})
 
 	recentBlockHashes := [][]byte{}
@@ -152,8 +152,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], block.data.AncestorHashes[0]) {
-			t.Fatalf("update failed: expected %#x got %#x", block.data.AncestorHashes[:], updated[i])
+		} else if !areBytesEqual(updated[i], block.data.AncestorHash32S[0]) {
+			t.Fatalf("update failed: expected %#x got %#x", block.data.AncestorHash32S[:], updated[i])
 		}
 	}
 }
@@ -177,8 +177,8 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	block := &Block{
 		data: &pb.BeaconBlock{
-			Slot:           2,
-			AncestorHashes: [][]byte{{}},
+			Slot:            2,
+			AncestorHash32S: [][]byte{{}},
 		},
 	}
 

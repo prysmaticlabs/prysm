@@ -75,20 +75,20 @@ type queryService interface {
 // InitialSync defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type InitialSync struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	p2p                 p2pAPI
-	syncService         syncService
-	queryService        queryService
-	db                  *db.BeaconDB
-	blockAnnounceBuf    chan p2p.Message
-	blockBuf            chan p2p.Message
-	stateBuf            chan p2p.Message
-	currentSlot         uint64
-	highestObservedSlot uint64
-	syncPollingInterval time.Duration
-	initialStateRoot    [32]byte
-	inMemoryBlocks      map[uint64]*pb.BeaconBlockResponse
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	p2p                    p2pAPI
+	syncService            syncService
+	queryService           queryService
+	db                     *db.BeaconDB
+	blockAnnounceBuf       chan p2p.Message
+	blockBuf               chan p2p.Message
+	stateBuf               chan p2p.Message
+	currentSlot            uint64
+	highestObservedSlot    uint64
+	syncPollingInterval    time.Duration
+	initialStateRootHash32 [32]byte
+	inMemoryBlocks         map[uint64]*pb.BeaconBlockResponse
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -197,7 +197,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			}
 
 			if s.currentSlot == 0 {
-				if s.initialStateRoot != [32]byte{} {
+				if s.initialStateRootHash32 != [32]byte{} {
 					continue
 				}
 				if data.GetBlock().GetSlot() != 1 {
@@ -233,7 +233,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 
-			if s.initialStateRoot == [32]byte{} {
+			if s.initialStateRootHash32 == [32]byte{} {
 				continue
 			}
 
@@ -243,7 +243,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				log.Errorf("Unable to hash beacon state: %v", err)
 			}
 
-			if hash != s.initialStateRoot {
+			if hash != s.initialStateRootHash32 {
 				continue
 			}
 
@@ -272,7 +272,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 // for a beacon block.
 func (s *InitialSync) requestStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block := types.NewBlock(data.Block)
-	h := block.StateRoot()
+	h := block.StateRootHash32()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", h)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: h[:]}, peer)
 	return nil
@@ -293,7 +293,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 		return err
 	}
 
-	s.initialStateRoot = block.StateRoot()
+	s.initialStateRootHash32 = block.StateRootHash32()
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
 	s.currentSlot = block.SlotNumber()
