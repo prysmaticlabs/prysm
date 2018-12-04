@@ -18,20 +18,19 @@ import (
 
 const bitsInByte = 8
 
-// InitialValidators creates a new validator set that is used to
+// InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
-func InitialValidators() []*pb.ValidatorRecord {
+func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	config := params.BeaconConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
 	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           config.DepositSize * config.Gwei,
-			WithdrawalAddress: []byte{},
-			Pubkey:            []byte{},
-			RandaoCommitment:  randaoReveal[:],
+			Status:                 uint64(params.Active),
+			Balance:                config.DepositSize * config.Gwei,
+			Pubkey:                 []byte{},
+			RandaoCommitmentHash32: randaoReveal[:],
 		}
 	}
 	return validators
@@ -123,9 +122,9 @@ func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastSta
 
 // ValidatorIndex returns the index of the validator given an input public key.
 func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, error) {
-	activeValidators := ActiveValidatorIndices(validators)
+	activeValidatorRegistry := ActiveValidatorIndices(validators)
 
-	for _, index := range activeValidators {
+	for _, index := range activeValidatorRegistry {
 		if bytes.Equal(validators[index].Pubkey, pubKey) {
 			return index, nil
 		}
@@ -226,21 +225,16 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
-	withdrawalShard uint64,
-	withdrawalAddr []byte,
 	randaoCommitment []byte,
 	status uint64) []*pb.ValidatorRecord {
 
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
 	newValidatorRecord := &pb.ValidatorRecord{
-		Pubkey:            pubKey,
-		WithdrawalShard:   withdrawalShard,
-		WithdrawalAddress: withdrawalAddr,
-		RandaoCommitment:  randaoCommitment,
-		Balance:           params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
-		Status:            status,
-		ExitSlot:          0,
+		Pubkey:                 pubKey,
+		RandaoCommitmentHash32: randaoCommitment,
+		Balance:                params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
+		Status:                 status,
 	}
 
 	index := minEmptyValidator(validators)
@@ -260,7 +254,7 @@ func ExitValidator(
 	currentSlot uint64,
 	panalize bool) *pb.ValidatorRecord {
 	// TODO(#614): Add validator set change
-	validator.ExitSlot = currentSlot
+	validator.LatestStatusChangeSlot = currentSlot
 	if panalize {
 		validator.Status = uint64(params.Penalized)
 	} else {
@@ -269,8 +263,8 @@ func ExitValidator(
 	return validator
 }
 
-// ChangeValidators updates the validator set during state transition.
-func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+// ChangeValidatorRegistry updates the validator set during state transition.
+func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 	maxAllowableChange := 2 * params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
 
 	totalBalance := TotalActiveValidatorDeposit(validators)
@@ -290,7 +284,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 		}
 		if validators[i].Status == uint64(params.PendingExit) {
 			validators[i].Status = uint64(params.PendingWithdraw)
-			validators[i].ExitSlot = currentSlot
+			validators[i].LatestStatusChangeSlot = currentSlot
 			totalChanged += validators[i].Balance
 
 			// TODO(#614): Add validator set change.
@@ -305,7 +299,7 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	for i := 0; i < len(validators); i++ {
 		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
 		isPenalized := validators[i].Status == uint64(params.Penalized)
-		withdrawalSlot := validators[i].ExitSlot + params.BeaconConfig().MinWithdrawalPeriod
+		withdrawalSlot := validators[i].LatestStatusChangeSlot + params.BeaconConfig().MinWithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
 			penaltyFactor := totalPenalties * 3
@@ -322,21 +316,19 @@ func ChangeValidators(currentSlot uint64, totalPenalties uint64, validators []*p
 	return validators
 }
 
-// CopyValidators creates a fresh new validator set by copying all the validator information
+// CopyValidatorRegistry creates a fresh new validator set by copying all the validator information
 // from the old validator set. This is used in calculating the new state of the crystallized
 // state, where the changes to the validator balances are applied to the new validator set.
-func CopyValidators(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
+func CopyValidatorRegistry(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
 	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
 
 	for i, validator := range validatorSet {
 		newValidatorSet[i] = &pb.ValidatorRecord{
-			Pubkey:            validator.Pubkey,
-			WithdrawalShard:   validator.WithdrawalShard,
-			WithdrawalAddress: validator.WithdrawalAddress,
-			RandaoCommitment:  validator.RandaoCommitment,
-			Balance:           validator.Balance,
-			Status:            validator.Status,
-			ExitSlot:          validator.ExitSlot,
+			Pubkey:                 validator.Pubkey,
+			RandaoCommitmentHash32: validator.RandaoCommitmentHash32,
+			Balance:                validator.Balance,
+			Status:                 validator.Status,
+			LatestStatusChangeSlot: validator.LatestStatusChangeSlot,
 		}
 	}
 	return newValidatorSet

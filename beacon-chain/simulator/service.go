@@ -307,13 +307,13 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:           slot,
-		Timestamp:      ptypes.TimestampNow(),
-		PowChainRef:    powChainRef,
-		StateRoot:      stateHash[:],
-		AncestorHashes: [][]byte{parentHash},
-		RandaoReveal:   params.BeaconConfig().SimulatedBlockRandao[:],
-		Attestations:   attestations,
+		Slot:                          slot,
+		Timestamp:                     ptypes.TimestampNow(),
+		CandidatePowReceiptRootHash32: powChainRef,
+		StateRootHash32:               stateHash[:],
+		AncestorHash32S:               [][]byte{parentHash},
+		RandaoRevealHash32:            params.BeaconConfig().SimulatedBlockRandao[:],
+		Attestations:                  attestations,
 	})
 	return block, nil
 }

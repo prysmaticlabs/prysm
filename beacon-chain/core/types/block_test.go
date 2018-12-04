@@ -31,7 +31,7 @@ func TestGenesisBlock(t *testing.T) {
 		t.Errorf("genesis block hash should be identical: %#x %#x", h1, h2)
 	}
 
-	if b1.data.AncestorHashes == nil {
+	if b1.data.AncestorHash32S == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
@@ -39,16 +39,16 @@ func TestGenesisBlock(t *testing.T) {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 
-	if b1.RandaoReveal() != [32]byte{} {
-		t.Error("genesis block missing RandaoReveal field")
+	if b1.RandaoRevealHash32() != [32]byte{} {
+		t.Error("genesis block missing RandaoRevealHash32 field")
 	}
 
-	if b1.PowChainRef() != common.BytesToHash([]byte{}) {
-		t.Error("genesis block missing PowChainRef field")
+	if b1.CandidatePowReceiptRootHash32() != common.BytesToHash([]byte{}) {
+		t.Error("genesis block missing CandidatePowReceiptRootHash32 field")
 	}
 
-	if b1.StateRoot() != stateHash {
-		t.Error("genesis block StateRoot isn't initialized correctly")
+	if b1.StateRootHash32() != stateHash {
+		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
 
 	rd := [32]byte{}

@@ -24,9 +24,9 @@ func TestInitialDeriveState(t *testing.T) {
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{{'A'}},
-		Slot:           0,
-		StateRoot:      []byte{},
+		AncestorHash32S: [][]byte{{'A'}},
+		Slot:            0,
+		StateRootHash32: []byte{},
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: attesterBitfield,
@@ -64,8 +64,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{{'A'}},
-		Slot:           0,
+		AncestorHash32S: [][]byte{{'A'}},
+		Slot:            0,
 	})
 
 	blockVoteCache := utils.NewBlockVoteCache()
@@ -74,12 +74,12 @@ func TestNextDeriveSlot(t *testing.T) {
 		t.Fatalf("failed to derive next crystallized state: %v", err)
 	}
 
-	beaconState.SetValidators([]*pb.ValidatorRecord{
+	beaconState.SetValidatorRegistry([]*pb.ValidatorRecord{
 		{Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei),
 			Status: uint64(params.Active)},
 	})
 
-	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.Validators())
+	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.ValidatorRegistry())
 	recentShardBlockHashes := make([][]byte, 3*params.BeaconConfig().CycleLength)
 	for i := 0; i < int(params.BeaconConfig().CycleLength); i++ {
 		shardBlockHash := [32]byte{}
@@ -93,8 +93,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(params.BeaconConfig().CycleLength - 1)
 	block = types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{{'A'}},
-		Slot:           params.BeaconConfig().CycleLength,
+		AncestorHash32S: [][]byte{{'A'}},
+		Slot:            params.BeaconConfig().CycleLength,
 	})
 	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength, blockVoteCache)
 	if err != nil {
@@ -116,8 +116,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(2*params.BeaconConfig().CycleLength - 1)
 	block = types.NewBlock(&pb.BeaconBlock{
-		AncestorHashes: [][]byte{{'A'}},
-		Slot:           params.BeaconConfig().CycleLength * 2,
+		AncestorHash32S: [][]byte{{'A'}},
+		Slot:            params.BeaconConfig().CycleLength * 2,
 	})
 	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength*2, blockVoteCache)
 	if err != nil {
@@ -137,7 +137,7 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinks(t *testing.T) {
+func TestProcessLatestCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
@@ -176,20 +176,20 @@ func TestProcessCrosslinks(t *testing.T) {
 	shardAndCommitteesForSlots[0].ArrayShardAndCommittee[0].Committee = committee
 
 	beaconState := types.NewBeaconState(&pb.BeaconState{
-		Crosslinks:                 clRecords,
-		Validators:                 validators,
+		LatestCrosslinks:           clRecords,
+		ValidatorRegistry:          validators,
 		ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 	})
-	newCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
+	newLatestCrosslinks, err := crossLinkCalculations(beaconState, pAttestations, 100)
 	if err != nil {
 		t.Fatalf("process crosslink failed %v", err)
 	}
 
-	if newCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
-		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newCrosslinks[0].Slot)
+	if newLatestCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
+		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newLatestCrosslinks[0].Slot)
 	}
-	if !bytes.Equal(newCrosslinks[1].ShardBlockHash, []byte{'a'}) {
-		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newCrosslinks[0].ShardBlockHash)
+	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockHash, []byte{'a'}) {
+		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockHash)
 	}
 	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }
@@ -199,7 +199,7 @@ func TestIsNewValidatorSetTransition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	beaconState.SetValidatorSetChangeSlot(1)
+	beaconState.SetValidatorRegistryLastChangeSlot(1)
 	if beaconState.IsValidatorSetChange(0) {
 		t.Errorf("Is new validator set change should be false, last changed slot greater than finalized slot")
 	}
@@ -245,17 +245,17 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	// Negative test case, shuffle validators with more than MaxValidators.
+	// Negative test case, shuffle validators with more than MaxValidatorRegistry.
 	size := params.BeaconConfig().ModuloBias + 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
 	for i := uint64(0); i < size; i++ {
 		validators[i] = validator
 	}
-	beaconState.SetValidators(validators)
+	beaconState.SetValidatorRegistry(validators)
 	if _, err := validatorSetRecalculations(
 		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 		[32]byte{'A'},
 	); err == nil {
 		t.Error("Validator set change calculation should have failed with invalid validator count")
@@ -284,7 +284,7 @@ func TestNewValidatorSetRecalculations(t *testing.T) {
 
 	_, err = validatorSetRecalculations(
 		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.Validators(),
+		beaconState.ValidatorRegistry(),
 		[32]byte{'A'},
 	)
 	if err != nil {

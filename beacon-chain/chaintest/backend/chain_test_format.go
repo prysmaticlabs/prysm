@@ -45,7 +45,7 @@ type TestBlock struct {
 
 // TestAttestation --
 type TestAttestation struct {
-	Block         string `yaml:"block"`
-	Validators    string `yaml:"validators"`
-	CommitteeSlot uint64 `yaml:"committee_slot"`
+	Block             string `yaml:"block"`
+	ValidatorRegistry string `yaml:"validators"`
+	CommitteeSlot     uint64 `yaml:"committee_slot"`
 }

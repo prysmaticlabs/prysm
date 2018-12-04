@@ -43,14 +43,14 @@ func TestBlockValidity(t *testing.T) {
 	}
 	randaoPreCommit := [32]byte{'A'}
 	hashedRandaoPreCommit := hashutil.Hash(randaoPreCommit[:])
-	validators := beaconState.Validators()
-	validators[1].RandaoCommitment = hashedRandaoPreCommit[:]
-	beaconState.SetValidators(validators)
+	validators := beaconState.ValidatorRegistry()
+	validators[1].RandaoCommitmentHash32 = hashedRandaoPreCommit[:]
+	beaconState.SetValidatorRegistry(validators)
 	beaconState.SetLatestBlockHashes(recentBlockHashes)
 
 	b := types.NewBlock(&pb.BeaconBlock{
-		Slot:         1,
-		RandaoReveal: randaoPreCommit[:],
+		Slot:               1,
+		RandaoRevealHash32: randaoPreCommit[:],
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:          0,
@@ -89,8 +89,8 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot:         2,
-		RandaoReveal: []byte{'B'},
+		Slot:               2,
+		RandaoRevealHash32: []byte{'B'},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,
@@ -124,8 +124,8 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot:         1,
-		RandaoReveal: []byte{'B'},
+		Slot:               1,
+		RandaoRevealHash32: []byte{'B'},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,

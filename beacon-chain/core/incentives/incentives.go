@@ -30,7 +30,7 @@ func TallyVoteBalances(
 
 	blockVoteBalance := blockVote.VoteTotalDeposit
 	voterIndices := blockVote.VoterIndices
-	newValidators := CalculateRewards(
+	newValidatorRegistry := CalculateRewards(
 		voterIndices,
 		activeValidatorIndices,
 		validators,
@@ -39,7 +39,7 @@ func TallyVoteBalances(
 		timeSinceFinality,
 	)
 
-	return blockVoteBalance, newValidators
+	return blockVoteBalance, newValidatorRegistry
 }
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
@@ -55,7 +55,7 @@ func CalculateRewards(
 	timeSinceFinality uint64,
 ) []*pb.ValidatorRecord {
 
-	newValidatorSet := v.CopyValidators(validators)
+	newValidatorSet := v.CopyValidatorRegistry(validators)
 
 	// Calculate the reward and penalty quotients for the validator set.
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
@@ -117,7 +117,7 @@ func ApplyCrosslinkRewardsAndPenalties(
 	totalBalance uint64,
 	voteBalance uint64,
 ) ([]*pb.ValidatorRecord, error) {
-	newValidatorSet := v.CopyValidators(validators)
+	newValidatorSet := v.CopyValidatorRegistry(validators)
 
 	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
 	for _, attesterIndex := range attesterIndices {
@@ -169,13 +169,11 @@ func RewardValidatorCrosslink(
 	currentBalance := int64(validator.Balance)
 	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
 	return &pb.ValidatorRecord{
-		Pubkey:            validator.Pubkey,
-		WithdrawalShard:   validator.WithdrawalShard,
-		WithdrawalAddress: validator.WithdrawalAddress,
-		RandaoCommitment:  validator.RandaoCommitment,
-		Balance:           uint64(currentBalance),
-		Status:            validator.Status,
-		ExitSlot:          validator.ExitSlot,
+		Pubkey:                 validator.Pubkey,
+		RandaoCommitmentHash32: validator.RandaoCommitmentHash32,
+		Balance:                uint64(currentBalance),
+		Status:                 validator.Status,
+		LatestStatusChangeSlot: validator.LatestStatusChangeSlot,
 	}
 }
 
@@ -189,12 +187,10 @@ func PenaliseValidatorCrosslink(
 	quadraticQuotient := QuadraticPenaltyQuotient()
 	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
 	return &pb.ValidatorRecord{
-		Pubkey:            validator.Pubkey,
-		WithdrawalShard:   validator.WithdrawalShard,
-		WithdrawalAddress: validator.WithdrawalAddress,
-		RandaoCommitment:  validator.RandaoCommitment,
-		Balance:           uint64(newBalance),
-		Status:            validator.Status,
-		ExitSlot:          validator.ExitSlot,
+		Pubkey:                 validator.Pubkey,
+		RandaoCommitmentHash32: validator.RandaoCommitmentHash32,
+		Balance:                uint64(newBalance),
+		Status:                 validator.Status,
+		LatestStatusChangeSlot: validator.LatestStatusChangeSlot,
 	}
 }
