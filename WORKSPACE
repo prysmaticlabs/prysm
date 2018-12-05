@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "f7cbe917ef623dd7062366ce4a1a0558c997f437",
+    commit = "e17947f884f63c85799a86637524c213d798c7ec",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "aa55a523dc0a8297edf51bb75e8eec13eb3be45d",
+    commit = "1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4",
     importpath = "github.com/prometheus/procfs",
 )
 
