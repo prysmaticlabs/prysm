@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -21,7 +22,11 @@ func TestInitGenesisJsonFailure(t *testing.T) {
 }
 
 func TestInitGenesisJson(t *testing.T) {
-	fNamePath := "./genesis.json"
+	fNamePath := fmt.Sprintf("%s/%s/%s",
+		os.Getenv("RUNFILES_DIR"),
+		os.Getenv("TEST_WORKSPACE"),
+		"/genesis.json",
+	)
 
 	params.UseDemoBeaconConfig()
 	state := &pb.BeaconState{
