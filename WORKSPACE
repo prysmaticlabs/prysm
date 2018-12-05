@@ -899,7 +899,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.15.89",
+    tag = "v1.15.90",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
@@ -931,7 +931,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    tag = "v0.33.1",
+    tag = "v0.34.0",
     importpath = "cloud.google.com/go",
 )
 
