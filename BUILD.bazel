@@ -5,6 +5,8 @@ load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
+exports_files(["genesis.json"])
+
 # gazelle:prefix github.com/prysmaticlabs/prysm
 gazelle(
     name = "gazelle",
