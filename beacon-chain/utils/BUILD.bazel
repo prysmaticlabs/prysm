@@ -29,11 +29,11 @@ go_test(
         "genesis_json_test.go",
         "shuffle_test.go",
     ],
+    data = ["//:genesis.json"],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_gogo_protobuf//jsonpb:go_default_library",
     ],
 )
