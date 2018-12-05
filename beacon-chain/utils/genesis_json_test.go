@@ -22,11 +22,17 @@ func TestInitGenesisJsonFailure(t *testing.T) {
 }
 
 func TestInitGenesisJson(t *testing.T) {
-	fNamePath := fmt.Sprintf("%s/%s/%s",
-		os.Getenv("RUNFILES_DIR"),
-		os.Getenv("TEST_WORKSPACE"),
-		"/genesis.json",
-	)
+	// Support running this test via bazel or go test.
+	var fNamePath string
+	if os.Getenv("RUNFILES_DIR") != "" {
+		fNamePath = fmt.Sprintf("%s/%s/%s",
+			os.Getenv("RUNFILES_DIR"),
+			os.Getenv("TEST_WORKSPACE"),
+			"/genesis.json",
+		)
+	} else {
+		fNamePath = "../../genesis.json"
+	}
 
 	params.UseDemoBeaconConfig()
 	state := &pb.BeaconState{
