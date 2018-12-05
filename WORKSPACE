@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "af4fc4062c262223ddc2d92f5f35a93690db383a",
+    commit = "6142e720c068c6cd71f2258e007ff1991572e1d5",
     importpath = "google.golang.org/api",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "f7cbe917ef623dd7062366ce4a1a0558c997f437",
+    commit = "e17947f884f63c85799a86637524c213d798c7ec",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "aa55a523dc0a8297edf51bb75e8eec13eb3be45d",
+    commit = "1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -899,7 +899,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.15.89",
+    tag = "v1.15.90",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
@@ -931,7 +931,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    tag = "v0.33.1",
+    tag = "v0.34.0",
     importpath = "cloud.google.com/go",
 )
 
